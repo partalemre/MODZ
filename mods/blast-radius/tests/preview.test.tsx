@@ -41,7 +41,7 @@ for (const theme of ['dark', 'light']) {
     await pass(w, 0)
     await showOnce(`br-reset${suffix}`, await mountPane($, 'desktop'))
     await show(`br-reset-w400${suffix}`, await mountPane($, 'desktop', NARROW_PANE))
-    await showOnce(`br-band-w520${suffix}`, await mountBand($, 'desktop', false, NARROW_BAND))
+    await showOnce(`br-band-w520${suffix}`, await mountBand($, 'desktop', { columns: NARROW_BAND }))
     const band = await mountBand($, 'desktop')
     await show(`br-band${suffix}`, band)
     await band.press({ key: 'cancel' })

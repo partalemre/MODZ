@@ -39,16 +39,8 @@ function keyOf(argv: string[]): string {
   return argv.join(' ')
 }
 
-export function stub(on: any, w: World): void {
-  w.clock = mock.clock(on)
-  on('session.start', () => ({ cwd: w.cwd }))
-  on('session.cwd', () => {
-    if (w.cwd === '') throw new Error('no session folder')
-
-    return { value: w.cwd }
-  })
-  on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'enum', value: w.theme }] }))
-  on('env.get', () => ({ value: undefined }))
+// The pane and toast side of the engine: what the mod opened, closed and said.
+function stubUi(on: any, w: World): void {
   on('ui.open', (_: any, e: any) => {
     w.opened.push(e)
 
@@ -65,6 +57,19 @@ export function stub(on: any, w: World): void {
     return { value: undefined }
   })
   on('ui.log', () => ({ value: undefined }))
+}
+
+export function stub(on: any, w: World): void {
+  w.clock = mock.clock(on)
+  on('session.start', () => ({ cwd: w.cwd }))
+  on('session.cwd', () => {
+    if (w.cwd === '') throw new Error('no session folder')
+
+    return { value: w.cwd }
+  })
+  on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'enum', value: w.theme }] }))
+  on('env.get', () => ({ value: undefined }))
+  stubUi(on, w)
   on('process.run', async (_: any, e: any) => {
     if (e.argv[0] === 'sleep') {
       await w.clock?.sleep(Number(e.argv[1]) * SECOND)
@@ -112,7 +117,8 @@ export async function mountPane($: any, surface: string, columns: number = PANE_
   })
 }
 
-export async function mountBand($: any, surface: string, hasSurvey = false, columns = 110) {
+export async function mountBand($: any, surface: string, opts: { hasSurvey?: boolean; columns?: number } = {}) {
+  const { hasSurvey = false, columns = 110 } = opts
   return await $.ui.mount({
     plugin: 'blast-radius', component: 'AbovePrompt', requestId: hasSurvey ? 'band-survey' : 'band', surface,
     viewport: { columns: 120, rows: 40 },

@@ -100,7 +100,7 @@ for (const surface of SURFACES) {
 
     expect(JSON.stringify(drawn.children?.[0])).toContain('9 dosyayı sil')
     expect(JSON.stringify(drawn.children?.[1])).toContain('other mod row')
-    const survey = await mountBand($, surface, true)
+    const survey = await mountBand($, surface, { hasSurvey: true })
     expect(JSON.stringify(await survey.drawn())).not.toContain('9 dosyayı sil')
     await band.press({ key: 'cancel' })
     await pass(w)

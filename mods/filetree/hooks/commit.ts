@@ -2,7 +2,7 @@
 // A commit is judged in the repository it ran in: a `cd other && git commit` that lands in
 // another repo is a success there, never a failure of the tree's own HEAD.
 
-import { resolve, segments, stripGlobals } from './git'
+import { resolve, segments, stripGlobals } from './shell'
 import { inside, isAbsolute } from './tree'
 
 export type Outcome = { state: 'done' | 'failed'; label: string; detail: string }

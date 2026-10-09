@@ -24,12 +24,13 @@ export const LINUX_OPEN = [
 
 const WIN_OPEN = "$ErrorActionPreference = 'Stop'; [Diagnostics.Process]::Start([Diagnostics.ProcessStartInfo]@{ FileName = $env:PANE_OPEN_TARGET; UseShellExecute = $true }) | Out-Null"
 
+function argvOf(os: 'linux' | 'darwin' | 'win32', target: string): string[] {
+  if (os === 'linux') return ['sh', '-c', LINUX_LAUNCH, 'sh', 'sh', '-c', LINUX_OPEN, 'sh', target]
+  return os === 'darwin' ? ['open', '--', target] : ['powershell', '-NoProfile', '-NonInteractive', '-Command', WIN_OPEN]
+}
+
 export function openCommand(os: 'linux' | 'darwin' | 'win32', target: string) {
-  const argv = os === 'linux'
-    ? ['sh', '-c', LINUX_LAUNCH, 'sh', 'sh', '-c', LINUX_OPEN, 'sh', target]
-    : os === 'darwin'
-      ? ['open', '--', target]
-      : ['powershell', '-NoProfile', '-NonInteractive', '-Command', WIN_OPEN]
+  const argv = argvOf(os, target)
   return {
     argv,
     init: {

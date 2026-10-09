@@ -111,5 +111,6 @@ export const folderColor = (p: Palette): string => mix(p.roles.read.fg, p.lo, 0.
 // Light, dark, or undefined when Claude's theme name says neither (`auto`).
 export function lightByName(value: unknown): boolean | undefined {
   const name = typeof value === 'string' ? value.trim().toLowerCase() : ''
-  return name.includes('light') ? true : name.includes('dark') ? false : undefined
+  if (name.includes('light')) return true
+  return name.includes('dark') ? false : undefined
 }

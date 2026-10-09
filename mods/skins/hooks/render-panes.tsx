@@ -13,6 +13,9 @@ import type { SettingsPorts } from './settings-actions'
 import { stamped } from './stamp'
 import type { Drawing } from './view'
 
+// The settings pane's tab title, wherever it is opened from.
+export const SETTINGS_TITLE = 'Görünüm'
+
 // Every element the skin draws, numbered, to point at when asking for a change.
 export async function galleryView({ view, e }: Omit<Drawing<'Pane'>, 'pass'>): Promise<RenderElement> {
   const active = await view.active()

@@ -1,6 +1,9 @@
 import { gnomeDark, macDark, resolveLight } from './light'
 import type { Probe, ThemeHints } from './light'
 
+// How long a system appearance probe may take before the theme falls back.
+export const PROBE_MS = 2000
+
 // The engine's reach for the theme, bound in register.tsx: the engine follows `$` only into
 // functions of the hooks module's own file.
 export type ThemeHost = {

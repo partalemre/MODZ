@@ -44,6 +44,9 @@ export const DESIGN_TOOL = {
   },
 } as const
 
+// The tool's name as the engine calls it, for telling its calls from the turn's own work.
+export const DESIGN = `mcp__skins__${DESIGN_TOOL.name}`
+
 export type DesignState = { prefs: Prefs; custom: Record<string, CustomSkin> }
 
 export type DesignOutcome = { text: string; state: DesignState; isError: boolean }

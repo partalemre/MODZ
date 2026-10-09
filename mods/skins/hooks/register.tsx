@@ -1,33 +1,30 @@
 import { atom, memberOf, read, update } from 'claude-code'
-import type { EngineInterface, Frozen, On, Register, RenderInput, Timer } from 'claude-code'
+import type { EngineInterface, Frozen, On, Register, RenderInput } from 'claude-code'
 
-import type { SkinSlot, TurnStats, UsageSnap } from '../types'
+import type { SkinSlot, UsageSnap } from '../types'
 import { DEFAULT_PREFS } from './command'
-import { DESIGN_TOOL, runDesign } from './designer'
+import { DESIGN, DESIGN_TOOL, runDesign } from './designer'
 import { diffstat } from './format'
+import { settleFocus } from './focus'
 import { EMPTY_HUB, isOwnOpen } from './hub'
 import { lookOf } from './look'
 import { activeSkin, commit, load, syncHub } from './prefs-store'
 import type { PrefsHost } from './prefs-store'
 import { abovePromptView, askView } from './render-bands'
-import { replyView, spinnerView, turnDurationView, userMessageView } from './render-messages'
-import { galleryView, settingsView } from './render-panes'
+import { FRAME_MS, replyView, spinnerView, turnDurationView, userMessageView } from './render-messages'
+import { galleryView, SETTINGS_TITLE, settingsView } from './render-panes'
 import type { SettingsHost } from './render-panes'
 import { toolGroupView, toolResultView, toolUseView } from './render-tools'
-import { runSkin } from './skin-command'
-import { refreshTheme } from './theme'
+import { runSkin, SKIN_COMMAND } from './skin-command'
+import { PROBE_MS, refreshTheme } from './theme'
 import type { ThemeHost } from './theme'
 import { usageSnap } from './svg-usage'
-import { addCall, NO_STATS, withTurn } from './turn-stats'
+import { addCall, type Live, NO_STATS, withTurn } from './turn-stats'
 import type { View } from './view'
 
 const SETTINGS = 'skins-settings'
-const SETTINGS_TITLE = 'Görünüm'
 const GALLERY = 'skins-gallery'
-const DESIGN = `mcp__skins__${DESIGN_TOOL.name}`
 const DESIGN_MATCH = /^mcp__skins__design$/
-const FRAME_MS = 90
-const PROBE_MS = 2000
 // /compact starts on the next tick, in a dispatch of its own (see compact).
 const NEXT_TICK_MS = 1
 
@@ -44,10 +41,6 @@ const usageAtom = atom({ plugin: 'skins', key: 'usage' } as const, { context: nu
 const compactingAtom = atom({ plugin: 'skins', key: 'compacting' } as const, false)
 const pinnedAtom = atom({ plugin: 'skins', key: 'pinned' } as const, false)
 const hubAtom = atom({ plugin: 'skins', key: 'hub' } as const, EMPTY_HUB)
-
-// What the turn on the main loop has done so far, for its footer, and the width the last
-// reply was drawn at, shown by /skin list to tune table sizing.
-type Live = { stats: TurnStats; isWorking: boolean; ticker?: Timer; lastColumns?: number }
 
 // The prefs store's port (prefs-store.ts).
 function storeOf($: EngineInterface): PrefsHost {
@@ -157,12 +150,7 @@ async function refreshLook($: EngineInterface): Promise<void> {
 
 function onSession(on: On, live: Live): void {
   on('session.start', async ($, e, next) => {
-    await $.command.register({
-      name: 'skin',
-      description: 'Skin ayarlarını aç ya da /skin <ad | list | off>',
-      argumentHint: '[gallery | name | list | off | pin | unpin | share | rail | tables | shimmer | band | clip | icons]',
-      immediate: true,
-    })
+    await $.command.register(SKIN_COMMAND)
     await $.tool.register({ name: DESIGN_TOOL.name, description: DESIGN_TOOL.description, inputSchema: DESIGN_TOOL.inputSchema })
     await load(storeOf($))
     await refreshUsage($)
@@ -272,8 +260,16 @@ function onCommands(on: On, live: Live): void {
 }
 
 function onRenders(on: On, live: Live): void {
-  on('ui.render', { component: 'Pane', requestId: SETTINGS }, ($, e) => settingsView(paneOf($, e), e))
-  on('ui.render', { component: 'Pane', requestId: GALLERY }, ($, e) => galleryView({ view: viewOf($, e, live), e }))
+  on('ui.render', { component: 'Pane', requestId: SETTINGS }, async ($, e) => {
+    await settleFocus(e, ms => $.clock.sleep(ms))
+
+    return settingsView(paneOf($, e), e)
+  })
+  on('ui.render', { component: 'Pane', requestId: GALLERY }, async ($, e) => {
+    await settleFocus(e, ms => $.clock.sleep(ms))
+
+    return galleryView({ view: viewOf($, e, live), e })
+  })
   on('ui.render', { component: 'ToolUse' }, ($, e, next) => toolUseView({ view: viewOf($, e, live), e, pass: next }))
   on('ui.render', { component: 'ToolGroup' }, ($, e, next) => toolGroupView({ view: viewOf($, e, live), e, pass: next }))
   on('ui.render', { component: 'ToolResult' }, ($, e, next) => toolResultView({ view: viewOf($, e, live), e, pass: next }))
@@ -293,4 +289,12 @@ export const register: Register = on => {
   onTurnEnd(on, live)
   onCommands(on, live)
   onRenders(on, live)
+  // A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
+  // left, so its first click would be refused. Drawing again on attach hands it live buttons.
+  on('session.attach', async ($, e, next) => {
+    const attached = await next(e)
+    $.ui.invalidate('ui.render')
+
+    return attached
+  })
 }

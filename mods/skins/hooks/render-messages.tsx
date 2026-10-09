@@ -8,6 +8,9 @@ import { stamped } from './stamp'
 import { DEFAULT_COLUMNS } from './view'
 import type { Drawing } from './view'
 
+// How often the spinner steps while a turn works.
+export const FRAME_MS = 90
+
 export async function userMessageView({ view, e, pass }: Drawing<'UserMessage'>): Promise<RenderElement> {
   const active = await view.active()
 

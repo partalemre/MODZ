@@ -1,7 +1,17 @@
+import type { CommandSpec } from 'claude-code'
+
 import { rowReply, runSkinCommand } from './command'
 import { skinNames } from './custom'
 import { commit, isFolderWord, runFolderCommand } from './prefs-store'
 import type { PrefsHost } from './prefs-store'
+
+// What /skin registers as: the settings alone, or a skin, a folder word or a switch by name.
+export const SKIN_COMMAND: CommandSpec = {
+  name: 'skin',
+  description: 'Skin ayarlarını aç ya da /skin <ad | list | off>',
+  argumentHint: '[gallery | name | list | off | pin | unpin | share | rail | tables | shimmer | band | clip | icons]',
+  immediate: true,
+}
 
 // The /skin command's reach, bound in register.tsx: the prefs store, the panes it opens,
 // toasts, and the width the last reply was drawn at.

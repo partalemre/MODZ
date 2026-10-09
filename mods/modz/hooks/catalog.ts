@@ -142,3 +142,10 @@ export function headline(mods: ModInfo[]): string {
 
   return unknown === 0 ? `${mods.length} mod · ${state}` : `${mods.length} mod · ${state} · ${unknown} bilinmiyor`
 }
+
+// The catalog head's right side: problems are named, a clean catalog says so quietly.
+export function healthOf(mods: ModInfo[]): { text: string; isBad: boolean } {
+  const bad = mods.filter(mod => !mod.isHealthy).length
+
+  return bad === 0 ? { text: 'hepsi sağlıklı', isBad: false } : { text: `${bad} sorunlu`, isBad: true }
+}

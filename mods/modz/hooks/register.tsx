@@ -8,6 +8,7 @@ import type { HubCard, ModzView } from '../types'
 import { loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
 import { cardOf, focusOf, MODS_PANE, rowsOf } from './hub'
+import type { Presence } from './hub'
 import { hubTree } from './hub-pane'
 import { modzTree } from './pane'
 import type { Theme } from './theme'
@@ -71,10 +72,18 @@ async function openPane($: EngineInterface, pane: string): Promise<void> {
   await $.state.set(OPEN, { pane, at: Date.now() })
 }
 
+// An empty catalog is one that could not be read: the hub says so rather than "0 mod açık".
 function metaOf(market: Market): string {
+  if (market.mods.length === 0) return 'katalog okunamadı'
   const on = market.mods.filter(mod => mod.isEnabled !== false).length
 
   return `${on} mod açık`
+}
+
+function presenceOf(market: Market): (mod: string) => Presence {
+  const listed = new Map(market.mods.map(mod => [mod.name, mod.isEnabled]))
+
+  return name => (!listed.has(name) ? 'unlisted' : listed.get(name) === false ? 'off' : 'listed')
 }
 
 export const register: Register = (on, options) => {
@@ -118,8 +127,7 @@ export const register: Register = (on, options) => {
         </Box>
       )
     }
-    const installed = new Set(market.mods.filter(mod => mod.isEnabled !== false).map(mod => mod.name))
-    const rows = rowsOf(await read($, cardsAtom), name => installed.has(name))
+    const rows = rowsOf(await read($, cardsAtom), presenceOf(market))
 
     return hubTree(ui, { rows, focus: focusOf(rows), meta: metaOf(market), surface: e.surface, columns, theme, onOpen: pane => void openPane($, pane).catch(cause => $.ui.log(`modz: ${pane} could not be opened: ${String(cause)}`, { to: 'debug' })) })
   })

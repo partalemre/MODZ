@@ -14,21 +14,40 @@ test('a card from another mod is kept only when it has the right shape', () => {
   expect(cardOf('2 ajan')).toBeNull()
 })
 
-test('rows list installed mods in order, number the first nine and always offer the catalog', () => {
-  const rows = rowsOf({ agents: card('agents', 'live', '2 ajan çalışıyor') }, mod => mod === 'savvy-progress' || mod === 'test-badge')
+test('rows list listed mods in order, number the first nine and always offer the catalog', () => {
+  const rows = rowsOf({ 'savvy-progress': card('agents', 'live', '2 ajan çalışıyor') }, mod => (mod === 'savvy-progress' || mod === 'test-badge' ? 'listed' : 'off'))
 
   expect(rows.map(row => row.entry.pane)).toEqual(['agents', 'tests', 'mods'])
   expect(rows.map(row => row.hotkey)).toEqual(['1', '2', '3'])
   expect(rows[0]?.card?.detail).toBe('2 ajan çalışıyor')
 })
 
-test('the head leads with a failure before a warning before live work, and stays calm otherwise', () => {
-  const all = (cards: Record<string, HubCard>) => rowsOf(cards, () => true)
+test('a pane shows only its own mod\'s card: a removed mod\'s leftover card is never drawn', () => {
+  const cards = { 'agent-deck-pro': card('agents', 'bad', 'eski kart', 9), 'savvy-progress': card('agents', 'live', '1 ajan', 1) }
+  const rows = rowsOf(cards, () => 'listed')
+  expect(rows.find(row => row.entry.pane === 'agents')?.card?.detail).toBe('1 ajan')
+  expect(focusOf(rows)?.row.card?.detail).toBe('1 ajan')
 
-  expect(focusOf(all({ a: card('agents', 'live', '2 ajan'), t: card('tests', 'bad', '41/42 geçti') }))?.row.entry.pane).toBe('tests')
-  expect(focusOf(all({ a: card('agents', 'live', '2 ajan', 9), p: card('plan', 'live', '3/9 adım', 3) }))?.row.entry.pane).toBe('agents')
-  expect(focusOf(all({ c: card('checkpoints', 'ok', '12 nokta') }))).toBeNull()
-  expect(focusOf(all({ a: card('agents', 'live', '') }))).toBeNull()
+  const alone = rowsOf({ 'agent-deck-pro': card('agents', 'bad', 'eski kart') }, () => 'listed')
+  expect(alone.find(row => row.entry.pane === 'agents')?.card).toBeNull()
+  expect(focusOf(alone)).toBeNull()
+})
+
+test('a mod the catalog does not list shows once it reports; a switched-off mod stays hidden', () => {
+  const cards = { 'test-badge': card('tests', 'ok', '42/42 geçti'), 'hud-pro': card('usage', 'idle', '5s %10') }
+  const presence = (mod: string) => (mod === 'hud-pro' ? 'off' : 'unlisted') as const
+  const rows = rowsOf(cards, presence)
+
+  expect(rows.map(row => row.entry.pane)).toEqual(['tests', 'mods'])
+})
+
+test('the head leads with a failure before a warning before live work, and stays calm otherwise', () => {
+  const all = (cards: Record<string, HubCard>) => rowsOf(cards, () => 'listed')
+
+  expect(focusOf(all({ 'savvy-progress': card('agents', 'live', '2 ajan'), 'test-badge': card('tests', 'bad', '41/42 geçti') }))?.row.entry.pane).toBe('tests')
+  expect(focusOf(all({ 'savvy-progress': card('agents', 'live', '2 ajan', 9), 'plan-steps': card('plan', 'live', '3/9 adım', 3) }))?.row.entry.pane).toBe('agents')
+  expect(focusOf(all({ checkpoint: card('checkpoints', 'ok', '12 nokta') }))).toBeNull()
+  expect(focusOf(all({ 'savvy-progress': card('agents', 'live', '') }))).toBeNull()
 })
 
 function stubWorld(on: any) {

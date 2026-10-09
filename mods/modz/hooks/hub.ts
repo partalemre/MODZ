@@ -43,12 +43,27 @@ const RANK: Record<HubTone, number> = { bad: 4, warn: 3, live: 2, ok: 1, idle: 0
 
 export type HubRow = { entry: HubEntry; card: HubCard | null; hotkey: string | null }
 
-// The panes whose mod is installed and not switched off; the catalog is always there.
-export function rowsOf(cards: Record<string, HubCard>, isInstalled: (mod: string) => boolean): HubRow[] {
-  const byPane = new Map(Object.values(cards).map(card => [card.pane, card]))
-  const shown = ENTRIES.filter(entry => entry.pane === MODS_PANE || isInstalled(entry.mod))
+// What the catalog says of a mod: on (or not said), switched off, or not listed at all.
+export type Presence = 'listed' | 'off' | 'unlisted'
 
-  return shown.map((entry, i) => ({ entry, card: byPane.get(entry.pane) ?? null, hotkey: i < 9 ? String(i + 1) : null }))
+const HOTKEYS = 9
+
+// A pane belongs to one mod, so only that mod's own card fills its row: a card left behind by a
+// removed mod (or another mod claiming the pane) is never drawn. The catalog is always offered; a
+// mod the catalog does not list (a mod from elsewhere, or an unreadable catalog) shows once it reports.
+export function rowsOf(cards: Record<string, HubCard>, presence: (mod: string) => Presence): HubRow[] {
+  const own = (entry: HubEntry) => {
+    const card = cards[entry.mod]
+
+    return card !== undefined && card.pane === entry.pane ? card : null
+  }
+  const shown = ENTRIES.filter(entry => {
+    const state = presence(entry.mod)
+
+    return entry.pane === MODS_PANE || state === 'listed' || (state === 'unlisted' && own(entry) !== null)
+  })
+
+  return shown.map((entry, i) => ({ entry, card: own(entry), hotkey: i < HOTKEYS ? String(i + 1) : null }))
 }
 
 export type Focus = { row: HubRow; tone: HubTone }

@@ -31,6 +31,20 @@ export const hubWidth = (columns: number): number => Math.max(WIDTH_MIN, Math.mi
 
 const inSection = (rows: HubRow[], section: Section) => rows.filter(row => row.entry.section === section)
 
+// The one primary button: straight to whatever leads the head ("Testler panelini aç").
+function focusButton(ui: Ui, view: HubView) {
+  const { Box, Button } = ui
+  const focus = view.focus
+  if (focus === null) return null
+  const pane = focus.row.entry.pane
+
+  return (
+    <Box key="focus" flexDirection="row">
+      <Button key="open-focus" label={`${focus.row.entry.title} panelini aç`} variant="primary" onPress={() => view.onOpen(pane)} />
+    </Box>
+  )
+}
+
 // The terminal shows each row's digit; the desktop's buttons stay one width, so the column lines up.
 function openButton(ui: Ui, view: HubView, row: HubRow) {
   const { Button } = ui
@@ -50,6 +64,7 @@ function desktopTree(ui: Ui, view: HubView) {
   return (
     <Box flexDirection="column" rowGap={1}>
       {draw(hubHeadSvg({ width, theme: view.theme, focus: view.focus, meta: view.meta }), 'head', width)}
+      {focusButton(ui, view)}
       {SECTIONS.map(section => {
         const rows = inSection(view.rows, section)
         if (rows.length === 0) return null
@@ -97,10 +112,12 @@ function terminalTree(ui: Ui, view: HubView) {
     <Box flexDirection="column" rowGap={1}>
       <Box flexDirection="row" columnGap={2}>
         <Text color="claude" bold>MODZ</Text>
-        <Text dimColor>{focus === null ? 'Sakin' : `Şu an · ${focus.row.entry.title}: ${focus.row.card?.detail ?? ''}`}</Text>
+        {focus === null ? <Text dimColor>Sakin</Text> : <Text dimColor>{`Şu an · ${focus.row.entry.title}`}</Text>}
+        {focus === null ? null : <Text color={TONE_COLOR[ROLE_OF_TONE[focus.tone] ?? '']} wrap="truncate">{focus.row.card?.detail ?? ''}</Text>}
         <Box flexGrow={1} />
         <Text dimColor>{view.meta}</Text>
       </Box>
+      {focusButton(ui, view)}
       {SECTIONS.map(section => {
         const rows = inSection(view.rows, section)
 

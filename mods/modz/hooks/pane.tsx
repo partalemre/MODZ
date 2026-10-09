@@ -1,8 +1,9 @@
 // The /modz pane: every mod in the marketplace, grouped, with its version, surfaces, source and health.
 import type { Market, ModInfo } from './catalog'
-import { headline } from './catalog'
+import { headline, healthOf } from './catalog'
 import { groupSvg, headSvg, rowSvg } from './draw'
 import { GROUPS } from './meta'
+import type { Group } from './meta'
 import type { Theme } from './theme'
 
 // The resolved element table of the surface that draws the pane.
@@ -14,20 +15,20 @@ const PX_PER_COLUMN = 8
 const WIDTH_MIN = 320
 const WIDTH_MAX = 900
 
-function groupsOf(mods: ModInfo[]): [string, ModInfo[]][] {
-  return GROUPS.map(group => [group, mods.filter(mod => mod.group === group)] as [string, ModInfo[]]).filter(([, list]) => list.length > 0)
+function groupsOf(mods: ModInfo[]): [Group, ModInfo[]][] {
+  return GROUPS.map(group => [group, mods.filter(mod => mod.group === group)] as [Group, ModInfo[]]).filter(([, list]) => list.length > 0)
 }
 
 function sourceText(mod: ModInfo): string {
   return mod.upstream === null ? 'MODZ' : `asıl: ${mod.upstream}`
 }
 
-function stateOf(mod: ModInfo): { glyph: string; color: string } {
-  if (!mod.isHealthy) return { glyph: '✕', color: 'error' }
+// The glyph says on/off/unknown; a problem or an off mod also gets its word, as on the desktop.
+function stateOf(mod: ModInfo): { glyph: string; color: string; word: string } {
+  if (!mod.isHealthy) return { glyph: '✕', color: 'error', word: 'sorunlu' }
+  if (mod.isEnabled === null) return { glyph: '◌', color: 'subtle', word: '' }
 
-  if (mod.isEnabled === null) return { glyph: '◌', color: 'subtle' }
-
-  return mod.isEnabled ? { glyph: '●', color: 'success' } : { glyph: '○', color: 'subtle' }
+  return mod.isEnabled ? { glyph: '●', color: 'success', word: '' } : { glyph: '○', color: 'subtle', word: 'kapalı' }
 }
 
 function terminalRow(ui: Ui, mod: ModInfo) {
@@ -38,24 +39,28 @@ function terminalRow(ui: Ui, mod: ModInfo) {
     <Box key={`mod-${mod.name}`} flexDirection="column">
       <Box flexDirection="row" columnGap={1}>
         <Text color={state.color}>{state.glyph}</Text>
-        <Text color="claude" bold>{mod.name}</Text>
+        <Text bold dimColor={mod.isEnabled === false}>{mod.name}</Text>
         <Text dimColor>{`v${mod.version}`}</Text>
+        {state.word === '' ? null : <Text color={state.color}>{state.word}</Text>}
         <Box flexGrow={1} />
-        <Text dimColor>{`${mod.surfaces.join(' · ')} · ${sourceText(mod)}`}</Text>
+        <Text dimColor wrap="truncate">{`${mod.surfaces.join(' · ')} · ${sourceText(mod)}`}</Text>
       </Box>
-      <Box paddingLeft={2}><Text dimColor wrap="truncate">{mod.description}</Text></Box>
+      <Box paddingLeft={2}>{mod.isHealthy ? <Text dimColor wrap="truncate">{mod.description}</Text> : <Text color="error" wrap="truncate">{mod.description}</Text>}</Box>
     </Box>
   )
 }
 
 function terminalTree(ui: Ui, view: View) {
   const { Box, Text } = ui
+  const health = healthOf(view.market.mods)
 
   return (
     <Box flexDirection="column" rowGap={1}>
       <Box flexDirection="row" columnGap={2}>
-        <Text color="claude" bold>MODZ</Text>
-        <Text dimColor>{headline(view.market.mods)}</Text>
+        <Text color="claude" bold>Tüm modlar</Text>
+        <Text>{headline(view.market.mods)}</Text>
+        <Box flexGrow={1} />
+        {health.isBad ? <Text color="error">{health.text}</Text> : <Text dimColor>{health.text}</Text>}
       </Box>
       {groupsOf(view.market.mods).map(([group, list]) => (
         <Box key={`group-${group}`} flexDirection="column">
@@ -70,7 +75,8 @@ function terminalTree(ui: Ui, view: View) {
 function desktopTree(ui: Ui, view: View) {
   const { Box, Svg } = ui
   const width = Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, view.columns * PX_PER_COLUMN - PX_PER_COLUMN))
-  const head = headSvg({ width, theme: view.theme, title: headline(view.market.mods), meta: `pazar: ${view.market.name}` })
+  const health = healthOf(view.market.mods)
+  const head = headSvg({ width, theme: view.theme, title: headline(view.market.mods), meta: health.text, metaRole: health.isBad ? 'danger' : null })
   const draw = (drawing: { source: string; alt: string; height: number }, key: string) => (
     <Svg key={key} source={drawing.source} alt={drawing.alt} width={width} height={drawing.height} />
   )
@@ -93,8 +99,9 @@ export function modzTree(ui: Ui, view: View) {
   if (view.market.mods.length === 0) {
     return (
       <Box flexDirection="column">
-        <Text color="claude" bold>MODZ</Text>
-        <Text dimColor>Marketplace'te mod yok.</Text>
+        <Text color="claude" bold>Tüm modlar</Text>
+        <Text>Katalog okunamadı</Text>
+        <Text dimColor>marketplace.json bulunamadı ya da içinde mod yok.</Text>
       </Box>
     )
   }

@@ -8,7 +8,7 @@ bin/kit-sync filetree secret-guard     # copy into those mods (name under mods/ 
 bin/kit-sync                           # refresh every mod that already has hooks/kit
 ```
 
-The kit is pure: no `$`, no state, no timers (save the render stamp's one counter, below). Svg builders return `{ source, width, height, alt }` (an `SvgPic`)
+The kit is pure: no `$`, no state, no timers (save the render stamp's one counter and the focus settle's map of last focus, below). Svg builders return `{ source, width, height, alt }` (an `SvgPic`)
 that spreads into `<Svg {...pic} />`; colours inside are CSS variables for both schemes
 (`prefers-color-scheme`), so no hex reaches the markup. Element helpers take `(draw, opts)`, where `draw` is
 `{ ui, surface, isLight }` (`DrawCtx`): `ui = $.ui.resolve(e)`, `surface = e.surface`, and `isLight` comes from
@@ -112,6 +112,33 @@ Mods that do not vendor the kit carry a byte-identical `hooks/stamp.tsx` (and `h
 | `stamped(ui, tree)` | `return stamped(ui, paneTree(ui, view))` (stamp as the root Box's last child, or a column around it) |
 | `renderStamp(ui)`, `STAMP_KEY` | `<Box key="render-stamp" display="none"><Text>12</Text></Box>`, a new number each render |
 | `isSame(a, b)` | `if (isSame(cards[from], card)) return` (structural, for plain state values) |
+
+## focus.ts (the focus race)
+
+A click on a Pane that does not hold the keyboard focuses it first; the `isFocused` flip redraws the pane and
+releases the old buttons' handles, and the click lands a moment later with one of them (`ui_press not handled`).
+`settleFocus` holds a render whose only news is a focus flip back for `FOCUS_SETTLE_MS`, so the old handles are
+still held when the click arrives. The first render of a site and a render with unchanged focus never wait; a
+site is `surface` + `requestId`. Keep the sleep in the file that receives `$`: the engine follows `$` within one
+file. Mods that do not vendor the kit carry a byte-identical `hooks/focus.ts`.
+
+| Export | Example |
+|---|---|
+| `settleFocus(site, sleep)` | `await settleFocus(e, ms => $.clock.sleep(ms))`, first line of a Pane's `ui.render` hook |
+| `isFocusFlip(site)`, `FOCUS_SETTLE_MS` | `isFocusFlip(e)` → true once per flip (it records the focus it saw) |
+
+The second half of the fix lives in each mod, since it needs `$`: a desktop that reattaches keeps showing the
+tree it had, whose buttons the engine released on detach, so every mod that draws a Pane or a band redraws on
+attach:
+
+```ts
+on('session.attach', async ($, e, next) => {
+  const attached = await next(e)
+  $.ui.invalidate('ui.render')
+
+  return attached
+})
+```
 
 ## Visual QA
 

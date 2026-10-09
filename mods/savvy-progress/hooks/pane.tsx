@@ -14,7 +14,7 @@ import type { PaneData } from './pane-data'
 import { FRAME_COLS, FRAME_PX, agentRow, plannedRow } from './rows'
 import type { RowContext, Ui } from './rows'
 import { attentionTree, compactTree, emptyTree, headTree, sectionHead, timelineTree, toolbarTree } from './sections'
-import type { Layout, PaneHandlers } from './sections'
+import type { Layout, PaneHandlers, PaneView } from './sections'
 import { PANE } from './state'
 import { deliveryText } from './steer'
 import type { StopNoun } from './steer'
@@ -130,8 +130,9 @@ function handlersOf($: EngineInterface, d: PaneData): PaneHandlers {
   }
 }
 
-function listTree(ui: Ui, d: PaneData, layout: Layout, on: PaneHandlers) {
+function listTree(ui: Ui, view: PaneView) {
   const { Box } = ui
+  const { d, layout, on } = view
   const s = t()
   const ctx: RowContext = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.inner, limit: d.limit, selected: d.panel.selected }
   const isDoneOpen = !d.panel.isDoneCollapsed
@@ -147,8 +148,9 @@ function listTree(ui: Ui, d: PaneData, layout: Layout, on: PaneHandlers) {
   )
 }
 
-function paneTree(ui: Ui, d: PaneData, layout: Layout, on: PaneHandlers) {
+function paneTree(ui: Ui, view: PaneView) {
   const { Box } = ui
+  const { d, layout, on } = view
   const isDrafting = d.panel.draft?.isOpen === true
   const form = isDrafting && draftTree(ui, { draft: d.panel.draft, types: d.types, layout }, on)
   if (d.list.length === 0 && d.planned.length === 0) {
@@ -158,10 +160,10 @@ function paneTree(ui: Ui, d: PaneData, layout: Layout, on: PaneHandlers) {
     <Box flexDirection="column" rowGap={1}>
       {headTree(ui, d, layout)}
       {toolbarTree(ui, d, on)}
-      {attentionTree(ui, d, layout, on)}
+      {attentionTree(ui, view)}
       {form}
-      {d.panel.isCompact ? compactTree(ui, d, layout) : timelineTree(ui, d, layout, on)}
-      {!d.panel.isCompact && listTree(ui, d, layout, on)}
+      {d.panel.isCompact ? compactTree(ui, d, layout) : timelineTree(ui, view)}
+      {!d.panel.isCompact && listTree(ui, view)}
     </Box>
   )
 }
@@ -178,6 +180,7 @@ export function onPane(on: On): void {
     const ui = $.ui.resolve(e) as Ui
     const isDesktop = e.surface === 'desktop' && 'Svg' in ui
     const d = await paneData($)
-    return paneTree(ui, d, layoutOf(isDesktop, Math.max(MIN_COLS, e.props.bodyColumns || DEFAULT_COLS)), handlersOf($, d))
+    const layout = layoutOf(isDesktop, Math.max(MIN_COLS, e.props.bodyColumns || DEFAULT_COLS))
+    return paneTree(ui, { d, layout, on: handlersOf($, d) })
   })
 }

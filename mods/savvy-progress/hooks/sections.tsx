@@ -39,6 +39,9 @@ export type PaneHandlers = {
   onStartTask: (text: string) => void
 }
 
+/** What a part of the panel draws from: the data, the room and the handlers, in one. */
+export type PaneView = { d: PaneData; layout: Layout; on: PaneHandlers }
+
 // The button beside a drawn section head: its room in px, so the drawing leaves it.
 const BUTTON_PX = 76
 // The terminal timeline's name column and the clock after the lane.
@@ -77,9 +80,10 @@ export function toolbarTree(ui: Ui, d: PaneData, on: PaneHandlers) {
 }
 
 /** One agent that needs a look, under the header; "Bak" opens its card. */
-export function attentionTree(ui: Ui, d: PaneData, layout: Layout, on: PaneHandlers) {
+export function attentionTree(ui: Ui, view: PaneView) {
   const { Box, Button, Svg, Text } = ui
-  const att = d.attention
+  const { layout, on } = view
+  const att = view.d.attention
   if (!att) return null
   const look = <Button key="look" plain label={t().look} onPress={() => on.onLook(att.agentId)} />
   if (!layout.isDesktop) {
@@ -155,8 +159,9 @@ function termTimeline(ui: Ui, tl: Timeline, layout: Layout) {
 }
 
 /** The crew over time, once two or more agents share it; folds under its head. */
-export function timelineTree(ui: Ui, d: PaneData, layout: Layout, on: PaneHandlers) {
+export function timelineTree(ui: Ui, view: PaneView) {
   const { Box, Svg } = ui
+  const { d, layout, on } = view
   const tl = d.list.length >= TIMELINE_MIN_AGENTS ? timelineOf(d.list, d.at) : null
   if (!tl) return null
   const isOpen = d.panel.isTimelineHidden !== true

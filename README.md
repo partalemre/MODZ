@@ -1,55 +1,65 @@
 # MODZ
 
-Claude Code modlarının (hooks plugin'leri: pane, band, status, toast, guard) tek kaynağı.
-Bu klasör aynı zamanda `modz` adlı bir **yerel marketplace**: Claude modları doğrudan buradan okur,
-kopya yok. Bir dosyayı düzenle, oturumda `/reload-plugins` de, değişiklik gelir.
+Claude Code modlarının (hooks plugin'leri: bant, panel, status, toast, guard) tek kaynağı.
 
-## Modlar
+- Kaynak burada: `mods/<ad>/`.
+- Etkinleştirme: `~/.claude/skills/<ad>` → `MODZ/mods/<ad>` symlink'i. Claude skills klasöründeki plugin'leri
+  her oturumda kendiliğinden yükler; kopya yok, kurulum yok.
+- `~/AI-Tools/claude-mods/src/<ad>` da buraya bakan symlink; orada yapılan düzenleme buraya yazılır.
+- Klasör aynı zamanda `modz` adlı marketplace (`.claude-plugin/marketplace.json`), paylaşmak için.
+- Taşıma öncesi yedekler: `~/.claude/mods-backup-20261009/`.
+
+## Modlar (18)
+
+Gruplar `/modz` panelindekiyle aynı (`mods/modz/hooks/meta.ts`).
+
+**Görünüm**
 
 | Mod | Ne yapar |
 | --- | --- |
-| `agent-deck` | Tüm agent'ları canlı gösteren panel: ne yapıyor, ne kadar sürdü, token, transcript, mesaj, iş verme (`/deck`) |
-| `git-guard` | Force push, main'e push, hard reset, `git clean -f`, `rm -r` öncesi sorar, risk kartı gösterir |
-| `hud` | Prompt üstünde bant: plan limitleri, context doluluğu, oturum maliyeti, tur token akışı |
-| `modz` | `/modz`: bu marketplace'teki modları panelde listeler |
+| `filetree` | File tree of what Claude touches: what it is doing now, files touched this turn and git status |
+| `modz` | /modz: every mod in the marketplace grouped by Görünüm / Koruma / Ölçüm / Akış, with version, surfaces, source and health |
+| `replay-theater` | Replay the last turn's file edits step by step: what each step did, which plan step it belongs to, colored diff |
+| `skins` | Skins for the transcript: themed tool rows, reply gutters and spinner words; /skin swaps them live |
+| `terminal-browser` | A browser that runs in the terminal: preview sites and HTML files, let the agent drive the built-in browser. Terminal only |
 
-## Yapı
+**Koruma**
 
-```
-.claude-plugin/marketplace.json   marketplace (bin/modz sync üretir)
-mods/<ad>/                        her mod: .claude-plugin/plugin.json, hooks/, tests/, types/
-templates/blank/                  yeni mod şablonu
-bin/modz                          yönetim CLI'ı
-```
+| Mod | Ne yapar |
+| --- | --- |
+| `blast-radius` | Holds risky shell commands (rm -rf, git reset --hard, git clean, force push, migrations) and shows what they would change, with delete and Vazgeç |
+| `cache-tax` | Keeps the one-hour prompt cache warm during breaks and holds a cold send on a card with its estimated rewrite cost. Warming costs tokens |
+| `checkpoint` | Silent git snapshot before each turn's first file write; /checkpoints lists turns and undoes one after a confirm |
+| `secret-guard` | Scans Write/Edit and git add/commit for keys and tokens, blocks git add of .env; masked card with Anahtarları .env'e taşı, Bir kez izin ver or Vazgeç |
+| `session-budget` | A per-session spend budget (% of the 5h limit or $): notice at 80%, Continue anyway / Stop at 100% on a new prompt |
+
+**Ölçüm**
+
+| Mod | Ne yapar |
+| --- | --- |
+| `hud-pro` | One quiet line at the bottom of the band: 5h limit with reset, 7d, context and session ≈cost; /hud full shows details |
+| `savvy-progress` | Progress band above the prompt and /agents-info panel: running, finished and planned subagents with model, effort, tools, context, cost and time |
+| `test-badge` | After a turn that edited source files, runs tests and lint in the background and shows a badge (testler 41/42 · lint 2 hata) with a failure pane |
+
+**Akış**
+
+| Mod | Ne yapar |
+| --- | --- |
+| `agent-deck-pro` | Agent deck: each subagent's task, step, time, tools, files, tokens and ≈cost; flags silent agents and broken tests; read, message, stop or dispatch |
+| `done-ping` | A notification when a long turn finishes or Claude waits on you: the desktop app's own notification, else a macOS banner |
+| `plan-steps` | Shows the plan's steps when there is one (task list, approved plan or plan file): /steps pane and a quiet status line |
+| `reflect-mod` | Finds reusable corrections in your prompts (Turkish and English prefilter, one model check) and saves them to the chosen CLAUDE.md |
+| `savvy-flow` | Orchestrated delivery: the session model plans and reviews, five tiered worker subagents implement. Skill and agents only; pairs with savvy-progress |
+
+Ortak çizim kiti `kit/` altında (`bin/kit-sync` modlara dağıtır). `bin/preview <mod>` bir modun test önizlemelerini PNG'ye çizer.
 
 ## Yönetim
 
-```bash
-bin/modz list
-```
+`bin/modz status | check [ad] | new <ad> "açıklama" | link [ad] | unlink <ad> | list | sync | dev | import <klasör>`.
+Oturum içinde `/modz` hepsini panelde listeler.
 
-```bash
-bin/modz new benim-modum "Ne yaptığı tek satır"
-```
-
-```bash
-bin/modz check
-```
-
-```bash
-bin/modz install
-```
-
-Diğerleri: `bin/modz check <ad>`, `bin/modz install <ad>`, `bin/modz uninstall <ad>`, `bin/modz sync`,
-`bin/modz dev` (oturumların `~/.claude/dev-mods` klasöründe yazılmış modlar), `bin/modz import <klasör>`.
-
-## Akış
-
-1. Claude'a mod yazdırınca oturumun `~/.claude/dev-mods/<oturum>/` klasörüne yazar (hot reload orada).
-2. Beğendiğinde `bin/modz dev` ile bul, `bin/modz import <klasör>` ile buraya al.
-3. `bin/modz check` → `bin/modz install <ad>`; sonra düzenlemeler burada, `/reload-plugins` ile yüklenir.
-
-Geliştirme sırasında tek oturumda denemek için: `claude --plugin-dir ~/Projects/MODZ/mods/<ad>`.
+Akış: `bin/modz new <ad>` → düzenle → `bin/modz check <ad>` → `bin/modz link <ad>`.
+Oturumda Claude'a yazdırılan mod `~/.claude/dev-mods/<oturum>/` altına düşer: `bin/modz dev` → `bin/modz import <klasör>` → `bin/modz link <ad>`.
 
 ## Paylaşım
 

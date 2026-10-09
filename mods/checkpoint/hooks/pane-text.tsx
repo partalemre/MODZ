@@ -1,7 +1,7 @@
 import { EMPTY_TEXT, ago, changedText, confirmLabel, headerMeta, questionOf, statusRow, titleOf } from './pane'
 import type { PaneOpts, Ui } from './pane'
 import { upper } from './svg'
-import type { CheckpointView, PendingUndo } from '../types'
+import type { CheckpointMeta, CheckpointView, PendingUndo } from '../types'
 
 // The pane in text (terminal): the same timeline with ●/○ step glyphs and the confirm card.
 
@@ -36,6 +36,12 @@ function confirmText(ui: Ui, pending: PendingUndo, opts: PaneOpts) {
   )
 }
 
+function glyphOf(meta: CheckpointMeta): string {
+  if (meta.isSafety === true) return '◆'
+
+  return meta.isUndone === true ? '○' : '●'
+}
+
 function rowText(ui: Ui, view: CheckpointView, spec: { index: number; opts: PaneOpts }) {
   const { Box, Text, Button } = ui
   const entry = view.entries[spec.index]
@@ -43,7 +49,7 @@ function rowText(ui: Ui, view: CheckpointView, spec: { index: number; opts: Pane
   const meta = spec.opts.meta[entry.ref] ?? {}
   const named = titleOf(entry, spec.opts.meta)
   const isUndone = meta.isUndone === true
-  const glyph = meta.isSafety === true ? '◆' : isUndone ? '○' : '●'
+  const glyph = glyphOf(meta)
   const facts = [ago(spec.opts.now - entry.at), meta.files ? `+${meta.files} dosya` : '', (meta.tools ?? []).join(' ')].filter(part => part !== '')
 
   return (

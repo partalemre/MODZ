@@ -5,7 +5,7 @@ import { svgWidth } from './svg'
 import { boxColor } from './tidemark'
 import type { Theme } from './tidemark'
 import { textPane } from './pane-text'
-import type { CheckpointEntry, CheckpointView, PendingUndo } from '../types'
+import type { CheckpointEntry, CheckpointStatus, CheckpointView, PendingUndo } from '../types'
 
 // The resolved element table of the surface that draws the pane.
 export type Ui = Record<string, any>
@@ -116,11 +116,18 @@ function timeline(ui: Ui, view: CheckpointView, opts: PaneOpts) {
   )
 }
 
+const STATUS_LOOK: Record<CheckpointStatus['tone'], { color: string } | { dimColor: boolean }> = {
+  busy: { dimColor: true },
+  success: { color: 'success' },
+  error: { color: 'error' },
+  info: { dimColor: true },
+}
+
 export function statusRow(ui: Ui, view: CheckpointView, actions: PaneActions) {
   const { Box, Text, Button } = ui
   const status = view.status
   if (status === null) return null
-  const look = status.tone === 'success' ? { color: 'success' } : status.tone === 'error' ? { color: 'error' } : { dimColor: true }
+  const look = STATUS_LOOK[status.tone]
   const glyph = { busy: '◐', success: '✓', error: '✕', info: '›' }[status.tone]
   const redo = status.redo
 

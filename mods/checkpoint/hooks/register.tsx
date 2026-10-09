@@ -161,8 +161,15 @@ async function confirm($: EngineInterface): Promise<void> {
   await setView($, { isBusy: false, pending: null, status })
 }
 
+async function wantedOn($: EngineInterface, arg: string): Promise<boolean> {
+  if (arg === 'on') return true
+  if (arg === 'off') return false
+
+  return !(await read($, enabledAtom))
+}
+
 async function toggle($: EngineInterface, arg: string): Promise<void> {
-  const isOn = arg === 'on' ? true : arg === 'off' ? false : !(await read($, enabledAtom))
+  const isOn = await wantedOn($, arg)
   await update($, enabledAtom, () => isOn)
   await $.store.set(STORE_KEY, isOn)
   $.ui.toast(`checkpoint ${isOn ? 'açık' : 'kapalı'}`)

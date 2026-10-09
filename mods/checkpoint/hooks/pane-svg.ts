@@ -1,4 +1,4 @@
-import { bar, eyebrow, eyebrowWidth, fileBadge, fit, iconTile, line, measure, monogram, rect, runs, svgDoc, text, wrap } from './svg'
+import { bar, eyebrow, eyebrowWidth, fileBadge, fit, fitStart, iconTile, line, measure, monogram, rect, runs, svgDoc, text, wrap } from './svg'
 import type { Font, Ink } from './svg'
 import type { Mode, Role } from './tidemark'
 import type { CheckpointMeta, PendingUndo, UndoFile } from '../types'
@@ -122,10 +122,16 @@ function struck(spec: { x: number; y: number; text: string; font: Font }): strin
   return line({ x1: spec.x - 1, y1: y, x2: spec.x + width + 1, y2: y, ink: 'lo' })
 }
 
+function titleInkOf(meta: CheckpointMeta): Ink {
+  if (meta.isSafety === true) return 'amber'
+
+  return meta.isUndone === true ? 'lo' : 'hi'
+}
+
 export function rowSvg(frame: Frame, spec: RowSpec & { isStacked: boolean }): Drawing {
   const { meta } = spec
   const isUndone = meta.isUndone === true
-  const titleInk: Ink = meta.isSafety === true ? 'amber' : isUndone ? 'lo' : 'hi'
+  const titleInk = titleInkOf(meta)
   const head = runs({ x: TEXT_X, y: TITLE_Y, size: TITLE.size, parts: [{ text: spec.title, ink: titleInk, weight: TITLE.weight }, { text: `  ${spec.when}`, ink: 'lo', weight: 400 }] })
   const labels = wrap(spec.label, frame.width - TEXT_X, { font: LABEL, maxLines: LABEL_LINES })
   const labelY = (index: number) => LABEL_Y + index * LABEL_LINE_H
@@ -167,10 +173,10 @@ function fileRow(frame: Frame, file: UndoFile, at: { y: number; isTall: boolean 
   const name = at.isTall && cut >= 0 ? file.path.slice(cut + 1) : file.path
   const folder = at.isTall && cut >= 0 ? file.path.slice(0, cut + 1) : ''
   const tag = file.isRemoved ? text({ ...TAG, x: frame.width - countsW - STAT_GAP, y: at.y + 15, text: REMOVED_TAG, ink: 'flare', anchor: 'end' }) : ''
-  const under = folder === '' ? '' : text({ ...FILE_DIR, x: FILE_X, y: at.y + 30, text: fit(folder, frame.width - FILE_X, FILE_DIR, true), ink: 'lo' })
+  const under = folder === '' ? '' : text({ ...FILE_DIR, x: FILE_X, y: at.y + 30, text: fitStart(folder, frame.width - FILE_X, FILE_DIR), ink: 'lo' })
 
   return fileBadge({ x: 0, y: at.y + 3, path: file.path })
-    + text({ ...FILE_NAME, x: FILE_X, y: at.y + 15, text: fit(name, room, FILE_NAME, true), ink: 'hi' })
+    + text({ ...FILE_NAME, x: FILE_X, y: at.y + 15, text: fitStart(name, room, FILE_NAME), ink: 'hi' })
     + under + tag
     + runs({ x: frame.width - countsW, y: at.y + 15, size: META.size, parts: [{ text: `+${file.added}`, ink: countInk(file.added, 'moss'), isMono: true }, { text: ` −${file.removed}`, ink: countInk(file.removed, 'flare'), isMono: true }] })
 }

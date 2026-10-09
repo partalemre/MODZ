@@ -36,12 +36,15 @@ export async function gitBinary(run: Run, cwd: string): Promise<string | null> {
   return null
 }
 
-async function git(run: Run, repo: Repo, args: string[], init: ProcessRunInit = {}): Promise<string> {
+async function gitWith(run: Run, repo: Repo, call: { args: string[]; init: ProcessRunInit }): Promise<string> {
+  const { args, init } = call
   const out = await run(argvOf(repo, args), { cwd: repo.root, ...init })
   if (out.exitCode !== 0) throw new Error(`git ${args[0]} failed: ${out.stderr.trim().slice(0, 200)}`)
 
   return out.stdout.trim()
 }
+
+const git = (run: Run, repo: Repo, args: string[]): Promise<string> => gitWith(run, repo, { args, init: {} })
 
 function chunks<T>(items: T[]): T[][] {
   const out: T[][] = []
@@ -90,11 +93,11 @@ export async function writeTree(run: Run, repo: Repo): Promise<string> {
   await run(['rm', '-f', index], { cwd: repo.root })
   if (!repo.isShadow) await run(['cp', `${repo.gitDir}/index`, index], { cwd: repo.root })
   const big = await bigFiles(run, repo)
-  await git(run, repo, ['add', '-A', '--', '.', ...big.map(path => `:(exclude,literal)${path}`)], { env })
+  await gitWith(run, repo, { args: ['add', '-A', '--', '.', ...big.map(path => `:(exclude,literal)${path}`)], init: { env } })
   for (const part of chunks(big)) {
-    await git(run, repo, ['rm', '--cached', '-q', '--ignore-unmatch', '--', ...part.map(literal)], { env })
+    await gitWith(run, repo, { args: ['rm', '--cached', '-q', '--ignore-unmatch', '--', ...part.map(literal)], init: { env } })
   }
-  const tree = await git(run, repo, ['write-tree'], { env })
+  const tree = await gitWith(run, repo, { args: ['write-tree'], init: { env } })
   await run(['rm', '-f', index], { cwd: repo.root })
 
   return tree
@@ -104,7 +107,7 @@ export async function snapshot(run: Run, repo: Repo, opts: { ref: string; label:
   const tree = await writeTree(run, repo)
   const head = await run(argvOf(repo, ['rev-parse', '--verify', '-q', 'HEAD']), { cwd: repo.root })
   const parent = head.exitCode === 0 ? ['-p', head.stdout.trim()] : []
-  const commit = await git(run, repo, ['commit-tree', tree, ...parent, '-m', opts.label], { env: IDENTITY })
+  const commit = await gitWith(run, repo, { args: ['commit-tree', tree, ...parent, '-m', opts.label], init: { env: IDENTITY } })
   await git(run, repo, ['update-ref', `${REF_ROOT}${opts.ref}`, commit])
 
   return commit
@@ -128,7 +131,7 @@ export async function prune(run: Run, repo: Repo, keep = KEEP): Promise<Checkpoi
   const stale = all.slice(keep)
   if (stale.length === 0) return all
   const stdin = stale.map(entry => `delete ${entry.ref}\n`).join('')
-  await git(run, repo, ['update-ref', '--stdin'], { stdin })
+  await gitWith(run, repo, { args: ['update-ref', '--stdin'], init: { stdin } })
   if (repo.isShadow) await run(argvOf(repo, ['gc', '--auto', '--quiet']), { cwd: repo.root })
 
   return all.slice(0, keep)

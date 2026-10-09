@@ -1,16 +1,17 @@
-// The one confirmation card of MODZ (blast-radius, secret-guard): the same file in each mod, keep the copies identical.
+// secret-guard's text card for the terminal: the desktop card's words (eyebrow, headline, one row per finding) as text.
 
 // The resolved element table of the surface that draws the dialog.
 export type Ui = Record<string, any>
 
-export type CardColumn = { align: 'left' | 'right'; isDim: boolean }
+// `isToned`: drawn in the card's tone (the masked value), `isDim`: meta (the line, the file).
+export type CardColumn = { align: 'left' | 'right'; isDim: boolean; isToned?: boolean }
 
 export type CardModel = {
   tone: 'error' | 'warning'
-  // `! <title>: <subject>`: what is happening, then to what.
-  title: string
+  // `● <EYEBROW> · <subject>`: what happened, then to what; the headline says how much.
+  eyebrow: string
   subject: string
-  summary: string
+  headline: string
   columns: CardColumn[]
   // Every detail row the caller has; the card draws the first ROWS_MAX.
   rows: string[][]
@@ -23,6 +24,7 @@ const INDENT = 2
 const GAP = 2
 const FIRST_MIN = 12
 const SUBJECT_MIN = 8
+const SUBJECT_GLUE = ' · '
 
 // Cuts the middle so both the head and the file name of a path stay readable.
 export function clipMiddle(text: string, width: number): string {
@@ -49,10 +51,11 @@ export function padCell(text: string, column: CardColumn, width: number): string
   return column.align === 'right' ? shown.padStart(width) : shown.padEnd(width)
 }
 
-function cellOf(ui: Ui, text: string, column: CardColumn, width: number) {
+function cellOf(ui: Ui, cell: { text: string; column: CardColumn; tone: CardModel['tone'] }, width: number) {
   const { Text } = ui
+  const look = cell.column.isToned === true ? { color: cell.tone } : cell.column.isDim ? { dimColor: true } : {}
 
-  return <Text {...(column.isDim ? { dimColor: true } : {})}>{padCell(text, column, width)}</Text>
+  return <Text {...look}>{padCell(cell.text, cell.column, width)}</Text>
 }
 
 // One Text per line, the cells inline in it: the dialog's surroundings are counted by the line.
@@ -64,7 +67,7 @@ function rowOf(ui: Ui, cells: string[], model: CardModel, widths: number[]) {
 
   return (
     <Text wrap="truncate-end">
-      {shown.flatMap(({ column, index }, place) => [place === 0 ? null : gap, cellOf(ui, cells[index] ?? '', column, widths[index] ?? 0)])}
+      {shown.flatMap(({ column, index }, place) => [place === 0 ? null : gap, cellOf(ui, { text: cells[index] ?? '', column, tone: model.tone }, widths[index] ?? 0)])}
     </Text>
   )
 }
@@ -77,7 +80,6 @@ function detailsOf(ui: Ui, model: CardModel, width: number) {
 
   return (
     <Box flexDirection="column" paddingLeft={INDENT}>
-      <Text dimColor wrap="truncate-end">{model.summary}</Text>
       {rows.map(row => rowOf(ui, row, model, widths))}
       {more > 0 && <Text dimColor>{`+${more} daha`}</Text>}
     </Box>
@@ -86,15 +88,16 @@ function detailsOf(ui: Ui, model: CardModel, width: number) {
 
 export function confirmCard(ui: Ui, model: CardModel, width: number) {
   const { Box, Text } = ui
-  const head = `! ${model.title}:`
-  const subject = clipMiddle(model.subject.split('\n')[0] ?? '', Math.max(SUBJECT_MIN, width - head.length - 1))
+  const head = `● ${model.eyebrow.toLocaleUpperCase('tr')}`
+  const subject = clipMiddle(model.subject.split('\n')[0] ?? '', Math.max(SUBJECT_MIN, width - head.length - SUBJECT_GLUE.length))
 
   return (
     <Box flexDirection="column">
       <Text wrap="truncate-end">
         <Text color={model.tone} bold>{head}</Text>
-        {` ${subject}`}
+        <Text dimColor>{`${SUBJECT_GLUE}${subject}`}</Text>
       </Text>
+      <Text bold wrap="truncate-end">{model.headline}</Text>
       {detailsOf(ui, model, width)}
     </Box>
   )

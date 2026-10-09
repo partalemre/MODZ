@@ -1,6 +1,6 @@
 import { confirmCard } from './confirm'
 import type { CardModel, Ui } from './confirm'
-import { desktopCard } from './svg-card'
+import { desktopCard, headlineOf } from './svg-card'
 import type { GuardOption, GuardPending } from '../types'
 
 export const ALLOW = 'Bir kez izin ver'
@@ -38,9 +38,11 @@ export function optionsOf(found: { secretCount: number; isMovable: boolean }): G
   return [{ label: moveLabel(found.secretCount), description: move }, allow, cancel]
 }
 
-// An env file staged for git is no secret value but is shown among them: its path stands where a location would.
+// An env file staged for git is no secret value but is shown among them. Alone, its path stands where a
+// location would; beside secrets it takes the value column (`git'e ekleniyor`), as on the desktop card.
 function rowsOf(pending: GuardPending): string[][] {
-  const env = pending.envFiles.map(path => ['ortam dosyası', '', path])
+  const isAlone = pending.secrets.length === 0
+  const env = pending.envFiles.map(path => (isAlone ? ['ortam dosyası', '', path] : [path, "git'e ekleniyor", '']))
   const secrets = pending.secrets.map(secret => [secret.label, secret.masked, secret.where])
 
   return [...env, ...secrets]
@@ -48,13 +50,14 @@ function rowsOf(pending: GuardPending): string[][] {
 
 export function cardModel(pending: GuardPending): CardModel {
   const rows = rowsOf(pending)
+  const head = headlineOf(pending)
 
   return {
     tone: pending.secrets.length === 0 ? 'warning' : 'error',
-    title: pending.secrets.length === 0 ? 'Ortam dosyası' : 'Gizli anahtar',
+    eyebrow: head.eyebrow,
     subject: pending.subject,
-    summary: `${rows.length} bulgu`,
-    columns: [{ align: 'left', isDim: false }, { align: 'left', isDim: false }, { align: 'left', isDim: true }],
+    headline: head.title,
+    columns: [{ align: 'left', isDim: false }, { align: 'left', isDim: false, isToned: true }, { align: 'left', isDim: true }],
     rows,
     total: rows.length,
   }

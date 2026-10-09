@@ -79,7 +79,7 @@ test('moving to .env reuses equal values, suffixes taken names, rewrites code to
   expect(hasEnvIgnore('node_modules\n')).toBe(false)
 })
 
-test('terminal: the text card, with the file, a count and masked values in columns', async ($, on) => {
+test('terminal: the text card, eyebrow and file, the headline, masked values in columns', async ($, on) => {
   const setup = fresh(CANCEL)
   await start($, on, setup)
 
@@ -87,8 +87,8 @@ test('terminal: the text card, with the file, a count and masked values in colum
 
   expect(setup.asked).toEqual([QUESTION])
   expect(setup.cards[0]).toEqual([
-    '! Gizli anahtar: src/lib/supabase.ts',
-    '  2 bulgu',
+    '● SIZINTI ENGELLENDİ · src/lib/supabase.ts',
+    'Bu yazımda 2 gizli anahtar var',
     '  Anthropic API key  sk-a****  satır 1',
     '  GitHub token       ghp_****  satır 3',
   ])
@@ -107,20 +107,13 @@ test('desktop: one vector card in a single border, the safe fix first with a lin
   expect(svg?.type).toBe('Svg')
   expect(svg?.props.alt).toBe('Bu yazımda 2 gizli anahtar var: Anthropic src/lib/supabase.ts:1 sk-a****; GitHub src/lib/supabase.ts:3 ghp_****')
   expect(svg?.props.source).toContain('SIZINTI ENGELLENDİ')
+  // The header names the file, so each row says only its line.
+  expect(svg?.props.source).toContain('satır 3')
+  expect(svg?.props.source).not.toContain('supabase.ts:3')
   expect(JSON.stringify(setup.trees)).not.toContain(ANT)
   const options = setup.dialogs.at(-1)?.questions?.[0]?.options
   expect(options?.map((option: any) => option.label)).toEqual([moveLabel(2), ALLOW, CANCEL])
   expect(options?.[0]?.description).toMatch(/^Önerilen/)
-})
-
-test('desktop: seven findings still fit the dialog\'s rows', async ($, on) => {
-  const setup = fresh(CANCEL, 'desktop')
-  await start($, on, setup)
-  const content = Array.from({ length: 7 }, (_, i) => `const API${i}_KEY = "9f8e7d6c5b4a3f2e1d0c${i}q"`).join('\n')
-
-  await ($ as any).tool.call({ tool: 'Write', file_path: '/work/conf.ts', content })
-
-  expect(setup.trees[0]?.children?.[0]?.children?.[0]?.props.source).toContain('+2 bulgu daha')
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
@@ -132,37 +125,60 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     const denied: any = await ($ as any).tool.call({ tool: 'Bash', command: 'git add .' })
 
-    if (surface === 'terminal') expect(setup.cards[0]).toEqual(['! Ortam dosyası: git add .', '  1 bulgu', '  ortam dosyası  .env.local'])
+    if (surface === 'terminal') expect(setup.cards[0]).toEqual(['● ORTAM DOSYASI · git add .', ".env.local git'e ekleniyor", '  ortam dosyası  .env.local'])
     else expect(JSON.stringify(setup.trees[0])).toContain(".env.local git'e ekleniyor")
     expect(denied.deny).toMatch(/blocked/)
   })
 }
 
-test('a Write with a key asks with the masked value only, and Cancel denies', async ($, on) => {
-  const setup = fresh(CANCEL)
-  await start($, on, setup)
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`a Write with a key asks with the masked value only, and Cancel denies (${surface})`, async ($, on) => {
+    const setup = fresh(CANCEL, surface)
+    await start($, on, setup)
 
-  const denied: any = await ($ as any).tool.call({ tool: 'Write', file_path: '/work/a.ts', content: `const k = "${ANT}"` })
+    const denied: any = await ($ as any).tool.call({ tool: 'Write', file_path: '/work/a.ts', content: `const k = "${ANT}"` })
 
-  expect(denied.deny).toMatch(/blocked/)
-  expect(denied.deny).toContain('sk-a****')
-  expect(setup.cards[0]?.join('\n')).toContain('sk-a****')
-  expect(setup.cards[0]?.join('\n')).not.toContain(ANT)
-  expect(denied.deny).not.toContain(ANT)
-  expect(setup.ran).toHaveLength(0)
-})
+    expect(denied.deny).toMatch(/blocked/)
+    expect(denied.deny).toContain('sk-a****')
+    expect(JSON.stringify(setup.trees[0])).toContain('sk-a****')
+    expect(JSON.stringify(setup.trees[0])).not.toContain(ANT)
+    expect(denied.deny).not.toContain(ANT)
+    expect(setup.ran).toHaveLength(0)
+  })
 
-test('the card shows five findings and counts the rest', async ($, on) => {
-  const setup = fresh(CANCEL)
-  await start($, on, setup)
-  const content = Array.from({ length: 7 }, (_, i) => `const API${i}_KEY = "9f8e7d6c5b4a3f2e1d0c${i}q"`).join('\n')
+  test(`the card shows five findings and counts the rest (${surface})`, async ($, on) => {
+    const setup = fresh(CANCEL, surface)
+    await start($, on, setup)
+    const content = Array.from({ length: 7 }, (_, i) => `const API${i}_KEY = "9f8e7d6c5b4a3f2e1d0c${i}q"`).join('\n')
 
-  await ($ as any).tool.call({ tool: 'Write', file_path: '/work/conf.ts', content })
+    await ($ as any).tool.call({ tool: 'Write', file_path: '/work/conf.ts', content })
 
-  expect(setup.cards[0]?.[1]).toBe('  7 bulgu')
-  expect(setup.cards[0]).toHaveLength(8)
-  expect(setup.cards[0]?.[7]).toBe('  +2 daha')
-})
+    if (surface === 'desktop') {
+      expect(setup.trees[0]?.children?.[0]?.children?.[0]?.props.source).toContain('+2 bulgu daha')
+    } else {
+      expect(setup.cards[0]?.[1]).toBe('Bu yazımda 7 gizli anahtar var')
+      expect(setup.cards[0]).toHaveLength(8)
+      expect(setup.cards[0]?.[7]).toBe('  +2 daha')
+    }
+  })
+
+  test(`git commit scans the staged diff; Move to .env tells Claude to move them (${surface})`, async ($, on) => {
+    const setup = fresh(moveLabel(1), surface)
+    setup.git['diff --cached -U0 --no-color'] = `+++ b/src/pay.ts\n@@ -0,0 +1 @@\n+const stripe = "${STRIPE}"\n`
+    await start($, on, setup)
+
+    const denied: any = await ($ as any).tool.call({ tool: 'Bash', command: 'git commit -m "pay"' })
+
+    if (surface === 'terminal') {
+      expect(setup.cards[0]?.[0]).toBe('● SIZINTI ENGELLENDİ · git commit -m "pay"')
+      expect(setup.cards[0]?.[2]).toBe('  Stripe live key  sk_l****  src/pay.ts')
+    } else {
+      expect(setup.trees[0]?.children?.[0]?.children?.[0]?.props.alt).toBe("Bu commit'te 1 gizli anahtar var: Stripe src/pay.ts sk_l****")
+    }
+    expect(denied.deny).toMatch(/Move each secret/)
+    expect(denied.deny).not.toContain(STRIPE)
+  })
+}
 
 test('Allow once runs the call unchanged', async ($, on) => {
   const setup = fresh(ALLOW)
@@ -196,19 +212,6 @@ test('writing the .env file itself and clean code never ask', async ($, on) => {
 
   expect(setup.asked.filter(line => !line.startsWith('LOG'))).toEqual([])
   expect(setup.ran).toHaveLength(2)
-})
-
-test('git commit scans the staged diff; Move to .env tells Claude to move them', async ($, on) => {
-  const setup = fresh(moveLabel(1))
-  setup.git['diff --cached -U0 --no-color'] = `+++ b/src/pay.ts\n@@ -0,0 +1 @@\n+const stripe = "${STRIPE}"\n`
-  await start($, on, setup)
-
-  const denied: any = await ($ as any).tool.call({ tool: 'Bash', command: 'git commit -m "pay"' })
-
-  expect(setup.cards[0]?.[0]).toBe('! Gizli anahtar: git commit -m "pay"')
-  expect(setup.cards[0]?.[2]).toBe('  Stripe live key  sk_l****  src/pay.ts')
-  expect(denied.deny).toMatch(/Move each secret/)
-  expect(denied.deny).not.toContain(STRIPE)
 })
 
 test('/secret-guard turns the scan off', async ($, on) => {

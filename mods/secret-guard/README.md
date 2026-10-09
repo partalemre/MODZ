@@ -15,11 +15,13 @@ A blocking dialog (Claude Code's own question) with a card above it, in the MODZ
 
 **Desktop** draws one vector card (the dialog allows 12 rows around it, and an `Svg` counts by its `alt`, so the card stays within 10): a key tile, the eyebrow `SIZINTI ENGELLENDİ`, the headline (`Bu yazımda 2 gizli anahtar var`, `Bu commit'te …`, `Bu eklemede …`; `.env.local git'e ekleniyor` when only an env file is staged) with the file or git command on the right, then one row per finding: a detector chip (`Anthropic`, `Stripe`, `GitHub`, `Supabase`, `AWS`, `Özel anahtar`, or the variable name), `path:satır`, and the masked value as a highlight span. Up to 5 rows, then `+N bulgu daha`.
 
-**Terminal** keeps the text card:
+On a file write the header already names the file, so each row says only its line (`satır 4`); the alt keeps the full spot.
+
+**Terminal** draws the same words as text: the eyebrow with the file or command, the headline, then one row per finding with the masked value in the card's colour:
 
 ```
-! Gizli anahtar: src/lib/supabase.ts
-  2 bulgu
+● SIZINTI ENGELLENDİ · src/lib/supabase.ts
+Bu yazımda 2 gizli anahtar var
   Supabase service_role key  eyJh****  satır 4
   Anthropic API key          sk-a****  satır 9
 ```
@@ -43,4 +45,4 @@ The card follows the theme: Claude Code's `theme` setting (or `MODZ_THEME`), the
 - `git add` is dry-run from the session's working directory (or `git -C dir`); a `cd` earlier in the same command is not followed.
 
 ## Dev
-`tsc -p .`, `claude plugin validate .`, `claude plugin test .` (23 tests, previews in `tests/preview.test.tsx` for `bin/preview`; fake keys in tests are assembled from pieces).
+`tsc -p .`, `claude plugin validate .`, `claude plugin test .` (33 tests, previews in `tests/preview.test.tsx` for `bin/preview`; fake keys in tests are assembled from pieces).

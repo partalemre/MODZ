@@ -23,6 +23,8 @@ const META_GAP = 24
 const MAX_WIDTH = 640
 // Each 40 characters of alt cost the dialog a row: border, padding and this keep the card to 10 of its 12.
 const ALT_MAX = 200
+// Uppercase eyebrows are tracked +0.10em: about 12 % wider than measured.
+const EYEBROW_TRACKING = 1.12
 
 type Finding = { chip: string; where: string; value: string; tone: 'danger' | 'warn' }
 
@@ -39,19 +41,26 @@ export function headlineOf(pending: GuardPending): { eyebrow: string; title: str
   return { eyebrow: 'ORTAM DOSYASI', title: `${what} git'e ekleniyor`, tone: 'warn' }
 }
 
-function findingsOf(pending: GuardPending): Finding[] {
+/** The subject (file or git command) beside the eyebrow, only whole; '' when it doesn't fit. */
+function subjectOf(pending: GuardPending, width: number): string {
+  const eyebrowW = measure(headlineOf(pending).eyebrow, { size: 10.5, isBold: true }) * EYEBROW_TRACKING
+  const line = pending.subject.split('\n')[0] ?? ''
+
+  return measure(line, { size: 11.5, isMono: true }) <= width - HEAD_X - eyebrowW - META_GAP ? line : ''
+}
+
+// A write whose file the header already names says only the line (`satır 4`); otherwise the full spot.
+function findingsOf(pending: GuardPending, isSubjectShown: boolean): Finding[] {
+  const isLineEnough = pending.source === 'write' && isSubjectShown
   const env: Finding[] = pending.envFiles.map(path => ({ chip: '.env', where: path, value: 'git\'e ekleniyor', tone: 'warn' }))
-  const secrets: Finding[] = pending.secrets.map(secret => ({ chip: secret.chip, where: secret.at, value: secret.masked, tone: 'danger' }))
+  const secrets: Finding[] = pending.secrets.map(secret => ({ chip: secret.chip, where: isLineEnough ? secret.where : secret.at, value: secret.masked, tone: 'danger' }))
 
   return [...env, ...secrets]
 }
 
 function headerSvg(pending: GuardPending, width: number): string {
   const head = headlineOf(pending)
-  const eyebrowW = measure(head.eyebrow, { size: 10.5, isBold: true }) * 1.12
-  const line = pending.subject.split('\n')[0] ?? ''
-  // The subject sits beside the eyebrow only whole; the rows below name every file anyway.
-  const subject = measure(line, { size: 11.5, isMono: true }) <= width - HEAD_X - eyebrowW - META_GAP ? line : ''
+  const subject = subjectOf(pending, width)
 
   return [
     tile(head.tone === 'danger' ? 'key' : 'shield', { x: 0, y: 4, size: TILE, role: head.tone }),
@@ -82,7 +91,7 @@ function findingSvg(finding: Finding, top: number, width: number): string {
 }
 
 export function leakSvg(pending: GuardPending, width: number): { source: string; height: number; alt: string } {
-  const findings = findingsOf(pending)
+  const findings = findingsOf(pending, subjectOf(pending, width) !== '')
   const shown = findings.slice(0, ROWS_MAX)
   const more = findings.length - shown.length
   const top = HEAD_H + ROW_TOP_GAP
@@ -90,7 +99,8 @@ export function leakSvg(pending: GuardPending, width: number): { source: string;
   const rows = shown.map((finding, index) => findingSvg(finding, top + index * ROW_H, width))
   const moreRow = more > 0 ? `<text x="0" y="${top + shown.length * ROW_H + 18}" font-size="12.5" style="fill:var(--lo)">+${more} bulgu daha</text>` : ''
   const head = headlineOf(pending)
-  const said = `${head.title}: ${findings.map(finding => `${finding.chip} ${finding.where} ${finding.value}`).join('; ')}`
+  // The alt reads every full spot, even where the drawing says only the line.
+  const said = `${head.title}: ${findingsOf(pending, false).map(finding => `${finding.chip} ${finding.where} ${finding.value}`).join('; ')}`
 
   return {
     height,

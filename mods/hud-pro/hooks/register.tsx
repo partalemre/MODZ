@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, ModelUsage, Register, SessionUsage } from 'claude-code'
 
 import { bandRow } from './band'
-import { labelOf, longLabelOf, percentText } from './format'
+import { labelOf, longLabelOf, resetText, untilReset, valueText } from './format'
 import { addSample, isHistory } from './history'
 import { EMPTY_HUB, HUB_PANE, hubOf, isOwnOpen } from './hub'
 import { paneTree } from './pane'
@@ -72,13 +72,17 @@ async function writeHub($: EngineInterface, usage: HudUsage, isFirst = false): P
   await update($, hubAtom, () => ({ pane: HUB_PANE, ...fresh, at }))
 }
 
-// One short notice per plan window once it passes 90%.
-function noticeHigh($: EngineInterface, fresh: HudUsage): void {
+// One short notice per plan window once it passes 90%, with when it resets.
+async function noticeHigh($: EngineInterface, fresh: HudUsage): Promise<void> {
+  const nowMs = await $.clock.now()
   for (const gauge of fresh.gauges.filter(entry => entry.id !== 'context' && entry.percent >= NOTICE_PERCENT)) {
     const id = `${gauge.id}:${gauge.resetsAt}`
     if (noticed.has(id)) continue
     noticed.add(id)
-    $.ui.toast(`${longLabelOf(gauge.id)} limiti ${percentText(gauge.percent)} dolu`)
+    const value = valueText(gauge.percent)
+    const reset = untilReset(gauge.resetsAt, nowMs)
+    const head = value === 'dolu' ? `${longLabelOf(gauge.id)} limiti doldu` : `${longLabelOf(gauge.id)} limiti ${value} dolu`
+    $.ui.toast(reset === '' ? head : `${head} · ${resetText(reset)}`)
   }
 }
 
@@ -140,7 +144,7 @@ function onUsage(on: On) {
       const fresh = toUsage(e)
       await update($, usageAtom, () => fresh)
       await writeHub($, fresh)
-      noticeHigh($, fresh)
+      await noticeHigh($, fresh)
       await record($, fresh)
     } catch {
       $.ui.log('hud-pro: measure failed', { to: 'debug' })

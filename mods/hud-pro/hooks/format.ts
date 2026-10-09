@@ -58,6 +58,13 @@ const short = (value: number): string => decimal(value, 1).replace(/,0$/, '')
 
 export const percentText = (percent: number): string => `%${Math.round(percent)}`
 
+// A gauge's value: a window that ran out reads "dolu", never past 100 (DESIGN.md §4, Ölçer).
+export const valueText = (percent: number): string => (percent >= PERCENT ? 'dolu' : percentText(percent))
+
+// The glyph that marks a reset countdown, on both surfaces: "↻ 1sa 20dk".
+export const RESET_MARK = '↻'
+export const resetText = (reset: string): string => `${RESET_MARK} ${reset}`
+
 export const costText = (usd: number): string => `≈$${decimal(usd, 2)}`
 
 export function compact(count: number): string {

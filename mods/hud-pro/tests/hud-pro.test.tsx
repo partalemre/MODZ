@@ -29,7 +29,7 @@ test('terminal: one text line under what others drew, 5s with reset, 7g, bağlam
 
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
 
-  for (const text of ['theirs', '5s', '%32', '· 2sa 0dk', '7g', '%91', '· 3g 22sa', 'bağlam', '%41', '≈$1,23']) {
+  for (const text of ['theirs', '5s', '%32', '↻ 2sa 0dk', '7g', '%91', '↻ 3g 22sa', 'bağlam', '%41', '≈$1,23']) {
     expect(await ui.find({ type: 'Text', text })).toBeDefined()
   }
   const order = (await ui.findAll({ type: 'Text' })).map((found: any) => found.text)
@@ -64,7 +64,8 @@ test('a narrow band drops bars first, then the reset and cost; the desktop line 
 
   const medium = await $.ui.mount({ ...BAND, surface: 'terminal', props: { ...BAND.props, bodyColumns: 60 } })
   expect(await medium.find({ type: 'Text', text: /━/ })).toBeUndefined()
-  expect(await medium.find({ type: 'Text', text: '· 2sa 0dk' })).toBeDefined()
+  expect(await medium.find({ type: 'Text', text: '↻ 2sa 0dk' })).toBeDefined()
+  expect(await medium.find({ type: 'Text', text: '↻ 3g 22sa' })).toBeUndefined()
   await medium.unmount()
 
   const narrow = await $.ui.mount({ ...BAND, surface: 'terminal', props: { ...BAND.props, bodyColumns: 40 } })
@@ -76,7 +77,45 @@ test('a narrow band drops bars first, then the reset and cost; the desktop line 
   expect(((await desk.find({ type: 'Svg' })) as Drawn)?.props.width).toBeLessThanOrEqual(50 * 6.4)
 })
 
+const CRITICAL: any = {
+  ...USAGE,
+  rateLimits: [
+    { kind: 'five_hour', percentUsed: 99, resetsAt: new Date(MS_PER_HOUR + 20 * 60_000).toISOString() },
+    { kind: 'seven_day', percentUsed: 24, resetsAt: new Date(94 * MS_PER_HOUR).toISOString() },
+  ],
+}
+// Columns at which every other reset has dropped from the line, on each surface.
+const NARROW_COLUMNS = { terminal: 40, desktop: 64 } as const
+
 for (const surface of SURFACES) {
+  test(`a critical window keeps its reset on a narrow band and reads Flare (${surface})`, async ($, on) => {
+    stubSession(on, CRITICAL)
+    await start($, surface)
+
+    const ui = await $.ui.mount({ ...BAND, surface, props: { ...BAND.props, bodyColumns: NARROW_COLUMNS[surface] } })
+    if (surface === 'terminal') {
+      expect((await ui.find({ type: 'Text', text: '%99' }))?.props?.color).toBe('error')
+      expect((await ui.find({ type: 'Text', text: '↻ 1sa 20dk' }))?.props?.color).toBe('error')
+      expect(await ui.find({ type: 'Text', text: '↻ 3g 22sa' })).toBeUndefined()
+    } else {
+      const source = ((await ui.find({ type: 'Svg' })) as Drawn)?.props.source ?? ''
+      expect(source).toContain('f-danger-t s-danger-l')
+      expect(source).toContain('↻ 1sa 20dk')
+      expect(source).not.toContain('↻ 3g 22sa')
+      expect(((await ui.find({ type: 'Svg' })) as Drawn)?.props.width).toBeLessThanOrEqual(NARROW_COLUMNS.desktop * 6.4)
+    }
+  })
+
+  test(`a full window reads "dolu", never past 100 (${surface})`, async ($, on) => {
+    stubSession(on, { ...CRITICAL, rateLimits: [{ ...CRITICAL.rateLimits[0], percentUsed: 104 }] })
+    await start($, surface)
+
+    const ui = await $.ui.mount({ ...BAND, surface })
+    if (surface === 'terminal') expect(await ui.find({ type: 'Text', text: 'dolu' })).toBeDefined()
+    else expect(((await ui.find({ type: 'Svg' })) as Drawn)?.props.alt).toContain('5 saat dolu, 1sa 20dk sonra sıfırlanır')
+    expect(await ui.find({ type: 'Text', text: '%104' })).toBeUndefined()
+  })
+
   test(`the line gives way to a survey and to /hud (${surface})`, async ($, on) => {
     stubSession(on)
     await start($, surface)
@@ -129,7 +168,7 @@ test('a limit past 90% raises one notice per window', async ($, on) => {
   await $.session.measure(MEASURE)
   await $.session.measure(MEASURE)
 
-  expect(toasts.filter(text => text === '7 gün limiti %91 dolu').length).toBe(1)
+  expect(toasts.filter(text => text === '7 gün limiti %91 dolu · ↻ 3g 22sa').length).toBe(1)
 })
 
 async function fullPane($: any, on: any, surface: string) {

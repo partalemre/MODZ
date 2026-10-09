@@ -1,17 +1,18 @@
-import { costText, filledCells, FIVE_HOUR, percentText } from './format'
-import type { GaugeView } from './model'
+import { costText, filledCells, resetText, valueText } from './format'
+import { hasReset, isCritical } from './model'
+import type { GaugeView, Resets } from './model'
 import { terminalColor } from './theme'
 import type { Tone } from './theme'
 
 // The terminal's HUD: the same line as text. Thin meters with a pace tick (┊) on a wide band,
-// then the bars go, then the reset and the cost.
+// then the bars go, then the resets and the cost; a critical window keeps its reset to the end.
 
 // The resolved element table of the surface that draws the line; Box and Text exist on both.
 export type Ui = Record<string, any>
 
 export type LineInput = { gauges: readonly GaugeView[]; costUsd: number | null; columns: number }
 
-type Layout = { barWidth: number; resets: 'all' | 'five' | 'none'; hasCost: boolean }
+type Layout = { barWidth: number; resets: Resets; hasCost: boolean }
 
 const BAR = '━'
 const TRACK = '─'
@@ -21,7 +22,7 @@ const WIDE_COLUMNS = 96
 const MEDIUM_COLUMNS = 52
 const WIDE: Layout = { barWidth: 6, resets: 'all', hasCost: true }
 const MEDIUM: Layout = { barWidth: 0, resets: 'five', hasCost: true }
-const NARROW: Layout = { barWidth: 0, resets: 'none', hasCost: false }
+const NARROW: Layout = { barWidth: 0, resets: 'critical', hasCost: false }
 
 function layoutFor(columns: number): Layout {
   if (columns >= WIDE_COLUMNS) return WIDE
@@ -54,14 +55,15 @@ export function barTree(ui: Ui, spec: { gauge: GaugeView; width: number }) {
 
 function gaugeTree(ui: Ui, gauge: GaugeView, layout: Layout) {
   const { Box, Text } = ui
-  const showsReset = gauge.reset !== '' && (layout.resets === 'all' || (layout.resets === 'five' && gauge.id === FIVE_HOUR))
+  const showsReset = hasReset(gauge, layout.resets)
+  const resetTone = isCritical(gauge) ? gauge.tone : 'neutral'
 
   return (
     <Box key={`gauge-${gauge.id}`} flexDirection="row" columnGap={1}>
       <Text dimColor>{gauge.short}</Text>
       {layout.barWidth > 0 && barTree(ui, { gauge, width: layout.barWidth })}
-      {toneText(ui, { text: percentText(gauge.percent), tone: gauge.tone })}
-      {showsReset && <Text dimColor>{`· ${gauge.reset}`}</Text>}
+      {toneText(ui, { text: valueText(gauge.percent), tone: gauge.tone })}
+      {showsReset && toneText(ui, { text: resetText(gauge.reset), tone: resetTone })}
     </Box>
   )
 }

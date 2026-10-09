@@ -50,10 +50,12 @@ function tileSvg(tile: Tile, x: number, y: number, width: number): string {
   const inner = x + TILE.pad
   const right = x + width - TILE.pad
   const frame = tile.tone === 'neutral' ? 's-line' : `s-${tile.tone}-l`
+  // A critical tile sits on a Flare tint, the pane's one accent; the others on the inset.
+  const fill = tile.tone === 'danger' ? 'f-danger-t' : 'f-inset'
   const sparkTop = y + 104
 
   return [
-    `<rect class="f-inset ${frame}" x="${x + 0.5}" y="${y + 0.5}" width="${width - 1}" height="${TILE.h - 1}" rx="${TILE.radius}"/>`,
+    `<rect class="${fill} ${frame}" x="${x + 0.5}" y="${y + 0.5}" width="${width - 1}" height="${TILE.h - 1}" rx="${TILE.radius}"/>`,
     eyebrow(tile.eyebrow, inner, y + TILE.pad + 9, tile.tone === 'neutral' ? 'f-lo' : `f-${tile.tone}`),
     textAt({ x: right, y: y + TILE.pad + 9, cls: 'f-lo num', size: 10.5, value: tile.meta, anchor: 'end' }),
     valueAndMeter(tile, { x: inner, y: y + 30, width: right - inner }),

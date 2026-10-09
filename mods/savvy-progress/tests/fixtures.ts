@@ -31,15 +31,22 @@ export type World = {
   toasts: string[]
   sent: { to: string; text: string }[]
   calls: Record<string, unknown>[]
+  spawns: Record<string, unknown>[]
   /** What `$.agent.list()` answers; a test may change it. */
   roster: Record<string, unknown>[]
 }
 
 /**
  * `deny` refuses a spawn of the named agent types; `files` are folders of agent files by path,
- * each `{ name: text }`; `undelivered` refuses every send with that reason.
+ * each `{ name: text }`; `undelivered` refuses every send with that reason; `refuse` names tools
+ * whose calls a permission hook refuses.
  */
-export type SetupOptions = { deny?: Record<string, string>; files?: Record<string, Record<string, string>>; undelivered?: string }
+export type SetupOptions = {
+  deny?: Record<string, string>
+  files?: Record<string, Record<string, string>>
+  undelivered?: string
+  refuse?: string[]
+}
 
 // Folders are found by the end of their path, so a relative `.claude/agents` matches wherever the test runs.
 function fsHooks(on: any, files: Record<string, Record<string, string>>) {
@@ -53,7 +60,7 @@ function fsHooks(on: any, files: Record<string, Record<string, string>>) {
 }
 
 export async function setup($: any, on: any, opts: SetupOptions = {}) {
-  const world: World = { opened: [], closed: [], panes: [], toasts: [], sent: [], calls: [], roster: [] }
+  const world: World = { opened: [], closed: [], panes: [], toasts: [], sent: [], calls: [], spawns: [], roster: [] }
   const clock = mock.clock(on)
   let spawned = 0
   let created = 0
@@ -68,11 +75,13 @@ export async function setup($: any, on: any, opts: SetupOptions = {}) {
   on('ui.close', (_: any, e: any) => (world.closed.push(e.id), (world.panes = []), { value: undefined }))
   on('ui.render', () => OTHERS)
   on('agent.spawn', (_: any, e: any) => {
+    world.spawns.push(e)
     const reason = opts.deny?.[e.subagentType ?? e.subagent_type]
     return reason ? { deny: reason } : { model: 'claude-opus-5-5', agentId: `a${++spawned}` }
   })
   on('tool.call', (_: any, e: any) => {
     world.calls.push(e)
+    if (opts.refuse?.includes(e.tool)) return { deny: 'not allowed here' }
     return e.tool === 'TaskCreate' ? { result: { task: { id: `t${++created}`, subject: e.subject } } } : { result: 'ok' }
   })
   on('ui.toast', (_: any, e: any) => (world.toasts.push(e.text), { value: undefined }))
@@ -81,6 +90,7 @@ export async function setup($: any, on: any, opts: SetupOptions = {}) {
     return opts.undelivered ? { isDelivered: false, reason: opts.undelivered } : { isDelivered: true }
   })
   on('agent.list', () => ({ value: world.roster }))
+  on('agent.offer', () => ({ isOffered: true }))
   fsHooks(on, opts.files ?? {})
   on('turn.step', async function* (_: any, e: any) {
     return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: { ...USAGE, model: e.model } }

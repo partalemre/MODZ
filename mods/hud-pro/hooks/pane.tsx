@@ -1,3 +1,5 @@
+import type { RenderElement } from 'claude-code'
+
 import { AHEAD_POINTS, cachePercent, compact, CONTEXT, costText, percentText, resetText, valueText } from './format'
 import { costSeries, seriesOf } from './history'
 import { barTree, toneText } from './line'
@@ -17,7 +19,7 @@ export type PaneView = {
   turn: HudTurn | null
   columns: number
   nowMs: number
-  svg?: (props: { source: string; alt: string; width: number; height: number }) => unknown
+  svg?: (props: { source: string; alt: string; width: number; height: number }) => RenderElement
 }
 
 const PX_PER_COLUMN = 6.4

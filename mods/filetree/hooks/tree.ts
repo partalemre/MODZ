@@ -255,7 +255,7 @@ export function rollCounts(files: Record<string, Change>, root: string): Record<
   return out
 }
 
-export function underAny(id: string, set: Set<string>, root: string): boolean {
+export function underAny(id: string, set: ReadonlySet<string>, root: string): boolean {
   if (set.size === 0) return false
   let cur = id
   while (cur.length >= root.length) {

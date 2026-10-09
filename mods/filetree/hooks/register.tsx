@@ -1,4 +1,4 @@
-import { type BuiltinToolResults, type ElementTable, type EngineInterface, type Register, type Timer, update } from 'claude-code'
+import { type BuiltinToolResults, type ElementTable, type EngineInterface, type Register, type RenderChildren, type Timer, update } from 'claude-code'
 import { openCommand } from './open'
 import { commitOutcome, gitDirOf, type Outcome, placeOf } from './commit'
 import { HUB_PANE, hubOf, isOpenFor, isSameCard } from './hub'
@@ -1237,7 +1237,7 @@ function terminalBranch(ui: ElementTable<'terminal'>, s: Scene, unicode: boolean
   )
 }
 
-function activityChip(ui: ElementTable<'terminal'>, a: Activity, unicode: boolean, colorOf: (tone: string) => string) {
+function activityChip(ui: ElementTable<'terminal' | 'desktop'>, a: Activity, unicode: boolean, colorOf: (tone: string) => string) {
   const { Box, Text } = ui
   const color = colorOf(a.state === 'failed' ? 'red' : a.tone)
   const hash = a.state === 'done' && a.kind === 'git commit' ? (a.detail.split(' ')[0] ?? '') : ''
@@ -1252,7 +1252,7 @@ function activityChip(ui: ElementTable<'terminal'>, a: Activity, unicode: boolea
   )
 }
 
-function footer(ui: ElementTable<'terminal'>, s: Scene, chip: unknown) {
+function footer(ui: ElementTable<'terminal' | 'desktop'>, s: Scene, chip: RenderChildren) {
   const { Box, Text } = ui
   if (!s.t.selected && !s.latest) return null
   return (

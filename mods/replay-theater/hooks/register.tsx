@@ -133,7 +133,7 @@ async function step($: EngineInterface, delta: number): Promise<void> {
 }
 
 // An edit is read before it runs and kept only once it was answered; recording never stops the call.
-async function recordEdit($: EngineInterface, e: Call, run: () => Promise<{ deny?: unknown; isError?: unknown }>) {
+async function recordEdit<R extends { deny?: unknown; isError?: unknown }>($: EngineInterface, e: Call, run: () => Promise<R>): Promise<R> {
   let steps: ReplayStep[] = []
   try {
     steps = await stepsFor({ cwd: flags.cwd, before: path => readBefore($, path) }, e)
@@ -149,7 +149,7 @@ async function recordEdit($: EngineInterface, e: Call, run: () => Promise<{ deny
 }
 
 // The task list: TodoWrite is the main loop's own; TaskCreate / TaskUpdate share one list across loops.
-async function trackPlan($: EngineInterface, e: Call, run: () => Promise<{ deny?: unknown; isError?: unknown; result?: unknown }>) {
+async function trackPlan<R extends { deny?: unknown; isError?: unknown; result?: unknown }>($: EngineInterface, e: Call, run: () => Promise<R>): Promise<R> {
   const result = await run()
   if (!isAnswered(result) || (e.tool === 'TodoWrite' && e.agentId !== undefined)) return result
   await update($, planAtom, items => planAfter(items, e, result.result))

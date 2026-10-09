@@ -86,7 +86,8 @@ export function plainSnippet(markdown: string): string {
 
 export const isTestCommand = (command: unknown): boolean => typeof command === 'string' && TEST_COMMAND.test(command)
 
-const testsText = (tests: TestsSeen): string => (tests === null ? '' : tests === 'pass' ? 'testler geçti' : 'testler kaldı')
+const TESTS_TEXT: Record<'pass' | 'fail', string> = { pass: 'testler geçti', fail: 'testler kaldı' }
+const testsText = (tests: TestsSeen): string => (tests === null ? '' : TESTS_TEXT[tests])
 
 // "Tur bitti" · project · "testler geçti · 3 dosya"; with neither fact, how long it took. Facts lead with
 // what matters most on return (the tests), so a narrow row drops the duration first.

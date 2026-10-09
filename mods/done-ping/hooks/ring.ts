@@ -73,7 +73,8 @@ async function notifierPath(io: RingIo): Promise<string | null> {
   return null
 }
 
-async function banner(io: RingIo, ping: Ping, sound: Sound, host: string | null): Promise<boolean> {
+async function banner(io: RingIo, note: { ping: Ping; sound: Sound; host: string | null }): Promise<boolean> {
+  const { ping, sound, host } = note
   const notifier = await notifierPath(io)
   if (notifier !== null) {
     const argv = terminalNotifierArgv({ path: notifier, ping, sound, sender: host })
@@ -104,7 +105,7 @@ export async function ring(io: RingIo, spec: RingSpec): Promise<Rung> {
   const shouldCheckFocus = spec.config.isQuietWhenFocused && !spec.isForced
   if (shouldCheckFocus && (await isHostFrontmost(io, host).catch(() => false))) return 'quiet'
   const sound = soundOf(spec.config.sound)
-  const isShown = await banner(io, spec.ping, sound, host).catch(() => false)
+  const isShown = await banner(io, { ping: spec.ping, sound, host }).catch(() => false)
   const play = afplayArgv(sound)
   if (isShown && play !== null) {
     await io.run(play, { timeoutMs: RUN_TIMEOUT_MS }).catch(() => io.log('done-ping: afplay failed'))

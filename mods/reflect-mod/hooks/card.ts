@@ -93,19 +93,19 @@ function stacksAt(c: CardInput, width: number): boolean {
 }
 
 // The path stays whole: when it and the label do not fit on one line it moves under the label. The picked
-// row's label reads text.hi, the other one dim.
+// row's label is drawn at full strength, the other one dim.
 function destDesktop(ui: Elements['desktop'], c: CardInput, d: Dest): RenderElement {
-  const { Box, Button, Svg, Text } = ui
+  const { Box, Button, Svg } = ui
   const { scope, p } = d
   const isPicked = c.picked === scope
   const tone = p.role.ok
   const path = pathSvg(c.paths[scope], isPicked ? p.hi : p.lo)
   const isStacked = d.isStacked
   const pathEl = Svg({ source: path.source, alt: c.paths[scope], width: path.width, height: path.height })
-  const label = Text({ color: isPicked ? p.hi : p.lo, bold: isPicked, children: [ROW_LABEL[scope]] })
   const pick = [
     Svg({ source: iconSvg(ROW_ICONS[scope], ROW_ICON, isPicked ? tone.fg : p.lo), alt: '', width: ROW_ICON, height: ROW_ICON }),
-    Button({ key: `pick-${scope}:${c.l.id}`, label: ROW_LABEL[scope], plain: true, hotkey: HOTKEY[scope], onPress: () => c.on.pick(scope), children: [label] }),
+    // The desktop engine takes a Button's label as its one string: a Text child is refused and drops the band.
+    Button({ key: `pick-${scope}:${c.l.id}`, label: ROW_LABEL[scope], plain: true, hotkey: HOTKEY[scope], dimColor: !isPicked, onPress: () => c.on.pick(scope) }),
   ]
   const frame = { key: `dest-${scope}:${c.l.id}`, paddingX: 1, borderStyle: 'round', borderColor: isPicked ? tone.line : p.line, backgroundColor: isPicked ? tone.tint : p.card } as const
   if (isStacked) {

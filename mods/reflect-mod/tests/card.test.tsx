@@ -90,8 +90,8 @@ test('desktop draws the card in Svg with selectable rows and the band of others 
   await ui.press({ key: (await ui.findAll({ type: 'Button' })).find(b => b.key?.startsWith('pick-global:'))?.key ?? '' })
   const global = (await ui.findAll({ type: 'Box' })).find(b => b.key?.startsWith('dest-global:'))
   expect(global?.props.backgroundColor).toBe('#1B2F25')
-  const labels = (await ui.findAll({ type: 'Text' })).filter(t => t.text === 'Sadece bu proje' || t.text === 'Tüm projelerin')
-  expect(labels.map(t => [t.text, t.props.bold === true])).toEqual([['Sadece bu proje', false], ['Tüm projelerin', true]])
+  const picks = (await ui.findAll({ type: 'Button' })).filter(b => b.key?.startsWith('pick-'))
+  expect(picks.map(b => [b.props.label, b.props.dimColor])).toEqual([['Sadece bu proje', true], ['Tüm projelerin', false]])
   await ui.unmount()
 })
 

@@ -5,7 +5,10 @@ import { bandRow } from './band'
 import { labelOf, longLabelOf, resetText, untilReset, valueText } from './format'
 import { addSample, isHistory } from './history'
 import { EMPTY_HUB, HUB_PANE, hubOf, isOwnOpen } from './hub'
+import { gaugeViews } from './model'
 import { paneTree } from './pane'
+import { isSame } from './same'
+import { stamped } from './stamp'
 import type { HudTurn, HudUsage } from '../types'
 
 type Measured = Pick<SessionUsage, 'context' | 'rateLimits' | 'cost'>
@@ -28,6 +31,8 @@ const compactingAtom = atom({ plugin: 'hud-pro', key: 'isCompacting' } as const,
 const hubAtom = atom({ plugin: 'hud-pro', key: 'hub' } as const, EMPTY_HUB)
 
 const noticed = new Set<string>()
+// What the minute clock last moved on screen: the gauges' countdowns and pace marks.
+let shownGauges: unknown = null
 
 function toUsage(measured: Measured): HudUsage {
   const gauges = measured.rateLimits.map(limit => ({
@@ -118,15 +123,26 @@ function compactNow($: EngineInterface): void {
   )
 }
 
+// The minute clock moves only the gauges' countdowns and pace marks; a minute that moves none of
+// them redraws nothing, since every redraw also hands out new press handles.
+async function redrawIfMoved($: EngineInterface): Promise<void> {
+  const usage = await read($, usageAtom)
+  const gauges = usage === null ? null : gaugeViews(usage, await $.clock.now())
+  if (isSame(gauges, shownGauges)) return
+  shownGauges = gauges
+  $.ui.invalidate('ui.render')
+}
+
 async function setup($: EngineInterface): Promise<void> {
   const current = toUsage(await $.session.usage())
   await update($, usageAtom, () => current)
+  shownGauges = gaugeViews(current, await $.clock.now())
   await writeHub($, current, true)
   await update($, hiddenAtom, () => false)
   if ((await $.store.get(HIDDEN_KEY)) === true) await update($, hiddenAtom, () => true)
   const saved = await $.store.get(HISTORY_KEY)
   if (isHistory(saved)) await update($, historyAtom, () => saved)
-  $.clock.every(REFRESH_MS, () => $.ui.invalidate('ui.render'))
+  $.clock.every(REFRESH_MS, () => void redrawIfMoved($))
   await $.command.register({ name: 'hud', description: 'HUD satırını aç/kapat; "/hud full" limit ayrıntılarını açar' })
 }
 
@@ -194,14 +210,14 @@ function onRender(on: On) {
     const turn = await read($, turnAtom)
     const ui = $.ui.resolve(e)
 
-    return paneTree(ui, {
+    return stamped(ui, paneTree(ui, {
       usage: await read($, usageAtom),
       history: await read($, historyAtom),
       turn: turn.requests > 0 ? turn : await read($, lastTurnAtom),
       columns: e.props.bodyColumns,
       nowMs: await $.clock.now(),
       ...(e.surface !== 'terminal' && 'Svg' in ui ? { svg: ui.Svg } : {}),
-    })
+    }))
   })
 }
 
@@ -227,7 +243,7 @@ function onBand(on: On) {
       return (
         <Box flexDirection="column">
           {theirs}
-          {row}
+          {stamped(ui, row)}
         </Box>
       )
     } catch {

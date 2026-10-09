@@ -132,7 +132,9 @@ for (const surface of SURFACES) {
 
     const band = await $.ui.mount(bandOf(surface))
     expect(await shown(band, surface)).toMatch(/✕ 1\/42 kaldı[\s\S]*lint 2 hata[\s\S]*\d sn önce/)
-    expect((await band.drawn() as any).children.at(-1)).toEqual({ type: 'engine', ref: 1 })
+    // The other plugins' lines stay last; only the hidden render stamp may follow them.
+    const shownChildren = (await band.drawn() as any).children.filter((child: any) => child?.props?.key !== 'render-stamp')
+    expect(shownChildren.at(-1)).toEqual({ type: 'engine', ref: 1 })
     await band.press({ key: 'tb-details' })
     expect(world.opened).toEqual(['test-badge'])
 

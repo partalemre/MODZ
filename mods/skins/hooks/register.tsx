@@ -16,6 +16,7 @@ import type { Look, SvgElement, Ui } from './rows'
 import { galleryPane } from './gallery'
 import { EMPTY_HUB, HUB_PANE, hubDetail, isOwnOpen } from './hub'
 import { settingsPane, swatchesOf } from './settings'
+import { stamped } from './stamp'
 import { ICONS } from './skin'
 import type { Skin } from './skin'
 import { hunksOf } from './svg-diff'
@@ -441,7 +442,7 @@ yanıt genişliği: ${lastColumns} sütun`
     const names = skinNames(custom)
     const skins = names.flatMap(name => resolveSkin(name, custom) ?? []).map(one => forTheme(one, isLight))
 
-    return settingsPane(look, ui, { names, editing, width: e.props.bodyColumns, swatches: swatchesOf(skins) }, {
+    return stamped(ui, settingsPane(look, ui, { names, editing, width: e.props.bodyColumns, swatches: swatchesOf(skins) }, {
       gallery: () => void $.ui.open({ id: GALLERY, title: 'Skin galerisi', focus: true, closeOnEscape: true }),
       pick: name => void commit($, { ...state, prefs: { ...prefs, skin: name } }),
       toggle: word => void commit($, { ...state, prefs: { ...prefs, [TOGGLES[word]]: !prefs[TOGGLES[word]] } }),
@@ -459,7 +460,7 @@ yanıt genişliği: ${lastColumns} sütun`
 
         void commit($, { prefs: { ...prefs, skin: made.name }, custom: { ...custom, [made.name]: made.skin } })
       },
-    })
+    }))
   })
 
   // Every element the skin draws, numbered, to point at when asking for a change.
@@ -471,7 +472,7 @@ yanıt genişliği: ${lastColumns} sütun`
       return <ui.Text>Galeri bir skin gösterir. Önce /skin ile birini seç.</ui.Text>
     }
 
-    return galleryPane(lookOf(ui, active, e.surface), e.props.bodyColumns)
+    return stamped(ui, galleryPane(lookOf(ui, active, e.surface), e.props.bodyColumns))
   })
 
   on('ui.render', { component: 'ToolUse' }, async ($, e, next) => {
@@ -516,7 +517,7 @@ yanıt genişliği: ${lastColumns} sütun`
       const diff = hunksOf(e.props.output)
 
       if (diff !== null) {
-        return diffCard(look, look.svg, diff, shortenPath(diff.path, await $.session.cwd()), columns)
+        return stamped(look.ui, diffCard(look, look.svg, diff, shortenPath(diff.path, await $.session.cwd()), columns))
       }
     }
 
@@ -524,7 +525,7 @@ yanıt genişliği: ${lastColumns} sütun`
       const shell = shellOutputOf(e.props.output)
 
       if (shell !== null) {
-        return terminalCard(look, look.svg, shell, e.props.isErrored, columns)
+        return stamped(look.ui, terminalCard(look, look.svg, shell, e.props.isErrored, columns))
       }
     }
 
@@ -577,7 +578,7 @@ yanıt genişliği: ${lastColumns} sütun`
       void $.ui.copy({ text: copied, surface: e.surface }).then(result => $.ui.toast(result.isCopied ? 'Kopyalandı' : 'Burada kopyalanamadı'))
     }
 
-    return replyRows(lookOf(ui, active, e.surface, copy), segments, e.viewport?.columns ?? 100, e.surface !== 'terminal' && 'Svg' in ui ? ui.Svg : undefined)
+    return stamped(ui, replyRows(lookOf(ui, active, e.surface, copy), segments, e.viewport?.columns ?? 100, e.surface !== 'terminal' && 'Svg' in ui ? ui.Svg : undefined))
   })
 
   // The terminal's spinner gets the skin's word with a shimmer; the desktop's keeps its
@@ -653,12 +654,12 @@ yanıt genişliği: ${lastColumns} sütun`
       )
     }
 
-    return (
+    return stamped(look.ui, (
       <Box flexDirection="column">
         {usageBand(look, meters, !e.props.isWorking && !isCompacting, compact)}
         {theirs}
       </Box>
-    )
+    ))
   })
 
   // Claude Code's own dialog stays whole: the skin only adds a band above it.

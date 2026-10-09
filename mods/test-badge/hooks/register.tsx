@@ -10,6 +10,7 @@ import { badgeText, isFailing, parseLint, parseTests } from './parse'
 import type { ParseContext } from './text'
 import { bandTree } from './band'
 import { isLive } from './notice'
+import { stamped } from './stamp'
 import { AUTO, themeFrom } from './tidemark'
 import { paneTree } from './view'
 import type { CheckOutcome, Failure, HubCard, SuiteFilter, TestBadge } from '../types'
@@ -257,19 +258,21 @@ function hookDrawing(on: On, overrides: Overrides): void {
     if (shown === null) return theirs
     const { badge, isNotice } = shown
 
-    return bandTree($.ui.resolve(e), {
+    const ui = $.ui.resolve(e)
+    return stamped(ui, bandTree(ui, {
       badge, now, columns: e.props.bodyColumns, theme: await read($, themeAtom), isRich: e.surface !== 'terminal',
       hasDetails: !badge.isRunning && isFailing(badge),
       onDetails: () => void openPane($),
       onDismiss: badge.isRunning || !isNotice ? undefined : () => void update($, noticeAtom, () => null),
-    }, theirs)
+    }, theirs))
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const badge = await read($, badgeAtom)
     const where = { root: badge.root ?? (await $.session.cwd()), template: overrides.open, surface: e.surface }
 
-    return paneTree($.ui.resolve(e), {
+    const ui = $.ui.resolve(e)
+    return stamped(ui, paneTree(ui, {
       badge,
       now: await $.clock.now(),
       columns: e.props.bodyColumns,
@@ -279,7 +282,7 @@ function hookDrawing(on: On, overrides: Overrides): void {
       onOpen: failure => void openFailure($, failure, where),
       onRerun: () => void runAll($, overrides),
       onFilter: filter => void update($, filterAtom, () => filter),
-    })
+    }))
   })
 }
 

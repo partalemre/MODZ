@@ -122,6 +122,9 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
   kendi `$.ui.open`'ını çağırır (komut değil). Kanca `.catch(($, e, next) => next(e))` taşır.
 - **Öne getirme:** sahibinin `$.ui.open`'ı "kendiliğinden" sayılır; yüzey en yeni paneli yalnızca hiçbir panel
   klavyeyi tutmuyorsa öne alır. Bu yüzden ana panel istekten önce kendini kapatıp odaksız bir sekme olarak geri açar.
+- **Basış damgası:** her yeniden çizim yeni basış tutamaçları verir, ama masaüstü aynı görünen ağacı eskisiyle
+  tutar ve ilk tıklama reddedilir. Button, Input ya da Select çizen her ağaç kökünde kit'in `stamped` damgasını
+  taşır (`kit/stamp.tsx`, görünmez); değişmeyen değer `$.state`'e yeniden yazılmaz (`kit/same.ts`).
 - **Özet kartı:** her mod kendi `{ plugin: '<mod>', key: 'hub' }` değerine `HubCard` yazar; ana panel
   `on('state.set', { key: 'hub' }, …)` ile hepsini toplar. Yalnızca gösterilen metin değişince yazılır.
 

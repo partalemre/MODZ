@@ -25,6 +25,7 @@ import { classify } from './classify'
 import type { Risk } from './classify'
 import { measure, missingFolder } from './measure'
 import type { Report, Run } from './report'
+import { stamped } from './stamp'
 import { resolveLight } from './theme'
 import { viewOf } from './view'
 
@@ -234,8 +235,9 @@ function drawHooks(on: On): void {
     const mine = held
     if (e.requestId !== PANE_ID || !isMeasured(mine)) return next(e)
     const redraw = () => $.ui.invalidate('ui.render')
+    const ui = $.ui.resolve(e)
 
-    return draw(mine, { ui: $.ui.resolve(e), surface: e.surface, columns: e.props.bodyColumns, place: 'pane', redraw })
+    return stamped(ui, draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, place: 'pane', redraw }))
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -245,7 +247,7 @@ function drawHooks(on: On): void {
     const ui = $.ui.resolve(e)
     const { Box } = ui
     const redraw = () => $.ui.invalidate('ui.render')
-    const card = draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, place: 'band', redraw })
+    const card = stamped(ui, draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, place: 'band', redraw }))
 
     // A decision card goes above the other mods' rows (DESIGN.md §6).
     return (

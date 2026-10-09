@@ -15,6 +15,7 @@ import { FRAME_COLS, FRAME_PX, agentRow, plannedRow } from './rows'
 import type { RowContext, Ui } from './rows'
 import { attentionTree, compactTree, emptyTree, headTree, sectionHead, timelineTree, toolbarTree } from './sections'
 import type { Layout, PaneHandlers, PaneView } from './sections'
+import { stamped } from './stamp'
 import { PANE } from './state'
 import { deliveryText } from './steer'
 import type { StopNoun } from './steer'
@@ -178,10 +179,11 @@ export const layoutOf = (isDesktop: boolean, columns: number): Layout => {
 
 export function onPane(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const ui = $.ui.resolve(e) as Ui
+    const table = $.ui.resolve(e)
+    const ui = table as Ui
     const isDesktop = e.surface === 'desktop' && 'Svg' in ui
     const d = await paneData($)
     const layout = layoutOf(isDesktop, Math.max(MIN_COLS, e.props.bodyColumns || DEFAULT_COLS))
-    return paneTree(ui, { d, layout, on: handlersOf($, d) })
+    return stamped(table, paneTree(ui, { d, layout, on: handlersOf($, d) }))
   })
 }

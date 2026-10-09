@@ -16,6 +16,7 @@ import { offerCard } from './offer'
 import { replayView } from './pane'
 import { currentStep, planAfter, PLAN_TOOLS } from './plan'
 import { EDIT_TOOLS, isAnswered, stepsFor } from './record'
+import { stamped } from './stamp'
 import type { EditCall } from './record'
 import { themeOf } from './ui/theme'
 import type { HubCard, ReplayStep } from '../types'
@@ -240,13 +241,13 @@ function hookDrawing(on: On): void {
       const model = { steps: replay.steps, index: await read($, indexAtom), explain: replay.explain, theme: view.theme }
       const site = { surface: e.surface, columns: e.props.bodyColumns, inBand: true, maxRows: e.props.maxRows, on: handlers($) }
 
-      return <Box flexDirection="column">{replayView(ui, model, site)}{theirs}</Box>
+      return stamped(ui, <Box flexDirection="column">{replayView(ui, model, site)}{theirs}</Box>)
     }
     if (!(await read($, offeredAtom)) || e.props.isWorking || view.isOpen || replay === null) return theirs
     const offer = { steps: replay.steps, quote: replay.quote, theme: view.theme, columns: e.props.bodyColumns, surface: e.surface }
     const actions = { onOpen: () => void openReplay($), onDismiss: () => void update($, offeredAtom, () => false) }
 
-    return <Box flexDirection="column">{offerCard(ui, offer, actions)}{theirs}</Box>
+    return stamped(ui, <Box flexDirection="column">{offerCard(ui, offer, actions)}{theirs}</Box>)
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e) => {
@@ -256,7 +257,9 @@ function hookDrawing(on: On): void {
     const model = { steps: replay?.steps ?? [], index: await read($, indexAtom), explain: replay?.explain ?? 'none', theme: view.theme, ...context }
     const site = { surface: e.surface, columns: e.props.bodyColumns, inBand: false, maxRows: e.props.scroll?.bodyRows ?? PANE_ROWS_MAX, on: handlers($) }
 
-    return replayView($.ui.resolve(e), model, site)
+    const ui = $.ui.resolve(e)
+
+    return stamped(ui, replayView(ui, model, site))
   })
 
   // The person closed the pane (Escape, the close mark): keep the view in step.

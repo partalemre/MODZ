@@ -7,6 +7,7 @@ import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { glyphOf, keepListed, markUndone, pendingOf, sortGlyphs } from './meta'
 import type { MetaMap } from './meta'
 import { clip, paneTree } from './pane'
+import { stamped } from './stamp'
 import { AUTO, themeFrom } from './tidemark'
 import type { CheckpointEntry, CheckpointStatus, CheckpointView, HubCard } from '../types'
 
@@ -268,6 +269,8 @@ export const register: Register = on => {
     }
     const look = { theme: await read($, themeAtom), columns: e.props.bodyColumns, isRich: e.surface !== 'terminal' }
 
-    return paneTree($.ui.resolve(e), await read($, viewAtom), { now: await $.clock.now(), meta: await read($, metaAtom), look, actions })
+    const ui = $.ui.resolve(e)
+
+    return stamped(ui, paneTree(ui, await read($, viewAtom), { now: await $.clock.now(), meta: await read($, metaAtom), look, actions }))
   })
 }

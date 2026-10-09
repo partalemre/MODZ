@@ -6,6 +6,7 @@ import { isOwnOpen } from './hub'
 import { t } from './i18n'
 import type { JobView } from './job'
 import { deriveJob, percentText } from './job'
+import { stamped } from './stamp'
 import { PANE } from './state'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
@@ -166,12 +167,14 @@ export function onBand(on: On): void {
     const theirs = await next(e)
     const view = await viewOf($)
     if (!view) return theirs
-    const ui = $.ui.resolve(e) as Ui
+    const table = $.ui.resolve(e)
+    const ui = table as Ui
     const { Box } = ui
     const mine = e.surface !== 'terminal' && 'Svg' in ui ? desktopBand(ui, $, view, e.props.bodyColumns) : terminalBand(ui, $, view, e.props.bodyColumns)
+    // The stamp rides inside this mod's own rows, so the band keeps its two parts: ours, then the others'.
     return (
       <Box flexDirection="column">
-        {mine}
+        {stamped(table, mine)}
         {theirs}
       </Box>
     )

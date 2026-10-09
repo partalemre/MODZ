@@ -116,7 +116,14 @@ export async function plannedTurn($: any, world: World) {
   await $.turn.complete({ answer: 'greet adını **welcome** yaptım. Testler geçiyor.', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
 }
 
-export const texts = async (site: any): Promise<string[]> => (await site.findAll({ type: 'Text' })).map((found: any) => found.text)
+// The texts a site shows, in order: the render stamp's hidden number is not one of them.
+export async function texts(site: any): Promise<string[]> {
+  const all: string[] = (await site.findAll({ type: 'Text' })).map((found: any) => found.text)
+  const stamp = await site.find({ key: 'render-stamp' })
+  const at = stamp === undefined ? -1 : all.lastIndexOf(stamp.text)
+
+  return at === -1 ? all : [...all.slice(0, at), ...all.slice(at + 1)]
+}
 
 export const svgText = async (site: any): Promise<string> =>
   (await site.findAll({ type: 'Svg' })).map((found: any) => String(found.props?.source ?? '')).join('\n')

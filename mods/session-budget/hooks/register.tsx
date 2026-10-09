@@ -3,6 +3,7 @@ import type { EngineInterface, On, PromptOrigin, Register } from 'claude-code'
 
 import { WARN_RATIO, advance, describe, parseCommand, raise, ratioOf, readingOf, spendText, startBudget, stepText } from './budget'
 import { fullCard, isLive, noticeAbove, stoppedRow, warnRow } from './notice'
+import { stamped } from './stamp'
 import type { Budget, BudgetNotice } from '../types'
 
 const BUDGET = 'budget'
@@ -184,11 +185,11 @@ function registerBand(on: On) {
     if (notice.kind === 'stopped') {
       const spend = budget === null ? '' : spendText(budget)
 
-      return noticeAbove(ui, stoppedRow(ui, { text: notice.text, spend, surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss })
+      return stamped(ui, noticeAbove(ui, stoppedRow(ui, { text: notice.text, spend, surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss }))
     }
     if (budget === null) return theirs
 
-    return noticeAbove(ui, warnRow(ui, { budget, nowMs: await $.clock.now(), surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss })
+    return stamped(ui, noticeAbove(ui, warnRow(ui, { budget, nowMs: await $.clock.now(), surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss }))
   })
 
   // The full-budget question keeps Claude Code's own options; the card above says what is full.

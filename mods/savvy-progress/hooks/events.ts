@@ -11,6 +11,7 @@ import type { ProgressInput } from './flow'
 import { deriveJob, joinJob, sealJob } from './job'
 import { STEP_TOOL, TOOL } from './state'
 import { TASK_TOOLS, applyTaskTool, openTasks } from './tasks'
+import { isSame } from './same'
 import { touchFile } from './touched'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
@@ -85,9 +86,12 @@ function onLaunches(on: On): void {
     const result = await next(e)
     if (e.origin.kind === 'task-notification') return result
     const list = await read($, agents)
-    const kept = await update($, job, prev => sealJob(prev, list))
-    if (!kept || kept.isSealed) await update($, tasks, openTasks)
-    await update($, flow, f => (f?.isFinished ? null : f))
+    // Each write redraws its readers, so one that would change nothing is left out.
+    const before = await read($, job)
+    const kept = isSame(sealJob(before, list), before) ? before : await update($, job, prev => sealJob(prev, list))
+    const open = await read($, tasks)
+    if ((!kept || kept.isSealed) && !isSame(openTasks(open), open)) await update($, tasks, openTasks)
+    if ((await read($, flow))?.isFinished) await update($, flow, f => (f?.isFinished ? null : f))
     return result
   })
 }
@@ -141,8 +145,12 @@ function onSteps(on: On): void {
   })
 }
 
-const follow = ($: EngineInterface, reading: LimitReading | null) =>
-  reading ? update($, limit, prev => trackLimit(prev, reading)) : Promise.resolve()
+// A measure that moved nothing is not written: every write redraws the band and the pane.
+async function follow($: EngineInterface, reading: LimitReading | null): Promise<void> {
+  if (!reading) return
+  const prev = await read($, limit)
+  if (!isSame(trackLimit(prev, reading), prev)) await update($, limit, p => trackLimit(p, reading))
+}
 
 // Each measure moves the 5h window and the session's dollars, for each agent's share of the limit.
 function onLimit(on: On): void {

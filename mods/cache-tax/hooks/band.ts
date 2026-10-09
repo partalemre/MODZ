@@ -10,6 +10,7 @@ import { holdDesktop, holdTerminal } from './hold'
 import type { HoldActions } from './hold'
 import type { HoldView } from './hold-svg'
 import { rowDesktop, rowOf, rowTerminal } from './row'
+import { renderStamp } from './stamp'
 import { AUTO_WARM, coldFor, rateText } from './words'
 
 export type Prefs = { isLight: boolean; noColor: boolean }
@@ -48,5 +49,6 @@ export function composeBand(d: Drawing, theirs: RenderElement, b: Band): RenderE
   const above = holdCard(d, b)
   const below = statusRow(d, b)
   if (above === null && below === null) return theirs
-  return d.ui.Box({ flexDirection: 'column', gap: above === null ? 0 : 1, children: [above, theirs, below] })
+  // The stamp makes each drawing a new tree, so the desktop takes the hold card's live press handles.
+  return d.ui.Box({ flexDirection: 'column', gap: above === null ? 0 : 1, children: [above, theirs, below, renderStamp(d.ui)] })
 }

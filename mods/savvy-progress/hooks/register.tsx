@@ -15,6 +15,7 @@ import type { Lang } from './i18n'
 import { readingOf, trackLimit } from './limit'
 import { onPane } from './pane'
 import { reconcile } from './roster'
+import { isSame } from './same'
 import { HUB_PANE } from './state'
 import { onTranscript } from './transcript'
 
@@ -106,7 +107,8 @@ async function seedLimit($: EngineInterface): Promise<void> {
   try {
     const usage = await $.session.usage()
     const reading = readingOf(usage.rateLimits, usage.cost?.usd)
-    if (reading) await update($, limit, prev => trackLimit(prev, reading))
+    const prev = await read($, limit)
+    if (reading && !isSame(trackLimit(prev, reading), prev)) await update($, limit, p => trackLimit(p, reading))
   } catch (error) {
     $.ui.log(`savvy-progress: no usage yet, the 5h share waits for a measure (${String(error)})`, { to: 'debug' })
   }
@@ -132,7 +134,8 @@ async function scanTypes($: EngineInterface): Promise<void> {
   const project = await scanDir($, AGENTS_DIR, 'project')
   const user = home ? await scanDir($, `${home}/${AGENTS_DIR}`, 'user') : []
   const found = [...project, ...user]
-  if (found.length) await update($, types, current => mergeTypes(current, found))
+  const known = await read($, types)
+  if (found.length && !isSame(mergeTypes(known, found), known)) await update($, types, current => mergeTypes(current, found))
 }
 
 // Folds the engine's own agent list into ours: an agent spawned before this mod loaded appears,

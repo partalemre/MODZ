@@ -10,6 +10,7 @@ import type { RowSpec, RowsProps } from './rows'
 import { countSegs, desktopRow, type RowCtx, terminalRow } from './rowspec'
 import { heroCard, type GitRow, type LegendItem, sectionLine, touchedCard } from './cards'
 import { heroOf, heroText, subText, touchedRows } from './now'
+import { stamped } from './stamp'
 import { lightByName, paletteOf, type Role, roleOfTone, shimmerTones } from './theme'
 import {
   ancestorsOf,
@@ -1643,7 +1644,11 @@ export const register: Register = (on, options) => {
     const scene = await sceneOf($, e.surface === 'desktop')
     const width = Math.max(24, e.props.bodyColumns)
     const bodyRows = e.props.scroll?.bodyRows ?? 40
-    if (e.surface === 'desktop') return drawDesktop($, $.ui.resolve(e), scene, { width, bodyRows })
-    return drawTerminal($, $.ui.resolve(e), scene, { width, bodyRows })
+    if (e.surface === 'desktop') {
+      const desk = $.ui.resolve(e)
+      return stamped(desk, drawDesktop($, desk, scene, { width, bodyRows }))
+    }
+    const ui = $.ui.resolve(e)
+    return stamped(ui, drawTerminal($, ui, scene, { width, bodyRows }))
   })
 }

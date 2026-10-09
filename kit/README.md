@@ -8,7 +8,7 @@ bin/kit-sync filetree secret-guard     # copy into those mods (name under mods/ 
 bin/kit-sync                           # refresh every mod that already has hooks/kit
 ```
 
-The kit is pure: no `$`, no state, no timers. Svg builders return `{ source, width, height, alt }` (an `SvgPic`)
+The kit is pure: no `$`, no state, no timers (save the render stamp's one counter, below). Svg builders return `{ source, width, height, alt }` (an `SvgPic`)
 that spreads into `<Svg {...pic} />`; colours inside are CSS variables for both schemes
 (`prefers-color-scheme`), so no hex reaches the markup. Element helpers take `(draw, opts)`, where `draw` is
 `{ ui, surface, isLight }` (`DrawCtx`): `ui = $.ui.resolve(e)`, `surface = e.surface`, and `isLight` comes from
@@ -99,6 +99,19 @@ cube, bookmark, bulb, play, pause, folder, file, branch, terminal, bell, sparkle
 | `planButtons` | `planButtons(specs, isDanger)` (the pure rules behind ButtonRow) |
 | `meterGlyphs` | `meterGlyphs(0.4, 20, 0.7)` → `{ fill: '━━━━━━━╸', rest: '──────', pace: '┊', after: '─────' }` |
 | `cardInnerWidth`, `pxWidth`, `isTextSurface`, `toneKey` | `cardInnerWidth(e.props.bodyColumns)` → Svg px inside a card |
+
+## stamp.tsx and same.ts (redraws)
+
+The engine hands out new press handles on every redraw, but the desktop keeps a tree that looks the same as the
+one it holds, old handles and all: the first press is refused (`ui_press not handled`) and only the second lands.
+Every tree a mod returns with a Button, Input or Select carries a stamp; values that did not change are not written.
+Mods that do not vendor the kit carry a byte-identical `hooks/stamp.tsx` (and `hooks/same.ts` where they need it).
+
+| Export | Example |
+|---|---|
+| `stamped(ui, tree)` | `return stamped(ui, paneTree(ui, view))` (stamp as the root Box's last child, or a column around it) |
+| `renderStamp(ui)`, `STAMP_KEY` | `<Box key="render-stamp" display="none"><Text>12</Text></Box>`, a new number each render |
+| `isSame(a, b)` | `if (isSame(cards[from], card)) return` (structural, for plain state values) |
 
 ## Visual QA
 

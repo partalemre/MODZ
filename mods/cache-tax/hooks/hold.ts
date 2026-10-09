@@ -4,7 +4,7 @@
 import type { Elements, RenderElement } from 'claude-code'
 
 import { fmtUsd } from './fmt'
-import { COMPARE_H, HEADER_H, compareSvg, headerSvg } from './hold-svg'
+import { COMPARE_H, HEADER_H, compareSvg, headerSvg, warmCaptions } from './hold-svg'
 import type { HoldView } from './hold-svg'
 import { ICONS } from './icons'
 import { iconSvg } from './svg'
@@ -102,7 +102,7 @@ export function holdTerminal(ui: Elements['terminal'], o: HoldOptions): RenderEl
     Text({ bold: true, children: ['Mesajın bekletiliyor'] }),
     Text({ dimColor: true, children: [`Önbellek ${v.coldFor} önce soğudu.`] }),
     priceLine(ui, 'Şimdi gönder', fmtUsd(v.coldUsd), kiln, textBar(1, cells)),
-    priceLine(ui, 'Sıcak bir tur', fmtUsd(v.warmUsd), undefined, `${textBar(share, cells)} olurdu`),
+    priceLine(ui, 'Sıcak bir tur', fmtUsd(v.warmUsd), undefined, `${textBar(share, cells)} ${warmCaptions(v).at(-1) ?? ''}`),
     Text({ dimColor: true, children: [`~${v.tokens} token yeniden yazılır · ${v.rate}`] }),
     Text({ wrap: 'truncate-end', children: [Text({ dimColor: true, children: ['⏸ Bekleyen: '] }), heldQuote(v)] }),
     Text({ dimColor: true, children: [`✓ ${keepText(v)}`] }),

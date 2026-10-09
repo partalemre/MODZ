@@ -2,7 +2,7 @@
 
 import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, TTL_MS, breakEvenPings, coldUsd, isCold, priceOf, warmUsd } from './core'
 import type { State } from './core'
-import { fmtDuration, fmtInt, fmtTok, fmtUsd } from './fmt'
+import { fmtDuration, fmtInt, fmtTok, fmtUsd, trDecimal } from './fmt'
 
 export const AUTO_WARM = fmtDuration(AUTO_WARM_MS)
 
@@ -11,7 +11,7 @@ export const coldFor = (s: State, now: number): number => now - s.lastRequestAt 
 
 export function rateText(s: State): string {
   const price = priceOf(s.lastModel)
-  return price ? `$${price[1]}/MTok` : 'önbellek yazma fiyatı'
+  return price ? `$${trDecimal(price[1])}/MTok` : 'önbellek yazma fiyatı'
 }
 
 export function guardText(s: State, now: number): string {

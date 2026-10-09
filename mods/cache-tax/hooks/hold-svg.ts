@@ -17,6 +17,17 @@ export type HoldView = {
   autoWarm: string
 }
 
+/** How many times cheaper a warm turn is than the cold write (list prices), or null without both prices. */
+export function timesCheaper(view: HoldView): number | null {
+  return view.coldUsd && view.warmUsd ? Math.round(view.coldUsd / view.warmUsd) : null
+}
+
+/** What the warm side's caption says, longest first: the ratio makes the comparison read at a glance. */
+export function warmCaptions(view: HoldView): string[] {
+  const times = timesCheaper(view)
+  return times === null ? ['olurdu'] : [`sıcakken olurdu · ${times} kat ucuz`, `${times} kat ucuz`]
+}
+
 export const HEADER_H = 64
 const TILE = 38
 const CUBE = 22
@@ -97,7 +108,7 @@ export function compareSvg(width: number, view: HoldView, p: Palette): string {
     // One accent per card: the price being asked is Kiln, the warm turn it is weighed against is neutral.
     column({ x: right, w, label: 'Sıcak bir tur', usd: view.warmUsd, share, fg: p.hi }, p),
     coldCaption(PAD + SPAN_PAD, w, view, p),
-    text({ ...CAPTION, x: right, y: CY.caption, fill: p.lo, text: 'olurdu' }),
+    text({ ...CAPTION, x: right, y: CY.caption, fill: p.lo, text: warmCaptions(view).find(said => measure(said, CAPTION) <= w) ?? '' }),
   ]
   return doc(width, COMPARE_H, body.join(''))
 }

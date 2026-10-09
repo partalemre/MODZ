@@ -39,3 +39,14 @@ for (const [theme, size] of (['dark', 'light'] as const).flatMap(theme => SIZES.
     console.log(`@@TREE@@row-cold-${theme}${size.tag}@@` + JSON.stringify(await ui.drawn()))
   })
 }
+
+test('preview terminal: hold card and status row', async ($, on) => {
+  const clock = mock.clock(on, { now: START })
+  world(on, [], { theme: { value: 'dark' }, model: 'claude-opus-5', live: { tokens: 51929 } })
+  await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
+  await $.turn.complete(turn({ usage: { input_tokens: 2, output_tokens: 10, cache_read_input_tokens: 51000, cache_creation_input_tokens: 900, model: 'claude-opus-5' } }))
+  await clock.advance(7 * HOUR + 38 * MIN)
+  const ui = await $.ui.mount({ plugin: 'cache-tax', surface: 'terminal', component: 'AbovePrompt', props: { ...bandProps, bodyColumns: 100 } })
+  await $.prompt.submit(prompt('Nerede kalmıştık? Bana iki satırlık bir özet ver.'))
+  console.log('@@TREE@@hold-card-terminal@@' + JSON.stringify(await ui.drawn()))
+})

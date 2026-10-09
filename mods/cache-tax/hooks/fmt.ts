@@ -1,19 +1,27 @@
-// Number and time formats, Turkish style: `6s 38dk`, `51.929`, `$0.52`.
+// Number and time formats, Turkish style: `6 sa 38 dk`, `51.929`, `$0,52` (the decimal comma, as every MODZ mod).
 
 import { MIN_MS } from './core'
 
-/** Turkish short form: `6s 38dk`, `3s`, `45dk`, `2g 4s` (saat, dakika, gün). */
+const MIN_PER_HOUR = 60
+const HOURS_PER_DAY = 24
+const DAYS_FROM_HOURS = 48
+const WHOLE_DOLLARS_FROM = 100
+
+/** Turkish short form: `6 sa 38 dk`, `3 sa`, `45 dk`, `2 gün 4 sa`. `sa`, never `s`, which reads as seconds. */
 export function fmtDuration(ms: number): string {
   const total = Math.max(0, Math.round(ms / MIN_MS))
-  const h = Math.floor(total / 60)
-  const m = total % 60
-  if (h >= 48) return `${Math.floor(h / 24)}g ${h % 24}s`
-  if (h === 0) return `${m}dk`
-  return m === 0 ? `${h}s` : `${h}s ${m}dk`
+  const h = Math.floor(total / MIN_PER_HOUR)
+  const m = total % MIN_PER_HOUR
+  if (h >= DAYS_FROM_HOURS) return `${Math.floor(h / HOURS_PER_DAY)} gün ${h % HOURS_PER_DAY} sa`
+  if (h === 0) return `${m} dk`
+  return m === 0 ? `${h} sa` : `${h} sa ${m} dk`
 }
 
+/** A decimal with the Turkish comma: 18.75 → `18,75`. */
+export const trDecimal = (n: number): string => String(n).replace('.', ',')
+
 export function fmtUsd(usd: number | null): string {
-  return usd == null ? '—' : '$' + (usd >= 100 ? usd.toFixed(0) : usd.toFixed(2))
+  return usd == null ? '—' : '$' + (usd >= WHOLE_DOLLARS_FROM ? usd.toFixed(0) : usd.toFixed(2).replace('.', ','))
 }
 
 /** Turkish digit grouping: 51.929. */

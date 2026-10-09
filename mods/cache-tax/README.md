@@ -9,14 +9,14 @@
 >
 > - **Bekletme kartı.** Soğuk bir gönderim artık yalnızca metinle düşürülmez: prompt'un üstünde bir kart açılır. Küp kutusu (soğuk = Kiln),
 >   "ÖNBELLEK VERGİSİ", "Mesajın bekletiliyor", ne zaman soğuduğu, gömme alanda **Şimdi gönder** (tam çubuk) ile **Sıcak bir tur**
->   (orantılı çubuk, en az görünür bir dilim) fiyatları, yeniden yazılacak token sayısı ve fiyat oranı, bekleyen mesaj ve
->   "Bir kez öde, keepwarm önbelleği 3s tutsun." Düğmeler: **Öde ve gönder** (bekleyen metni senin sözlerin olarak gönderir,
+>   (orantılı çubuk, en az görünür bir dilim, altında `sıcakken olurdu · 20 kat ucuz`) fiyatları, yeniden yazılacak token sayısı ve fiyat oranı, bekleyen mesaj ve
+>   "Bir kez öde, keepwarm önbelleği 3 sa tutsun." Düğmeler: **Öde ve gönder** (bekleyen metni senin sözlerin olarak gönderir,
 >   soğuk yazımı sayar ve keepwarm'ı 3 saat açar), **Yeni başla** (`/clear`, ardından bekleyen metni istem kutusuna geri koyar),
 >   **Önbellek durumu** (`/cache-tax`). Mesajı yeniden yazıp göndermek de eskisi gibi öder.
 > - **Durum satırı** bandın en altında, yalnızca anlamlıyken: keepwarm açık ya da durmuş, önbellek soğuk, ya da büyük bir önbellek
 >   10 dakika içinde soğuyacak. Dar bantta en az önemli parçalar önce düşer.
 > - Oturum başında başka modların durum satırı temizlenmez (yukarı akıştaki `$.ui.status(undefined)` kaldırıldı).
-> - Tüm metinler Türkçe; süreler `6s 38dk`, sayılar `51.929`. Komutlar ve argümanları İngilizce kalır (`/keepwarm 90m`).
+> - Tüm metinler Türkçe; süreler `6 sa 38 dk` (`s` saniye okunmasın diye `sa`), sayılar `51.929`, fiyatlar ondalık virgülle `$0,52` (diğer MODZ modları gibi). Komutlar ve argümanları İngilizce kalır (`/keepwarm 90m`).
 > - **Maliyet dürüstlüğü aynen geçerli:** keepwarm ping'leri model isteğidir ve token harcar; aşağıdaki "Cost and the plan-limit
 >   question" ve "Limits" bölümleri değişmedi. Kart ve satırdaki fiyatlar liste fiyatlarından tahmindir (üst sınır), canlı bir
 >   sunucu ölçümü değildir.

@@ -228,7 +228,7 @@ function hookRecording(on: On): void {
   })
 }
 
-function hookDrawing(on: On): void {
+function hookBand(on: On): void {
   // The offer stacks above the other band lines; a survey holds the band alone.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
@@ -249,7 +249,9 @@ function hookDrawing(on: On): void {
 
     return stamped(ui, <Box flexDirection="column">{offerCard(ui, offer, actions)}{theirs}</Box>)
   })
+}
 
+function hookPane(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e) => {
     const replay = await read($, replayAtom)
     const view = await read($, viewAtom)
@@ -277,5 +279,6 @@ function handlers($: EngineInterface) {
 export const register: Register = on => {
   hookSession(on)
   hookRecording(on)
-  hookDrawing(on)
+  hookBand(on)
+  hookPane(on)
 }

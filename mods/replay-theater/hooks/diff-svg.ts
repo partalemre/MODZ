@@ -87,6 +87,12 @@ const charsOf = (line: ReplayDiffLine): number => (line.op === '~' ? 0 : line.t.
 
 // The diff as one drawing: tinted rows, the changed words on a stronger tint, then the legend. A line longer
 // than the pane widens the drawing to `contentWidth` instead of being cut; the pane scrolls it sideways.
+function noteOf(shownCount: number, hidden: number): string {
+  if (shownCount === 0) return 'Satır değişikliği yok.'
+
+  return hidden > 0 ? `… ${hidden} satır daha` : ''
+}
+
 export function diffSvg(model: DiffModel): DiffDrawing {
   const shown = model.lines.slice(0, MAX_DIFF_LINES)
   const hidden = model.lines.length - shown.length
@@ -97,7 +103,7 @@ export function diffSvg(model: DiffModel): DiffDrawing {
   const inner = { width: contentWidth, maxChars: Math.floor((contentWidth - CODE_X - CODE_PAD_RIGHT) / CHAR) }
   const rows = shown.map((line, n) => diffRow(line, PAD_Y + n * ROW_H, inner))
   const tail = PAD_Y + shown.length * ROW_H + 14
-  const note = shown.length === 0 ? 'Satır değişikliği yok.' : hidden > 0 ? `… ${hidden} satır daha` : ''
+  const note = noteOf(shown.length, hidden)
   const noteSvg = note === '' ? '' : `<text x="${CODE_X}" y="${tail}" class="lo" font-size="11.5">${note}</text>`
   const box = `<rect x="0.5" y="0.5" width="${contentWidth - 1}" height="${boxH - 1}" rx="8" fill="var(--inset)" stroke="var(--line)"/>`
   const key = legend(model.width, boxH + 14)

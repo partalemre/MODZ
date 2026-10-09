@@ -27,10 +27,10 @@ export function measure(text: string, size: number, isMono = false): number {
 }
 
 // The text cut with … so it fits `width`; '' when not even one character does.
-export function fit(text: string, width: number, size: number, isMono = false): string {
-  if (measure(text, size, isMono) <= width) return text
+export function fit(text: string, width: number, size: number): string {
+  if (measure(text, size) <= width) return text
   const chars = [...text]
-  while (chars.length > 0 && measure(`${chars.join('')}…`, size, isMono) > width) chars.pop()
+  while (chars.length > 0 && measure(`${chars.join('')}…`, size) > width) chars.pop()
 
   return chars.length === 0 ? '' : `${chars.join('').trimEnd()}…`
 }

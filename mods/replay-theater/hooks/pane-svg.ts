@@ -52,9 +52,15 @@ function counts(step: ReplayStep, right: number, cy: number): { svg: string; wid
   return { svg, width: right - plusEnd + measure(plus, COUNT_SIZE, true) }
 }
 
+function stateOf(k: number, index: number): 'current' | 'done' | 'next' {
+  if (k === index) return 'current'
+
+  return k < index ? 'done' : 'next'
+}
+
 function row(model: PaneModel, k: number, cy: number): string {
   const step = model.steps[k] as ReplayStep
-  const state = k === model.index ? 'current' : k < model.index ? 'done' : 'next'
+  const state = stateOf(k, model.index)
   const right = counts(step, model.width - 10, cy)
   const room = model.width - NAME_X - right.width - 14
   const name = fit(baseName(step.file), room, 13)

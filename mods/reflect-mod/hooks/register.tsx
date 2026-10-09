@@ -266,10 +266,22 @@ function wireBand(on: On) {
   })
 }
 
+// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
+// left, so its first click would be refused. Drawing again on attach hands it live buttons.
+function wireAttach(on: On) {
+  on('session.attach', async ($, e, next) => {
+    const attached = await next(e)
+    $.ui.invalidate('ui.render')
+
+    return attached
+  })
+}
+
 export const register: Register = (on, options) => {
   if (typeof options.model === 'string' && options.model.trim() !== '') model = options.model.trim()
   wireSession(on)
   wirePrompts(on)
   wireCommands(on)
   wireBand(on)
+  wireAttach(on)
 }

@@ -11,6 +11,7 @@ import type { ProgressInput } from './flow'
 import { deriveJob, joinJob, sealJob } from './job'
 import { STEP_TOOL, TOOL } from './state'
 import { TASK_TOOLS, applyTaskTool, openTasks } from './tasks'
+import { touchFile } from './touched'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
 const agents = atom({ plugin: 'savvy-progress', key: 'agents' } as const, [])
@@ -101,7 +102,8 @@ function onActivity(on: On): void {
     const isTracked = name !== STEP_TOOL
     if (agentId && isTracked) {
       const at = await $.clock.now()
-      await update($, agents, list => patchRun(list, agentId, a => heard(openEvent(toolActivity(a, call), { call, at, id }), at)))
+      const facts = { call, at, id }
+      await update($, agents, list => patchRun(list, agentId, a => heard(openEvent(touchFile(toolActivity(a, call), facts), facts), at)))
     }
     const result = await next(e)
     if (agentId && isTracked) {

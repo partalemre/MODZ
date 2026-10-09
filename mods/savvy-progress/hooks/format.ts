@@ -37,6 +37,28 @@ export const fitText = (s: string, size: number, maxW: number): string => {
   return out + '…'
 }
 
+// Cuts from the start, so a path keeps its end: "…/hooks/" rather than "src/mo…".
+export const fitStart = (s: string, size: number, maxW: number): string => {
+  if (textWidth(s, size) <= maxW) return s
+  const chars = [...s]
+  while (chars.length && textWidth('…' + chars.join(''), size) > maxW) chars.shift()
+  return chars.length ? '…' + chars.join('') : ''
+}
+
+// A monospace face gives every character the same advance, a little over half an em.
+const MONO_EM = 0.62
+
+export const monoWidth = (s: string, size: number): number => [...s].length * MONO_EM * size
+
+/** Cuts monospace text to `maxW` pixels, at its end or, for a path, at its start. */
+export const fitMono = (s: string, opts: { size: number; maxW: number; isFromStart?: boolean }): string => {
+  const room = Math.floor(opts.maxW / (MONO_EM * opts.size))
+  const chars = [...s]
+  if (chars.length <= room) return s
+  if (room < 2) return ''
+  return opts.isFromStart ? '…' + chars.slice(-(room - 1)).join('') : chars.slice(0, room - 1).join('') + '…'
+}
+
 // A fixed-decimal number in the interface language's decimal mark ("1,5" in Turkish).
 export const fixed = (n: number, digits: number): string => n.toFixed(digits).replace('.', t().decimal)
 
@@ -71,14 +93,41 @@ export const toolName = (tool: string): string => (tool.startsWith('mcp__') ? to
 const lastSegments = (path: string): string => path.split('/').filter(Boolean).slice(-2).join('/')
 
 const TARGET_KEYS = ['command', 'pattern', 'query', 'description', 'subject', 'skill', 'prompt'] as const
+// The open card has room for a whole path or a long command line; the history row has not.
+const DETAIL_MAX = 160
+// Folders kept before a file's name when a path is shortened.
+const PATH_DEPTH = 3
+
+type Aim = { path: string; url: string; text: string }
+
+// What a call points at, before it is cut for a row or a card.
+const aimOf = (input: Record<string, unknown>): Aim => {
+  const str = (key: string): string => (typeof input[key] === 'string' ? String(input[key]).trim() : '')
+  const key = TARGET_KEYS.find(k => str(k))
+  return {
+    path: str('file_path') || str('notebook_path') || str('path'),
+    url: str('url'),
+    text: key ? str(key).split('\n')[0] ?? '' : '',
+  }
+}
 
 // What a tool call works on, in a few characters: a file, a command's first line, a host.
 export function toolTarget(input: Record<string, unknown>): string {
-  const str = (key: string): string => (typeof input[key] === 'string' ? String(input[key]).trim() : '')
-  const path = str('file_path') || str('notebook_path') || str('path')
-  if (path) return clip(lastSegments(path), TARGET_MAX)
-  const url = str('url')
-  if (url) return clip(/^[a-z]+:\/\/([^/?#]+)/i.exec(url)?.[1] ?? url, TARGET_MAX)
-  const key = TARGET_KEYS.find(k => str(k))
-  return key ? clip(str(key).split('\n')[0] ?? '', TARGET_MAX) : ''
+  const aim = aimOf(input)
+  if (aim.path) return clip(lastSegments(aim.path), TARGET_MAX)
+  if (aim.url) return clip(/^[a-z]+:\/\/([^/?#]+)/i.exec(aim.url)?.[1] ?? aim.url, TARGET_MAX)
+  return clip(aim.text, TARGET_MAX)
+}
+
+/** The same aim at full length: the whole path, the whole address, the command's first line. */
+export const toolDetail = (input: Record<string, unknown>): string => {
+  const aim = aimOf(input)
+  return clip(aim.path || aim.url || aim.text, DETAIL_MAX)
+}
+
+/** A path's last few folders and its name: enough to tell two files apart in a narrow card. */
+export const shortPath = (path: string, depth = PATH_DEPTH): string => {
+  const parts = path.split('/').filter(Boolean)
+  const tail = parts.slice(-depth).join('/')
+  return parts.length > depth ? `…/${tail}` : path
 }

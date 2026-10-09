@@ -1,5 +1,5 @@
 import type { AgentRun } from '../types'
-import { clip, norm, toolName, toolTarget } from './format'
+import { clip, norm, toolDetail, toolName, toolTarget } from './format'
 import { nextLook } from './identity'
 import { costOf, tokensOf, windowOf } from './pricing'
 import type { Usage } from './pricing'
@@ -94,6 +94,7 @@ export const toolActivity = (a: AgentRun, call: Record<string, unknown>): AgentR
   toolCount: (a.toolCount || 0) + 1,
   lastTool: toolName(String(call.tool ?? '')),
   lastTarget: toolTarget(call) || undefined,
+  lastDetail: toolDetail(call) || undefined,
 })
 
 export const ownTasks = (a: AgentRun, call: Record<string, unknown>, result: unknown): AgentRun => ({

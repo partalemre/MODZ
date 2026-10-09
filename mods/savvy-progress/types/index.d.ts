@@ -37,6 +37,14 @@ export type ToolEvent = {
   isError?: boolean
 }
 
+/** A file an agent read or changed: how often each, and when it last touched it. */
+export type TouchedFile = {
+  path: string
+  reads: number
+  edits: number
+  at: number
+}
+
 export type AgentRun = {
   id: string
   agentId?: string
@@ -62,6 +70,8 @@ export type AgentRun = {
   toolCount: number
   lastTool?: string
   lastTarget?: string
+  /** The latest call's target in full (a whole path, a command's first line), for the open card. */
+  lastDetail?: string
   /** Self-reported by the worker through the `step` tool. */
   stepDone?: number
   stepTotal?: number
@@ -74,6 +84,8 @@ export type AgentRun = {
   answer?: string
   /** Its latest tool calls, oldest first. */
   history?: ToolEvent[]
+  /** The files its calls read or changed, the latest last. */
+  files?: TouchedFile[]
   /** When it was last heard from: a tool call opened or closed, a model request answered. */
   heardAt?: number
 }
@@ -109,6 +121,8 @@ export type Panel = {
   isDoneCollapsed: boolean
   /** The agent whose work history is open. */
   selected?: string
+  /** The agent whose task text is shown whole rather than cut short. */
+  briefOpen?: string
   isTimelineHidden?: boolean
   draft?: Draft
 }

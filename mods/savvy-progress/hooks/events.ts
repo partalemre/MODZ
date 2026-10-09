@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { StepInput } from './agents'
-import { addRun, endRun, isRunning, ownTasks, patchRun, stepReport, stepUsage, toolActivity } from './agents'
+import { addRun, endRun, heard, isRunning, ownTasks, patchRun, stepReport, stepUsage, toolActivity } from './agents'
 import { isNewFlow, mergeFlow } from './flow'
 import { closeEvent, openEvent } from './history'
 import { readingOf, trackLimit } from './limit'
@@ -49,7 +49,8 @@ function onReports(on: On): void {
     const agentId = e.agentId
     if (!agentId) return { result: 'ignored: only subagents report steps' }
     const input = e as unknown as StepInput
-    await update($, agents, list => patchRun(list, agentId, a => stepReport(a, input)))
+    const at = await $.clock.now()
+    await update($, agents, list => patchRun(list, agentId, a => heard(stepReport(a, input), at)))
     return { result: 'ok' }
   })
 }
@@ -90,7 +91,7 @@ function onLaunches(on: On): void {
   })
 }
 
-// What each loop is doing: tool calls, task lists, model requests and the end of a run.
+// What each loop is doing: its tool calls and task lists.
 function onActivity(on: On): void {
   on('tool.call', async ($, e, next) => {
     const call = e as unknown as Record<string, unknown>
@@ -100,19 +101,22 @@ function onActivity(on: On): void {
     const isTracked = name !== STEP_TOOL
     if (agentId && isTracked) {
       const at = await $.clock.now()
-      await update($, agents, list => patchRun(list, agentId, a => openEvent(toolActivity(a, call), { call, at, id })))
+      await update($, agents, list => patchRun(list, agentId, a => heard(openEvent(toolActivity(a, call), { call, at, id }), at)))
     }
     const result = await next(e)
     if (agentId && isTracked) {
       const facts = { id, tool: name, at: await $.clock.now(), isError: result.deny !== undefined || result.isError === true }
-      await update($, agents, list => patchRun(list, agentId, a => closeEvent(a, facts)))
+      await update($, agents, list => patchRun(list, agentId, a => heard(closeEvent(a, facts), facts.at)))
     }
     if (!TASK_TOOLS.includes(name) || result.deny !== undefined || result.isError) return result
     if (agentId) await update($, agents, list => patchRun(list, agentId, a => ownTasks(a, call, result.result)))
     else await update($, tasks, list => applyTaskTool(list, call, result.result))
     return result
   })
+}
 
+// Each loop's model requests and its end.
+function onSteps(on: On): void {
   // Each model request of a subagent: live context, tokens and cost.
   on('turn.step', async function* ($, e, next) {
     const result = yield* next(e)
@@ -120,7 +124,8 @@ function onActivity(on: On): void {
     const usage = result.usage
     if (!agentId || !usage) return result
     const facts = { model: usage.model || e.model, effort: e.effort, usage }
-    await update($, agents, list => patchRun(list, agentId, a => stepUsage(a, facts)))
+    const at = await $.clock.now()
+    await update($, agents, list => patchRun(list, agentId, a => heard(stepUsage(a, facts), at)))
     return result
   })
 
@@ -150,4 +155,5 @@ export function onEvents(on: On): void {
   onReports(on)
   onLaunches(on)
   onActivity(on)
+  onSteps(on)
 }

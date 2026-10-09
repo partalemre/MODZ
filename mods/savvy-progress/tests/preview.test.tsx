@@ -2,12 +2,17 @@ import { expect, test } from 'claude-code/testing'
 
 import { BAND, PANE, SECOND, finish, measure, modelStep, setup, spawn, threeRunning, tool } from './fixtures'
 
-// Desktop trees for bin/preview: each logged tree becomes a PNG.
-const dump = async (label: string, ui: any) => {
+// Desktop trees for bin/preview: each logged tree becomes a PNG. A pane's tree is wrapped in a box
+// as wide as its columns (8 px a column, as the renderer and MODZ measure), so the picture shows
+// the pane at its own width rather than the renderer's page.
+const dump = async (label: string, ui: any, cols?: number) => {
   const tree = await ui.drawn()
-  console.log('@@TREE@@' + label + '@@' + JSON.stringify(tree))
+  const framed = cols ? { type: 'Box', props: { width: cols, flexDirection: 'column' }, children: [tree] } : tree
+  console.log('@@TREE@@' + label + '@@' + JSON.stringify(framed))
   expect(tree).toBeDefined()
 }
+
+const MINUTE = 60 * SECOND
 
 const TASKS = [
   { title: 'Research competitor launches', tier: 'careful' },
@@ -42,28 +47,35 @@ const dumpBand = async ($: any, label: string) => {
   }
 }
 
-const dumpPane = async ($: any, label: string, open?: string) => {
+// Each press happens once, on the first mount: the panel's state outlives the mount.
+const dumpPane = async ($: any, label: string, presses: string[] = []) => {
+  let isFirst = true
   for (const [name, cols] of Object.entries(WIDTHS)) {
     const ui = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, bodyColumns: cols.pane } })
-    if (open) await ui.press({ key: open })
-    await dump(`${label}-${name}`, ui)
+    if (isFirst) for (const key of presses) await ui.press({ key })
+    isFirst = false
+    await dump(`${label}-${name}`, ui, cols.pane)
     await ui.unmount()
   }
 }
+
+// A worker that reads, edits and runs tests over a few minutes, one call at a time.
+async function work($: any, clock: any, agentId: string, calls: Record<string, unknown>[]) {
+  for (const call of calls) {
+    await clock.advance(9 * SECOND)
+    await tool($, { ...call, agentId })
+  }
+}
+
+const READS = ['src/hero.tsx', 'src/nav.tsx', 'package.json'].map(file => ({ tool: 'Read', file_path: `/w/site/${file}` }))
+const EDITS = [{ tool: 'Edit', file_path: '/w/site/src/hero.tsx', old_string: 'a', new_string: 'b' }, { tool: 'Write', file_path: '/w/site/src/cta.tsx', content: '' }]
+const TESTS = [{ tool: 'Bash', command: 'npm test' }]
 
 test('preview: band, three agents running with no report', async ($, on) => {
   const { clock } = await setup($, on)
   await threeRunning($)
   await clock.advance(12 * SECOND)
   await dumpBand($, 'band-running-3-agents')
-})
-
-test('preview: band, one of three agents finished', async ($, on) => {
-  await setup($, on)
-  await threeRunning($)
-  await finish($, 'a1')
-  await tool($, { tool: 'mcp__savvy-progress__step', done: 2, total: 4, agentId: 'a2' })
-  await dumpBand($, 'band-agents-partial')
 })
 
 test('preview: band, reported flow at 2/4', async ($, on) => {
@@ -81,18 +93,14 @@ test('preview: band, done with a failure', async ($, on) => {
   await dumpBand($, 'band-done-failed')
 })
 
-test('preview: band, done', async ($, on) => {
-  await setup($, on)
-  await spawn($, 'Research competitors')
-  await spawn($, 'Design the graphics')
-  await finish($, 'a1')
-  await finish($, 'a2')
-  await dumpBand($, 'band-done')
-})
-
-test('preview: panel empty', async ($, on) => {
+test('preview: panel empty, a resting crab and one action', async ($, on) => {
   await setup($, on)
   await dumpPane($, 'panel-empty')
+})
+
+test('preview: panel empty with the Yeni görev form open', async ($, on) => {
+  await setup($, on)
+  await dumpPane($, 'panel-new-task', ['new-task'])
 })
 
 test('preview: panel with running, finished and planned', async ($, on) => {
@@ -105,23 +113,20 @@ test('preview: panel with running, finished and planned', async ($, on) => {
 test('preview: panel of effort-dressed agents', async ($, on) => {
   const { clock } = await setup($, on)
   await threeRunning($)
-  await clock.advance(156 * SECOND)
+  await work($, clock, 'a1', READS)
+  await work($, clock, 'a3', [...EDITS, ...TESTS])
   await finish($, 'a2')
   await measure($, 23.5, 1)
   await dumpPane($, 'panel-effort-costumes')
 })
 
-test('preview: panel with one agent work history open', async ($, on) => {
+test('preview: panel with one running agent open: history, message and stop', async ($, on) => {
   const { clock } = await setup($, on)
   await threeRunning($)
-  for (const file of ['src/hero.tsx', 'src/nav.tsx', 'package.json']) {
-    await clock.advance(4 * SECOND)
-    await tool($, { tool: 'Read', file_path: `/w/site/${file}`, agentId: 'a3' })
-  }
-  await tool($, { tool: 'Bash', command: 'npm test', agentId: 'a3' })
-  await clock.advance(7 * SECOND)
+  await work($, clock, 'a3', [...READS, ...TESTS])
+  await work($, clock, 'a1', READS.slice(0, 1))
   await measure($, 23.5, 1)
-  await dumpPane($, 'panel-history-open', 'open-a3')
+  await dumpPane($, 'panel-history-open', ['open-a3'])
 })
 
 test('preview: panel with a finished agent open on its result', async ($, on) => {
@@ -129,8 +134,63 @@ test('preview: panel with a finished agent open on its result', async ($, on) =>
   await threeRunning($)
   await tool($, { tool: 'Read', file_path: '/w/mods/modz/hooks/catalog.ts', agentId: 'a1' })
   await tool($, { tool: 'Bash', command: 'bun test', agentId: 'a1' })
-  await clock.advance(131 * SECOND)
+  await clock.advance(31 * SECOND)
   await $.turn.complete({ answer: 'Five findings, two verified by running the code. One bad marketplace entry kills the whole pane.', durationMs: 1, isAborted: false, turnId: 'turn-a1', agentId: 'a1', reason: 'answer' })
+  await work($, clock, 'a2', READS)
+  await work($, clock, 'a3', EDITS)
   await measure($, 23.5, 1)
-  await dumpPane($, 'panel-result-open', 'open-a1')
+  await dumpPane($, 'panel-result-open', ['open-a1'])
+})
+
+test('preview: panel with a quiet agent: amber pill and the attention line', async ($, on) => {
+  const { clock } = await setup($, on)
+  await threeRunning($)
+  await clock.advance(3 * MINUTE)
+  await work($, clock, 'a2', READS)
+  await work($, clock, 'a3', EDITS)
+  await dumpPane($, 'panel-quiet-agent')
+})
+
+test('preview: panel with a fresh failure on the attention line', async ($, on) => {
+  const { clock } = await setup($, on)
+  await threeRunning($)
+  await work($, clock, 'a1', READS)
+  await work($, clock, 'a2', EDITS)
+  await finish($, 'a2', 'error')
+  await work($, clock, 'a3', TESTS)
+  await dumpPane($, 'panel-failure')
+})
+
+test('preview: panel timeline of a busy crew', async ($, on) => {
+  const { clock } = await setup($, on)
+  await spawn($, 'Map the API surface', 'Explore')
+  await work($, clock, 'a1', READS)
+  await spawn($, 'Write the client', 'savvy-medium')
+  await work($, clock, 'a2', [...READS.slice(0, 1), ...EDITS])
+  await finish($, 'a1')
+  await spawn($, 'Test the client', 'savvy-light')
+  await work($, clock, 'a3', [...TESTS, ...EDITS, ...TESTS])
+  await work($, clock, 'a2', TESTS)
+  await finish($, 'a2')
+  await spawn($, 'Review the change', 'savvy-heavy')
+  await work($, clock, 'a4', READS)
+  await dumpPane($, 'panel-timeline', ['done'])
+})
+
+test('preview: panel compact strip', async ($, on) => {
+  const { clock } = await setup($, on)
+  await launchKit($, clock)
+  await dumpPane($, 'panel-compact', ['compact'])
+})
+
+test('preview: panel with agents and the form open on a refusal', async ($, on) => {
+  const { clock } = await setup($, on, { deny: { Plan: 'plan mode is off in this session' } })
+  await threeRunning($)
+  await clock.advance(20 * SECOND)
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await ui.press({ key: 'new-task' })
+  await ui.select({ key: 'dispatch-type', value: 'Plan' })
+  await ui.input({ key: 'dispatch-task', text: 'Plan the billing page' })
+  await ui.unmount()
+  await dumpPane($, 'panel-new-task-refused')
 })

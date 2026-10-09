@@ -23,10 +23,37 @@ export const OTHERS = { type: 'engine', ref: 1 }
 
 const USAGE = { input_tokens: 120_000, output_tokens: 4_000, cache_read_input_tokens: 5_000, cache_creation_input_tokens: 0 }
 
-export type World = { opened: string[]; closed: string[]; panes: { id: string }[] }
+/** What the session around the mod saw: panes, toasts, sends, tool calls; and what it answers. */
+export type World = {
+  opened: string[]
+  closed: string[]
+  panes: { id: string }[]
+  toasts: string[]
+  sent: { to: string; text: string }[]
+  calls: Record<string, unknown>[]
+  /** What `$.agent.list()` answers; a test may change it. */
+  roster: Record<string, unknown>[]
+}
 
-export async function setup($: any, on: any) {
-  const world: World = { opened: [], closed: [], panes: [] }
+/**
+ * `deny` refuses a spawn of the named agent types; `files` are folders of agent files by path,
+ * each `{ name: text }`; `undelivered` refuses every send with that reason.
+ */
+export type SetupOptions = { deny?: Record<string, string>; files?: Record<string, Record<string, string>>; undelivered?: string }
+
+// Folders are found by the end of their path, so a relative `.claude/agents` matches wherever the test runs.
+function fsHooks(on: any, files: Record<string, Record<string, string>>) {
+  const entry = (name: string) => ({ name, kind: 'file', size: 1, mtimeMs: 1, isLink: false })
+  const folder = (path: string) => Object.entries(files).find(([dir]) => path.endsWith(dir))?.[1]
+  on('fs.list', (_: any, e: any) => ({ value: Object.keys(folder(e.path) ?? {}).map(entry) }))
+  on('fs.read', (_: any, e: any) => {
+    const cut = e.path.lastIndexOf('/')
+    return { value: folder(e.path.slice(0, cut))?.[e.path.slice(cut + 1)] ?? '' }
+  })
+}
+
+export async function setup($: any, on: any, opts: SetupOptions = {}) {
+  const world: World = { opened: [], closed: [], panes: [], toasts: [], sent: [], calls: [], roster: [] }
   const clock = mock.clock(on)
   let spawned = 0
   let created = 0
@@ -40,8 +67,21 @@ export async function setup($: any, on: any) {
   on('ui.open', (_: any, e: any) => (world.opened.push(e.id), world.panes.push({ id: e.id }), { value: { isPlaced: true } }))
   on('ui.close', (_: any, e: any) => (world.closed.push(e.id), (world.panes = []), { value: undefined }))
   on('ui.render', () => OTHERS)
-  on('agent.spawn', () => ({ model: 'claude-opus-5-5', agentId: `a${++spawned}` }))
-  on('tool.call', (_: any, e: any) => (e.tool === 'TaskCreate' ? { result: { task: { id: `t${++created}`, subject: e.subject } } } : { result: 'ok' }))
+  on('agent.spawn', (_: any, e: any) => {
+    const reason = opts.deny?.[e.subagentType ?? e.subagent_type]
+    return reason ? { deny: reason } : { model: 'claude-opus-5-5', agentId: `a${++spawned}` }
+  })
+  on('tool.call', (_: any, e: any) => {
+    world.calls.push(e)
+    return e.tool === 'TaskCreate' ? { result: { task: { id: `t${++created}`, subject: e.subject } } } : { result: 'ok' }
+  })
+  on('ui.toast', (_: any, e: any) => (world.toasts.push(e.text), { value: undefined }))
+  on('session.send', (_: any, e: any) => {
+    world.sent.push({ to: e.to, text: e.text })
+    return opts.undelivered ? { isDelivered: false, reason: opts.undelivered } : { isDelivered: true }
+  })
+  on('agent.list', () => ({ value: world.roster }))
+  fsHooks(on, opts.files ?? {})
   on('turn.step', async function* (_: any, e: any) {
     return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: { ...USAGE, model: e.model } }
   })

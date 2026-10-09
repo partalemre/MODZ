@@ -10,9 +10,10 @@ export const BAR_H = 18
 export const CHIPS_H = 22
 export const MIX_H = 8
 const TRACK_H = 8
-// Room the percent takes at the bar's end: "~%100" in 13px mono, and the gap before it.
+// Room the percent takes after the bar: the gap, then "~%100" in 12.5px mono.
+const PCT_GAP = 8
 const PCT_W = 46
-const PCT_SIZE = 13
+const PCT_SIZE = 12.5
 const STRIPE = 8
 const CHIP_GAP = 6
 const CHIP_PAD = 9
@@ -31,10 +32,11 @@ const stripesOf = (filled: number, y: number, uid: string): string =>
 const FILL: Record<string, string> = { running: 'f-run', done: 'f-ok', failed: 'f-danger' }
 
 // Still, one colour per state (Iris running, Moss done, Flare failed): the crab carries the tier.
-// The percent sits at the bar's end in a fixed slot, so rows of different values line up.
+// The percent sits right after the bar's end, in a slot of one width, so every card's bar ends at
+// the same x and its percent starts there.
 export const progressBarSvg = (W: number, a: AgentRun, opts: { progress: Progress; label: string }): string => {
   const y = (BAR_H - TRACK_H) / 2
-  const barW = Math.max(TRACK_H, W - PCT_W)
+  const barW = Math.max(TRACK_H, W - PCT_W - PCT_GAP)
   const filled = Math.max(TRACK_H, Math.round(barW * opts.progress.value))
   // Ids are per agent: drawings that share a page must not share defs.
   const uid = a.id.replace(/\W/g, '')
@@ -42,7 +44,7 @@ export const progressBarSvg = (W: number, a: AgentRun, opts: { progress: Progres
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`
   const bar = `<rect class="${FILL[a.status] ?? 'f-run'}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`
   const stripes = a.status === 'running' && opts.progress.isEstimate ? stripesOf(filled, y, uid) : ''
-  const label = `<text class="${FILL[a.status] ?? 'f-run'}" x="${W}" y="${BAR_H / 2 + PCT_SIZE * 0.34}" text-anchor="end" font-family="${MONO}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`
+  const label = `<text class="${FILL[a.status] ?? 'f-run'}" x="${barW + PCT_GAP}" y="${BAR_H / 2 + PCT_SIZE * 0.34}" font-family="${MONO}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`
   return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`)
 }
 

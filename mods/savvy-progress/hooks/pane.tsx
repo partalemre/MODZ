@@ -1,26 +1,25 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register, ThemeKey } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 
-import type { AgentRun, LimitTrack, Panel } from '../types'
-import { isRunning, totals } from './agents'
-import type { Totals } from './agents'
-import type { Planned } from './flow'
-import { plannedOf } from './flow'
-import { fmtCost, fmtTime, fmtTokens } from './format'
-import { headerSvg } from './header-svg'
-import type { HeaderData, Tone } from './header-svg'
+import type { Draft, Panel } from '../types'
+import { BUILTIN_TYPES, DEFAULT_TYPE, TASK_TITLE_MAX, blankDraft, chosenOf } from './agent-types'
+import { draftTree } from './dispatch'
+import type { DraftView } from './dispatch'
+import { clip } from './format'
 import { t } from './i18n'
-import { lookAt, lookOf } from './identity'
-import { deriveJob, percentText } from './job'
-import type { JobView } from './job'
-import { shareNumber, shareOf } from './limit'
-import { COMPACT_H, CARD_CRAB, compactSvg } from './pane-svg'
+import { lookAt, lookOf, nextLook } from './identity'
+import { paneDataOf } from './pane-data'
+import type { PaneData } from './pane-data'
 import { FRAME_COLS, FRAME_PX, agentRow, plannedRow } from './rows'
 import type { RowContext, Ui } from './rows'
+import { attentionTree, compactTree, emptyTree, headTree, sectionHead, timelineTree, toolbarTree } from './sections'
+import type { Layout, PaneHandlers } from './sections'
 import { PANE } from './state'
 import { deliveryText } from './steer'
 import type { StopNoun } from './steer'
-import { colorOf, costumeOf, keyOf, plannedTierOf, tierOf } from './tiers'
+
+// The Ajanlar panel: the header card, the toolbar ("Yeni görev", Daralt), the attention line, the
+// form while it is open, the timeline, then the running, finished and planned agents as cards.
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
 const agents = atom({ plugin: 'savvy-progress', key: 'agents' } as const, [])
@@ -30,49 +29,16 @@ const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
 const panel = atom({ plugin: 'savvy-progress', key: 'panel' } as const, { isCompact: false, isDoneCollapsed: false })
 const tasks = atom({ plugin: 'savvy-progress', key: 'tasks' } as const, [])
 const limit = atom({ plugin: 'savvy-progress', key: 'limit' } as const, null)
+const types = atom({ plugin: 'savvy-progress', key: 'types' } as const, BUILTIN_TYPES)
 
 type On = Parameters<Register>[0]
 
 const MIN_W = 240
 const MAX_W = 900
+// MODZ measures the desktop in 8 px cells (kit `PX_PER_CELL`).
 const PX_PER_COL = 8
-// The open card's inner rows sit one indent in from its frame, two cells.
-const DETAIL_INDENT_PX = 16
-
-export type PaneData = {
-  list: AgentRun[]
-  running: AgentRun[]
-  finished: AgentRun[]
-  planned: Planned[]
-  sum: Totals
-  view: JobView | null
-  at: number
-  panel: Panel
-  limit: LimitTrack | null
-}
-
-// With no job of its own (none yet, or dismissed), the header describes the crew as a whole.
-const crewView = (list: AgentRun[]): JobView | null =>
-  deriveJob({ flow: null, agents: list, job: { agentIds: list.map(a => a.id), startedAt: 0, isSealed: true, isHidden: false }, tasks: [] })
-
-async function paneData($: EngineInterface): Promise<PaneData> {
-  const list = await read($, agents)
-  const f = await read($, flow)
-  const at = Math.max(await read($, now), ...list.map(a => a.startedAt), 0)
-  const view = deriveJob({ flow: f, agents: list, job: await read($, job), tasks: await read($, tasks) }) ?? crewView(list)
-  const ended = (a: AgentRun) => a.endedAt ?? a.startedAt
-  return {
-    list,
-    running: list.filter(isRunning).reverse(),
-    finished: list.filter(a => !isRunning(a)).sort((a, b) => ended(b) - ended(a)),
-    planned: plannedOf(f, list),
-    sum: totals(list, at),
-    view,
-    at,
-    panel: await read($, panel),
-    limit: await read($, limit),
-  }
-}
+const MIN_COLS = 24
+const DEFAULT_COLS = 40
 
 // Talking to a running agent, and stopping it through the engine's own TaskStop tool (the normal
 // permission chain applies).
@@ -97,179 +63,117 @@ async function stopAgent($: EngineInterface, agentId: string): Promise<void> {
   }
 }
 
-type Layout = { isDesktop: boolean; width: number; detailWidth: number; W: number }
-
-function toggles(ui: Ui, $: EngineInterface, d: PaneData) {
-  const { Button } = ui
-  const s = t()
-  const compact = (
-    <Button key="compact" label={d.panel.isCompact ? s.expand : s.collapse} plain dimColor onPress={() => update($, panel, prev => ({ ...prev, isCompact: !prev.isCompact }))} />
-  )
-  const done = (
-    <Button
-      key="done"
-      label={`${d.panel.isDoneCollapsed ? '▸' : '▾'} ${s.finished} · ${d.finished.length}`}
-      plain
-      onPress={() => update($, panel, prev => ({ ...prev, isDoneCollapsed: !prev.isDoneCollapsed }))}
-    />
-  )
-  return { compact, done }
+// Every value the panel draws from; each read subscribes the pane to it.
+async function paneData($: EngineInterface): Promise<PaneData> {
+  return paneDataOf({
+    list: await read($, agents),
+    flow: await read($, flow),
+    job: await read($, job),
+    tasks: await read($, tasks),
+    now: await read($, now),
+    panel: await read($, panel),
+    limit: await read($, limit),
+    types: await read($, types),
+  })
 }
 
-const iconsOf = (d: PaneData) => [
-  ...[...d.running, ...d.finished].map(a => ({ costume: costumeOf(a), look: lookOf(a), color: colorOf(tierOf(a)), isRunning: isRunning(a), isDim: false })),
-  ...d.planned.map((p, i) => ({ costume: plannedTierOf(p.tier), look: lookAt(i), color: colorOf(p.tier), isRunning: false, isDim: true })),
-]
+const draftOf = (draft: Draft | undefined): Draft => draft ?? blankDraft()
 
-const summaryOf = (sum: Totals): string => `≈${fmtCost(sum.cost)} · ${fmtTokens(sum.tokens)} ${t().tokensWord} · ${fmtTime(sum.time)}`
+// Changes the "Yeni görev" form and leaves the rest of the panel as it was.
+const patchDraft = ($: EngineInterface, patch: Partial<Draft>) =>
+  update($, panel, prev => ({ ...prev, draft: { ...draftOf(prev.draft), ...patch } }))
 
-const toneOf = (d: PaneData): Tone => {
-  if (d.running.length) return 'run'
-  if (!d.list.length) return 'idle'
-  return d.view && d.view.failed > 0 ? 'warn' : 'ok'
+// Starts the task; a refusal stays on the form, a start closes it and opens the new agent's card.
+async function startTask($: EngineInterface, type: string, text: string): Promise<void> {
+  const prompt = text.trim()
+  if (!prompt) return
+  try {
+    const before = await read($, agents)
+    const started = await $.agent.spawn({ subagentType: type, prompt, description: clip(prompt.split('\n')[0] ?? prompt, TASK_TITLE_MAX) })
+    if (started.deny !== undefined) {
+      await patchDraft($, { notice: t().denied(started.deny) })
+      return
+    }
+    const id = started.agentId
+    await update($, panel, prev => ({ ...prev, selected: id ?? prev.selected, draft: { ...draftOf(prev.draft), isOpen: false, notice: undefined } }))
+    // Our own spawn hook may not see a spawn we made: the roster brings it in with the next free look.
+    const run = (await read($, agents)).find(a => a.agentId === id)
+    $.ui.toast(t().launched(run ? lookOf(run).name : lookAt(nextLook(before)).name))
+  } catch (error) {
+    $.ui.log(`savvy-progress: spawn failed (${String(error)})`, { to: 'debug' })
+    await patchDraft($, { notice: t().spawnFailed })
+  }
 }
 
-// "2 çalışıyor · 3 bitti · 1 planlı": only the parts that are not zero.
-const countsOf = (d: PaneData): string => {
-  const s = t()
-  const ended = d.list.length - d.running.length
-  return [d.running.length && s.liveCount(d.running.length), ended && s.endedCount(ended), d.planned.length && s.plannedCount(d.planned.length)]
-    .filter(Boolean)
-    .join(' · ')
-}
+const draftHandlers = ($: EngineInterface, view: Omit<DraftView, 'layout'>): Pick<PaneHandlers, 'onNewTask' | 'onCancelTask' | 'onPickType' | 'onStartTask'> => ({
+  onNewTask: () => void patchDraft($, { isOpen: !draftOf(view.draft).isOpen, notice: undefined }),
+  onCancelTask: () => void patchDraft($, { isOpen: false, notice: undefined }),
+  onPickType: name => void patchDraft($, { type: name, notice: undefined }),
+  onStartTask: text => void startTask($, chosenOf(view.types, view.draft)?.name ?? DEFAULT_TYPE, text),
+})
 
-function headerOf(d: PaneData): HeaderData {
-  const s = t()
-  const share = shareOf(d.sum.cost, d.limit)
-  const view = d.view
+function handlersOf($: EngineInterface, d: PaneData): PaneHandlers {
+  const flip = (fn: (prev: Panel) => Panel) => () => void update($, panel, fn)
   return {
-    eyebrow: s.pane.toLocaleUpperCase('tr'),
-    counts: countsOf(d),
-    headline: view?.title || s.crew(d.list.length),
-    percent: view ? percentText(view) : '—',
-    tone: toneOf(d),
-    isLive: d.running.length > 0,
-    meter: view,
-    stats: [
-      { label: s.cost, value: `≈${fmtCost(d.sum.cost)}` },
-      { label: s.tokens, value: fmtTokens(d.sum.tokens) },
-      { label: s.time, value: fmtTime(d.sum.time) },
-      { label: s.limitTile, value: share === null ? '—' : `≈${s.pct(shareNumber(share))}` },
-    ],
-  }
-}
-
-const totalsLineOf = (data: HeaderData): string => data.stats.map(stat => `${stat.label} ${stat.value}`).join(' · ')
-
-function headTree(ui: Ui, d: PaneData, ctx: { compact: unknown; layout: Layout }) {
-  const { Box, Text, Svg } = ui
-  const data = headerOf(d)
-  const line = totalsLineOf(data)
-  if (ctx.layout.isDesktop) {
-    const head = headerSvg(ctx.layout.W, data)
-    return (
-      <Box flexDirection="column" rowGap={1}>
-        <Box flexDirection="row" justifyContent="flex-end">{ctx.compact}</Box>
-        <Svg key="head" source={head.source} alt={[data.headline, data.percent, data.counts, line].filter(Boolean).join(', ')} width={ctx.layout.W} height={head.height} />
-      </Box>
-    )
-  }
-  return (
-    <Box flexDirection="column">
-      <Box flexDirection="row" justifyContent="space-between" columnGap={2}>
-        <Text wrap="truncate-end"><Text bold>{data.headline}</Text><Text bold dimColor={data.tone === 'idle'}>{`  ${data.percent}`}</Text></Text>
-        {ctx.compact}
-      </Box>
-      {data.counts !== '' && <Text dimColor>{data.counts}</Text>}
-      <Text dimColor>{line}</Text>
-    </Box>
-  )
-}
-
-const glyphKeyOf = (a: AgentRun): ThemeKey => {
-  if (a.status === 'failed') return 'error'
-  return a.status === 'done' ? 'success' : keyOf(tierOf(a))
-}
-
-function compactTree(ui: Ui, d: PaneData, layout: Layout) {
-  const { Svg, Text } = ui
-  if (layout.isDesktop) {
-    return <Svg key="compact-icons" source={compactSvg(layout.W, iconsOf(d), d.sum)} alt={`${d.list.length} ${t().agentsCount}, ${summaryOf(d.sum)}`} width={layout.W} height={COMPACT_H} />
-  }
-  const glyphs = [...d.running, ...d.finished].map(a => (
-    <Text key={a.id} color={glyphKeyOf(a)}>{`${a.status === 'done' ? '✓' : '●'} `}</Text>
-  ))
-  return (
-    <Text wrap="truncate-end">
-      {glyphs}
-      {d.planned.length ? <Text dimColor>{'○ '.repeat(d.planned.length)}</Text> : null}
-    </Text>
-  )
-}
-
-function listTree(ui: Ui, $: EngineInterface, d: PaneData, layout: Layout) {
-  const { Box, Text } = ui
-  const s = t()
-  const { done } = toggles(ui, $, d)
-  const onToggle = (id: string) => update($, panel, prev => ({ ...prev, selected: prev.selected === id ? undefined : id }))
-  const ctx: RowContext = {
-    at: d.at,
-    width: layout.width,
-    detailWidth: layout.detailWidth,
-    isDesktop: layout.isDesktop,
-    limit: d.limit,
-    selected: d.panel.selected,
-    onToggle,
+    onToggle: id => void update($, panel, prev => ({ ...prev, selected: prev.selected === id ? undefined : id })),
+    onLook: id => void update($, panel, prev => ({ ...prev, selected: id, isCompact: false })),
     onSend: (id, text) => void sendTo($, id, text),
     onStop: id => void stopAgent($, id),
+    onCompact: flip(prev => ({ ...prev, isCompact: !prev.isCompact })),
+    onDone: flip(prev => ({ ...prev, isDoneCollapsed: !prev.isDoneCollapsed })),
+    onTimeline: flip(prev => ({ ...prev, isTimelineHidden: prev.isTimelineHidden !== true })),
+    ...draftHandlers($, { draft: d.panel.draft, types: d.types }),
   }
-  const section = (label: string) => <Text key={`h-${label}`} bold>{label}</Text>
+}
+
+function listTree(ui: Ui, d: PaneData, layout: Layout, on: PaneHandlers) {
+  const { Box } = ui
+  const s = t()
+  const ctx: RowContext = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.inner, limit: d.limit, selected: d.panel.selected }
+  const isDoneOpen = !d.panel.isDoneCollapsed
   return (
-    <Box flexDirection="column" rowGap={1}>
-      {d.running.length > 0 && section(`${s.running} · ${d.running.length}`)}
+    <Box key="list" flexDirection="column" rowGap={1}>
+      {d.running.length > 0 && sectionHead(ui, layout, { label: `${s.running} · ${d.running.length}`, dot: 'run' })}
       {d.running.map(a => agentRow(ui, a, ctx))}
-      {d.finished.length > 0 && <Box key="h-done" flexDirection="row">{done}</Box>}
-      {!d.panel.isDoneCollapsed && d.finished.map(a => agentRow(ui, a, ctx))}
-      {d.planned.length > 0 && section(`${s.planned} · ${d.planned.length}`)}
+      {d.finished.length > 0 && sectionHead(ui, layout, { label: `${s.finished} · ${d.finished.length}`, dot: 'ok', toggle: { key: 'done', isOpen: isDoneOpen, onPress: on.onDone } })}
+      {isDoneOpen && d.finished.map(a => agentRow(ui, a, ctx))}
+      {d.planned.length > 0 && sectionHead(ui, layout, { label: `${s.planned} · ${d.planned.length}`, dot: 'idle' })}
       {d.planned.map(p => plannedRow(ui, p, ctx))}
     </Box>
   )
 }
 
-// Nothing launched yet: an eyebrow and one sentence, no empty tiles.
-function emptyTree(ui: Ui) {
-  const { Box, Text } = ui
-  const s = t()
-  return (
-    <Box flexDirection="column" rowGap={1}>
-      <Text bold color="permission">{`● ${s.emptyTitle.toLocaleUpperCase('tr')}`}</Text>
-      <Text dimColor>{s.empty}</Text>
-    </Box>
-  )
-}
-
-function paneTree(ui: Ui, $: EngineInterface, d: PaneData, layout: Layout) {
+function paneTree(ui: Ui, d: PaneData, layout: Layout, on: PaneHandlers) {
   const { Box } = ui
-  if (d.list.length === 0 && d.planned.length === 0) return emptyTree(ui)
-  const { compact } = toggles(ui, $, d)
+  const isDrafting = d.panel.draft?.isOpen === true
+  const form = isDrafting && draftTree(ui, { draft: d.panel.draft, types: d.types, layout }, on)
+  if (d.list.length === 0 && d.planned.length === 0) {
+    return <Box flexDirection="column" rowGap={2}>{isDrafting ? form : emptyTree(ui, layout, on)}</Box>
+  }
   return (
     <Box flexDirection="column" rowGap={1}>
-      {headTree(ui, d, { compact, layout })}
-      {d.panel.isCompact ? compactTree(ui, d, layout) : listTree(ui, $, d, layout)}
+      {headTree(ui, d, layout)}
+      {toolbarTree(ui, d, on)}
+      {attentionTree(ui, d, layout, on)}
+      {form}
+      {d.panel.isCompact ? compactTree(ui, d, layout) : timelineTree(ui, d, layout, on)}
+      {!d.panel.isCompact && listTree(ui, d, layout, on)}
     </Box>
   )
 }
 
-const layoutOf = (isDesktop: boolean, columns: number): Layout => {
-  if (!isDesktop) return { isDesktop, W: 0, width: columns, detailWidth: columns - FRAME_COLS }
-  const W = Math.max(MIN_W, Math.min(MAX_W, columns * PX_PER_COL - PX_PER_COL))
-  return { isDesktop, W, width: W - CARD_CRAB.w - PX_PER_COL - FRAME_PX, detailWidth: W - FRAME_PX - DETAIL_INDENT_PX }
+/** The pane's room: the desktop in px (a card's inside less its frame), the terminal in cells. */
+export const layoutOf = (isDesktop: boolean, columns: number): Layout => {
+  if (!isDesktop) return { isDesktop, W: 0, inner: columns, cols: columns }
+  const W = Math.max(MIN_W, Math.min(MAX_W, columns * PX_PER_COL))
+  return { isDesktop, W, inner: W - FRAME_PX, cols: columns - FRAME_COLS }
 }
 
 export function onPane(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const ui = $.ui.resolve(e) as Ui
     const isDesktop = e.surface === 'desktop' && 'Svg' in ui
-    return paneTree(ui, $, await paneData($), layoutOf(isDesktop, Math.max(24, e.props.bodyColumns || 40)))
+    const d = await paneData($)
+    return paneTree(ui, d, layoutOf(isDesktop, Math.max(MIN_COLS, e.props.bodyColumns || DEFAULT_COLS)), handlersOf($, d))
   })
 }

@@ -9,28 +9,34 @@ for (const surface of SURFACES) {
     const labels = (await ui.findAll({ type: 'Button' })).map((b: any) => b.props?.label ?? '')
     return [...words, ...labels].join('\n')
   }
+  // Everything the person can read: the desktop draws a card's head and the section heads.
+  const all = async (ui: any) => (surface === 'terminal' ? text(ui) : `${await text(ui)}\n${await svgOf(ui)}`)
+  const hasHead = async (ui: any, label: string) =>
+    surface === 'terminal' ? (await ui.find({ type: 'Text', text: label })) !== undefined : (await svgOf(ui)).includes(label)
+  // The card's disclosure: the title itself on the terminal, a chevron beside the drawn head on the desktop.
+  const toggleLabel = (isOpen: boolean, title: string) => (surface === 'terminal' ? `${isOpen ? '▾' : '▸'} ${title}` : isOpen ? '▾' : '▸')
 
   test(`${surface}: rows are titled by the Agent description with tier, model, tool and meta`, async ($, on) => {
     const { clock } = await setup($, on)
     await threeRunning($)
     await clock.advance(156 * SECOND)
     const ui = await mount($)
-    const all = await text(ui)
-    expect(all).toContain('Build the landing page')
-    expect(all).not.toContain('general-purpose')
-    expect(all).toContain('heavy')
-    expect(all).toContain('Opus 5.5 · xhigh')
-    expect(all).toContain('› Edit src/hero.tsx')
-    expect(all).toContain('1 araç')
-    expect(all).toMatch(/≈\$0,\d\d/)
-    expect(all).toContain('2:36')
+    const seen = await all(ui)
+    expect(seen).toContain('Build the landing page')
+    expect(seen).not.toContain('general-purpose')
+    expect(seen).toContain('heavy')
+    expect(seen).toContain('Opus 5.5 · xhigh')
+    expect(seen).toContain('› Edit src/hero.tsx')
+    expect(seen).toContain('1 araç')
+    expect(seen).toMatch(/≈\$0,\d\d/)
+    expect(seen).toContain('2:36')
     // Context and tokens wait in the detail, so the card reads name, status, progress and cost.
     const metrics = /bağlam %13 · 129k token · ≈\$0,\d\d/
-    expect(surface === 'terminal' ? all : await svgOf(ui)).not.toMatch(metrics)
+    expect(surface === 'terminal' ? seen : await svgOf(ui)).not.toMatch(metrics)
     await ui.press({ key: 'open-a3' })
     if (surface === 'terminal') expect(await text(ui)).toMatch(metrics)
     else expect(await svgOf(ui)).toMatch(metrics)
-    expect(await ui.find({ type: 'Text', text: 'Çalışıyor · 3' })).toBeDefined()
+    expect(await hasHead(ui, 'Çalışıyor · 3')).toBe(true)
   })
 
   test(`${surface}: finished rows show the total time and fold under Bitti`, async ($, on) => {
@@ -42,9 +48,11 @@ for (const surface of SURFACES) {
     const ui = await mount($)
     expect(await text(ui)).toContain('toplam 1:01')
     expect(await text(ui)).toContain('durduruldu')
-    expect((await ui.find({ key: 'done' }))?.props?.label).toBe('▾ Bitti · 2')
+    expect(await hasHead(ui, 'Bitti · 2') || (await ui.find({ key: 'done' }))?.props?.label === '▾ Bitti · 2').toBe(true)
+    expect((await ui.find({ key: 'done' }))?.props?.label).toBe(surface === 'terminal' ? '▾ Bitti · 2' : 'Gizle')
     await ui.press({ key: 'done' })
-    expect((await ui.find({ key: 'done' }))?.props?.label).toBe('▸ Bitti · 2')
+    expect((await ui.find({ key: 'done' }))?.props?.label).toBe(surface === 'terminal' ? '▸ Bitti · 2' : 'Göster')
+    expect(await all(ui)).not.toContain('Design the graphics: ')
     expect(await text(ui)).not.toContain('Design the graphics')
   })
 
@@ -57,7 +65,7 @@ for (const surface of SURFACES) {
     await tool($, { tool: 'mcp__savvy-progress__progress', title: 'Launch kit', tasks, phase: 'delegate' })
     await spawn($, 'Research', 'savvy-careful')
     const ui = await mount($)
-    expect(await ui.find({ type: 'Text', text: 'Planlı · 1' })).toBeDefined()
+    expect(await hasHead(ui, 'Planlı · 1')).toBe(true)
     expect(await text(ui)).toContain('2. Review the kit')
     expect(await text(ui)).toContain('Opus · xhigh · 1 sonrası')
   })
@@ -81,11 +89,11 @@ for (const surface of SURFACES) {
     await finish($, 'a3')
     const ui = await mount($)
     expect(await text(ui)).not.toContain('İş geçmişi')
-    expect((await ui.find({ key: 'open-a3' }))?.props?.label).toBe('▸ Build the landing page')
+    expect((await ui.find({ key: 'open-a3' }))?.props?.label).toBe(toggleLabel(false, 'Build the landing page'))
 
     await ui.press({ key: 'open-a3' })
     const open = await text(ui)
-    expect((await ui.find({ key: 'open-a3' }))?.props?.label).toBe('▾ Build the landing page')
+    expect((await ui.find({ key: 'open-a3' }))?.props?.label).toBe(toggleLabel(true, 'Build the landing page'))
     expect(open).toContain('Görev')
     expect(open).toContain('do it')
     expect(open).toContain('İş geçmişi · 2 araç')

@@ -110,6 +110,9 @@ export const stepReport = (a: AgentRun, input: StepInput): AgentRun => {
   return { ...a, stepTotal: total, stepDone: total ? Math.min(total, done) : done, stepNote: input.note?.trim() || undefined }
 }
 
+/** Anything an agent's own loop reports counts as hearing from it: the quiet check reads this. */
+export const heard = (a: AgentRun, at: number): AgentRun => ({ ...a, heardAt: Math.max(a.heardAt ?? 0, at) })
+
 export const isRunning = (a: AgentRun): boolean => a.status === 'running'
 
 export const elapsed = (a: AgentRun, at: number): number => (a.endedAt ?? Math.max(at, a.startedAt)) - a.startedAt

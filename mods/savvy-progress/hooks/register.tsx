@@ -1,8 +1,11 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
+import type { AgentType } from '../types'
+import { BUILTIN_TYPES, mergeTypes, parseAgentFile } from './agent-types'
 import { isRunning } from './agents'
 import { onBand } from './band'
+import { onDispatch } from './dispatch'
 import { onEvents } from './events'
 import { PHASES } from './flow'
 import { deriveJob } from './job'
@@ -22,11 +25,14 @@ const limit = atom({ plugin: 'savvy-progress', key: 'limit' } as const, null)
 const flow = atom({ plugin: 'savvy-progress', key: 'flow' } as const, null)
 const job = atom({ plugin: 'savvy-progress', key: 'job' } as const, null)
 const tasks = atom({ plugin: 'savvy-progress', key: 'tasks' } as const, [])
+const types = atom({ plugin: 'savvy-progress', key: 'types' } as const, BUILTIN_TYPES)
 const hub = atom({ plugin: 'savvy-progress', key: 'hub' } as const, { pane: HUB_PANE, detail: '', tone: 'idle', at: 0 })
 
 type On = Parameters<Register>[0]
 
 const TICK_MS = 1000
+// The project's agents folder (from the working directory), and the same folder under $HOME.
+const AGENTS_DIR = '.claude/agents'
 
 const PROGRESS_SPEC = {
   name: 'progress',
@@ -106,6 +112,29 @@ async function seedLimit($: EngineInterface): Promise<void> {
   }
 }
 
+async function scanDir($: EngineInterface, dir: string, source: string): Promise<AgentType[]> {
+  const found: AgentType[] = []
+  try {
+    for (const entry of await $.fs.list(dir)) {
+      if (!entry.name.endsWith('.md')) continue
+      const type = parseAgentFile(await $.fs.read(`${dir}/${entry.name}`), source)
+      if (type) found.push(type)
+    }
+  } catch (error) {
+    $.ui.log(`savvy-progress: no agent files in ${dir} (${String(error)})`, { to: 'debug' })
+  }
+  return found
+}
+
+// The agent types "Yeni görev" can start from files: the project's, then the user's.
+async function scanTypes($: EngineInterface): Promise<void> {
+  const home = await $.env.get('HOME')
+  const project = await scanDir($, AGENTS_DIR, 'project')
+  const user = home ? await scanDir($, `${home}/${AGENTS_DIR}`, 'user') : []
+  const found = [...project, ...user]
+  if (found.length) await update($, types, current => mergeTypes(current, found))
+}
+
 // Folds the engine's own agent list into ours: an agent spawned before this mod loaded appears,
 // one whose end event never came is closed. A failure only costs this beat, never the session.
 async function syncRoster($: EngineInterface): Promise<void> {
@@ -178,16 +207,18 @@ export const register: Register = (on, options) => {
     await $.tool.register(STEP_SPEC)
     await $.command.register({
       name: 'agents-info',
-      description: 'Ajanlar panelini aç/kapat: çalışan, biten ve planlı alt ajanlar; durum, ilerleme yüzdesi, maliyet, süre; mesaj ve durdur',
+      description: 'Ajanlar panelini aç/kapat: çalışan, biten ve planlı alt ajanlar; ilerleme, maliyet, zaman çizelgesi, sessiz ajan uyarısı; mesaj, durdur ve yeni görev',
     })
     startBeat($)
     await seedLimit($)
+    await scanTypes($)
     await syncHub($, true)
     return started
   })
 
   onEvents(on)
   onPane(on)
+  onDispatch(on)
   onBand(on)
   onHubSources(on)
   onTranscript(on)

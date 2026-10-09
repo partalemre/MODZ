@@ -5,6 +5,7 @@ import { clip, fmtTime } from './format'
 import { KIND_GLYPH, KIND_KEY, kindOf } from './history'
 import type { Kind } from './history'
 import { t } from './i18n'
+import { lookOf } from './identity'
 import { chipsOf, metricsLine } from './metrics'
 import { MIX_H, chipsSvg, mixSvg } from './metrics-svg'
 import type { MixPart } from './metrics-svg'
@@ -19,8 +20,8 @@ const BRIEF_SHOWN = 360
 const ANSWER_SHOWN = 900
 const SECOND = 1000
 const MINUTE = 60 * SECOND
-const LIVE_COLOR = '#B19CF3'
-const INDENT = 2
+// The room a card needs to set the message field and the stop button side by side.
+const SIDE_BY_SIDE_PX = 480
 const KIND_ORDER: Kind[] = ['read', 'edit', 'run', 'agent', 'other']
 
 const durationOf = (e: ToolEvent): string => {
@@ -43,7 +44,7 @@ function eventTree(ui: Ui, e: ToolEvent, ctx: EventContext) {
   const kind = kindOf(e.tool)
   const outcome = outcomeOf(e, ctx.isLive)
   const end = e.endAt === undefined && ctx.isLive && ctx.isDesktop
-    ? <Svg key="live" source={pulseSvg(LIVE_COLOR)} alt={t().isRunning} width={PULSE} height={PULSE} />
+    ? <Svg key="live" source={pulseSvg()} alt={t().isRunning} width={PULSE} height={PULSE} />
     : <Text color={outcome.key}>{outcome.glyph}</Text>
   return (
     <Box key={`ev-${ctx.index}`} flexDirection="row" alignItems="center" columnGap={1}>
@@ -75,7 +76,7 @@ function mixTree(ui: Ui, parts: MixPart[], ctx: RowContext) {
       <Text dimColor>{`${s.kinds[p.kind]} ${p.count}${i < parts.length - 1 ? '   ' : ''}`}</Text>
     </Text>
   ))
-  const width = ctx.detailWidth
+  const width = ctx.inner
   return (
     <Box flexDirection="column" rowGap={ctx.isDesktop ? 1 : 0}>
       {ctx.isDesktop && <Svg key="mix" source={mixSvg(width, parts)} alt={words} width={width} height={MIX_H} />}
@@ -138,22 +139,35 @@ function metricsTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Svg, Text } = ui
   const line = metricsLine(a, ctx.limit)
   if (!ctx.isDesktop) return <Text dimColor wrap="truncate-end">{line}</Text>
-  const width = ctx.detailWidth
+  const width = ctx.inner
   const chips = chipsSvg(width, chipsOf(a, ctx.limit))
   return <Svg key="chips" source={chips.source} alt={line} width={width} height={chips.height} />
 }
 
-// Only a running agent can be spoken to or stopped; the field is left out where a surface has none.
+// Only a running agent can be spoken to or stopped. The desktop sets the field and the stop side by
+// side; the terminal stacks them. The field is left out where a surface has none.
 function actionsTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box, Button, Input } = ui
   if (a.status !== 'running') return null
   const s = t()
-  return (
-    <Box key={`actions-${a.id}`} flexDirection="column" rowGap={1}>
-      {Input && <Input key={`send-${a.id}`} label={s.message} placeholder={s.messageHint} value="" submitLabel={s.send} onSubmit={(text: string) => ctx.onSend(a.id, text)} />}
-      <Box flexDirection="row">
-        <Button key={`stop-${a.id}`} plain label={s.stop} onPress={() => ctx.onStop(a.id)} />
+  const name = lookOf(a).name
+  const field = Input && (
+    <Input key={`send-${a.id}`} label={s.message} placeholder={s.messageTo(name)} value="" submitLabel={s.send} onSubmit={(text: string) => ctx.onSend(a.id, text)} />
+  )
+  const stop = <Button key={`stop-${a.id}`} variant="secondary" label={s.stopWho(name)} onPress={() => ctx.onStop(a.id)} />
+  // A narrow card stacks them, so neither the field nor the button has to wrap.
+  if (!ctx.isDesktop || ctx.inner < SIDE_BY_SIDE_PX) {
+    return (
+      <Box key={`actions-${a.id}`} flexDirection="column" rowGap={ctx.isDesktop ? 1 : 0}>
+        {field}
+        <Box flexDirection="row" justifyContent={ctx.isDesktop ? 'flex-end' : 'flex-start'}>{stop}</Box>
       </Box>
+    )
+  }
+  return (
+    <Box key={`actions-${a.id}`} flexDirection="row" alignItems="center" columnGap={1}>
+      {field && <Box flexDirection="column" flexGrow={1} flexShrink={1}>{field}</Box>}
+      {stop}
     </Box>
   )
 }
@@ -161,7 +175,7 @@ function actionsTree(ui: Ui, a: AgentRun, ctx: RowContext) {
 export function detailTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box } = ui
   return (
-    <Box key={`detail-${a.id}`} flexDirection="column" rowGap={1} marginTop={1} paddingLeft={INDENT}>
+    <Box key={`detail-${a.id}`} flexDirection="column" rowGap={1} marginTop={1}>
       {metricsTree(ui, a, ctx)}
       {briefTree(ui, a.brief)}
       {historyTree(ui, a, ctx)}

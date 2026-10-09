@@ -74,6 +74,8 @@ export type AgentRun = {
   answer?: string
   /** Its latest tool calls, oldest first. */
   history?: ToolEvent[]
+  /** When it was last heard from: a tool call opened or closed, a model request answered. */
+  heardAt?: number
 }
 
 /** The agents the main loop launched for the current request. */
@@ -95,11 +97,28 @@ export type LimitTrack = {
   carriedRate?: number
 }
 
+/** The "Yeni görev" form: open or not, the agent type picked, and why the last start was refused. */
+export type Draft = {
+  isOpen: boolean
+  type: string
+  notice?: string
+}
+
 export type Panel = {
   isCompact: boolean
   isDoneCollapsed: boolean
   /** The agent whose work history is open. */
   selected?: string
+  isTimelineHidden?: boolean
+  draft?: Draft
+}
+
+/** An agent type the panel can start: a built-in, one the engine offered, or an agents/*.md file. */
+export type AgentType = {
+  name: string
+  description: string
+  /** `built-in`, `plugin`, `project`, `user` or the settings source the engine named. */
+  source: string
 }
 
 /** The MODZ hub's tone for this mod's card (DESIGN.md §9): lo · Iris · Moss · Amber · Flare. */
@@ -119,6 +138,7 @@ declare module 'claude-code' {
       tasks: TrackedTask[]
       limit: LimitTrack | null
       hub: HubCard
+      types: AgentType[]
     }
   }
 }

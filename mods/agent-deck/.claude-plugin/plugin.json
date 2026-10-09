@@ -1,6 +1,0 @@
-{
-  "name": "agent-deck",
-  "version": "0.1.0",
-  "description": "A pane that shows every agent live (what it is doing, how long, how many tokens), lets you read its transcript, message it and hand work to any agent type",
-  "types": "./types/index.d.ts"
-}

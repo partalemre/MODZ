@@ -128,11 +128,11 @@ function termLane(ui: Ui, runs: Run[], label: { name: string; end: string; key: 
   const { Text } = ui
   return (
     <Text key={`lane-${label.name}`} wrap="truncate-end">
-      <Text color={label.key}>{label.name.padEnd(TERM_NAME)}</Text>
+      <Text bold>{label.name.padEnd(TERM_NAME)}</Text>
       {runs.map((run, i) => (
         <Text key={`r${i}`} color={RUN_KEY[run.kind]} dimColor={run.kind === 'idle'}>{(RUN_GLYPH[run.kind] ?? '━').repeat(run.length)}</Text>
       ))}
-      <Text dimColor>{` ${label.end}`}</Text>
+      <Text color={label.key}>{` ${label.end}`}</Text>
     </Text>
   )
 }

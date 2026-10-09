@@ -19,11 +19,16 @@ const NEUTRALS: Record<string, Pair> = {
 
 const STROKES: Record<string, Pair> = {
   ln: ['#E4E0D6', '#2E2E2A'],
+  'i-m': ['#706B63', '#8E8A80'],
   rk: ['#ECE8DF', '#34332F'],
 }
 
-// Role colours: `f-<role>` the fill (fg), `b-<role>` its tint, `l-<role>` its line as a stroke.
+// Role colours: `f-<role>` the fill (fg), `b-<role>` its tint, `l-<role>` its line as a stroke,
+// `i-<role>` the fg as a stroke for line icons.
 const ROLES: Record<string, { fg: Pair; tint: Pair; line: Pair }> = {
+  read: { fg: ['#2464A0', '#7FB6E8'], tint: ['#E7F0F9', '#1E2B37'], line: ['#B9D3EC', '#2F4A63'] },
+  edit: { fg: ['#A94A26', '#E58A5F'], tint: ['#FBEDE6', '#38251D'], line: ['#EFC6B4', '#6A3E2D'] },
+  plan: { fg: ['#A8337F', '#E07BC0'], tint: ['#FBE9F4', '#351F2E'], line: ['#EDBFDC', '#6B3A5C'] },
   run: { fg: ['#6243C4', '#B19CF3'], tint: ['#F0ECFC', '#29243D'], line: ['#CFC3F3', '#4A3F75'] },
   ok: { fg: ['#1F6E43', '#6FC593'], tint: ['#E4F4EA', '#1B2F25'], line: ['#B5DEC4', '#2F5A42'] },
   warn: { fg: ['#8A6000', '#E9B949'], tint: ['#FBF2D9', '#332D19'], line: ['#EBD48F', '#66552A'] },
@@ -43,7 +48,7 @@ const WORDS: Record<string, Pair> = {
 const rulesOf = (side: 0 | 1): string => {
   const fills = Object.entries(NEUTRALS).map(([cls, pair]) => `.${cls}{fill:${pair[side]}}`)
   const strokes = Object.entries(STROKES).map(([cls, pair]) => `.${cls}{stroke:${pair[side]}}`)
-  const roles = Object.entries(ROLES).map(([role, c]) => `.f-${role}{fill:${c.fg[side]}}.b-${role}{fill:${c.tint[side]}}.l-${role}{stroke:${c.line[side]}}`)
+  const roles = Object.entries(ROLES).map(([role, c]) => `.f-${role}{fill:${c.fg[side]}}.b-${role}{fill:${c.tint[side]}}.l-${role}{stroke:${c.line[side]}}.i-${role}{stroke:${c.fg[side]}}`)
   const words = Object.entries(WORDS).map(([tier, pair]) => `.w-${tier}{fill:${pair[side]}}`)
   return [...fills, ...strokes, ...roles, ...words].join('')
 }

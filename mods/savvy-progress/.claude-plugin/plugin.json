@@ -1,6 +1,6 @@
 {
   "name": "savvy-progress",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Prompt üstü ilerleme bandı ve tek Ajanlar paneli (/agents-info): her ajan kendi yengeciyle bir kart (durum, ilerleme yüzdesi, maliyet, süre; mesaj ve durdur), zaman çizelgesi, sessiz ajan uyarısı ve Yeni görev. İlerleme yalnızca gözlenenden türetilir.",
   "author": {
     "name": "johnnyvizz",

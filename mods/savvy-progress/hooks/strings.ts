@@ -60,6 +60,20 @@ export type Strings = {
   show: string
   hide: string
   details: string
+  /** The open card: what it does now, between calls, and once it ended. */
+  current: string
+  thinking: string
+  lastStep: string
+  /** "Komut çalıştırıyor": a call of each kind in progress. */
+  doing: Kinds
+  /** The files its calls read or changed, and how many more than shown. */
+  files: string
+  moreFiles: (n: number) => string
+  /** The task text cut short, or whole. */
+  showAll: string
+  showLess: string
+  /** A moment in the past: "12 sn önce". */
+  ago: (span: string) => string
   /** The timeline: its title and the "now" mark at its right edge. */
   timeline: string
   now: string

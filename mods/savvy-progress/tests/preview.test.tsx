@@ -132,6 +132,43 @@ test('preview: panel with one running agent open: history, message and stop', as
   await dumpPane($, 'panel-history-open', ['open-a3'])
 })
 
+const BRIEF = 'Rebuild the landing hero: tighter headline, one primary action, the crab mascot on the right. Keep the copy under 12 words and check the layout at 360 px before you finish.'
+
+const spawnBrief = ($: any, description: string) => $.agent.spawn({ prompt: BRIEF, description, subagentType: 'savvy-medium' })
+
+// A Bash call left open, so the card shows a command in flight; resolved after the dump.
+function holdBash(on: any): () => void {
+  let release = () => {}
+  const gate = new Promise<void>(resolve => (release = resolve))
+  on('tool.call', { tool: 'Bash' }, async () => (await gate, { result: 'ok' }))
+  return release
+}
+
+test('preview: panel with a busy agent open: task, a command in flight, recent calls and files', async ($, on) => {
+  const release = holdBash(on)
+  const { clock } = await setup($, on)
+  await spawnBrief($, 'Rebuild the landing hero')
+  await modelStep($, 'a1', 'medium')
+  await work($, clock, 'a1', [...READS, ...EDITS, { tool: 'Read', file_path: '/w/site/src/styles/tokens.css' }])
+  await tool($, { tool: 'mcp__savvy-progress__step', done: 3, total: 5, note: 'Hero copy', agentId: 'a1' })
+  await clock.advance(9 * SECOND)
+  const pending = tool($, { tool: 'Bash', command: 'npx playwright test hero.spec.ts --project=mobile', agentId: 'a1' })
+  await clock.advance(14 * SECOND)
+  await measure($, 23.5, 1)
+  await dumpPane($, 'panel-detail-busy', ['open-a1'])
+  release()
+  await pending
+})
+
+test('preview: panel with a failed agent open on where it stopped', async ($, on) => {
+  const { clock } = await setup($, on)
+  await spawn($, 'Migrate the billing tables', 'savvy-careful')
+  await modelStep($, 'a1', 'high')
+  await work($, clock, 'a1', [...READS.slice(0, 2), { tool: 'Bash', command: 'npm run migrate' }])
+  await finish($, 'a1', 'error')
+  await dumpPane($, 'panel-detail-failed', ['open-a1'])
+})
+
 test('preview: panel with a finished agent open on its result', async ($, on) => {
   const { clock } = await setup($, on)
   await threeRunning($)

@@ -22,8 +22,8 @@ export const CRAB = { w: 36, h: 32 } as const
 export const PULSE = 12
 const PULSE_CORE = 3
 
-// The narrative part: the worker's own steps or task list, then what it is doing now.
-const stepsOf = (a: AgentRun): string => {
+/** The worker's own count of its steps or its task list, when it keeps one: "3/5 · Hero copy". */
+export const stepsOf = (a: AgentRun): string => {
   if (a.stepTotal) return `${a.stepDone ?? 0}/${a.stepTotal}${a.stepNote ? ' · ' + a.stepNote : ''}`
   const own = countTasks(a.todos ?? [])
   if (!own.total) return ''

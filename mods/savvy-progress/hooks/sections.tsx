@@ -28,6 +28,8 @@ export type PaneHandlers = {
   onToggle: (id: string) => void
   /** Opens one agent's card (never closes it). */
   onLook: (id: string) => void
+  /** Shows one agent's task text whole, or cut short again. */
+  onBrief: (id: string) => void
   onSend: (id: string, text: string) => void
   onStop: (id: string) => void
   onCompact: () => void

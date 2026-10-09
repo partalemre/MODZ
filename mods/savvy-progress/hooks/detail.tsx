@@ -1,119 +1,41 @@
 import type { ThemeKey } from 'claude-code'
 
-import type { AgentRun, ToolEvent } from '../types'
-import { clip, fmtTime } from './format'
-import { KIND_GLYPH, KIND_KEY, kindOf } from './history'
-import type { Kind } from './history'
+import type { AgentRun } from '../types'
+import { filesTree, historyTree, nowTree } from './detail-work'
+import { clip } from './format'
 import { t } from './i18n'
 import { lookOf } from './identity'
 import { chipsOf, metricsLine } from './metrics'
-import { MIX_H, chipsSvg, mixSvg } from './metrics-svg'
-import type { MixPart } from './metrics-svg'
-import { PULSE, pulseSvg } from './pane-svg'
+import { chipsSvg } from './metrics-svg'
 import type { RowContext, Ui } from './rows'
 
-// The open row: what it used (context, tokens, ≈$, its 5h share), the task it was handed in a soft card, its work as a colored mix and a timed
-// history, and its answer in a card that says how it went.
+// The open card answers "what is it doing" from the top: the task it was handed, what it does this
+// moment, its latest calls, the files it touched, what it used (time, tokens, ≈$, its 5h share),
+// its answer once it ended, then a message to it and its stop while it runs.
 
-const HISTORY_SHOWN = 14
-const BRIEF_SHOWN = 360
+const BRIEF_SHOWN = 280
 const ANSWER_SHOWN = 900
-const SECOND = 1000
-const MINUTE = 60 * SECOND
 // The room a card needs to set the message field and the stop button side by side.
 const SIDE_BY_SIDE_PX = 480
-const KIND_ORDER: Kind[] = ['read', 'edit', 'run', 'agent', 'other']
 
-const durationOf = (e: ToolEvent): string => {
-  if (e.endAt === undefined) return ''
-  const ms = e.endAt - e.at
-  if (ms < SECOND) return `${ms}ms`
-  return ms < MINUTE ? `${(ms / SECOND).toFixed(1)}s` : fmtTime(ms)
-}
-
-// How a call came back: ✓ or ✗, … while its agent still runs, — when it never answered.
-const outcomeOf = (e: ToolEvent, isLive: boolean): { glyph: string; key: ThemeKey } => {
-  if (e.endAt !== undefined) return e.isError ? { glyph: '✗', key: 'error' } : { glyph: '✓', key: 'success' }
-  return { glyph: isLive ? '…' : '—', key: 'subtle' }
-}
-
-type EventContext = RowContext & { start: number; isLive: boolean; index: number }
-
-function eventTree(ui: Ui, e: ToolEvent, ctx: EventContext) {
-  const { Box, Text, Svg } = ui
-  const kind = kindOf(e.tool)
-  const outcome = outcomeOf(e, ctx.isLive)
-  const end = e.endAt === undefined && ctx.isLive && ctx.isDesktop
-    ? <Svg key="live" source={pulseSvg()} alt={t().isRunning} width={PULSE} height={PULSE} />
-    : <Text color={outcome.key}>{outcome.glyph}</Text>
-  return (
-    <Box key={`ev-${ctx.index}`} flexDirection="row" alignItems="center" columnGap={1}>
-      <Text dimColor>{`+${fmtTime(e.at - ctx.start)}`}</Text>
-      <Text color={KIND_KEY[kind]}>{KIND_GLYPH[kind]}</Text>
-      <Box flexGrow={1} flexShrink={1}>
-        <Text wrap="truncate-end">
-          <Text bold>{e.tool}</Text>
-          {e.target ? <Text dimColor>{` ${e.target}`}</Text> : null}
-        </Text>
-      </Box>
-      <Text dimColor>{durationOf(e)}</Text>
-      {end}
-    </Box>
-  )
-}
-
-export const mixOf = (history: ToolEvent[]): MixPart[] =>
-  KIND_ORDER.map(kind => ({ kind, count: history.filter(e => kindOf(e.tool) === kind).length })).filter(p => p.count > 0)
-
-function mixTree(ui: Ui, parts: MixPart[], ctx: RowContext) {
-  const { Box, Text, Svg } = ui
-  if (!parts.length) return null
+// The task cut short, with a button to read it whole; a short one needs neither.
+function briefTree(ui: Ui, a: AgentRun, ctx: RowContext) {
+  const { Box, Button, Text } = ui
+  if (!a.brief) return null
   const s = t()
-  const words = parts.map(p => `${s.kinds[p.kind]} ${p.count}`).join(' · ')
-  const legend = parts.map((p, i) => (
-    <Text key={`k-${p.kind}`}>
-      <Text color={KIND_KEY[p.kind]}>{`${KIND_GLYPH[p.kind]} `}</Text>
-      <Text dimColor>{`${s.kinds[p.kind]} ${p.count}${i < parts.length - 1 ? '   ' : ''}`}</Text>
-    </Text>
-  ))
-  const width = ctx.inner
-  return (
-    <Box flexDirection="column" rowGap={ctx.isDesktop ? 1 : 0}>
-      {ctx.isDesktop && <Svg key="mix" source={mixSvg(width, parts)} alt={words} width={width} height={MIX_H} />}
-      <Text wrap="truncate-end">{legend}</Text>
-    </Box>
-  )
-}
-
-function historyTree(ui: Ui, a: AgentRun, ctx: RowContext) {
-  const { Box, Text } = ui
-  const s = t()
-  const list = a.history ?? []
-  const shown = list.slice(-HISTORY_SHOWN)
-  const hidden = list.length - shown.length
-  const isLive = a.status === 'running'
-  return (
-    <Box flexDirection="column" rowGap={1}>
-      <Text bold>{`${s.history} · ${s.tools(list.length)}`}</Text>
-      {mixTree(ui, mixOf(list), ctx)}
-      <Box flexDirection="column">
-        {list.length === 0 && <Text dimColor>{s.noCalls}</Text>}
-        {hidden > 0 && <Text dimColor>{s.earlier(hidden)}</Text>}
-        {shown.map((e, i) => eventTree(ui, e, { ...ctx, start: a.startedAt, isLive, index: hidden + i }))}
-      </Box>
-    </Box>
-  )
-}
-
-function briefTree(ui: Ui, brief: string | undefined) {
-  const { Box, Text } = ui
-  if (!brief) return null
+  const isLong = a.brief.length > BRIEF_SHOWN
+  const isWhole = !isLong || ctx.briefOpen === a.id
   return (
     <Box flexDirection="column">
-      <Text bold>{t().brief}</Text>
-      <Box borderStyle="round" borderDimColor paddingX={1}>
-        <Text dimColor>{clip(brief, BRIEF_SHOWN)}</Text>
+      <Text bold>{s.brief}</Text>
+      <Box flexDirection="column" borderStyle="round" borderDimColor paddingX={1}>
+        <Text>{isWhole ? a.brief : clip(a.brief, BRIEF_SHOWN)}</Text>
       </Box>
+      {isLong && (
+        <Box flexDirection="row" justifyContent="flex-end">
+          <Button key={`brief-${a.id}`} plain dimColor label={isWhole ? s.showLess : s.showAll} onPress={() => ctx.onBrief(a.id)} />
+        </Box>
+      )}
     </Box>
   )
 }
@@ -137,10 +59,11 @@ function resultTree(ui: Ui, a: AgentRun) {
 
 function metricsTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Svg, Text } = ui
-  const line = metricsLine(a, ctx.limit)
+  const facts = { limit: ctx.limit, at: ctx.at }
+  const line = metricsLine(a, facts)
   if (!ctx.isDesktop) return <Text dimColor wrap="truncate-end">{line}</Text>
   const width = ctx.inner
-  const chips = chipsSvg(width, chipsOf(a, ctx.limit))
+  const chips = chipsSvg(width, chipsOf(a, facts))
   return <Svg key="chips" source={chips.source} alt={line} width={width} height={chips.height} />
 }
 
@@ -176,9 +99,11 @@ export function detailTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box } = ui
   return (
     <Box key={`detail-${a.id}`} flexDirection="column" rowGap={1} marginTop={1}>
-      {metricsTree(ui, a, ctx)}
-      {briefTree(ui, a.brief)}
+      {briefTree(ui, a, ctx)}
+      {nowTree(ui, a, ctx)}
       {historyTree(ui, a, ctx)}
+      {filesTree(ui, a, ctx)}
+      {metricsTree(ui, a, ctx)}
       {resultTree(ui, a)}
       {actionsTree(ui, a, ctx)}
     </Box>

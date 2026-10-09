@@ -13,8 +13,11 @@ for (const surface of SURFACES) {
   const all = async (ui: any) => (surface === 'terminal' ? text(ui) : `${await text(ui)}\n${await svgOf(ui)}`)
   const hasHead = async (ui: any, label: string) =>
     surface === 'terminal' ? (await ui.find({ type: 'Text', text: label })) !== undefined : (await svgOf(ui)).includes(label)
-  // The card's disclosure: the title itself on the terminal, a chevron beside the drawn head on the desktop.
-  const toggleLabel = (isOpen: boolean, title: string) => (surface === 'terminal' ? `${isOpen ? '▾' : '▸'} ${title}` : isOpen ? '▾' : '▸')
+  // The card's disclosure: the title itself on the terminal, a "Detay" button under the drawn head on the desktop.
+  const toggleLabel = (isOpen: boolean, title: string) => {
+    if (surface === 'terminal') return `${isOpen ? '▾' : '▸'} ${title}`
+    return isOpen ? 'Gizle ▴' : 'Detay ▾'
+  }
 
   test(`${surface}: rows are titled by the Agent description with tier, model, tool and meta`, async ($, on) => {
     const { clock } = await setup($, on)
@@ -100,7 +103,7 @@ for (const surface of SURFACES) {
     expect(open).toContain('Edit')
     expect(open).toContain(' src/hero.tsx')
     expect(open).toContain(' src/a.ts')
-    expect(open).toContain('+0:03')
+    expect(open).toContain('3 sn önce')
     expect(open).toContain('Sonuç')
 
     await ui.press({ key: 'open-a3' })

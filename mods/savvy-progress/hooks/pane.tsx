@@ -121,6 +121,7 @@ function handlersOf($: EngineInterface, d: PaneData): PaneHandlers {
   return {
     onToggle: id => void update($, panel, prev => ({ ...prev, selected: prev.selected === id ? undefined : id })),
     onLook: id => void update($, panel, prev => ({ ...prev, selected: id, isCompact: false })),
+    onBrief: id => void update($, panel, prev => ({ ...prev, briefOpen: prev.briefOpen === id ? undefined : id })),
     onSend: (id, text) => void sendTo($, id, text),
     onStop: id => void stopAgent($, id),
     onCompact: flip(prev => ({ ...prev, isCompact: !prev.isCompact })),
@@ -134,7 +135,7 @@ function listTree(ui: Ui, view: PaneView) {
   const { Box } = ui
   const { d, layout, on } = view
   const s = t()
-  const ctx: RowContext = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.inner, limit: d.limit, selected: d.panel.selected }
+  const ctx: RowContext = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen }
   const isDoneOpen = !d.panel.isDoneCollapsed
   return (
     <Box key="list" flexDirection="column" rowGap={1}>

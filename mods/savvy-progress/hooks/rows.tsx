@@ -18,8 +18,9 @@ import { CARD_CRAB, CRAB, activityOf, cardCrabSvg, clockOf, crabSvg, modelLine, 
 import { costumeOf, keyOf, plannedTierOf, tierOf, tierWordOf } from './tiers'
 
 // One agent as a card. The desktop draws who it is and its task as the card's head beside its
-// crab, the bar under them and one native line of what it does now; the chevron at the right opens
-// the detail. The terminal keeps native text, its title the button that opens it.
+// crab, the bar under them and one native line of what it does now, ended by a "Detay" button that
+// lights while the pointer is anywhere on the card. The terminal keeps native text, its title the
+// button that opens it. Either way the button is a real one: the focus ring and Enter reach it.
 
 export type Ui = Record<string, any>
 
@@ -30,7 +31,10 @@ export type RowContext = {
   inner: number
   limit: LimitTrack | null
   selected?: string
+  /** The agent whose task text is shown whole. */
+  briefOpen?: string
   onToggle: (id: string) => void
+  onBrief: (id: string) => void
   onSend: (id: string, text: string) => void
   onStop: (id: string) => void
 }
@@ -39,9 +43,9 @@ export type RowContext = {
 export const CARD_PAD_X = 2
 export const FRAME_PX = 34
 export const FRAME_COLS = 4
-// The chevron button beside the head, and the gaps around it.
-const TOGGLE_PX = 40
+// The gap between the card's parts, and a native button's padding around its label.
 const GAP_PX = 8
+const BUTTON_PAD_PX = 28
 const TERM_BAR_MAX = 24
 // Room the percent and the cost beside the bar take on the terminal: "~%100" and "≈$12.34".
 const PCT_COLS = 6
@@ -124,7 +128,7 @@ function termSummary(ui: Ui, a: AgentRun, ctx: RowContext) {
   return (
     <Box flexDirection="column" flexGrow={1} flexShrink={1}>
       <Box flexDirection="row" justifyContent="space-between" columnGap={1}>
-        <Button key={`open-${a.id}`} plain label={`${isOpen ? '▾' : '▸'} ${a.description || a.type}`} onPress={() => ctx.onToggle(a.id)} />
+        <Button key={`open-${a.id}`} plain label={`${isOpen ? '▾' : '▸'} ${a.description || a.type}`} hover={{ color: 'permission' }} onPress={() => ctx.onToggle(a.id)} />
         {termStatus(ui, a, stuckOf(a, ctx.at))}
       </Box>
       {termBarTree(ui, a, ctx)}
@@ -156,41 +160,54 @@ function termCard(ui: Ui, a: AgentRun, ctx: RowContext) {
 }
 
 function deskHead(ui: Ui, a: AgentRun, ctx: RowContext) {
-  const { Box, Button, Svg } = ui
+  const { Box, Svg } = ui
   const look = lookOf(a)
   const stuck = stuckOf(a, ctx.at)
   const head = headOf(a, stuck)
-  const headW = ctx.inner - CARD_CRAB.w - TOGGLE_PX - GAP_PX * 2
-  const isOpen = ctx.selected === a.id
+  const headW = ctx.inner - CARD_CRAB.w - GAP_PX
   // A stuck crab stands still: the calm card says it before the pill does.
   const crab = cardCrabSvg({ costume: costumeOf(a), look, isWalking: a.status === 'running' && !stuck })
   return (
     <Box flexDirection="row" alignItems="center" columnGap={1}>
       <Svg key="crab" source={crab} alt={`${look.name}, ${tierWordOf(a)}`} width={CARD_CRAB.w} height={CARD_CRAB.h} />
       <Svg key="head" source={cardHeadSvg(headW, head)} alt={`${head.title}: ${head.name} · ${head.tierWord} · ${head.model} · ${head.pill.text}`} width={headW} height={HEAD_H} />
-      <Button key={`open-${a.id}`} plain dimColor label={isOpen ? '▾' : '▸'} onPress={() => ctx.onToggle(a.id)} />
+    </Box>
+  )
+}
+
+/** The card's disclosure: "Detay ▾" opens it, "Gizle ▴" closes it. */
+export const toggleLabel = (isOpen: boolean): string => (isOpen ? `${t().hide} ▴` : `${t().details} ▾`)
+
+// The now line, the meta and the disclosure in one row; the line gives way, never the button.
+function deskFoot(ui: Ui, a: AgentRun, ctx: RowContext) {
+  const { Box, Button, Text } = ui
+  const isOpen = ctx.selected === a.id
+  const meta = `${t().tools(a.toolCount || 0)} · ${clockOf(a, ctx.at)} · ≈${fmtCost(a.costUsd)}`
+  const toggle = toggleLabel(isOpen)
+  const room = ctx.inner - textWidth(meta, BODY_PX) - textWidth(toggle, BODY_PX) - BUTTON_PAD_PX - GAP_PX * 2
+  const line = fitText(nowLine(a, isOpen), BODY_PX, room)
+  return (
+    <Box flexDirection="row" justifyContent="space-between" alignItems="center" columnGap={1}>
+      <Box flexShrink={1} flexGrow={1}>
+        <Text wrap="truncate-end" dimColor={a.status !== 'running'}>{line}</Text>
+      </Box>
+      <Box flexShrink={0}><Text dimColor>{meta}</Text></Box>
+      <Button key={`open-${a.id}`} plain dimColor={!isOpen} label={toggle} hover={{ color: 'permission' }} onPress={() => ctx.onToggle(a.id)} />
     </Box>
   )
 }
 
 function deskCard(ui: Ui, a: AgentRun, ctx: RowContext) {
-  const { Box, Svg, Text } = ui
+  const { Box, Svg } = ui
   const isOpen = ctx.selected === a.id
   const progress = agentProgress(a)
   const label = barLabel(a, progress)
-  const meta = `${t().tools(a.toolCount || 0)} · ${clockOf(a, ctx.at)} · ≈${fmtCost(a.costUsd)}`
-  // The line is cut to the room the meta leaves, so it never wraps under it.
-  const line = fitText(nowLine(a, isOpen), BODY_PX, ctx.inner - textWidth(meta, BODY_PX) - GAP_PX * 2)
+  // Keyed, so the pointer anywhere on the card lights its edge and its "Detay" button.
   return (
-    <Box key={a.id} flexDirection="column" borderStyle="round" borderDimColor={!isOpen} paddingX={CARD_PAD_X} paddingY={1}>
+    <Box key={a.id} flexDirection="column" borderStyle="round" borderDimColor={!isOpen} hover={{ borderDimColor: false }} paddingX={CARD_PAD_X} paddingY={1}>
       {deskHead(ui, a, ctx)}
       <Svg key="bar" source={progressBarSvg(ctx.inner, a, { progress, label })} alt={label} width={ctx.inner} height={BAR_H} />
-      <Box flexDirection="row" justifyContent="space-between" columnGap={2}>
-        <Box flexShrink={1}>
-          <Text wrap="truncate-end" dimColor={a.status !== 'running'}>{line}</Text>
-        </Box>
-        <Box flexShrink={0}><Text dimColor>{meta}</Text></Box>
-      </Box>
+      {deskFoot(ui, a, ctx)}
       {isOpen && detailTree(ui, a, ctx)}
     </Box>
   )

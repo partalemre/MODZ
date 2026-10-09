@@ -13,7 +13,7 @@ Dayandığı proje: [JohnnyVizz/claude-kit](https://github.com/johnnyvizz/claude
 - **Dikkat satırı**: en çok bakılması gereken tek ajan. Çalışırken 2 dakikadır sesi çıkmayan (açık aracı yok, model yanıtı da gelmedi) ya da tek bir aracı 15 dakikadır süren ajan Amber (`Pip sessiz 3 dk · Research competitors`), son 10 dakikada kendiliğinden hata veren ajan Flare. Senin durdurduğun ajan sayılmaz. `Bak` onun kartını açar.
 - **Zaman çizelgesi** (en az iki ajan varken, `Gizle`/`Göster`): her ajana bir şerit, her araç çağrısı türünün renginde bir parça (okuma, düzenleme, komut, ajan), şeridin sonu nasıl bittiğini söyler, çalışırken "şimdi" çizgisi, sessiz ajanın şeridinde Amber çentik. Terminalde aynı şeritler hücre dizisi olarak.
 - **Kartlar** (Çalışıyor / Bitti / Planlı): yengeç, adı ve katmanı (`Nori · light · Opus 5.5 · low`), görev başlığı, durum pill'i, ilerleme çubuğu ve hemen ardından yüzdesi, altta şu anki iş (`› Write src/Hero.tsx`; bitince yanıtının ilk satırı) ve `3 araç · 0:56 · ≈$0,56`. Yüzde, adımlarını (`step`) ya da görev listesini bildiren ajanda ölçülür (`%60`), bildirmeyende yaptığı işten tahmin edilir (`~%45`, çizgili çubuk; yanıt gelmeden %90'ı geçmez). Hata veren kartın çubuğu `✗` ile biter.
-- **Açık kart** (sağdaki `▸`): çipler (`bağlam %13`, `129k token`, `≈$0,85`, `5 saat ≈%2,0`), verilen görev, iş karışımı, zamanlı iş geçmişi ve sonuç kartı. Çalışan ajanda **mesaj kutusu** (`Nori'ye yaz, Enter gönderir`, `$.session.send`) ve **`Nori'yi durdur`** (motorun kendi TaskStop aracı, normal izin zinciriyle).
+- **Açık kart**: masaüstünde kartın altındaki `Detay ▾` (işaretçi kartın neresindeyse kenar ve düğme aydınlanır), terminalde kartın başlığı açar; ikisi de gerçek düğme, odak halkası ve Enter ulaşır. Yukarıdan aşağı "ne yapıyor" sorusunu cevaplar: verilen görev (uzunsa `Tamamını göster`), **Şu an** kartı (açık çağrının türü ve rengi, `KOMUT ÇALIŞTIRIYOR · 14 sn`, aracı ve tam hedefi: dosya yolu, komutun ilk satırı, arama; çağrılar arasında `Düşünüyor`, bitince nasıl bittiği), ajanın kendi adımları, iş karışımı ve son 8 çağrı (ne, neye, ne kadar önce, nasıl döndü), **dokunduğu dosyalar** (düzenlenenler önce; tür rozeti, düzenleme ve okuma sayısı), çipler (`Süre 1:17`, `bağlam %13`, `129k token`, `≈$0,85`, `5 saat ≈%2,0`) ve sonuç kartı. Çalışan ajanda **mesaj kutusu** (`Nori'ye yaz, Enter gönderir`, `$.session.send`) ve **`Nori'yi durdur`** (motorun kendi TaskStop aracı, normal izin zinciriyle).
 - **Yeni görev**: ajan türünü seç, işi anlat, Enter başlatır (`$.agent.spawn`); kart hemen açılır ve `Kiko işe koyuldu` der. Türler: yerleşikler (general-purpose, Explore, Plan), motorun modele sunduğu her tür (`agent.offer`: eklentilerin ve ayarların ajanları) ve `.claude/agents/*.md` ile `~/.claude/agents/*.md` dosyaları. Reddedilen başlatma nedeniyle formda kalır.
 - **Boş panel**: dinlenen bir yengeç, tek cümle ve tek eylem (`＋ Yeni görev`).
 - **Yengeçler**: her ajana geliş sırasıyla kendi kabuk rengi, gözleri ve adı (Pip, Mako, Nori…); kostüm katmanı söyler (heavy dedektif, careful mühendis, medium aşçı, light yarışçı, fable astronot, Explore korsan; savvy katmanı yoksa effort seçer). Panelin tek hareketi yengeçlerdir: yalnızca çalışan yürür, sessizleşen durur, iş bitince hareket de biter; `prefers-reduced-motion` hepsini durdurur.
@@ -43,5 +43,9 @@ Maliyet, token sayılarından ve yerleşik fiyat tablosundan (`hooks/pricing.ts`
 ```json
 { "pluginConfigs": { "savvy-progress": { "options": { "language": "tr" } } } }
 ```
+
+## Sürümler
+
+- **1.5.0**: açık kart yeniden düzenlendi: `Detay ▾` düğmesi ve kart üzerinde aydınlanma, Şu an kartı, okunur son çağrılar (göreli zamanla), dokunduğu dosyalar, açılır görev metni, çiplerde süre.
 
 Kurulum talimatları [depo README'sinde](../../README.md).

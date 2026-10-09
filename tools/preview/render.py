@@ -190,7 +190,9 @@ def main():
             continue
         label = re.sub(r"[^\w.-]+", "-", match.group(1))
         out = out_dir / f"{label}.png"
-        shoot(page(json.loads(match.group(2)), theme, width), out, width, theme)
+        # A tree drawn for the light theme says so in its label; its Svg must see a light scheme too.
+        scheme = "light" if re.search(r"(^|-)light(-|$)", label) else theme
+        shoot(page(json.loads(match.group(2)), scheme, width), out, width, scheme)
         print(out)
 
 

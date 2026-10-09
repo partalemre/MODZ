@@ -1,6 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { cardOf, focusOf, rowsOf } from '../hooks/hub'
+import type { Presence } from '../hooks/hub'
 import type { HubCard } from '../types'
 import { MARKET_FILES } from './market-fixture'
 
@@ -35,7 +36,7 @@ test('a pane shows only its own mod\'s card: a removed mod\'s leftover card is n
 
 test('a mod the catalog does not list shows once it reports; a switched-off mod stays hidden', () => {
   const cards = { 'test-badge': card('tests', 'ok', '42/42 geçti'), 'hud-pro': card('usage', 'idle', '5s %10') }
-  const presence = (mod: string) => (mod === 'hud-pro' ? 'off' : 'unlisted') as const
+  const presence = (mod: string): Presence => (mod === 'hud-pro' ? 'off' : 'unlisted')
   const rows = rowsOf(cards, presence)
 
   expect(rows.map(row => row.entry.pane)).toEqual(['tests', 'mods'])
@@ -86,7 +87,7 @@ test('the hub opens by itself at session start', async ($, on) => {
   expect(w.opened).toEqual(['modz'])
 })
 
-test('with openOnStart off nothing opens until /modz', { options: { openOnStart: false } }, async ($, on) => {
+test('with openOnStart off nothing opens until /modz', { options: { openOnStart: false } }, async ($: any, on: any) => {
   const w = stubWorld(on)
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   expect(w.opened).toEqual([])
@@ -96,7 +97,7 @@ test('with openOnStart off nothing opens until /modz', { options: { openOnStart:
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
-  test(`pressing a row asks its mod to open the pane; Modlar shows the catalog (${surface})`, async ($, on) => {
+  test(`pressing a row asks its mod to open the pane; Modlar shows the catalog (${surface})`, async ($: any, on: any) => {
     const w = stubWorld(on)
     const asked: unknown[] = []
     on('state.set', { plugin: 'modz', key: 'open' }, (_: unknown, e: any, next: any) => {

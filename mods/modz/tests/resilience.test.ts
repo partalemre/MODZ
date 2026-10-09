@@ -67,7 +67,7 @@ function troubledMarket(): Files {
 }
 
 for (const surface of ['terminal', 'desktop'] as const) {
-  test(`a removed mod's card never leads; the head offers the real one (${surface})`, { plugins: reporters }, async ($, on) => {
+  test(`a removed mod's card never leads; the head offers the real one (${surface})`, { plugins: reporters }, async ($: any, on: any) => {
     stubWorld(on, MARKET_FILES)
     const asked: unknown[] = []
     on('state.set', { plugin: 'modz', key: 'open' }, (_: unknown, e: any, next: any) => {
@@ -87,7 +87,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(asked).toEqual(['tests'])
   })
 
-  test(`with no readable catalog the hub keeps reporting mods and says why (${surface})`, { plugins: reporters }, async ($, on) => {
+  test(`with no readable catalog the hub keeps reporting mods and says why (${surface})`, { plugins: reporters }, async ($: any, on: any) => {
     stubWorld(on, {})
     await $.session.start({ surface, isInteractive: true, cwd: '/work' })
     await $.command.run({ command: 'report', args: '' })
@@ -100,7 +100,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(await said(ui, /Katalog okunamadı/)).toBe(true)
   })
 
-  test(`the catalog marks a mod whose folder is gone and files an unknown one under Diğer (${surface})`, async ($, on) => {
+  test(`the catalog marks a mod whose folder is gone and files an unknown one under Diğer (${surface})`, async ($: any, on: any) => {
     stubWorld(on, troubledMarket())
     await $.session.start({ surface, isInteractive: true, cwd: '/work' })
     const ui = await $.ui.mount({ ...PANE, surface })

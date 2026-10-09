@@ -99,7 +99,7 @@ test('on a narrow desktop band both destinations stack their path the same way',
   const w = world(on, { verdicts: { [TR]: PNPM_TR }, root: () => '/Users/me/a-rather-long-project-name' })
   await start($)
   await say($, w, TR)
-  const ui = await $.ui.mount({ plugin: 'reflect-mod', surface: 'desktop', ...BAND, props: { ...BAND.props, bodyColumns: 50 } as never })
+  const ui = await $.ui.mount({ plugin: 'reflect-mod', surface: 'desktop', ...BAND, props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 50 } as never })
   const rows = (await ui.findAll({ type: 'Box' })).filter(b => b.key?.startsWith('dest-'))
   expect(rows.map(b => b.props.flexDirection)).toEqual(['column', 'column'])
   await ui.unmount()

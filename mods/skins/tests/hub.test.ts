@@ -28,7 +28,7 @@ function stubEngine(on: On, theme = 'dark') {
   on('session.start', () => ({ cwd: '/work' }))
   on('command.register', () => ({ value: { command: 'skin' } }))
   on('tool.register', () => ({ value: { tool: 'mcp__skins__design' } }))
-  on('state.set', { plugin: 'skins', key: 'hub' } as never, ($: unknown, e: { value: unknown }, next: (e: unknown) => unknown) => {
+  on('state.set', { plugin: 'skins', key: 'hub' }, ($, e, next) => {
     world.cards.push(e.value)
 
     return next(e)

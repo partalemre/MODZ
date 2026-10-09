@@ -145,7 +145,7 @@ for (const surface of SURFACES) {
     if (surface === 'desktop') expect(await svgOf(pane)).toContain('okuma 1 · düzenleme 1')
   })
 
-  test(`${surface}: /agents-info toggles the Ajanlar pane`, async ($, on) => {
+  test(`${surface}: /agents-info toggles the Ajanlar pane`, async ($: any, on: any) => {
     const { world } = await setup($, on)
     expect((await $.command.run({ command: 'agents-info', args: '' })).text).toBe('Ajanlar paneli açıldı.')
     expect((await $.command.run({ command: 'agents-info', args: '' })).text).toBe('Ajanlar paneli kapandı.')

@@ -10,7 +10,7 @@ import { seedFromResume } from './session'
 import { isLightTheme } from './theme'
 import { KEY_ALWAYS, KEY_GUARD, arm, deadlineKey, everyKey, prune, startWindow, stop, stopForGood, updateStatus } from './warm'
 import type { Io } from './warm'
-import { GUARD, HOOK_TWICE, KEEPWARM, alwaysText, armedText, cardText, dropText, paidText, statusText, warnText } from './words'
+import { COMMANDS, GUARD, HOOK_TWICE, KEEPWARM, alwaysText, armedText, cardText, dropText, paidText, statusText, warnText } from './words'
 
 export { fmtDuration } from './fmt'
 export { freshState, parseDuration, resetForClear } from './core'
@@ -88,18 +88,8 @@ async function restore($: EngineInterface, s: State, now: number) {
 }
 
 async function registerCommands($: EngineInterface) {
-  await $.command.register({
-    name: 'keepwarm',
-    description: 'Önbelleği sıcak tut: tek başına 6 saat, 90m gibi bir süre, always, off ya da status (cache-tax)',
-    argumentHint: '[6h | always | off | status]',
-    immediate: true,
-  })
-  await $.command.register({
-    name: NAME,
-    description: 'Önbellek durumu, soğuk fiyatı ve bu oturumun soğuk yazımları; guard warn|refuse (cache-tax)',
-    argumentHint: '[status | guard warn | guard refuse]',
-    immediate: true,
-  })
+  await $.command.register(COMMANDS.keepwarm)
+  await $.command.register(COMMANDS.cacheTax)
   // The hook form of cache-tax ships a /cache-tax:status skill; both installed means two guards.
   if ((await $.command.list()).some(cmd => cmd.name === 'cache-tax:status')) $.ui.log(HOOK_TWICE)
 }
@@ -222,7 +212,16 @@ function wireBand(on: On, c: Ctx) {
     if (e.surface === 'terminal') return composeBand({ surface: 'terminal', ui: $.ui.resolve(e) }, theirs, band)
     return theirs
   })
+}
 
+// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
+// left, so its first click would be refused. Drawing again on attach hands it live buttons.
+function onAttach(on: On) {
+  on('session.attach', async ($, e, next) => {
+    const attached = await next(e)
+    $.ui.invalidate('ui.render')
+    return attached
+  })
 }
 
 function wireSession(on: On, c: Ctx) {
@@ -260,7 +259,6 @@ function wireSession(on: On, c: Ctx) {
     await arm(io($), s)
     return r
   })
-
 }
 
 function wireTurns(on: On, s: State) {
@@ -295,6 +293,7 @@ function wireTurns(on: On, s: State) {
 export const register: Register = on => {
   const c: Ctx = { s: freshState(), prefs: { isLight: false, noColor: false }, drawn: '' }
   wireBand(on, c)
+  onAttach(on)
   wireSession(on, c)
   wireTurns(on, c.s)
 }

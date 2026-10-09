@@ -140,7 +140,7 @@ async function restore($: EngineInterface, entry: CheckpointEntry): Promise<Chec
   await setView($, { entries })
   await writeHub($, entries)
   const number = (await read($, metaAtom))[entry.ref]?.turn
-  const where = number === undefined ? `"${clip(entry.label)}" öncesine` : `tur ${number} öncesine`
+  const where = number === undefined ? `"${clip(entry.label)}" öncesine` : `Tur ${number} öncesine`
 
   const redo = entries.find(item => item.ref === safetyRef) ?? { ref: safetyRef, commit, at: await $.clock.now(), label }
 

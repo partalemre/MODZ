@@ -1,4 +1,4 @@
-import { EMPTY_TEXT, ago, changedText, headerMeta, questionOf, statusRow, titleOf } from './pane'
+import { EMPTY_TEXT, ago, changedText, confirmLabel, headerMeta, questionOf, statusRow, titleOf } from './pane'
 import type { PaneOpts, Ui } from './pane'
 import { upper } from './svg'
 import type { CheckpointView, PendingUndo } from '../types'
@@ -29,8 +29,8 @@ function confirmText(ui: Ui, pending: PendingUndo, opts: PaneOpts) {
       ))}
       {more > 0 && <Text dimColor>{`+${more} daha`}</Text>}
       <Box flexDirection="row" columnGap={1} marginTop={1}>
-        <Button key="cp-confirm" variant="secondary" hotkey="g" label="Geri al" onPress={opts.actions.onConfirm} />
-        <Button key="cp-cancel" variant="secondary" hotkey="v" label="Vazgeç" onPress={opts.actions.onCancel} />
+        <Button key="cp-confirm" variant="secondary" hotkey="g" label={confirmLabel(pending)} onPress={opts.actions.onConfirm} />
+        <Button key="cp-cancel" variant="secondary" hotkey="v" label="Vazgeç" autoFocus onPress={opts.actions.onCancel} />
       </Box>
     </Box>
   )

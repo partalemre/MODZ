@@ -172,7 +172,21 @@ function fileRow(frame: Frame, file: UndoFile, at: { y: number; isTall: boolean 
   return fileBadge({ x: 0, y: at.y + 3, path: file.path })
     + text({ ...FILE_NAME, x: FILE_X, y: at.y + 15, text: fit(name, room, FILE_NAME, true), ink: 'hi' })
     + under + tag
-    + runs({ x: frame.width - countsW, y: at.y + 15, size: META.size, parts: [{ text: `+${file.added}`, ink: 'moss', isMono: true }, { text: ` −${file.removed}`, ink: 'flare', isMono: true }] })
+    + runs({ x: frame.width - countsW, y: at.y + 15, size: META.size, parts: [{ text: `+${file.added}`, ink: countInk(file.added, 'moss'), isMono: true }, { text: ` −${file.removed}`, ink: countInk(file.removed, 'flare'), isMono: true }] })
+}
+
+// A zero count is meta, not a change: it stays text.lo.
+const countInk = (count: number, ink: Ink): Ink => (count === 0 ? 'lo' : ink)
+
+const MORE_H = 22
+
+// The files the card has no row for, counted as the terminal card counts them.
+function moreOf(pending: PendingUndo, y: number): { svg: string; height: number; text: string } {
+  const more = pending.restore + pending.remove - pending.files.length
+  if (more <= 0) return { svg: '', height: 0, text: '' }
+  const said = `+${more} dosya daha`
+
+  return { svg: text({ size: 11.5, x: FILE_X, y: y + 15, text: said, ink: 'lo' }), height: MORE_H, text: said }
 }
 
 // "+42 −17" with a bar and what the undo does, then up to five files with their own counts.
@@ -190,7 +204,9 @@ export function diffstatSvg(frame: Frame, pending: PendingUndo): Drawing {
   const isTall = pending.files.some(file => !fileFits(frame, file))
   const rowH = isTall ? FILE_ROW_TALL : FILE_ROW_H
   const files = pending.files.map((file, index) => fileRow(frame, file, { y: statH + index * rowH, isTall }))
-  const height = statH + pending.files.length * rowH
+  const more = moreOf(pending, statH + pending.files.length * rowH)
+  const height = statH + pending.files.length * rowH + more.height
+  const listed = [...pending.files.map(file => file.path), ...(more.text === '' ? [] : [more.text])].join(', ')
 
-  return drawing(frame, { height, body: summary + blocks + note + files.join(''), alt: `+${pending.added} −${pending.removed} satır, ${parts}: ${pending.files.map(file => file.path).join(', ')}` })
+  return drawing(frame, { height, body: summary + blocks + note + files.join('') + more.svg, alt: `+${pending.added} −${pending.removed} satır, ${parts}: ${listed}` })
 }

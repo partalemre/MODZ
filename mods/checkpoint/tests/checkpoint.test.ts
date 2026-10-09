@@ -1,7 +1,8 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { gitBinary, list, locate, parseNameStatus, parseNumstat, prune, snapshot } from '../hooks/git'
-import { dative, markUndone } from '../hooks/meta'
+import { markUndone, pendingOf } from '../hooks/meta'
+import { diffstatSvg } from '../hooks/pane-svg'
 import type { Run } from '../hooks/git'
 
 type Call = { argv: string[]; env: Record<string, string>; stdin?: string }
@@ -196,6 +197,8 @@ for (const surface of SURFACES) {
     await pane.press({ key: 'cp-undo-0' })
     const card = await shown(pane)
     expect(card).toContain('"fix login" öncesine dönülsün mü? 2 dosya değişecek')
+    expect(((await pane.find({ key: 'cp-confirm' })) as any)?.props.label).toBe('2 dosyayı geri al')
+    expect(((await pane.find({ key: 'cp-cancel' })) as any)?.props.autoFocus).toBe(true)
     expect(card).toMatch(/\+12\s*−23/)
     expect(card).toMatch(/new\.ts/)
     expect(await pane.find({ key: 'cp-undo-0' })).toBeUndefined()
@@ -240,11 +243,10 @@ test('a turn is numbered and keeps its files and tools; undo marks it and later 
   expect(Object.values(meta)).toEqual([{ turn: 2, files: 2, tools: ['E', 'W', '$'] }])
 })
 
-test('undo bookkeeping and Turkish number endings', () => {
+test('undo bookkeeping and git numstat', () => {
   const entries = [1, 2, 3].map(at => ({ ref: `r${at}`, commit: `c${at}`, at, label: `t${at}` }))
   const out = markUndone({ r1: { turn: 1 }, r2: { turn: 2 } }, { entries: [...entries, { ref: 's', commit: 'cs', at: 4, label: 'x' }], target: entries[1]!, safetyRef: 's' })
   expect(out).toEqual({ r1: { turn: 1, isUndone: false }, r2: { turn: 2, isUndone: true }, r3: { isUndone: true }, s: { isSafety: true } })
-  expect([1, 2, 3, 6, 9, 10, 12, 20, 30, 40, 50, 70, 100].map(dative)).toEqual(["1'e", "2'ye", "3'e", "6'ya", "9'a", "10'a", "12'ye", "20'ye", "30'a", "40'a", "50'ye", "70'e", "100'e"])
   expect(parseNumstat('3\t1\ta.ts\0-\t-\timg.png\0')).toEqual([{ path: 'a.ts', added: 3, removed: 1 }, { path: 'img.png', added: 0, removed: 0 }])
 })
 
@@ -254,3 +256,12 @@ for (const surface of SURFACES) {
     expect(await shown(pane)).toContain('Henüz kontrol noktası yok · ilk dosya yazımından önce sessizce alınır')
   })
 }
+
+test('the desktop card counts the files it has no row for, as the terminal card does', () => {
+  const paths = Array.from({ length: 7 }, (_, i) => `src/f${i}.ts`)
+  const entry = { ref: 'r', commit: 'c', at: 1, label: 'x' }
+  const pending = pendingOf(entry, { changes: { restore: paths, remove: [] }, stats: paths.map(path => ({ path, added: 1, removed: 0 })), turn: 3 })
+  const drawn = diffstatSvg({ width: 400, mode: 'dark' }, pending)
+  expect(drawn.source).toContain('+2 dosya daha')
+  expect(drawn.alt).toMatch(/\+2 dosya daha$/)
+})

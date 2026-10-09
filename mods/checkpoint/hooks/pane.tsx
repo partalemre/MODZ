@@ -1,4 +1,3 @@
-import { dative } from './meta'
 import type { MetaMap } from './meta'
 import { diffstatSvg, headSvg, rowFits, rowSvg } from './pane-svg'
 import type { Drawing, Frame, RowSpec } from './pane-svg'
@@ -45,13 +44,17 @@ export function clip(text: string, max = LABEL_MAX): string {
 
 export const changedText = (pending: PendingUndo): string => `${pending.restore + pending.remove} dosya değişecek`
 
+// The confirm button says what it does (verb and object); Vazgeç holds the focus, so Enter changes nothing.
+export const confirmLabel = (pending: PendingUndo): string => `${pending.restore + pending.remove} dosyayı geri al`
+
 export const EMPTY_LEAD = 'Henüz kontrol noktası yok'
 export const EMPTY_REST = 'ilk dosya yazımından önce sessizce alınır'
 export const EMPTY_TEXT = `${EMPTY_LEAD} · ${EMPTY_REST}`
 
-// "Tur 12'ye dönülsün mü?" when the turn is known, else the prompt's opening words.
+// A turn's checkpoint is the tree before that turn wrote: "Tur 12 öncesine dönülsün mü?" when the turn is
+// known, else the prompt's opening words. Going there undoes that turn and every later one.
 export const questionOf = (pending: PendingUndo): string =>
-  pending.turn === null ? `"${clip(pending.entry.label, 40)}" öncesine dönülsün mü?` : `Tur ${dative(pending.turn)} dönülsün mü?`
+  `${pending.turn === null ? `"${clip(pending.entry.label, 40)}"` : `Tur ${pending.turn}`} öncesine dönülsün mü?`
 
 export function titleOf(entry: CheckpointEntry, meta: MetaMap): { title: string; label: string } {
   const own = meta[entry.ref] ?? {}
@@ -79,8 +82,8 @@ function confirmCard(ui: Ui, pending: PendingUndo, opts: PaneOpts) {
       {picture(ui, head, 'cp-card-head')}
       {picture(ui, diffstatSvg(frame, pending), 'cp-card-stat')}
       <Box flexDirection="row" columnGap={1}>
-        <Button key="cp-confirm" variant="secondary" hotkey="g" label="Geri al" onPress={opts.actions.onConfirm} />
-        <Button key="cp-cancel" variant="secondary" hotkey="v" label="Vazgeç" onPress={opts.actions.onCancel} />
+        <Button key="cp-confirm" variant="secondary" hotkey="g" label={confirmLabel(pending)} onPress={opts.actions.onConfirm} />
+        <Button key="cp-cancel" variant="secondary" hotkey="v" label="Vazgeç" autoFocus onPress={opts.actions.onCancel} />
       </Box>
     </Box>
   )

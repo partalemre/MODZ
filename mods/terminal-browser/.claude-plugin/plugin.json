@@ -1,0 +1,24 @@
+{
+  "name": "terminal-browser",
+  "version": "0.0.3",
+  "description": "Claude Code içinde, terminalde çalışan bir tarayıcı: siteleri ve HTML belgelerini önizle, ajanın yerleşik tarayıcıyı yönetsin. Yalnızca terminal; masaüstünde hiçbir şey çizmez.",
+  "author": {
+    "name": "zenbu-labs"
+  },
+  "homepage": "https://github.com/zenbu-labs/terminal-browser/tree/main/claude-code-plugin",
+  "repository": "https://github.com/zenbu-labs/terminal-browser",
+  "license": "MIT",
+  "keywords": [
+    "browser",
+    "function-hooks"
+  ],
+  "types": "./hooks/browser.d.ts",
+  "userConfig": {
+    "agentTool": {
+      "type": "boolean",
+      "title": "Ajana terminal-browser'ı açıp kapatan bir araç ver",
+      "description": "Modelin bir sayfayı tarayıcı panelinde göstermek için çağırabileceği bir aç/kapat aracı ekler. Varsayılan kapalı.",
+      "default": false
+    }
+  }
+}

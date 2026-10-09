@@ -1,0 +1,13 @@
+{
+  "name": "blast-radius",
+  "version": "0.1.1",
+  "description": "Holds risky shell commands (rm -rf, git reset --hard, git clean, force push, migrations) and shows what they would change, with a delete button and Vazgeç (Turkish UI, Svg card on desktop).",
+  "author": {
+    "name": "Claude Code DevRel"
+  },
+  "keywords": [
+    "mods",
+    "safety",
+    "git"
+  ]
+}

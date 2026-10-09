@@ -1,0 +1,9 @@
+{
+  "name": "checkpoint",
+  "version": "0.2.1",
+  "description": "Silent git snapshot before each turn's first file write; /checkpoints lists turns and undoes one after a confirm",
+  "author": {
+    "name": "Partal"
+  },
+  "types": "./types/index.d.ts"
+}

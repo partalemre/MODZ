@@ -1,0 +1,16 @@
+{
+  "name": "claude-code-filetree",
+  "owner": {
+    "name": "Kurt Buhler"
+  },
+  "metadata": {
+    "description": "An IDE-style file tree for Claude Code that shows what Claude is doing and where in files"
+  },
+  "plugins": [
+    {
+      "name": "filetree",
+      "description": "File tree of the session cwd with git status, lines changed, shimmer on files Claude touches and its git activity",
+      "source": "./"
+    }
+  ]
+}

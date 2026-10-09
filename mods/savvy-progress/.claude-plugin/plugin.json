@@ -1,0 +1,27 @@
+{
+  "name": "savvy-progress",
+  "version": "1.3.0",
+  "description": "Prompt üstü ilerleme bandı ve ajan paneli (/agents-info): çalışan, biten ve planlı alt ajanlar; model, effort, araç, bağlam, maliyet ve süre. İlerleme yalnızca gözlenenden türetilir.",
+  "author": {
+    "name": "johnnyvizz",
+    "url": "https://github.com/johnnyvizz"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Panel dili",
+      "description": "tr (varsayılan), en, ru; auto Claude Code'un language ayarını, sonra sistem dilini izler",
+      "default": "tr",
+      "options": [
+        "tr",
+        "en",
+        "ru",
+        "auto"
+      ]
+    }
+  },
+  "homepage": "https://github.com/johnnyvizz/claude-kit/tree/main/plugins/savvy-progress",
+  "repository": "https://github.com/johnnyvizz/claude-kit",
+  "license": "MIT"
+}

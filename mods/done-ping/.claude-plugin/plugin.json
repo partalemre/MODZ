@@ -1,0 +1,41 @@
+{
+  "name": "done-ping",
+  "version": "0.2.1",
+  "description": "A notification when a long turn finishes or Claude waits on you (permission or a question): the desktop app's own notification where it can, else a macOS banner with project, what happened and a short detail",
+  "author": {
+    "name": "Partal"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "thresholdSeconds": {
+      "type": "number",
+      "title": "Threshold (seconds)",
+      "description": "A finished turn pings only when it ran at least this long",
+      "default": 60
+    },
+    "pingOnPermission": {
+      "type": "boolean",
+      "title": "Ping when waiting",
+      "description": "Also ping when Claude asks for permission or asks you a question",
+      "default": true
+    },
+    "sound": {
+      "type": "string",
+      "title": "Sound",
+      "description": "A macOS system sound by name (Glass, Hero, Ping, Purr, Submarine, Funk, Pop), a path to a sound file, or none",
+      "default": "Glass"
+    },
+    "quietWhenFocused": {
+      "type": "boolean",
+      "title": "Quiet while you look",
+      "description": "Skip the banner while the app this session runs in (Claude, your terminal) is the frontmost app",
+      "default": true
+    },
+    "appNotification": {
+      "type": "boolean",
+      "title": "Use the app's notification",
+      "description": "In the desktop app, notify through Claude's own notification (Claude icon) when it is available without a prompt",
+      "default": true
+    }
+  }
+}

@@ -5,24 +5,94 @@
   },
   "plugins": [
     {
-      "name": "agent-deck",
-      "source": "./mods/agent-deck",
-      "description": "A pane that shows every agent live (what it is doing, how long, how many tokens), lets you read its transcript, message it and hand work to any agent type"
+      "name": "agent-deck-pro",
+      "source": "./mods/agent-deck-pro",
+      "description": "Ajan güvertesi: her alt ajan görev adıyla, adımı ya da evresi, süre, araç, dosya, token ve ≈maliyet; sessiz kalanı ve kırık testi işaretler; oku, mesaj at, durdur, görev ver. Sıfır token."
     },
     {
-      "name": "git-guard",
-      "source": "./mods/git-guard",
-      "description": "Asks before Bash runs a force push, a push to or from main, a hard reset, git clean -f or a recursive delete, and shows a risk card above the question"
+      "name": "blast-radius",
+      "source": "./mods/blast-radius",
+      "description": "Holds risky shell commands (rm -rf, git reset --hard, git clean, force push, migrations) and shows what they would change, with a delete button and Vazgeç (Turkish UI, Svg card on desktop)."
     },
     {
-      "name": "hud",
-      "source": "./mods/hud",
-      "description": "A live band above the prompt: plan limits, context fill, session cost and this turn's token flow"
+      "name": "cache-tax",
+      "source": "./mods/cache-tax",
+      "description": "A Claude Code mod that keeps the one-hour prompt cache warm during breaks and holds a cold send on a card with its estimated rewrite cost. Warming uses model requests and costs tokens. Requires Claude Code 2.1.287+."
+    },
+    {
+      "name": "checkpoint",
+      "source": "./mods/checkpoint",
+      "description": "Silent git snapshot before each turn's first file write; /checkpoints lists turns and undoes one after a confirm"
+    },
+    {
+      "name": "done-ping",
+      "source": "./mods/done-ping",
+      "description": "A notification when a long turn finishes or Claude waits on you (permission or a question): the desktop app's own notification where it can, else a macOS banner with project, what happened and a short detail"
+    },
+    {
+      "name": "filetree",
+      "source": "./mods/filetree",
+      "description": "Claude'un dokunduğu dosyaları gösteren dosya ağacı: şu an ne yaptığı, bu turda dokunduğu dosyalar ve git durumu"
+    },
+    {
+      "name": "hud-pro",
+      "source": "./mods/hud-pro",
+      "description": "One quiet line at the bottom of the band, terminal and desktop: 5h limit with reset, 7d, context and session ≈cost; /hud full shows details"
     },
     {
       "name": "modz",
       "source": "./mods/modz",
-      "description": "/modz: a pane listing every mod in the MODZ marketplace with its version and description"
+      "description": "/modz: MODZ pazarındaki her modu Görünüm / Koruma / Ölçüm / Akış gruplarında gösterir: sürüm, yüzeyler, kaynak ve sağlık"
+    },
+    {
+      "name": "plan-steps",
+      "source": "./mods/plan-steps",
+      "description": "Plan varsa adımlarını gösterir: görev listesi, onaylı plan ya da plan dosyası; /steps paneli ve sessiz bir durum satırı"
+    },
+    {
+      "name": "reflect-mod",
+      "source": "./mods/reflect-mod",
+      "description": "claude-reflect as a Claude Code mod: a cheap trigger-word prefilter (Turkish and English) and one model check find reusable corrections; a card above the prompt saves them to the chosen CLAUDE.md"
+    },
+    {
+      "name": "replay-theater",
+      "source": "./mods/replay-theater",
+      "description": "Replay Theater: son turdaki dosya düzenlemelerini adım adım izle; her adımın ne yaptığı ve hangi plan adımına ait olduğu, renkli diff."
+    },
+    {
+      "name": "savvy-flow",
+      "source": "./mods/savvy-flow",
+      "description": "Orchestrated delivery flow: the session model plans, owns design and reviews; five tiered worker subagents implement. Pairs with the savvy-progress mod for a live progress bar and agents panel."
+    },
+    {
+      "name": "savvy-progress",
+      "source": "./mods/savvy-progress",
+      "description": "Prompt üstü ilerleme bandı ve ajan paneli (/agents-info): çalışan, biten ve planlı alt ajanlar; model, effort, araç, bağlam, maliyet ve süre. İlerleme yalnızca gözlenenden türetilir."
+    },
+    {
+      "name": "secret-guard",
+      "source": "./mods/secret-guard",
+      "description": "Stops secrets before they land: scans Write/Edit and git add/commit for keys and tokens, blocks git add of .env; a card with masked values, then Anahtarları .env'e taşı, Bir kez izin ver or Vazgeç"
+    },
+    {
+      "name": "session-budget",
+      "source": "./mods/session-budget",
+      "description": "A per-session spend budget (% of the 5h limit or $): notice at 80%, Continue anyway / Stop at 100% on a new prompt"
+    },
+    {
+      "name": "skins",
+      "source": "./mods/skins",
+      "description": "Skins for Claude Code's transcript: themed tool rows, reply gutters and spinner words. /skin swaps them live."
+    },
+    {
+      "name": "terminal-browser",
+      "source": "./mods/terminal-browser",
+      "description": "Claude Code içinde, terminalde çalışan bir tarayıcı: siteleri ve HTML belgelerini önizle, ajanın yerleşik tarayıcıyı yönetsin. Yalnızca terminal; masaüstünde hiçbir şey çizmez."
+    },
+    {
+      "name": "test-badge",
+      "source": "./mods/test-badge",
+      "description": "After a turn that edited source files, runs the project's tests and lint in the background and shows a one-line badge (testler 41/42 · lint 2 hata · 4sn önce) with a details pane listing each failure by suite and file:line"
     }
   ]
 }

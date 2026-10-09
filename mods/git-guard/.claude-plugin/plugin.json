@@ -1,0 +1,6 @@
+{
+  "name": "git-guard",
+  "version": "0.2.0",
+  "description": "Asks before Bash runs a force push, a push to or from main, a hard reset, git clean -f or a recursive delete, and shows a risk card above the question",
+  "types": "./types/index.d.ts"
+}

@@ -1,0 +1,28 @@
+{
+  "name": "modz",
+  "owner": {
+    "name": "partalle"
+  },
+  "plugins": [
+    {
+      "name": "agent-deck",
+      "source": "./mods/agent-deck",
+      "description": "A pane that shows every agent live (what it is doing, how long, how many tokens), lets you read its transcript, message it and hand work to any agent type"
+    },
+    {
+      "name": "git-guard",
+      "source": "./mods/git-guard",
+      "description": "Asks before Bash runs a force push, a push to or from main, a hard reset, git clean -f or a recursive delete, and shows a risk card above the question"
+    },
+    {
+      "name": "hud",
+      "source": "./mods/hud",
+      "description": "A live band above the prompt: plan limits, context fill, session cost and this turn's token flow"
+    },
+    {
+      "name": "modz",
+      "source": "./mods/modz",
+      "description": "/modz: a pane listing every mod in the MODZ marketplace with its version and description"
+    }
+  ]
+}

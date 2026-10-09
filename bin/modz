@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# MODZ: Claude Code modlarının tek kaynağı. Marketplace adı: modz
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MARKET="modz"
+MODS="$ROOT/mods"
+DEV_MODS="$HOME/.claude/dev-mods"
+
+usage() {
+  cat <<USAGE
+modz <komut>
+  list                 modları listele (sürüm + açıklama)
+  new <ad> [açıklama]  templates/blank'ten yeni mod oluştur ve marketplace'e ekle
+  check [ad]           validate + test (ad verilmezse hepsi)
+  sync                 marketplace.json'u mods/ klasörüyle eşitle
+  import <klasör>      bir dev-mods klasöründeki modu MODZ'a kopyala
+  dev                  ~/.claude/dev-mods altındaki tüm oturum modlarını göster
+  install [ad]         marketplace'i ekle ve modu (veya hepsini) kur
+  uninstall <ad>       modu kaldır
+USAGE
+}
+
+mod_names() { find "$MODS" -mindepth 2 -maxdepth 3 -path '*/.claude-plugin/plugin.json' | sed -E "s|$MODS/([^/]+)/.*|\1|" | sort; }
+
+cmd_list() {
+  for m in $(mod_names); do
+    python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));print("%-14s v%-8s %s" % (d["name"], d.get("version","?"), d.get("description","")))' "$MODS/$m/.claude-plugin/plugin.json"
+  done
+}
+
+cmd_sync() {
+  python3 - "$ROOT" <<'PY'
+import json, os, sys
+root = sys.argv[1]
+path = os.path.join(root, ".claude-plugin", "marketplace.json")
+market = json.load(open(path))
+plugins = []
+for name in sorted(os.listdir(os.path.join(root, "mods"))):
+    manifest = os.path.join(root, "mods", name, ".claude-plugin", "plugin.json")
+    if not os.path.isfile(manifest):
+        continue
+    d = json.load(open(manifest))
+    plugins.append({"name": d["name"], "source": f"./mods/{name}", "description": d.get("description", "")})
+market["plugins"] = plugins
+json.dump(market, open(path, "w"), indent=2, ensure_ascii=False)
+open(path, "a").write("\n")
+print(f"marketplace.json: {len(plugins)} mod")
+PY
+}
+
+cmd_new() {
+  local name="${1:?mod adı gerekli}" desc="${2:-Yeni mod}"
+  [[ "$name" =~ ^[a-z0-9-]+$ ]] || { echo "ad sadece a-z, 0-9 ve - içerebilir" >&2; exit 1; }
+  [[ -e "$MODS/$name" ]] && { echo "$name zaten var" >&2; exit 1; }
+  cp -R "$ROOT/templates/blank" "$MODS/$name"
+  NAME="$name" DESC="$desc" python3 - "$MODS/$name" <<'PY'
+import os, sys, pathlib
+for p in pathlib.Path(sys.argv[1]).rglob("*"):
+    if p.is_file():
+        s = p.read_text()
+        p.write_text(s.replace("__NAME__", os.environ["NAME"]).replace("__DESC__", os.environ["DESC"]))
+PY
+  cmd_sync
+  echo "oluşturuldu: $MODS/$name"
+}
+
+cmd_check() {
+  local targets=("${1:-}")
+  [[ -z "${1:-}" ]] && targets=($(mod_names))
+  local failed=0
+  for m in "${targets[@]}"; do
+    echo "== $m"
+    claude plugin validate "$MODS/$m" >/dev/null 2>&1 && echo "  validate ✔" || { echo "  validate ✘"; failed=1; }
+    if compgen -G "$MODS/$m/tests/*.test.ts*" >/dev/null; then
+      claude plugin test "$MODS/$m" 2>&1 | grep -E '^ *[0-9]+ (pass|fail)' | sed 's/^/  /'
+      claude plugin test "$MODS/$m" >/dev/null 2>&1 || failed=1
+    fi
+  done
+  return $failed
+}
+
+cmd_import() {
+  local src="${1:?kaynak klasör gerekli}" name
+  name="$(basename "$src")"
+  rsync -a --exclude '.claude-plugin/types/' --exclude node_modules "$src/" "$MODS/$name/"
+  cmd_sync
+  echo "içe aktarıldı: $name"
+}
+
+cmd_dev() {
+  find "$DEV_MODS" -mindepth 3 -maxdepth 4 -path '*/.claude-plugin/plugin.json' 2>/dev/null \
+    | sed -E 's|/.claude-plugin/plugin.json||' | sort
+}
+
+ensure_market() {
+  claude plugin marketplace list 2>/dev/null | grep -q "$MARKET" || claude plugin marketplace add "$ROOT"
+}
+
+cmd_install() {
+  ensure_market
+  if [[ -n "${1:-}" ]]; then claude plugin install "$1@$MARKET"; return; fi
+  for m in $(mod_names); do claude plugin install "$m@$MARKET"; done
+}
+
+case "${1:-}" in
+  list) cmd_list ;;
+  new) shift; cmd_new "$@" ;;
+  check) shift; cmd_check "$@" ;;
+  sync) cmd_sync ;;
+  import) shift; cmd_import "$@" ;;
+  dev) cmd_dev ;;
+  install) shift; cmd_install "$@" ;;
+  uninstall) shift; claude plugin uninstall "${1:?mod adı gerekli}@$MARKET" ;;
+  *) usage ;;
+esac

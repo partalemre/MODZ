@@ -1,0 +1,6 @@
+{
+  "name": "hud",
+  "version": "0.1.0",
+  "description": "A live band above the prompt: plan limits, context fill, session cost and this turn's token flow",
+  "types": "./types/index.d.ts"
+}

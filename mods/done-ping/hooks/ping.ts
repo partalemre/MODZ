@@ -1,4 +1,5 @@
-export type PingKind = 'done' | 'wait'
+// `fail`: a finished turn whose own test command failed, the one finish worth a Flare look.
+export type PingKind = 'done' | 'fail' | 'wait'
 
 // One notification (RESEARCH.md §c): `title` the outcome in at most four words, `subtitle` the
 // project, `body` facts only (files, tests); `detail` is the in-app row's line. Never code or secrets.
@@ -87,15 +88,17 @@ export const isTestCommand = (command: unknown): boolean => typeof command === '
 
 const testsText = (tests: TestsSeen): string => (tests === null ? '' : tests === 'pass' ? 'testler geçti' : 'testler kaldı')
 
-// "Tur bitti" · project · "3 dosya · testler geçti"; with neither fact, how long it took.
+// "Tur bitti" · project · "testler geçti · 3 dosya"; with neither fact, how long it took. Facts lead with
+// what matters most on return (the tests), so a narrow row drops the duration first.
 export function donePing(spec: { project: string; durationMs: number; files: number; tests: TestsSeen }): Ping {
   const took = durationText(spec.durationMs)
   const tests = testsText(spec.tests)
   const files = spec.files === 0 ? '' : `${spec.files} dosya`
-  const body = [files, tests].filter(part => part !== '').join(' · ') || `${took} sürdü`
-  const detail = [took, files === '' ? '' : `${files} değişti`, tests].filter(part => part !== '').join(' · ')
+  const body = [tests, files].filter(part => part !== '').join(' · ') || `${took} sürdü`
+  const detail = [tests, files === '' ? '' : `${files} değişti`, took].filter(part => part !== '').join(' · ')
+  const kind = spec.tests === 'fail' ? 'fail' : 'done'
 
-  return { kind: 'done', project: spec.project, title: 'Tur bitti', subtitle: spec.project, body, detail }
+  return { kind, project: spec.project, title: 'Tur bitti', subtitle: spec.project, body, detail }
 }
 
 function baseName(path: string): string {

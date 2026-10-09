@@ -10,13 +10,13 @@ test('a done ping: outcome in the title, the project as subtitle, facts in the b
   expect(durationText(45_000)).toBe('45sn')
   expect(projectOf('/Users/me/code/eliti')).toBe('eliti')
   expect(donePing({ project: 'eliti', durationMs: 134_000, files: 3, tests: 'pass' })).toEqual({
-    kind: 'done', project: 'eliti', title: 'Tur bitti', subtitle: 'eliti', body: '3 dosya · testler geçti', detail: '2dk 14sn · 3 dosya değişti · testler geçti',
+    kind: 'done', project: 'eliti', title: 'Tur bitti', subtitle: 'eliti', body: 'testler geçti · 3 dosya', detail: 'testler geçti · 3 dosya değişti · 2dk 14sn',
   })
 })
 
 test('with no facts the body says how long it took; failing tests say so', () => {
   expect(donePing({ project: 'x', durationMs: 61_000, files: 0, tests: null })).toMatchObject({ body: '1dk 1sn sürdü', detail: '1dk 1sn' })
-  expect(donePing({ project: 'x', durationMs: 61_000, files: 1, tests: 'fail' }).body).toBe('1 dosya · testler kaldı')
+  expect(donePing({ project: 'x', durationMs: 61_000, files: 1, tests: 'fail' })).toMatchObject({ kind: 'fail', body: 'testler kaldı · 1 dosya' })
   expect(isTestCommand('npm run test -- --watch=false')).toBe(true)
   expect(isTestCommand('pnpm test')).toBe(true)
   expect(isTestCommand('go test ./...')).toBe(true)

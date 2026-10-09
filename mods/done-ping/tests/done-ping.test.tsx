@@ -12,6 +12,8 @@ type Spy = {
   surface: Surface
   push: Record<string, unknown> | null
   files: Set<string>
+  // The turn's test command fails.
+  isTestFailing?: boolean
 }
 
 const NOTIFIER = '/opt/homebrew/bin/terminal-notifier'
@@ -30,6 +32,7 @@ function processAnswer(spy: Spy, argv: string[]) {
 }
 
 function toolAnswer(spy: Spy, e: any) {
+  if (e.tool === 'Bash' && spy.isTestFailing === true) return { result: 'FAIL', isError: true }
   if (e.tool !== 'PushNotification') return { result: 'ok' }
   spy.calls.push(e)
 
@@ -78,7 +81,7 @@ test('a long turn shows a banner: outcome title, project subtitle, files and tes
   await turn($, spy, 75_000)
 
   const argv = banners(spy)[0] ?? []
-  expect(argv.slice(-4)).toEqual(['2 dosya · testler geçti', 'Tur bitti', 'eliti', 'Glass'])
+  expect(argv.slice(-4)).toEqual(['testler geçti · 2 dosya', 'Tur bitti', 'eliti', 'Glass'])
   expect(spy.runs.some(run => run[0] === 'afplay')).toBe(false)
 })
 
@@ -160,7 +163,7 @@ test('on the desktop the app notification is used when it runs without asking', 
 
   await turn($, spy, 75_000)
 
-  expect(spy.calls[0]).toMatchObject({ status: 'proactive', message: 'Tur bitti · eliti\n2 dosya · testler geçti' })
+  expect(spy.calls[0]).toMatchObject({ status: 'proactive', message: 'Tur bitti · eliti\ntestler geçti · 2 dosya' })
   expect(banners(spy)).toHaveLength(0)
 })
 
@@ -201,13 +204,31 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await turn($, spy, 75_000)
     const ui = await $.ui.mount(bandOf(surface) as any)
 
-    const line = 'Tur bitti · 1dk 15sn · 2 dosya değişti · testler geçti'
+    const line = 'Tur bitti · testler geçti · 2 dosya değişti · 1dk 15sn'
     const drawn = JSON.stringify(await ui.drawn())
     if (surface === 'desktop') expect(drawn).toContain(`"alt":"${line}"`)
     else expect(await ui.find({ type: 'Text', text: line })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: 'engine' })).toBeDefined()
     await ui.press({ key: 'done-ping-dismiss' })
     expect(await ui.find({ key: 'done-ping-dismiss' })).toBeUndefined()
+  })
+
+  test(`a turn whose tests failed leads with "testler kaldı" and reads Flare (${surface})`, async ($, on) => {
+    const spy = spyOf({ exitCode: 1, surface, isTestFailing: true })
+    await setup($, on, spy)
+
+    await turn($, spy, 75_000)
+    const ui = await $.ui.mount(bandOf(surface) as any)
+
+    const line = 'Tur bitti · testler kaldı · 2 dosya değişti · 1dk 15sn'
+    if (surface === 'desktop') {
+      const svg = (await ui.find({ type: 'Svg' })) as any
+      expect(svg?.props?.alt).toBe(line)
+      expect(String(svg?.props?.source)).toContain('flare-t')
+    } else {
+      expect(await ui.find({ type: 'Text', text: line })).toBeDefined()
+      expect((await ui.find({ type: 'Text', text: '✕' }))?.props?.color).toBe('error')
+    }
   })
 
   test(`the fallback row clears when the person sends the next prompt (${surface})`, async ($, on) => {

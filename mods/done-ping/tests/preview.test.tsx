@@ -12,7 +12,7 @@ const band = (columns: number) => ({
 // Full width, then the band at about 520 px and 400 px (8 px a column); `-w<px>` sets the preview's page.
 const SIZES = [{ tag: '', columns: 100 }, { tag: '-w520', columns: 65 }, { tag: '-w400', columns: 50 }]
 
-async function setup($: any, on: any, theme: string) {
+async function setup($: any, on: any, theme: string, isTestFailing = false) {
   const clock = mock.clock(on)
   mock.env(on, { MODZ_THEME: theme })
   for (const name of ['store.get', 'store.set', 'command.register', 'ui.log']) on(name, () => ({ value: undefined }))
@@ -23,7 +23,7 @@ async function setup($: any, on: any, theme: string) {
   on('turn.complete', (_: any, e: any) => ({ text: e.answer }))
   on('fs.exists', () => ({ value: false }))
   on('tool.list', () => ({ value: [] }))
-  on('tool.call', () => ({ result: 'ok' }))
+  on('tool.call', (_: any, e: any) => (isTestFailing && e.tool === 'Bash' ? { result: 'FAIL', isError: true } : { result: 'ok' }))
   on('tool.check', () => ({ decision: 'ask' }))
   on('process.run', () => ok(1))
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work/eliti' })
@@ -45,6 +45,16 @@ for (const theme of ['dark', 'light']) {
     await $.turn.complete({ answer: 'ok', durationMs: 134_000, isAborted: false, turnId: 't', reason: 'answer' })
     await clock.advance(5)
     await dumpSizes($, `fallback-done-${theme}`)
+  })
+
+  test(`preview ${theme}: turn done, tests failed`, async ($: any, on: any) => {
+    const clock = await setup($, on, theme, true)
+    await $.turn.start({ text: 'go', turnId: 't' })
+    for (const file of ['a.ts', 'b.ts']) await $.tool.call({ tool: 'Edit', file_path: file, old_string: 'a', new_string: 'b' })
+    await $.tool.call({ tool: 'Bash', command: 'npm test' })
+    await $.turn.complete({ answer: 'ok', durationMs: 412_000, isAborted: false, turnId: 't', reason: 'answer' })
+    await clock.advance(5)
+    await dumpSizes($, `fallback-fail-${theme}`)
   })
 
   test(`preview ${theme}: waiting on the person`, async ($: any, on: any) => {

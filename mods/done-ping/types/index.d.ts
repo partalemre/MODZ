@@ -1,8 +1,8 @@
 export type PingNotice = {
   id: number
-  // `done` draws the Moss bell tile, `wait` the Amber one.
-  kind: 'done' | 'wait'
-  // The outcome ("Tur bitti") and its facts ("2dk 14sn · 3 dosya değişti").
+  // `done` draws the Moss bell tile, `fail` (the turn's tests failed) the Flare one, `wait` the Amber one.
+  kind: 'done' | 'fail' | 'wait'
+  // The outcome ("Tur bitti") and its facts ("testler geçti · 3 dosya değişti · 2dk 14sn").
   title: string
   detail: string
   expiresAt: number

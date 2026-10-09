@@ -1,11 +1,13 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register, RenderSurface, Timer } from 'claude-code'
+import type { EngineInterface, On, Register, RenderSurface, Timer } from 'claude-code'
 
 import { PROBED_TEXTS, detect, goModuleOf, isSource } from './detect'
 import type { RootInfo } from './detect'
+import { settleFocus } from './focus'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { DEBOUNCE_MS, DISMISS_AFTER_MS, EMPTY, NICE, OPEN_TIMEOUT_MS, PRIORITY, REFRESH_MS, TIMEOUT_MS, TIMEOUT_SLACK_MS, VENDOR_TOOLS, WRITE_TOOLS } from './limits'
 import { openCandidates, pathOf, placeOf } from './open'
+import { overridesOf, type Overrides } from './options'
 import { badgeText, isFailing, parseLint, parseTests } from './parse'
 import type { ParseContext } from './text'
 import { bandTree } from './band'
@@ -33,7 +35,6 @@ const knowNotice = { plugin: 'you-should-know', key: 'notice' } as const
 const budgetNotice = { plugin: 'session-budget', key: 'notice' } as const
 const reflectNotice = { plugin: 'reflect', key: 'notice' } as const
 
-type Overrides = { test: string; lint: string; open: string }
 type Parse = (out: string, code: number, ctx: ParseContext) => CheckOutcome
 const flags = { isDirty: false, isRunning: false, isQueued: false, debounce: null as Timer | null, noticeId: 0 }
 
@@ -133,10 +134,8 @@ function schedule($: EngineInterface, overrides: Overrides): void {
 async function isOutranked($: EngineInterface): Promise<boolean> {
   const nowMs = await $.clock.now()
   const others: { value?: unknown }[] = [
-    await $.state.get(cacheTaxNotice as never),
-    await $.state.get(knowNotice as never),
-    await $.state.get(budgetNotice as never),
-    await $.state.get(reflectNotice as never),
+    await $.state.get(cacheTaxNotice as never), await $.state.get(knowNotice as never),
+    await $.state.get(budgetNotice as never), await $.state.get(reflectNotice as never),
   ]
 
   return others.some(other => isLive(other.value, nowMs))
@@ -188,8 +187,6 @@ async function runCommand($: EngineInterface, arg: string, overrides: Overrides)
 
   return `test-badge ${isOn ? 'açık' : 'kapalı'}`
 }
-
-type On = Parameters<Register>[0]
 
 function hookRuns(on: On, overrides: Overrides): void {
   on('session.start', async ($, e, next) => {
@@ -270,17 +267,14 @@ function hookDrawing(on: On, overrides: Overrides): void {
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    await settleFocus(e, ms => $.clock.sleep(ms))
     const badge = await read($, badgeAtom)
     const where = { root: badge.root ?? (await $.session.cwd()), template: overrides.open, surface: e.surface }
 
     const ui = $.ui.resolve(e)
     return stamped(ui, paneTree(ui, {
-      badge,
-      now: await $.clock.now(),
-      columns: e.props.bodyColumns,
-      filter: await read($, filterAtom),
-      theme: await read($, themeAtom),
-      isRich: e.surface !== 'terminal',
+      badge, now: await $.clock.now(), columns: e.props.bodyColumns, filter: await read($, filterAtom),
+      theme: await read($, themeAtom), isRich: e.surface !== 'terminal',
       onOpen: failure => void openFailure($, failure, where),
       onRerun: () => void runAll($, overrides),
       onFilter: filter => void update($, filterAtom, () => filter),
@@ -289,10 +283,16 @@ function hookDrawing(on: On, overrides: Overrides): void {
 }
 
 export const register: Register = (on, options) => {
-  const overrides: Overrides = {
-    test: String(options.testCommand ?? ''), lint: String(options.lintCommand ?? ''), open: String(options.openCommand ?? ''),
-  }
+  const overrides = overridesOf(options)
   hookRuns(on, overrides)
   hookHub(on)
   hookDrawing(on, overrides)
+  // A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
+  // left, so its first click would be refused. Drawing again on attach hands it live buttons.
+  on('session.attach', async ($, e, next) => {
+    const attached = await next(e)
+    $.ui.invalidate('ui.render')
+
+    return attached
+  })
 }

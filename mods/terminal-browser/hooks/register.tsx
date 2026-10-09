@@ -3,6 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Browser } from './browser'
 import { MAX_IMAGE_CELLS } from './surface.tsx'
 import { normalizeUrl } from './urls.ts'
+import { statusView } from './status.tsx'
 import {
   isBridgeState,
   isInputMessage,
@@ -16,7 +17,7 @@ import {
 
 
 const PANE = 'browser'
-const PANE_TITLE = 'tarayıcı'
+const PANE_TITLE = 'Tarayıcı'
 const TERMINAL_ONLY = 'terminal-browser yalnızca terminalde çalışır'
 const IMAGE_KEY = 'view'
 const IMAGE_ALT = ''
@@ -35,6 +36,8 @@ const state = {
   token: null as string | null,
   open: false,
   pendingUrl: null as string | null,
+  // The address last asked for, which the pane names until the first frame lands.
+  requestedUrl: null as string | null,
   region: null as { cols: number; rows: number } | null,
   last: null as BridgeState | null,
   frame: null as Frame | null,
@@ -70,7 +73,9 @@ async function checkCapabilities($: EngineInterface, command: string[]): Promise
     try {
       const parsed = line ? JSON.parse(line) : null
       if (parsed && Array.isArray(parsed.capabilities)) capabilities = parsed.capabilities
-    } catch {}
+    } catch (err) {
+      $.ui.log(`terminal-browser: capabilities yanıtı okunamadı: ${err}`, { to: 'debug' })
+    }
   }
   const ok = REQUIRED_CAPABILITIES.every(need => capabilities.includes(need))
   return ok ? { ok: true } : { ok: false, installed: true }
@@ -101,8 +106,16 @@ async function startBridge($: EngineInterface): Promise<{ ok: true } | { ok: fal
   }
   state.port = report.port
   state.token = report.token
-  void watchBridge($)
+  void watchBridge($).catch(cause => forgetBridge(cause))
   return { ok: true }
+}
+
+// A watcher that stopped (the session unloading, the bridge gone) leaves nothing to talk to:
+// the next /browser launches a bridge again instead of posting to a dead port.
+function forgetBridge(cause: unknown): void {
+  state.port = null
+  state.token = null
+  state.last = state.last === null ? null : { ...state.last, alive: false, error: `terminal-browser bağlantısı koptu: ${String(cause)}` }
 }
 
 async function post($: EngineInterface, path: string, body: unknown): Promise<unknown> {
@@ -130,6 +143,12 @@ async function fetchState($: EngineInterface, version: number): Promise<BridgeSt
   }
 }
 
+
+// Until the first frame: the address on its way, or the bridge's own reason it stopped.
+function paneStatus() {
+  const last = state.last
+  return { url: state.requestedUrl ?? last?.url ?? null, error: last?.error ?? null, isAlive: last === null ? null : last.alive }
+}
 
 function imageSource(frame: Frame) {
   return { shm: frame.shm, format: frame.format, width: frame.width, height: frame.height, generation: frame.generation }
@@ -210,6 +229,7 @@ async function openBrowser($: EngineInterface, raw: string | null): Promise<{ ok
   const alive = state.last?.alive === true
   const url = raw ? normalizeUrl(raw) : (alive && state.last?.url ? state.last.url : START_URL)
   state.pendingUrl = url
+  state.requestedUrl = url
   state.open = true
   await $.ui.open({ id: PANE, title: PANE_TITLE, focus: true, rows: 24 })
   $.ui.invalidate('ui.render')
@@ -229,6 +249,7 @@ async function closeBrowser($: EngineInterface): Promise<boolean> {
 async function browserClosed($: EngineInterface): Promise<void> {
   state.open = false
   state.pendingUrl = null
+  state.requestedUrl = null
   state.region = null
   state.frame = null
   state.mounted = null
@@ -277,7 +298,9 @@ export const register: Register = (on, options) => {
     let surfaces: readonly string[] = []
     try {
       surfaces = await $.session.surfaces()
-    } catch {}
+    } catch (err) {
+      $.ui.log(`terminal-browser: yüzeyler okunamadı, terminal yok sayılıyor: ${err}`, { to: 'debug' })
+    }
     // The desktop has a browser of its own: register nothing there, so /browser never clashes.
     state.isOffTerminal = !surfaces.includes('terminal') || surfaces.includes('desktop')
     if (state.isOffTerminal) return r
@@ -301,11 +324,11 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'browser' }, async ($, e) => {
     const arg = e.args.trim()
     if (arg === 'close' || (!arg && state.open)) {
-      await closeBrowser($)
-      return { text: 'terminal-browser kapatıldı' }
+      const wasOpen = await closeBrowser($)
+      return { text: wasOpen ? 'Tarayıcı kapatıldı' : 'Tarayıcı zaten kapalı' }
     }
     const opened = await openBrowser($, arg || null)
-    return { text: opened.ok ? 'terminal-browser açıldı' : opened.error }
+    return { text: opened.ok ? `Tarayıcı açıldı: ${opened.url === START_URL ? 'başlangıç sayfası' : opened.url}` : opened.error }
   })
 
   on('tool.call', { tool: new RegExp(`^${OPEN_TOOL}$`) }, async ($, e) => {
@@ -325,7 +348,7 @@ export const register: Register = (on, options) => {
       const { Box } = await $.ui.resolve(e)
       return <Box />
     }
-    const { Box, Client, Image } = await $.ui.resolve(e)
+    const { Box, Client, Image, Text } = await $.ui.resolve(e)
     const rows = e.props.scroll.bodyRows > 0 ? e.props.scroll.bodyRows : Math.max(8, (e.viewport?.rows ?? 30) - 8)
     const cols = Math.max(1, e.props.bodyColumns > 0 ? e.props.bodyColumns : (e.viewport?.columns ?? 80))
     const frame = state.frame
@@ -335,7 +358,7 @@ export const register: Register = (on, options) => {
       <Box flexDirection="column" width={cols} height={rows}>
         {frame && grid ? (
           <Image key={IMAGE_KEY} source={imageSource(frame)} columns={grid.cols} rows={grid.rows} alt={IMAGE_ALT} />
-        ) : null}
+        ) : statusView({ Box, Text }, paneStatus())}
         <Box position="absolute" top={0} left={0} width={cols} height={rows}>
           <Client key={viewKey()} module="./surface.tsx" width={cols} height={rows} />
         </Box>

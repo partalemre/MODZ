@@ -128,7 +128,7 @@ test('a refused edit is not recorded; /replay opens the pane on its empty state,
   for (const surface of SURFACES) {
     const pane = await $.ui.mount(paneOf(surface))
     const shown = [...(await texts(pane)), await svgText(pane)].join('\n')
-    expect(shown).toContain(surface === 'terminal' ? 'Son turda düzenleme yok · bir tur dosya düzenleyince adımları burada izlenir' : 'Son turda düzenleme yok')
+    expect(shown).toContain('Henüz düzenleme yok')
   }
 })
 
@@ -138,7 +138,7 @@ test('with no room for the pane and nothing to replay, /replay says so in one li
   const clock = await setup($, on, world)
   const opening = $.command.run({ command: 'replay', args: '' })
   await clock.advance(OPEN_WAIT_MS)
-  expect(await opening).toMatchObject({ text: 'Tekrar: son turda düzenleme yok.' })
+  expect(await opening).toMatchObject({ text: 'Tekrar: henüz düzenleme yok.' })
   expect(await texts(await $.ui.mount(bandOf('terminal')))).toEqual(['engine'])
 })
 

@@ -49,7 +49,7 @@ function actions(ui: Ui, on: OfferHandlers, hasHint: boolean) {
 
   return (
     <Box key="rt-actions" flexDirection="row" columnGap={2} alignItems="center">
-      <Button key="rt-open" variant="secondary" hotkey="r" label="Düzenlemeleri izle" onPress={on.onOpen} />
+      <Button key="rt-open" variant="primary" hotkey="r" label="Düzenlemeleri izle" onPress={on.onOpen} />
       {hasHint && <Text dimColor>ya da /replay yaz</Text>}
       <Box flexGrow={1} />
       <Button key="rt-dismiss" plain label="Şimdi değil" onPress={on.onDismiss} />

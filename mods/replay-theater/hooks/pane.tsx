@@ -5,7 +5,7 @@ import type { Ui } from './offer'
 import { baseName, detailSvg, overviewSvg, totals } from './pane-svg'
 import type { PaneModel } from './pane-svg'
 import { terminalView } from './terminal'
-import { escape, eyebrow, measure, widthFor, wrap } from './ui/svg'
+import { escape, eyebrow, widthFor, wrap } from './ui/svg'
 import { svgDoc } from './ui/theme'
 import type { Theme } from './ui/theme'
 
@@ -14,12 +14,12 @@ export type PaneSite = { surface: string; columns: number; inBand: boolean; maxR
 const PANE_GUTTER_COLUMNS = 3
 // The sideways scrollbar of a diff wider than the pane takes this much under it.
 const SCROLLBAR_ROOM = 12
-const EMPTY_LEAD = 'Son turda düzenleme yok'
-const EMPTY_REST = 'bir tur dosya düzenleyince adımları burada izlenir'
-export const EMPTY_TEXT = `${EMPTY_LEAD} · ${EMPTY_REST}`
+// The replay outlives turns without edits, so an empty pane means none yet this session.
+const EMPTY_LEAD = 'Henüz düzenleme yok'
+const EMPTY_REST = 'Claude dosya düzenleyen bir turu bitirince adımlar burada oynatılır.'
+export const EMPTY_TEXT = `${EMPTY_LEAD}. ${EMPTY_REST}`
 const EMPTY_LEAD_Y = 40
 const EMPTY_LINE_H = 19
-const EMPTY_LEAD_SIZE = 17
 const EMPTY_REST_SIZE = 13
 
 function altOf(model: PaneModel): string {
@@ -49,15 +49,12 @@ function desktopView(ui: Ui, model: PaneModel, on: PaneHandlers) {
   )
 }
 
-// The eyebrow and one sentence; the rest of it goes under the lead when the pane is narrow.
+// The eyebrow, the lead and one sentence under it.
 function emptySvg(width: number, theme: Theme): { source: string; height: number } {
-  const isInline = measure(EMPTY_TEXT, EMPTY_LEAD_SIZE) <= width
-  const rest = isInline ? [] : wrap(EMPTY_REST, { width, size: EMPTY_REST_SIZE, maxLines: 2 })
-  const lead = isInline
-    ? `<text x="0" y="${EMPTY_LEAD_Y}" class="headline"><tspan class="hi">${EMPTY_LEAD}</tspan><tspan class="mid" font-weight="500"> · ${EMPTY_REST}</tspan></text>`
-    : `<text x="0" y="${EMPTY_LEAD_Y}" class="headline hi">${EMPTY_LEAD}</text>`
-  const lines = rest.map((part, n) => `<text x="0" y="${EMPTY_LEAD_Y + (n + 1) * EMPTY_LINE_H}" class="mid" font-size="${EMPTY_REST_SIZE}">${escape(part)}</text>`)
-  const height = EMPTY_LEAD_Y + rest.length * EMPTY_LINE_H + 8
+  const rest = wrap(EMPTY_REST, { width, size: EMPTY_REST_SIZE, maxLines: 2 })
+  const lead = `<text x="0" y="${EMPTY_LEAD_Y}" class="headline hi">${EMPTY_LEAD}</text>`
+  const lines = rest.map((part, n) => `<text x="0" y="${EMPTY_LEAD_Y + (n + 1) * EMPTY_LINE_H + 2}" class="mid" font-size="${EMPTY_REST_SIZE}">${escape(part)}</text>`)
+  const height = EMPTY_LEAD_Y + rest.length * EMPTY_LINE_H + 10
   const body = `<rect x="0" y="5" width="6" height="6" rx="1.5" fill="var(--plan)"/><text x="13" y="12" class="eyebrow f-plan">${eyebrow('Tekrar')}</text>${lead}${lines.join('')}`
 
   return { source: svgDoc({ width, height, theme }, body), height }
@@ -70,7 +67,8 @@ function emptyView(ui: Ui, spec: { surface: string; width: number; theme: Theme;
     return (
       <Box key="rt-empty" flexDirection="column" gap={1} paddingX={1}>
         <Text color="merged" bold>{'● TEKRAR'}</Text>
-        <Text dimColor>{EMPTY_TEXT}</Text>
+        <Text bold>{EMPTY_LEAD}</Text>
+        <Text dimColor>{EMPTY_REST}</Text>
         <Box flexDirection="row">{close}</Box>
       </Box>
     )

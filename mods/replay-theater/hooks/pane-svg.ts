@@ -5,11 +5,13 @@ import { DOT_CSS, stepDot, stepRail } from './ui/steps'
 import { svgDoc } from './ui/theme'
 import type { Theme } from './ui/theme'
 
-export type PaneModel = { steps: ReplayStep[]; index: number; explain: ReplayExplain; theme: Theme; width: number }
+// `ask` is the prompt that started the turn and `age` how long ago it ended ("3 dk önce"); '' when unknown.
+export type PaneModel = { steps: ReplayStep[]; index: number; explain: ReplayExplain; theme: Theme; width: number; ask?: string; age?: string }
 
 const ROW = 32
 const ROWS_MAX = 8
-const LIST_TOP = 80
+const HEAD_TOP = 118
+const ASK_LINE = 24
 const DOT_X = 16
 const NAME_X = 38
 const COUNT_SIZE = 11.5
@@ -65,24 +67,40 @@ function row(model: PaneModel, k: number, cy: number): string {
   return `${stepDot({ cx: DOT_X, cy, n: k + 1, state })}${label}${right.svg}`
 }
 
-// "4 dosyada 4 düzenleme", the totals, then every edit as a numbered circle on a rail.
-export function overviewSvg(model: PaneModel): { source: string; height: number } {
+function headOf(model: PaneModel): { svg: string[]; listTop: number } {
   const sum = totals(model.steps)
+  const age = model.age ?? ''
+  const ask = model.ask ?? ''
+  const askLine = ask === '' ? '' : `<text x="0" y="82" class="mid" font-size="12.5" font-style="italic">${escape(fit(`“${ask}”`, model.width, 12.5))}</text>`
+  const listTop = HEAD_TOP - (ask === '' ? ASK_LINE : 0)
+
+  return {
+    svg: [
+      `<rect x="0" y="5" width="6" height="6" rx="1.5" fill="var(--plan)"/><text x="13" y="12" class="eyebrow f-plan">${eyebrow('Tekrar')}</text>`,
+      age === '' ? '' : `<text x="${model.width}" y="12" text-anchor="end" class="label lo">${escape(age)}</text>`,
+      `<text x="0" y="40" class="headline hi">${sum.files} dosyada ${model.steps.length} düzenleme</text>`,
+      `<text x="0" y="60" class="label"><tspan class="f-ok">${sum.add} satır eklendi</tspan><tspan class="lo">, </tspan><tspan class="f-danger">${sum.del} silindi</tspan></text>`,
+      askLine,
+      `<text x="0" y="${listTop - 12}" class="eyebrow lo">${eyebrow('Sırayla düzenlemeler')}</text>`,
+    ],
+    listTop,
+  }
+}
+
+// The eyebrow and age, "4 dosyada 4 düzenleme", the totals, the prompt that started the turn, then every
+// edit as a numbered circle on a rail.
+export function overviewSvg(model: PaneModel): { source: string; height: number } {
+  const head = headOf(model)
   const shown = windowOf(model.steps.length, model.index)
-  const head = [
-    `<text x="0" y="18" class="headline hi">${sum.files} dosyada ${model.steps.length} düzenleme</text>`,
-    `<text x="0" y="40" class="label"><tspan class="f-ok">${sum.add} satır eklendi</tspan><tspan class="lo">, </tspan><tspan class="f-danger">${sum.del} silindi</tspan></text>`,
-    `<text x="0" y="66" class="eyebrow lo">${eyebrow('Sırayla düzenlemeler')}</text>`,
-  ]
-  const centers = Array.from({ length: shown.end - shown.start }, (_, n) => LIST_TOP + n * ROW + ROW / 2)
+  const centers = Array.from({ length: shown.end - shown.start }, (_, n) => head.listTop + n * ROW + ROW / 2)
   const rails = centers.slice(1).map((cy, n) => stepRail(DOT_X, centers[n] as number, cy))
   const rows = centers.map((cy, n) => row(model, shown.start + n, cy))
   const at = model.index - shown.start
   const tint = at >= 0 && at < centers.length ? `<rect x="0" y="${(centers[at] as number) - 15}" width="${model.width}" height="30" rx="8" class="row-on"/>` : ''
-  const more = moreLines(model.steps.length, shown, LIST_TOP + centers.length * ROW)
-  const height = LIST_TOP + centers.length * ROW + more.height + 4
+  const more = moreLines(model.steps.length, shown, head.listTop + centers.length * ROW)
+  const height = head.listTop + centers.length * ROW + more.height + 4
 
-  return { source: svgDoc({ width: model.width, height, theme: model.theme }, [...head, tint, ...rails, ...rows, more.svg].join(''), CSS), height }
+  return { source: svgDoc({ width: model.width, height, theme: model.theme }, [...head.svg, tint, ...rails, ...rows, more.svg].join(''), CSS), height }
 }
 
 function moreLines(total: number, shown: { start: number; end: number }, top: number): { svg: string; height: number } {

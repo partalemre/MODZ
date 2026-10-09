@@ -26,6 +26,10 @@ export type Replay = {
   explain: ReplayExplain
   // The first sentence of Claude's answer that ended the turn; '' when it had none.
   quote: string
+  // The person's own words that started the turn, one short line; absent before this was kept.
+  ask?: string
+  // When the turn ended (ms), for "3 dk önce": the replay stays after turns without edits.
+  at?: number
 }
 
 export type ReplayPlanStatus = 'pending' | 'in_progress' | 'completed'

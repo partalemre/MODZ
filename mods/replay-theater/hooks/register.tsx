@@ -8,6 +8,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
+import { ageText } from './age'
 import { shortLine } from './explain'
 import { explainReplay, why } from './explainer'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
@@ -43,7 +44,7 @@ type On = Parameters<Register>[0]
 type Call = EditCall & Record<string, unknown>
 
 // The session's folder, for relative paths; set when the session starts.
-const flags = { cwd: '' }
+const flags = { cwd: '', ask: '' }
 
 async function refreshTheme($: EngineInterface): Promise<void> {
   try {
@@ -179,7 +180,7 @@ function hookSession(on: On): void {
     if (opened.hasEdits) return { text: `Tekrar: ${count} düzenleme` }
 
     // Only a terminal too narrow for the pane hears it as text.
-    return opened.isPlaced ? {} : { text: 'Tekrar: son turda düzenleme yok.' }
+    return opened.isPlaced ? {} : { text: 'Tekrar: henüz düzenleme yok.' }
   })
 
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
@@ -201,6 +202,7 @@ function hookRecording(on: On): void {
 
   on('turn.start', async ($, e, next) => {
     if ((e as { agentId?: string }).agentId === undefined) {
+      flags.ask = typeof (e as { text?: unknown }).text === 'string' ? (e as { text: string }).text : ''
       await update($, pendingAtom, () => [])
       await update($, offeredAtom, () => false)
     }
@@ -213,7 +215,8 @@ function hookRecording(on: On): void {
     const r = await next(e)
     const pending = await read($, pendingAtom)
     if (e.agentId !== undefined || pending.length === 0) return r
-    await update($, replayAtom, () => ({ id: e.turnId, steps: pending, explain: 'none' as const, quote: shortLine(e.answer ?? '') }))
+    const turn = { quote: shortLine(e.answer ?? ''), ask: shortLine(flags.ask), at: await $.clock.now() }
+    await update($, replayAtom, () => ({ id: e.turnId, steps: pending, explain: 'none' as const, ...turn }))
     await update($, pendingAtom, () => [])
     await update($, indexAtom, () => 0)
     await update($, offeredAtom, () => true)
@@ -249,7 +252,8 @@ function hookDrawing(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e) => {
     const replay = await read($, replayAtom)
     const view = await read($, viewAtom)
-    const model = { steps: replay?.steps ?? [], index: await read($, indexAtom), explain: replay?.explain ?? 'none', theme: view.theme }
+    const context = { ask: replay?.ask ?? '', age: ageText(replay?.at, await $.clock.now()) }
+    const model = { steps: replay?.steps ?? [], index: await read($, indexAtom), explain: replay?.explain ?? 'none', theme: view.theme, ...context }
     const site = { surface: e.surface, columns: e.props.bodyColumns, inBand: false, maxRows: e.props.scroll?.bodyRows ?? PANE_ROWS_MAX, on: handlers($) }
 
     return replayView($.ui.resolve(e), model, site)

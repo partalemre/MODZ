@@ -1,9 +1,9 @@
 /* @jsx h */
 import type { EngineInterface, Register } from 'claude-code'
 import type { Browser } from './browser'
-import { MAX_IMAGE_CELLS } from './surface.tsx'
-import { normalizeUrl } from './urls.ts'
-import { statusView } from './status.tsx'
+import { MAX_IMAGE_CELLS } from './surface'
+import { normalizeUrl } from './urls'
+import { statusView } from './status'
 import {
   isBridgeState,
   isInputMessage,
@@ -12,7 +12,7 @@ import {
   takenItems,
   type BridgeState,
   type Frame,
-} from './bridge-protocol.ts'
+} from './bridge-protocol'
 
 
 

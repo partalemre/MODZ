@@ -81,7 +81,3 @@ export function addedByFile(diff: string): Map<string, string> {
 
   return files
 }
-
-export function diffPaths(diff: string): string[] {
-  return [...addedByFile(diff).keys()]
-}

@@ -51,15 +51,22 @@ export function padCell(text: string, column: CardColumn, width: number): string
   return column.align === 'right' ? shown.padStart(width) : shown.padEnd(width)
 }
 
+function lookOf(column: CardColumn, tone: CardModel['tone']) {
+  if (column.isToned === true) return { color: tone }
+
+  return column.isDim ? { dimColor: true } : {}
+}
+
 function cellOf(ui: Ui, cell: { text: string; column: CardColumn; tone: CardModel['tone'] }, width: number) {
   const { Text } = ui
-  const look = cell.column.isToned === true ? { color: cell.tone } : cell.column.isDim ? { dimColor: true } : {}
+  const look = lookOf(cell.column, cell.tone)
 
   return <Text {...look}>{padCell(cell.text, cell.column, width)}</Text>
 }
 
 // One Text per line, the cells inline in it: the dialog's surroundings are counted by the line.
-function rowOf(ui: Ui, cells: string[], model: CardModel, widths: number[]) {
+function rowOf(ui: Ui, line: { cells: string[]; model: CardModel; widths: number[] }) {
+  const { cells, model, widths } = line
   const { Text } = ui
   const gap = ' '.repeat(GAP)
   // A column empty in every row takes no room, its gap included.
@@ -80,7 +87,7 @@ function detailsOf(ui: Ui, model: CardModel, width: number) {
 
   return (
     <Box flexDirection="column" paddingLeft={INDENT}>
-      {rows.map(row => rowOf(ui, row, model, widths))}
+      {rows.map(row => rowOf(ui, { cells: row, model, widths }))}
       {more > 0 && <Text dimColor>{`+${more} daha`}</Text>}
     </Box>
   )

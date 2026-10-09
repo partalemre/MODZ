@@ -11,6 +11,7 @@ import { fileText, isFileTool, patchedFields, pathOf, resolvePath } from './tool
 import { resolveLight } from './theme'
 import type { GuardPending } from '../types'
 
+type On = Parameters<Register>[0]
 type Found = { secrets: (Secret & { where: string })[]; envFiles: string[]; path: string | null; command: string }
 
 const COMMAND = 'secret-guard'
@@ -170,7 +171,7 @@ async function refreshTheme($: EngineInterface): Promise<void> {
   session.isLight = resolveLight({ ...hints, systemDark: mac.exitCode === 0 ? mac.stdout.trim() === 'Dark' : false })
 }
 
-export const register: Register = on => {
+function hookSession(on: On): void {
   on('session.start', async ($, e, next) => {
     try {
       session.cwd = e.cwd
@@ -184,7 +185,9 @@ export const register: Register = on => {
 
     return next(e)
   })
+}
 
+function hookCommand(on: On): void {
   on('command.run', { command: COMMAND }, async $ => {
     const isOn = !(await read($, enabledAtom))
     await update($, enabledAtom, () => isOn)
@@ -192,7 +195,9 @@ export const register: Register = on => {
 
     return { text: `secret-guard ${isOn ? 'açık' : 'kapalı'}` }
   })
+}
 
+function hookCall(on: On): void {
   on('tool.call', async ($, e, next) => {
     if (!(await read($, enabledAtom))) return next(e)
     const input = e as unknown as Record<string, unknown>
@@ -217,7 +222,9 @@ export const register: Register = on => {
 
     return ran.deny === undefined ? { ...ran, context: [...(ran.context ?? []), note] } : ran
   })
+}
 
+function hookDialog(on: On): void {
   on('ui.render', { component: 'AskUserQuestion' }, async ($, e, next) => {
     const pending = await read($, pendingAtom)
     if (pending === null) return next(e)
@@ -233,4 +240,11 @@ export const register: Register = on => {
       </Box>
     )
   })
+}
+
+export const register: Register = on => {
+  hookSession(on)
+  hookCommand(on)
+  hookCall(on)
+  hookDialog(on)
 }

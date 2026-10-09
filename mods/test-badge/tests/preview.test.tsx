@@ -1,5 +1,8 @@
 import { mock, test } from 'claude-code/testing'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 // Draws each state on the desktop for bin/preview, once per pinned theme.
 const VITEST = [
   ' FAIL  src/auth/login.test.ts > login > rejects an expired token 14ms',

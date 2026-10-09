@@ -4,6 +4,9 @@ import { test } from 'claude-code/testing'
 
 import { MARKET_FILES } from './market-fixture'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 const pane = (bodyColumns: number) => ({ plugin: 'modz', component: 'Pane', requestId: 'modz', viewport: { columns: 100, rows: 40 }, props: { bodyColumns } }) as const
 
 const MARKET = '/m/.claude-plugin/marketplace.json'

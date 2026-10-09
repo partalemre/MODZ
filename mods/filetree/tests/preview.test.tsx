@@ -1,5 +1,8 @@
 import { expect, test } from 'claude-code/testing'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 // Draws the desktop pane in the states the video walks through, for bin/preview.
 // Each tree is logged as @@TREE@@<theme>-<state>@@<json>, the rows Client spliced in.
 

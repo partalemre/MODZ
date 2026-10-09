@@ -2,6 +2,9 @@ import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 // Visual check, not behaviour: logs each drawn tree for the preview renderer
 // (`@@TREE@@<label>@@<json>`), once on a dark and once on a light Claude Code theme.
 
@@ -86,7 +89,7 @@ const runSkin = ($: Engine, args: string) =>
 async function previewAll($: Engine, theme: Theme) {
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   await $.tool.call({ tool: 'Bash', tool_use_id: 'bash', command: 'pnpm test --filter hub' })
-  await $.tool.call({ tool: 'Edit', tool_use_id: 'edit', file_path: '/work/apps/hub/src/server.ts' })
+  await $.tool.call({ tool: 'Edit', tool_use_id: 'edit', file_path: '/work/apps/hub/src/server.ts', old_string: '', new_string: '' })
 
   for (const [name, props] of ROWS) {
     await logTree(`${theme}-tidemark-rows-${name}`, await $.ui.mount({ ...SITE, component: 'ToolUse', requestId: props.tool_use_id, props }))

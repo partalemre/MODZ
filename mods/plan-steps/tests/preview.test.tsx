@@ -1,5 +1,8 @@
 import { mock, test } from 'claude-code/testing'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 const MIN = 60_000
 const TITLES = ['Tipleri ve durum sözleşmesini yaz', 'Görev listesi takibi', 'Markdown plan ayrıştırıcısı', 'Adım–görev bulanık eşleştirme: TodoWrite, TaskCreate ve plan dosyasındaki adımları tek listede birleştir', 'Panel çizimi: başlık, ölçer, adımlar', 'Durum satırı', 'ETA kuralı', 'Testler: terminal ve masaüstü', 'README']
 

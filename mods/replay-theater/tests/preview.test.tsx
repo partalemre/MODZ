@@ -2,6 +2,9 @@ import { test } from 'claude-code/testing'
 
 import { bandOf, newWorld, paneOf, said, setup } from './fixtures'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 const FILES: Record<string, string> = {
   '/w/README.md': 'Call `greet(name)` to say hi.\n',
   '/w/src/greet.js': 'export function greet(name) {\n  return `Hi ${name}`\n}\n',

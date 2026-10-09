@@ -2,6 +2,9 @@ import { expect, test } from 'claude-code/testing'
 
 import { BAND, PANE, SECOND, finish, measure, modelStep, setup, spawn, threeRunning, tool } from './fixtures'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 // Desktop trees for bin/preview: each logged tree becomes a PNG. A pane's tree is wrapped in a box
 // as wide as its columns (8 px a column, as the renderer and MODZ measure), so the picture shows
 // the pane at its own width rather than the renderer's page.

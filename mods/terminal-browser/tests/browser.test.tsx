@@ -5,6 +5,9 @@ import { expect, mock, test } from 'claude-code/testing'
 
 import { normalizeUrl } from '../hooks/urls'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 type Post = { path: string; body: any }
 
 type World = {

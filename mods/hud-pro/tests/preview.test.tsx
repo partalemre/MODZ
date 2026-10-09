@@ -2,6 +2,9 @@ import { test } from 'claude-code/testing'
 
 import { BAND, MS_PER_HOUR, PANE, USAGE, start, stubSession } from './stubs'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 // Visual states for bin/preview: each logs its drawn tree. Widths in columns of 6.4 px:
 // the band at a wide (≈770 px) and a narrow (≈520 px) chat column, the pane at ≈400 and ≈600 px.
 const BAND_NARROW = 81

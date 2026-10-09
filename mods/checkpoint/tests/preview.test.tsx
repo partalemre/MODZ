@@ -1,5 +1,8 @@
 import { mock, test } from 'claude-code/testing'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 // Draws the timeline, the confirm card and the empty pane on the desktop for bin/preview, once per pinned theme
 // and per panel width: narrow ≈400 px (bin/preview --width 400) and wide ≈600 px (--width 600).
 const MIN = 60

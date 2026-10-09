@@ -66,7 +66,7 @@ test('the hub card is idle before a run, live while one goes, then says what fai
   world.hold = undefined
   release()
   await clock.advance(1)
-  expect(await cardOf($)).toMatchObject({ detail: '41/42 geçti · lint 2', tone: 'bad' })
+  expect(await cardOf($)).toMatchObject({ detail: '41/42 geçti · lint 2 hata', tone: 'bad' })
 })
 
 test('a green run reads 42/42 geçti; an unchanged card is not written again', { plugins: [modz] }, async ($: any, on: any) => {

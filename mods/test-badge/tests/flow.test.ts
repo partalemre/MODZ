@@ -8,6 +8,8 @@ type World = {
   toasts: string[]
   outs: { test: string; lint: string }
   code: number
+  // The lint command's exit code when it differs from the tests'.
+  lintCode?: number
   canOpen: boolean
   hold?: Promise<void>
 }
@@ -63,7 +65,9 @@ async function setup($: any, on: any, world: World) {
     }
     await world.hold
 
-    return result(e.argv.at(-1) === 'lint' ? world.outs.lint : world.outs.test, world.code)
+    const isLint = e.argv.at(-1) === 'lint'
+
+    return result(isLint ? world.outs.lint : world.outs.test, isLint ? (world.lintCode ?? world.code) : world.code)
   })
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/w' })
 
@@ -127,7 +131,7 @@ for (const surface of SURFACES) {
     await editAndRun($, await setup($, on, world))
 
     const band = await $.ui.mount(bandOf(surface))
-    expect(await shown(band, surface)).toMatch(/✕ 1\/42[\s\S]*lint 2[\s\S]*\d sn önce/)
+    expect(await shown(band, surface)).toMatch(/✕ 1\/42 kaldı[\s\S]*lint 2 hata[\s\S]*\d sn önce/)
     expect((await band.drawn() as any).children.at(-1)).toEqual({ type: 'engine', ref: 1 })
     await band.press({ key: 'tb-details' })
     expect(world.opened).toEqual(['test-badge'])
@@ -139,6 +143,8 @@ for (const surface of SURFACES) {
     expect(text).toContain('src/api/user.ts')
     expect(text).toMatch(/AssertionError: expected 200 to be 401/)
     expect((await pane.find({ key: 'tb-filter-lint' }))?.text).toBe('Lint 2')
+    expect(await pane.find({ key: 'tb-filter-e2e' })).toBeUndefined()
+    expect(await pane.find({ key: 'tb-filter-typecheck' })).toBeUndefined()
     expect(await pane.find({ key: 'tb-open-0' })).toBeDefined()
     await pane.press({ key: 'tb-filter-lint' })
     expect(await pane.find({ key: 'tb-open-0' })).toBeUndefined()
@@ -180,10 +186,42 @@ for (const surface of SURFACES) {
     await editAndRun($, await setup($, on, world))
 
     const band = await $.ui.mount(bandOf(surface))
-    expect(await shown(band, surface)).toMatch(/✓ test 42\/42[\s\S]*lint temiz/)
+    expect(await shown(band, surface)).toMatch(/✓ 42\/42 geçti[\s\S]*lint temiz/)
     expect(await band.find({ key: 'tb-details' })).toBeUndefined()
     const pane = await $.ui.mount(paneOf(surface))
     expect(await shown(pane, surface)).toMatch(/Hepsi geçti\s*· 42 test geçti · lint temiz/)
+  })
+}
+
+for (const surface of SURFACES) {
+  test(`${surface}: lint errors alone read Amber, not Flare, from the eyebrow down`, async ($: any, on: any) => {
+    const world = newWorld({ outs: { test: ' Tests  42 passed (42)', lint: ESLINT_FAIL }, code: 0, lintCode: 1 })
+    await editAndRun($, await setup($, on, world))
+
+    const pane = await $.ui.mount(paneOf(surface))
+    expect(await shown(pane, surface)).toMatch(/2 lint hatası\s*· 42 test geçti/)
+    expect(await pane.find({ key: 'tb-filter-unit' })).toBeUndefined()
+    if (surface === 'terminal') {
+      expect((await pane.find({ type: 'Text', text: /TEST SONUÇLARI/ }))?.props?.color).toBe('warning')
+
+      return
+    }
+    const header = String((await pane.find({ type: 'Svg' }))?.props?.source ?? '')
+    expect(header).toContain('var(--amber)')
+    expect(header).not.toContain('var(--flare)')
+  })
+}
+
+for (const surface of SURFACES) {
+  test(`${surface}: a test command that fails with every test passed says "test kaldı", never "0 başarısız"`, async ($: any, on: any) => {
+    const world = newWorld({ outs: { test: ' Tests  42 passed (42)\nERROR: Coverage for lines (71%) does not meet threshold (80%)', lint: '' }, code: 1, lintCode: 0 })
+    await editAndRun($, await setup($, on, world))
+
+    const band = await $.ui.mount(bandOf(surface))
+    expect(await shown(band, surface)).toMatch(/✕ test kaldı/)
+    const text = await shown(await $.ui.mount(paneOf(surface)), surface)
+    expect(text).toMatch(/Testler kaldı\s*· 42 geçti/)
+    expect(text).not.toContain('0 başarısız')
   })
 }
 

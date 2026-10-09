@@ -35,7 +35,7 @@ export function chipRow(ui: Ui, view: PaneView) {
 
   return (
     <Box flexDirection="row" columnGap={1} flexWrap="wrap">
-      {chipsOf(view.badge).map(chip => {
+      {chipsOf(view.badge, view.filter).map(chip => {
         const isOn = chip.filter === view.filter
         const look = isOn ? { variant: 'secondary' } : { plain: true, dimColor: chip.count === 0 }
 

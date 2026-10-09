@@ -3,12 +3,12 @@
 After a turn that edited source files, runs the project's tests and lint in the background and shows the result as one line above the prompt, with a details pane that says where each failure is:
 
 ```
-[✕ 3/42] [lint 2] 4 sn önce  [ Ayrıntı t ] ✕      failing: Flare pill, Amber lint pill, time in a dim color
-[✓ test 42/42] [lint temiz] 4 sn önce          ✕      passing: Moss pill
+[✕ 3/42 kaldı] [lint 2 hata] 4 sn önce  [ Ayrıntı t ] ✕   failing: Flare pill, Amber lint pill, time in a dim color
+[✓ 42/42 geçti] [lint temiz] 4 sn önce            ✕      passing: Moss pill
 [● test çalışıyor]                                    running: Iris pill with a breathing dot
 ```
 
-**Ayrıntı** (`t`) opens the details pane: eyebrow `TEST SONUÇLARI`, a headline such as `3 başarısız · 39 geçti` over a passed/failed bar, filter chips with counts (Hepsi / Birim / E2E / Lint / Tip), then the failures grouped by file: a file-type badge and path, and per failure a `dosya:satır` highlight, the test's name, its first error line, the suite and (for vitest, jest, go and bun) its duration. **Aç** opens the file at the line; **Yeniden çalıştır** (`r`) runs again. `MODZ_THEME=light|dark` pins the theme.
+**Ayrıntı** (`t`) opens the details pane: eyebrow `TEST SONUÇLARI`, a headline such as `3 başarısız · 39 geçti` over a passed/failed bar, filter chips with counts (Hepsi, then only the suites that have failures: Birim / E2E / Lint / Tip), then the failures grouped by file: a file-type badge and path, and per failure a `dosya:satır` highlight, the test's name, its first error line, the suite and (for vitest, jest, go and bun) its duration. **Aç** opens the file at the line; **Yeniden çalıştır** (`r`) runs again. `MODZ_THEME=light|dark` pins the theme.
 
 Zero tokens: it runs your own commands and reads their output.
 
@@ -31,7 +31,7 @@ Zero tokens: it runs your own commands and reads their output.
 | `pubspec.yaml` and a `test/` folder | `flutter test` (Flutter SDK in pubspec) or `dart test` | |
 | `phpstan.neon(.dist)` | | `vendor/bin/phpstan analyse --no-progress --no-ansi` |
 
-Counts are read from jest, vitest, pytest, cargo, mocha, node:test, bun, phpunit, flutter/dart and go output. Lint errors are read from eslint, tsc, flutter/dart analyze and phpstan. Any other tool falls back to its exit code: `testler geçti` / `testler kaldı`, `lint temiz` / `lint kaldı`. A run that hits the 120s limit shows `zaman aşımı`.
+Counts are read from jest, vitest, pytest, cargo, mocha, node:test, bun, phpunit, flutter/dart and go output. Lint errors are read from eslint, tsc, flutter/dart analyze and phpstan. Any other tool falls back to its exit code: `testler geçti` / `testler kaldı`, `lint temiz` / `lint kaldı`. A test command that fails while every counted test passed (a coverage gate, a crash after the last test) reads `test kaldı`, never `0 başarısız`. The pane's eyebrow wears the headline's role: Flare only for failed tests, Amber for lint errors alone or a run that did not finish. A run that hits the 120s limit shows `zaman aşımı`.
 
 ## Where failures are
 

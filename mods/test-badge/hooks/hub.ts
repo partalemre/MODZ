@@ -1,6 +1,6 @@
 import type { CheckOutcome, HubTone, TestBadge } from '../types'
 
-// The MODZ main panel's side of this mod (DESIGN.md §9): the one-line card it collects ("41/42 geçti · lint 2"),
+// The MODZ main panel's side of this mod (DESIGN.md §9): the one-line card it collects ("41/42 geçti · lint 2 hata"),
 // and its open requests, which name a pane by key.
 
 export const HUB_PANE = 'tests'
@@ -10,7 +10,9 @@ export type HubShown = { detail: string; tone: HubTone }
 function testsPart(tests: CheckOutcome): string {
   if (tests.status === 'timeout') return 'test zaman aşımı'
   if (tests.status === 'error') return 'test başlamadı'
-  if (tests.passed !== null && tests.total !== null) return `${tests.passed}/${tests.total} geçti`
+  // A failing run with every counted test passed (a coverage gate, a late crash) has no honest count.
+  const isCounted = tests.passed !== null && tests.total !== null && !(tests.status === 'fail' && tests.passed >= tests.total)
+  if (isCounted) return `${tests.passed}/${tests.total} geçti`
 
   return tests.status === 'pass' ? 'testler geçti' : 'testler kaldı'
 }
@@ -20,7 +22,7 @@ function lintPart(lint: CheckOutcome): string {
   if (lint.status === 'timeout') return 'lint zaman aşımı'
   if (lint.status === 'error') return 'lint başlamadı'
 
-  return lint.errors !== null && lint.errors > 0 ? `lint ${lint.errors}` : 'lint kaldı'
+  return lint.errors !== null && lint.errors > 0 ? `lint ${lint.errors} hata` : 'lint kaldı'
 }
 
 // Red for a failing check; Amber for a check that could not say (timed out, never started).

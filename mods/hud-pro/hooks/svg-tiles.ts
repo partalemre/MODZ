@@ -46,7 +46,8 @@ function valueAndMeter(tile: Tile, spec: { x: number; y: number; width: number }
   return value + meter({ x: spec.x, y: spec.y + BAR.top, width: spec.width, height: BAR.height, percent: tile.arc.percent, tone: tile.tone, pace: tile.arc.pace })
 }
 
-function tileSvg(tile: Tile, x: number, y: number, width: number): string {
+function tileSvg(tile: Tile, box: { x: number; y: number; width: number }): string {
+  const { x, y, width } = box
   const inner = x + TILE.pad
   const right = x + width - TILE.pad
   const frame = tile.tone === 'neutral' ? 's-line' : `s-${tile.tone}-l`
@@ -56,7 +57,7 @@ function tileSvg(tile: Tile, x: number, y: number, width: number): string {
 
   return [
     `<rect class="${fill} ${frame}" x="${x + 0.5}" y="${y + 0.5}" width="${width - 1}" height="${TILE.h - 1}" rx="${TILE.radius}"/>`,
-    eyebrow(tile.eyebrow, inner, y + TILE.pad + 9, tile.tone === 'neutral' ? 'f-lo' : `f-${tile.tone}`),
+    eyebrow(tile.eyebrow, { x: inner, y: y + TILE.pad + 9, cls: tile.tone === 'neutral' ? 'f-lo' : `f-${tile.tone}` }),
     textAt({ x: right, y: y + TILE.pad + 9, cls: 'f-lo num', size: 10.5, value: tile.meta, anchor: 'end' }),
     valueAndMeter(tile, { x: inner, y: y + 30, width: right - inner }),
     textAt({ x: inner, y: y + 94, cls: fillOf(tile.noteTone, 'lo'), size: 11, value: tile.note }),
@@ -68,7 +69,7 @@ function tileSvg(tile: Tile, x: number, y: number, width: number): string {
 
 function headerSvg(spec: TilesSpec, width: number): string {
   return [
-    eyebrow('HUD · kullanım', 0, 12, 'f-lo'),
+    eyebrow('HUD · kullanım', { x: 0, y: 12, cls: 'f-lo' }),
     textAt({ x: 0, y: 36, cls: 'f-hi', size: 17, value: spec.title, weight: 620 }),
     textAt({ x: width, y: 36, cls: 'f-lo', size: 11.5, value: spec.meta, anchor: 'end' }),
   ].join('')
@@ -82,7 +83,7 @@ export function tilesSvg(spec: TilesSpec): SvgDoc {
     const x = (index % cols) * (tileW + TILE.gap)
     const y = HEADER_H + Math.floor(index / cols) * (TILE.h + TILE.gap)
 
-    return tileSvg(tile, x, y, tileW)
+    return tileSvg(tile, { x, y, width: tileW })
   })
   const alt = [spec.title, ...spec.tiles.map(tile => `${tile.eyebrow} ${tile.value} · ${tile.note} · ${tile.caption}`)].join('; ')
 

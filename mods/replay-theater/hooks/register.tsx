@@ -11,6 +11,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import { ageText } from './age'
 import { shortLine } from './explain'
 import { explainReplay, why } from './explainer'
+import { settleFocus } from './focus'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { offerCard } from './offer'
 import { replayView } from './pane'
@@ -253,6 +254,7 @@ function hookBand(on: On): void {
 
 function hookPane(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e) => {
+    await settleFocus(e, ms => $.clock.sleep(ms))
     const replay = await read($, replayAtom)
     const view = await read($, viewAtom)
     const context = { ask: replay?.ask ?? '', age: ageText(replay?.at, await $.clock.now()) }
@@ -272,6 +274,17 @@ function hookPane(on: On): void {
   }).catch(($, e, next) => next(e))
 }
 
+// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
+// left, so its first click would be refused. Drawing again on attach hands it live buttons.
+function hookAttach(on: On): void {
+  on('session.attach', async ($, e, next) => {
+    const attached = await next(e)
+    $.ui.invalidate('ui.render')
+
+    return attached
+  })
+}
+
 function handlers($: EngineInterface) {
   return { onPrev: () => void step($, -1), onNext: () => void step($, 1), onClose: () => void closeReplay($) }
 }
@@ -281,4 +294,5 @@ export const register: Register = on => {
   hookRecording(on)
   hookBand(on)
   hookPane(on)
+  hookAttach(on)
 }

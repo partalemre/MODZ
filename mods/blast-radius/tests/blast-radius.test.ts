@@ -108,23 +108,56 @@ for (const surface of SURFACES) {
   })
 }
 
-test('git reset lists the changes it drops; plain commands are never held', async ($, on) => {
-  const w = world({ answers: { 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })
-  stub(on, w)
-  await ($ as any).tool.call({ tool: 'Bash', command: 'ls -la' })
-  expect(w.opened).toHaveLength(0)
+for (const surface of SURFACES) {
+  test(`git reset lists the changes it drops; plain commands are never held (${surface})`, async ($, on) => {
+    const w = world({ answers: { 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })
+    stub(on, w)
+    await ($ as any).tool.call({ tool: 'Bash', command: 'ls -la' })
+    expect(w.opened).toHaveLength(0)
 
-  const call = ($ as any).tool.call({ tool: 'Bash', command: 'git reset --hard' })
-  await pass(w, 0)
-  const ui = await mountPane($, 'desktop')
-  expect(JSON.stringify(await ui.drawn())).toContain('Değişiklikleri sil')
-  await ui.press({ key: 'cancel' })
-  await pass(w)
-  const result: any = await call
+    const call = ($ as any).tool.call({ tool: 'Bash', command: 'git reset --hard' })
+    await pass(w, 0)
+    const ui = await mountPane($, surface)
+    const drawn = JSON.stringify(await ui.drawn())
+    expect(drawn).toContain('Değişiklikleri sil')
+    expect(drawn).toContain('KOMUT BEKLETİLDİ')
+    await ui.press({ key: 'cancel' })
+    await pass(w)
+    const result: any = await call
 
-  expect(result.deny).toMatch(/discard uncommitted changes in 3 files/)
-  expect(w.ran).toHaveLength(1)
-})
+    expect(result.deny).toMatch(/discard uncommitted changes in 3 files/)
+    expect(w.ran).toHaveLength(1)
+  })
+
+  test(`a path the shell fills in at run time is held with that reason (${surface})`, async ($, on) => {
+    const w = world()
+    stub(on, w)
+    const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf $UNSET' })
+    await pass(w, 0)
+    const ui = await mountPane($, surface)
+    expect(JSON.stringify(await ui.drawn())).toContain('komut çalışırken belirleniyor')
+    await ui.press({ key: 'cancel' })
+    await pass(w)
+
+    expect(((await call) as any).deny).toMatch(/paths decided at run time/)
+  })
+
+  test(`the list opens and closes; the pane says the folder, not who holds it (${surface})`, async ($, on) => {
+    const w = world({ answers: { files: BUILD_SCAN } })
+    stub(on, w)
+    const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
+    await pass(w, 0)
+    const ui = await mountPane($, surface)
+    expect(JSON.stringify(await ui.drawn())).not.toContain('robots.txt')
+    expect(JSON.stringify(await ui.drawn())).not.toContain('Blast Radius bekletiyor')
+    await ui.press({ key: 'toggle' })
+    expect(JSON.stringify(await ui.drawn())).toContain('robots.txt')
+    expect(JSON.stringify(await ui.drawn())).toContain('Daha az göster')
+    await ui.press({ key: 'cancel' })
+    await pass(w)
+    await call
+  })
+}
 
 test('a command that would change nothing runs with no card', async ($, on) => {
   const w = world()
@@ -134,19 +167,6 @@ test('a command that would change nothing runs with no card', async ($, on) => {
   expect(result?.deny).toBeUndefined()
   expect(w.opened).toHaveLength(0)
   expect(w.toasts).toEqual([])
-})
-
-test('a path the shell fills in at run time is held with that reason', async ($, on) => {
-  const w = world()
-  stub(on, w)
-  const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf $UNSET' })
-  await pass(w, 0)
-  const ui = await mountPane($, 'terminal')
-  expect(JSON.stringify(await ui.drawn())).toContain('komut çalışırken belirleniyor')
-  await ui.press({ key: 'cancel' })
-  await pass(w)
-
-  expect(((await call) as any).deny).toMatch(/paths decided at run time/)
 })
 
 test('fail closed: an error while holding refuses the command', async ($, on) => {

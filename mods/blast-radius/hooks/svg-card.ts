@@ -23,11 +23,19 @@ const STRIKE_MS = 220
 const STRIKE_STAGGER_MS = 60
 
 const LINE_STEP = 19
-const FIRST_BASELINE = 21
+const EYEBROW_BASELINE = 13
+const EYEBROW_SIZE = 10.5
+const EYEBROW_TRACKING = 1.05
+const EYEBROW_DOT = 3
+const EYEBROW_TEXT_X = 10
+const META_GAP = 12
+const FIRST_BASELINE = 35
 const FULL_STEP = 18
 const HEAD_BOTTOM = 6
 const HEAD_MIN = 46
 const GLUE = ' · '
+// DESIGN.md §3: every card opens with an eyebrow in its role colour.
+export const EYEBROW = 'Komut bekletildi'
 
 type Line = { y: number; markup: string }
 
@@ -57,22 +65,37 @@ function headlineLines(view: View, room: number): Line[] {
   ]
 }
 
+/** `● KOMUT BEKLETİLDİ` in Flare, and where it would run (`demo-app içinde`) on the right while it fits. */
+function eyebrowLine(view: View, room: number): string {
+  const label = EYEBROW.toLocaleUpperCase('tr')
+  const labelW = measure(label, { size: EYEBROW_SIZE, isBold: true }) + [...label].length * EYEBROW_TRACKING
+  const metaRoom = room - EYEBROW_TEXT_X - labelW - META_GAP
+  const meta = view.context === '' || metaRoom < HEAD_X ? '' : fit(view.context, metaRoom, { size: META_SIZE })
+  const y = EYEBROW_BASELINE
+
+  return [
+    `<circle cx="${HEAD_X + EYEBROW_DOT}" cy="${y - 3.5}" r="${EYEBROW_DOT}" style="fill:var(--danger)"/>`,
+    `<text x="${HEAD_X + EYEBROW_TEXT_X}" y="${y}" font-size="${EYEBROW_SIZE}" font-weight="700" letter-spacing="${EYEBROW_TRACKING}" style="fill:var(--danger)">${escape(label)}</text>`,
+    meta === '' ? '' : `<text x="${HEAD_X + room}" y="${y}" text-anchor="end" font-size="${META_SIZE - 1}" style="fill:var(--lo)">${escape(meta)}</text>`,
+  ].join('')
+}
+
 export function headerSvg(view: View, width: number): { source: string; height: number } {
   const room = width - HEAD_X
   const lines = headlineLines(view, room)
-  const contextY = (lines[lines.length - 1]?.y ?? FIRST_BASELINE) + LINE_STEP
-  const fullY = contextY + FULL_STEP
+  const fullY = (lines[lines.length - 1]?.y ?? FIRST_BASELINE) + FULL_STEP
   const full = view.fullCommand === null ? '' : `<text x="${HEAD_X}" y="${fullY}" class="mono" font-size="11.5" style="fill:var(--lo)">${escape(fitMiddle(view.fullCommand, room, { size: 11.5, isMono: true }))}</text>`
-  const height = Math.max(HEAD_MIN, (view.fullCommand === null ? contextY : fullY) + HEAD_BOTTOM)
+  const lastY = view.fullCommand === null ? (lines[lines.length - 1]?.y ?? FIRST_BASELINE) : fullY
+  const height = Math.max(HEAD_MIN, lastY + HEAD_BOTTOM)
 
   return {
     height,
     source: [
       svgOpen(width, height),
       svgStyle(),
-      tile(view.icon, { x: 0, y: 4, size: TILE, role: 'danger' }),
+      tile(view.icon, { x: 0, y: 2, size: TILE, role: 'danger' }),
+      eyebrowLine(view, room),
       ...lines.map(line => `<text x="${HEAD_X}" y="${line.y}">${line.markup}</text>`),
-      `<text x="${HEAD_X}" y="${contextY}" font-size="${META_SIZE}" style="fill:var(--lo)">${escape(fit(view.context, room, { size: META_SIZE }))}</text>`,
       full,
       '</svg>',
     ].join(''),
@@ -138,6 +161,26 @@ function bar(row: Row, top: number, cols: Columns): string {
 
 type Placed = { row: Row; top: number; strikeIndex: number | null }
 
+// A git status letter by role: added Moss, modified Amber, deleted Flare, renamed Tide; a commit hash stays meta.
+const STATUS_ROLE: Record<string, string> = { A: 'ok', M: 'warn', D: 'danger', R: 'read', C: 'read', U: 'danger' }
+const DIFF = /^\+(\d+) −(\d+)$/
+
+export const tagPaint = (tag: string): string => {
+  const role = STATUS_ROLE[tag.trim().charAt(0)]
+
+  return tag.length <= 2 && role !== undefined ? `var(--${role})` : 'var(--lo)'
+}
+
+/** `+61 −0`: the added count in Moss, the removed one in Flare; any other size stays as one run. */
+function sizeRuns(size: string, paint: string): string {
+  const diff = DIFF.exec(size)
+  if (diff === null) return `<tspan style="fill:${paint}">${escape(size)}</tspan>`
+
+  const paintOf = (count: string, role: string) => (count === '0' ? 'var(--lo)' : `var(--${role})`)
+
+  return `<tspan style="fill:${paintOf(diff[1] ?? '', 'ok')}">+${diff[1]}</tspan><tspan style="fill:${paintOf(diff[2] ?? '', 'danger')}"> −${diff[2]}</tspan>`
+}
+
 function rowSvg(placed: Placed, cols: Columns): string {
   const { row, top } = placed
   const base = top + 18
@@ -148,13 +191,13 @@ function rowSvg(placed: Placed, cols: Columns): string {
   const spec = { size: NAME_SIZE, isBold: isFolder }
   const name = fitMiddle(row.name, Math.max(40, right - nameX - tagW - NAME_GAP), spec)
   const glyph = row.kind === 'more' ? '' : icon(row.icon, { x: isFolder || row.kind === 'item' ? 2 : 26, y: top + 7, size: isFolder ? 16 : 14, color: isFolder ? 'var(--mid)' : 'var(--lo)' })
-  const tag = row.tag === '' ? '' : `<text x="${nameX}" y="${base}" class="mono" font-size="11.5" style="fill:var(--lo)">${escape(row.tag)}</text>`
+  const tag = row.tag === '' ? '' : `<text x="${nameX}" y="${base}" class="mono" font-size="11.5" font-weight="${tagPaint(row.tag) === 'var(--lo)' ? 400 : 700}" style="fill:${tagPaint(row.tag)}">${escape(row.tag)}</text>`
   const nameColor = isFolder ? 'var(--hi)' : row.kind === 'more' ? 'var(--lo)' : 'var(--mid)'
   const dim = placed.strikeIndex === null ? '' : ` class="dim" style="animation-delay:${placed.strikeIndex * STRIKE_STAGGER_MS}ms"`
   const texts = [
     `<text x="${nameX + tagW}" y="${base}" font-size="13" font-weight="${isFolder ? 600 : 400}" style="fill:${nameColor}">${escape(name)}</text>`,
     row.count === '' || !cols.hasCount ? '' : `<text x="${cols.countRight}" y="${base}" text-anchor="end" font-size="12.5" style="fill:var(--lo)">${escape(row.count)}</text>`,
-    row.size === '' ? '' : `<text x="${cols.sizeRight}" y="${base}" text-anchor="end" class="num" font-size="12.5" font-weight="${isFolder ? 600 : 400}" style="fill:${isFolder ? 'var(--hi)' : 'var(--lo)'}">${escape(row.size)}</text>`,
+    row.size === '' ? '' : `<text x="${cols.sizeRight}" y="${base}" text-anchor="end" class="num" font-size="12.5" font-weight="${isFolder ? 600 : 400}">${sizeRuns(row.size, isFolder ? 'var(--hi)' : 'var(--lo)')}</text>`,
   ]
 
   return `${glyph}<g${dim}>${tag}${texts.join('')}</g>${bar(row, top, cols)}${strike(placed, nameX + tagW, measure(name, spec))}`

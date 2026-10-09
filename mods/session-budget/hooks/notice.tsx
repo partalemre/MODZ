@@ -45,11 +45,17 @@ export function noticeAbove(ui: Ui, row: unknown, spec: { theirs: unknown; dismi
   )
 }
 
+function cellAt(index: number, filled: number): string {
+  if (index === TERMINAL_MARK) return '┃'
+
+  return index < filled ? '━' : '─'
+}
+
 // The terminal's meter: spent in warning, the budget as a ┃ tidemark, room past it dim.
 function terminalMeter(ui: Ui, ratio: number) {
   const { Text } = ui
   const filled = Math.min(TERMINAL_CELLS, Math.max(1, Math.round(ratio * TERMINAL_MARK)))
-  const cells = Array.from({ length: TERMINAL_CELLS }, (_, index) => (index === TERMINAL_MARK ? '┃' : index < filled ? '━' : '─'))
+  const cells = Array.from({ length: TERMINAL_CELLS }, (_, index) => cellAt(index, filled))
 
   return (
     <Text>

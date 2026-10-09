@@ -128,7 +128,7 @@ export function fullCardSvg(card: FullCard): SvgDoc {
   const body = [
     `<rect class="f-card s-warn-l" x=".5" y=".5" width="${card.width - 1}" height="${height - 1}" rx="${CARD.radius}"/>`,
     tile({ x: x(0), y: y(4), size: CARD.tile, glyph: CARD.glyph, radius: CARD.tileRadius, role: 'warn', icon: 'gauge' }),
-    eyebrow(EYEBROW, x(CARD.textX), y(CARD_Y.eyebrow), 'f-warn'),
+    eyebrow(EYEBROW, { x: x(CARD.textX), y: y(CARD_Y.eyebrow), cls: 'f-warn' }),
     meta === '' ? '' : `<text class="f-lo num" x="${x(inner)}" y="${y(CARD_Y.eyebrow)}" font-size="${META}" text-anchor="end">${escape(meta)}</text>`,
     `<text class="f-hi" x="${x(CARD.textX)}" y="${y(CARD_Y.headline)}" font-size="${HEADLINE}" font-weight="620">Bütçe doldu</text>`,
     ...lines.map((line, i) => `<text class="f-mid" x="${x(CARD.textX)}" y="${y(CARD_Y.body + i * CARD_Y.step)}" font-size="${BODY}">${escape(line)}</text>`),

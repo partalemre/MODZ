@@ -27,7 +27,8 @@ export function measure(text: string, size: number, isMono = false): number {
 }
 
 // The text cut with … so it fits `width`; '' when not even one character does.
-export function fit(text: string, width: number, size: number, isMono = false): string {
+export function fit(text: string, width: number, font: { size: number; isMono?: boolean }): string {
+  const { size, isMono = false } = font
   if (measure(text, size, isMono) <= width) return text
   const chars = [...text]
   while (chars.length > 0 && measure(`${chars.join('')}…`, size, isMono) > width) chars.pop()
@@ -55,7 +56,7 @@ export function wrap(text: string, box: { width: number; size: number; maxLines:
   }
   if (line !== '') lines.push(line)
 
-  return lines.map(part => fit(part, box.width, box.size))
+  return lines.map(part => fit(part, box.width, { size: box.size }))
 }
 
 export function widthFor(columns: number | undefined, range: { min: number; max: number }): number {

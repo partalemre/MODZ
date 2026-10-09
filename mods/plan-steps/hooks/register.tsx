@@ -199,7 +199,6 @@ function stopTicker(): void {
   flags.ticker = null
 }
 
-// The session's edges and the pane: /steps or the MODZ main panel opens it, nothing else does.
 function lifecycle(on: On): void {
   on('session.start', async ($, e, next) => {
     flags.cwd = e.cwd.replace(/\/$/, '')
@@ -221,7 +220,10 @@ function lifecycle(on: On): void {
 
     return next(e)
   }).catch(($, e, next) => next(e))
+}
 
+// /steps or the MODZ main panel opens the pane, nothing else does.
+function paneOpening(on: On): void {
   on('command.run', { command: 'steps' }, async $ => {
     await openPane($)
 
@@ -266,6 +268,7 @@ function tracking(on: On): void {
 
 export const register: Register = on => {
   lifecycle(on)
+  paneOpening(on)
   tracking(on)
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {

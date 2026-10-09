@@ -5,6 +5,7 @@ import { DETAIL_CSS, detailBlock, hasDetails } from './plan-detail'
 import type { Block, DeskDetails } from './plan-detail'
 import { escape, eyebrow, measure, wrap } from './ui/svg'
 import { DOT_CSS, stepDot, stepRail } from './ui/steps'
+import type { DotState } from './ui/steps'
 import { svgDoc } from './ui/theme'
 import type { Theme } from './ui/theme'
 
@@ -72,10 +73,18 @@ function rightText(model: PlanSvgModel, step: Step, isCurrent: boolean): { text:
   return { text: [checks, step.status === 'in_progress' ? time : ''].filter(Boolean).join(' · '), cls: 'lo' }
 }
 
+const TITLE_CLASS: Record<DotState, string> = { current: 'title hi', done: 'label lo', next: 'label mid' }
+
+function dotState(row: Placed): DotState {
+  if (row.isCurrent) return 'current'
+
+  return row.step.status === 'completed' ? 'done' : 'next'
+}
+
 function rowSvg(model: PlanSvgModel, row: Placed): string {
-  const state = row.isCurrent ? 'current' : row.step.status === 'completed' ? 'done' : 'next'
+  const state = dotState(row)
   const right = rightText(model, row.step, row.isCurrent)
-  const titleCls = row.isCurrent ? 'title hi' : state === 'done' ? 'label lo' : 'label mid'
+  const titleCls = TITLE_CLASS[state]
   const size = row.isCurrent ? '' : ` font-size="${TITLE_SIZE}"`
   const cy = row.top + DOT_CY
   const parts = [

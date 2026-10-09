@@ -17,7 +17,6 @@ const FILE_ROW = 22
 const BADGE = { w: 26, h: 16, gap: 8 }
 const NAME_SIZE = 12
 const META_SIZE = 12
-const MORE_SIZE = 10.5
 const AGENT_INDENT = 14
 const LINES_MAX = 3
 
@@ -58,7 +57,7 @@ function fileBadge(x: number, y: number, path: string): string {
 function fileRow(path: string, frame: Frame): string {
   const nameX = frame.x + BADGE.w + BADGE.gap
   const room = frame.width - (nameX - frame.x)
-  const name = fit(baseName(path), room, NAME_SIZE)
+  const name = fit(baseName(path), room, { size: NAME_SIZE })
   const folder = path.slice(0, path.length - baseName(path).length)
   const folderRoom = room - measure(name, NAME_SIZE)
   const kept = measure(folder, NAME_SIZE) <= folderRoom ? folder : ''

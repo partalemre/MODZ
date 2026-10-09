@@ -201,6 +201,18 @@ export const register: Register = (on, options) => {
   })
 
   registerBand(on)
+  registerAttach(on)
+}
+
+// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
+// left, so its first click would be refused. Drawing again on attach hands it live buttons.
+function registerAttach(on: On): void {
+  on('session.attach', async ($, e, next) => {
+    const attached = await next(e)
+    $.ui.invalidate('ui.render')
+
+    return attached
+  })
 }
 
 // The fallback row: drawn above the others, and stepping aside once the person writes again.

@@ -6,13 +6,18 @@ import type { HubCard, HubTone } from '../types'
 export const HUB_PANE = 'files'
 
 export type HubShown = { detail: string; tone: HubTone }
-export type HubInput = { isRunning: boolean; touched: number; hasRepo: boolean; changed: number }
+// `edited` counts the files Claude wrote or committed in the latest turn; `sha` is that turn's commit.
+export type HubInput = { isRunning: boolean; touched: number; hasRepo: boolean; changed: number; edited?: number; sha?: string }
 
-// Live work first, then what git says is left to commit, then a clean tree.
+const SHA_SHOWN = 7
+
+// Live work first, then what git says is left to commit, then what the last turn did.
 export function hubOf(s: HubInput): HubShown {
+  const edited = s.edited ?? 0
   if (s.isRunning && s.touched > 0) return { detail: `${s.touched} dosya bu tur`, tone: 'live' }
-  if (!s.hasRepo) return { detail: 'git deposu yok', tone: 'idle' }
+  if (!s.hasRepo) return edited > 0 ? { detail: `son tur ${edited} dosya düzenlendi`, tone: 'idle' } : { detail: 'git deposu yok', tone: 'idle' }
   if (s.changed > 0) return { detail: `${s.changed} değişiklik commit edilmedi`, tone: 'warn' }
+  if (s.sha) return { detail: `commit ${s.sha.slice(0, SHA_SHOWN)} · temiz`, tone: 'ok' }
 
   return { detail: 'temiz', tone: 'ok' }
 }

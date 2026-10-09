@@ -31,7 +31,7 @@ Bu kopya MODZ için Türkçeleştirilip masaüstü (Code sekmesi) için yeniden 
 - Panel kendiliğinden açılmaz: `/filetree` ile açılır (masaüstünde de); açık bir panel yalnızca yeniden adlandırılır.
 - Araç çubuğu tek satır: arama, **Daralt**, **Yenile**, **Daha fazla** (boyut/tarih, gizliler, üst klasör, projeye dön, seçimi kaldır). Ağaç seçiliyken tek tuş kısayolları: `r` `c` `s` `.` `u` `p` `x`.
 - Git etkinliği, komutun gerçekten çalıştığı depoda değerlendirilir: başka bir depoya (`cd başka && git commit`) yapılan commit "commit edildi · başka" olarak görünür; git commit'i reddederse nedeni yazılır ("commit olmadı: değişiklik yok").
-- MODZ ana paneli (DESIGN.md §9): pane anahtarı `files`, başlık "Dosyalar"; özet kartı "4 dosya bu tur", "3 değişiklik commit edilmedi" ya da "temiz".
+- MODZ ana paneli (DESIGN.md §9): pane anahtarı `files`, başlık "Dosyalar"; özet kartı "4 dosya bu tur", "3 değişiklik commit edilmedi", turun commit'i ("commit b7d2e91 · temiz"), git dışında "son tur 1 dosya düzenlendi" ya da "temiz".
 
 Dayandığı proje: [data-goblin/claude-code-filetree](https://github.com/data-goblin/claude-code-filetree), MIT.
 

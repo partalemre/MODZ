@@ -96,6 +96,7 @@ for (const theme of ['dark', 'light'] as const) for (const [size, cols] of SIZES
     world(on, { ...w, theme })
     await $.session.start({ cwd: w.root, surface: 'desktop', isInteractive: true })
     const ui = await $.ui.mount({ plugin: 'filetree', surface: 'desktop', component: 'Pane', requestId: 'filetree', props: paneProps(cols) })
+    await snap(ui, `${size}-${theme}-0-fresh`)
     await ($ as any).turn.start(turn('t1'))
     await $.tool.call({ tool: 'Read', file_path: `${w.root}/tests/client.test.js` } as any)
     await snap(ui, `${size}-${theme}-1-reading`)

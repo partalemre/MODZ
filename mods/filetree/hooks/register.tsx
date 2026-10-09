@@ -348,6 +348,7 @@ async function noteTouches($: EngineInterface, ids: string[], role: TouchRole): 
 
 async function noteCommit($: EngineInterface, fields: { sha?: string; committed?: number }): Promise<void> {
   await update($, TURN, cur => ({ ...NO_TURN, ...cur, hasRun: true, ...fields }))
+  await syncHub($)
 }
 
 // The MODZ main panel's card, from what the pane itself shows: this turn's files, then git.
@@ -355,7 +356,8 @@ async function syncHub($: EngineInterface): Promise<void> {
   const t = await get($)
   const turn = await turnLog($)
   const changed = (t.counts[t.root] ?? [0, 0, 0]).reduce((a, b) => a + b, 0)
-  const shown = hubOf({ isRunning: turn.isRunning, touched: turn.touches.length, hasRepo: Boolean(t.top), changed })
+  const edited = turn.touches.filter(x => x.role !== 'read').length
+  const shown = hubOf({ isRunning: turn.isRunning, touched: turn.touches.length, hasRepo: Boolean(t.top), changed, edited, sha: turn.sha })
   if (isSameCard((await $.state.get(HUB)).value, shown)) return
   await $.state.set(HUB, { pane: HUB_PANE, ...shown, at: await $.clock.now() })
 }

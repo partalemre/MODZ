@@ -156,3 +156,18 @@ test('desktop toolbar: one row, the rest under Daha fazla, and single-key shortc
   for (const label of ['Boyutları göster', 'Üst klasör', 'Projeye dön', 'Gizlileri göster', 'Daha az', 'Ağaç seçiliyken']) expect(open).toContain(label)
   await ui.unmount()
 })
+
+test('hub card: after a turn that committed, the commit and a clean tree', { timeoutMs: 20_000, plugins: [modz] } as any, async ($: any, on: any) => {
+  const root = '/Users/k/MODZ'
+  const w: World = { root, files: ['a.ts'], status: '## main\0 M a.ts\0', heads: { [root]: ['1111111aaaa', '2222222bbbb'] } }
+  const clock = world(on, w)
+  await $.session.start({ cwd: root, surface: 'desktop', isInteractive: true })
+  await clock.settle()
+  await $.turn.start({ text: 'commit it', turnId: 't1' })
+  w.status = '## main\0'
+  await $.tool.call({ tool: 'Bash', command: 'git commit -am "fix: a"' } as any)
+  await clock.settle()
+  await $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
+  await clock.settle()
+  expect(await hub($)).toMatchObject({ detail: 'commit 2222222 · temiz', tone: 'ok' })
+})

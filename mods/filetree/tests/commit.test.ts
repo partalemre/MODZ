@@ -49,6 +49,11 @@ test('hub card: live files this turn, then uncommitted work, then clean', () => 
   expect(hubOf({ isRunning: true, touched: 0, hasRepo: true, changed: 0 })).toEqual({ detail: 'temiz', tone: 'ok' })
   expect(hubOf({ isRunning: false, touched: 0, hasRepo: false, changed: 0 }).tone).toBe('idle')
   for (const n of [1, 999_999]) expect(hubOf({ isRunning: false, touched: 0, hasRepo: true, changed: n }).detail.length).toBeLessThanOrEqual(40)
+  // After the turn: its commit on a clean tree, or what it edited where there is no git.
+  expect(hubOf({ isRunning: false, touched: 2, hasRepo: true, changed: 0, edited: 2, sha: 'b7d2e91c3a' })).toEqual({ detail: 'commit b7d2e91 · temiz', tone: 'ok' })
+  expect(hubOf({ isRunning: false, touched: 4, hasRepo: false, changed: 0, edited: 1 })).toEqual({ detail: 'son tur 1 dosya düzenlendi', tone: 'idle' })
+  expect(hubOf({ isRunning: false, touched: 3, hasRepo: false, changed: 0, edited: 0 })).toEqual({ detail: 'git deposu yok', tone: 'idle' })
+  expect(hubOf({ isRunning: false, touched: 0, hasRepo: false, changed: 0, edited: 999_999 }).detail.length).toBeLessThanOrEqual(40)
   expect(isSameCard({ pane: 'files', detail: 'temiz', tone: 'ok', at: 1 }, { detail: 'temiz', tone: 'ok' })).toBe(true)
   expect(isSameCard(undefined, { detail: 'temiz', tone: 'ok' })).toBe(false)
 })

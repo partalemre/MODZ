@@ -36,8 +36,8 @@ export function hubHeadSvg(spec: HeadSpec): Drawing {
   const body = [
     `<rect x="0.5" y="0.5" width="${width - 1}" height="${HEAD - 1}" rx="12" class="${frame}" style="stroke-width:1"/>`,
     `<g transform="translate(${HEAD_PAD} 0)">${eyebrow({ y: 26, width: inner, label, role: role ?? 'edit', meta: spec.meta })}</g>`,
-    `<text x="${HEAD_PAD}" y="56" class="hl hi">${esc(fit(title, inner, 17, 620))}</text>`,
-    `<text x="${HEAD_PAD}" y="78" class="lb lo">${esc(fit(line, inner, 12))}</text>`,
+    `<text x="${HEAD_PAD}" y="56" class="hl hi">${esc(fit(title, inner, { size: 17, weight: 620 }))}</text>`,
+    `<text x="${HEAD_PAD}" y="78" class="lb lo">${esc(fit(line, inner, { size: 12 }))}</text>`,
   ].join('')
   const alt = `${focus === null ? `MODZ: ${IDLE_TITLE}. ${IDLE_LINE}` : `Şu an, ${focus.row.entry.title}: ${title}`} (${spec.meta})`
 
@@ -86,8 +86,8 @@ export function hubRowSvg(spec: { width: number; theme: Theme; row: HubRow }): D
   const detail = detailOf(row)
   const body = [
     iconTile(row),
-    `<text x="${TEXT_X}" y="21" class="ti hi" style="font-size:13.5px">${esc(fit(row.entry.title, room, 13.5, 600))}</text>`,
-    `<text x="${TEXT_X}" y="38" class="lb ${detail.ink}">${esc(fit(detail.text, room, 12))}</text>`,
+    `<text x="${TEXT_X}" y="21" class="ti hi" style="font-size:13.5px">${esc(fit(row.entry.title, room, { size: 13.5, weight: 600 }))}</text>`,
+    `<text x="${TEXT_X}" y="38" class="lb ${detail.ink}">${esc(fit(detail.text, room, { size: 12 }))}</text>`,
     statusDot(row.card, width),
   ].join('')
   const alt = `${row.entry.title}: ${detail.text}`

@@ -35,7 +35,8 @@ export function measure(text: string, size: number, weight = WEIGHT_BODY): numbe
 
 const monoMeasure = (text: string, size: number): number => [...text].length * size * MONO_EM
 
-export function fit(text: string, width: number, size: number, weight = WEIGHT_BODY): string {
+export function fit(text: string, width: number, font: { size: number; weight?: number }): string {
+  const { size, weight = WEIGHT_BODY } = font
   if (measure(text, size, weight) <= width) return text
   const chars = [...text]
   while (chars.length > 1 && measure(`${chars.join('').trimEnd()}…`, size, weight) > width) chars.pop()
@@ -72,7 +73,7 @@ function pill(spec: PillSpec): { svg: string; width: number } {
 
 export function headSvg(spec: { width: number; theme: Theme; title: string; meta: string; metaRole: RoleName | null }): Drawing {
   const meta = spec.meta === '' ? '' : `<text x="${spec.width}" y="40" text-anchor="end" class="lb ${spec.metaRole === null ? 'lo' : `fg-${spec.metaRole}`}">${esc(spec.meta)}</text>`
-  const title = fit(spec.title, spec.width - measure(spec.meta, 12) - GAP * 2, 17, 620)
+  const title = fit(spec.title, spec.width - measure(spec.meta, 12) - GAP * 2, { size: 17, weight: 620 })
   const body = eyebrow({ y: 12, width: spec.width, label: 'Tüm modlar', role: 'edit', meta: '' }) + `<text x="0" y="40" class="hl hi">${esc(title)}</text>${meta}`
 
   return { source: svgDoc({ width: spec.width, height: HEAD, theme: spec.theme, body }), alt: `Tüm modlar: ${spec.title}${spec.meta === '' ? '' : ` · ${spec.meta}`}`, height: HEAD }
@@ -128,7 +129,7 @@ export function rowSvg(spec: { width: number; theme: Theme; mod: ModInfo }): Dra
   const versionText = `v${mod.version}`
   const versionWidth = monoMeasure(versionText, 10.5) + PILL_PAD * 2
   const nameRoom = width - TEXT_X - mark.width - versionWidth - GAP * 2
-  const name = fit(mod.name, nameRoom, 14, 600)
+  const name = fit(mod.name, nameRoom, { size: 14, weight: 600 })
   const version = pill({ right: TEXT_X + measure(name, 14, 600) + GAP, y: 9, text: versionText, role: null, isMono: true, isLeft: true })
   const lineRoom = width - TEXT_X - 4
   const body = [
@@ -136,8 +137,8 @@ export function rowSvg(spec: { width: number; theme: Theme; mod: ModInfo }): Dra
     `<text x="${TEXT_X}" y="22" style="font-size:14px;font-weight:600" class="${mod.isEnabled === false ? 'lo' : 'hi'}">${esc(name)}</text>`,
     version.svg,
     mark.svg,
-    `<text x="${TEXT_X}" y="41" class="lb ${mod.isHealthy ? 'mid' : 'fg-danger'}">${esc(fit(mod.description, lineRoom, 12))}</text>`,
-    `<text x="${TEXT_X}" y="58" class="mi lo">${esc(fit(metaLine(mod), lineRoom, 10.5))}</text>`,
+    `<text x="${TEXT_X}" y="41" class="lb ${mod.isHealthy ? 'mid' : 'fg-danger'}">${esc(fit(mod.description, lineRoom, { size: 12 }))}</text>`,
+    `<text x="${TEXT_X}" y="58" class="mi lo">${esc(fit(metaLine(mod), lineRoom, { size: 10.5 }))}</text>`,
   ].join('')
   const alt = `${mod.name} v${mod.version} · ${metaLine(mod)} · ${stateLabel(mod)} · ${mod.description}`
 

@@ -93,7 +93,10 @@ function presenceOf(market: Market): (mod: string) => Presence {
   }
 }
 
-export const register: Register = (on, options) => {
+type On = Parameters<Register>[0]
+type Options = Parameters<Register>[1]
+
+function hubHooks(on: On, options: Options): void {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
     await $.command.register({ name: 'modz', description: 'MODZ ana panelini açar: ajanlar, dosyalar, plan, testler ve tüm modlar' })
@@ -121,7 +124,9 @@ export const register: Register = (on, options) => {
 
     return { text: 'MODZ paneli açıldı.' }
   })
+}
 
+function paneHooks(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const ui = $.ui.resolve(e)
     const market = await marketOf($)
@@ -139,4 +144,9 @@ export const register: Register = (on, options) => {
 
     return stamped(ui, modzTree(ui, { market: await marketOf($), surface: e.surface, columns, theme: await themeNow($) }))
   })
+}
+
+export const register: Register = (on, options) => {
+  hubHooks(on, options)
+  paneHooks(on)
 }

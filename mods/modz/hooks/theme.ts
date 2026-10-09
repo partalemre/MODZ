@@ -53,11 +53,6 @@ export const ROLE_NAMES: RoleName[] = ['read', 'edit', 'run', 'ok', 'warn', 'dan
 export const FONT = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`
 export const MONO = `ui-monospace, 'SF Mono', Menlo, monospace`
 
-// Box/Text hex: an `auto` theme reads as dark, the host's own default.
-export function paletteOf(theme: Theme): Palette {
-  return theme === 'light' ? LIGHT : DARK
-}
-
 function varsOf(palette: Palette): string {
   const base = ['sheet', 'card', 'inset', 'line', 'strong', 'track', 'hi', 'mid', 'lo'] as const
   const neutral = base.map(key => `--${key}:${palette[key]}`)

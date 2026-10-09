@@ -53,19 +53,23 @@ export async function prune(io: Io, s: State, now: number) {
   }
 }
 
-export async function stop(io: Io, s: State, why: string | null, forgetAlways = false) {
+async function halt(io: Io, s: State, end: { why: string | null; isForgettingAlways: boolean }) {
   s.deadline = 0
   s.every = PING_AFTER_MS
-  s.stopped = why
+  s.stopped = end.why
   disarm(s)
   await io.del(deadlineKey(s))
   await io.del(everyKey(s))
-  if (forgetAlways) {
+  if (end.isForgettingAlways) {
     s.always = false
     await io.del(KEY_ALWAYS)
   }
   updateStatus(io, s, await io.now())
 }
+
+export const stop = (io: Io, s: State, why: string | null): Promise<void> => halt(io, s, { why, isForgettingAlways: false })
+/** keepwarm off: the window ends and so does always, for every later session too. */
+export const stopForGood = (io: Io, s: State): Promise<void> => halt(io, s, { why: null, isForgettingAlways: true })
 
 export async function arm(io: Io, s: State) {
   disarm(s)
@@ -122,7 +126,8 @@ async function ping(io: Io, s: State) {
   await arm(io, s)
 }
 
-export async function startWindow(io: Io, s: State, windowMs: number, every: number) {
+export async function startWindow(io: Io, s: State, span: { windowMs: number; every: number }) {
+  const { windowMs, every } = span
   const now = await io.now()
   s.every = every
   if (every === PING_AFTER_MS) await io.del(everyKey(s))

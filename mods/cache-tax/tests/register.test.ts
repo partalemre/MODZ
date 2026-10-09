@@ -1,5 +1,4 @@
 import { describe, expect, mock, test, tier } from 'claude-code/testing'
-import type { ModelForkResult } from 'claude-code'
 
 import { fmtDuration, freshState, parseDuration, resetForClear, seedFromResume } from '../hooks/register'
 import { HOUR, MIN, START, prompt, run, session, turn, usage, warm, world } from './world'

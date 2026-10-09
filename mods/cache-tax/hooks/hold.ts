@@ -37,8 +37,9 @@ function buttons(ui: Elements['desktop'] | Elements['terminal'], actions: HoldAc
   ] })
 }
 
-function infoRow(ui: Elements['desktop'], paths: string, color: string, children: RenderElement[]): RenderElement {
+function infoRow(ui: Elements['desktop'], glyph: { paths: string; color: string }, children: RenderElement[]): RenderElement {
   const { Box, Svg } = ui
+  const { paths, color } = glyph
   return Box({ flexDirection: 'row', gap: 1, alignItems: 'center', children: [
     Box({ flexShrink: 0, children: [Svg({ source: iconSvg(paths, ROW_ICON, color), alt: '', width: ROW_ICON, height: ROW_ICON })] }),
     ...children,
@@ -48,10 +49,10 @@ function infoRow(ui: Elements['desktop'], paths: string, color: string, children
 function desktopInfo(ui: Elements['desktop'], view: HoldView, p: Palette): RenderElement {
   const { Box, Text } = ui
   return Box({ flexDirection: 'column', children: [
-    infoRow(ui, ICONS.pauseCircle, p.lo, [
+    infoRow(ui, { paths: ICONS.pauseCircle, color: p.lo }, [
       Text({ color: p.mid, wrap: 'truncate-end', children: ['Bekleyen: ', Text({ color: p.hi, children: [heldQuote(view)] })] }),
     ]),
-    infoRow(ui, ICONS.shieldCheck, p.lo, [Text({ color: p.mid, children: [keepText(view)] })]),
+    infoRow(ui, { paths: ICONS.shieldCheck, color: p.lo }, [Text({ color: p.mid, children: [keepText(view)] })]),
   ] })
 }
 
@@ -82,7 +83,9 @@ export function textBar(share: number, cells: number): string {
   return '━'.repeat(Math.max(0, filled - 1)) + '╸'
 }
 
-function priceLine(ui: Elements['terminal'], label: string, usd: string, color: string | undefined, bar: string): RenderElement {
+type PriceLine = { label: string; usd: string; color: string | undefined; bar: string }
+
+function priceLine(ui: Elements['terminal'], { label, usd, color, bar }: PriceLine): RenderElement {
   const { Box, Text } = ui
   return Box({ flexDirection: 'row', gap: 1, children: [
     Text({ dimColor: true, children: [label.padEnd(LABEL_CELLS)] }),
@@ -101,8 +104,8 @@ export function holdTerminal(ui: Elements['terminal'], o: HoldOptions): RenderEl
     Text({ bold: true, color: kiln, children: ['● ÖNBELLEK VERGİSİ'] }),
     Text({ bold: true, children: ['Mesajın bekletiliyor'] }),
     Text({ dimColor: true, children: [`Önbellek ${v.coldFor} önce soğudu.`] }),
-    priceLine(ui, 'Şimdi gönder', fmtUsd(v.coldUsd), kiln, textBar(1, cells)),
-    priceLine(ui, 'Sıcak bir tur', fmtUsd(v.warmUsd), undefined, `${textBar(share, cells)} ${warmCaptions(v).at(-1) ?? ''}`),
+    priceLine(ui, { label: 'Şimdi gönder', usd: fmtUsd(v.coldUsd), color: kiln, bar: textBar(1, cells) }),
+    priceLine(ui, { label: 'Sıcak bir tur', usd: fmtUsd(v.warmUsd), color: undefined, bar: `${textBar(share, cells)} ${warmCaptions(v).at(-1) ?? ''}` }),
     Text({ dimColor: true, children: [`~${v.tokens} token yeniden yazılır · ${v.rate}`] }),
     Text({ wrap: 'truncate-end', children: [Text({ dimColor: true, children: ['⏸ Bekleyen: '] }), heldQuote(v)] }),
     Text({ dimColor: true, children: [`✓ ${keepText(v)}`] }),

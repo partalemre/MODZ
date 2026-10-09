@@ -42,13 +42,13 @@ export function headerSvg(width: number, view: HoldView, p: Palette): string {
   const kiln = p.role.edit
   const room = width - TEXT_X
   const body = [
-    tile(0, TILE_Y, TILE, kiln.tint),
-    cube((TILE - CUBE) / 2, TILE_Y + (TILE - CUBE) / 2, CUBE, kiln.fg, p.hi),
-    eyebrow(TEXT_X, HY.eyebrow, 'Önbellek vergisi', kiln.fg),
+    tile({ x: 0, y: TILE_Y, size: TILE }, kiln.tint),
+    cube({ x: (TILE - CUBE) / 2, y: TILE_Y + (TILE - CUBE) / 2, size: CUBE }, { lid: kiln.fg, outline: p.hi }),
+    eyebrow({ x: TEXT_X, y: HY.eyebrow, fill: kiln.fg }, 'Önbellek vergisi'),
     text({ ...HEADLINE, x: TEXT_X, y: HY.headline, fill: p.hi, text: fit('Mesajın bekletiliyor', room, HEADLINE) }),
     text({ ...BODY, x: TEXT_X, y: HY.body, fill: p.mid, text: fit(`Önbellek ${view.coldFor} önce soğudu.`, room, BODY) }),
   ]
-  return doc(width, HEADER_H, body.join(''))
+  return doc({ width, height: HEADER_H }, body.join(''))
 }
 
 export const COMPARE_H = 112
@@ -83,7 +83,7 @@ function column(c: Column, p: Palette): string {
 }
 
 /** The cold caption: the token count as a highlight span, then the rate. */
-function coldCaption(x: number, w: number, view: HoldView, p: Palette): string {
+function coldCaption({ x, w }: { x: number; w: number }, view: HoldView, p: Palette): string {
   const kiln = p.role.edit
   const count = `~${view.tokens} token`
   const spanW = measure(count, CAPTION) * SPAN_SLACK + 2 * SPAN_PAD
@@ -107,8 +107,8 @@ export function compareSvg(width: number, view: HoldView, p: Palette): string {
     column({ x: PAD, w, label: 'Şimdi gönder', usd: view.coldUsd, share: view.coldUsd === null ? null : 1, fg: p.role.edit.fg }, p),
     // One accent per card: the price being asked is Kiln, the warm turn it is weighed against is neutral.
     column({ x: right, w, label: 'Sıcak bir tur', usd: view.warmUsd, share, fg: p.hi }, p),
-    coldCaption(PAD + SPAN_PAD, w, view, p),
+    coldCaption({ x: PAD + SPAN_PAD, w }, view, p),
     text({ ...CAPTION, x: right, y: CY.caption, fill: p.lo, text: warmCaptions(view).find(said => measure(said, CAPTION) <= w) ?? '' }),
   ]
-  return doc(width, COMPARE_H, body.join(''))
+  return doc({ width, height: COMPARE_H }, body.join(''))
 }

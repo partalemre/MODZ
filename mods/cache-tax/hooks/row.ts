@@ -77,7 +77,7 @@ export function rowDesktop(ui: Elements['desktop'], o: RowOptions): RenderElemen
   const p = palette(o.isLight)
   const color = o.noColor || o.row.state === 'unknown' || o.row.state === 'stopped' ? undefined : lidOf(o.row.state, o.isLight)
   const icon = o.noColor ? Text({ bold: true, children: ['[>]'] })
-    : Svg({ source: doc(CUBE_PX, CUBE_PX, cube(0, 0, CUBE_PX, lidOf(o.row.state, o.isLight), p.hi)), alt: 'Cache Tax', width: CUBE_PX, height: CUBE_PX })
+    : Svg({ source: doc({ width: CUBE_PX, height: CUBE_PX }, cube({ x: 0, y: 0, size: CUBE_PX }, { lid: lidOf(o.row.state, o.isLight), outline: p.hi })), alt: 'Cache Tax', width: CUBE_PX, height: CUBE_PX })
   return Box({ key: 'cache-tax:row', flexDirection: 'row', alignItems: 'center', gap: 1, children: [
     Box({ flexShrink: 0, children: [icon] }),
     Text({ color: o.noColor ? undefined : p.mid, wrap: 'truncate-end', children: [

@@ -104,18 +104,21 @@ const TOGGLE_LABELS: Readonly<Record<ToggleWord, string>> = {
 
 type Parts = { look: Look; ui: PaneUi; model: SettingsModel; actions: SettingsActions }
 
-// The skin in use is the one bordered button with a check; the rest are quiet until pointed at.
-// No label: the dots and the name are the button, and its name for a screen reader.
+// The skin in use is the one bordered button with a check; the rest are quiet until pointed at. Its colour
+// dots sit beside the button, not in it: the desktop engine takes a Button's label as its one string and
+// refuses a Text inside, which left the whole pane undrawn there.
 function skinButton(parts: Parts, name: string, i: number) {
-  const { Button, Text } = parts.ui
+  const { Box, Button, Text } = parts.ui
   const isOn = name === parts.look.prefs.skin
   const dots = (parts.model.swatches[name] ?? []).map((hex, k) => <Text key={`dot-${k}`} color={hex}>●</Text>)
+  const look = isOn ? { variant: 'secondary' as const } : { plain: true as const, dimColor: true }
+  const hotkey = i < HOTKEYS ? { hotkey: String(i + 1) } : {}
 
   return (
-    <Button key={`skin-${name}`} {...(isOn ? { variant: 'secondary' as const } : { plain: true as const, dimColor: true })} onPress={() => parts.actions.pick(name)} {...(i < HOTKEYS ? { hotkey: String(i + 1) } : {})}>
-      {dots}
-      <Text bold={isOn}>{` ${name}${isOn ? ' ✓' : ''}`}</Text>
-    </Button>
+    <Box key={`skin-swatch-${name}`} flexDirection="row" columnGap={1} alignItems="center">
+      <Box flexDirection="row">{dots}</Box>
+      <Button key={`skin-${name}`} label={`${name}${isOn ? ' ✓' : ''}`} {...look} {...hotkey} onPress={() => parts.actions.pick(name)} />
+    </Box>
   )
 }
 
@@ -131,14 +134,12 @@ function skinButtons(parts: Parts) {
   )
 }
 
+// A toggle says on or off by its dot and its strength; the label is one string, as the desktop requires.
 function optionButtons({ look, ui, actions }: Parts) {
-  const { Box, Button, Text } = ui
+  const { Box, Button } = ui
   const { prefs } = look
   const toggle = (word: ToggleWord, hotkey: string, on: boolean) => (
-    <Button key={`toggle-${word}`} hotkey={hotkey} plain dimColor={!on} onPress={() => actions.toggle(word)}>
-      <Text color={on ? look.skin.palette.ok : look.skin.palette.muted}>{on ? '●' : '○'}</Text>
-      {` ${TOGGLE_LABELS[word]}`}
-    </Button>
+    <Button key={`toggle-${word}`} label={`${on ? '●' : '○'} ${TOGGLE_LABELS[word]}`} hotkey={hotkey} plain dimColor={!on} onPress={() => actions.toggle(word)} />
   )
 
   return (

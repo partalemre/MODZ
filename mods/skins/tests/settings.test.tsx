@@ -56,7 +56,8 @@ for (const surface of SURFACES) {
     expect(String(current?.props?.label)).toContain('✓')
     const dracula = (await ui.find({ key: 'skin-dracula' })) as Node | undefined
     expect(dracula?.props?.plain).toBe(true)
-    expect(colors(dracula).slice(0, 3)).toEqual(['#bd93f9', '#50fa7b', '#ff5555'])
+    const swatch = (await ui.find({ key: 'skin-swatch-dracula' })) as Node | undefined
+    expect(colors(swatch).slice(0, 3)).toEqual(['#bd93f9', '#50fa7b', '#ff5555'])
 
     await ui.press({ key: 'skin-dracula' })
     expect(((await ui.find({ key: 'skin-dracula' })) as Node | undefined)?.props?.variant).toBe('secondary')

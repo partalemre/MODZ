@@ -1,6 +1,7 @@
 import { type EngineInterface, type On, type Register, update } from 'claude-code'
 
 import { drawDesktop } from './desktop'
+import { settleFocus } from './focus'
 import { gitDir } from './gitread'
 import type { Host, IoHost, StateHost, UiHost } from './host'
 import { HUB_PANE, isOpenFor } from './hub'
@@ -210,6 +211,7 @@ function onPane(on: On): void {
 
 function onRender(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e, next) => {
+    await settleFocus(e, ms => $.clock.sleep(ms))
     if (e.surface !== 'terminal' && e.surface !== 'desktop') return next(e)
     if (e.surface === 'terminal' && e.props.placement === 'inline') {
       mem.noDock = true
@@ -229,6 +231,17 @@ function onRender(on: On): void {
   })
 }
 
+// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
+// left, so its first click would be refused. Drawing again on attach hands it live buttons.
+function onAttach(on: On): void {
+  on('session.attach', async ($, e, next) => {
+    const attached = await next(e)
+    $.ui.invalidate('ui.render')
+
+    return attached
+  })
+}
+
 export const register: Register = (on, options) => {
   mem.glyphSetting = typeof options?.glyphs === 'string' ? options.glyphs : 'auto'
   const activity = typeof options?.activity === 'string' ? options.activity : 'reads and writes'
@@ -242,4 +255,5 @@ export const register: Register = (on, options) => {
   onClassic(on)
   onPane(on)
   onRender(on)
+  onAttach(on)
 }

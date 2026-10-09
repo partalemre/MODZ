@@ -203,8 +203,20 @@ function registerBand(on: On) {
   })
 }
 
+// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
+// left, so its first click would be refused. Drawing again on attach hands it live buttons.
+function onAttach(on: On) {
+  on('session.attach', async ($, e, next) => {
+    const attached = await next(e)
+    $.ui.invalidate('ui.render')
+
+    return attached
+  })
+}
+
 export const register: Register = on => {
   registerSetup(on)
   registerFlow(on)
   registerBand(on)
+  onAttach(on)
 }

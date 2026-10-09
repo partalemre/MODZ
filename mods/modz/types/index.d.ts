@@ -12,5 +12,14 @@ export type ModzView = 'home' | 'mods'
 declare module 'claude-code' {
   interface PluginState {
     modz: { open: ModzOpen; cards: Record<string, HubCard>; view: ModzView }
+    // Each listed mod's own hub line (hooks/hub.ts ENTRIES), which the hub listens for and keeps.
+    'savvy-progress': { hub: HubCard }
+    filetree: { hub: HubCard }
+    'plan-steps': { hub: HubCard }
+    'test-badge': { hub: HubCard }
+    checkpoint: { hub: HubCard }
+    'replay-theater': { hub: HubCard }
+    'hud-pro': { hub: HubCard }
+    skins: { hub: HubCard }
   }
 }

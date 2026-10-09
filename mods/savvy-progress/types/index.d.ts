@@ -140,5 +140,7 @@ declare module 'claude-code' {
       hub: HubCard
       types: AgentType[]
     }
+    // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
+    modz: { open: { pane: string; at: number } }
   }
 }

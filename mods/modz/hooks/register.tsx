@@ -98,7 +98,9 @@ export const register: Register = (on, options) => {
   on('state.set', { key: 'hub' }, async ($, e, next) => {
     const done = await next(e)
     const card = cardOf(e.value)
-    if (card !== null && e.plugin !== 'modz') await update($, cardsAtom, cards => ({ ...cards, [e.plugin]: card }))
+    // Widened from the declared reporters: the hub also hears a mod it does not list, and never itself.
+    const from: string = e.plugin
+    if (card !== null && from !== 'modz') await update($, cardsAtom, cards => ({ ...cards, [from]: card }))
 
     return done
   }).catch(($, e, next) => next(e))

@@ -102,11 +102,13 @@ export const BUILD_SCAN = [
 export const RESET_STATUS = 'M  src/api/client.ts\n M src/App.tsx\nA  src/hooks/useAuth.ts\n?? notes.md\n'
 export const RESET_NUMSTAT = '38\t12\tsrc/api/client.ts\n9\t4\tsrc/App.tsx\n61\t0\tsrc/hooks/useAuth.ts\n'
 
-export async function mountPane($: any, surface: string, columns = 72) {
+export const PANE_PROPS = { title: 'Blast Radius', isFocused: true, bodyColumns: 72, placement: 'dock', scroll: { top: 0, bodyRows: 40, rows: 40 }, view: {} } as const
+
+export async function mountPane($: any, surface: string, columns: number = PANE_PROPS.bodyColumns) {
   return await $.ui.mount({
     plugin: 'blast-radius', component: 'Pane', requestId: 'blast-radius', surface,
     viewport: { columns: 160, rows: 48 },
-    props: { title: 'Blast Radius', isFocused: true, bodyColumns: columns, placement: 'dock', scroll: { top: 0, bodyRows: 40, rows: 40 }, view: {} },
+    props: { ...PANE_PROPS, bodyColumns: columns },
   })
 }
 

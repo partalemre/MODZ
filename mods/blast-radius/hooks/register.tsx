@@ -23,6 +23,7 @@ import { desktopCard, terminalCard } from './card'
 import type { CardProps } from './card'
 import { classify } from './classify'
 import type { Risk } from './classify'
+import { settleFocus } from './focus'
 import { measure, missingFolder } from './measure'
 import type { Report, Run } from './report'
 import { stamped } from './stamp'
@@ -231,7 +232,9 @@ function drawHooks(on: On): void {
     return next(e)
   })
 
-  on('ui.render', { component: 'Pane' }, ($, e, next) => {
+  // Only its own pane waits out a focus flip: every other mod's pane passes through this hook too.
+  on('ui.render', { component: 'Pane' }, async ($, e, next) => {
+    if (e.requestId === PANE_ID) await settleFocus(e, ms => $.clock.sleep(ms))
     const mine = held
     if (e.requestId !== PANE_ID || !isMeasured(mine)) return next(e)
     const redraw = () => $.ui.invalidate('ui.render')
@@ -262,4 +265,12 @@ function drawHooks(on: On): void {
 export const register: Register = on => {
   holdHooks(on)
   drawHooks(on)
+  // A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
+  // left, so its first click would be refused. Drawing again on attach hands it live buttons.
+  on('session.attach', async ($, e, next) => {
+    const attached = await next(e)
+    $.ui.invalidate('ui.render')
+
+    return attached
+  })
 }

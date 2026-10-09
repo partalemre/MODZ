@@ -3,9 +3,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-MARKET="modz"
 MODS="$ROOT/mods"
 DEV_MODS="$HOME/.claude/dev-mods"
+SKILLS="$HOME/.claude/skills"
 
 usage() {
   cat <<USAGE
@@ -16,8 +16,9 @@ modz <komut>
   sync                 marketplace.json'u mods/ klasörüyle eşitle
   import <klasör>      bir dev-mods klasöründeki modu MODZ'a kopyala
   dev                  ~/.claude/dev-mods altındaki tüm oturum modlarını göster
-  install [ad]         marketplace'i ekle ve modu (veya hepsini) kur
-  uninstall <ad>       modu kaldır
+  status               her modun etkin olup olmadığını göster
+  link [ad]            modu (veya hepsini) ~/.claude/skills'e bağla: her oturumda yüklenir
+  unlink <ad>          bağlantıyı kaldır (mod MODZ'da kalır)
 USAGE
 }
 
@@ -93,14 +94,33 @@ cmd_dev() {
     | sed -E 's|/.claude-plugin/plugin.json||' | sort
 }
 
-ensure_market() {
-  claude plugin marketplace list 2>/dev/null | grep -q "$MARKET" || claude plugin marketplace add "$ROOT"
+cmd_status() {
+  for m in $(mod_names); do
+    local target="$SKILLS/$m" state="kapalı"
+    if [[ -L "$target" && "$(readlink "$target")" == "$MODS/$m" ]]; then state="aktif"
+    elif [[ -e "$target" ]]; then state="çakışma: $target MODZ'a bağlı değil"; fi
+    printf "%-18s %s\n" "$m" "$state"
+  done
 }
 
-cmd_install() {
-  ensure_market
-  if [[ -n "${1:-}" ]]; then claude plugin install "$1@$MARKET"; return; fi
-  for m in $(mod_names); do claude plugin install "$m@$MARKET"; done
+link_one() {
+  local m="$1" target="$SKILLS/$1"
+  [[ -d "$MODS/$m" ]] || { echo "$m yok" >&2; return 1; }
+  if [[ -L "$target" ]]; then ln -sfn "$MODS/$m" "$target"
+  elif [[ -e "$target" ]]; then echo "$target gerçek bir klasör; önce 'modz import $target'" >&2; return 1
+  else ln -s "$MODS/$m" "$target"; fi
+  echo "aktif: $m"
+}
+
+cmd_link() {
+  if [[ -n "${1:-}" ]]; then link_one "$1"; return; fi
+  for m in $(mod_names); do link_one "$m"; done
+}
+
+cmd_unlink() {
+  local target="$SKILLS/${1:?mod adı gerekli}"
+  [[ -L "$target" ]] || { echo "$target bir bağlantı değil" >&2; exit 1; }
+  rm "$target" && echo "kapalı: $1"
 }
 
 case "${1:-}" in
@@ -110,7 +130,8 @@ case "${1:-}" in
   sync) cmd_sync ;;
   import) shift; cmd_import "$@" ;;
   dev) cmd_dev ;;
-  install) shift; cmd_install "$@" ;;
-  uninstall) shift; claude plugin uninstall "${1:?mod adı gerekli}@$MARKET" ;;
+  status) cmd_status ;;
+  link) shift; cmd_link "$@" ;;
+  unlink) shift; cmd_unlink "$@" ;;
   *) usage ;;
 esac

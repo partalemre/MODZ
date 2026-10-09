@@ -1,0 +1,9 @@
+{
+  "name": "plan-steps",
+  "version": "0.2.0",
+  "description": "Plan varsa adımlarını gösterir: görev listesi, onaylı plan ya da plan dosyası; /steps paneli ve sessiz bir durum satırı",
+  "author": {
+    "name": "Partal"
+  },
+  "types": "./types/index.d.ts"
+}

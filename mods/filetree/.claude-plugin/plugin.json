@@ -1,0 +1,62 @@
+{
+  "name": "filetree",
+  "version": "0.2.25",
+  "description": "Claude'un dokunduğu dosyaları gösteren dosya ağacı: şu an ne yaptığı, bu turda dokunduğu dosyalar ve git durumu",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "Kurt Buhler"
+  },
+  "repository": "https://github.com/data-goblin/claude-code-filetree",
+  "keywords": [
+    "file-tree",
+    "git",
+    "mod",
+    "pane"
+  ],
+  "userConfig": {
+    "activity": {
+      "type": "string",
+      "title": "Claude etkinliği",
+      "description": "Ağaçta hangi etkinlik parlasın: okumalar (Read ya da rg, grep, cat gibi okuyucular) mavi, yazmalar turuncu, git işlemleri yeşil",
+      "default": "reads and writes",
+      "options": [
+        "reads and writes",
+        "writes",
+        "reads",
+        "none"
+      ]
+    },
+    "glyphs": {
+      "type": "string",
+      "title": "Simgeler",
+      "description": "auto: Nerd Font kuruluysa onun simgeleri (masaüstü uygulaması hariç); plain: yalnızca Unicode",
+      "default": "auto",
+      "options": [
+        "auto",
+        "nerd",
+        "plain"
+      ]
+    },
+    "follow": {
+      "type": "string",
+      "title": "Claude'u izle",
+      "description": "on: ağaç Claude'un okuduğu, yazdığı ya da commit ettiği dosyaya kayar. off: görünüm yalnızca senin kaydırmanla değişir; vurgular yine görünür.",
+      "default": "on",
+      "options": [
+        "on",
+        "off"
+      ]
+    },
+    "column": {
+      "type": "string",
+      "title": "Sağ sütun",
+      "description": "Sağ sütunda varsayılan olarak ne görünsün: date (son değişiklik) ya da size (dosya boyutu, klasörler için arka planda hesaplanan disk kullanımı). Başlıktaki düğme değiştirir.",
+      "default": "date",
+      "options": [
+        "date",
+        "size"
+      ]
+    }
+  },
+  "license": "MIT"
+}

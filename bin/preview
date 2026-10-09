@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Render a mod's preview trees to PNG: tests that console.log('@@TREE@@<label>@@' + JSON) are drawn.
+# Usage: bin/preview <mod-dir> [out-dir] [--theme light]
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MOD="$(cd "$1" && pwd)"; OUT="${2:-$MOD/.preview}"; shift; [[ $# -gt 0 && "$1" != --* ]] && shift
+DUMP="$(mktemp)"
+claude plugin test "$MOD" > "$DUMP" 2>&1 || true
+grep -E '^ *[0-9]+ (pass|fail)' "$DUMP" | tr -s ' \n' ' '; echo
+python3 -I "$ROOT/tools/preview/render.py" "$DUMP" "$OUT" "$@"
+rm -f "$DUMP"

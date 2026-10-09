@@ -1,0 +1,12 @@
+{
+  "name": "hellosverre-mods",
+  "description": "Mods for Claude Code that change how it looks.",
+  "owner": { "name": "hellosverre", "url": "https://github.com/hellosverre" },
+  "plugins": [
+    {
+      "name": "skins",
+      "source": "./",
+      "description": "Skins for Claude Code's transcript: themed tool rows, reply gutters and spinner words. /skin swaps them live."
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "name": "test-badge",
+  "version": "0.2.1",
+  "description": "After a turn that edited source files, runs the project's tests and lint in the background and shows a one-line badge (testler 41/42 · lint 2 hata · 4sn önce) with a details pane listing each failure by suite and file:line",
+  "author": {
+    "name": "Partal"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "testCommand": {
+      "type": "string",
+      "title": "Test command",
+      "description": "Overrides the detected test command (run with /bin/sh -c in the project root); empty = auto-detect",
+      "default": ""
+    },
+    "lintCommand": {
+      "type": "string",
+      "title": "Lint command",
+      "description": "Overrides the detected lint command (run with /bin/sh -c in the project root); empty = auto-detect",
+      "default": ""
+    },
+    "openCommand": {
+      "type": "string",
+      "title": "Open command",
+      "description": "How a failure row opens its file, e.g. \"cursor -g {file}:{line}\" (no shell); empty = VS Code's code -g, then the OS opener",
+      "default": ""
+    }
+  }
+}

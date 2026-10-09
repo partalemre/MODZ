@@ -1,0 +1,12 @@
+{
+  "name": "reflect-mod",
+  "version": "3.4.0",
+  "description": "claude-reflect as a Claude Code mod: a cheap trigger-word prefilter (Turkish and English) and one model check find reusable corrections; a card above the prompt saves them to the chosen CLAUDE.md",
+  "types": "./types/index.d.ts",
+  "author": {
+    "name": "Bayram Annakov",
+    "url": "https://github.com/bayramannakov"
+  },
+  "repository": "https://github.com/bayramannakov/claude-reflect",
+  "license": "MIT"
+}

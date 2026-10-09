@@ -1,0 +1,144 @@
+export type PingKind = 'done' | 'wait'
+
+// One notification (RESEARCH.md §c): `title` the outcome in at most four words, `subtitle` the
+// project, `body` facts only (files, tests); `detail` is the in-app row's line. Never code or secrets.
+export type Ping = { kind: PingKind; project: string; title: string; subtitle: string; body: string; detail: string }
+
+// What the turn's own test commands said: the last one that ran wins.
+export type TestsSeen = 'pass' | 'fail' | null
+
+export type PingConfig = {
+  thresholdSeconds: number
+  isPermissionPing: boolean
+  sound: string
+  isQuietWhenFocused: boolean
+  isAppNotification: boolean
+}
+
+const MS_PER_SECOND = 1_000
+const SECONDS_PER_MINUTE = 60
+const MINUTES_PER_HOUR = 60
+const DEFAULT_THRESHOLD = 60
+const DEFAULT_SOUND = 'Glass'
+const BODY_CHARS = 80
+const EDIT_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit']
+const PATH_KEYS = ['file_path', 'notebook_path', 'path']
+const FILE_KEYS = ['file_path', 'notebook_path', 'path']
+const TEST_COMMAND = /\b(?:(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?test|vitest|jest|pytest|mocha|playwright\s+test|go\s+test|cargo\s+test|flutter\s+test|dart\s+test|phpunit|rspec)\b/
+
+export function configFrom(options: Record<string, unknown>): PingConfig {
+  const threshold = Number(options.thresholdSeconds)
+  const sound = typeof options.sound === 'string' ? options.sound.trim() : DEFAULT_SOUND
+
+  return {
+    thresholdSeconds: Number.isFinite(threshold) && threshold >= 0 ? threshold : DEFAULT_THRESHOLD,
+    isPermissionPing: options.pingOnPermission !== false,
+    sound,
+    isQuietWhenFocused: options.quietWhenFocused !== false,
+    isAppNotification: options.appNotification !== false,
+  }
+}
+
+export function durationText(ms: number): string {
+  const seconds = Math.max(0, Math.round(ms / MS_PER_SECOND))
+  const minutes = Math.floor(seconds / SECONDS_PER_MINUTE)
+  const hours = Math.floor(minutes / MINUTES_PER_HOUR)
+  if (hours > 0) return `${hours}sa ${minutes % MINUTES_PER_HOUR}dk`
+  if (minutes > 0) return `${minutes}dk ${seconds % SECONDS_PER_MINUTE}sn`
+
+  return `${seconds}sn`
+}
+
+export function projectOf(cwd: string): string {
+  const parts = cwd.split('/').filter(part => part !== '')
+
+  return parts[parts.length - 1] ?? 'Claude'
+}
+
+export function editedPath(input: Record<string, unknown>): string | null {
+  if (typeof input.tool !== 'string' || !EDIT_TOOLS.includes(input.tool)) return null
+  for (const key of PATH_KEYS) {
+    const value = input[key]
+    if (typeof value === 'string' && value !== '') return value
+  }
+
+  return null
+}
+
+export function clip(text: string, max = BODY_CHARS): string {
+  const flat = text.replace(/\s+/g, ' ').trim()
+
+  return flat.length <= max ? flat : `${flat.slice(0, max - 1).trimEnd()}…`
+}
+
+// The opening words of a reply, without markdown marks: what a banner can show.
+export function plainSnippet(markdown: string): string {
+  const text = markdown
+    .replace(/```[\s\S]*?(```|$)/g, ' ')
+    .replace(/`[^`\n]*`/g, ' ')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^\s{0,3}(#{1,6}|[-*+>]|\d+\.)\s+/gm, '')
+    .replace(/[*_`~|]/g, '')
+
+  return clip(text)
+}
+
+export const isTestCommand = (command: unknown): boolean => typeof command === 'string' && TEST_COMMAND.test(command)
+
+const testsText = (tests: TestsSeen): string => (tests === null ? '' : tests === 'pass' ? 'testler geçti' : 'testler kaldı')
+
+// "Tur bitti" · project · "3 dosya · testler geçti"; with neither fact, how long it took.
+export function donePing(spec: { project: string; durationMs: number; files: number; tests: TestsSeen }): Ping {
+  const took = durationText(spec.durationMs)
+  const tests = testsText(spec.tests)
+  const files = spec.files === 0 ? '' : `${spec.files} dosya`
+  const body = [files, tests].filter(part => part !== '').join(' · ') || `${took} sürdü`
+  const detail = [took, files === '' ? '' : `${files} değişti`, tests].filter(part => part !== '').join(' · ')
+
+  return { kind: 'done', project: spec.project, title: 'Tur bitti', subtitle: spec.project, body, detail }
+}
+
+function baseName(path: string): string {
+  return path.split('/').filter(part => part !== '').pop() ?? path
+}
+
+// What the tool wants, without its input: a command is never shown, a file by its name, a page by its host.
+export function toolDetail(tool: string, input: Record<string, unknown>): string {
+  if (tool === 'Bash') return 'Bash komutu'
+  for (const key of FILE_KEYS) {
+    const value = input[key]
+    if (typeof value === 'string' && value.trim() !== '') return `${tool} · ${clip(baseName(value), BODY_CHARS)}`
+  }
+  const host = typeof input.url === 'string' ? /^https?:\/\/([^/?#]+)/.exec(input.url)?.[1] : undefined
+
+  return host === undefined ? `${tool} izni` : `${tool} · ${host}`
+}
+
+export function questionOf(input: Record<string, unknown>): string {
+  const questions = Array.isArray(input.questions) ? input.questions : []
+  const first = questions[0] as { question?: unknown } | undefined
+
+  return typeof first?.question === 'string' ? plainSnippet(first.question) : ''
+}
+
+export function permissionPing(project: string, tool: string, input: Record<string, unknown>): Ping {
+  const body = toolDetail(tool, input)
+
+  return { kind: 'wait', project, title: 'Onay bekliyor', subtitle: project, body, detail: body }
+}
+
+export function questionPing(project: string, input: Record<string, unknown>): Ping {
+  const body = questionOf(input) || 'Bir sorusu var'
+
+  return { kind: 'wait', project, title: 'Cevap bekliyor', subtitle: project, body, detail: body }
+}
+
+export function parseSeconds(text: string): number | null {
+  const match = /^(\d+)\s*(s|sn|sec|secs|seconds|m|dk|min|mins|minutes)?$/i.exec(text.trim())
+  if (match === null) return null
+  const value = Number(match[1])
+  const unit = (match[2] ?? '').toLowerCase()
+  const isMinutes = unit.startsWith('m') || unit === 'dk'
+
+  return isMinutes ? value * SECONDS_PER_MINUTE : value
+}

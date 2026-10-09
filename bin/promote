@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Promote a mod from .staging to mods/ after re-validating and re-testing it.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MARK="$ROOT/.staging/.since"
+for m in "$@"; do
+  src="$ROOT/.staging/$m" dst="$ROOT/mods/$m"
+  claude plugin validate "$src" >/dev/null 2>&1 || { echo "$m: validate ✘"; continue; }
+  out=$(claude plugin test "$src" 2>&1 | grep -E '^ *[0-9]+ (pass|fail)' | tr -s ' \n' ' ')
+  [[ "$out" =~ " 0 fail" ]] || { echo "$m: test ✘ ($out)"; continue; }
+  if [[ -d "$dst" ]] && [[ -n "$(find "$dst" -type f -newer "$MARK" -not -path '*/.claude-plugin/types/*' | head -1)" ]]; then
+    echo "$m: canlı kopya staging'den sonra değişmiş, atlandı"; find "$dst" -type f -newer "$MARK" -not -path '*/.claude-plugin/types/*'; continue
+  fi
+  rsync -a --delete --exclude '.claude-plugin/types/' --exclude node_modules "$src/" "$dst/"
+  echo "$m: canlıda ✓ ($out)"
+done

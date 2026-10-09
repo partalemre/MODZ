@@ -1,0 +1,17 @@
+{
+  "name": "agent-deck-pro",
+  "version": "0.2.1",
+  "description": "Ajan güvertesi: her alt ajan görev adıyla, adımı ya da evresi, süre, araç, dosya, token ve ≈maliyet; sessiz kalanı ve kırık testi işaretler; oku, mesaj at, durdur, görev ver. Sıfır token.",
+  "author": {
+    "name": "Partal"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "prices": {
+      "type": "string",
+      "title": "Prices",
+      "description": "USD per million tokens by model family, family=input:output comma-separated (overrides the built-in table)",
+      "default": ""
+    }
+  }
+}

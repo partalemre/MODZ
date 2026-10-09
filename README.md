@@ -38,7 +38,7 @@ Gruplar `/modz` panelindekiyle aynı (`mods/modz/hooks/meta.ts`).
 | Mod | Ne yapar |
 | --- | --- |
 | `hud-pro` | One quiet line at the bottom of the band: 5h limit with reset, 7d, context and session ≈cost; /hud full shows details |
-| `savvy-progress` | Progress band above the prompt and the single **Ajanlar** panel: running, finished and planned agents with progress %, cost, time, message and stop |
+| `savvy-progress` | Progress band above the prompt and the single **Ajanlar** panel: each agent a crab card with progress %, cost and time, message and stop; a crew timeline, a quiet-agent warning and Yeni görev to start one |
 | `test-badge` | After a turn that edited source files, runs tests and lint in the background and shows a badge (testler 41/42 · lint 2 hata) with a failure pane |
 
 **Akış**

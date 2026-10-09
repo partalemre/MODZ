@@ -62,7 +62,7 @@
     {
       "name": "savvy-progress",
       "source": "./mods/savvy-progress",
-      "description": "Prompt üstü ilerleme bandı ve ajan paneli (/agents-info): çalışan, biten ve planlı alt ajanlar; model, effort, araç, bağlam, maliyet ve süre. İlerleme yalnızca gözlenenden türetilir."
+      "description": "Prompt üstü ilerleme bandı ve tek Ajanlar paneli (/agents-info): her ajan kendi yengeciyle bir kart (durum, ilerleme yüzdesi, maliyet, süre; mesaj ve durdur), zaman çizelgesi, sessiz ajan uyarısı ve Yeni görev. İlerleme yalnızca gözlenenden türetilir."
     },
     {
       "name": "secret-guard",

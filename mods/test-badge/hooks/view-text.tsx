@@ -19,13 +19,14 @@ const BAR_MAX = 40
 const BAR_MIN = 8
 
 const colorOf = (tone: Tone): { color?: string; dimColor?: boolean } => (tone === 'neutral' ? { dimColor: true } : { color: THEME_KEY[tone] })
+const WHY_UNPLACED: Partial<Record<CheckOutcome['status'], string>> = { timeout: 'zaman aşımına uğradı', error: 'başlatılamadı' }
 const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, Math.max(1, max - 1))}…` : text)
 
 // A failing check whose output no parser could place: say so, and keep the output's last lines.
 export function unplacedOf(spec: { name: string; outcome: CheckOutcome | null }): { title: string; lines: string[] } | null {
   const { outcome } = spec
   if (outcome === null || outcome.status === 'pass' || outcome.failures.length > 0) return null
-  const why = outcome.status === 'timeout' ? 'zaman aşımına uğradı' : outcome.status === 'error' ? 'başlatılamadı' : 'kaldı; hata yeri okunamadı'
+  const why = WHY_UNPLACED[outcome.status] ?? 'kaldı; hata yeri okunamadı'
 
   return { title: `${spec.name} ${why}`, lines: outcome.tail }
 }

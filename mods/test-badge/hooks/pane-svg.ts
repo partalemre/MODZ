@@ -1,5 +1,5 @@
 import { SUITE_TAG, durationText, eyebrowRole, headlineOf, runMeta, spanOf } from './summary'
-import { bar, esc, eyebrow, fileBadge, fit, highlight, icon, measure, rect, runs, svgDoc, text, wrapText } from './svg'
+import { bar, esc, eyebrow, fileBadge, fit, fitStart, highlight, icon, measure, rect, runs, svgDoc, text, wrapText } from './svg'
 import type { Ink } from './svg'
 import type { Mode } from './tidemark'
 import type { Failure, TestBadge } from '../types'
@@ -64,7 +64,7 @@ export function fileHeadSvg(frame: Frame, spec: { file: string | null; count: nu
   const path = spec.file ?? 'dosya belirtilmemiş'
   const cut = path.lastIndexOf('/')
   const name = fit(path.slice(cut + 1), room, PATH)
-  const dir = fit(path.slice(0, cut + 1), Math.max(0, room - measure(name, PATH)), { size: PATH.size }, true)
+  const dir = fitStart(path.slice(0, cut + 1), Math.max(0, room - measure(name, PATH)), { size: PATH.size })
   const body = fileBadge({ x: 0, y: 5, path })
     + runs({ x: 34, y: 17.5, size: PATH.size, parts: [{ text: dir === '…' ? '' : dir, ink: 'lo', weight: 500 }, { text: name, ink: 'hi', weight: PATH.weight }] })
     + text({ ...META, x: frame.width, y: 17.5, text: count, ink: 'lo', anchor: 'end' })

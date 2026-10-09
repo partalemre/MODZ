@@ -18,6 +18,8 @@ import type { CheckOutcome, Failure, HubCard, SuiteFilter, TestBadge } from '../
 const COMMAND = 'test-badge'
 const PANE = 'test-badge'
 const STORE_KEY = 'test-badge.enabled'
+// `on`/`off` set the switch; any other argument flips it.
+const SWITCH_ARGS = new Map([['on', true], ['off', false]])
 
 const badgeAtom = atom({ plugin: 'test-badge', key: 'badge' } as const, EMPTY)
 const noticeAtom = atom({ plugin: 'test-badge', key: 'notice' } as const, null)
@@ -178,7 +180,7 @@ async function runCommand($: EngineInterface, arg: string, overrides: Overrides)
 
     return 'test-badge: ayrıntılar açıldı'
   }
-  const isOn = arg === 'on' ? true : arg === 'off' ? false : !(await read($, enabledAtom))
+  const isOn = SWITCH_ARGS.get(arg) ?? !(await read($, enabledAtom))
   await update($, enabledAtom, () => isOn)
   await $.store.set(STORE_KEY, isOn)
   if (!isOn) await update($, noticeAtom, () => null)

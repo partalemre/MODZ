@@ -91,12 +91,19 @@ export function parseTests(output: string, exitCode: number, ctx: ParseContext):
   return { status, passed: counts.passed, total: counts.passed + counts.failed, errors: null, failures, tail }
 }
 
+// No count printed: a clean exit means none, a failing one leaves the count unknown.
+function countOf(match: RegExpExecArray | null, exitCode: number): number | null {
+  if (match !== null) return Number(match[1])
+
+  return exitCode === 0 ? 0 : null
+}
+
 // eslint "✖ 3 problems (2 errors, 1 warning)", tsc "Found 2 errors", phpstan "[ERROR] Found 2 errors"
 export function parseLint(output: string, exitCode: number, ctx: ParseContext): CheckOutcome {
   const text = clean(output)
   const failures = lintFailures(text, ctx)
   const match = /\((\d+) errors?/.exec(text) ?? /Found (\d+) errors?/.exec(text) ?? /^(\d+) errors?\b/m.exec(text)
-  const counted = match !== null ? Number(match[1]) : exitCode === 0 ? 0 : null
+  const counted = countOf(match, exitCode)
   const errors = failures.length > 0 ? Math.max(failures.length, counted ?? 0) : counted
   const status = exitCode === 0 && (errors ?? 0) === 0 ? 'pass' : 'fail'
 

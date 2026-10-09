@@ -42,7 +42,15 @@ const ICONS: Record<IconName, string> = {
 
 export const esc = (text: string): string => text.replace(/[&<>"]/g, ch => ENTITIES[ch] ?? ch)
 const px = (value: number): string => String(Math.round(value * 10) / 10)
-const charEm = (ch: string): number => (/[\s.,:;'|!il1()[\]ıjtf`]/.test(ch) ? 0.3 : /[A-ZÇĞİÖŞÜmwMW@%]/.test(ch) ? 0.72 : 0.56)
+const NARROW_EM = 0.3
+const WIDE_EM = 0.72
+const OTHER_EM = 0.56
+
+function charEm(ch: string): number {
+  if (/[\s.,:;'|!il1()[\]ıjtf`]/.test(ch)) return NARROW_EM
+
+  return /[A-ZÇĞİÖŞÜmwMW@%]/.test(ch) ? WIDE_EM : OTHER_EM
+}
 export const upper = (text: string): string => text.toLocaleUpperCase('tr')
 
 export function measure(text: string, font: Font): number {
@@ -53,16 +61,22 @@ export function measure(text: string, font: Font): number {
   return em * font.size * widen + chars.length * (font.spacing ?? 0)
 }
 
-// Cuts `text` to `width` pixels with an ellipsis; `fromStart` keeps the end (paths).
-export function fit(text: string, width: number, font: Font, fromStart = false): string {
+// Cuts `text` to `width` pixels with an ellipsis.
+export function fit(text: string, width: number, font: Font): string {
   if (measure(text, font) <= width) return text
   const chars = [...text]
-  while (chars.length > 1 && measure(`${chars.join('')}…`, font) > width) {
-    if (fromStart) chars.shift()
-    else chars.pop()
-  }
+  while (chars.length > 1 && measure(`${chars.join('')}…`, font) > width) chars.pop()
 
-  return fromStart ? `…${chars.join('')}` : `${chars.join('')}…`
+  return `${chars.join('')}…`
+}
+
+// Like `fit`, but cuts from the start so the end survives (paths).
+export function fitStart(text: string, width: number, font: Font): string {
+  if (measure(text, font) <= width) return text
+  const chars = [...text]
+  while (chars.length > 1 && measure(`…${chars.join('')}`, font) > width) chars.shift()
+
+  return `…${chars.join('')}`
 }
 
 // A word wider than the line is broken between characters: error text holds long paths and tokens.
@@ -159,15 +173,6 @@ export function icon(name: IconName, at: { x: number; y: number; size: number; i
   return `<g transform="translate(${px(at.x)} ${px(at.y)}) scale(${scale})" fill="none" stroke-width="${px(width)}" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--${at.ink})">${ICONS[name]}</g>`
 }
 
-// A rounded tint square with a line icon: the identity of a card or a notice row.
-export function iconTile(spec: { x: number; y: number; size: number; role: Role; icon: IconName }): string {
-  const glyph = Math.round(spec.size * 0.56)
-  const inset = (spec.size - glyph) / 2
-
-  return rect({ x: spec.x, y: spec.y, w: spec.size, h: spec.size, rx: Math.round(spec.size * 0.27), fill: `${spec.role}-t` })
-    + icon(spec.icon, { x: spec.x + inset, y: spec.y + inset, size: glyph, ink: spec.role })
-}
-
 export type PillSpec = { x: number; y: number; label: string; role: Role | 'neutral'; glyph?: 'check' | 'x' | 'pulse' }
 
 // h20 rx10: tint fill, line stroke, fg label; a neutral pill is inset fill with mid text.
@@ -214,12 +219,6 @@ export function fileBadge(spec: { x: number; y: number; path: string }): string 
   const box = rect({ x: spec.x, y: spec.y, w: 26, h: 16, rx: 4, fill: role === undefined ? 'inset' : `${role}-t`, stroke: role === undefined ? 'line' : undefined })
 
   return box + text({ size: 9.5, weight: 700, isMono: true, x: spec.x + 13, y: spec.y + 11.5, text: label, ink: role ?? 'lo', anchor: 'middle' })
-}
-
-// 16×16 monogram chip for a tool kind: `E` edit, `$` bash.
-export function monogram(spec: { x: number; y: number; glyph: string; role: Role }): string {
-  return rect({ x: spec.x, y: spec.y, w: 16, h: 16, rx: 4, fill: `${spec.role}-t` })
-    + text({ size: 10, weight: 700, isMono: true, x: spec.x + 8, y: spec.y + 11.5, text: spec.glyph, ink: spec.role, anchor: 'middle' })
 }
 
 // A highlight span: tint behind fg text, hugging the glyphs (DESIGN.md §4).

@@ -6,6 +6,7 @@ import { BUILTIN_TYPES, DEFAULT_TYPE, TASK_TITLE_MAX, blankDraft, chosenOf } fro
 import { addRun } from './agents'
 import { draftTree } from './dispatch'
 import type { DraftView } from './dispatch'
+import { settleFocus } from './focus'
 import { clip } from './format'
 import { t } from './i18n'
 import { lookOf } from './identity'
@@ -179,6 +180,7 @@ export const layoutOf = (isDesktop: boolean, columns: number): Layout => {
 
 export function onPane(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    await settleFocus(e, ms => $.clock.sleep(ms))
     const table = $.ui.resolve(e)
     const ui = table as Ui
     const isDesktop = e.surface === 'desktop' && 'Svg' in ui

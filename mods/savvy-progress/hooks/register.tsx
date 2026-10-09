@@ -202,6 +202,17 @@ function onHubSources(on: On): void {
   }).catch(($, e, next) => next(e))
 }
 
+// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
+// left, so its first click would be refused. Drawing again on attach hands it live buttons.
+function onAttach(on: On): void {
+  on('session.attach', async ($, e, next) => {
+    const attached = await next(e)
+    $.ui.invalidate('ui.render')
+
+    return attached
+  })
+}
+
 export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     const started = await next(e)
@@ -225,4 +236,5 @@ export const register: Register = (on, options) => {
   onBand(on)
   onHubSources(on)
   onTranscript(on)
+  onAttach(on)
 }

@@ -30,7 +30,8 @@ function tile(t: Tile): string {
     + `<g class="s-${t.role}" transform="translate(${t.x + inset} ${t.y + inset}) scale(${scale})" fill="none" stroke-width="${ICON_STROKE / scale}" stroke-linecap="round" stroke-linejoin="round">${GLYPHS[t.icon]}</g>`
 }
 
-type Part = { text: string; isMono?: boolean }
+// `isKept`: the fact that tells the person what to do; a narrow row drops the others first.
+type Part = { text: string; isMono?: boolean; isKept?: boolean }
 
 const partWidth = (part: Part): number => measure(part.text, DETAIL, part.isMono)
 const detailWidth = (parts: readonly Part[]): number => parts.reduce((sum, part) => sum + measure(SEP, DETAIL) + partWidth(part), 0)
@@ -46,7 +47,10 @@ function rowDoc(row: RowSpec): SvgDoc {
   const titleW = measure(row.title, TITLE.size) * BOLD_SLACK
   const meterW = row.meter === undefined ? 0 : METER.gap + METER.width
   const parts = [...row.parts]
-  while (parts.length > 0 && ROW.textX + titleW + detailWidth(parts) + meterW > row.room) parts.pop()
+  while (parts.length > 0 && ROW.textX + titleW + detailWidth(parts) + meterW > row.room) {
+    const loose = parts.map(part => part.isKept === true).lastIndexOf(false)
+    parts.splice(loose >= 0 ? loose : parts.length - 1, 1)
+  }
   const textEnd = ROW.textX + titleW + detailWidth(parts)
   const body = [
     tile({ x: 0, y: (ROW.h - ROW.tile) / 2, size: ROW.tile, glyph: ROW.glyph, radius: ROW.radius, role: row.role, icon: row.icon }),
@@ -83,7 +87,7 @@ export function warnRowSvg(row: WarnRow): SvgDoc {
 }
 
 export function stoppedRowSvg(spend: string, room: number): SvgDoc {
-  const parts: Part[] = [...(spend === '' ? [] : [{ text: spend, isMono: true }]), { text: '/budget ile artır' }]
+  const parts: Part[] = [...(spend === '' ? [] : [{ text: spend, isMono: true }]), { text: '/budget ile artır', isKept: true }]
   const title = 'Durduruldu: bütçe doldu'
 
   return rowDoc({ role: 'danger', icon: 'x', title, parts, room, alt: `${title} · ${spend} · /budget ile artır` })

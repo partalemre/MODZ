@@ -1,0 +1,112 @@
+import type { Strings } from './strings'
+
+// Turkish, the default. Names take their case with vowel harmony: Pip'i, Mako'yu, Coral'a, Nori'ye.
+const VOWELS = 'aeıioöuü'
+const HARMONY: Record<string, string> = { a: 'ı', ı: 'ı', e: 'i', i: 'i', o: 'u', u: 'u', ö: 'ü', ü: 'ü' }
+
+const BACK = 'aıou'
+
+const lastVowel = (lower: string): string => [...lower].reverse().find(ch => VOWELS.includes(ch)) ?? 'i'
+
+// A name ending in a vowel takes a buffer y: Mako'yu, Nori'ye.
+const suffixed = (name: string, pick: (vowel: string) => string): string => {
+  const lower = name.toLocaleLowerCase('tr')
+  const buffer = VOWELS.includes(lower.at(-1) ?? '') ? 'y' : ''
+  return `${name}'${buffer}${pick(lastVowel(lower))}`
+}
+
+const accusative = (name: string): string => suffixed(name, vowel => HARMONY[vowel] ?? 'i')
+
+const dative = (name: string): string => suffixed(name, vowel => (BACK.includes(vowel) ? 'a' : 'e'))
+
+export const tr: Strings = {
+  pane: 'Ajanlar',
+  cost: 'Maliyet',
+  tokens: 'Token',
+  time: 'Süre',
+  collapse: 'Daralt',
+  expand: 'Genişlet',
+  running: 'Çalışıyor',
+  finished: 'Bitti',
+  planned: 'Planlı',
+  emptyTitle: 'Henüz ajan yok',
+  empty: 'Bir görev ver, bir yengeç işe koyulsun: durumu, ilerlemesi ve maliyeti burada canlı görünür.',
+  round: 'tur',
+  failed: 'hata',
+  aborted: 'durduruldu',
+  tokensWord: 'token',
+  agentsCount: 'ajan',
+  isRunning: 'çalışıyor',
+  isFinished: 'bitti',
+  isPlanned: 'planlı',
+  opened: 'Ajanlar paneli açıldı.',
+  closed: 'Ajanlar paneli kapandı.',
+  done: 'Bitti',
+  plan: 'Plan',
+  design: 'Tasarım',
+  tasks: 'Görevler',
+  review: 'Gözden geçirme',
+  agents: 'Ajanlar',
+  busy: 'çalışıyor',
+  total: 'toplam',
+  completed: 'tamamlandı',
+  starting: 'başlıyor',
+  dismiss: 'Kapat',
+  brief: 'Görev',
+  history: 'İş geçmişi',
+  result: 'Sonuç',
+  noCalls: 'Henüz araç çağrısı yok.',
+  context: 'bağlam',
+  limit: '5 saat',
+  limitTile: '5 saat payı',
+  kinds: { read: 'okuma', edit: 'düzenleme', run: 'komut', agent: 'ajan', other: 'diğer' },
+  cheerDone: '(ᵔᴗᵔ) bitirdim',
+  cheerFailed: '(×_×) olmadı',
+  show: 'Göster',
+  hide: 'Gizle',
+  details: 'Ayrıntılar',
+  timeline: 'Zaman çizelgesi',
+  now: 'şimdi',
+  look: 'Bak',
+  failedNow: 'hata verdi',
+  newTask: 'Yeni görev',
+  agentLabel: 'Ajan',
+  taskLabel: 'Görev',
+  taskHint: 'İşi anlat, Enter başlatır',
+  start: 'başlat',
+  cancel: 'Vazgeç',
+  noTypes: 'Henüz bilinen ajan türü yok.',
+  noDescription: 'Açıklama yok.',
+  spawnFailed: 'Ajan başlatılamadı',
+  builtins: { 'general-purpose': 'Araştırma, arama ve çok adımlı iş', Explore: 'Hızlı, salt okunur kod araması', Plan: 'Uygulama planı çıkarır' },
+  sources: { 'built-in': 'yerleşik', plugin: 'eklenti', project: 'proje', user: 'kullanıcı' },
+  shareOf: share => `5 saatlik limitin ≈%${share} kadarı`,
+  earlier: n => `${n} önceki adım gizli`,
+  after: list => `${list} sonrası`,
+  tools: n => `${n} araç`,
+  errors: n => `${n} hata`,
+  crew: n => `${n} ajan`,
+  pct: n => `%${n}`,
+  minutes: n => `${n} dk`,
+  seconds: n => `${n} sn`,
+  hours: n => `${n} sa`,
+  quiet: span => `sessiz ${span}`,
+  longTool: (tool, span) => `${tool} ${span} sürüyor`,
+  stopWho: name => `${accusative(name)} durdur`,
+  messageTo: name => `${dative(name)} yaz, Enter gönderir`,
+  launched: name => `${name} işe koyuldu`,
+  denied: reason => `Reddedildi: ${reason}`,
+  decimal: ',',
+  message: 'Mesaj',
+  send: 'gönder',
+  stop: 'Durdur',
+  delivered: 'Mesaj iletildi',
+  stopAsked: 'Durdurma istendi',
+  stopRefused: 'Durdurma reddedildi',
+  stopFailed: 'Bu ajan durdurulamadı',
+  allDone: 'Hepsi bitti',
+  liveCount: n => `${n} çalışıyor`,
+  endedCount: n => `${n} bitti`,
+  plannedCount: n => `${n} planlı`,
+  notDelivered: reason => `İletilemedi: ${reason}`,
+}

@@ -12,6 +12,7 @@ type Strings = {
   finished: string
   planned: string
   empty: string
+  emptyTitle: string
   round: string
   failed: string
   aborted: string
@@ -37,7 +38,15 @@ type Strings = {
   history: string
   result: string
   noCalls: string
-  agentsTile: string
+  message: string
+  messageHint: string
+  send: string
+  stop: string
+  delivered: string
+  stopAsked: string
+  stopRefused: string
+  stopFailed: string
+  allDone: string
   context: string
   limit: string
   limitTile: string
@@ -49,7 +58,14 @@ type Strings = {
   after: (list: string) => string
   tools: (n: number) => string
   errors: (n: number) => string
+  crew: (n: number) => string
+  liveCount: (n: number) => string
+  endedCount: (n: number) => string
+  plannedCount: (n: number) => string
+  notDelivered: (reason: string) => string
   pct: (n: number | string) => string
+  // The decimal mark numbers are written with: "1,68" in Turkish and Russian, "1.68" in English.
+  decimal: string
 }
 
 const tr: Strings = {
@@ -62,7 +78,8 @@ const tr: Strings = {
   running: 'Çalışıyor',
   finished: 'Bitti',
   planned: 'Planlı',
-  empty: 'Henüz alt ajan yok.',
+  emptyTitle: 'Henüz ajan yok',
+  empty: 'Bir alt ajan başlayınca durumu, ilerlemesi ve maliyeti burada görünür.',
   round: 'tur',
   failed: 'hata',
   aborted: 'durduruldu',
@@ -71,8 +88,8 @@ const tr: Strings = {
   isRunning: 'çalışıyor',
   isFinished: 'bitti',
   isPlanned: 'planlı',
-  opened: 'Ajan paneli açıldı.',
-  closed: 'Ajan paneli kapandı.',
+  opened: 'Ajanlar paneli açıldı.',
+  closed: 'Ajanlar paneli kapandı.',
   done: 'Bitti',
   plan: 'Plan',
   design: 'Tasarım',
@@ -88,10 +105,9 @@ const tr: Strings = {
   history: 'İş geçmişi',
   result: 'Sonuç',
   noCalls: 'Henüz araç çağrısı yok.',
-  agentsTile: 'Ajan',
   context: 'bağlam',
-  limit: '5s',
-  limitTile: '5s payı',
+  limit: '5 saat',
+  limitTile: '5 saat payı',
   kinds: { read: 'okuma', edit: 'düzenleme', run: 'komut', agent: 'ajan', other: 'diğer' },
   cheerDone: '(ᵔᴗᵔ) bitirdim',
   cheerFailed: '(×_×) olmadı',
@@ -100,7 +116,22 @@ const tr: Strings = {
   after: list => `${list} sonrası`,
   tools: n => `${n} araç`,
   errors: n => `${n} hata`,
+  crew: n => `${n} ajan`,
   pct: n => `%${n}`,
+  decimal: ',',
+  message: 'Mesaj',
+  messageHint: 'Bu ajana bir şey söyle, Enter gönderir',
+  send: 'gönder',
+  stop: 'Durdur',
+  delivered: 'Mesaj iletildi',
+  stopAsked: 'Durdurma istendi',
+  stopRefused: 'Durdurma reddedildi',
+  stopFailed: 'Bu ajan durdurulamadı',
+  allDone: 'Hepsi bitti',
+  liveCount: n => `${n} çalışıyor`,
+  endedCount: n => `${n} bitti`,
+  plannedCount: n => `${n} planlı`,
+  notDelivered: reason => `İletilemedi: ${reason}`,
 }
 
 const en: Strings = {
@@ -113,7 +144,8 @@ const en: Strings = {
   running: 'Running',
   finished: 'Finished',
   planned: 'Planned',
-  empty: 'No subagents yet.',
+  emptyTitle: 'No agents yet',
+  empty: 'Once a subagent starts, its status, progress and cost show here.',
   round: 'round',
   failed: 'error',
   aborted: 'stopped',
@@ -139,7 +171,6 @@ const en: Strings = {
   history: 'Work history',
   result: 'Result',
   noCalls: 'No tool calls yet.',
-  agentsTile: 'Agents',
   context: 'context',
   limit: '5h',
   limitTile: '5h share',
@@ -151,7 +182,22 @@ const en: Strings = {
   after: list => `after ${list}`,
   tools: n => `${n} ${n === 1 ? 'tool' : 'tools'}`,
   errors: n => `${n} failed`,
+  crew: n => `${n} ${n === 1 ? 'agent' : 'agents'}`,
   pct: n => `${n}%`,
+  decimal: '.',
+  message: 'Message',
+  messageHint: 'Tell this agent something, Enter sends',
+  send: 'send',
+  stop: 'Stop',
+  delivered: 'Message delivered',
+  stopAsked: 'Stop requested',
+  stopRefused: 'Stop refused',
+  stopFailed: 'Could not stop this agent',
+  allDone: 'All done',
+  liveCount: n => `${n} running`,
+  endedCount: n => `${n} finished`,
+  plannedCount: n => `${n} planned`,
+  notDelivered: reason => `Not delivered: ${reason}`,
 }
 
 const ru: Strings = {
@@ -165,7 +211,8 @@ const ru: Strings = {
   running: 'Работают',
   finished: 'Завершены',
   planned: 'Запланированы',
-  empty: 'Субагентов пока нет.',
+  emptyTitle: 'Агентов пока нет',
+  empty: 'Когда субагент начнёт работу, его статус, прогресс и стоимость появятся здесь.',
   round: 'раунд',
   failed: 'ошибка',
   aborted: 'остановлен',
@@ -191,7 +238,6 @@ const ru: Strings = {
   history: 'История работы',
   result: 'Результат',
   noCalls: 'Вызовов инструментов пока нет.',
-  agentsTile: 'Агенты',
   context: 'контекст',
   limit: '5ч',
   limitTile: 'доля 5ч',
@@ -203,6 +249,20 @@ const ru: Strings = {
   after: list => `после ${list}`,
   tools: n => `инструментов: ${n}`,
   errors: n => `ошибок: ${n}`,
+  crew: n => `агентов: ${n}`,
+  message: 'Сообщение',
+  messageHint: 'Скажи агенту что-нибудь, Enter отправит',
+  send: 'отправить',
+  stop: 'Остановить',
+  delivered: 'Сообщение доставлено',
+  stopAsked: 'Остановка запрошена',
+  stopRefused: 'Остановка отклонена',
+  stopFailed: 'Не удалось остановить агента',
+  allDone: 'Всё готово',
+  liveCount: n => `работают: ${n}`,
+  endedCount: n => `завершено: ${n}`,
+  plannedCount: n => `в плане: ${n}`,
+  notDelivered: reason => `Не доставлено: ${reason}`,
 }
 
 const STRINGS: Record<Lang, Strings> = { tr, en, ru }

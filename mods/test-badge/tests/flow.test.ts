@@ -114,6 +114,13 @@ test('a turn that edited source runs tests then lint, niced, 5s after it ends', 
   expect(world.statuses.at(-1)).toBe('testler 41/42 · lint 2 hata · 0 sn önce')
 })
 
+test('the status line holds a failure only: a green run clears it', async ($: any, on: any) => {
+  const world = newWorld({ outs: { test: ' Tests  42 passed (42)', lint: '' }, code: 0 })
+  await editAndRun($, await setup($, on, world))
+
+  expect(world.statuses.filter(text => text !== undefined)).toEqual([])
+})
+
 for (const surface of SURFACES) {
   test(`${surface}: one band line above the others, Ayrıntı opens the pane grouped by file`, async ($: any, on: any) => {
     const world = newWorld()

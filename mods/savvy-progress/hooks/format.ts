@@ -1,4 +1,5 @@
 // Text helpers shared by the band, the panel and the terminal rows.
+import { t } from './i18n'
 
 const TARGET_MAX = 40
 const KILO = 1e3
@@ -36,13 +37,16 @@ export const fitText = (s: string, size: number, maxW: number): string => {
   return out + '…'
 }
 
+// A fixed-decimal number in the interface language's decimal mark ("1,5" in Turkish).
+export const fixed = (n: number, digits: number): string => n.toFixed(digits).replace('.', t().decimal)
+
 export const fmtTokens = (n: number): string => {
-  if (n >= MEGA) return `${(n / MEGA).toFixed(1)}M`
+  if (n >= MEGA) return `${fixed(n / MEGA, 1)}M`
   if (n >= KILO) return `${Math.round(n / KILO)}k`
   return `${Math.round(n)}`
 }
 
-export const fmtCost = (usd: number): string => `$${usd < COST_WIDE ? usd.toFixed(2) : usd.toFixed(1)}`
+export const fmtCost = (usd: number): string => `$${usd < COST_WIDE ? fixed(usd, 2) : fixed(usd, 1)}`
 
 export const fmtTime = (ms: number): string => {
   const s = Math.max(0, Math.round(ms / SECOND))

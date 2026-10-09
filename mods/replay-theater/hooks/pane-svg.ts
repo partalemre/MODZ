@@ -15,6 +15,8 @@ const NAME_X = 38
 const COUNT_SIZE = 11.5
 const NOTE_SIZE = 13
 const NOTE_LINE = 18
+const NOTE_LINES_MAX = 3
+const META_LINE = 17
 const PILL_H = 24
 const CSS = `${DOT_CSS}.row-on{fill:var(--plan-t)}.shimmer{animation:sh 1.4s ease-in-out infinite}@keyframes sh{50%{opacity:.45}}`
 
@@ -97,7 +99,7 @@ function noteBlock(model: PaneModel, step: ReplayStep, top: number): { svg: stri
 
     return { svg: `<rect x="0" y="${top}" width="2.5" height="18" rx="1.25" fill="var(--line2)"/>${bar}`, height: 18 + 12 }
   }
-  const lines = wrap(step.said, { width: model.width - 14, size: NOTE_SIZE, maxLines: 2 })
+  const lines = wrap(step.said, { width: model.width - 14, size: NOTE_SIZE, maxLines: NOTE_LINES_MAX })
   const text = lines.map((line, n) => `<text x="12" y="${top + 13 + n * NOTE_LINE}" class="mid" font-size="${NOTE_SIZE}">${escape(line)}</text>`)
   const height = lines.length * NOTE_LINE
 
@@ -121,16 +123,19 @@ export function detailSvg(model: PaneModel): { source: string; height: number } 
   const step = model.steps[model.index] as ReplayStep
   const { add, del } = countChanges(step.diff)
   const meta = [step.file, step.tool, step.note].filter(Boolean).join(' · ')
+  // A deep path wraps under the name rather than losing its middle.
+  const metaLines = wrap(meta, { width: model.width, size: 12, maxLines: 2 })
   const head = [
     `<line x1="0" y1="0.5" x2="${model.width}" y2="0.5" stroke="var(--line)"/>`,
     `<text x="0" y="30" class="eyebrow f-plan">${eyebrow(`Düzenleme ${model.index + 1} / ${model.steps.length}`)}</text>`,
     `<text x="${model.width}" y="30" text-anchor="end" class="mono micro"><tspan class="f-ok">+${add}</tspan><tspan dx="6" class="f-danger">−${del}</tspan></text>`,
     `<text x="0" y="54" class="headline hi">${escape(fit(baseName(step.file), model.width, 17))}</text>`,
-    `<text x="0" y="74" class="label lo">${escape(fit(meta, model.width, 12))}</text>`,
+    ...metaLines.map((part, n) => `<text x="0" y="${74 + n * META_LINE}" class="label lo">${escape(part)}</text>`),
   ]
-  const note = noteBlock(model, step, 88)
-  const pill = planPill(model, step, 88 + note.height)
-  const height = 88 + note.height + pill.height
+  const top = 88 + Math.max(0, metaLines.length - 1) * META_LINE
+  const note = noteBlock(model, step, top)
+  const pill = planPill(model, step, top + note.height)
+  const height = top + note.height + pill.height
 
   return { source: svgDoc({ width: model.width, height, theme: model.theme }, [...head, note.svg, pill.svg].join(''), CSS), height }
 }

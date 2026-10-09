@@ -57,6 +57,8 @@ export type AgentRun = {
   costUsd: number
   steps: number
   round: number
+  /** Arrival order among the session's agents: picks its shell, eyes and name. */
+  look?: number
   toolCount: number
   lastTool?: string
   lastTarget?: string
@@ -100,6 +102,12 @@ export type Panel = {
   selected?: string
 }
 
+/** The MODZ hub's tone for this mod's card (DESIGN.md §9): lo · Iris · Moss · Amber · Flare. */
+export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
+
+/** This mod's one-line summary on the MODZ hub; `pane` is the key the hub's open request names. */
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+
 declare module 'claude-code' {
   interface PluginState {
     'savvy-progress': {
@@ -110,6 +118,7 @@ declare module 'claude-code' {
       job: Job | null
       tasks: TrackedTask[]
       limit: LimitTrack | null
+      hub: HubCard
     }
   }
 }

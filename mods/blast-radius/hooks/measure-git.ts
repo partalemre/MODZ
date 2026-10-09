@@ -1,7 +1,7 @@
 // Measuring git's risky commands and migrations: the changes `reset --hard` and
 // `checkout -- .` drop, the commits a force push drops, the migrations to apply.
 
-import { emptyReport, lines, plural, LIST_MAX } from './report'
+import { emptyReport, nothingReport, lines, plural, LIST_MAX } from './report'
 import type { Item, Report, Run } from './report'
 import type { GitRisk, Risk } from './classify'
 
@@ -44,12 +44,12 @@ export async function measureChanges(run: Run, risk: GitRisk, cwd: string): Prom
   const numstat = await run(['git', 'diff', '--numstat', isReset ? 'HEAD' : '--'], { cwd, timeoutMs: TIMEOUT_MS })
   const stats = parseNumstat(numstat.stdout)
   const items = lost.map(row => changeItem(row, stats)).sort((a, b) => b.weight - a.weight)
-  const summary = lost.length === 0 ? 'discard nothing: no uncommitted changes' : `discard uncommitted changes in ${plural(lost.length, 'file', 'files')}`
-  const note = lost.length === 0 ? 'Commit edilmemiş değişiklik yok.' : null
+  if (lost.length === 0) return nothingReport('changes', 'discard nothing: no uncommitted changes')
+  const summary = `discard uncommitted changes in ${plural(lost.length, 'file', 'files')}`
   const added = items.reduce((sum, item) => sum + (stats.get(item.name)?.added ?? 0), 0)
   const removed = items.reduce((sum, item) => sum + (stats.get(item.name)?.removed ?? 0), 0)
 
-  return { ...emptyReport('changes', summary, note), count: lost.length, items: items.slice(0, LIST_MAX), more: Math.max(0, lost.length - LIST_MAX), added, removed }
+  return { ...emptyReport('changes', summary, null), count: lost.length, items: items.slice(0, LIST_MAX), more: Math.max(0, lost.length - LIST_MAX), added, removed }
 }
 
 /** The remote branch a force push lands on, and the local ref it pushes from. */
@@ -111,7 +111,8 @@ export async function measureMigrations(run: Run, risk: MigrateRisk, cwd: string
   }
   const pending = ran.stdout.split('\n').filter(lister.isPending).map(lister.strip)
   const items = pending.slice(0, LIST_MAX).map(name => ({ name, tag: '', meta: '', weight: 0 }))
-  const summary = pending.length === 0 ? `run ${risk.label}: nothing pending` : `apply ${plural(pending.length, 'pending migration', 'pending migrations')}`
+  if (pending.length === 0) return nothingReport('migrations', `run ${risk.label}: nothing pending`)
+  const summary = `apply ${plural(pending.length, 'pending migration', 'pending migrations')}`
 
-  return { ...emptyReport('migrations', summary, pending.length === 0 ? 'Bekleyen migration yok.' : null), count: pending.length, items, more: Math.max(0, pending.length - LIST_MAX) }
+  return { ...emptyReport('migrations', summary, null), count: pending.length, items, more: Math.max(0, pending.length - LIST_MAX) }
 }

@@ -1,5 +1,8 @@
 import { type BuiltinToolResults, type ElementTable, type EngineInterface, type Register, type Timer, update } from 'claude-code'
 import { openCommand } from './open'
+import { commitOutcome, gitDirOf, type Outcome, placeOf } from './commit'
+import { HUB_PANE, hubOf, isOpenFor, isSameCard } from './hub'
+import { drawToolbar, TOOL_KEYS, type ToolKey } from './toolbar'
 
 import type { Activity, FileNode, FileTree, Look, Theme, TouchRole, TurnLog } from '../types'
 import { BRANCH_ICON, chainOf, type GitAction, gitActions, readOnly, readTargets, resolve, TONES } from './git'
@@ -39,7 +42,9 @@ const THEME = { plugin: 'filetree', key: 'theme' } as const
 const ACTIVITY = { plugin: 'filetree', key: 'activity' } as const
 const TURN = { plugin: 'filetree', key: 'turn' } as const
 const LOOK = { plugin: 'filetree', key: 'look' } as const
+const HUB = { plugin: 'filetree', key: 'hub' } as const
 const PANE = 'filetree'
+const PANE_TITLE = 'Dosyalar'
 // The terminal keeps upstream's hues, keyed so a read is blue (Tide) and an edit orange (Kiln).
 const TERMINAL_TONE: Record<string, string> = { purple: 'blue', iris: 'purple' }
 const SHIMMER = Object.fromEntries(
@@ -56,6 +61,10 @@ const ROW_PX = 18
 const LIVE_SPREAD_MS = 1_500
 const MIN_SVG_W = 240
 const MAX_SVG_W = 900
+// Rows the desktop toolbar takes: its one line, and with "Daha fazla" open the extra buttons and hint.
+const TOOLBAR_ROWS = 3
+const TOOLBAR_OPEN_ROWS = 9
+const FOOTER_ROWS = 2
 const BRANCH_ROW = '#branch'
 const FLASH_MS = 2700
 const RUNNING_MAX_MS = 600_000
@@ -255,6 +264,7 @@ async function readGit($: EngineInterface): Promise<void> {
           }
         : {},
     )
+    await syncHub($)
   } catch {
     return
   }
@@ -284,14 +294,13 @@ async function reset($: EngineInterface, root: string, focus = false): Promise<v
   searchIndex = null
   sizeEpoch += 1
   sizeQueue = []
-  await put($, () => ({ ...emptyTree(root), showHidden: prev.showHidden, showSize: prev.root ? prev.showSize : sizeDefault }))
-  await showPane($, paneTitle(root), focus)
+  await put($, () => ({ ...emptyTree(root), showHidden: prev.showHidden, showTools: prev.showTools, showSize: prev.root ? prev.showSize : sizeDefault }))
+  await showPane($, PANE_TITLE, focus)
   await loadDirs($, [root])
   await detectRepo($)
   await refreshGit($)
 }
 
-const paneTitle = (root: string): string => `Dosyalar: ${root.split('/').pop() || root}`
 
 async function paneIsOpen($: EngineInterface): Promise<boolean> {
   try {
@@ -334,10 +343,29 @@ async function noteTouches($: EngineInterface, ids: string[], role: TouchRole): 
     }
     return { ...log, touches: touches.slice(-TOUCH_LIMIT) }
   })
+  await syncHub($)
 }
 
 async function noteCommit($: EngineInterface, fields: { sha?: string; committed?: number }): Promise<void> {
   await update($, TURN, cur => ({ ...NO_TURN, ...cur, hasRun: true, ...fields }))
+}
+
+// The MODZ main panel's card, from what the pane itself shows: this turn's files, then git.
+async function syncHub($: EngineInterface): Promise<void> {
+  const t = await get($)
+  const turn = await turnLog($)
+  const changed = (t.counts[t.root] ?? [0, 0, 0]).reduce((a, b) => a + b, 0)
+  const shown = hubOf({ isRunning: turn.isRunning, touched: turn.touches.length, hasRepo: Boolean(t.top), changed })
+  if (isSameCard((await $.state.get(HUB)).value, shown)) return
+  await $.state.set(HUB, { pane: HUB_PANE, ...shown, at: await $.clock.now() })
+}
+
+// A request from the MODZ main panel: opens (or brings forward) the pane, never closes it.
+async function openFromHub($: EngineInterface): Promise<void> {
+  noDock = false
+  const t = await get($)
+  if (!t.root || t.nodes.length === 0) await reset($, await cwdOf($), true)
+  else await showPane($, PANE_TITLE, true)
 }
 
 async function systemDark($: EngineInterface): Promise<boolean | undefined> {
@@ -594,11 +622,12 @@ async function followCwd($: EngineInterface): Promise<boolean> {
   return true
 }
 
-type Pending = { actions: GitAction[]; ids: number[]; command: string; head: string }
+// `dir` is where git ran (null when that is a guess), `head` its HEAD before the command.
+type Pending = { actions: GitAction[]; ids: number[]; command: string; dir: string | null; head: string; place: { isHere: boolean; name: string } }
 type Job = { actions: GitAction[]; since: Since; initRepo: boolean; readOnly: boolean }
 type Background = { p: Pending | null; job: Job; reads: string[] }
 type GitOperation = NonNullable<BuiltinToolResults['Bash']['gitOperation']>
-type Outcome = { state: 'done' | 'failed'; label: string; detail: string }
+type Run = { ok: boolean; op: GitOperation | undefined; text: string }
 
 const PROOF: Record<string, (op: GitOperation) => boolean> = {
   push: op => Boolean(op.push),
@@ -638,18 +667,31 @@ async function headOf($: EngineInterface, cwd: string): Promise<string> {
   }
 }
 
-async function outcomes($: EngineInterface, p: Pending, ok: boolean, op: GitOperation | undefined): Promise<Outcome[]> {
+async function outcomes($: EngineInterface, p: Pending, run: Run): Promise<Outcome[]> {
   const chain = chainOf(p.command)
-  const after = p.actions.some(a => a.verb === 'commit') && !op?.commit ? await headOf($, (await get($)).root || (await cwdOf($))) : ''
+  const isCommit = p.actions.some(a => a.verb === 'commit')
+  const after = isCommit && !run.op?.commit && p.dir !== null ? await headOf($, p.dir) : ''
   return p.actions.map(a => {
     if (a.verb === 'commit') {
-      const sha = op?.commit?.sha || (after && after !== p.head ? after : '')
-      return sha ? { state: 'done', label: a.done, detail: sha.slice(0, 7) } : { state: 'failed', label: `${a.verb} başarısız`, detail: '' }
+      const sha = run.op?.commit?.sha || (after && after !== p.head ? after : '')
+      return commitOutcome({ sha, place: p.place.name, isDirKnown: p.dir !== null, hasFailed: !run.ok && chain.and && chain.size === 1, text: run.text })
     }
-    if ((op && PROOF[a.verb]?.(op)) || (ok && chain.and)) return { state: 'done', label: a.done, detail: '' }
-    if (!ok && chain.and && chain.size === 1) return { state: 'failed', label: `${a.verb} başarısız`, detail: '' }
+    if ((run.op && PROOF[a.verb]?.(run.op)) || (run.ok && chain.and)) return { state: 'done', label: a.done, detail: '' }
+    if (!run.ok && chain.and && chain.size === 1) return { state: 'failed', label: `${a.verb} başarısız`, detail: '' }
     return { state: 'done', label: `${a.kind} çalıştı`, detail: '' }
   })
+}
+
+type GitCall = { command: string; actions: GitAction[]; cwd: string }
+
+// Where the command's git work runs and its HEAD there before it runs; '' cwd for a subagent's loop.
+async function pendingOf($: EngineInterface, call: GitCall): Promise<Pending> {
+  const t = await get($)
+  const dir = gitDirOf(call.command, { cwd: call.cwd, home })
+  const isCommit = call.actions.some(a => a.verb === 'commit')
+  const head = isCommit && dir !== null ? await headOf($, dir) : ''
+  const place = placeOf(dir, { top: t.top || t.root, isAgent: !call.cwd })
+  return { actions: call.actions, ids: await startGit($, call.actions), command: call.command, dir, head, place }
 }
 
 async function finishGit($: EngineInterface, p: Pending, results: Outcome[]): Promise<void> {
@@ -668,8 +710,9 @@ function failAll(p: Pending): Outcome[] {
   return p.actions.map(a => ({ state: 'failed', label: `${a.verb} başarısız`, detail: '' }))
 }
 
+// Only git work in the tree's own repository lights its files; another repo's commit is not this one's.
 function proven(p: Pending | null, results: Outcome[]): GitAction[] {
-  return p ? p.actions.filter((_, i) => results[i]?.state !== 'failed') : []
+  return p && p.place.isHere ? p.actions.filter((_, i) => results[i]?.state !== 'failed') : []
 }
 
 function taskEnds(text: string): [string, string][] {
@@ -687,7 +730,7 @@ async function settleBackground($: EngineInterface, text: string): Promise<void>
     if (!task) continue
     background.delete(id)
     const ok = status === 'completed'
-    const results = task.p ? await outcomes($, task.p, ok, undefined) : []
+    const results = task.p ? await outcomes($, task.p, { ok, op: undefined, text: '' }) : []
     if (task.p) await finishGit($, task.p, results)
     if (showReads) queuedReads.push(...task.reads)
     scheduleScan($, { ...task.job, actions: proven(task.p, results) })
@@ -1108,7 +1151,7 @@ function rowCtx(s: Scene, width: number, unicode: boolean): RowCtx {
   }
 }
 
-// The header's six actions, shared by both surfaces.
+// The toolbar's actions, shared by both surfaces and the tree's single-key shortcuts.
 function actionsOf($: EngineInterface, t: FileTree) {
   return {
     refresh: () =>
@@ -1135,7 +1178,8 @@ function actionsOf($: EngineInterface, t: FileTree) {
       })(),
     hidden: () => void patch($, cur => ({ showHidden: !cur.showHidden })),
     unselect: () => void patch($, () => ({ selected: '' })),
-  }
+    more: () => void patch($, cur => ({ showTools: !cur.showTools })),
+  } satisfies Record<ToolKey, () => void>
 }
 
 const relOrShort = (t: FileTree, id: string): string => (id !== t.root && inside(t.root, id) ? id.slice(t.root.endsWith('/') ? t.root.length : t.root.length + 1) : shortPath(id))
@@ -1301,72 +1345,40 @@ function legendOf(s: Scene, git: GitRow | null): LegendItem[] {
   ]
 }
 
-const DESKTOP_ACTIONS = ['refresh', 'collapse', 'size', 'up', 'cwd', 'hidden', 'unselect'] as const
-
-function desktopLabels(t: FileTree): Record<(typeof DESKTOP_ACTIONS)[number], string> {
-  return {
-    refresh: 'Yenile',
-    collapse: 'Tümünü daralt',
-    size: t.showSize ? 'Tarihleri göster' : 'Boyutları göster',
-    up: 'Üst klasör',
-    cwd: 'Projeye dön',
-    hidden: t.showHidden ? 'Gizlileri gizle' : 'Gizlileri göster',
-    unselect: 'Seçimi kaldır',
-  }
-}
-
-// How many rows the buttons wrap to, from their labels' widths in cells.
-function buttonRows(labels: string[], width: number): number {
-  let rows = 1
-  let used = 0
-  for (const label of labels) {
-    const w = label.length + 5
-    if (used + w > width && used > 0) {
-      rows += 1
-      used = 0
-    }
-    used += w
-  }
-  return rows
-}
-
 function drawDesktop($: EngineInterface, ui: ElementTable<'desktop'>, s: Scene, room: Room) {
-  const { Box, Text, Button, Client, Svg } = ui
+  const { Box, Client, Svg } = ui
   const { t, look } = s
   const pal = paletteOf(look.isLight)
-  const w = Math.max(MIN_SVG_W, Math.min(MAX_SVG_W, room.width * PX_PER_COL - PX_PER_COL))
+  const w = Math.max(MIN_SVG_W, Math.min(MAX_SVG_W, room.width * PX_PER_COL))
   const input = heroInput(s)
   const git = gitRowOf(t)
   const hero = heroCard(heroOf(input), git, legendOf(s, git), look, w)
-  const touched = touchedCard(touchedRows(input), look, w)
-  const section = sectionLine('TÜM DOSYALAR', (t.top ? t.top : t.root).split('/').pop()?.toUpperCase() ?? '', look, w)
-  const labels = desktopLabels(t)
-  const keys = DESKTOP_ACTIONS.filter(k => k !== 'unselect' || t.selected)
+  const touchedList = touchedRows(input)
+  const touched = touchedList.length ? touchedCard(touchedList, look, w) : null
+  const section = sectionLine('TÜM DOSYALAR', (t.top ? t.top : t.root).split('/').pop()?.toLocaleUpperCase('tr') ?? '', look, w)
   const lines = (px: number) => Math.ceil(px / ROW_PX) + 1
-  const fixed = lines(hero.height) + lines(touched.height) + lines(section.height) + 3 + buttonRows(keys.map(k => labels[k]), room.width) * 2 + 2
+  const toolRows = t.showTools ? TOOLBAR_OPEN_ROWS : TOOLBAR_ROWS
+  const fixed = lines(hero.height) + (touched ? lines(touched.height) : 0) + lines(section.height) + toolRows + FOOTER_ROWS
   const ctx = rowCtx(s, room.width - 1, true)
   const win = treeWindow(s, Math.max(5, room.bodyRows - fixed), r => desktopRow(ctx, r), { thumb: pal.lineStrong, track: pal.line, note: pal.lo })
   if (t.showSize) wantSizes($, win.rows.filter(r => r.node.kind === 'dir' && !(r.node.id in t.dirSizes)).map(r => r.node.id))
-  const act = actionsOf($, t)
   const chipColor = (tone: string) => pal.roles[roleOfTone(tone)].fg
   const chip = s.latest ? activityChip(ui, s.latest, true, chipColor) : null
-  const svg = (d: { source: string; width: number; height: number; alt: string }) => <Svg source={d.source} alt={d.alt} width={d.width} height={d.height} />
+  // The full body width, so the cards end where the tree's right column does; with no width set,
+  // a narrower slot than the columns promise shrinks the drawing instead of cutting it.
+  const svg = (d: { source: string; alt: string }) => <Svg source={d.source} alt={d.alt} />
+  const find = { onInput: (v: string) => void search($, v), onSubmit: (v: string) => void jump($, v) }
   return (
     <Box flexDirection="column" gap={1} minHeight={Math.max(1, room.bodyRows)}>
       {svg(hero)}
-      {searchRow($, ui, t, { clear: 'Temizle' })}
-      <Box flexDirection="row" flexWrap="wrap" gap={1}>
-        {keys.map(k => (
-          <Button key={k} variant="secondary" label={labels[k]} onPress={act[k]} />
-        ))}
-      </Box>
-      {svg(touched)}
+      {drawToolbar(ui, { t, act: actionsOf($, t), search: find })}
+      {touched ? svg(touched) : null}
       <Box flexDirection="column">
         {svg(section)}
         <Client key="rows" module="./rows.tsx" props={{ rows: win.specs, active: t.cursor, activeBg: pal.line, hoverBg: pal.inset, tones: shimmerTones(pal, look.isLight), pointer, ...(win.bar ? { bar: win.bar } : {}) } satisfies RowsProps} />
       </Box>
       <Box flexGrow={1} />
-      {footer(ui, s, chip) ?? <Text> </Text>}
+      {footer(ui, s, chip) ?? <Box height={1} />}
     </Box>
   )
 }
@@ -1378,6 +1390,14 @@ export const register: Register = (on, options) => {
   showWrites = activity.includes('writes')
   followClaude = options?.follow !== 'off'
   sizeDefault = options?.column === 'size'
+  // DESIGN.md §9: the MODZ main panel asks for a pane by key; this only opens, never closes.
+  // modz's contract is not this mod's to import, so its address stays untyped here.
+  on('state.set', { plugin: 'modz', key: 'open' } as any, async ($: EngineInterface, e: any, next: any) => {
+    const done = await next(e)
+    if (isOpenFor(e.value, HUB_PANE)) await openFromHub($)
+
+    return done
+  }).catch(($, e, next) => next(e))
   on('session.start', async ($, e, next) => {
     await $.command.register({ name: 'filetree', description: 'Dosya ağacını açar; argüman: [yol] (boşsa çalışma klasörü)' })
     const windows = (await $.env.get('OS')) === 'Windows_NT'
@@ -1400,7 +1420,8 @@ export const register: Register = (on, options) => {
       await setActivities($, cur => cur.map(a => (a.state === 'running' ? { ...a, state: 'failed', label: `${a.kind} yarıda kaldı` } : a)))
       const cwd = await cwdOf($)
       if (!t.root || t.nodes.length === 0 || (follow && t.root !== cwd)) await reset($, cwd)
-      else await showPane($, paneTitle(t.root), false)
+      else await showPane($, PANE_TITLE, false)
+      await syncHub($)
     })()
     return next(e)
   })
@@ -1425,9 +1446,7 @@ export const register: Register = (on, options) => {
     const actions = gitActions(command)
     const quiet = !actions.length && readOnly(command)
     const since = await sinceNow($, e.tool === 'Bash' && !quiet)
-    const before = actions.some(a => a.verb === 'commit') ? await get($) : null
-    const head = before?.top ? await headOf($, before.root) : ''
-    const pending: Pending | null = actions.length ? { actions, ids: await startGit($, actions), command, head } : null
+    const pending = actions.length ? await pendingOf($, { command, actions, cwd: e.agentId ? '' : cwd }) : null
     let result: Awaited<ReturnType<typeof next>>
     try {
       result = await next(e)
@@ -1450,10 +1469,11 @@ export const register: Register = (on, options) => {
       const job: Job = { actions: [], since, initRepo: actions.some(a => a.init), readOnly: quiet || result.isReadOnly === true }
       if (out.backgroundTaskId) background.set(out.backgroundTaskId, { p: pending, job, reads })
       else void (async () => {
-        const results = pending ? await outcomes($, pending, !result.isError, out.gitOperation) : []
+        const run = { ok: !result.isError, op: out.gitOperation, text: typeof result.text === 'string' ? result.text : '' }
+        const results = pending ? await outcomes($, pending, run) : []
         if (pending) await finishGit($, pending, results)
         const sha = results.find((r, i) => r.state === 'done' && pending?.actions[i]?.verb === 'commit')?.detail
-        if (sha) await noteCommit($, { sha })
+        if (sha && pending?.place.isHere) await noteCommit($, { sha })
         queuedReads.push(...reads)
         scheduleScan($, { ...job, actions: proven(pending, results) })
       })()
@@ -1479,12 +1499,14 @@ export const register: Register = (on, options) => {
 
   on('turn.start', async ($, e, next) => {
     await update($, TURN, () => ({ ...NO_TURN, isRunning: true, hasRun: true }))
+    await syncHub($)
     return next(e)
   })
 
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
     if (!e.agentId) await update($, TURN, cur => ({ ...NO_TURN, ...cur, isRunning: false }))
+    if (!e.agentId) await syncHub($)
     return result
   })
 
@@ -1531,6 +1553,7 @@ export const register: Register = (on, options) => {
       else if (cur.parent !== t.root) await patch($, () => ({ cursor: cur.parent }))
     } else if (cur && data.key === 'return') await (cur.kind !== 'dir' ? openNode($, cur) : toggle($, cur))
     else if (cur && data.key === ' ') await toggle($, cur)
+    else if (TOOL_KEYS[data.key] && !data.ctrl) actionsOf($, t)[TOOL_KEYS[data.key] as ToolKey]()
     return {}
   })
 

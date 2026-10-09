@@ -9,18 +9,21 @@ const STRIPE = `sk_live_${'4eC39HqLyjWDarjtT1zdp7dc'}`
 
 const show = (label: string, tree: unknown) => (globalThis as any).console.log(`@@TREE@@${label}@@${JSON.stringify(tree)}`)
 
-for (const theme of ['dark', 'light']) {
-  const suffix = theme === 'light' ? '-light' : ''
+// The dialog at full width, then as narrow as the desktop draws it beside an open pane (8 px a column).
+const SIZES = [{ tag: '', columns: 100 }, { tag: '-w520', columns: 65 }, { tag: '-w400', columns: 50 }]
 
-  test(`preview: a write with two keys (${theme})`, async ($, on) => {
-    const setup = { ...fresh('Vazgeç', 'desktop'), theme }
+for (const [theme, size] of ['dark', 'light'].flatMap(theme => SIZES.map(size => [theme, size] as const))) {
+  const suffix = `${size.tag}${theme === 'light' ? '-light' : ''}`
+
+  test(`preview: a write with two keys (${theme}${size.tag})`, async ($, on) => {
+    const setup = { ...fresh('Vazgeç', 'desktop'), theme, columns: size.columns }
     await start($, on, setup)
     await ($ as any).tool.call({ tool: 'Write', file_path: '/work/src/lib/supabase.ts', content: `const a = "${ANT}"\n\nconst g = '${GH}'\n` })
     show(`sg-write${suffix}`, setup.trees[0])
   })
 
-  test(`preview: a commit with a key and an env file (${theme})`, async ($, on) => {
-    const setup = { ...fresh('Vazgeç', 'desktop'), theme }
+  test(`preview: a commit with a key and an env file (${theme}${size.tag})`, async ($, on) => {
+    const setup = { ...fresh('Vazgeç', 'desktop'), theme, columns: size.columns }
     setup.git['diff --cached -U0 --no-color'] = `+++ b/src/pay.ts\n@@ -0,0 +1 @@\n+const stripe = "${STRIPE}"\n`
     setup.git['diff --cached --name-only'] = 'src/pay.ts\n.env.production\n'
     await start($, on, setup)

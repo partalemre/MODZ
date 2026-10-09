@@ -3,11 +3,12 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { apply, gitBinary, list, locate, numstat, plan, prune, slug, snapshot } from './git'
 import type { Repo, Run } from './git'
+import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { glyphOf, keepListed, markUndone, pendingOf, sortGlyphs } from './meta'
 import type { MetaMap } from './meta'
 import { clip, paneTree } from './pane'
 import { AUTO, themeFrom } from './tidemark'
-import type { CheckpointEntry, CheckpointStatus, CheckpointView } from '../types'
+import type { CheckpointEntry, CheckpointStatus, CheckpointView, HubCard } from '../types'
 
 const PANE = 'checkpoints'
 const TOGGLE = 'checkpoint'
@@ -22,6 +23,7 @@ const FAILED: CheckpointStatus = { text: 'Geri alınamadı; ayrıntı debug gün
 const viewAtom = atom({ plugin: 'checkpoint', key: 'view' } as const, EMPTY_VIEW)
 const enabledAtom = atom({ plugin: 'checkpoint', key: 'isEnabled' } as const, true)
 const metaAtom = atom({ plugin: 'checkpoint', key: 'meta' } as const, {} as MetaMap)
+const HUB = { plugin: 'checkpoint', key: 'hub' } as const
 const themeAtom = atom({ plugin: 'checkpoint', key: 'theme' } as const, AUTO)
 
 // Armed by each prompt; the first write after it takes the snapshot, later writes wait for it.
@@ -35,13 +37,33 @@ function runnerOf($: EngineInterface): Run {
   return (argv, init) => $.process.run(argv, { timeoutMs: GIT_TIMEOUT_MS, ...init })
 }
 
-async function repoOf($: EngineInterface): Promise<Repo | null> {
+async function repoOf($: EngineInterface, isProbeOnly = false): Promise<Repo | null> {
   const home = (await $.env.get('HOME')) ?? ''
   const cwd = await $.session.cwd()
   turn.bin ??= await gitBinary(runnerOf($), cwd)
   if (turn.bin === null) return null
 
-  return locate(runnerOf($), { cwd, home, bin: turn.bin })
+  return locate(runnerOf($), { cwd, home, bin: turn.bin, isProbeOnly })
+}
+
+// The main panel's card (DESIGN.md §9), written only when what it shows changes so the panel does not redraw for nothing.
+async function writeHub($: EngineInterface, entries: CheckpointEntry[]): Promise<void> {
+  const now = await $.clock.now()
+  const shown = hubOf(entries, now)
+  const { value } = await $.state.get(HUB)
+  if (value !== undefined && value.detail === shown.detail && value.tone === shown.tone) return
+  const card: HubCard = { pane: HUB_PANE, ...shown, at: now }
+  await $.state.set(HUB, card)
+}
+
+// The main panel's card at session start: the checkpoints already there, read without making a shadow repo.
+async function greetHub($: EngineInterface): Promise<void> {
+  try {
+    const repo = await repoOf($, true)
+    await writeHub($, repo === null ? [] : await list(runnerOf($), repo))
+  } catch (error) {
+    $.ui.log(`checkpoint: could not count checkpoints (${error instanceof Error ? error.message : 'unknown'})`, { to: 'debug' })
+  }
 }
 
 async function refName($: EngineInterface): Promise<string> {
@@ -73,6 +95,7 @@ async function take($: EngineInterface, label: string): Promise<void> {
     const number = turn.number
     await saveMeta($, meta => ({ ...keepListed(meta, entries), [full]: { turn: number } }))
     await setView($, { entries })
+    await writeHub($, entries)
   } catch (error) {
     $.ui.log(`checkpoint: snapshot failed (${error instanceof Error ? error.message : 'unknown'})`, { to: 'debug' })
   }
@@ -115,6 +138,7 @@ async function restore($: EngineInterface, entry: CheckpointEntry): Promise<Chec
   const safetyRef = `refs/checkpoints/${safety}`
   await saveMeta($, meta => keepListed(markUndone(meta, { entries, target: entry, safetyRef }), entries))
   await setView($, { entries })
+  await writeHub($, entries)
   const number = (await read($, metaAtom))[entry.ref]?.turn
   const where = number === undefined ? `"${clip(entry.label)}" öncesine` : `tur ${number} öncesine`
 
@@ -143,14 +167,17 @@ async function toggle($: EngineInterface, arg: string): Promise<void> {
   $.ui.toast(`checkpoint ${isOn ? 'açık' : 'kapalı'}`)
 }
 
-async function openPane($: EngineInterface): Promise<void> {
+// `isFocused` for the main panel's request: an open pane comes forward instead of staying behind.
+async function openPane($: EngineInterface, isFocused = false): Promise<void> {
   try {
     const repo = await repoOf($)
-    await setView($, { entries: repo === null ? [] : await list(runnerOf($), repo), status: null, pending: null })
+    const entries = repo === null ? [] : await list(runnerOf($), repo)
+    await setView($, { entries, status: null, pending: null })
+    await writeHub($, entries)
   } catch {
     $.ui.log('checkpoint: could not list checkpoints', { to: 'debug' })
   }
-  await $.ui.open({ id: PANE, title: 'Kontrol noktaları' })
+  await $.ui.open({ id: PANE, title: 'Kontrol noktaları', ...(isFocused ? { focus: true } : {}) })
 }
 
 type On = Parameters<Register>[0]
@@ -170,8 +197,10 @@ function hookCommands(on: On): void {
     } catch {
       $.ui.log('checkpoint: could not load settings', { to: 'debug' })
     }
+    const done = await next(e)
+    await greetHub($)
 
-    return next(e)
+    return done
   })
 
   on('command.run', { command: TOGGLE }, async ($, e) => (await toggle($, e.args.trim().toLowerCase()), {}))
@@ -222,6 +251,14 @@ function hookTurns(on: On): void {
 export const register: Register = on => {
   hookCommands(on)
   hookTurns(on)
+
+  // The main panel's open request: opens only, so a pane already open comes forward instead of closing.
+  on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
+    const done = await next(e)
+    if (isOpenFor(e.value, HUB_PANE)) await openPane($, true)
+
+    return done
+  }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const actions = {

@@ -14,6 +14,8 @@ const HEAD_H = 58
 const TILE = 38
 const TEXT_X = 52
 const CARD_CHROME_COLUMNS = 8
+// Below this the "/replay" hint would push the buttons into two lines; the buttons win.
+const HINT_MIN_COLUMNS = 64
 
 export function offerFacts(steps: ReplayStep[]): { title: string; files: string } {
   const names = [...new Set(steps.map(step => baseName(step.file)))]
@@ -42,13 +44,13 @@ export function offerSvg(model: OfferModel, width: number): string {
   return svgDoc({ width, height: HEAD_H, theme: model.theme }, body.join(''))
 }
 
-function actions(ui: Ui, on: OfferHandlers) {
+function actions(ui: Ui, on: OfferHandlers, hasHint: boolean) {
   const { Box, Text, Button } = ui
 
   return (
     <Box key="rt-actions" flexDirection="row" columnGap={2} alignItems="center">
-      <Button key="rt-open" variant="primary" hotkey="r" label="Düzenlemeleri izle" onPress={on.onOpen} />
-      <Text dimColor>ya da /replay yaz</Text>
+      <Button key="rt-open" variant="secondary" hotkey="r" label="Düzenlemeleri izle" onPress={on.onOpen} />
+      {hasHint && <Text dimColor>ya da /replay yaz</Text>}
       <Box flexGrow={1} />
       <Button key="rt-dismiss" plain label="Şimdi değil" onPress={on.onDismiss} />
     </Box>
@@ -69,7 +71,7 @@ function desktopCard(ui: Ui, model: OfferModel, on: OfferHandlers) {
           <Text dimColor>{model.quote}</Text>
         </Text>
       )}
-      {actions(ui, on)}
+      {actions(ui, on, model.columns >= HINT_MIN_COLUMNS)}
     </Box>
   )
 }
@@ -87,7 +89,7 @@ function terminalCard(ui: Ui, model: OfferModel, on: OfferHandlers) {
           <Text dimColor wrap="truncate-end">{facts.files}</Text>
         </Box>
       </Box>
-      {actions(ui, on)}
+      {actions(ui, on, model.columns >= HINT_MIN_COLUMNS)}
     </Box>
   )
 }

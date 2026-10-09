@@ -3,6 +3,8 @@ import type { EngineInterface, Register, RenderSurface, Timer } from 'claude-cod
 
 import { PROBED_TEXTS, detect, goModuleOf, isSource } from './detect'
 import type { RootInfo } from './detect'
+import { HUB_PANE, hubOf, isOpenFor } from './hub'
+import { DEBOUNCE_MS, DISMISS_AFTER_MS, EMPTY, NICE, OPEN_TIMEOUT_MS, PRIORITY, REFRESH_MS, TIMEOUT_MS, TIMEOUT_SLACK_MS, VENDOR_TOOLS, WRITE_TOOLS } from './limits'
 import { openCandidates, pathOf, placeOf } from './open'
 import { badgeText, isFailing, parseLint, parseTests } from './parse'
 import type { ParseContext } from './text'
@@ -10,28 +12,18 @@ import { bandTree } from './band'
 import { isLive } from './notice'
 import { AUTO, themeFrom } from './tidemark'
 import { paneTree } from './view'
-import type { CheckOutcome, Failure, SuiteFilter, TestBadge } from '../types'
+import type { CheckOutcome, Failure, HubCard, SuiteFilter, TestBadge } from '../types'
 
 const COMMAND = 'test-badge'
 const PANE = 'test-badge'
 const STORE_KEY = 'test-badge.enabled'
-const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit'])
-const DEBOUNCE_MS = 5_000
-const TIMEOUT_MS = 120_000
-const TIMEOUT_SLACK_MS = 1_000
-const REFRESH_MS = 15_000
-const DISMISS_AFTER_MS = 20_000
-const PRIORITY = 1
-const NICE = ['nice', '-n', '10']
-const OPEN_TIMEOUT_MS = 10_000
-const VENDOR_TOOLS = ['phpunit', 'phpstan']
-const EMPTY: TestBadge = { tests: null, lint: null, root: null, finishedAt: null, durationMs: 0, isRunning: false }
 
 const badgeAtom = atom({ plugin: 'test-badge', key: 'badge' } as const, EMPTY)
 const noticeAtom = atom({ plugin: 'test-badge', key: 'notice' } as const, null)
 const enabledAtom = atom({ plugin: 'test-badge', key: 'isEnabled' } as const, true)
 const filterAtom = atom({ plugin: 'test-badge', key: 'filter' } as const, 'all' as SuiteFilter)
 const themeAtom = atom({ plugin: 'test-badge', key: 'theme' } as const, AUTO)
+const hubRef = { plugin: 'test-badge', key: 'hub' } as const
 // The shared notice line: every one of these outranks this mod's line (session-budget ties at 1 and wins).
 const cacheTaxNotice = { plugin: 'cache-tax', key: 'notice' } as const
 const knowNotice = { plugin: 'you-should-know', key: 'notice' } as const
@@ -65,9 +57,11 @@ async function check($: EngineInterface, argv: string[], how: { parse: Parse; ct
   }
 }
 
+// The status line is drawn as a warning (⚠), so it holds a failure only; a green run lives in the band and the MODZ hub.
 async function showStatus($: EngineInterface): Promise<void> {
-  const isOn = await read($, enabledAtom)
-  $.ui.status(isOn ? badgeText(await read($, badgeAtom), await $.clock.now()) : undefined)
+  const badge = await read($, badgeAtom)
+  const isShown = (await read($, enabledAtom)) && isFailing(badge)
+  $.ui.status(isShown ? badgeText(badge, await $.clock.now()) : undefined)
 }
 
 async function notify($: EngineInterface, badge: TestBadge): Promise<void> {
@@ -93,13 +87,14 @@ async function runChecks($: EngineInterface, overrides: Overrides): Promise<void
   }
   const ctx: ParseContext = { root, goModule: goModuleOf(info) }
   const started = await $.clock.now()
-  await update($, badgeAtom, badge => ({ ...badge, isRunning: true }))
+  await writeHub($, await update($, badgeAtom, badge => ({ ...badge, isRunning: true })))
   await showStatus($)
   const tests = commands.test === null ? null : await check($, commands.test, { parse: parseTests, ctx })
   const lint = commands.lint === null ? null : await check($, commands.lint, { parse: parseLint, ctx })
   const finishedAt = await $.clock.now()
   const badge: TestBadge = { tests, lint, root, finishedAt, durationMs: finishedAt - started, isRunning: false }
   await update($, badgeAtom, () => badge)
+  await writeHub($, badge)
   await update($, filterAtom, () => 'all')
   await showStatus($)
   await notify($, badge)
@@ -117,7 +112,7 @@ async function runAll($: EngineInterface, overrides: Overrides): Promise<void> {
     await runChecks($, overrides)
   } catch (error) {
     $.ui.log(`test-badge: run failed (${error instanceof Error ? error.message : 'unknown'})`, { to: 'debug' })
-    await update($, badgeAtom, badge => ({ ...badge, isRunning: false }))
+    await writeHub($, await update($, badgeAtom, badge => ({ ...badge, isRunning: false })))
   } finally {
     flags.isRunning = false
   }
@@ -157,8 +152,18 @@ async function openFailure($: EngineInterface, failure: Failure, where: { root: 
   $.ui.toast(copied.isCopied ? `Açılamadı, kopyalandı: ${place}` : `Açılamadı: ${place}`)
 }
 
+// The same pane whoever asks (Ayrıntı, /test-badge details, the MODZ main panel); an open one comes forward.
 async function openPane($: EngineInterface): Promise<void> {
-  await $.ui.open({ id: PANE, title: 'Testler' })
+  await $.ui.open({ id: PANE, title: 'Testler', focus: true })
+}
+
+// The MODZ main panel's card, written only when what it shows changes.
+async function writeHub($: EngineInterface, badge: TestBadge): Promise<void> {
+  const shown = hubOf(badge)
+  const { value } = await $.state.get(hubRef)
+  if (value !== undefined && value.detail === shown.detail && value.tone === shown.tone) return
+  const card: HubCard = { pane: HUB_PANE, ...shown, at: await $.clock.now() }
+  await $.state.set(hubRef, card)
 }
 
 async function runCommand($: EngineInterface, arg: string, overrides: Overrides): Promise<string> {
@@ -190,6 +195,7 @@ function hookRuns(on: On, overrides: Overrides): void {
       await update($, enabledAtom, () => saved !== false)
       const pinned = await $.env.get('MODZ_THEME').catch(() => undefined)
       await update($, themeAtom, () => themeFrom(pinned))
+      await writeHub($, await read($, badgeAtom))
       await $.command.register({ name: COMMAND, description: 'Düzenlemeden sonra arka planda test/lint: aç/kapa; run şimdi çalıştırır, details ayrıntıları açar', argumentHint: '[on|off|run|details]' })
       $.clock.every(REFRESH_MS, () => {
         void read($, badgeAtom).then(badge => (badge.finishedAt === null ? undefined : showStatus($)))
@@ -220,6 +226,16 @@ function hookRuns(on: On, overrides: Overrides): void {
 
     return next(e)
   })
+}
+
+// The main panel's open request opens the details pane, or brings it forward; it never closes it.
+function hookHub(on: On): void {
+  on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
+    const done = await next(e)
+    if (isOpenFor(e.value, HUB_PANE)) await openPane($)
+
+    return done
+  }).catch(($, e, next) => next(e))
 }
 
 // The band shows a finished run's notice, or the running pill; both give way to louder notices.
@@ -272,5 +288,6 @@ export const register: Register = (on, options) => {
     test: String(options.testCommand ?? ''), lint: String(options.lintCommand ?? ''), open: String(options.openCommand ?? ''),
   }
   hookRuns(on, overrides)
+  hookHub(on)
   hookDrawing(on, overrides)
 }

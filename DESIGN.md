@@ -11,7 +11,8 @@ Hedef: videodaki kalite, ama kopya değil — özgün çizim, aynı zenginlik.
 2. **Dürüst sayı.** Ölçülemeyen değer gösterilmez ("—"); tahmin `~` ile işaretlenir ve dayanağı yoksa çizilmez.
    Bayat veri text.lo + "· 3 dk önce".
 3. **Sıfır token varsayılan.** `$.model` yalnızca özelliğin özü gerektiriyorsa (reflect), en ucuz model, olay başına ≤1.
-4. **Sakin davranış.** Kendiliğinden panel açma yok, odak çalma yok, bildirim kendini kapatır.
+4. **Sakin davranış.** Kendiliğinden açılan tek panel MODZ ana panelidir (§9); başka hiçbir mod paneli kendi açılmaz,
+   odak çalmaz, rutin olay için toast atmaz. Komutu kullanıcı adına çalıştırmak (`$.command.run`) yasak: transkripte balon düşer.
 5. **Türkçe arayüz.** Kısa, cümle düzeni; komut adları İngilizce. Büyük harf etiketlerde `toLocaleUpperCase('tr')`.
 
 ## 2. Renk (hex, iki tema)
@@ -111,3 +112,35 @@ Dosya ≤300 satır, fonksiyon ≤40 satır, ≤3 parametre, sihirli sayı yok, 
 `claude plugin validate` + `claude plugin test` yeşil. Görsel değişiklikte `bin/preview <mod>` ile PNG'ye bak:
 `tests/preview.test.tsx` her durum için `console.log('@@TREE@@<etiket>@@' + JSON.stringify(await ui.drawn()))` yazar.
 Asıl (upstream) modlarda: kaynak belirt (README "Dayandığı proje"), LICENSE'ı koru, davranışı bozma.
+
+## 9. MODZ ana paneli ve mod veri yolu
+Oturum açılınca sağda **tek** panel açık gelir: `modz` modunun "MODZ" paneli. Her özellik oradan bir tıkla açılır.
+Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kancalarıyla konuşur:
+
+- **Aç isteği:** ana panel `{ plugin: 'modz', key: 'open' }` değerine `{ pane, at }` yazar. Paneli olan mod
+  `on('state.set', { plugin: 'modz', key: 'open' }, …)` ile dinler, `next(e)`'den sonra `pane` kendi anahtarıysa
+  kendi `$.ui.open`'ını çağırır (komut değil). Kanca `.catch(($, e, next) => next(e))` taşır.
+- **Öne getirme:** sahibinin `$.ui.open`'ı "kendiliğinden" sayılır; yüzey en yeni paneli yalnızca hiçbir panel
+  klavyeyi tutmuyorsa öne alır. Bu yüzden ana panel istekten önce kendini kapatıp odaksız bir sekme olarak geri açar.
+- **Özet kartı:** her mod kendi `{ plugin: '<mod>', key: 'hub' }` değerine `HubCard` yazar; ana panel
+  `on('state.set', { key: 'hub' }, …)` ile hepsini toplar. Yalnızca gösterilen metin değişince yazılır.
+
+```ts
+type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'   // lo · Iris · Moss · Amber · Flare
+type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+```
+
+| pane | mod | panel başlığı |
+|---|---|---|
+| agents | savvy-progress | Ajanlar |
+| files | filetree | Dosyalar |
+| plan | plan-steps | Plan |
+| tests | test-badge | Testler |
+| checkpoints | checkpoint | Kontrol noktaları |
+| replay | replay-theater | Tekrar |
+| usage | hud-pro | Kullanım |
+| skins | skins | Görünüm |
+| mods | modz | Modlar |
+
+`detail` tek satır, ≤40 karakter, Türkçe, ölçülmüş gerçek ("2 ajan çalışıyor", "41/42 geçti", "3/9 adım"); bilinmiyorsa
+boş dize. Panel başlıkları tabloda yazıldığı gibidir; iki sekme aynı adı taşımaz.

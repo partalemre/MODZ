@@ -1,8 +1,17 @@
 {
   "name": "modz",
-  "version": "0.1.1",
-  "description": "/modz: MODZ pazarındaki her modu Görünüm / Koruma / Ölçüm / Akış gruplarında gösterir: sürüm, yüzeyler, kaynak ve sağlık",
+  "version": "0.2.0",
+  "description": "MODZ ana paneli: oturum açılınca sağda açılır; ajanlar, dosyalar, plan, testler, kontrol noktaları, tekrar, kullanım, görünüm ve tüm modlar tek tıkla",
   "author": {
     "name": "Partal"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "openOnStart": {
+      "type": "boolean",
+      "title": "Oturum başında aç",
+      "description": "MODZ ana paneli her oturum açıldığında sağda açık gelsin",
+      "default": true
+    }
   }
 }

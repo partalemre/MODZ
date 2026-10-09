@@ -1,103 +1,70 @@
-import { CRAB_CSS, crab } from './crabs'
+import { crab } from './crabs'
 import { fitText, textWidth, xml } from './format'
+import { meterSvg } from './meter'
 import type { JobView } from './job'
 import { percentText } from './job'
-import { ACCENT, DONE, FONT, WARN, bandCss } from './theme'
+import { FONT, MONO, paneSvg } from './theme'
 
-// The whole row is one SVG: the desktop wraps sibling elements onto new lines,
-// so title, track, percent and the crab live in one drawing; only the crew
-// count and the dismiss are Buttons beside it.
-export const BAND_H = 22
-const BAR_H = 16
-const CRAB_W = 26
-const CELL = 3
-const TITLE_X = 16
+// The desktop band as one Svg (the desktop wraps sibling elements onto new lines): title, status
+// pill, a quiet meter of one segment per task, the percent and the crab. Its height and baseline
+// match hud-pro's line beneath, so the two rows read as one block. As the row narrows the meter
+// gives way first, then the title; the pill, the percent and the crab always stay whole.
+export const BAND_H = 26
+const BASELINE = 17.5
+const TITLE_X = 11
 const TITLE_SIZE = 13
-const PILL_SIZE = 11
-const PILL_PAD = 18
-const PERCENT_SLOT = 46
-const MIN_BAR = 60
-const TITLE_SHARE = 0.4
-const FAINT = 0.2
-const CRAB_SCALE = 0.8
+const TITLE_MIN = 64
+// Semibold runs a little wider than the regular advance textWidth measures.
+const BOLD = 1.06
+const GAP = 8
+const PILL = { y: 3, h: 20, padX: 9, size: 11 } as const
+const METER = { h: 6, min: 36, max: 360 } as const
+const PERCENT_SIZE = 12.5
+const MONO_EM = 0.6
+const CRAB = { w: 24, y: 2, scale: 0.8 } as const
 
-// Deterministic noise so the dither does not shimmer between redraws.
-const noise = (x: number, y: number): number => {
-  const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453
-  return s - Math.floor(s)
+type Role = 'run' | 'ok' | 'warn' | 'danger'
+export type BandDrawing = { source: string; width: number }
+
+const pillRole = (view: JobView): Role => {
+  if (!view.isFinished) return 'run'
+  return view.failed ? 'warn' : 'ok'
 }
 
-const cell = (c: number, r: number, size: number, group: number): string =>
-  `<rect class="t${group}" x="${c * CELL + 1}" y="${r * CELL + 1}" width="${size}" height="${size}"/>`
+const pillSvg = (label: string, role: Role, x: number, w: number): string =>
+  `<rect class="b-${role} l-${role}" x="${x + 0.5}" y="${PILL.y + 0.5}" width="${w - 1}" height="${PILL.h - 1}" rx="${(PILL.h - 1) / 2}" stroke-width="1"/>
+<text class="f-${role}" x="${x + w / 2}" y="${BASELINE - 0.5}" text-anchor="middle" font-family="${FONT}" font-size="${PILL.size}" font-weight="600">${xml(label)}</text>`
 
-// Done: sparse at the start, dense toward the head.
-const doneCells = (fillW: number): string[] => {
-  const cols = Math.floor(fillW / CELL)
-  const rows = Math.floor(BAR_H / CELL)
-  const out: string[] = []
-  for (let c = 0; c < cols; c++) {
-    const density = 0.35 + 0.6 * Math.pow(c / Math.max(1, cols), 1.2)
-    for (let r = 0; r < rows; r++) if (noise(c, r) < density) out.push(cell(c, r, 2, Math.floor(noise(r, c) * 4)))
-  }
-  return out
+type Plan = { title: string; titleW: number; meterW: number; pillW: number; pctW: number }
+
+// The meter shrinks to its minimum before the title gives up a pixel; below that the meter goes.
+const planOf = (view: JobView, maxW: number): Plan => {
+  const pillW = Math.ceil(textWidth(view.label, PILL.size) * BOLD + PILL.padX * 2)
+  const pctW = Math.ceil(percentText(view).length * PERCENT_SIZE * MONO_EM)
+  const avail = maxW - TITLE_X - pillW - pctW - CRAB.w - GAP * 4
+  const natural = Math.ceil(textWidth(view.title, TITLE_SIZE) * BOLD)
+  if (avail - natural >= METER.min) return { title: view.title, titleW: natural, meterW: Math.min(METER.max, avail - natural), pillW, pctW }
+  const titleW = Math.max(TITLE_MIN, avail - METER.min)
+  const meterW = avail - titleW
+  const fits = meterW >= METER.min
+  const room = fits ? titleW : Math.max(TITLE_MIN, avail + GAP)
+  const title = fitText(view.title, TITLE_SIZE * BOLD, room)
+  return { title, titleW: Math.min(room, Math.ceil(textWidth(title, TITLE_SIZE) * BOLD)), meterW: fits ? meterW : 0, pillW, pctW }
 }
 
-// Handed out, not yet done: a faint second layer.
-const faintCells = (fillW: number, runW: number): string[] => {
-  const rows = Math.floor(BAR_H / CELL)
-  const out: string[] = []
-  for (let c = Math.floor(fillW / CELL); c < Math.floor(runW / CELL); c++) {
-    for (let r = 0; r < rows; r++) if (noise(c + 7, r + 3) < FAINT) out.push(cell(c, r, 1.7, Math.floor(noise(r + 5, c) * 4)))
-  }
-  return out
-}
-
-const ticks = (units: number, barW: number, fillW: number): string[] => {
-  const out: string[] = []
-  for (let i = 1; i < units; i++) {
-    const x = Math.round((barW * i) / units)
-    if (x > fillW + 4) out.push(`<rect x="${x}" y="${BAR_H / 2 - 4}" width="1.5" height="8" rx="0.75"/>`)
-  }
-  return out
-}
-
-const colorOfView = (view: JobView): string => {
-  if (!view.isFinished) return ACCENT
-  return view.failed ? WARN : DONE
-}
-
-type Track = { barW: number; fillW: number; color: string }
-
-const trackSvg = (view: JobView, track: Track): string => {
-  const { barW, fillW, color } = track
-  const runW = Math.max(fillW, Math.round(barW * view.launched))
-  const pillW = Math.round(PILL_PAD + textWidth(view.label, PILL_SIZE))
-  const pillX = Math.max(0, Math.min(barW - pillW, fillW - pillW))
-  return `<defs><clipPath id="c"><rect x="0" y="0" width="${barW}" height="${BAR_H}" rx="${BAR_H / 2}"/></clipPath></defs>
-<rect class="k" width="${barW}" height="${BAR_H}" rx="${BAR_H / 2}"/>
-<g clip-path="url(#c)">
-<g fill="${color}">${doneCells(fillW).join('')}</g>
-<g fill="${color}" opacity="0.45">${faintCells(fillW, runW).join('')}</g>
-<g class="tk">${ticks(view.units, barW, fillW).join('')}</g>
-</g>
-<rect x="${pillX}" width="${pillW}" height="${BAR_H}" rx="${BAR_H / 2}" fill="${color}"/>
-<text x="${pillX + pillW / 2}" y="${BAR_H / 2 + 4}" text-anchor="middle" font-family="${FONT}" font-size="${PILL_SIZE}" font-weight="600" fill="#ffffff">${xml(view.label)}</text>`
-}
-
-export const bandSvg = (view: JobView, W: number): string => {
-  // The title takes what it needs, up to 40% of the row; the track takes the rest.
-  const title = fitText(view.title, TITLE_SIZE, Math.max(MIN_BAR, W * TITLE_SHARE))
-  const barX = Math.round(TITLE_X + textWidth(title, TITLE_SIZE) + 12)
-  const barW = Math.max(MIN_BAR, W - barX - PERCENT_SLOT - CRAB_W)
-  const color = colorOfView(view)
-  const fillW = Math.round(barW * (view.ratio ?? 0))
-  const crabSvg = crab(W - CRAB_W + 1, 0, { costume: 'other', isWalking: view.isWorking, scale: CRAB_SCALE })
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${BAND_H}" viewBox="0 0 ${W} ${BAND_H}">
-${bandCss(view.isFinished)}
-<circle cx="5" cy="${BAND_H / 2}" r="4" fill="${color}"/>
-<text class="t" x="${TITLE_X}" y="${BAND_H / 2 + 4.5}" font-family="${FONT}" font-size="${TITLE_SIZE}" font-weight="500">${xml(title)}</text>
-<g transform="translate(${barX},${(BAND_H - BAR_H) / 2})">${trackSvg(view, { barW, fillW, color })}</g>
-<text class="m" x="${W - CRAB_W - 6}" y="${BAND_H / 2 + 4.5}" text-anchor="end" font-family="${FONT}" font-size="12.5" font-variant-numeric="tabular-nums">${xml(percentText(view))}</text>
-${CRAB_CSS}${crabSvg}
-</svg>`
+export const bandSvg = (view: JobView, maxW: number): BandDrawing => {
+  const plan = planOf(view, maxW)
+  const pillX = TITLE_X + plan.titleW + GAP
+  const meterX = pillX + plan.pillW + GAP
+  const pctX = meterX + (plan.meterW ? plan.meterW + GAP : 0)
+  const crabX = pctX + plan.pctW + GAP
+  const width = Math.ceil(crabX + CRAB.w)
+  const body = [
+    `<text class="t" x="${TITLE_X}" y="${BASELINE}" font-family="${FONT}" font-size="${TITLE_SIZE}" font-weight="600">${xml(plan.title)}</text>`,
+    pillSvg(view.label, pillRole(view), pillX, plan.pillW),
+    plan.meterW ? meterSvg(view, { x: meterX, y: (BAND_H - METER.h) / 2, w: plan.meterW, h: METER.h }) : '',
+    `<text class="t" x="${pctX}" y="${BASELINE}" font-family="${MONO}" font-size="${PERCENT_SIZE}" font-weight="650">${xml(percentText(view))}</text>`,
+    crab(crabX, CRAB.y, { costume: 'other', isWalking: view.isWorking, scale: CRAB.scale }),
+  ]
+  return { source: paneSvg(width, BAND_H, body.join('\n')), width }
 }

@@ -9,7 +9,8 @@ const PNPM_TR = { is_rule: true, rule: 'Bu projede paket yönetimi için npm yer
 
 const buttons = async ($: Engine) => {
   const ui = await mount($)
-  const found = (await ui.findAll({ type: 'Button' })).map(b => `${b.props.variant === 'primary' ? '*' : ''}${b.props.label}`)
+  // `*` marks the recommended save: the one on the `k` key, first in the row (no button is drawn white).
+  const found = (await ui.findAll({ type: 'Button' })).map(b => `${b.props.hotkey === 'k' ? '*' : ''}${b.props.label}`)
   await ui.unmount()
   return found
 }
@@ -42,7 +43,7 @@ test('a Turkish correction: the card shows the rule, its confidence and the word
   expect(await buttons($)).toEqual(['Sadece bu proje', 'Tüm projelerin', '*Bu projeye kaydet', 'Tüm projelere kaydet', 'Yeniden yaz', 'Kaydetme'])
 })
 
-test('picking the global row moves the primary button, and saving writes the global file', async ($, on) => {
+test('picking the global row moves the recommended button, and saving writes the global file', async ($, on) => {
   const w = world(on, { verdicts: { [TR]: PNPM_TR }, files: { '/home/u/.claude/CLAUDE.md': '# Me\n' } })
   await start($)
   await say($, w, TR)

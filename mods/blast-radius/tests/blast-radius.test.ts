@@ -10,6 +10,9 @@ test('risky commands are classified, the rest pass', () => {
   expect(classify('rm -rf build')).toMatchObject({ kind: 'rm', label: 'rm -rf', targets: ['build'] })
   expect(classify('sudo -u me nice -n 5 \\rm -r "my dir"')).toMatchObject({ kind: 'rm', targets: ['my dir'] })
   expect(classify('rm file.txt')).toBeNull()
+  expect(classify('D=demo-app; rm -rf $D')).toMatchObject({ kind: 'rm', targets: ['demo-app'] })
+  expect(classify('export OUT=dist && rm -rf "${OUT}/cache"')).toMatchObject({ kind: 'rm', targets: ['dist/cache'] })
+  expect(classify('rm -rf $UNSET')).toMatchObject({ kind: 'rm', targets: ['$UNSET'] })
   expect(classify('cd app && git reset --hard')).toMatchObject({ kind: 'git-reset', dir: 'app' })
   expect(classify('(cd sub && make) > log; rm -rf out')).toMatchObject({ kind: 'rm', dir: null })
   expect(classify('pushd a && pushd b && popd && rm -rf x')).toMatchObject({ dir: 'a' })
@@ -36,7 +39,7 @@ test('the files scan groups by folder; git clean keeps only dry-run flags', () =
 
 test('the view: consequence headline, untracked banner, capped rows with an honest overflow', () => {
   const scan = parseScan(BUILD_SCAN)
-  const report = { kind: 'files' as const, summary: '', count: 9, bytes: scan.bytes, groups: scan.groups, items: [], more: 0, tracked: 0, where: null, added: 0, removed: 0, note: null }
+  const report = { kind: 'files' as const, summary: '', count: 9, bytes: scan.bytes, groups: scan.groups, items: [], more: 0, tracked: 0, where: null, added: 0, removed: 0, note: null, isEmpty: false }
   const risk = classify('rm -rf build')!
   const view = viewOf({ command: 'rm -rf build', risk, report, cwd: '/work/demo-app', isExpanded: false })
 
@@ -83,7 +86,7 @@ for (const surface of SURFACES) {
     await call
 
     expect(w.ran).toMatchObject([{ command: 'rm -rf build' }])
-    expect(w.toasts).toEqual(['Blast Radius: komut çalışıyor'])
+    expect(w.toasts).toEqual([])
   })
 
   test(`the band draws above the other rows and yields to a survey (${surface})`, async ($, on) => {
@@ -121,6 +124,29 @@ test('git reset lists the changes it drops; plain commands are never held', asyn
 
   expect(result.deny).toMatch(/discard uncommitted changes in 3 files/)
   expect(w.ran).toHaveLength(1)
+})
+
+test('a command that would change nothing runs with no card', async ($, on) => {
+  const w = world()
+  stub(on, w)
+  const result: any = await ($ as any).tool.call({ tool: 'Bash', command: 'D=missing; rm -rf $D' })
+
+  expect(result?.deny).toBeUndefined()
+  expect(w.opened).toHaveLength(0)
+  expect(w.toasts).toEqual([])
+})
+
+test('a path the shell fills in at run time is held with that reason', async ($, on) => {
+  const w = world()
+  stub(on, w)
+  const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf $UNSET' })
+  await pass(w, 0)
+  const ui = await mountPane($, 'terminal')
+  expect(JSON.stringify(await ui.drawn())).toContain('komut çalışırken belirleniyor')
+  await ui.press({ key: 'cancel' })
+  await pass(w)
+
+  expect(((await call) as any).deny).toMatch(/paths decided at run time/)
 })
 
 test('fail closed: an error while holding refuses the command', async ($, on) => {

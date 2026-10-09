@@ -114,7 +114,7 @@ function bannerOf(report: Report): Banner | null {
 }
 
 function headline(report: Report): { payload: string; tail: string } {
-  if (report.count === 0) return { payload: 'ölçülecek bir şey yok', tail: '' }
+  if (report.count === 0) return { payload: 'önceden ölçülemedi', tail: '' }
   if (report.kind === 'files') return { payload: report.bytes === null ? `${report.count} yol` : `${report.count} dosya · ${trSize(report.bytes)}`, tail: ' silinecek' }
   if (report.kind === 'changes') return { payload: `${report.count} dosyadaki değişiklik`, tail: ' silinecek' }
   if (report.kind === 'commits') return { payload: `${report.count} commit`, tail: ' düşecek' }

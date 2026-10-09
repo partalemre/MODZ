@@ -77,7 +77,7 @@ function infoOf(facts: Facts): ModInfo {
   return {
     name,
     version: text(manifest?.version) ?? text(entry.version) ?? UNKNOWN_VERSION,
-    description: problem ?? text(manifest?.description) ?? text(entry.description) ?? (manifest ? '' : UNREADABLE),
+    description: problem ?? meta?.summary ?? text(manifest?.description) ?? text(entry.description) ?? (manifest ? '' : UNREADABLE),
     group: meta?.group ?? 'Diğer',
     surfaces: meta?.surfaces ?? BOTH,
     upstream: upstreamOf(name, manifest),

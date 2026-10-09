@@ -35,6 +35,10 @@ export type ReplayPlanItem = { id: string; title: string; status: ReplayPlanStat
 
 export type ReplayView = { isOpen: boolean; inBand: boolean; theme: 'light' | 'dark' | 'auto' }
 
+// The one-line card the MODZ main panel collects from every mod (DESIGN.md §9).
+export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+
 declare module 'claude-code' {
   interface PluginState {
     'replay-theater': {
@@ -46,6 +50,7 @@ declare module 'claude-code' {
       isOffered: boolean
       view: ReplayView
       plan: ReplayPlanItem[]
+      hub: HubCard
     }
   }
 }

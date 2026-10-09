@@ -1,6 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Register } from 'claude-code'
 
+import { HUB_PANE, hubOf, isOpenFor } from './hub'
+import type { HubShown } from './hub'
 import { resolvePlan } from './match'
 import type { Plan } from './match'
 import { planPane } from './pane'
@@ -8,7 +10,7 @@ import { baseName } from './parse'
 import { addAgent, addFile, currentIndex, observe, progressOf, settleAgents } from './progress'
 import { approvedDoc, fileDoc, isReplacing, mayHoldPlan, statusText } from './plan'
 import { createdId, createTask, fromTodos, updateTask } from './tasks'
-import type { PlanDoc, PlanTask, StepTrack } from '../types'
+import type { HubCard, PlanDoc, PlanTask, StepTrack } from '../types'
 import { themeOf } from './ui/theme'
 import type { Theme } from './ui/theme'
 
@@ -25,6 +27,7 @@ const tasksAtom = atom({ plugin: 'plan-steps', key: 'tasks' } as const, [])
 const docAtom = atom({ plugin: 'plan-steps', key: 'doc' } as const, null)
 const tracksAtom = atom({ plugin: 'plan-steps', key: 'tracks' } as const, {})
 const tickAtom = atom({ plugin: 'plan-steps', key: 'tick' } as const, 0)
+const hubRef = { plugin: 'plan-steps', key: 'hub' } as const
 
 // Session-local facts no drawing reads. `isSettled`: a finished plan's status line was cleared.
 const flags = { cwd: '', isSettled: false, ticker: null as { cancel: () => void } | null, theme: 'auto' as Theme }
@@ -44,6 +47,14 @@ async function currentPlan($: EngineInterface): Promise<Plan | null> {
   return resolvePlan(await read($, tasksAtom), await read($, docAtom))
 }
 
+// The MODZ main panel's card (DESIGN.md §9), written only when what it shows changes.
+async function writeHub($: EngineInterface, shown: HubShown): Promise<void> {
+  const { value } = await $.state.get(hubRef)
+  if (value !== undefined && value.detail === shown.detail && value.tone === shown.tone) return
+  const card: HubCard = { pane: HUB_PANE, ...shown, at: await $.clock.now() }
+  await $.state.set(hubRef, card)
+}
+
 // Re-reads the plan, stamps status changes with the time, and refreshes the status line.
 async function sync($: EngineInterface): Promise<void> {
   const plan = await currentPlan($)
@@ -52,6 +63,7 @@ async function sync($: EngineInterface): Promise<void> {
   const progress = plan === null ? null : progressOf(plan)
   if (progress === null || progress.done < progress.total) flags.isSettled = false
   $.ui.status(flags.isSettled ? undefined : statusText(plan, tracks))
+  await writeHub($, hubOf(progress))
 }
 
 async function setTasks($: EngineInterface, change: (tasks: PlanTask[]) => PlanTask[]): Promise<void> {
@@ -141,6 +153,14 @@ async function reset($: EngineInterface): Promise<void> {
   await update($, tracksAtom, () => ({}))
   flags.isSettled = false
   $.ui.status(undefined)
+  await writeHub($, hubOf(null))
+}
+
+// The same pane whoever asks: /steps or the MODZ main panel; an open pane comes forward.
+async function openPane($: EngineInterface): Promise<void> {
+  await refreshTheme($)
+  await $.ui.open({ id: PANE, title: PANE_TITLE, focus: true })
+  startTicker($)
 }
 
 function startTicker($: EngineInterface): void {
@@ -152,11 +172,13 @@ function stopTicker(): void {
   flags.ticker = null
 }
 
-// The session's edges and the pane: /steps opens it, nothing else does.
+// The session's edges and the pane: /steps or the MODZ main panel opens it, nothing else does.
 function lifecycle(on: On): void {
   on('session.start', async ($, e, next) => {
     flags.cwd = e.cwd.replace(/\/$/, '')
     await refreshTheme($)
+    const plan = await currentPlan($)
+    await writeHub($, hubOf(plan === null ? null : progressOf(plan)))
     try {
       await $.command.register({ name: 'steps', description: 'Plandaki adımları ve işin nerede olduğunu gösteren paneli aç' })
     } catch {
@@ -173,12 +195,18 @@ function lifecycle(on: On): void {
   }).catch(($, e, next) => next(e))
 
   on('command.run', { command: 'steps' }, async $ => {
-    await refreshTheme($)
-    await $.ui.open({ id: PANE, title: PANE_TITLE })
-    startTicker($)
+    await openPane($)
 
     return {}
   })
+
+  // The MODZ main panel asks by pane key; this only opens, so a pane already open just comes forward.
+  on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
+    const done = await next(e)
+    if (isOpenFor(e.value, HUB_PANE)) await openPane($)
+
+    return done
+  }).catch(($, e, next) => next(e))
 
   on('ui.close', { id: PANE }, ($, e, next) => {
     stopTicker()

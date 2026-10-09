@@ -1,4 +1,4 @@
-import { ago, changedText, headerMeta, questionOf, statusRow, titleOf } from './pane'
+import { EMPTY_TEXT, ago, changedText, headerMeta, questionOf, statusRow, titleOf } from './pane'
 import type { PaneOpts, Ui } from './pane'
 import { upper } from './svg'
 import type { CheckpointView, PendingUndo } from '../types'
@@ -29,7 +29,7 @@ function confirmText(ui: Ui, pending: PendingUndo, opts: PaneOpts) {
       ))}
       {more > 0 && <Text dimColor>{`+${more} daha`}</Text>}
       <Box flexDirection="row" columnGap={1} marginTop={1}>
-        <Button key="cp-confirm" variant="primary" hotkey="g" label="Geri al" onPress={opts.actions.onConfirm} />
+        <Button key="cp-confirm" variant="secondary" hotkey="g" label="Geri al" onPress={opts.actions.onConfirm} />
         <Button key="cp-cancel" variant="secondary" hotkey="v" label="Vazgeç" onPress={opts.actions.onCancel} />
       </Box>
     </Box>
@@ -73,7 +73,7 @@ export function textPane(ui: Ui, view: CheckpointView, opts: PaneOpts) {
       <Text> </Text>
       {statusRow(ui, view, opts.actions)}
       {view.pending !== null && confirmText(ui, view.pending, opts)}
-      {view.pending === null && view.entries.length === 0 && <Text dimColor>Henüz kontrol noktası yok. Her turun ilk dosya yazımından önce bir tane alınır.</Text>}
+      {view.pending === null && view.entries.length === 0 && <Text dimColor>{EMPTY_TEXT}</Text>}
       {view.pending === null && view.entries.map((_, index) => rowText(ui, view, { index, opts }))}
     </Box>
   )

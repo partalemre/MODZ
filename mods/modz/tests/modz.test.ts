@@ -59,6 +59,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await $.command.run({ command: 'modz', args: '' })
 
     const ui = await $.ui.mount({ ...PANE, surface })
+    await ui.press({ key: 'open-mods' })
     const said = async (text: RegExp) => {
       if ((await ui.find({ type: 'Text', text })) !== undefined) return true
       const svgs = await ui.findAll({ type: 'Svg' })
@@ -93,6 +94,7 @@ test('with no settings flag, a ~/.claude/skills link turns a mod on in the pane 
   await $.command.run({ command: 'modz', args: '' })
 
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await ui.press({ key: 'open-mods' })
 
   expect(await ui.find({ type: 'Text', text: /3 mod · hepsi açık · 2 bilinmiyor/ })).toBeDefined()
 })

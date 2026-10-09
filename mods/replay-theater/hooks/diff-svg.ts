@@ -13,6 +13,9 @@ const CODE_X = 28
 const LEGEND_GAP = 18
 const SWATCH = 11
 const TAB = '  '
+const CODE_PAD_RIGHT = 12
+// Past this a line is cut after all: a drawing must stay under the Svg size cap.
+const LINE_CHARS_MAX = 400
 
 const TINT: Record<string, string> = { '-': 'var(--danger-t)', '+': 'var(--ok-t)' }
 const WORD: Record<string, string> = { '-': 'var(--danger-l)', '+': 'var(--ok-l)' }
@@ -20,6 +23,7 @@ const SIGN: Record<string, string> = { '-': '−', '+': '+' }
 const SIGN_CLS: Record<string, string> = { '-': 'f-danger', '+': 'f-ok' }
 
 export type DiffModel = { lines: ReplayDiffLine[]; width: number; theme: Theme }
+export type DiffDrawing = { source: string; height: number; hidden: number; contentWidth: number }
 
 function clipLine(text: string, maxChars: number): { shown: string; isCut: boolean } {
   const plain = text.replace(/\t/g, TAB)
@@ -79,21 +83,26 @@ function legend(width: number, top: number): { svg: string; height: number } {
   return { svg: parts.join(''), height: y - top + SWATCH }
 }
 
-// The diff as one drawing: tinted rows, the changed words on a stronger tint, then the legend.
-export function diffSvg(model: DiffModel): { source: string; height: number; hidden: number } {
+const charsOf = (line: ReplayDiffLine): number => (line.op === '~' ? 0 : line.t.replace(/\t/g, TAB).length)
+
+// The diff as one drawing: tinted rows, the changed words on a stronger tint, then the legend. A line longer
+// than the pane widens the drawing to `contentWidth` instead of being cut; the pane scrolls it sideways.
+export function diffSvg(model: DiffModel): DiffDrawing {
   const shown = model.lines.slice(0, MAX_DIFF_LINES)
   const hidden = model.lines.length - shown.length
   const extra = hidden > 0 || shown.length === 0 ? 1 : 0
   const boxH = PAD_Y * 2 + (shown.length + extra) * ROW_H
-  const inner = { width: model.width, maxChars: Math.floor((model.width - CODE_X - 10) / CHAR) }
+  const longest = Math.min(LINE_CHARS_MAX, Math.max(0, ...shown.map(charsOf)))
+  const contentWidth = Math.max(model.width, Math.ceil(CODE_X + longest * CHAR + CODE_PAD_RIGHT))
+  const inner = { width: contentWidth, maxChars: Math.floor((contentWidth - CODE_X - CODE_PAD_RIGHT) / CHAR) }
   const rows = shown.map((line, n) => diffRow(line, PAD_Y + n * ROW_H, inner))
   const tail = PAD_Y + shown.length * ROW_H + 14
   const note = shown.length === 0 ? 'Satır değişikliği yok.' : hidden > 0 ? `… ${hidden} satır daha` : ''
   const noteSvg = note === '' ? '' : `<text x="${CODE_X}" y="${tail}" class="lo" font-size="11.5">${note}</text>`
-  const box = `<rect x="0.5" y="0.5" width="${model.width - 1}" height="${boxH - 1}" rx="8" fill="var(--inset)" stroke="var(--line)"/>`
+  const box = `<rect x="0.5" y="0.5" width="${contentWidth - 1}" height="${boxH - 1}" rx="8" fill="var(--inset)" stroke="var(--line)"/>`
   const key = legend(model.width, boxH + 14)
   const height = boxH + 14 + key.height + 2
   const body = `${box}<g>${rows.join('')}</g>${noteSvg}${key.svg}`
 
-  return { source: svgDoc({ width: model.width, height, theme: model.theme }, body), height, hidden }
+  return { source: svgDoc({ width: contentWidth, height, theme: model.theme }, body), height, hidden, contentWidth }
 }

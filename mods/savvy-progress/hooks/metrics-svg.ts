@@ -1,19 +1,18 @@
 import type { AgentRun } from '../types'
 import type { Progress } from './estimate'
 import { textWidth, xml } from './format'
-import { DONE, FAIL, FONT, paneSvg } from './theme'
+import { FONT, MONO, paneSvg } from './theme'
 import type { Kind } from './history'
 
-// The row's small drawings: the progress bar, the metric chips and the work-mix strip. Each keeps
-// one source while its numbers hold, so its motion runs on through the panel's redraw.
+// The row's small drawings: the progress bar, the metric chips and the work-mix strip.
 
-export const BAR_H = 10
+export const BAR_H = 18
 export const CHIPS_H = 22
 export const MIX_H = 8
-const TRACK_H = 6
-const MUTED = 0.55
-const SHEEN_S = 2.4
-const STRIPE_S = 1.1
+const TRACK_H = 8
+// Room the percent takes at the bar's end: "~%100" in 13px mono, and the gap before it.
+const PCT_W = 46
+const PCT_SIZE = 13
 const STRIPE = 8
 const CHIP_GAP = 6
 const CHIP_PAD = 9
@@ -25,38 +24,26 @@ const MIX_GAP = 2
 
 export const KIND_COLOR: Record<Kind, string> = { read: '#6aa6e6', edit: '#e58466', run: '#a48ff0', agent: '#5fbf8f', other: '#9a968c' }
 
-const sweepCss = (name: string, from: number, to: number, seconds: number): string =>
-  `<style>.${name}{animation:${name} ${seconds}s linear infinite}@keyframes ${name}{from{transform:translateX(${from}px)}to{transform:translateX(${to}px)}}@media (prefers-reduced-motion: reduce){.${name}{animation:none}}</style>`
+// An estimate wears soft still stripes, so it never reads as a measured fill.
+const stripesOf = (filled: number, y: number, uid: string): string =>
+  `<defs><pattern id="st${uid}" width="${STRIPE}" height="${STRIPE}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${STRIPE / 2}" height="${STRIPE}" fill="#fff" opacity=".28"/></pattern></defs><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" fill="url(#st${uid})"/>`
 
-type Motion = { filled: number; y: number; uid: string }
+const FILL: Record<string, string> = { running: 'f-run', done: 'f-ok', failed: 'f-danger' }
 
-const sheenOf = ({ filled, y, uid }: Motion): string => {
-  const w = Math.max(16, Math.round(filled * 0.35))
-  return `<defs><linearGradient id="sh${uid}" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".6"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>${sweepCss(`sn${uid}`, -w, filled, SHEEN_S)}<rect class="sn${uid}" x="0" y="${y}" width="${w}" height="${TRACK_H}" fill="url(#sh${uid})"/>`
-}
-
-// An estimate wears soft moving stripes, so it never reads as a measured fill.
-const stripesOf = ({ filled, y, uid }: Motion): string =>
-  `<defs><pattern id="st${uid}" width="${STRIPE}" height="${STRIPE}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${STRIPE / 2}" height="${STRIPE}" fill="#fff" opacity=".28"/></pattern></defs>${sweepCss(`sp${uid}`, -STRIPE * 2, 0, STRIPE_S)}<rect class="sp${uid}" x="0" y="${y}" width="${filled + STRIPE * 2}" height="${TRACK_H}" fill="url(#st${uid})"/>`
-
-const fillOf = (a: AgentRun, color: string): string => {
-  if (a.status === 'failed') return FAIL
-  return a.status === 'done' ? DONE : color
-}
-
-export const progressBarSvg = (W: number, a: AgentRun, opts: { progress: Progress; color: string }): string => {
+// Still, one colour per state (Iris running, Moss done, Flare failed): the crab carries the tier.
+// The percent sits at the bar's end in a fixed slot, so rows of different values line up.
+export const progressBarSvg = (W: number, a: AgentRun, opts: { progress: Progress; label: string }): string => {
   const y = (BAR_H - TRACK_H) / 2
-  const filled = Math.max(TRACK_H, Math.round(W * opts.progress.value))
-  const isLive = a.status === 'running'
-  // Ids and animation names are per agent: drawings that share a page must not share defs.
+  const barW = Math.max(TRACK_H, W - PCT_W)
+  const filled = Math.max(TRACK_H, Math.round(barW * opts.progress.value))
+  // Ids are per agent: drawings that share a page must not share defs.
   const uid = a.id.replace(/\W/g, '')
-  const fill = fillOf(a, opts.color)
-  const track = `<rect class="k" x="0" y="${y}" width="${W}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`
+  const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`
-  const bar = `<rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" fill="${fill}" opacity="${isLive ? 1 : MUTED}"/>`
-  const motion = { filled, y, uid }
-  const live = opts.progress.isEstimate ? stripesOf(motion) : sheenOf(motion)
-  return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${isLive ? live : ''}</g>`)
+  const bar = `<rect class="${FILL[a.status] ?? 'f-run'}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`
+  const stripes = a.status === 'running' && opts.progress.isEstimate ? stripesOf(filled, y, uid) : ''
+  const label = `<text class="${FILL[a.status] ?? 'f-run'}" x="${W}" y="${BAR_H / 2 + PCT_SIZE * 0.34}" text-anchor="end" font-family="${MONO}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`
+  return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`)
 }
 
 export type Chip = { text: string; ring?: { ratio: number; color: string } }
@@ -72,20 +59,25 @@ const ringOf = (x: number, ring: NonNullable<Chip['ring']>): string => {
 
 const chipWidth = (chip: Chip): number => Math.ceil(textWidth(chip.text, CHIP_TEXT)) + CHIP_PAD * 2 + (chip.ring ? RING_SLOT : 0)
 
-// Rounded chips left to right; the ones that do not fit drop from the end.
-export const chipsSvg = (W: number, chips: Chip[]): string => {
+// Rounded chips left to right; one that does not fit starts the next line, so none is lost.
+export const chipsSvg = (W: number, chips: Chip[]): { source: string; height: number } => {
   let x = 0
+  let y = 0
   const parts: string[] = []
   for (const chip of chips) {
-    const w = chipWidth(chip)
-    if (x + w > W) break
+    const w = Math.min(W, chipWidth(chip))
+    if (x > 0 && x + w > W) {
+      x = 0
+      y += CHIPS_H + CHIP_GAP
+    }
     const tx = x + CHIP_PAD + (chip.ring ? RING_SLOT : 0)
-    parts.push(`<rect class="chip" x="${x}" y="0" width="${w}" height="${CHIPS_H}" rx="${CHIPS_H / 2}"/>`)
-    if (chip.ring) parts.push(ringOf(x, chip.ring))
-    parts.push(`<text class="s" x="${tx}" y="${CHIPS_H / 2 + 4}" font-family="${FONT}" font-size="${CHIP_TEXT}" font-weight="500" font-variant-numeric="tabular-nums">${xml(chip.text)}</text>`)
+    parts.push(`<rect class="chip" x="${x}" y="${y}" width="${w}" height="${CHIPS_H}" rx="${CHIPS_H / 2}"/>`)
+    if (chip.ring) parts.push(`<g transform="translate(0,${y})">${ringOf(x, chip.ring)}</g>`)
+    parts.push(`<text class="s" x="${tx}" y="${y + CHIPS_H / 2 + 4}" font-family="${FONT}" font-size="${CHIP_TEXT}" font-weight="500" font-variant-numeric="tabular-nums">${xml(chip.text)}</text>`)
     x += w + CHIP_GAP
   }
-  return paneSvg(W, CHIPS_H, parts.join(''))
+  const height = y + CHIPS_H
+  return { source: paneSvg(W, height, parts.join('')), height }
 }
 
 export type MixPart = { kind: Kind; count: number }

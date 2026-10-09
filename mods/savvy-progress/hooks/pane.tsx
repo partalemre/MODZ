@@ -7,13 +7,19 @@ import type { Totals } from './agents'
 import type { Planned } from './flow'
 import { plannedOf } from './flow'
 import { fmtCost, fmtTime, fmtTokens } from './format'
+import { headerSvg } from './header-svg'
+import type { HeaderData, Tone } from './header-svg'
 import { t } from './i18n'
-import { deriveJob } from './job'
+import { lookAt, lookOf } from './identity'
+import { deriveJob, percentText } from './job'
+import type { JobView } from './job'
 import { shareNumber, shareOf } from './limit'
-import { COMPACT_H, CRAB, HEADER_H, compactSvg, headerSvg } from './pane-svg'
-import { agentRow, plannedRow } from './rows'
+import { COMPACT_H, CARD_CRAB, compactSvg } from './pane-svg'
+import { FRAME_COLS, FRAME_PX, agentRow, plannedRow } from './rows'
 import type { RowContext, Ui } from './rows'
 import { PANE } from './state'
+import { deliveryText } from './steer'
+import type { StopNoun } from './steer'
 import { colorOf, costumeOf, keyOf, plannedTierOf, tierOf } from './tiers'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
@@ -30,9 +36,8 @@ type On = Parameters<Register>[0]
 const MIN_W = 240
 const MAX_W = 900
 const PX_PER_COL = 8
-// The open row's round frame: a cell of padding and a border on each side.
-const FRAME_PX = 2 * PX_PER_COL + 2
-const FRAME_COLS = 4
+// The open card's inner rows sit one indent in from its frame, two cells.
+const DETAIL_INDENT_PX = 16
 
 export type PaneData = {
   list: AgentRun[]
@@ -40,17 +45,21 @@ export type PaneData = {
   finished: AgentRun[]
   planned: Planned[]
   sum: Totals
-  title: string
+  view: JobView | null
   at: number
   panel: Panel
   limit: LimitTrack | null
 }
 
+// With no job of its own (none yet, or dismissed), the header describes the crew as a whole.
+const crewView = (list: AgentRun[]): JobView | null =>
+  deriveJob({ flow: null, agents: list, job: { agentIds: list.map(a => a.id), startedAt: 0, isSealed: true, isHidden: false }, tasks: [] })
+
 async function paneData($: EngineInterface): Promise<PaneData> {
   const list = await read($, agents)
   const f = await read($, flow)
   const at = Math.max(await read($, now), ...list.map(a => a.startedAt), 0)
-  const view = deriveJob({ flow: f, agents: list, job: await read($, job), tasks: await read($, tasks) })
+  const view = deriveJob({ flow: f, agents: list, job: await read($, job), tasks: await read($, tasks) }) ?? crewView(list)
   const ended = (a: AgentRun) => a.endedAt ?? a.startedAt
   return {
     list,
@@ -58,14 +67,37 @@ async function paneData($: EngineInterface): Promise<PaneData> {
     finished: list.filter(a => !isRunning(a)).sort((a, b) => ended(b) - ended(a)),
     planned: plannedOf(f, list),
     sum: totals(list, at),
-    title: view && !view.isFinished ? view.title : '',
+    view,
     at,
     panel: await read($, panel),
     limit: await read($, limit),
   }
 }
 
-type Layout = { isDesktop: boolean; width: number; W: number }
+// Talking to a running agent, and stopping it through the engine's own TaskStop tool (the normal
+// permission chain applies).
+async function sendTo($: EngineInterface, agentId: string, text: string): Promise<void> {
+  const message = text.trim()
+  if (!message) return
+  $.ui.toast(deliveryText(await $.session.send({ to: { agentId }, text: message })))
+}
+
+async function requestStop($: StopNoun, agentId: string): Promise<boolean> {
+  const ran = await $.tool.call({ tool: 'TaskStop', task_id: agentId })
+  return ran.deny === undefined
+}
+
+async function stopAgent($: EngineInterface, agentId: string): Promise<void> {
+  try {
+    const isStopped = await requestStop($ as unknown as StopNoun, agentId)
+    $.ui.toast(isStopped ? t().stopAsked : t().stopRefused)
+  } catch (error) {
+    $.ui.log(`savvy-progress: stop failed (${String(error)})`, { to: 'debug' })
+    $.ui.toast(t().stopFailed)
+  }
+}
+
+type Layout = { isDesktop: boolean; width: number; detailWidth: number; W: number }
 
 function toggles(ui: Ui, $: EngineInterface, d: PaneData) {
   const { Button } = ui
@@ -85,29 +117,71 @@ function toggles(ui: Ui, $: EngineInterface, d: PaneData) {
 }
 
 const iconsOf = (d: PaneData) => [
-  ...[...d.running, ...d.finished].map(a => ({ costume: costumeOf(a), color: colorOf(tierOf(a)), isRunning: isRunning(a), isDim: false })),
-  ...d.planned.map(p => ({ costume: plannedTierOf(p.tier), color: colorOf(p.tier), isRunning: false, isDim: true })),
+  ...[...d.running, ...d.finished].map(a => ({ costume: costumeOf(a), look: lookOf(a), color: colorOf(tierOf(a)), isRunning: isRunning(a), isDim: false })),
+  ...d.planned.map((p, i) => ({ costume: plannedTierOf(p.tier), look: lookAt(i), color: colorOf(p.tier), isRunning: false, isDim: true })),
 ]
 
 const summaryOf = (sum: Totals): string => `≈${fmtCost(sum.cost)} · ${fmtTokens(sum.tokens)} ${t().tokensWord} · ${fmtTime(sum.time)}`
 
-function headTree(ui: Ui, d: PaneData, ctx: { compact: unknown; layout: Layout }) {
-  const { Box, Text, Svg } = ui
+const toneOf = (d: PaneData): Tone => {
+  if (d.running.length) return 'run'
+  if (!d.list.length) return 'idle'
+  return d.view && d.view.failed > 0 ? 'warn' : 'ok'
+}
+
+// "2 çalışıyor · 3 bitti · 1 planlı": only the parts that are not zero.
+const countsOf = (d: PaneData): string => {
+  const s = t()
+  const ended = d.list.length - d.running.length
+  return [d.running.length && s.liveCount(d.running.length), ended && s.endedCount(ended), d.planned.length && s.plannedCount(d.planned.length)]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+function headerOf(d: PaneData): HeaderData {
   const s = t()
   const share = shareOf(d.sum.cost, d.limit)
-  const shareText = share === null ? null : shareNumber(share)
-  const counts = { running: d.running.length, total: d.list.length, share: shareText }
-  const limitPart = shareText === null ? '' : ` · ${s.limitTile} ≈${s.pct(shareText)}`
-  const totalsLine = `${s.cost} ≈${fmtCost(d.sum.cost)} · ${s.tokens} ${fmtTokens(d.sum.tokens)} · ${s.time} ${fmtTime(d.sum.time)}${limitPart}`
+  const view = d.view
+  return {
+    eyebrow: s.pane.toLocaleUpperCase('tr'),
+    counts: countsOf(d),
+    headline: view?.title || s.crew(d.list.length),
+    percent: view ? percentText(view) : '—',
+    tone: toneOf(d),
+    isLive: d.running.length > 0,
+    meter: view,
+    stats: [
+      { label: s.cost, value: `≈${fmtCost(d.sum.cost)}` },
+      { label: s.tokens, value: fmtTokens(d.sum.tokens) },
+      { label: s.time, value: fmtTime(d.sum.time) },
+      { label: s.limitTile, value: share === null ? '—' : `≈${s.pct(shareNumber(share))}` },
+    ],
+  }
+}
+
+const totalsLineOf = (data: HeaderData): string => data.stats.map(stat => `${stat.label} ${stat.value}`).join(' · ')
+
+function headTree(ui: Ui, d: PaneData, ctx: { compact: unknown; layout: Layout }) {
+  const { Box, Text, Svg } = ui
+  const data = headerOf(d)
+  const line = totalsLineOf(data)
+  if (ctx.layout.isDesktop) {
+    const head = headerSvg(ctx.layout.W, data)
+    return (
+      <Box flexDirection="column" rowGap={1}>
+        <Box flexDirection="row" justifyContent="flex-end">{ctx.compact}</Box>
+        <Svg key="head" source={head.source} alt={[data.headline, data.percent, data.counts, line].filter(Boolean).join(', ')} width={ctx.layout.W} height={head.height} />
+      </Box>
+    )
+  }
   return (
-    <Box flexDirection="column" rowGap={1}>
+    <Box flexDirection="column">
       <Box flexDirection="row" justifyContent="space-between" columnGap={2}>
-        <Text bold wrap="truncate-end">{d.title}</Text>
+        <Text wrap="truncate-end"><Text bold>{data.headline}</Text><Text bold dimColor={data.tone === 'idle'}>{`  ${data.percent}`}</Text></Text>
         {ctx.compact}
       </Box>
-      {ctx.layout.isDesktop
-        ? <Svg key="head" source={headerSvg(ctx.layout.W, d.sum, counts)} alt={[d.title, summaryOf(d.sum) + limitPart].filter(Boolean).join(': ')} width={ctx.layout.W} height={HEADER_H} />
-        : <Text dimColor>{totalsLine}</Text>}
+      {data.counts !== '' && <Text dimColor>{data.counts}</Text>}
+      <Text dimColor>{line}</Text>
     </Box>
   )
 }
@@ -141,16 +215,17 @@ function listTree(ui: Ui, $: EngineInterface, d: PaneData, layout: Layout) {
   const ctx: RowContext = {
     at: d.at,
     width: layout.width,
-    frameWidth: layout.isDesktop ? FRAME_PX : FRAME_COLS,
+    detailWidth: layout.detailWidth,
     isDesktop: layout.isDesktop,
     limit: d.limit,
     selected: d.panel.selected,
     onToggle,
+    onSend: (id, text) => void sendTo($, id, text),
+    onStop: id => void stopAgent($, id),
   }
   const section = (label: string) => <Text key={`h-${label}`} bold>{label}</Text>
   return (
     <Box flexDirection="column" rowGap={1}>
-      {d.list.length === 0 && d.planned.length === 0 && <Text dimColor>{s.empty}</Text>}
       {d.running.length > 0 && section(`${s.running} · ${d.running.length}`)}
       {d.running.map(a => agentRow(ui, a, ctx))}
       {d.finished.length > 0 && <Box key="h-done" flexDirection="row">{done}</Box>}
@@ -161,8 +236,21 @@ function listTree(ui: Ui, $: EngineInterface, d: PaneData, layout: Layout) {
   )
 }
 
+// Nothing launched yet: an eyebrow and one sentence, no empty tiles.
+function emptyTree(ui: Ui) {
+  const { Box, Text } = ui
+  const s = t()
+  return (
+    <Box flexDirection="column" rowGap={1}>
+      <Text bold color="permission">{`● ${s.emptyTitle.toLocaleUpperCase('tr')}`}</Text>
+      <Text dimColor>{s.empty}</Text>
+    </Box>
+  )
+}
+
 function paneTree(ui: Ui, $: EngineInterface, d: PaneData, layout: Layout) {
   const { Box } = ui
+  if (d.list.length === 0 && d.planned.length === 0) return emptyTree(ui)
   const { compact } = toggles(ui, $, d)
   return (
     <Box flexDirection="column" rowGap={1}>
@@ -173,9 +261,9 @@ function paneTree(ui: Ui, $: EngineInterface, d: PaneData, layout: Layout) {
 }
 
 const layoutOf = (isDesktop: boolean, columns: number): Layout => {
-  if (!isDesktop) return { isDesktop, W: 0, width: columns }
+  if (!isDesktop) return { isDesktop, W: 0, width: columns, detailWidth: columns - FRAME_COLS }
   const W = Math.max(MIN_W, Math.min(MAX_W, columns * PX_PER_COL - PX_PER_COL))
-  return { isDesktop, W, width: W - CRAB.w - PX_PER_COL }
+  return { isDesktop, W, width: W - CARD_CRAB.w - PX_PER_COL - FRAME_PX, detailWidth: W - FRAME_PX - DETAIL_INDENT_PX }
 }
 
 export function onPane(on: On): void {

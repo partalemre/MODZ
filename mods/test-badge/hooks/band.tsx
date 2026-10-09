@@ -45,11 +45,13 @@ function pillsSvg(view: BandView): { source: string; width: number } {
     body.push(drawn.svg)
     x += drawn.width + PILL_GAP
   }
-  if (parts.meta !== '') {
+  const room = svgWidth(view.columns, { reserve: BUTTONS_RESERVE, min: 160, max: 1200 })
+  // "4 sn önce" is the first thing a narrow band leaves out: whole or not at all, never cut.
+  if (parts.meta !== '' && x + measure(parts.meta, META_FONT) + 4 <= room) {
     body.push(text({ ...META_FONT, x: x + 2, y: 16, text: parts.meta, ink: 'lo' }))
     x += measure(parts.meta, META_FONT) + 4
   }
-  const width = Math.min(Math.ceil(x), svgWidth(view.columns, { reserve: BUTTONS_RESERVE, min: 160, max: 1200 }))
+  const width = Math.min(Math.ceil(x), room)
 
   return { source: svgDoc({ width, height: ROW_H, mode: view.theme.mode, body: body.join('') }), width }
 }
@@ -72,9 +74,9 @@ export function bandTree(ui: Ui, view: BandView, theirs: unknown) {
 
   return (
     <Box flexDirection="column">
-      <Box flexDirection="row" alignItems="center" columnGap={1}>
+      <Box flexDirection="row" alignItems="center" columnGap={1} flexWrap="wrap">
         {drawn === null ? pillTexts(ui, view) : <Svg source={drawn.source} alt={bandAlt(view.badge, view.now)} width={drawn.width} height={ROW_H} />}
-        {view.hasDetails && <Button key="tb-details" hotkey="t" label="Ayrıntı" onPress={view.onDetails} />}
+        {view.hasDetails && <Button key="tb-details" variant="secondary" hotkey="t" label="Ayrıntı" onPress={view.onDetails} />}
         {view.onDismiss !== undefined && <Button key="tb-dismiss" plain dimColor role="dismiss" label="✕" onPress={view.onDismiss} />}
       </Box>
       {theirs}

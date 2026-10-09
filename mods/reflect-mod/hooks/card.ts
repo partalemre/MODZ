@@ -6,7 +6,8 @@ import type { Elements, RenderElement } from 'claude-code'
 import type { JustSaved, Learning } from '../types'
 import { pathSvg, proposalSvg, savedSvg } from './card-svg'
 import { ICONS } from './icons'
-import { iconSvg } from './svg'
+import { iconSvg, measure } from './svg'
+import type { Font } from './svg'
 import { TERMINAL, palette } from './theme'
 import type { Palette } from './theme'
 
@@ -33,15 +34,21 @@ export type CardInput = {
 export type Look = { isLight: boolean; columns: number }
 type TextUi = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button'> & { Input?: Elements['terminal']['Input'] }
 
-const PX_PER_COLUMN = 6.4
-const CARD_CHROME_PX = 40
+// About 8 px a reported column; the card's border and padding take 6 of them (as in every MODZ card).
+const PX_PER_COLUMN = 8
+const CARD_CHROME = 6
 const MIN_WIDTH = 300
 const MAX_WIDTH = 720
 const ROW_ICON = 16
 const PERCENT = 100
+// A destination row's own chrome in px: border, padding, icon, two gaps, the button's padding and hotkey.
+const DEST_CHROME = 110
+const LABEL_FONT: Font = { size: 14 }
+// The path under a stacked row's label lines up with the label: past the icon and its gap.
+const DEST_INDENT = 3
 
 export const contentWidth = (columns: number): number =>
-  Math.round(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, columns * PX_PER_COLUMN - CARD_CHROME_PX)))
+  Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, (columns - CARD_CHROME) * PX_PER_COLUMN))
 
 const ROW_LABEL: Record<Scope, string> = { project: 'Sadece bu proje', global: 'Tüm projelerin' }
 const SAVE_LABEL: Record<Scope, string> = { project: 'Bu projeye kaydet', global: 'Tüm projelere kaydet' }
@@ -66,26 +73,40 @@ function actionsRow(ui: TextUi, c: CardInput): RenderElement {
       Button({ key: `cancel:${id}`, label: 'Vazgeç', plain: true, onPress: c.on.cancelReword }),
     ] })
   }
-  return Box({ flexDirection: 'row', gap: 1, flexWrap: 'wrap', children: [
-    Button({ key: `save:${id}`, label: SAVE_LABEL[c.picked], variant: 'primary', hotkey: 'k', onPress: () => c.on.save(c.picked) }),
+  return Box({ flexDirection: 'row', gap: 1, flexWrap: 'wrap', alignItems: 'center', children: [
+    Button({ key: `save:${id}`, label: SAVE_LABEL[c.picked], variant: 'secondary', hotkey: 'k', onPress: () => c.on.save(c.picked) }),
     Button({ key: `other:${id}`, label: SAVE_LABEL[other(c.picked)], variant: 'secondary', onPress: () => c.on.save(other(c.picked)) }),
     Button({ key: `edit:${id}`, label: 'Yeniden yaz', variant: 'secondary', hotkey: 'y', onPress: c.on.reword }),
     Button({ key: `skip:${id}`, label: 'Kaydetme', plain: true, onPress: c.on.skip }),
   ] })
 }
 
-function destDesktop(ui: Elements['desktop'], c: CardInput, scope: Scope, p: Palette): RenderElement {
+type Dest = { scope: Scope; p: Palette; width: number }
+
+/** What a destination row needs beside its path: its frame and padding, the icon, the gaps and the label button. */
+const rowChromeOf = (label: string): number => DEST_CHROME + measure(label, LABEL_FONT)
+
+// The path stays whole: when it and the label do not fit on one line it moves under the label.
+function destDesktop(ui: Elements['desktop'], c: CardInput, d: Dest): RenderElement {
   const { Box, Button, Svg } = ui
+  const { scope, p } = d
   const isPicked = c.picked === scope
   const tone = p.role.ok
   const path = pathSvg(c.paths[scope], isPicked ? p.hi : p.lo)
-  return Box({ key: `dest-${scope}:${c.l.id}`, flexDirection: 'row', alignItems: 'center', gap: 1, paddingX: 1, borderStyle: 'round',
-    borderColor: isPicked ? tone.line : p.line, backgroundColor: isPicked ? tone.tint : p.card, children: [
-      Svg({ source: iconSvg(ROW_ICONS[scope], ROW_ICON, isPicked ? tone.fg : p.lo), alt: '', width: ROW_ICON, height: ROW_ICON }),
-      Button({ key: `pick-${scope}:${c.l.id}`, label: ROW_LABEL[scope], plain: true, hotkey: HOTKEY[scope], dimColor: !isPicked, onPress: () => c.on.pick(scope) }),
-      Box({ flexGrow: 1 }),
-      Svg({ source: path.source, alt: c.paths[scope], width: path.width, height: path.height }),
+  const isStacked = rowChromeOf(ROW_LABEL[scope]) + path.width > d.width
+  const pathEl = Svg({ source: path.source, alt: c.paths[scope], width: path.width, height: path.height })
+  const pick = [
+    Svg({ source: iconSvg(ROW_ICONS[scope], ROW_ICON, isPicked ? tone.fg : p.lo), alt: '', width: ROW_ICON, height: ROW_ICON }),
+    Button({ key: `pick-${scope}:${c.l.id}`, label: ROW_LABEL[scope], plain: true, hotkey: HOTKEY[scope], dimColor: !isPicked, onPress: () => c.on.pick(scope) }),
+  ]
+  const frame = { key: `dest-${scope}:${c.l.id}`, paddingX: 1, borderStyle: 'round', borderColor: isPicked ? tone.line : p.line, backgroundColor: isPicked ? tone.tint : p.card } as const
+  if (isStacked) {
+    return Box({ ...frame, flexDirection: 'column', children: [
+      Box({ flexDirection: 'row', alignItems: 'center', gap: 1, children: pick }),
+      Box({ paddingLeft: DEST_INDENT, children: [pathEl] }),
     ] })
+  }
+  return Box({ ...frame, flexDirection: 'row', alignItems: 'center', gap: 1, children: [...pick, Box({ flexGrow: 1 }), pathEl] })
 }
 
 const shell = (ui: Elements['desktop'], p: Palette, children: RenderElement[]): RenderElement =>
@@ -99,7 +120,7 @@ export function cardDesktop(ui: Elements['desktop'], c: CardInput, look: Look): 
   const more = c.more > 0 ? [ui.Text({ color: p.lo, children: [`+${c.more} kural daha · /reflect-queue`] })] : []
   return shell(ui, p, [
     ui.Svg({ source: head.source, alt: `Kural olarak kaydedilsin mi? “${c.l.rule}”`, width, height: head.height }),
-    ui.Box({ flexDirection: 'column', gap: 0, children: [destDesktop(ui, c, 'project', p), destDesktop(ui, c, 'global', p)] }),
+    ui.Box({ flexDirection: 'column', gap: 0, children: [destDesktop(ui, c, { scope: 'project', p, width }), destDesktop(ui, c, { scope: 'global', p, width })] }),
     actionsRow(ui, c),
     ...more,
   ])

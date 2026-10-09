@@ -56,7 +56,8 @@ export function slug(text: string): string {
   return text.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^[-.]+|[-.]+$/g, '').slice(0, 120) || 'root'
 }
 
-export async function locate(run: Run, opts: { cwd: string; home: string; bin: string }): Promise<Repo | null> {
+// `isProbeOnly` finds a shadow repo made before but never makes one (a look at what exists, not a snapshot).
+export async function locate(run: Run, opts: { cwd: string; home: string; bin: string; isProbeOnly?: boolean }): Promise<Repo | null> {
   const { cwd, home, bin } = opts
   const found = await run([bin, 'rev-parse', '--show-toplevel', '--absolute-git-dir'], { cwd })
   const [root, gitDir] = found.stdout.trim().split('\n')
@@ -65,6 +66,7 @@ export async function locate(run: Run, opts: { cwd: string; home: string; bin: s
   if (home === '' || cwd === home || cwd === '/') return null
   const repo: Repo = { root: cwd, gitDir: `${home}/.cache/claude-checkpoint/${slug(cwd)}.git`, isShadow: true, bin }
   const probe = await run([bin, `--git-dir=${repo.gitDir}`, 'rev-parse', '--git-dir'], { cwd })
+  if (probe.exitCode !== 0 && opts.isProbeOnly === true) return null
   if (probe.exitCode !== 0) {
     await git(run, { ...repo, isShadow: false }, ['init', '-q', '--bare', repo.gitDir])
     await git(run, { ...repo, isShadow: false }, [`--git-dir=${repo.gitDir}`, 'config', 'core.bare', 'false'])

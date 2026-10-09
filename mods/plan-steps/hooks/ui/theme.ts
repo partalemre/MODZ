@@ -19,20 +19,24 @@ const ROLES = {
   ok: { dark: { fg: '#6FC593', tint: '#1B2F25', line: '#2F5A42' }, light: { fg: '#1F6E43', tint: '#E4F4EA', line: '#B5DEC4' } },
   danger: { dark: { fg: '#F2727F', tint: '#3B2023', line: '#74343C' }, light: { fg: '#C0263A', tint: '#FCE8EA', line: '#F1B9C0' } },
   plan: { dark: { fg: '#E07BC0', tint: '#351F2E', line: '#6B3A5C' }, light: { fg: '#A8337F', tint: '#FBE9F4', line: '#EDBFDC' } },
+  amber: { dark: { fg: '#E9B949', tint: '#332D19', line: '#66552A' }, light: { fg: '#8A6000', tint: '#FBF2D9', line: '#EBD48F' } },
+  tide: { dark: { fg: '#7FB6E8', tint: '#1E2B37', line: '#2F4A63' }, light: { fg: '#2464A0', tint: '#E7F0F9', line: '#B9D3EC' } },
 } satisfies Record<string, { dark: Tone; light: Tone }>
 
 // The number on a filled plan circle: dark ink on the light Orchid of the dark theme, white on the deep one.
 const ON_PLAN = { dark: '#2A0F21', light: '#FFFFFF' }
 
-export type Palette = Base & { plan: Tone; ok: Tone; danger: Tone; run: Tone; onPlan: string }
+type RoleName = keyof typeof ROLES
+const ROLE_NAMES = Object.keys(ROLES) as RoleName[]
+
+export type Palette = Base & Record<RoleName, Tone> & { onPlan: string }
 
 export function palette(isLight: boolean): Palette {
   const mode = isLight ? 'light' : 'dark'
 
-  return {
-    ...(isLight ? LIGHT : DARK),
-    plan: ROLES.plan[mode], ok: ROLES.ok[mode], danger: ROLES.danger[mode], run: ROLES.run[mode], onPlan: ON_PLAN[mode],
-  }
+  const roles = Object.fromEntries(ROLE_NAMES.map(role => [role, ROLES[role][mode]])) as Record<RoleName, Tone>
+
+  return { ...(isLight ? LIGHT : DARK), ...roles, onPlan: ON_PLAN[mode] }
 }
 
 // Claude Code's theme names say light or dark (`light-daltonized`, `dark-ansi`); anything else follows the system.
@@ -44,7 +48,7 @@ export function themeOf(value: unknown): Theme {
 }
 
 function vars(p: Palette): string {
-  const tones = (['plan', 'ok', 'danger', 'run'] as const).map(role => `--${role}:${p[role].fg};--${role}-t:${p[role].tint};--${role}-l:${p[role].line}`)
+  const tones = ROLE_NAMES.map(role => `--${role}:${p[role].fg};--${role}-t:${p[role].tint};--${role}-l:${p[role].line}`)
 
   return [
     `--sheet:${p.sheet};--card:${p.card};--inset:${p.inset};--line:${p.line};--line2:${p.lineStrong};--track:${p.track}`,
@@ -65,7 +69,7 @@ const TYPE = [
   '.label{font-size:12px;font-weight:500}',
   '.micro{font-size:10.5px;font-weight:500}',
   '.hi{fill:var(--hi)}.mid{fill:var(--mid)}.lo{fill:var(--lo)}',
-  '.f-plan{fill:var(--plan)}.f-ok{fill:var(--ok)}.f-danger{fill:var(--danger)}.f-run{fill:var(--run)}',
+  '.f-plan{fill:var(--plan)}.f-ok{fill:var(--ok)}.f-danger{fill:var(--danger)}.f-run{fill:var(--run)}.f-amber{fill:var(--amber)}.f-tide{fill:var(--tide)}',
 ].join('')
 
 const CALM = '@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}'

@@ -110,10 +110,10 @@ export async function mountPane($: any, surface: string, columns = 72) {
   })
 }
 
-export async function mountBand($: any, surface: string, hasSurvey = false) {
+export async function mountBand($: any, surface: string, hasSurvey = false, columns = 110) {
   return await $.ui.mount({
     plugin: 'blast-radius', component: 'AbovePrompt', requestId: hasSurvey ? 'band-survey' : 'band', surface,
     viewport: { columns: 120, rows: 40 },
-    props: { hasSurvey, isWorking: true, maxRows: 20, bodyColumns: 110, scroll: { top: 0, bodyRows: 20, rows: 20 }, view: {} },
+    props: { hasSurvey, isWorking: true, maxRows: 20, bodyColumns: columns, scroll: { top: 0, bodyRows: 20, rows: 20 }, view: {} },
   })
 }

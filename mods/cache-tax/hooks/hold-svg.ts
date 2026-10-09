@@ -17,21 +17,22 @@ export type HoldView = {
   autoWarm: string
 }
 
-export const HEADER_H = 62
+export const HEADER_H = 64
 const TILE = 38
 const CUBE = 22
 const TEXT_X = 52
 const HEADLINE: Font = { size: 17, weight: 620 }
 const BODY: Font = { size: 13 }
-/** Baselines in the header, top to bottom. */
-const HY = { eyebrow: 12, headline: 34, body: 55 }
+/** The tile's top and the baselines beside it: the same header every MODZ card opens with. */
+const TILE_Y = 4
+const HY = { eyebrow: 16, headline: 38, body: 59 }
 
 export function headerSvg(width: number, view: HoldView, p: Palette): string {
   const kiln = p.role.edit
   const room = width - TEXT_X
   const body = [
-    tile(0, 2, TILE, kiln.tint),
-    cube((TILE - CUBE) / 2, 2 + (TILE - CUBE) / 2, CUBE, kiln.fg, p.hi),
+    tile(0, TILE_Y, TILE, kiln.tint),
+    cube((TILE - CUBE) / 2, TILE_Y + (TILE - CUBE) / 2, CUBE, kiln.fg, p.hi),
     eyebrow(TEXT_X, HY.eyebrow, 'Önbellek vergisi', kiln.fg),
     text({ ...HEADLINE, x: TEXT_X, y: HY.headline, fill: p.hi, text: fit('Mesajın bekletiliyor', room, HEADLINE) }),
     text({ ...BODY, x: TEXT_X, y: HY.body, fill: p.mid, text: fit(`Önbellek ${view.coldFor} önce soğudu.`, room, BODY) }),
@@ -76,7 +77,9 @@ function coldCaption(x: number, w: number, view: HoldView, p: Palette): string {
   const count = `~${view.tokens} token`
   const spanW = measure(count, CAPTION) * SPAN_SLACK + 2 * SPAN_PAD
   const restX = x + spanW - SPAN_PAD + SPAN_GAP
-  const rest = fit(`yeniden yazılır · ${view.rate}`, Math.max(0, PAD + w - restX), CAPTION)
+  // The rate goes first, then the verb, when the column is narrow: a caption is whole or not drawn.
+  const room = Math.max(0, PAD + w - restX)
+  const rest = [`yeniden yazılır · ${view.rate}`, 'yeniden yazılır'].find(said => measure(said, CAPTION) <= room) ?? ''
   return [
     `<rect x="${x - SPAN_PAD}" y="${CY.span}" width="${spanW}" height="${SPAN_H}" rx="${SPAN_RADIUS}" fill="${kiln.tint}"/>`,
     text({ ...CAPTION, x, y: CY.caption, fill: kiln.fg, text: count }),
@@ -91,7 +94,8 @@ export function compareSvg(width: number, view: HoldView, p: Palette): string {
   const body = [
     `<rect width="${width}" height="${COMPARE_H}" rx="${RADIUS}" fill="${p.inset}"/>`,
     column({ x: PAD, w, label: 'Şimdi gönder', usd: view.coldUsd, share: view.coldUsd === null ? null : 1, fg: p.role.edit.fg }, p),
-    column({ x: right, w, label: 'Sıcak bir tur', usd: view.warmUsd, share, fg: p.role.ok.fg }, p),
+    // One accent per card: the price being asked is Kiln, the warm turn it is weighed against is neutral.
+    column({ x: right, w, label: 'Sıcak bir tur', usd: view.warmUsd, share, fg: p.hi }, p),
     coldCaption(PAD + SPAN_PAD, w, view, p),
     text({ ...CAPTION, x: right, y: CY.caption, fill: p.lo, text: 'olurdu' }),
   ]

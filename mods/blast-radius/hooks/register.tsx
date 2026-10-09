@@ -5,6 +5,7 @@
 //
 // tool.call (Bash): if the command is risky, work out its blast radius, open a
 // pane with the delete button and Vazgeç, and hold the call until one is pressed.
+// A command that would change nothing (no such file, no changes) runs with no card.
 // ui.render (Pane): draws the card. If the surface won't place the pane (a
 // narrow terminal), the same card is drawn in the AbovePrompt band, above the
 // other mods' rows.
@@ -122,6 +123,11 @@ async function hold($: EngineInterface, mine: Held, signal: AbortSignal): Promis
   let isPlaced = false
   try {
     await survey($, mine)
+    if (mine.report?.isEmpty) {
+      mine.decision = 'proceed'
+
+      return
+    }
     isPlaced = (await $.ui.open({ id: PANE_ID, title: 'Blast Radius', focus: true, closeOnEscape: true, rows: paneRows(mine) })).isPlaced
     if (!isPlaced) mine.where = 'band'
     $.ui.invalidate('ui.render')
@@ -203,11 +209,7 @@ function holdHooks(on: On): void {
     const mine: Held = { command, risk, report: null, cwd: '', decision: null, where: 'pane', phase: 'asking', isExpanded: false }
     held = mine
     await hold($, mine, next.signal)
-    if (mine.decision === 'proceed') {
-      $.ui.toast('Blast Radius: komut çalışıyor')
-
-      return next(e)
-    }
+    if (mine.decision === 'proceed') return next(e)
 
     return refusal(WHY[mine.decision ?? 'error'], mine.report?.summary ?? risk.label)
   }).catch(($, e, next) => {

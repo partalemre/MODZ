@@ -28,6 +28,8 @@ export type Report = {
   removed: number
   // A Turkish line for the person when something could not be measured.
   note: string | null
+  // Measured, and the command would change nothing: it runs without a card.
+  isEmpty: boolean
 }
 
 export type RunResult = { exitCode: number; stdout: string; stderr: string }
@@ -38,8 +40,11 @@ export type Run = (argv: string[], options: { cwd?: string; timeoutMs?: number }
 export const LIST_MAX = 10
 
 export function emptyReport(kind: ReportKind, summary: string, note: string | null): Report {
-  return { kind, summary, count: 0, bytes: null, groups: [], items: [], more: 0, tracked: null, where: null, added: 0, removed: 0, note }
+  return { kind, summary, count: 0, bytes: null, groups: [], items: [], more: 0, tracked: null, where: null, added: 0, removed: 0, note, isEmpty: false }
 }
+
+/** A measurement that found nothing the command could lose. */
+export const nothingReport = (kind: ReportKind, summary: string): Report => ({ ...emptyReport(kind, summary, null), isEmpty: true })
 
 export const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`
 

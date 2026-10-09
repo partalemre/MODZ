@@ -1,5 +1,6 @@
 import type { AgentRun } from '../types'
 import { clip, norm, toolName, toolTarget } from './format'
+import { nextLook } from './identity'
 import { costOf, tokensOf, windowOf } from './pricing'
 import type { Usage } from './pricing'
 import { MAX_RUNS } from './state'
@@ -43,6 +44,8 @@ export function addRun(list: AgentRun[], spawn: Spawn): AgentRun[] {
     costUsd: 0,
     steps: 0,
     round: 1 + same.length,
+    // A run the roster met first keeps the look it arrived with.
+    look: list.find(a => a.id === spawn.id)?.look ?? nextLook(list),
     toolCount: 0,
   }
   return [...list.filter(a => a.id !== run.id), run].slice(-MAX_RUNS)

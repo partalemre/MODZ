@@ -14,6 +14,7 @@ import { splitReply } from './markdown'
 import { askBand, desktopSpinnerRow, diffCard, footerRow, terminalCard, usageBand, groupRow, promptRow, replyRows, spinnerRow, toolRow } from './rows'
 import type { Look, SvgElement, Ui } from './rows'
 import { galleryPane } from './gallery'
+import { EMPTY_HUB, HUB_PANE, hubDetail, isOwnOpen } from './hub'
 import { settingsPane } from './settings'
 import { ICONS } from './skin'
 import type { Skin } from './skin'
@@ -24,6 +25,7 @@ import { shortenPath } from './format'
 import { kindOf, summarize } from './tools'
 
 const SETTINGS = 'skins-settings'
+const SETTINGS_TITLE = 'Görünüm'
 const GALLERY = 'skins-gallery'
 const DESIGN = `mcp__skins__${DESIGN_TOOL.name}`
 const DESIGN_MATCH = /^mcp__skins__design$/
@@ -50,6 +52,7 @@ const imagesAtom = atom({ plugin: 'skins', key: 'images' } as const, false)
 const usageAtom = atom({ plugin: 'skins', key: 'usage' } as const, { context: null, limits: [] } as UsageSnap)
 const compactingAtom = atom({ plugin: 'skins', key: 'compacting' } as const, false)
 const pinnedAtom = atom({ plugin: 'skins', key: 'pinned' } as const, false)
+const hubAtom = atom({ plugin: 'skins', key: 'hub' } as const, EMPTY_HUB)
 
 const EDITS = new Set(['Edit', 'MultiEdit', 'Write'])
 
@@ -189,6 +192,7 @@ async function runFolderCommand($: EngineInterface, word: string): Promise<strin
       await $.store.set('folders', withoutFolder(folders, folder))
       await update($, pinnedAtom, () => false)
       await update($, prefsAtom, () => fallback)
+      await syncHub($)
 
       return `bu klasör varsayılanı izler: ${fallback.skin}`
     }
@@ -214,6 +218,22 @@ async function commit($: EngineInterface, state: DesignState): Promise<void> {
   await update($, prefsAtom, () => state.prefs)
   await $.store.set('custom', state.custom)
   await savePrefs($, state.prefs)
+  await syncHub($)
+}
+
+// The MODZ card, written whenever the skin or the theme may have changed; a same text is not
+// written again.
+async function syncHub($: EngineInterface): Promise<void> {
+  const detail = hubDetail((await read($, prefsAtom)).skin, await read($, lightAtom))
+  if ((await read($, hubAtom)).detail === detail) return
+  const at = await $.clock.now()
+  await update($, hubAtom, () => ({ pane: HUB_PANE, detail, tone: 'idle', at }))
+}
+
+// Opening the settings is the person's own act only from /skin: opened for the MODZ main
+// panel it takes no keyboard, so letters typed meant elsewhere never reach its hotkeys.
+async function openSettings($: EngineInterface, isAsked: boolean): Promise<void> {
+  await $.ui.open({ id: SETTINGS, title: SETTINGS_TITLE, closeOnEscape: true, ...(isAsked ? { focus: true } : {}) })
 }
 
 async function designState($: EngineInterface): Promise<DesignState> {
@@ -243,6 +263,7 @@ export const register: Register = on => {
     await load($)
     await refreshUsage($)
     await refreshTheme($)
+    await syncHub($)
 
     // Only the spinner reads the frame, so a tick redraws the spinner and nothing else.
     ticker?.cancel()
@@ -259,6 +280,7 @@ export const register: Register = on => {
   on('classic.SessionStart', { source: ['clear', 'resume', 'fork'] }, async ($, e, next) => {
     await load($)
     await refreshTheme($)
+    await syncHub($)
 
     return next(e)
   })
@@ -277,6 +299,7 @@ export const register: Register = on => {
 
     if (e.key === 'theme') {
       await refreshTheme($)
+      await syncHub($)
     }
 
     return result
@@ -346,9 +369,18 @@ export const register: Register = on => {
     return { result: outcome.text }
   })
 
+  // The MODZ main panel asks for the settings by writing `{ pane: 'skins' }` to `modz.open`.
+  // modz's contract is not this mod's to import, so its address stays untyped here.
+  on('state.set', { plugin: 'modz', key: 'open' } as any, async ($: EngineInterface, e: any, next: any) => {
+    const done = await next(e)
+    if (isOwnOpen(e.value)) await openSettings($, false)
+
+    return done
+  }).catch(($: EngineInterface, e: any, next: any) => next(e))
+
   on('command.run', { command: 'skin' }, async ($, e) => {
     if (e.args.trim() === '') {
-      await $.ui.open({ id: SETTINGS, title: "Skin'ler", focus: true, closeOnEscape: true })
+      await openSettings($, true)
 
       return {}
     }
@@ -393,7 +425,9 @@ yanıt genişliği: ${lastColumns} sütun`
     const prefs = await read($, prefsAtom)
     const custom = await read($, customAtom)
     const editing = await read($, editingAtom)
-    const skin = resolveSkin(prefs.skin, custom) ?? resolveSkin(DEFAULT_PREFS.skin, custom)
+    // Drawn for the background the transcript is drawn for, as every other row is.
+    const base = resolveSkin(prefs.skin, custom) ?? resolveSkin(DEFAULT_PREFS.skin, custom)
+    const skin = base === undefined ? undefined : forTheme(base, await read($, lightAtom))
     const ui = $.ui.resolve(e)
 
     if (skin === undefined || e.surface === 'mobile' || !('Input' in ui)) {

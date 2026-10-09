@@ -171,11 +171,11 @@ function registerBand(on: On) {
     if (notice.kind === 'stopped') {
       const spend = budget === null ? '' : spendText(budget)
 
-      return noticeAbove(ui, stoppedRow(ui, { text: notice.text, spend, surface: e.surface }), { theirs, dismiss })
+      return noticeAbove(ui, stoppedRow(ui, { text: notice.text, spend, surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss })
     }
     if (budget === null) return theirs
 
-    return noticeAbove(ui, warnRow(ui, { budget, nowMs: await $.clock.now(), surface: e.surface }), { theirs, dismiss })
+    return noticeAbove(ui, warnRow(ui, { budget, nowMs: await $.clock.now(), surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss })
   })
 
   // The full-budget question keeps Claude Code's own options; the card above says what is full.

@@ -65,6 +65,40 @@ export function fit(text: string, width: number, font: Font, fromStart = false):
   return fromStart ? `…${chars.join('')}` : `${chars.join('')}…`
 }
 
+// A word wider than the line is broken between characters: error text holds long paths and tokens.
+function breakWord(word: string, width: number, font: Font): string[] {
+  const pieces: string[] = []
+  let piece = ''
+  for (const ch of word) {
+    if (piece !== '' && measure(piece + ch, font) > width) {
+      pieces.push(piece)
+      piece = ''
+    }
+    piece += ch
+  }
+
+  return piece === '' ? pieces : [...pieces, piece]
+}
+
+// Lays `text` into lines of `width` pixels; only past `maxLines` does the last line end in an ellipsis.
+export function wrapText(text: string, box: { width: number; font: Font; maxLines: number }): string[] {
+  const lines: string[] = []
+  let line = ''
+  for (const word of text.split(/\s+/).filter(Boolean).flatMap(part => breakWord(part, box.width, box.font))) {
+    const tried = line === '' ? word : `${line} ${word}`
+    if (line !== '' && measure(tried, box.font) > box.width) {
+      lines.push(line)
+      line = word
+    } else line = tried
+  }
+  if (line !== '') lines.push(line)
+  if (lines.length <= box.maxLines) return lines
+  const kept = lines.slice(0, box.maxLines)
+  kept[box.maxLines - 1] = fit(`${kept[box.maxLines - 1]} ${lines[box.maxLines]}`, box.width, box.font)
+
+  return kept
+}
+
 export function svgWidth(columns: number, range: { reserve?: number; min: number; max: number }): number {
   const room = (columns - (range.reserve ?? 0)) * PX_PER_COLUMN
 

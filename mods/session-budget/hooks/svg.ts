@@ -1,15 +1,11 @@
 import { fillOf, strokeOf, svgStyle } from './theme'
 import type { Tone } from './theme'
 
-// Svg building blocks of the Tidemark kit: a document shell, the segmented arc, the slim meter
+// Svg building blocks of the Tidemark kit: a document shell, the slim meter
 // with its pace tick, the sparkline and the eyebrow. Pure strings; colors come from classes.
 
 export type SvgDoc = { source: string; alt: string; width: number; height: number }
 
-const SWEEP_DEG = 270
-const START_DEG = 135
-const DEG = Math.PI / 180
-const TICK_OUT = 2
 const AREA_OPACITY = 0.12
 const EYEBROW_SIZE = 10.5
 const EYEBROW_TRACKING = 1.05
@@ -42,53 +38,6 @@ export function svgDoc(spec: { width: number; height: number; body: string; alt:
 }
 
 const clampPercent = (value: number): number => Math.max(0, Math.min(PERCENT, value))
-
-export type ArcSpec = {
-  cx: number
-  cy: number
-  r: number
-  stroke: number
-  segments: number
-  percent: number
-  tone: Tone
-  pace: number | null
-}
-
-const at = (spec: ArcSpec, fraction: number, radius = spec.r): string => {
-  const angle = (START_DEG + SWEEP_DEG * fraction) * DEG
-
-  return `${(spec.cx + radius * Math.cos(angle)).toFixed(2)} ${(spec.cy + radius * Math.sin(angle)).toFixed(2)}`
-}
-
-// Lit segments for a value: a live value never rounds down to none, a full one lights them all.
-export function litSegments(percent: number, segments: number): number {
-  const clamped = clampPercent(percent)
-  if (clamped === 0) return 0
-
-  return Math.max(1, Math.round((clamped / PERCENT) * segments))
-}
-
-// A 270° arc of segments, open at the bottom, with an optional pace tick across the ring.
-export function segmentedArc(spec: ArcSpec): string {
-  const lit = litSegments(spec.percent, spec.segments)
-  const gap = 1.4 / (spec.r * DEG * SWEEP_DEG)
-  const step = 1 / spec.segments
-  const parts = Array.from({ length: spec.segments }, (_, index) => {
-    const from = index * step + gap / 2
-    const to = (index + 1) * step - gap / 2
-    const cls = index < lit ? strokeOf(spec.tone) : 's-track'
-
-    return `<path class="${cls}" d="M${at(spec, from)} A${spec.r} ${spec.r} 0 0 1 ${at(spec, to)}" fill="none" stroke-width="${spec.stroke}"/>`
-  })
-  if (spec.pace !== null) {
-    const fraction = clampPercent(spec.pace) / PERCENT
-    const inner = spec.r - spec.stroke / 2 - TICK_OUT
-    const outer = spec.r + spec.stroke / 2 + TICK_OUT
-    parts.push(`<path class="s-hi" d="M${at(spec, fraction, inner)} L${at(spec, fraction, outer)}" stroke-width="1.5" stroke-linecap="round"/>`)
-  }
-
-  return parts.join('')
-}
 
 export type MeterSpec = { x: number; y: number; width: number; height: number; percent: number; tone: Tone; pace: number | null }
 

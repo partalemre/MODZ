@@ -5,12 +5,13 @@ import { clip, fmtTime } from './format'
 import { KIND_GLYPH, KIND_KEY, kindOf } from './history'
 import type { Kind } from './history'
 import { t } from './i18n'
-import { MIX_H, mixSvg } from './metrics-svg'
+import { chipsOf, metricsLine } from './metrics'
+import { MIX_H, chipsSvg, mixSvg } from './metrics-svg'
 import type { MixPart } from './metrics-svg'
 import { PULSE, pulseSvg } from './pane-svg'
 import type { RowContext, Ui } from './rows'
 
-// The open row: the task it was handed in a soft card, its work as a colored mix and a timed
+// The open row: what it used (context, tokens, ≈$, its 5h share), the task it was handed in a soft card, its work as a colored mix and a timed
 // history, and its answer in a card that says how it went.
 
 const HISTORY_SHOWN = 14
@@ -74,7 +75,7 @@ function mixTree(ui: Ui, parts: MixPart[], ctx: RowContext) {
       <Text dimColor>{`${s.kinds[p.kind]} ${p.count}${i < parts.length - 1 ? '   ' : ''}`}</Text>
     </Text>
   ))
-  const width = ctx.width - ctx.frameWidth
+  const width = ctx.detailWidth
   return (
     <Box flexDirection="column" rowGap={ctx.isDesktop ? 1 : 0}>
       {ctx.isDesktop && <Svg key="mix" source={mixSvg(width, parts)} alt={words} width={width} height={MIX_H} />}
@@ -133,13 +134,39 @@ function resultTree(ui: Ui, a: AgentRun) {
   )
 }
 
+function metricsTree(ui: Ui, a: AgentRun, ctx: RowContext) {
+  const { Svg, Text } = ui
+  const line = metricsLine(a, ctx.limit)
+  if (!ctx.isDesktop) return <Text dimColor wrap="truncate-end">{line}</Text>
+  const width = ctx.detailWidth
+  const chips = chipsSvg(width, chipsOf(a, ctx.limit))
+  return <Svg key="chips" source={chips.source} alt={line} width={width} height={chips.height} />
+}
+
+// Only a running agent can be spoken to or stopped; the field is left out where a surface has none.
+function actionsTree(ui: Ui, a: AgentRun, ctx: RowContext) {
+  const { Box, Button, Input } = ui
+  if (a.status !== 'running') return null
+  const s = t()
+  return (
+    <Box key={`actions-${a.id}`} flexDirection="column" rowGap={1}>
+      {Input && <Input key={`send-${a.id}`} label={s.message} placeholder={s.messageHint} value="" submitLabel={s.send} onSubmit={(text: string) => ctx.onSend(a.id, text)} />}
+      <Box flexDirection="row">
+        <Button key={`stop-${a.id}`} plain label={s.stop} onPress={() => ctx.onStop(a.id)} />
+      </Box>
+    </Box>
+  )
+}
+
 export function detailTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box } = ui
   return (
     <Box key={`detail-${a.id}`} flexDirection="column" rowGap={1} marginTop={1} paddingLeft={INDENT}>
+      {metricsTree(ui, a, ctx)}
       {briefTree(ui, a.brief)}
       {historyTree(ui, a, ctx)}
       {resultTree(ui, a)}
+      {actionsTree(ui, a, ctx)}
     </Box>
   )
 }

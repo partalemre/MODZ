@@ -6,42 +6,55 @@ import { agentProgress } from './estimate'
 import type { Progress } from './estimate'
 import type { Planned } from './flow'
 import { t } from './i18n'
-import { chipsOf, metricsLine, progressLabel } from './metrics'
-import { BAR_H, CHIPS_H, chipsSvg, progressBarSvg } from './metrics-svg'
-import { CRAB, PULSE, activityOf, clockOf, crabSvg, modelLine, plannedLine, pulseSvg } from './pane-svg'
-import { colorOf, costumeOf, keyOf, plannedTierOf, tierOf, tierWordOf } from './tiers'
+import { fmtCost } from './format'
+import { lookOf } from './identity'
+import { progressLabel } from './metrics'
+import { BAR_H, progressBarSvg } from './metrics-svg'
+import { CARD_CRAB, CRAB, activityOf, cardCrabSvg, clockOf, crabSvg, modelLine, pillSvg, plannedLine } from './pane-svg'
+import { costumeOf, keyOf, plannedTierOf, tierOf, tierWordOf } from './tiers'
 
-// One agent as native rows, the same on both surfaces: its name opens the detail beneath.
-// The desktop adds the crab, the live bar, the metric chips and the pulse as small drawings.
+// One agent as a card, the same on both surfaces: its name opens the detail beneath. The desktop
+// adds the crab, the status pill and the bar as small drawings; the terminal keeps native text.
 
 export type Ui = Record<string, any>
 
 // `width` is the room beside the crab, in px on the desktop and in cells on the terminal;
-// `frameWidth` is what the open row's frame takes from it.
+// `detailWidth` is the open card's full inner width, desktop only.
 export type RowContext = {
   at: number
   width: number
-  frameWidth: number
+  detailWidth: number
   isDesktop: boolean
   limit: LimitTrack | null
   selected?: string
   onToggle: (id: string) => void
+  onSend: (id: string, text: string) => void
+  onStop: (id: string) => void
 }
 
+// The card's round frame: a cell of padding and a border on each side.
+export const FRAME_PX = 18
+export const FRAME_COLS = 4
 const TERM_BAR_MAX = 24
-// Room the percent beside the bar takes: "~%100" in px on the desktop, in cells on the terminal.
-const PCT_PX = 46
+// Room the percent and the cost beside the bar take on the terminal: "~%100" and "≈$12.34".
 const PCT_COLS = 6
+const COST_COLS = 8
 
 const GLYPH: Record<string, string> = { running: '●', done: '✓', failed: '✗' }
-const PCT_KEY: Record<string, ThemeKey> = { done: 'success', failed: 'error' }
-const STATUS_KEY: Record<string, ThemeKey> = { running: 'suggestion', done: 'success', failed: 'error' }
+// Iris running, Moss done, Flare failed (DESIGN.md §2), as the bar beside it.
+const STATUS_KEY: Record<string, ThemeKey> = { running: 'permission', done: 'success', failed: 'error' }
 
 const statusWord = (a: AgentRun): string => {
   const s = t()
   if (a.status === 'running') return s.isRunning
   if (a.status === 'done') return s.isFinished
   return a.endReason === 'aborted' ? s.aborted : s.failed
+}
+
+const pillRole = (a: AgentRun): 'run' | 'ok' | 'warn' | 'danger' => {
+  if (a.status === 'running') return 'run'
+  if (a.status === 'done') return 'ok'
+  return a.endReason === 'aborted' ? 'warn' : 'danger'
 }
 
 // An estimate fills with a lighter rule, so it never reads as a measured one.
@@ -51,73 +64,57 @@ const termBar = (p: Progress, width: number): string => {
 }
 
 function statusTree(ui: Ui, a: AgentRun, ctx: RowContext) {
-  const { Box, Text, Svg } = ui
-  const key = STATUS_KEY[a.status] ?? 'subtle'
-  const mark = ctx.isDesktop && a.status === 'running'
-    ? <Svg key="pulse" source={pulseSvg(colorOf(tierOf(a)))} alt={statusWord(a)} width={PULSE} height={PULSE} />
-    : <Text color={key}>{GLYPH[a.status] ?? '●'}</Text>
-  return (
-    <Box flexDirection="row" alignItems="center" columnGap={1}>
-      {mark}
-      <Text color={key}>{statusWord(a)}</Text>
-    </Box>
-  )
+  const { Svg, Text } = ui
+  if (ctx.isDesktop) {
+    const pill = pillSvg(statusWord(a), pillRole(a), a.status === 'running')
+    return <Svg key="status" source={pill.source} alt={statusWord(a)} width={pill.width} height={pill.height} />
+  }
+  return <Text color={STATUS_KEY[a.status] ?? 'subtle'}>{`${GLYPH[a.status] ?? '●'} ${statusWord(a)}`}</Text>
 }
 
+// The bar and its percent: progress reads in one glance. The desktop draws both as one piece.
 function barTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box, Svg, Text } = ui
   const progress = agentProgress(a)
   const label = progressLabel(progress)
-  const tier = tierOf(a)
-  const pct = <Text bold color={PCT_KEY[a.status] ?? keyOf(tier)}>{label}</Text>
   if (ctx.isDesktop) {
-    const width = Math.max(PCT_PX, ctx.width - PCT_PX)
-    const source = progressBarSvg(width, a, { progress, color: colorOf(tier) })
-    return (
-      <Box flexDirection="row" alignItems="center" columnGap={1}>
-        <Svg key="bar" source={source} alt={label} width={width} height={BAR_H} />
-        {pct}
-      </Box>
-    )
+    return <Svg key="bar" source={progressBarSvg(ctx.width, a, { progress, label })} alt={label} width={ctx.width} height={BAR_H} />
   }
-  const width = Math.max(6, Math.min(TERM_BAR_MAX, ctx.width - PCT_COLS))
+  const width = Math.max(6, Math.min(TERM_BAR_MAX, ctx.width - PCT_COLS - COST_COLS))
+  const key = STATUS_KEY[a.status] ?? 'permission'
   return (
     <Box flexDirection="row" columnGap={1}>
-      <Text color={keyOf(tier)} dimColor={progress.isEstimate}>{termBar(progress, width)}</Text>
-      {pct}
+      <Text color={key} dimColor={progress.isEstimate}>{termBar(progress, width)}</Text>
+      <Text bold color={key}>{label}</Text>
+      <Text>{`≈${fmtCost(a.costUsd)}`}</Text>
     </Box>
   )
 }
 
-function metricsTree(ui: Ui, a: AgentRun, ctx: RowContext) {
-  const { Svg, Text } = ui
-  const line = metricsLine(a, ctx.limit)
-  if (!ctx.isDesktop) return <Text dimColor wrap="truncate-end">{line}</Text>
-  return <Svg key="chips" source={chipsSvg(ctx.width, chipsOf(a, ctx.limit))} alt={line} width={ctx.width} height={CHIPS_H} />
-}
-
+// Name and status first, then the bar with its percent; the agent's own name, tier, model and
+// clock stay one quiet line, and what it is doing now only while it runs or after it failed.
 function summaryTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box, Text, Button } = ui
   const isOpen = ctx.selected === a.id
   const tier = tierOf(a)
+  const money = ctx.isDesktop ? ` · ≈${fmtCost(a.costUsd)}` : ''
   return (
-    <Box flexDirection="column" flexGrow={1}>
-      <Box flexDirection="row" justifyContent="space-between" columnGap={1}>
+    <Box flexDirection="column" flexGrow={1} flexShrink={1}>
+      <Box flexDirection="row" justifyContent="space-between" alignItems="center" columnGap={1}>
         <Button key={`open-${a.id}`} plain label={`${isOpen ? '▾' : '▸'} ${a.description || a.type}`} onPress={() => ctx.onToggle(a.id)} />
         {statusTree(ui, a, ctx)}
       </Box>
+      {barTree(ui, a, ctx)}
       <Box flexDirection="row" justifyContent="space-between" columnGap={1}>
         <Text wrap="truncate-end">
+          <Text bold>{lookOf(a).name}</Text>
+          <Text dimColor>{' · '}</Text>
           <Text color={keyOf(tier)}>{tierWordOf(a)}</Text>
           <Text dimColor>{` · ${modelLine(a)} · ${t().tools(a.toolCount || 0)}`}</Text>
         </Text>
-        <Text dimColor>{clockOf(a, ctx.at)}</Text>
+        <Text dimColor>{`${clockOf(a, ctx.at)}${money}`}</Text>
       </Box>
-      <Text wrap="truncate-end" dimColor={a.status !== 'running'}>{activityOf(a)}</Text>
-      <Box flexDirection="column" rowGap={ctx.isDesktop ? 1 : 0} marginTop={ctx.isDesktop ? 1 : 0}>
-        {barTree(ui, a, ctx)}
-        {metricsTree(ui, a, ctx)}
-      </Box>
+      {a.status !== 'done' && <Text wrap="truncate-end" dimColor={a.status !== 'running'}>{activityOf(a)}</Text>}
     </Box>
   )
 }
@@ -125,11 +122,19 @@ function summaryTree(ui: Ui, a: AgentRun, ctx: RowContext) {
 export function agentRow(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box, Svg } = ui
   const isOpen = ctx.selected === a.id
+  const look = lookOf(a)
   const crab = ctx.isDesktop && (
-    <Svg key="crab" source={crabSvg({ costume: costumeOf(a), isWalking: a.status === 'running' })} alt={tierWordOf(a)} width={CRAB.w} height={CRAB.h} />
+    <Svg
+      key="crab"
+      source={cardCrabSvg({ costume: costumeOf(a), look, isWalking: a.status === 'running' })}
+      alt={`${look.name}, ${tierWordOf(a)}`}
+      width={CARD_CRAB.w}
+      height={CARD_CRAB.h}
+    />
   )
-  const frame = isOpen ? { borderStyle: 'round', borderColor: keyOf(tierOf(a)), paddingX: 1 } : {}
-  const inner = isOpen ? { ...ctx, width: ctx.width - ctx.frameWidth } : ctx
+  // On the desktop every agent is a card; on the terminal only the open one takes a frame.
+  const frame = ctx.isDesktop || isOpen ? { borderStyle: 'round', borderDimColor: !isOpen, paddingX: 1 } : {}
+  const inner = isOpen && !ctx.isDesktop ? { ...ctx, width: ctx.width - FRAME_COLS } : ctx
   return (
     <Box key={a.id} flexDirection="column" {...frame}>
       <Box flexDirection="row" columnGap={1}>

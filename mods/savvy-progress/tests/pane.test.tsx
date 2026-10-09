@@ -22,10 +22,14 @@ for (const surface of SURFACES) {
     expect(all).toContain('Opus 5.5 · xhigh')
     expect(all).toContain('› Edit src/hero.tsx')
     expect(all).toContain('1 araç')
-    const metrics = /bağlam %13 · 129k token · ≈\$0\.\d\d/
-    if (surface === 'terminal') expect(all).toMatch(metrics)
-    else expect(await svgOf(ui)).toMatch(metrics)
+    expect(all).toMatch(/≈\$0,\d\d/)
     expect(all).toContain('2:36')
+    // Context and tokens wait in the detail, so the card reads name, status, progress and cost.
+    const metrics = /bağlam %13 · 129k token · ≈\$0,\d\d/
+    expect(surface === 'terminal' ? all : await svgOf(ui)).not.toMatch(metrics)
+    await ui.press({ key: 'open-a3' })
+    if (surface === 'terminal') expect(await text(ui)).toMatch(metrics)
+    else expect(await svgOf(ui)).toMatch(metrics)
     expect(await ui.find({ type: 'Text', text: 'Çalışıyor · 3' })).toBeDefined()
   })
 
@@ -100,7 +104,8 @@ for (const surface of SURFACES) {
     await threeRunning($)
     await tool($, { tool: 'mcp__savvy-progress__step', done: 3, total: 5, agentId: 'a2' })
     await finish($, 'a1')
-    const all = await text(await mount($))
+    const ui = await mount($)
+    const all = surface === 'terminal' ? await text(ui) : await svgOf(ui)
     expect(all).toContain('%100')
     expect(all).toContain('%60')
     expect(all).toMatch(/~%\d+/)
@@ -111,11 +116,11 @@ for (const surface of SURFACES) {
     await threeRunning($)
     const pane = await mount($)
     const words = async () => (surface === 'terminal' ? text(pane) : svgOf(pane))
-    expect(await words()).not.toContain('5s ≈')
+    expect(await words()).not.toContain('5 saat ≈')
     await measure($, 23.5, 1)
-    const shown = await words()
-    expect(shown).toContain('5s ≈%2.0')
-    expect(shown).toContain('5s payı ≈%5.9')
+    expect(await words()).toContain('5 saat payı ≈%5,9')
+    await pane.press({ key: 'open-a1' })
+    expect(await words()).toContain('5 saat ≈%2,0')
   })
 
   test(`${surface}: an open finished row shows its work mix and a cheerful result card`, async ($, on) => {
@@ -132,10 +137,10 @@ for (const surface of SURFACES) {
     if (surface === 'desktop') expect(await svgOf(pane)).toContain('okuma 1 · düzenleme 1')
   })
 
-  test(`${surface}: /agents-info toggles the pane`, async ($, on) => {
+  test(`${surface}: /agents-info toggles the Ajanlar pane`, async ($, on) => {
     const { world } = await setup($, on)
-    expect((await $.command.run({ command: 'agents-info', args: '' })).text).toBe('Ajan paneli açıldı.')
-    expect((await $.command.run({ command: 'agents-info', args: '' })).text).toBe('Ajan paneli kapandı.')
+    expect((await $.command.run({ command: 'agents-info', args: '' })).text).toBe('Ajanlar paneli açıldı.')
+    expect((await $.command.run({ command: 'agents-info', args: '' })).text).toBe('Ajanlar paneli kapandı.')
     expect(world.opened).toEqual(['savvy-agents'])
     expect(world.closed).toEqual(['savvy-agents'])
   })

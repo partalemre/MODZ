@@ -51,8 +51,12 @@ export type CheckpointView = {
 
 export type CheckpointTheme = { mode: 'dark' | 'light' | 'auto'; isLight: boolean }
 
+// The one-line card the MODZ main panel collects from every mod (DESIGN.md §9).
+export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+
 declare module 'claude-code' {
   interface PluginState {
-    checkpoint: { view: CheckpointView; isEnabled: boolean; meta: Record<string, CheckpointMeta>; theme: CheckpointTheme }
+    checkpoint: { view: CheckpointView; isEnabled: boolean; meta: Record<string, CheckpointMeta>; theme: CheckpointTheme; hub: HubCard }
   }
 }

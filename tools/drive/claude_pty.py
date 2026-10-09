@@ -2,7 +2,7 @@
 
 Usage: python claude_pty.py <script.json>
 script.json: {"cwd": "...", "args": ["--model", "haiku"], "cols": 140, "rows": 46, "out": "dir",
-              "steps": [{"wait": 8}, {"type": "/deck"}, {"key": "enter"}, {"shot": "deck"}, {"until": "text", "timeout": 60}]}
+              "steps": [{"wait": 8}, {"type": "/modz"}, {"key": "enter"}, {"shot": "modz"}, {"until": "text", "timeout": 60}]}
 Needs `pyte` and Pillow (run with the scratch venv). Every shot is a colored PNG of the emulated screen.
 """
 import json

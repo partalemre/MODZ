@@ -248,7 +248,9 @@ test('undo bookkeeping and Turkish number endings', () => {
   expect(parseNumstat('3\t1\ta.ts\0-\t-\timg.png\0')).toEqual([{ path: 'a.ts', added: 3, removed: 1 }, { path: 'img.png', added: 0, removed: 0 }])
 })
 
-test('an empty project says how checkpoints are made', async ($: any, on: any) => {
-  const pane = await openPane($, on, { fake: newFake(), surface: 'desktop' })
-  expect(await pane.find({ type: 'Text', text: /^Henüz kontrol noktası yok/ })).toBeDefined()
-})
+for (const surface of SURFACES) {
+  test(`${surface}: an empty project says how checkpoints are made`, async ($: any, on: any) => {
+    const pane = await openPane($, on, { fake: newFake(), surface })
+    expect(await shown(pane)).toContain('Henüz kontrol noktası yok · ilk dosya yazımından önce sessizce alınır')
+  })
+}

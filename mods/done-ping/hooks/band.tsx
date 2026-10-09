@@ -1,4 +1,4 @@
-import { fit, iconTile, measure, runs, svgDoc, svgWidth } from './svg'
+import { iconTile, measure, runs, svgDoc, svgWidth } from './svg'
 import type { Theme } from './tidemark'
 import type { PingNotice } from '../types'
 
@@ -16,10 +16,20 @@ const DETAIL = { size: 12.5 }
 // Columns the ✕ button takes beside the row.
 const DISMISS_RESERVE = 6
 
+const SEP = ' · '
+
+// Facts drop from the end until the rest fits: each one is shown whole or not at all.
+function factsThatFit(detail: string, room: number): string {
+  const facts = detail === '' ? [] : detail.split(SEP)
+  while (facts.length > 0 && measure(SEP + facts.join(SEP), DETAIL) > room) facts.pop()
+
+  return facts.length === 0 ? '' : SEP + facts.join(SEP)
+}
+
 function rowSvg(band: PingBand): { source: string; width: number } {
   const { notice } = band
   const room = svgWidth(band.columns, { reserve: DISMISS_RESERVE, min: 200, max: 1200 })
-  const rest = notice.detail === '' ? '' : fit(` · ${notice.detail}`, room - TEXT_X - measure(notice.title, TITLE), DETAIL)
+  const rest = factsThatFit(notice.detail, room - TEXT_X - measure(notice.title, TITLE))
   const width = Math.min(room, Math.ceil(TEXT_X + measure(notice.title, TITLE) + measure(rest, DETAIL) + 4))
   const body = iconTile({ x: 0, y: 2, size: TILE, role: notice.kind === 'done' ? 'moss' : 'amber', icon: 'bell' })
     + runs({ x: TEXT_X, y: 18.5, size: DETAIL.size, parts: [{ text: notice.title, ink: 'hi', weight: TITLE.weight }, { text: rest, ink: 'mid' }] })

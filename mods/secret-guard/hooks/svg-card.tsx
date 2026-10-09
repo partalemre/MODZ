@@ -18,7 +18,8 @@ const CHIP_PAD = 9
 const SPAN_PAD = 6
 const CARD_CHROME = 6
 const PX_PER_COLUMN = 8
-const MIN_WIDTH = 320
+const MIN_WIDTH = 300
+const META_GAP = 24
 const MAX_WIDTH = 640
 // Each 40 characters of alt cost the dialog a row: border, padding and this keep the card to 10 of its 12.
 const ALT_MAX = 200
@@ -48,7 +49,9 @@ function findingsOf(pending: GuardPending): Finding[] {
 function headerSvg(pending: GuardPending, width: number): string {
   const head = headlineOf(pending)
   const eyebrowW = measure(head.eyebrow, { size: 10.5, isBold: true }) * 1.12
-  const subject = fitMiddle(pending.subject.split('\n')[0] ?? '', width - HEAD_X - eyebrowW - 18, { size: 11.5, isMono: true })
+  const line = pending.subject.split('\n')[0] ?? ''
+  // The subject sits beside the eyebrow only whole; the rows below name every file anyway.
+  const subject = measure(line, { size: 11.5, isMono: true }) <= width - HEAD_X - eyebrowW - META_GAP ? line : ''
 
   return [
     tile(head.tone === 'danger' ? 'key' : 'shield', { x: 0, y: 4, size: TILE, role: head.tone }),

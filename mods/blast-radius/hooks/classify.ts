@@ -47,18 +47,36 @@ export function tokenize(text: string): string[] {
   return words
 }
 
+/** `NAME=value` segments (or `export NAME=value`) set earlier on the line, so `rm -rf $NAME` can be measured. */
+function readAssignments(segment: string, vars: Map<string, string>): void {
+  const words = tokenize(segment.trim())
+  if (words[0] === 'export') words.shift()
+  if (words.length === 0 || !words.every(word => ASSIGNMENT.test(word))) return
+  for (const word of words) {
+    const at = word.indexOf('=')
+    vars.set(word.slice(0, at), expandVars(word.slice(at + 1), vars))
+  }
+}
+
+/** `$NAME` and `${NAME}` from earlier assignments on the line; anything else stays as written. */
+export function expandVars(text: string, vars: Map<string, string>): string {
+  return text.replace(/\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))/g, (whole, braced, bare) => vars.get(braced ?? bare) ?? whole)
+}
+
 /** The first risky segment of a shell command, or null. */
 export function classify(command: string): Risk | null {
   let dir: string | null = null
   const scopes: (string | null)[] = [] // dir to restore when a ( subshell ) closes
   const pushed: (string | null)[] = [] // pushd stack, for popd
+  const vars = new Map<string, string>()
   for (const raw of command.split(/&&|\|\||;|\||\n/)) {
+    readAssignments(raw, vars)
     const opens = raw.match(/^\s*\(+/)?.[0].trim().length ?? 0
     // Trailing redirects and & don't hide a closing ) : `(cd sub && make) > log`.
     const tail = raw.replace(/(?:\s*(?:\d*>>?|&>>?|<)\s*\S+|\s*&)+\s*$/, '')
     const closes = tail.match(/\)+\s*$/)?.[0].trim().length ?? 0
     for (let k = 0; k < opens; k += 1) scopes.push(dir)
-    const step = classifySegment(raw, dir, pushed)
+    const step = classifySegment(expandVars(raw, vars), dir, pushed)
     if (step !== null && !isMove(step)) return step
     if (isMove(step)) dir = step.cd // a cd, pushd or popd moved the folder
     for (let k = 0; k < closes && scopes.length > 0; k += 1) dir = scopes.pop() ?? null // a cd inside ( ... ) doesn't outlive it

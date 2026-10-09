@@ -44,6 +44,10 @@ export type StepTrack = {
   agents: AgentRun[]
 }
 
+// The MODZ main panel's summary card (DESIGN.md §9): lo · Iris · Moss · Amber · Flare.
+export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+
 declare module 'claude-code' {
   interface PluginState {
     'plan-steps': {
@@ -52,6 +56,9 @@ declare module 'claude-code' {
       tracks: Record<string, StepTrack>
       // Bumped by a timer while the pane is open, so elapsed times move.
       tick: number
+      hub: HubCard
     }
+    // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
+    modz: { open: { pane: string; at: number } }
   }
 }

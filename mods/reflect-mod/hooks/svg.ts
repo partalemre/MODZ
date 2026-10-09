@@ -1,5 +1,5 @@
 // Small SVG builders: text that is measured, fitted and wrapped without a renderer, eyebrows,
-// icon tiles and discs. Every drawing ends with the reduced-motion rule (DESIGN.md §5).
+// and icon tiles. Every drawing ends with the reduced-motion rule (DESIGN.md §5).
 
 import { FONT, MONO, upper } from './theme'
 
@@ -84,13 +84,10 @@ export const icon = (paths: string, x: number, y: number, size: number, color: s
   `<g transform="translate(${x} ${y}) scale(${size / 24})" fill="none" stroke="${color}" stroke-width="${ICON_STROKE * 24 / size}" ` +
   `stroke-linecap="round" stroke-linejoin="round">${paths}</g>`
 
-const TILE_RADIUS = 9
+const TILE_RADIUS = 10
 
 export const tile = (x: number, y: number, size: number, tint: string): string =>
   `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${TILE_RADIUS}" fill="${tint}"/>`
-
-export const disc = (x: number, y: number, size: number, tint: string): string =>
-  `<circle cx="${x + size / 2}" cy="${y + size / 2}" r="${size / 2}" fill="${tint}"/>`
 
 const REDUCED = '@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}'
 

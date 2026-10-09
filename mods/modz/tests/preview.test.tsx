@@ -1,28 +1,121 @@
-// Draws the desktop /modz pane from a snapshot of the real marketplace, for bin/preview.
+// Draws the desktop MODZ pane from a snapshot of the real marketplace, for bin/preview:
+// the hub calm and busy, narrow and wide, and the catalog view.
 import { test } from 'claude-code/testing'
 
 import { MARKET_FILES } from './market-fixture'
 
-const PANE = { plugin: 'modz', component: 'Pane', requestId: 'modz', viewport: { columns: 100, rows: 40 }, props: { bodyColumns: 90 } } as const
+const pane = (bodyColumns: number) => ({ plugin: 'modz', component: 'Pane', requestId: 'modz', viewport: { columns: 100, rows: 40 }, props: { bodyColumns } }) as const
+
+function stub(on: any, theme: string) {
+  on('fs.stat', () => ({ value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
+  on('fs.read', (_: unknown, e: { path: string }) => {
+    const text = MARKET_FILES[e.path]
+    if (!text) throw new Error(`ENOENT ${e.path}`)
+
+    return { value: text }
+  })
+  const names = Object.keys(MARKET_FILES).map(path => /mods\/([^/]+)\//.exec(path)?.[1]).filter(Boolean)
+  on('settings.read', () => ({ value: { enabledPlugins: Object.fromEntries(names.map(name => [`${name}@modz`, true])) } }))
+  on('command.register', () => ({ value: undefined }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('session.start', () => ({ cwd: '/work' }))
+  on('config.list', () => ({ value: [{ key: 'theme', value: theme }] }))
+  on('command.run', () => ({ text: '' }))
+}
+
+// Stand-ins for the mods that report to the hub: each writes its own card, as the real mod does.
+// The plugin and key are literals in each register, as the engine requires of a $.state call.
+const reporters = [
+  {
+    name: 'savvy-progress',
+    register(on: any) {
+      on('command.run', { command: 'report' }, async ($: any, e: any, next: any) => {
+        await $.state.set({ plugin: 'savvy-progress', key: 'hub' }, { pane: 'agents', detail: '2 ajan çalışıyor', tone: 'live', at: 3 })
+
+        return next(e)
+      })
+    },
+  },
+  {
+    name: 'filetree',
+    register(on: any) {
+      on('command.run', { command: 'report' }, async ($: any, e: any, next: any) => {
+        await $.state.set({ plugin: 'filetree', key: 'hub' }, { pane: 'files', detail: '4 dosya bu tur', tone: 'live', at: 2 })
+
+        return next(e)
+      })
+    },
+  },
+  {
+    name: 'plan-steps',
+    register(on: any) {
+      on('command.run', { command: 'report' }, async ($: any, e: any, next: any) => {
+        await $.state.set({ plugin: 'plan-steps', key: 'hub' }, { pane: 'plan', detail: '3/9 adım', tone: 'live', at: 1 })
+
+        return next(e)
+      })
+    },
+  },
+  {
+    name: 'test-badge',
+    register(on: any) {
+      on('command.run', { command: 'report' }, async ($: any, e: any, next: any) => {
+        await $.state.set({ plugin: 'test-badge', key: 'hub' }, { pane: 'tests', detail: '41/42 geçti · lint 2', tone: 'bad', at: 1 })
+
+        return next(e)
+      })
+    },
+  },
+  {
+    name: 'checkpoint',
+    register(on: any) {
+      on('command.run', { command: 'report' }, async ($: any, e: any, next: any) => {
+        await $.state.set({ plugin: 'checkpoint', key: 'hub' }, { pane: 'checkpoints', detail: '12 nokta · son 3 dk önce', tone: 'ok', at: 1 })
+
+        return next(e)
+      })
+    },
+  },
+  {
+    name: 'hud-pro',
+    register(on: any) {
+      on('command.run', { command: 'report' }, async ($: any, e: any, next: any) => {
+        await $.state.set({ plugin: 'hud-pro', key: 'hub' }, { pane: 'usage', detail: '5s %44 · 7g %17', tone: 'idle', at: 1 })
+
+        return next(e)
+      })
+    },
+  },
+  {
+    name: 'skins',
+    register(on: any) {
+      on('command.run', { command: 'report' }, async ($: any, e: any, next: any) => {
+        await $.state.set({ plugin: 'skins', key: 'hub' }, { pane: 'skins', detail: 'tidemark · koyu', tone: 'idle', at: 1 })
+
+        return next(e)
+      })
+    },
+  },
+]
+
+const CASES = [
+  { label: 'hub-calm', busy: false, columns: 50 },
+  { label: 'hub-busy', busy: true, columns: 50 },
+  { label: 'hub-busy-wide', busy: true, columns: 80 },
+  { label: 'catalog', busy: false, columns: 50 },
+]
 
 for (const theme of ['dark', 'light']) {
-  test(`preview: the modz pane (${theme})`, async ($, on) => {
-    on('fs.stat', () => ({ value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
-    on('fs.read', (_, e) => {
-      const text = MARKET_FILES[e.path]
-      if (!text) throw new Error(`ENOENT ${e.path}`)
-
-      return { value: text }
+  for (const c of CASES) {
+    test(`preview: ${c.label} (${theme})`, { plugins: reporters }, async ($: any, on: any) => {
+      stub(on, theme)
+      await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
+      if (c.busy) {
+        await $.command.run({ command: 'report', args: '' })
+      }
+      const ui = await $.ui.mount({ ...pane(c.columns), surface: 'desktop' })
+      if (c.label === 'catalog') await ui.press({ key: 'open-mods' })
+      console.log(`@@TREE@@${c.label}${theme === 'light' ? '-light' : ''}@@${JSON.stringify(await ui.drawn())}`)
     })
-    const names = Object.keys(MARKET_FILES).map(path => /mods\/([^/]+)\//.exec(path)?.[1]).filter(Boolean)
-    on('settings.read', () => ({ value: { enabledPlugins: Object.fromEntries(names.map(name => [`${name}@modz`, true])) } }))
-    on('command.register', () => ({ value: undefined }))
-    on('ui.open', () => ({ value: { isPlaced: true } }))
-    on('session.start', () => ({ cwd: '/work' }))
-    on('config.list', () => ({ value: [{ key: 'theme', value: theme }] }))
-    await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
-    await $.command.run({ command: 'modz', args: '' })
-    const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
-    console.log(`@@TREE@@modz-pane${theme === 'light' ? '-light' : ''}@@${JSON.stringify(await ui.drawn())}`)
-  })
+  }
 }

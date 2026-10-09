@@ -1,13 +1,16 @@
 import { mock, test } from 'claude-code/testing'
 
 const MIN = 60_000
-const TITLES = ['Tipleri ve durum sözleşmesini yaz', 'Görev listesi takibi', 'Markdown plan ayrıştırıcısı', 'Adım–görev bulanık eşleştirme', 'Panel çizimi: başlık, ölçer, adımlar', 'Durum satırı', 'ETA kuralı', 'Testler: terminal ve masaüstü', 'README']
+const TITLES = ['Tipleri ve durum sözleşmesini yaz', 'Görev listesi takibi', 'Markdown plan ayrıştırıcısı', 'Adım–görev bulanık eşleştirme: TodoWrite, TaskCreate ve plan dosyasındaki adımları tek listede birleştir', 'Panel çizimi: başlık, ölçer, adımlar', 'Durum satırı', 'ETA kuralı', 'Testler: terminal ve masaüstü', 'README']
 
 const todos = (current: number) => TITLES.map((content, k) => ({ content, activeForm: content, status: k < current ? 'completed' : k === current ? 'in_progress' : 'pending' }))
 
-const paneOf = (surface: 'desktop' | 'terminal') => ({
+// About 400 px and 600 px of the desktop's right pane.
+const WIDTHS = { narrow: 56, wide: 82 }
+
+const paneOf = (surface: 'desktop' | 'terminal', bodyColumns: number) => ({
   plugin: 'plan-steps', component: 'Pane', requestId: 'plan-steps', surface, viewport: { columns: 160, rows: 40 },
-  props: { title: 'Plan', isFocused: false, bodyColumns: 62, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} },
+  props: { title: 'Plan', isFocused: false, bodyColumns, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} },
 }) as const
 
 async function setup($: any, on: any, theme: string) {
@@ -36,10 +39,23 @@ for (const theme of ['dark', 'light']) {
     await $.tool.call({ tool: 'Edit', file_path: '/w/hooks/match.ts', old_string: 'a', new_string: 'b' })
     await $.tool.call({ tool: 'Write', file_path: '/w/tests/match.test.ts', content: 'x' })
     await $.tool.call({ tool: 'Edit', file_path: '/w/hooks/parse.ts', old_string: 'a', new_string: 'b' })
+    await $.tool.call({ tool: 'Edit', file_path: '/w/docs/superpowers/plans/2026-10-09-plan-steps.md', old_string: 'a', new_string: 'b' })
     await $.tool.call({ tool: 'Agent', description: 'Eşleştirme kenar durumları', prompt: 'p' })
     await clock.advance(4 * MIN)
     await $.command.run({ command: 'steps', args: '' })
-    const pane = await $.ui.mount(paneOf('desktop'))
-    console.log(`@@TREE@@plan-steps-mid-${theme}@@` + JSON.stringify(await pane.drawn()))
+    for (const [name, columns] of Object.entries(WIDTHS)) {
+      const pane = await $.ui.mount(paneOf('desktop', columns))
+      console.log(`@@TREE@@plan-steps-mid-${name}-${theme}@@` + JSON.stringify(await pane.drawn()))
+      await pane.unmount()
+    }
+  })
+
+  test(`preview ${theme}: no plan yet`, async ($: any, on: any) => {
+    await setup($, on, theme)
+    for (const [name, columns] of Object.entries(WIDTHS)) {
+      const pane = await $.ui.mount(paneOf('desktop', columns))
+      console.log(`@@TREE@@plan-steps-empty-${name}-${theme}@@` + JSON.stringify(await pane.drawn()))
+      await pane.unmount()
+    }
   })
 }

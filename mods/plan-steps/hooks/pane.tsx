@@ -3,7 +3,9 @@ import { baseName } from './parse'
 import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, percentText, progressOf, windowOf } from './progress'
 import type { Tracks } from './progress'
 import type { StepTrack } from '../types'
-import { emptySvg, planSvg } from './plan-svg'
+import { deskDetails } from './plan-detail'
+import { EMPTY_HOW, EMPTY_LEAD, emptySvg } from './plan-empty'
+import { planSvg } from './plan-svg'
 import { widthFor } from './ui/svg'
 import type { Theme } from './ui/theme'
 
@@ -173,34 +175,33 @@ function emptyPane(ui: Ui) {
 
   return (
     <Box flexDirection="column" paddingX={PAD}>
-      {header(ui, 'Plan', '—')}
-      <Box key="empty" flexDirection="column">
-        <Text dimColor>{'Henüz plan yok.'}</Text>
-        <Text dimColor wrap="wrap">{'Görev listesi, onaylı plan ya da plan dosyası görününce adımları burada.'}</Text>
+      <Text bold>{'Plan'}</Text>
+      <Box key="empty" flexDirection="row" flexWrap="wrap">
+        <Text wrap="wrap">
+          <Text bold>{EMPTY_LEAD}</Text>
+          <Text dimColor>{` · ${EMPTY_HOW}`}</Text>
+        </Text>
       </Box>
     </Box>
   )
 }
 
 function desktopPane(ui: Ui, view: PaneView, layout: Layout) {
-  const { Box, Text, Svg } = ui
+  const { Box, Svg } = ui
   const width = widthFor(layout.columns - GUTTER_COLUMNS, SVG_RANGE)
   const plan = view.plan
   if (plan === null || plan.steps.length === 0) {
     const empty = emptySvg(view.theme, width)
 
     return (
-      <Box flexDirection="column" paddingX={1} paddingY={1} gap={1}>
-        <Svg key="plan-svg" source={empty.source} alt="Plan: henüz yok" width={width} height={empty.height} />
-        <Box key="empty">
-          <Text dimColor wrap="wrap">{'Görev listesi, onaylı plan ya da plan dosyası görününce adımlar burada.'}</Text>
-        </Box>
+      <Box flexDirection="column" paddingX={1} paddingY={1}>
+        <Svg key="plan-svg" source={empty.source} alt={empty.alt} width={width} height={empty.height} />
       </Box>
     )
   }
   const steps = plan.steps
   const current = steps[currentIndex(steps, view.tracks)]
-  const details = current === undefined ? { summary: '', agents: [] } : detailLines(current, view.tracks[current.key])
+  const details = current === undefined ? { meta: '', files: [], running: [] } : deskDetails(current, view.tracks[current.key])
   const drawing = planSvg({ plan, tracks: view.tracks, now: view.now, theme: view.theme, width }, details)
 
   return (

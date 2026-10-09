@@ -1,5 +1,5 @@
 // The desktop pane's Svg: the head, a group's eyebrow and one row per mod (monogram tile, name,
-// version pill, surface and source badges, health dot, one line of description).
+// version pill, health dot, one line of description and a quiet line of surfaces and source).
 import type { ModInfo } from './catalog'
 import { monogram } from './meta'
 import { svgDoc } from './theme'
@@ -9,23 +9,24 @@ export type Drawing = { source: string; alt: string; height: number }
 
 const HEAD = 48
 const GROUP = 22
-const ROW = 54
+const ROW = 66
 const TILE = 36
 const TEXT_X = TILE + 12
 const PILL = 18
 const PILL_PAD = 8
 const GAP = 6
 const NOTCH = 6
+const DOT_ROOM = 16
 
-function esc(text: string): string {
+export function esc(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-function measure(text: string, size: number): number {
+export function measure(text: string, size: number): number {
   return [...text].reduce((sum, char) => sum + size * ('iljtfrI.,:;|!/ ·'.includes(char) ? 0.33 : char >= 'A' && char <= 'Z' ? 0.68 : 0.6), 0)
 }
 
-function fit(text: string, width: number, size: number): string {
+export function fit(text: string, width: number, size: number): string {
   if (measure(text, size) <= width) return text
   const chars = [...text]
   while (chars.length > 1 && measure(`${chars.join('')}…`, size) > width) chars.pop()
@@ -33,7 +34,7 @@ function fit(text: string, width: number, size: number): string {
   return `${chars.join('')}…`
 }
 
-function eyebrow(spec: { y: number; width: number; label: string; role: RoleName | null; meta: string }): string {
+export function eyebrow(spec: { y: number; width: number; label: string; role: RoleName | null; meta: string }): string {
   const label = spec.label.toLocaleUpperCase('tr')
   const end = NOTCH + 6 + measure(label, 10.5) * 1.12
   const metaStart = spec.width - measure(spec.meta, 12)
@@ -72,26 +73,18 @@ export function groupSvg(spec: { width: number; theme: Theme; label: string; cou
 }
 
 function healthDot(mod: ModInfo, cx: number): string {
-  if (!mod.isHealthy) return `<path d="M${cx - 3} 17l6 6M${cx + 3} 17l-6 6" stroke-width="1.8" stroke-linecap="round" class="st-danger"/>`
+  if (!mod.isHealthy) return `<path d="M${cx - 3} 19l6 6M${cx + 3} 19l-6 6" stroke-width="1.8" stroke-linecap="round" class="st-danger"/>`
   // Off is a hollow ring, unknown a dashed one; only a known-on mod gets the green dot.
-  if (mod.isEnabled !== true) return `<circle cx="${cx}" cy="20" r="3.5" fill="none" stroke-width="1.3"${mod.isEnabled === null ? ' stroke-dasharray="2 1.6"' : ''} class="strong"/>`
+  if (mod.isEnabled !== true) return `<circle cx="${cx}" cy="22" r="3.5" fill="none" stroke-width="1.3"${mod.isEnabled === null ? ' stroke-dasharray="2 1.6"' : ''} class="strong"/>`
 
-  return `<circle cx="${cx}" cy="20" r="4" class="fg-ok"/>`
+  return `<circle cx="${cx}" cy="22" r="4" class="fg-ok"/>`
 }
 
-// Right side of line one, right to left: health, source, surfaces, version.
-function badges(mod: ModInfo, width: number): { svg: string; left: number } {
-  let right = width - 16
-  const parts: string[] = [healthDot(mod, width - 5)]
-  const add = (spec: Omit<PillSpec, 'right' | 'y'>) => {
-    const piece = pill({ ...spec, right, y: 11 })
-    parts.push(piece.svg)
-    right -= piece.width + GAP
-  }
-  add(mod.upstream === null ? { text: 'MODZ', role: 'edit' } : { text: `asıl: ${mod.upstream}`, role: null })
-  for (const surface of [...mod.surfaces].reverse()) add({ text: surface, role: null })
+// The quiet third line: where it draws and where it comes from, as words rather than a row of badges.
+function metaLine(mod: ModInfo): string {
+  const source = mod.upstream === null ? 'MODZ' : `asıl: ${mod.upstream}`
 
-  return { svg: parts.join(''), left: right }
+  return `${mod.surfaces.join(' · ')} · ${source}`
 }
 
 function stateLabel(mod: ModInfo): string {
@@ -103,20 +96,23 @@ function stateLabel(mod: ModInfo): string {
 
 export function rowSvg(spec: { width: number; theme: Theme; mod: ModInfo }): Drawing {
   const { mod, width } = spec
-  const right = badges(mod, width)
-  const nameWidth = Math.min(measure(mod.name, 14) * 1.04, right.left - TEXT_X - 70)
-  const version = pill({ right: TEXT_X + nameWidth + 8, y: 11, text: `v${mod.version}`, role: null, isMono: true, isLeft: true })
+  const room = width - TEXT_X - DOT_ROOM
+  const versionText = `v${mod.version}`
+  const versionWidth = measure(versionText, 10.5) * 1.12 + PILL_PAD * 2
+  const nameRoom = room - versionWidth - GAP
+  const name = fit(mod.name, nameRoom, 14)
+  const version = pill({ right: TEXT_X + Math.min(measure(name, 14) * 1.04, nameRoom) + GAP, y: 9, text: versionText, role: null, isMono: true, isLeft: true })
+  const top = (ROW - TILE) / 2
   const body = [
-    `<rect x="0" y="${(ROW - TILE) / 2 - 2}" width="${TILE}" height="${TILE}" rx="9" class="bg-edit ln-edit"/>`,
-    `<text x="${TILE / 2}" y="${(ROW - TILE) / 2 + 21}" text-anchor="middle" style="font-size:13px;font-weight:700;letter-spacing:.04em" class="num fg-edit">${esc(monogram(mod.name))}</text>`,
-    `<text x="${TEXT_X}" y="24" style="font-size:14px;font-weight:600" class="${mod.isEnabled === false ? 'lo' : 'hi'}">${esc(fit(mod.name, nameWidth + 4, 14))}</text>`,
+    `<rect x="0.5" y="${top + 0.5}" width="${TILE - 1}" height="${TILE - 1}" rx="9" class="bg-edit ln-edit"/>`,
+    `<text x="${TILE / 2}" y="${top + 22.5}" text-anchor="middle" style="font-size:13px;font-weight:700;letter-spacing:.04em" class="num fg-edit">${esc(monogram(mod.name))}</text>`,
+    `<text x="${TEXT_X}" y="22" style="font-size:14px;font-weight:600" class="${mod.isEnabled === false ? 'lo' : 'hi'}">${esc(name)}</text>`,
     version.svg,
-    right.svg,
-    `<text x="${TEXT_X}" y="44" class="lb lo">${esc(fit(mod.description, width - TEXT_X - 8, 12))}</text>`,
+    healthDot(mod, width - 5),
+    `<text x="${TEXT_X}" y="41" class="lb mid">${esc(fit(mod.description, width - TEXT_X - 4, 12))}</text>`,
+    `<text x="${TEXT_X}" y="58" class="mi lo">${esc(fit(metaLine(mod), width - TEXT_X - 4, 10.5))}</text>`,
   ].join('')
-  const source = mod.upstream === null ? 'MODZ' : `asıl: ${mod.upstream}`
-  const state = stateLabel(mod)
-  const alt = `${mod.name} v${mod.version} · ${mod.surfaces.join(', ')} · ${source} · ${state} · ${mod.description}`
+  const alt = `${mod.name} v${mod.version} · ${metaLine(mod)} · ${stateLabel(mod)} · ${mod.description}`
 
   return { source: svgDoc({ width, height: ROW, theme: spec.theme, body }), alt, height: ROW }
 }

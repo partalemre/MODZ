@@ -84,7 +84,7 @@ export const icon = (paths: string, x: number, y: number, size: number, color: s
   `<g transform="translate(${x} ${y}) scale(${size / 24})" fill="none" stroke="${color}" stroke-width="${ICON_STROKE * 24 / size}" ` +
   `stroke-linecap="round" stroke-linejoin="round">${paths}</g>`
 
-const TILE_RADIUS = 9
+const TILE_RADIUS = 10
 
 export const tile = (x: number, y: number, size: number, tint: string): string =>
   `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${TILE_RADIUS}" fill="${tint}"/>`

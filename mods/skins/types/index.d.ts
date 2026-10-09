@@ -46,6 +46,10 @@ export type UsageSnap = { context: number | null; limits: { label: string; perce
 // What one turn did, shown in its footer.
 export type TurnStats = { tools: number; added: number; removed: number }
 
+// The MODZ main panel's card for this mod (DESIGN.md §9).
+export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+
 declare module 'claude-code' {
   interface PluginState {
     skins: {
@@ -61,6 +65,7 @@ declare module 'claude-code' {
       images: StateFamily<boolean>
       compacting: boolean
       pinned: boolean
+      hub: HubCard
     }
   }
 }

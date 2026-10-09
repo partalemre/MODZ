@@ -1,7 +1,7 @@
 // Measuring what `rm` and `git clean` would delete: every file under the paths,
 // its size in bytes, grouped by folder, and how many of them git tracks.
 
-import { emptyReport, plural, lines, LIST_MAX } from './report'
+import { emptyReport, nothingReport, plural, lines, LIST_MAX } from './report'
 import type { FileRow, Group, Report, Run } from './report'
 import type { GitRisk, Risk } from './classify'
 
@@ -57,6 +57,9 @@ export function folderName(dir: string): string {
   return bare === '' ? './' : `${bare}/`
 }
 
+// A path the shell fills in only when it runs: `$D`, `${D}`, `$(…)` or backticks.
+export const isUnresolved = (path: string): boolean => /[$`]/.test(path)
+
 export function parseScan(stdout: string): Scan {
   const scan: Scan = { files: 0, found: 0, tracked: 0, bytes: 0, groups: [] }
   const byDir = new Map<string, Group>()
@@ -101,14 +104,12 @@ function filesReport(scan: Scan, summary: string, note: string | null): Report {
 export async function measureRm(run: Run, risk: Extract<Risk, { kind: 'rm' }>, cwd: string): Promise<Report> {
   const targets = risk.targets.join(' ')
   if (risk.targets.length === 0) return emptyReport('files', 'rm with no paths', 'Silinecek bir yol verilmemiş.')
+  const unknown = risk.targets.filter(isUnresolved)
+  if (unknown.length > 0) return emptyReport('files', `${risk.label} ${targets} (paths decided at run time)`, `${unknown.join(' ')} komut çalışırken belirleniyor; neyin silineceği önceden ölçülemiyor.`)
   const ran = await run(['bash', '-c', FILES_SCRIPT, 'blast-radius', ...risk.targets], { cwd, timeoutMs: TIMEOUT_MS })
   const scan = parseScan(ran.stdout)
-  if (!scan.found) return emptyReport('files', `delete nothing: no file matches ${targets}`, `${targets} yok; rm'in sileceği bir şey yok.`)
-  if (!scan.files) {
-    const them = scan.found === 1 ? 'it' : 'them'
-
-    return emptyReport('files', `delete ${plural(scan.found, 'path', 'paths')} with no files in ${them}`, `Yollarda dosya yok: ${targets}`)
-  }
+  if (!scan.found) return nothingReport('files', `delete nothing: no file matches ${targets}`)
+  if (!scan.files) return nothingReport('files', `delete ${plural(scan.found, 'empty path', 'empty paths')}`)
 
   return filesReport(scan, `delete ${plural(scan.files, 'file', 'files')} (about ${size(scan.bytes)})`, null)
 }
@@ -145,7 +146,7 @@ export async function measureClean(run: Run, risk: GitRisk, cwd: string): Promis
   if (dry.exitCode !== 0) return emptyReport('files', 'git clean (could not dry-run it)', `git clean -n çalışmadı: ${dry.stderr.trim().slice(0, 160)}`)
   const gone = lines(dry.stdout).filter(l => l.startsWith('Would remove ')).map(l => l.slice('Would remove '.length))
   const summary = gone.length === 0 ? 'remove nothing: no untracked files match' : `remove ${plural(gone.length, 'untracked path', 'untracked paths')}`
-  if (gone.length === 0) return emptyReport('files', summary, 'Eşleşen izlenmeyen dosya yok.')
+  if (gone.length === 0) return nothingReport('files', summary)
   const ran = await run(['bash', '-c', FILES_SCRIPT, 'blast-radius', ...gone.slice(0, CLEAN_PATHS_MAX)], { cwd, timeoutMs: TIMEOUT_MS })
   const scan = parseScan(ran.stdout)
   if (!scan.files) {

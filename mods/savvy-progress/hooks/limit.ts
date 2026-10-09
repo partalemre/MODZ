@@ -1,4 +1,5 @@
 import type { LimitTrack } from '../types'
+import { fixed } from './format'
 
 // Each agent's share of the 5h limit. The engine reports the window's percent and the session's
 // dollars, never a per-agent split, so the session's own rate (points of the window per dollar
@@ -43,8 +44,8 @@ export const shareOf = (costUsd: number, track: LimitTrack | null): number | nul
   return rate === null ? null : costUsd * rate
 }
 
-// "<0.1", "3.4" or "12": a tenth of a point is the finest the window reports.
+// "<0,1", "3,4" or "12" (the decimal mark follows the language): a tenth of a point is the finest the window reports.
 export const shareNumber = (points: number): string => {
-  if (points < TENTH) return `<${TENTH}`
-  return points < ONE_DECIMAL_BELOW ? points.toFixed(1) : String(Math.round(points))
+  if (points < TENTH) return `<${fixed(TENTH, 1)}`
+  return points < ONE_DECIMAL_BELOW ? fixed(points, 1) : String(Math.round(points))
 }

@@ -60,10 +60,10 @@ function actions(ui: Ui, props: CardProps, lo: string | undefined) {
   }
 
   return (
-    <Box key="actions" flexDirection="row" gap={2} alignItems="center">
-      <Button key="run" label={props.view.action.label} hotkey={props.view.action.hotkey} onPress={props.onRun} />
-      <Button key="cancel" label="Vazgeç" hotkey="v" variant="primary" autoFocus onPress={props.onCancel} />
-      <Text key="holder" {...(lo === undefined ? { dimColor: true } : { color: lo })}>{HOLDER}</Text>
+    <Box key="actions" flexDirection="row" flexWrap="wrap" gap={1} alignItems="center">
+      <Button key="run" label={props.view.action.label} hotkey={props.view.action.hotkey} variant="secondary" onPress={props.onRun} />
+      <Button key="cancel" label="Vazgeç" hotkey="v" variant="secondary" autoFocus onPress={props.onCancel} />
+      <Box key="holder" marginLeft={1}><Text {...(lo === undefined ? { dimColor: true } : { color: lo })}>{HOLDER}</Text></Box>
     </Box>
   )
 }

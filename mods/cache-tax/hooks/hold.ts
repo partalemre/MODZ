@@ -14,23 +14,24 @@ import type { Palette } from './theme'
 export type HoldActions = { pay: () => void; fresh: () => void; status: () => void }
 export type HoldOptions = { view: HoldView; actions: HoldActions; isLight: boolean; noColor: boolean; columns: number }
 
-const PX_PER_COLUMN = 6.4
-const CARD_CHROME_PX = 40
+// About 8 px a reported column; the card's border and padding take 6 of them (as in every MODZ card).
+const PX_PER_COLUMN = 8
+const CARD_CHROME = 6
 const MIN_WIDTH = 300
 const MAX_WIDTH = 720
 const ROW_ICON = 16
 
-/** The card's inner width from the band's columns, erring small: a narrow drawing beats one that runs off. */
+/** The card's inner width from the band's columns. */
 export const contentWidth = (columns: number): number =>
-  Math.round(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, columns * PX_PER_COLUMN - CARD_CHROME_PX)))
+  Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, (columns - CARD_CHROME) * PX_PER_COLUMN))
 
 const heldQuote = (view: HoldView): string => `“${view.held}”`
 const keepText = (view: HoldView): string => `Bir kez öde, keepwarm önbelleği ${view.autoWarm} tutsun.`
 
 function buttons(ui: Elements['desktop'] | Elements['terminal'], actions: HoldActions): RenderElement {
   const { Box, Button } = ui
-  return Box({ flexDirection: 'row', gap: 1, children: [
-    Button({ key: 'cache-tax:pay', label: 'Öde ve gönder', variant: 'primary', hotkey: 'o', onPress: actions.pay }),
+  return Box({ flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'center', children: [
+    Button({ key: 'cache-tax:pay', label: 'Öde ve gönder', variant: 'secondary', hotkey: 'o', onPress: actions.pay }),
     Button({ key: 'cache-tax:fresh', label: 'Yeni başla', variant: 'secondary', hotkey: 'y', onPress: actions.fresh }),
     Button({ key: 'cache-tax:status', label: 'Önbellek durumu', plain: true, hotkey: 'd', onPress: actions.status }),
   ] })
@@ -47,10 +48,10 @@ function infoRow(ui: Elements['desktop'], paths: string, color: string, children
 function desktopInfo(ui: Elements['desktop'], view: HoldView, p: Palette): RenderElement {
   const { Box, Text } = ui
   return Box({ flexDirection: 'column', children: [
-    infoRow(ui, ICONS.pauseCircle, p.mid, [
+    infoRow(ui, ICONS.pauseCircle, p.lo, [
       Text({ color: p.mid, wrap: 'truncate-end', children: ['Bekleyen: ', Text({ color: p.hi, children: [heldQuote(view)] })] }),
     ]),
-    infoRow(ui, ICONS.shieldCheck, p.role.ok.fg, [Text({ color: p.mid, children: [keepText(view)] })]),
+    infoRow(ui, ICONS.shieldCheck, p.lo, [Text({ color: p.mid, children: [keepText(view)] })]),
   ] })
 }
 
@@ -93,7 +94,6 @@ function priceLine(ui: Elements['terminal'], label: string, usd: string, color: 
 export function holdTerminal(ui: Elements['terminal'], o: HoldOptions): RenderElement {
   const { Box, Text } = ui
   const kiln = o.noColor ? undefined : TERMINAL.edit
-  const moss = o.noColor ? undefined : TERMINAL.ok
   const v = o.view
   const share = v.coldUsd && v.warmUsd !== null ? Math.min(1, v.warmUsd / v.coldUsd) : 0
   const cells = Math.max(BAR_MIN, Math.min(BAR_FULL, o.columns - LINE_CHROME))
@@ -102,7 +102,7 @@ export function holdTerminal(ui: Elements['terminal'], o: HoldOptions): RenderEl
     Text({ bold: true, children: ['Mesajın bekletiliyor'] }),
     Text({ dimColor: true, children: [`Önbellek ${v.coldFor} önce soğudu.`] }),
     priceLine(ui, 'Şimdi gönder', fmtUsd(v.coldUsd), kiln, textBar(1, cells)),
-    priceLine(ui, 'Sıcak bir tur', fmtUsd(v.warmUsd), moss, `${textBar(share, cells)} olurdu`),
+    priceLine(ui, 'Sıcak bir tur', fmtUsd(v.warmUsd), undefined, `${textBar(share, cells)} olurdu`),
     Text({ dimColor: true, children: [`~${v.tokens} token yeniden yazılır · ${v.rate}`] }),
     Text({ wrap: 'truncate-end', children: [Text({ dimColor: true, children: ['⏸ Bekleyen: '] }), heldQuote(v)] }),
     Text({ dimColor: true, children: [`✓ ${keepText(v)}`] }),

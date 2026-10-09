@@ -23,6 +23,7 @@ const PILL_PAD = 9
 const PILL_GLYPH = 10
 const PILL_FONT: Font = { size: 11.5, weight: 600 }
 const EYEBROW_FONT: Font = { size: 10.5, weight: 700, spacing: 1.05 }
+const EYEBROW_HAIR_MIN = 24
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }
 const MOTION = [
   '@keyframes tm-breathe{0%,100%{opacity:1}50%{opacity:.45}}.breathe{animation:tm-breathe 1.8s ease-in-out infinite}',
@@ -63,6 +64,27 @@ export function fit(text: string, width: number, font: Font, fromStart = false):
   }
 
   return fromStart ? `…${chars.join('')}` : `${chars.join('')}…`
+}
+
+// Breaks `text` at spaces into at most `maxLines` lines of `width` pixels; only the last line may
+// end in an ellipsis, so a long prompt reads in full where it can.
+export function wrap(text: string, width: number, spec: { font: Font; maxLines: number }): string[] {
+  const lines: string[] = []
+  let current = ''
+  for (const word of text.split(/\s+/).filter(part => part !== '')) {
+    const next = current === '' ? word : `${current} ${word}`
+    if (current === '' || measure(next, spec.font) <= width) current = next
+    else {
+      lines.push(current)
+      current = word
+    }
+  }
+  if (current !== '') lines.push(current)
+  if (lines.length <= spec.maxLines) return lines.map(line => fit(line, width, spec.font))
+  const kept = lines.slice(0, spec.maxLines)
+  const last = kept.length - 1
+
+  return kept.map((line, index) => (index === last ? fit(`${line} ${lines.slice(spec.maxLines).join(' ')}`, width, spec.font) : line))
 }
 
 export function svgWidth(columns: number, range: { reserve?: number; min: number; max: number }): number {
@@ -150,6 +172,11 @@ export function pill(spec: PillSpec): Drawn {
   const label = text({ ...PILL_FONT, x: spec.x + lead, y: mid + 4, text: spec.label, ink: fg })
 
   return { svg: shell + glyph + label, width }
+}
+
+// The narrowest an eyebrow can be with its meta on the same line (the notch, label, a short hairline, meta).
+export function eyebrowWidth(label: string, meta: string): number {
+  return 13 + measure(upper(label), EYEBROW_FONT) + EYEBROW_HAIR_MIN + measure(meta, { size: 11 }) + 10
 }
 
 // The card opener: a 6px role notch, the tracked uppercase label, a hairline, and meta on the right.

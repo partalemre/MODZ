@@ -71,7 +71,7 @@ const GH_VERBS: Record<string, Omit<GitAction, 'kind'>> = {
 
 const READ_ONLY_GIT = new Set(['status', 'log', 'diff', 'show', 'blame', 'rev-parse', 'ls-files', 'grep', 'describe', 'config', 'remote', 'reflog', 'shortlog', 'help', 'version', 'check-ignore'])
 
-function segments(command: string, seps: string[] = []): string[][] {
+export function segments(command: string, seps: string[] = []): string[][] {
   const out: string[][] = []
   let cur: string[] = []
   let tok = ''
@@ -127,7 +127,7 @@ function segments(command: string, seps: string[] = []): string[][] {
     .filter(s => s.length > 0)
 }
 
-function stripGlobals(tokens: string[]): string[] {
+export function stripGlobals(tokens: string[]): string[] {
   const out = [...tokens]
   if (out[0] === 'env') out.shift()
   while (out.length && /^[A-Z_][A-Z0-9_]*=/.test(out[0] ?? '')) out.shift()

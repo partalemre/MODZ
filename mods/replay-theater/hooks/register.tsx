@@ -10,13 +10,14 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { shortLine } from './explain'
 import { explainReplay, why } from './explainer'
+import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { offerCard } from './offer'
 import { replayView } from './pane'
 import { currentStep, planAfter, PLAN_TOOLS } from './plan'
 import { EDIT_TOOLS, isAnswered, stepsFor } from './record'
 import type { EditCall } from './record'
 import { themeOf } from './ui/theme'
-import type { ReplayStep } from '../types'
+import type { HubCard, ReplayStep } from '../types'
 import type { ExplainIo } from './explainer'
 
 export const PANE_ID = 'replay-theater'
@@ -35,6 +36,8 @@ const PANE_ROWS_MAX = 30
 const PANE_ROWS_BASE = 12
 const LIST_ROWS_MAX = 8
 const DIFF_ROWS_MAX = 13
+const EMPTY_ROWS = 8
+const HUB = { plugin: 'replay-theater', key: 'hub' } as const
 
 type On = Parameters<Register>[0]
 type Call = EditCall & Record<string, unknown>
@@ -58,19 +61,42 @@ function paneRows(steps: ReplayStep[]): number {
   return Math.min(PANE_ROWS_MAX, PANE_ROWS_BASE + Math.min(steps.length, LIST_ROWS_MAX) + Math.min(longest, DIFF_ROWS_MAX))
 }
 
-async function openReplay($: EngineInterface): Promise<boolean> {
+// The pane opens with nothing to replay too: it says so there, not in the transcript.
+async function openReplay($: EngineInterface): Promise<{ hasEdits: boolean; isPlaced: boolean }> {
   const replay = await read($, replayAtom)
-  if (replay === null || replay.steps.length === 0) return false
-  await update($, indexAtom, () => 0)
-  await update($, offeredAtom, () => false)
+  const steps = replay?.steps ?? []
+  const hasEdits = steps.length > 0
+  if (hasEdits) {
+    await update($, indexAtom, () => 0)
+    await update($, offeredAtom, () => false)
+  }
   await update($, viewAtom, view => ({ ...view, isOpen: true, inBand: false }))
   // The pane takes the keys only while nothing else holds them: the band's button held them, so wait a beat.
   await $.clock.sleep(BAND_RELEASE_MS)
-  const placed = await $.ui.open({ id: PANE_ID, title: PANE_TITLE, focus: true, closeOnEscape: true, rows: paneRows(replay.steps), columns: PANE_COLUMNS })
-  if (placed.isPlaced === false) await update($, viewAtom, view => ({ ...view, inBand: true }))
-  void explainReplay(explainIo($), replay.id)
+  const rows = hasEdits ? paneRows(steps) : EMPTY_ROWS
+  const placed = await $.ui.open({ id: PANE_ID, title: PANE_TITLE, focus: true, closeOnEscape: true, rows, columns: PANE_COLUMNS })
+  const isPlaced = placed.isPlaced !== false
+  // The band shows a replay when the pane has no room; an empty one has nothing to show there.
+  if (!isPlaced) await update($, viewAtom, view => ({ ...view, isOpen: hasEdits, inBand: hasEdits }))
+  if (hasEdits && replay !== null) void explainReplay(explainIo($), replay.id)
 
-  return true
+  return { hasEdits, isPlaced }
+}
+
+// The main panel's card (DESIGN.md §9), written only when what it shows changes so the panel does not redraw for nothing.
+async function writeHub($: EngineInterface): Promise<void> {
+  const shown = hubOf(await read($, replayAtom))
+  const { value } = await $.state.get(HUB)
+  if (value !== undefined && value.detail === shown.detail && value.tone === shown.tone) return
+  const card: HubCard = { pane: HUB_PANE, ...shown, at: await $.clock.now() }
+  await $.state.set(HUB, card)
+}
+
+// The main panel's open request: an open pane only comes forward, keeping its place in the replay.
+async function bringReplay($: EngineInterface): Promise<void> {
+  const view = await read($, viewAtom)
+  if (view.isOpen && !view.inBand) await $.ui.open({ id: PANE_ID, title: PANE_TITLE, focus: true })
+  else await openReplay($)
 }
 
 // The engine calls explaining needs, as closures: only this module holds `$`.
@@ -136,6 +162,7 @@ function hookSession(on: On): void {
     flags.cwd = e.cwd.replace(/\/$/, '')
     await $.command.register({ name: 'replay', description: 'Tekrar: son turdaki dosya düzenlemelerini adım adım izle' })
     await refreshTheme($)
+    await writeHub($)
 
     return r
   })
@@ -149,9 +176,18 @@ function hookSession(on: On): void {
   on('command.run', { command: 'replay' }, async $ => {
     const opened = await openReplay($)
     const count = (await read($, replayAtom))?.steps.length ?? 0
+    if (opened.hasEdits) return { text: `Tekrar: ${count} düzenleme` }
 
-    return { text: opened ? `Tekrar: ${count} düzenleme` : 'Tekrar: son turda düzenleme yok.' }
+    // Only a terminal too narrow for the pane hears it as text.
+    return opened.isPlaced ? {} : { text: 'Tekrar: son turda düzenleme yok.' }
   })
+
+  on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
+    const done = await next(e)
+    if (isOpenFor(e.value, HUB_PANE)) await bringReplay($)
+
+    return done
+  }).catch(($, e, next) => next(e))
 }
 
 function hookRecording(on: On): void {
@@ -182,6 +218,7 @@ function hookRecording(on: On): void {
     await update($, indexAtom, () => 0)
     await update($, offeredAtom, () => true)
     await refreshTheme($)
+    await writeHub($)
 
     return r
   })

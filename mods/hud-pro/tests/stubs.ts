@@ -69,10 +69,11 @@ export function stubSession(on: any, usage: any = USAGE) {
 
     return { value: { isPlaced: true } }
   })
-  on('ui.invalidate', () => {
+  // Counted, then answered by the kit beneath, so a mounted drawing follows the redraw.
+  on('ui.invalidate', (_: any, e: any, next: any) => {
     invalidations.count += 1
 
-    return { value: undefined }
+    return next(e)
   })
   on('session.measure', (_: any, e: any) => ({ changed: e.changed }))
   on('ui.log', () => ({ value: undefined }))

@@ -6,6 +6,10 @@ Claude Code modlarının (hooks plugin'leri: bant, panel, status, toast, guard) 
 - Etkinleştirme: `~/.claude/skills/<ad>` → `MODZ/mods/<ad>` symlink'i. Claude skills klasöründeki plugin'leri
   her oturumda kendiliğinden yükler; kopya yok, kurulum yok.
 - `~/AI-Tools/claude-mods/src/<ad>` da buraya bakan symlink; orada yapılan düzenleme buraya yazılır.
+- Cloud: cloud oturumu yalnızca repoyu klonlar, `~/.claude/skills` orada yok. Bu yüzden repo
+  `.claude/skills/<ad>` → `../../mods/<ad>` göreli linklerini taşır; Claude bu proje klasöründeki plugin'leri de
+  kendiliğinden yükler. Makineye bağlı üç mod (done-ping, terminal-browser, filetree) cloud'a bağlanmaz.
+  Yerelde aynı ada sahip `~/.claude/skills` linki önce gelir; ikisi aynı klasörü gösterdiği için mod bir kez yüklenir.
 - Klasör aynı zamanda `modz` adlı marketplace (`.claude-plugin/marketplace.json`), paylaşmak için.
 - Taşıma öncesi yedekler: `~/.claude/mods-backup-20261009/`.
 
@@ -54,10 +58,10 @@ Ortak çizim kiti `kit/` altında (`bin/kit-sync` modlara dağıtır). `bin/prev
 
 ## Yönetim
 
-`bin/modz status | check [ad] | new <ad> "açıklama" | link [ad] | unlink <ad> | list | sync | dev | import <klasör>`.
+`bin/modz status | check [ad] | new <ad> "açıklama" | link [ad] | unlink <ad> | cloud | list | sync | dev | import <klasör>`.
 Oturum açılınca sağda MODZ ana paneli gelir: ajanlar, dosyalar, plan, testler, kontrol noktaları, tekrar, kullanım ve görünüm birer tıkla açılır; "Modlar" satırı tüm modları listeler. Kapatmak için `/config` → modz → "Oturum başında aç". Modlar birbirine `$.state` ile haber verir (DESIGN.md §9).
 
-Akış: `bin/modz new <ad>` → düzenle → `bin/modz check <ad>` → `bin/modz link <ad>`.
+Akış: `bin/modz new <ad>` → düzenle → `bin/modz check <ad>` → `bin/modz link <ad>` → `bin/modz cloud` (commit'le).
 Oturumda Claude'a yazdırılan mod `~/.claude/dev-mods/<oturum>/` altına düşer: `bin/modz dev` → `bin/modz import <klasör>` → `bin/modz link <ad>`.
 
 ## Paylaşım

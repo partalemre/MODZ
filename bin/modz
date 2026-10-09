@@ -6,6 +6,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODS="$ROOT/mods"
 DEV_MODS="$HOME/.claude/dev-mods"
 SKILLS="$HOME/.claude/skills"
+# Cloud oturumları yalnızca reponun kendi .claude/skills klasörünü görür.
+PROJECT_SKILLS="$ROOT/.claude/skills"
+# Bu makinenin sesine, tarayıcısına ya da diskine bağlı modlar: cloud'a bağlanmaz.
+LOCAL_ONLY=" done-ping terminal-browser filetree "
 
 usage() {
   cat <<USAGE
@@ -19,6 +23,7 @@ modz <komut>
   status               her modun etkin olup olmadığını göster
   link [ad]            modu (veya hepsini) ~/.claude/skills'e bağla: her oturumda yüklenir
   unlink <ad>          bağlantıyı kaldır (mod MODZ'da kalır)
+  cloud                .claude/skills linklerini eşitle: cloud oturumları yerel olmayan her modu yükler
 USAGE
 }
 
@@ -94,13 +99,32 @@ cmd_dev() {
     | sed -E 's|/.claude-plugin/plugin.json||' | sort
 }
 
+is_local_only() { [[ "$LOCAL_ONLY" == *" $1 "* ]]; }
+
 cmd_status() {
   for m in $(mod_names); do
-    local target="$SKILLS/$m" state="kapalı"
+    local target="$SKILLS/$m" state="kapalı" cloud="cloud: yok"
     if [[ -L "$target" && "$(readlink "$target")" == "$MODS/$m" ]]; then state="aktif"
     elif [[ -e "$target" ]]; then state="çakışma: $target MODZ'a bağlı değil"; fi
-    printf "%-18s %s\n" "$m" "$state"
+    if is_local_only "$m"; then cloud="cloud: yerel"
+    elif [[ -L "$PROJECT_SKILLS/$m" ]]; then cloud="cloud: var"; fi
+    printf "%-18s %-8s %s\n" "$m" "$state" "$cloud"
   done
+}
+
+# Göreli linkler: repo nereye klonlanırsa klonlansın (cloud dahil) çalışır.
+cmd_cloud() {
+  mkdir -p "$PROJECT_SKILLS"
+  for link in "$PROJECT_SKILLS"/*; do
+    [[ -L "$link" ]] || continue
+    local m; m="$(basename "$link")"
+    if [[ ! -d "$MODS/$m" ]] || is_local_only "$m"; then rm "$link" && echo "cloud'dan çıktı: $m"; fi
+  done
+  for m in $(mod_names); do
+    is_local_only "$m" && continue
+    ln -sfn "../../mods/$m" "$PROJECT_SKILLS/$m"
+  done
+  echo "cloud: $(find "$PROJECT_SKILLS" -maxdepth 1 -type l | wc -l | tr -d ' ') mod (yerel kalan:${LOCAL_ONLY% })"
 }
 
 link_one() {
@@ -133,5 +157,6 @@ case "${1:-}" in
   status) cmd_status ;;
   link) shift; cmd_link "$@" ;;
   unlink) shift; cmd_unlink "$@" ;;
+  cloud) cmd_cloud ;;
   *) usage ;;
 esac

@@ -96,15 +96,14 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(await ui.find({ key: 'open-tests' })).toBeDefined()
     expect(await ui.find({ key: 'open-files' })).toBeUndefined()
     expect(await said(ui, /katalog okunamadı/)).toBe(true)
-    await ui.press({ key: 'open-mods' })
-    expect(await said(ui, /Katalog okunamadı/)).toBe(true)
+    const catalog = await $.ui.mount({ ...PANE, requestId: 'modz-mods', surface })
+    expect(await said(catalog, /Katalog okunamadı/)).toBe(true)
   })
 
   test(`the catalog marks a mod whose folder is gone and files an unknown one under Diğer (${surface})`, async ($: any, on: any) => {
     stubWorld(on, troubledMarket())
     await $.session.start({ surface, isInteractive: true, cwd: '/work' })
-    const ui = await $.ui.mount({ ...PANE, surface })
-    await ui.press({ key: 'open-mods' })
+    const ui = await $.ui.mount({ ...PANE, requestId: 'modz-mods', surface })
 
     expect(await ui.find({ key: 'mod-ghost' })).toBeDefined()
     expect(await said(ui, /ghost v\?.*sorunlu.*plugin\.json okunamadı|sorunlu/)).toBe(true)

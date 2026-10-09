@@ -231,8 +231,9 @@ async function syncHub($: EngineInterface): Promise<void> {
   await update($, hubAtom, () => ({ pane: HUB_PANE, detail, tone: 'idle', at }))
 }
 
-// Opening the settings is the person's own act only from /skin: opened for the MODZ main
-// panel it takes no keyboard, so letters typed meant elsewhere never reach its hotkeys.
+// Opened by the person (/skin, or a press on its MODZ hub row) it asks for the keyboard: the hub
+// stays open, so only a focused pane comes in front of it. Opened otherwise it takes none, so
+// letters typed meant elsewhere never reach its hotkeys.
 async function openSettings($: EngineInterface, isAsked: boolean): Promise<void> {
   await $.ui.open({ id: SETTINGS, title: SETTINGS_TITLE, closeOnEscape: true, ...(isAsked ? { focus: true } : {}) })
 }
@@ -374,7 +375,7 @@ export const register: Register = on => {
   // modz's contract is not this mod's to import, so its address stays untyped here.
   on('state.set', { plugin: 'modz', key: 'open' } as any, async ($: EngineInterface, e: any, next: any) => {
     const done = await next(e)
-    if (isOwnOpen(e.value)) await openSettings($, false)
+    if (isOwnOpen(e.value)) await openSettings($, true)
 
     return done
   }).catch(($: EngineInterface, e: any, next: any) => next(e))

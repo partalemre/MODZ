@@ -10,19 +10,21 @@ export type HubEntry = { pane: string; mod: string; title: string; icon: IconNam
 
 export const SECTIONS: Section[] = ['Çalışma', 'Güvence', 'Ayarlar']
 
-// The catalog lives inside the hub itself rather than in a pane of its own.
-export const MODS_PANE = 'mods'
+// The catalog is this mod's own second pane, a tab beside the hub.
+export const MODS_PANE = 'modz-mods'
+export const MODS_TITLE = 'Modlar'
 
 export const ENTRIES: HubEntry[] = [
   { pane: 'agents', mod: 'savvy-progress', title: 'Ajanlar', icon: 'sparkle', role: 'run', section: 'Çalışma', hint: 'Ajanlar: durum, ilerleme, maliyet' },
   { pane: 'files', mod: 'filetree', title: 'Dosyalar', icon: 'folder', role: 'read', section: 'Çalışma', hint: "Claude'un dokunduğu dosyalar" },
   { pane: 'plan', mod: 'plan-steps', title: 'Plan', icon: 'list', role: 'plan', section: 'Çalışma', hint: 'Planın adımları' },
+  { pane: 'transceiver', mod: 'transceiver', title: 'Transceiver', icon: 'bell', role: 'read', section: 'Çalışma', hint: 'Arkadaşlarla sohbet odaları' },
   { pane: 'tests', mod: 'test-badge', title: 'Testler', icon: 'check', role: 'ok', section: 'Güvence', hint: 'Son test ve lint koşusu' },
   { pane: 'checkpoints', mod: 'checkpoint', title: 'Kontrol noktaları', icon: 'bookmark', role: 'ok', section: 'Güvence', hint: 'Bir turu geri al' },
   { pane: 'replay', mod: 'replay-theater', title: 'Tekrar', icon: 'rewind', role: 'plan', section: 'Güvence', hint: 'Son turun düzenlemelerini izle' },
   { pane: 'usage', mod: 'hud-pro', title: 'Kullanım', icon: 'gauge', role: 'warn', section: 'Ayarlar', hint: 'Limitler ve oturum maliyeti' },
   { pane: 'skins', mod: 'skins', title: 'Görünüm', icon: 'eye', role: 'edit', section: 'Ayarlar', hint: 'Skin ve renkler' },
-  { pane: MODS_PANE, mod: 'modz', title: 'Modlar', icon: 'cube', role: 'edit', section: 'Ayarlar', hint: 'Tüm modlar, sürüm ve sağlık' },
+  { pane: MODS_PANE, mod: 'modz', title: MODS_TITLE, icon: 'cube', role: 'edit', section: 'Ayarlar', hint: 'Tüm modlar, sürüm ve sağlık' },
 ]
 
 const TONES: HubTone[] = ['idle', 'live', 'ok', 'warn', 'bad']
@@ -46,11 +48,12 @@ export type HubRow = { entry: HubEntry; card: HubCard | null; hotkey: string | n
 // What the catalog says of a mod: on (or not said), switched off, or not listed at all.
 export type Presence = 'listed' | 'off' | 'unlisted'
 
-const HOTKEYS = 9
+// The terminal's row hotkeys: the digits in keyboard order, so a tenth row still gets one.
+const HOTKEYS = '1234567890'
 
 // A pane belongs to one mod, so only that mod's own card fills its row: a card left behind by a
 // removed mod (or another mod claiming the pane) is never drawn. The catalog is always offered; a
-// mod the catalog does not list (a mod from elsewhere, or an unreadable catalog) shows once it reports.
+// mod the catalog does not list (Transceiver, a mod from elsewhere, or an unreadable catalog) shows once it reports.
 export function rowsOf(cards: Record<string, HubCard>, presence: (mod: string) => Presence): HubRow[] {
   const own = (entry: HubEntry) => {
     const card = cards[entry.mod]
@@ -63,7 +66,7 @@ export function rowsOf(cards: Record<string, HubCard>, presence: (mod: string) =
     return entry.pane === MODS_PANE || state === 'listed' || (state === 'unlisted' && own(entry) !== null)
   })
 
-  return shown.map((entry, i) => ({ entry, card: own(entry), hotkey: i < HOTKEYS ? String(i + 1) : null }))
+  return shown.map((entry, i) => ({ entry, card: own(entry), hotkey: HOTKEYS[i] ?? null }))
 }
 
 export type Focus = { row: HubRow; tone: HubTone }

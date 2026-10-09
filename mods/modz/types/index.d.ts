@@ -7,15 +7,14 @@ export type HubCard = { pane: string; detail: string; tone: HubTone; at: number 
 // Written when a hub row is pressed; the mod that owns `pane` opens its own pane.
 export type ModzOpen = { pane: string; at: number }
 
-export type ModzView = 'home' | 'mods'
-
 declare module 'claude-code' {
   interface PluginState {
-    modz: { open: ModzOpen; cards: Record<string, HubCard>; view: ModzView }
+    modz: { open: ModzOpen; cards: Record<string, HubCard> }
     // Each listed mod's own hub line (hooks/hub.ts ENTRIES), which the hub listens for and keeps.
     'savvy-progress': { hub: HubCard }
     filetree: { hub: HubCard }
     'plan-steps': { hub: HubCard }
+    transceiver: { hub: HubCard }
     'test-badge': { hub: HubCard }
     checkpoint: { hub: HubCard }
     'replay-theater': { hub: HubCard }

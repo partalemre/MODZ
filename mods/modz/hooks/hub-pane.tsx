@@ -1,5 +1,5 @@
 // The MODZ hub pane: the head card, then each section's rows with an "Aç" button that asks the
-// owning mod to open its pane. The catalog ("Modlar") is a second view of this same pane.
+// owning mod to open its pane. The catalog ("Modlar") is a pane of its own (register.tsx).
 import type { Drawing } from './draw'
 import type { Focus, HubRow, Section } from './hub'
 import { ROLE_OF_TONE, SECTIONS } from './hub'

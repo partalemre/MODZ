@@ -135,8 +135,8 @@ for (const theme of ['dark', 'light']) {
       if (c.busy) {
         await $.command.run({ command: 'report', args: '' })
       }
-      const ui = await $.ui.mount({ ...pane(c.columns), surface })
-      if (c.isCatalog === true) await ui.press({ key: 'open-mods' })
+      const requestId = c.isCatalog === true ? 'modz-mods' : 'modz'
+      const ui = await $.ui.mount({ ...pane(c.columns), requestId, surface })
       console.log(`@@TREE@@${c.label}${theme === 'light' ? '-light' : ''}@@${JSON.stringify(await ui.drawn())}`)
     })
   }

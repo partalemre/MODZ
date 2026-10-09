@@ -63,7 +63,7 @@ test('/skin opens the Görünüm settings with the keyboard: the person asked fo
   expect(world.opens).toEqual([expect.objectContaining({ id: 'skins-settings', title: 'Görünüm', focus: true })])
 })
 
-test('a MODZ open request for skins opens the settings without taking the keyboard', { plugins: [MODZ] } as never, async ($: any, on: any) => {
+test('a MODZ hub press for skins opens the settings asking for the keyboard, so it comes in front of the hub', { plugins: [MODZ] } as never, async ($: any, on: any) => {
   const world = stubEngine(on)
   await start($)
 
@@ -72,7 +72,7 @@ test('a MODZ open request for skins opens the settings without taking the keyboa
   await $.command.run({ command: 'modz-press', args: 'skins' })
   expect(world.opens).toHaveLength(1)
   expect(world.opens[0]).toMatchObject({ id: 'skins-settings', title: 'Görünüm' })
-  expect(world.opens[0]?.focus).toBeUndefined()
+  expect(world.opens[0]?.focus).toBe(true)
   expect(isOwnOpen({ pane: 'skins', at: 1 })).toBe(true)
   expect(isOwnOpen(null)).toBe(false)
 })

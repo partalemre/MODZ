@@ -120,8 +120,9 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
 - **Aç isteği:** ana panel `{ plugin: 'modz', key: 'open' }` değerine `{ pane, at }` yazar. Paneli olan mod
   `on('state.set', { plugin: 'modz', key: 'open' }, …)` ile dinler, `next(e)`'den sonra `pane` kendi anahtarıysa
   kendi `$.ui.open`'ını çağırır (komut değil). Kanca `.catch(($, e, next) => next(e))` taşır.
-- **Öne getirme:** sahibinin `$.ui.open`'ı "kendiliğinden" sayılır; yüzey en yeni paneli yalnızca hiçbir panel
-  klavyeyi tutmuyorsa öne alır. Bu yüzden ana panel istekten önce kendini kapatıp odaksız bir sekme olarak geri açar.
+- **Öne getirme:** ana panel açık kalır, her satır kendi sekmesini açar. Yüzey, klavyeyi tutan paneli yerinden
+  etmez; bu yüzden sahibi `$.ui.open`'ı `focus: true` ile çağırır: oluru yüzey verir (masaüstünde istem kutusu boş
+  ve tur yokken), panel klavyeyi ve önü alır. Olmazsa panel ana panelin yanında sekme olarak bekler.
 - **Basış damgası:** her yeniden çizim yeni basış tutamaçları verir, ama masaüstü aynı görünen ağacı eskisiyle
   tutar ve ilk tıklama reddedilir. Button, Input ya da Select çizen her ağaç kökünde kit'in `stamped` damgasını
   taşır (`kit/stamp.tsx`, görünmez); değişmeyen değer `$.state`'e yeniden yazılmaz (`kit/same.ts`).
@@ -138,12 +139,13 @@ type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
 | agents | savvy-progress | Ajanlar |
 | files | filetree | Dosyalar |
 | plan | plan-steps | Plan |
+| transceiver | transceiver | Transceiver |
 | tests | test-badge | Testler |
 | checkpoints | checkpoint | Kontrol noktaları |
 | replay | replay-theater | Tekrar |
 | usage | hud-pro | Kullanım |
 | skins | skins | Görünüm |
-| mods | modz | Modlar |
+| modz-mods | modz | Modlar (modz'un ikinci paneli) |
 
 `detail` tek satır, ≤40 karakter, Türkçe, ölçülmüş gerçek ("2 ajan çalışıyor", "41/42 geçti", "3/9 adım"); bilinmiyorsa
 boş dize. Panel başlıkları tabloda yazıldığı gibidir; iki sekme aynı adı taşımaz.

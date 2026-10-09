@@ -3,7 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { cardOf, focusOf, rowsOf } from '../hooks/hub'
 import type { Presence } from '../hooks/hub'
 import type { HubCard } from '../types'
-import { MARKET_FILES } from './market-fixture'
+import { stubWorld } from './world'
 
 const PANE = { plugin: 'modz', component: 'Pane', requestId: 'modz', viewport: { columns: 100, rows: 40 }, props: { bodyColumns: 50 } } as const
 
@@ -80,36 +80,6 @@ const testsReporter = {
       return next(e)
     })
   },
-}
-
-function stubWorld(on: any) {
-  const opened: string[] = []
-  on('fs.stat', () => ({ value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
-  on('fs.read', (_: unknown, e: { path: string }) => {
-    const text = MARKET_FILES[e.path]
-    if (!text) throw new Error(`ENOENT ${e.path}`)
-
-    return { value: text }
-  })
-  const names = Object.keys(MARKET_FILES).map(path => /mods\/([^/]+)\//.exec(path)?.[1]).filter(Boolean)
-  on('settings.read', () => ({ value: { enabledPlugins: Object.fromEntries(names.map(name => [`${name}@modz`, true])) } }))
-  on('command.register', () => ({ value: undefined }))
-  on('ui.open', (_: unknown, e: { id: string }) => {
-    opened.push(e.id)
-
-    return { value: { isPlaced: true } }
-  })
-  on('ui.close', (_: unknown, e: { id: string }) => {
-    opened.push(`close:${e.id}`)
-
-    return { value: undefined }
-  })
-  on('session.start', () => ({ cwd: '/work' }))
-  on('config.list', () => ({ value: [] }))
-  on('clock.now', () => ({ value: 1_000 }))
-  on('command.run', () => ({ text: '' }))
-
-  return { opened }
 }
 
 test('the hub opens by itself at session start', async ($, on) => {

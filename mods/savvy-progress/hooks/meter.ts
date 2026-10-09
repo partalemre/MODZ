@@ -16,23 +16,25 @@ const classOf = (view: Units, i: number): string => {
   return i < view.done + view.active ? 'f-run' : 'k'
 }
 
-const rect = (track: Track, x: number, w: number, cls: string): string =>
+type Span = { x: number; w: number; cls: string }
+
+const rect = (track: Track, { x, w, cls }: Span): string =>
   `<rect class="${cls}" x="${x.toFixed(1)}" y="${track.y}" width="${Math.max(0, w).toFixed(1)}" height="${track.h}" rx="${track.h / 2}"/>`
 
 // Many units on a short meter run together: one track, filled in proportion, no gaps.
 const solid = (view: Units, track: Track): string => {
   const unit = track.w / Math.max(1, view.units)
   const ok = view.done - view.failed
-  const parts = [rect(track, track.x, track.w, 'k')]
+  const parts = [rect(track, { x: track.x, w: track.w, cls: 'k' })]
   const spans: [number, number, string][] = [[0, ok, 'f-ok'], [ok, view.done, 'f-danger'], [view.done, view.done + view.active, 'f-run']]
-  for (const [from, to, cls] of spans) if (to > from) parts.push(rect(track, track.x + from * unit, (to - from) * unit, cls))
+  for (const [from, to, cls] of spans) if (to > from) parts.push(rect(track, { x: track.x + from * unit, w: (to - from) * unit, cls }))
   return parts.join('')
 }
 
 export const meterSvg = (view: Units, track: Track): string => {
   const units = view.units
-  if (units < 1) return rect(track, track.x, track.w, 'k')
+  if (units < 1) return rect(track, { x: track.x, w: track.w, cls: 'k' })
   const seg = (track.w - GAP * (units - 1)) / units
   if (seg < MIN_SEG) return solid(view, track)
-  return Array.from({ length: units }, (_, i) => rect(track, track.x + i * (seg + GAP), seg, classOf(view, i))).join('')
+  return Array.from({ length: units }, (_, i) => rect(track, { x: track.x + i * (seg + GAP), w: seg, cls: classOf(view, i) })).join('')
 }

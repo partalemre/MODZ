@@ -78,7 +78,9 @@ function buttons(ui: Ui, $: EngineInterface, view: JobView) {
   ]
 }
 
-function desktopBand(ui: Ui, $: EngineInterface, view: JobView, cols: number) {
+type BandInput = { view: JobView; cols: number }
+
+function desktopBand(ui: Ui, $: EngineInterface, { view, cols }: BandInput) {
   const { Box, Svg } = ui
   const drawing = bandSvg(view, (cols || DEFAULT_COLS) * PX_PER_COL - BUTTONS_PX)
   return (
@@ -122,7 +124,7 @@ const termPlan = (view: JobView, cols: number): { titleW: number; meterW: number
   return meterW >= TERM.meterMin ? { titleW, meterW } : { titleW: Math.max(TERM.titleMin, avail + 1), meterW: 0 }
 }
 
-function terminalBand(ui: Ui, $: EngineInterface, view: JobView, cols: number) {
+function terminalBand(ui: Ui, $: EngineInterface, { view, cols }: BandInput) {
   const { Box, Text } = ui
   const plan = termPlan(view, cols || DEFAULT_COLS)
   return (
@@ -170,7 +172,7 @@ export function onBand(on: On): void {
     const table = $.ui.resolve(e)
     const ui = table as Ui
     const { Box } = ui
-    const mine = e.surface !== 'terminal' && 'Svg' in ui ? desktopBand(ui, $, view, e.props.bodyColumns) : terminalBand(ui, $, view, e.props.bodyColumns)
+    const mine = e.surface !== 'terminal' && 'Svg' in ui ? desktopBand(ui, $, { view, cols: e.props.bodyColumns }) : terminalBand(ui, $, { view, cols: e.props.bodyColumns })
     // The stamp rides inside this mod's own rows, so the band keeps its two parts: ours, then the others'.
     return (
       <Box flexDirection="column">

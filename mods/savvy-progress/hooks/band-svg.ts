@@ -31,7 +31,9 @@ const pillRole = (view: JobView): Role => {
   return view.failed ? 'warn' : 'ok'
 }
 
-const pillSvg = (label: string, role: Role, x: number, w: number): string =>
+type Pill = { label: string; role: Role; x: number; w: number }
+
+const pillSvg = ({ label, role, x, w }: Pill): string =>
   `<rect class="b-${role} l-${role}" x="${x + 0.5}" y="${PILL.y + 0.5}" width="${w - 1}" height="${PILL.h - 1}" rx="${(PILL.h - 1) / 2}" stroke-width="1"/>
 <text class="f-${role}" x="${x + w / 2}" y="${BASELINE - 0.5}" text-anchor="middle" font-family="${FONT}" font-size="${PILL.size}" font-weight="600">${xml(label)}</text>`
 
@@ -61,7 +63,7 @@ export const bandSvg = (view: JobView, maxW: number): BandDrawing => {
   const width = Math.ceil(crabX + CRAB.w)
   const body = [
     `<text class="t" x="${TITLE_X}" y="${BASELINE}" font-family="${FONT}" font-size="${TITLE_SIZE}" font-weight="600">${xml(plan.title)}</text>`,
-    pillSvg(view.label, pillRole(view), pillX, plan.pillW),
+    pillSvg({ label: view.label, role: pillRole(view), x: pillX, w: plan.pillW }),
     plan.meterW ? meterSvg(view, { x: meterX, y: (BAND_H - METER.h) / 2, w: plan.meterW, h: METER.h }) : '',
     `<text class="t" x="${pctX}" y="${BASELINE}" font-family="${MONO}" font-size="${PERCENT_SIZE}" font-weight="650">${xml(percentText(view))}</text>`,
     crab(crabX, CRAB.y, { costume: 'other', isWalking: view.isWorking, scale: CRAB.scale }),

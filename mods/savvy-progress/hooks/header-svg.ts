@@ -52,7 +52,9 @@ const columnsOf = (inner: number, stats: Stat[]): number => {
   return fits(2) ? 2 : 1
 }
 
-const statSvg = (stat: Stat, x: number, y: number, w: number): string =>
+type Slot = { x: number; y: number; w: number }
+
+const statSvg = (stat: Stat, { x, y, w }: Slot): string =>
   `<text class="m" x="${x}" y="${y + STATS.label}" font-family="${FONT}" font-size="${STATS.labelSize}" font-weight="700" letter-spacing="${EYEBROW.tracking}">${xml(fitText(stat.label.toLocaleUpperCase('tr'), STATS.labelSize + EYEBROW.tracking, w))}</text>
 <text class="t" x="${x}" y="${y + STATS.value}" font-family="${FONT}" font-size="${STATS.valueSize}" font-weight="650" font-variant-numeric="tabular-nums">${xml(fitText(stat.value, STATS.valueSize, w))}</text>`
 
@@ -66,7 +68,7 @@ const statsSvg = (stats: Stat[], inner: number): { body: string; height: number 
     const y = STATS.top + Math.floor(i / cols) * STATS.pitch
     const x = PAD + col * colW + (col ? GAP : 0)
     const rule = col ? `<line class="ln" x1="${PAD + col * colW}" x2="${PAD + col * colW}" y1="${y}" y2="${y + STATS.rule}" stroke-width="1"/>` : ''
-    return rule + statSvg(stat, x, y, colW - GAP * (col ? 2 : 1))
+    return rule + statSvg(stat, { x, y, w: colW - GAP * (col ? 2 : 1) })
   })
   return { body: parts.join('\n'), height: STATS.top + (rows - 1) * STATS.pitch + STATS.rule + PAD }
 }

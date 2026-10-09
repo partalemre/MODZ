@@ -56,7 +56,9 @@ const creditOf = (list: AgentRun[]): Credit => {
 const NO_CREDIT: Credit = { sum: 0, isEstimate: false }
 
 // Nothing measurable reads as null ("—"), never as 0%; a running job never reaches 100% on credit.
-const ratioOf = (done: number, credit: Credit, total: number, isFinished: boolean): number | null => {
+type Progress = { done: number; credit: Credit; total: number; isFinished: boolean }
+
+const ratioOf = ({ done, credit, total, isFinished }: Progress): number | null => {
   if (isFinished) return 1
   if (!total) return null
   const ratio = Math.min(NEAR_DONE, (done + credit.sum) / total)
@@ -95,7 +97,7 @@ function reportView(f: Flow, list: AgentRun[], input: JobInput): JobView {
     source: 'report',
     title: f.title,
     label: reportLabel(f, running.length),
-    ratio: ratioOf(f.done, credit, f.total, f.isFinished),
+    ratio: ratioOf({ done: f.done, credit, total: f.total, isFinished: f.isFinished }),
     isEstimate: credit.isEstimate && !f.isFinished,
     launched: f.isFinished ? 1 : launched,
     units: f.total,
@@ -116,7 +118,7 @@ function tasksView(tasks: TrackedTask[], list: AgentRun[]): JobView {
     source: 'tasks',
     title: agentsTitle(list),
     label: isFinished ? t().done : `${t().tasks} ${count.done}/${count.total}`,
-    ratio: ratioOf(count.done, NO_CREDIT, count.total, isFinished),
+    ratio: ratioOf({ done: count.done, credit: NO_CREDIT, total: count.total, isFinished }),
     isEstimate: false,
     launched: isFinished ? 1 : (count.done + count.active) / count.total,
     units: count.total,
@@ -141,7 +143,7 @@ function agentsView(list: AgentRun[]): JobView {
     source: 'agents',
     title: agentsTitle(list),
     label: isFinished ? done : `${s.agents} ${ended}/${list.length}`,
-    ratio: ratioOf(ended, credit, list.length, isFinished),
+    ratio: ratioOf({ done: ended, credit, total: list.length, isFinished }),
     isEstimate: credit.isEstimate && !isFinished,
     launched: 1,
     units: list.length,

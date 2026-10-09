@@ -3,11 +3,12 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Draft, Panel } from '../types'
 import { BUILTIN_TYPES, DEFAULT_TYPE, TASK_TITLE_MAX, blankDraft, chosenOf } from './agent-types'
+import { addRun } from './agents'
 import { draftTree } from './dispatch'
 import type { DraftView } from './dispatch'
 import { clip } from './format'
 import { t } from './i18n'
-import { lookAt, lookOf, nextLook } from './identity'
+import { lookOf } from './identity'
 import { paneDataOf } from './pane-data'
 import type { PaneData } from './pane-data'
 import { FRAME_COLS, FRAME_PX, agentRow, plannedRow } from './rows'
@@ -88,17 +89,20 @@ async function startTask($: EngineInterface, type: string, text: string): Promis
   const prompt = text.trim()
   if (!prompt) return
   try {
-    const before = await read($, agents)
-    const started = await $.agent.spawn({ subagentType: type, prompt, description: clip(prompt.split('\n')[0] ?? prompt, TASK_TITLE_MAX) })
+    const description = clip(prompt.split('\n')[0] ?? prompt, TASK_TITLE_MAX)
+    const started = await $.agent.spawn({ subagentType: type, prompt, description })
     if (started.deny !== undefined) {
       await patchDraft($, { notice: t().denied(started.deny) })
       return
     }
     const id = started.agentId
-    await update($, panel, prev => ({ ...prev, selected: id ?? prev.selected, draft: { ...draftOf(prev.draft), isOpen: false, notice: undefined } }))
-    // Our own spawn hook may not see a spawn we made: the roster brings it in with the next free look.
-    const run = (await read($, agents)).find(a => a.agentId === id)
-    $.ui.toast(t().launched(run ? lookOf(run).name : lookAt(nextLook(before)).name))
+    // Our own spawn hook does not see a spawn this plugin made: the card is added here, at once.
+    const at = await $.clock.now()
+    const spawn = { id: id ?? `task-${at}`, agentId: id, type, description, brief: prompt, model: started.model, at }
+    const list = await update($, agents, prev => (prev.some(a => a.agentId !== undefined && a.agentId === id) ? prev : addRun(prev, spawn)))
+    await update($, panel, prev => ({ ...prev, selected: spawn.id, draft: { ...draftOf(prev.draft), isOpen: false, notice: undefined } }))
+    const run = list.find(a => a.id === spawn.id)
+    $.ui.toast(t().launched(run ? lookOf(run).name : type))
   } catch (error) {
     $.ui.log(`savvy-progress: spawn failed (${String(error)})`, { to: 'debug' })
     await patchDraft($, { notice: t().spawnFailed })

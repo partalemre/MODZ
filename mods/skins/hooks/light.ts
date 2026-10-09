@@ -49,7 +49,11 @@ export const isLightTheme = (value: unknown): boolean => typeof value === 'strin
 const named = (value: unknown): boolean | undefined => {
   const name = typeof value === 'string' ? value.trim().toLowerCase() : ''
 
-  return name.includes('light') ? true : name.includes('dark') ? false : undefined
+  if (name.includes('light')) {
+    return true
+  }
+
+  return name.includes('dark') ? false : undefined
 }
 
 // `COLORFGBG` is `<fg>;<bg>` (sometimes `<fg>;<default>;<bg>`); background 7 or 15 is a light one.
@@ -76,3 +80,18 @@ export const resolveLight = (hints: ThemeHints): boolean =>
   named(hints.theme) ??
   terminalLight(hints.colorfgbg) ??
   (hints.systemDark === undefined ? false : !hints.systemDark)
+
+// What a probe of the system's appearance printed.
+export type Probe = { exitCode: number | null; stdout: string; stderr: string }
+
+// macOS's AppleInterfaceStyle: unset (exit 1, "does not exist") is how macOS says light.
+export function macDark(probe: Probe): boolean | undefined {
+  if (probe.exitCode === 0) {
+    return probe.stdout.trim() === 'Dark'
+  }
+
+  return /does not exist/.test(probe.stderr) ? false : undefined
+}
+
+// GNOME's color-scheme.
+export const gnomeDark = (probe: Probe): boolean | undefined => (probe.exitCode === 0 ? probe.stdout.includes('dark') : undefined)

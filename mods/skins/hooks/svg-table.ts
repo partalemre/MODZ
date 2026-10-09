@@ -1,6 +1,7 @@
 import type { Align, Table } from './markdown'
 import type { Palette } from './skin'
 import { CONTROL_SLOT, escape, HEADER_MID, measure as measureAt, MONO, svgCard } from './svg-kit'
+import type { CardFrame } from './svg-kit'
 
 // A table as an animated vector card in the skin's colours, with no background of its
 // own so the page shows through, for the surfaces that draw `Svg` (the desktop app).
@@ -69,8 +70,10 @@ function breakWord(word: string, width: number, isMono: boolean): string[] {
   return piece === '' ? pieces : [...pieces, piece]
 }
 
+export type Wrap = { isMono: boolean; maxLines?: number }
+
 // The cell's text as lines that fit its column; past the cap, the last line ends in `…`.
-export function wrapCell(text: string, width: number, isMono: boolean, maxLines = MAX_CELL_LINES): string[] {
+export function wrapCell(text: string, width: number, { isMono, maxLines = MAX_CELL_LINES }: Wrap): string[] {
   const lines: string[] = []
   let line = ''
 
@@ -139,10 +142,14 @@ export function fitColumns(natural: readonly number[], width: number, reserve = 
   return natural.map(w => (w <= fair ? w : Math.max(MIN_COL, (flexRoom * w) / flexTotal)))
 }
 
-const anchorOf = (align: Align): string => (align === 'right' ? 'end' : align === 'center' ? 'middle' : 'start')
+const ANCHORS: Readonly<Record<Align, string>> = { left: 'start', center: 'middle', right: 'end' }
 
-const xOf = (left: number, width: number, align: Align): number =>
-  align === 'right' ? left + width : align === 'center' ? left + width / 2 : left
+const anchorOf = (align: Align): string => ANCHORS[align]
+
+// How far across its column a cell's text anchors.
+const ANCHOR_SHARE: Readonly<Record<Align, number>> = { left: 0, center: 0.5, right: 1 }
+
+const xOf = (left: number, width: number, align: Align): number => left + width * ANCHOR_SHARE[align]
 
 type Cell = { kind: CellKind; text: string; lines: string[] }
 
@@ -150,10 +157,12 @@ function layoutCell(text: string, width: number): Cell {
   const kind = kindOfCell(text)
   const isWrapped = kind === 'text' || kind === 'code'
 
-  return { kind, text, lines: isWrapped ? wrapCell(text, width, kind === 'code') : [text] }
+  return { kind, text, lines: isWrapped ? wrapCell(text, width, { isMono: kind === 'code' }) : [text] }
 }
 
-function cellMarkup(cell: Cell, left: number, width: number, align: Align, rowH: number, palette: Palette): string {
+type Slot = { left: number; width: number; align: Align; rowH: number; palette: Palette }
+
+function cellMarkup(cell: Cell, { left, width, align, rowH, palette }: Slot): string {
   const isMono = isMonoKind(cell.kind)
   const font = isMono ? `font-family="${MONO}" font-size="${SIZE - 0.5}"` : ''
   const blockH = cell.lines.length * LINE_H
@@ -180,40 +189,10 @@ function cellMarkup(cell: Cell, left: number, width: number, align: Align, rowH:
     .join('')
 }
 
-// `width` is the room the reply gives the card, in pixels; it is clamped to a sane range.
-// `hasControl` keeps a gutter at the right for a Copy button laid over the header.
-export function tableSvg(table: Table, palette: Palette, width: number, hasControl = false): SvgTable {
-  const cardWidth = Math.round(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width)))
-  const reserve = hasControl ? CONTROL_SLOT : 0
-  const widths = fitColumns(naturalWidths(table), cardWidth, reserve)
-  const lefts = widths.map((_, i) => PAD_X + widths.slice(0, i).reduce((sum, w) => sum + w + COL_GAP, 0))
-  const align = (i: number): Align => table.align[i] ?? 'left'
+type Grid = { widths: number[]; lefts: number[]; align: (i: number) => Align }
 
-  const laid = table.rows.map(row => row.map((cell, i) => layoutCell(cell, (widths[i] ?? MIN_COL) - (kindOfCell(cell) === 'colour' ? 22 : 0))))
-  const heights = laid.map(cells => Math.max(MIN_ROW_H, Math.max(...cells.map(cell => cell.lines.length)) * LINE_H + ROW_PAD_Y * 2))
-  const tops = heights.map((_, r) => HEADER_H + heights.slice(0, r).reduce((sum, h) => sum + h, 0))
-  const height = HEADER_H + heights.reduce((sum, h) => sum + h, 0) + 6
-
-  const header = table.header
-    .map((cell, i) => {
-      const [text = ''] = wrapCell(cell.toUpperCase(), widths[i] ?? MIN_COL, false, 1)
-
-      return `<text x="${xOf(lefts[i] ?? 0, widths[i] ?? 0, align(i))}" y="${HEADER_MID + 4}" text-anchor="${anchorOf(align(i))}" class="head">${escape(text)}</text>`
-    })
-    .join('')
-
-  const rows = laid
-    .map((cells, r) => {
-      const rowH = heights[r] ?? MIN_ROW_H
-      const markup = cells.map((cell, i) => cellMarkup(cell, lefts[i] ?? 0, widths[i] ?? 0, align(i), rowH, palette)).join('')
-      const band = r % 2 === 1 ? `fill="${palette.fg}" fill-opacity=".05"` : 'fill="none"'
-
-      // The outer group places the row; the inner one rises relative to that place.
-      return `<g transform="translate(0 ${tops[r] ?? 0})"><g class="row" style="animation-delay:${120 + r * STAGGER_MS}ms"><rect class="bg" x="0" y="0" width="${cardWidth}" height="${rowH}" ${band}/>${markup}</g></g>`
-    })
-    .join('')
-
-  const style = [
+const tableStyle = (palette: Palette, cardWidth: number): string =>
+  [
     `text{font-size:${SIZE}px}`,
     `.head{font-size:12px;font-weight:600;letter-spacing:.1em;fill:${palette.muted}}`,
     `.num{font-variant-numeric:tabular-nums}`,
@@ -224,14 +203,55 @@ export function tableSvg(table: Table, palette: Palette, width: number, hasContr
     `@media (prefers-reduced-motion:reduce){.row,.rule{animation:none;opacity:1;stroke-dashoffset:0}}`,
   ].join('')
 
+function headerMarkup(table: Table, { widths, lefts, align }: Grid): string {
+  return table.header
+    .map((cell, i) => {
+      const [text = ''] = wrapCell(cell.toUpperCase(), widths[i] ?? MIN_COL, { isMono: false, maxLines: 1 })
+
+      return `<text x="${xOf(lefts[i] ?? 0, widths[i] ?? 0, align(i))}" y="${HEADER_MID + 4}" text-anchor="${anchorOf(align(i))}" class="head">${escape(text)}</text>`
+    })
+    .join('')
+}
+
+type Body = { rows: string; height: number }
+
+function rowsMarkup(table: Table, grid: Grid, { palette, width: cardWidth }: CardFrame): Body {
+  const { widths, lefts, align } = grid
+  const laid = table.rows.map(row => row.map((cell, i) => layoutCell(cell, (widths[i] ?? MIN_COL) - (kindOfCell(cell) === 'colour' ? 22 : 0))))
+  const heights = laid.map(cells => Math.max(MIN_ROW_H, Math.max(...cells.map(cell => cell.lines.length)) * LINE_H + ROW_PAD_Y * 2))
+  const tops = heights.map((_, r) => HEADER_H + heights.slice(0, r).reduce((sum, h) => sum + h, 0))
+  const rows = laid
+    .map((cells, r) => {
+      const rowH = heights[r] ?? MIN_ROW_H
+      const markup = cells.map((cell, i) => cellMarkup(cell, { left: lefts[i] ?? 0, width: widths[i] ?? 0, align: align(i), rowH, palette })).join('')
+      const band = r % 2 === 1 ? `fill="${palette.fg}" fill-opacity=".05"` : 'fill="none"'
+
+      // The outer group places the row; the inner one rises relative to that place.
+      return `<g transform="translate(0 ${tops[r] ?? 0})"><g class="row" style="animation-delay:${120 + r * STAGGER_MS}ms"><rect class="bg" x="0" y="0" width="${cardWidth}" height="${rowH}" ${band}/>${markup}</g></g>`
+    })
+    .join('')
+
+  return { rows, height: HEADER_H + heights.reduce((sum, h) => sum + h, 0) + 6 }
+}
+
+// `width` is the room the reply gives the card, in pixels; it is clamped to a sane range.
+// `hasControl` keeps a gutter at the right for a Copy button laid over the header.
+export function tableSvg(table: Table, { palette, width, hasControl = false }: CardFrame): SvgTable {
+  const cardWidth = Math.round(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width)))
+  const reserve = hasControl ? CONTROL_SLOT : 0
+  const widths = fitColumns(naturalWidths(table), cardWidth, reserve)
+  const lefts = widths.map((_, i) => PAD_X + widths.slice(0, i).reduce((sum, w) => sum + w + COL_GAP, 0))
+  const grid: Grid = { widths, lefts, align: (i: number): Align => table.align[i] ?? 'left' }
+  const { rows, height } = rowsMarkup(table, grid, { palette, width: cardWidth })
+
   const body = [
-    header,
+    headerMarkup(table, grid),
     `<line class="rule" x1="${PAD_X}" y1="${HEADER_H - 1}" x2="${cardWidth - PAD_X - reserve}" y2="${HEADER_H - 1}" stroke="${palette.user}" stroke-width="1" stroke-linecap="square"/>`,
     rows,
   ].join('')
 
   return {
-    source: svgCard(cardWidth, height, palette, style, body),
+    source: svgCard({ width: cardWidth, height, palette, style: tableStyle(palette, cardWidth), body }),
     width: cardWidth,
     height,
     alt: [table.header.join(' | '), ...table.rows.map(row => row.join(' | '))].join('\n'),

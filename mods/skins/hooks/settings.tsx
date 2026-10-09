@@ -4,8 +4,10 @@ import type { SkinSlot } from '../types'
 import type { ToggleWord } from './command'
 import { SLOTS } from './custom'
 import type { Table } from './markdown'
-import { footerRow, groupRow, promptRow, tableRows, toolRow } from './rows'
-import type { Look } from './rows'
+import type { Look } from './look'
+import { footerRow, promptRow } from './rows'
+import { tableRows } from './row-table'
+import { groupRow, toolRow } from './row-tool'
 
 export type PaneUi = Pick<ElementTable<'terminal' | 'desktop'>, 'Box' | 'Text' | 'Markdown' | 'Button' | 'Input' | 'Select'>
 
@@ -54,19 +56,20 @@ function preview(look: Look, width: number) {
   return (
     <Box flexDirection="column" borderStyle="round" borderColor={look.skin.palette.muted} paddingX={1}>
       {promptRow(look, "hub api'ye hız sınırı ekle")}
-      {toolRow(look, { tool: 'Bash', input: {}, ...done }, 'run', 'pnpm test', { ms: 2140 })}
-      {toolRow(look, { tool: 'Edit', input: {}, ...done }, 'write', 'src/server.ts', {
-        ms: 380,
-        added: 18,
-        removed: 3,
+      {toolRow(look, { call: { tool: 'Bash', input: {}, ...done }, kind: 'run', target: 'pnpm test', meta: { ms: 2140 } })}
+      {toolRow(look, {
+        call: { tool: 'Edit', input: {}, ...done },
+        kind: 'write',
+        target: 'src/server.ts',
+        meta: { ms: 380, added: 18, removed: 3 },
       })}
       {groupRow(look, [
         { tool: 'Read', input: {}, ...done },
         { tool: 'Read', input: {}, ...done },
         { tool: 'Grep', input: {}, ...done },
       ])}
-      {tableRows(look, SAMPLE, Math.max(20, width - 4))}
-      {footerRow(look, word, 41_000, { tools: 6, added: 18, removed: 3 })}
+      {tableRows(look, SAMPLE, { maxWidth: Math.max(20, width - 4) })}
+      {footerRow(look, { word, durationMs: 41_000, stats: { tools: 6, added: 18, removed: 3 } })}
     </Box>
   )
 }
@@ -189,10 +192,10 @@ function colorControls({ look, ui, model, actions }: Parts) {
   )
 }
 
-export function settingsPane(look: Look, ui: PaneUi, model: SettingsModel, actions: SettingsActions) {
+export function settingsPane(parts: Parts) {
+  const { look, ui, model, actions } = parts
   const { Box, Button, Text } = ui
   const { palette } = look.skin
-  const parts: Parts = { look, ui, model, actions }
   const count = model.names.length
 
   return (

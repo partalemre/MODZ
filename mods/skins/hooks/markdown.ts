@@ -36,6 +36,50 @@ const alignOf = (cell: string): Align => {
 const fit = (cells: string[], width: number): string[] =>
   Array.from({ length: width }, (_, i) => cells[i] ?? '')
 
+type Found<T> = { segment: T; end: number }
+
+// The fence opening at line `i` as a code segment, with the line that closes it; null
+// while it is still streaming.
+function codeAt(lines: readonly string[], i: number, fence: RegExpExecArray): Found<Code> | null {
+  const close = lines.findIndex((other, j) => j > i && FENCE.test(other) && other.trim().replace(/[`~]/g, '') === '')
+
+  if (close === -1) {
+    return null
+  }
+
+  return {
+    segment: {
+      kind: 'code',
+      lang: (fence[2] ?? '').toLowerCase(),
+      code: lines.slice(i + 1, close).join('\n'),
+      raw: lines.slice(i, close + 1).join('\n'),
+    },
+    end: close,
+  }
+}
+
+// The table whose header is line `i`, with its last row's line; null when none starts there.
+function tableAt(lines: readonly string[], i: number): Found<Table> | null {
+  const line = lines[i] ?? ''
+  const next = lines[i + 1] ?? ''
+  const header = cellsOf(line)
+  const isTable = line.includes('|') && SEPARATOR.test(next) && header.length > 1 && cellsOf(next).length === header.length
+
+  if (!isTable) {
+    return null
+  }
+
+  const rows: string[][] = []
+  let end = i + 2
+
+  while (end < lines.length && (lines[end] ?? '').includes('|') && (lines[end] ?? '').trim() !== '') {
+    rows.push(fit(cellsOf(lines[end] ?? ''), header.length))
+    end++
+  }
+
+  return { segment: { kind: 'table', header, align: cellsOf(next).map(alignOf), rows }, end: end - 1 }
+}
+
 export function splitReply(markdown: string): Segment[] {
   const lines = markdown.split('\n')
   const segments: Segment[] = []
@@ -51,57 +95,24 @@ export function splitReply(markdown: string): Segment[] {
   }
 
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i] ?? ''
-    const next = lines[i + 1] ?? ''
-
-    const fence = FENCE.exec(line)
-
+    const fence = FENCE.exec(lines[i] ?? '')
     // A closed fence becomes a code segment; one still streaming stays text.
-    if (fence !== null && !inFence) {
-      const close = lines.findIndex((other, j) => j > i && FENCE.test(other) && other.trim().replace(/[`~]/g, '') === '')
+    const code = fence === null || inFence ? null : codeAt(lines, i, fence)
 
-      if (close !== -1) {
-        flush()
-        segments.push({
-          kind: 'code',
-          lang: (fence[2] ?? '').toLowerCase(),
-          code: lines.slice(i + 1, close).join('\n'),
-          raw: lines.slice(i, close + 1).join('\n'),
-        })
-        i = close
-        continue
-      }
-
-      inFence = true
-    } else if (fence !== null) {
-      inFence = false
+    if (fence !== null && code === null) {
+      inFence = !inFence
     }
 
-    const header = cellsOf(line)
-    const isTable =
-      !inFence &&
-      line.includes('|') &&
-      SEPARATOR.test(next) &&
-      header.length > 1 &&
-      cellsOf(next).length === header.length
+    const found = code ?? (inFence ? null : tableAt(lines, i))
 
-    if (!isTable) {
-      text.push(line)
+    if (found === null) {
+      text.push(lines[i] ?? '')
       continue
     }
 
     flush()
-
-    const rows: string[][] = []
-    i += 2
-
-    while (i < lines.length && (lines[i] ?? '').includes('|') && (lines[i] ?? '').trim() !== '') {
-      rows.push(fit(cellsOf(lines[i] ?? ''), header.length))
-      i++
-    }
-
-    i--
-    segments.push({ kind: 'table', header, align: cellsOf(next).map(alignOf), rows })
+    segments.push(found.segment)
+    i = found.end
   }
 
   flush()

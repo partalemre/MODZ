@@ -107,3 +107,18 @@ export function runSkinCommand(args: string, current: Prefs, names: readonly str
         : refused(current, `bilinmeyen skin "${head}". /skin list hepsini gösterir`)
   }
 }
+
+export type RowContext = { args: string; isPinned: boolean; columns: number | undefined }
+
+// /skin list also says whether this folder is pinned, and the width the last reply was
+// drawn at, to tune table sizing.
+export function rowReply(message: string, { args, isPinned, columns }: RowContext): string {
+  if (args.trim() !== 'list') {
+    return message
+  }
+
+  const width = columns === undefined ? '' : `\nyanıt genişliği: ${columns} sütun`
+  const folder = isPinned ? 'bu klasör: sabitlendi' : 'bu klasör: varsayılanı izler'
+
+  return `${message}\n${folder}${width}`
+}

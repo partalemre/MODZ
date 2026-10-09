@@ -5,6 +5,8 @@ Usage: python3 -I render.py <dump.txt> <out-dir> [--theme dark|light] [--width 7
 Svg elements are drawn exactly; Box/Text/Button are an approximation (1 layout unit = 8px).
 """
 import html
+import os
+import shutil
 import json
 import re
 import subprocess
@@ -12,7 +14,21 @@ import sys
 import tempfile
 from pathlib import Path
 
-CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+MAC_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+
+
+def find_chrome() -> str:
+    """The browser that screenshots the page: $CHROME, then macOS Chrome, then a chromium on PATH."""
+    for path in (os.environ.get("CHROME"), MAC_CHROME, "/opt/pw-browsers/chromium", "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"):
+        if path and os.path.exists(path):
+            return path
+    for name in ("chromium", "chromium-browser", "google-chrome"):
+        if shutil.which(name):
+            return shutil.which(name)
+    raise SystemExit("render.py: no Chrome/Chromium found; set CHROME=/path/to/chrome")
+
+
+CHROME = find_chrome()
 UNIT = 8
 THEMES = {
     "dark": {"bg": "#151515", "text": "#ececec", "dim": "#878785", "surface": "#202020", "line": "#2e2e2e",
@@ -147,7 +163,7 @@ SCHEME = {"dark": "0", "light": "1"}
 def shoot(markup, out, width, theme="dark"):
     with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False) as handle:
         handle.write(markup)
-    subprocess.run([CHROME, "--headless=new", "--disable-gpu", "--hide-scrollbars", f"--window-size={width + 40},1400",
+    subprocess.run([CHROME, "--headless=new", "--no-sandbox", "--disable-gpu", "--hide-scrollbars", f"--window-size={width + 40},1400",
                     f"--blink-settings=preferredColorScheme={SCHEME[theme]}",
                     f"--screenshot={out}", f"file://{handle.name}"], capture_output=True, timeout=60, check=False)
     trim(out)

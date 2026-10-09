@@ -1,4 +1,4 @@
-import { CLAY, lookAt } from './identity'
+import { lookAt } from './identity'
 import type { Eyes, Look } from './identity'
 import { colorOf } from './tiers'
 

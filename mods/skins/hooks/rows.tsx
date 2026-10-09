@@ -172,6 +172,15 @@ function iconRow(look: Look, Svg: SvgElement, kind: Kind, calls: readonly Call[]
   )
 }
 
+// The desktop row has no status glyph, so a failure or a stop is said in a word, not by colour alone.
+function outcomeWord(look: Look, call: Call) {
+  const { Text } = look.ui
+  if (call.isInterrupted) return <Text color={look.skin.palette.warn}>{'  · durduruldu'}</Text>
+  if (call.isErrored) return <Text color={look.skin.palette.err}>{'  · hata'}</Text>
+
+  return null
+}
+
 export function toolRow(look: Look, call: Call, kind: Kind, target: string, meta: Meta) {
   const { Text } = look.ui
   const { palette } = look.skin
@@ -183,6 +192,7 @@ export function toolRow(look: Look, call: Call, kind: Kind, target: string, meta
           {toolLabel(call.tool)}
         </Text>
         <Text color={call.isErrored ? palette.err : palette.muted}>{`  ${target}`}</Text>
+        {outcomeWord(look, call)}
       </Text>
     )
 

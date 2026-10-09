@@ -13,6 +13,8 @@ export type SettingsModel = {
   names: readonly string[]
   editing: SkinSlot
   width: number
+  // Each skin's own accent, success and failure colours, for the dots on its button.
+  swatches: Readonly<Record<string, readonly string[]>>
 }
 
 export type SettingsActions = {
@@ -21,16 +23,24 @@ export type SettingsActions = {
   icons: () => void
   edit: (slot: SkinSlot) => void
   paint: (hex: string) => void
+  gallery: () => void
+}
+
+const SWATCH_SLOTS: readonly SkinSlot[] = ['user', 'ok', 'err']
+
+// The dots a skin's button carries: its accent, then its success and failure colours.
+export function swatchesOf(skins: readonly { name: string; palette: Readonly<Record<SkinSlot, string>> }[]): Record<string, string[]> {
+  return Object.fromEntries(skins.map(skin => [skin.name, SWATCH_SLOTS.map(slot => skin.palette[slot])]))
 }
 
 const SAMPLE: Table = {
   kind: 'table',
-  header: ['Route', 'Limit', 'Window'],
+  header: ['Yol', 'Sınır', 'Pencere'],
   align: ['left', 'right', 'left'],
   rows: [
-    ['/chat', '60', '1 min'],
-    ['/upload', '10', '1 min'],
-    ['/search', '120', '1 min'],
+    ['/chat', '60', '1 dk'],
+    ['/upload', '10', '1 dk'],
+    ['/search', '120', '1 dk'],
   ],
 }
 
@@ -61,18 +71,20 @@ function preview(look: Look, width: number) {
   )
 }
 
-const mark = (on: boolean): string => (on ? '●' : '○')
+const OFF = 'off'
+const HOTKEYS = 9
 
-// Each part of the pane opens with its own heading line, so a narrow side panel wraps the
-// buttons under it instead of beside a label.
-function section(look: Look, title: string, body: RenderElement) {
+// Each part of the pane opens with an eyebrow (and a quiet hint beside it), so a narrow side
+// panel wraps the buttons under it instead of beside a label.
+function section(look: Look, head: { title: string; hint?: string }, body: RenderElement) {
   const { Box, Text } = look.ui
 
   return (
-    <Box key={`section-${title}`} flexDirection="column">
-      <Text color={look.skin.palette.muted} bold>
-        {title}
-      </Text>
+    <Box key={`section-${head.title}`} flexDirection="column">
+      <Box flexDirection="row" columnGap={2}>
+        <Text color={look.skin.palette.muted} bold>{head.title.toLocaleUpperCase('tr')}</Text>
+        {head.hint === undefined ? null : <Text color={look.skin.palette.muted}>{head.hint}</Text>}
+      </Box>
       {body}
     </Box>
   )
@@ -80,46 +92,50 @@ function section(look: Look, title: string, body: RenderElement) {
 
 // What each toggle reads as in the pane; /skin keeps the English words.
 const TOGGLE_LABELS: Readonly<Record<ToggleWord, string>> = {
-  rail: 'ray',
-  tables: 'tablolar',
-  shimmer: 'parıltı',
-  band: 'kullanım bandı',
-  clip: 'çıktı kırp',
+  rail: 'Yanıt çizgisi',
+  tables: 'Tablo kartları',
+  shimmer: 'Parıltı',
+  band: 'Kullanım bandı',
+  clip: 'Uzun çıktıyı kırp',
 }
 
 type Parts = { look: Look; ui: PaneUi; model: SettingsModel; actions: SettingsActions }
 
-function skinButtons({ look, ui, model, actions }: Parts) {
-  const { Box, Button } = ui
+// The skin in use is the one bordered button with a check; the rest are quiet until pointed at.
+// No label: the dots and the name are the button, and its name for a screen reader.
+function skinButton(parts: Parts, name: string, i: number) {
+  const { Button, Text } = parts.ui
+  const isOn = name === parts.look.prefs.skin
+  const dots = (parts.model.swatches[name] ?? []).map((hex, k) => <Text key={`dot-${k}`} color={hex}>●</Text>)
 
   return (
-    <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
-      {model.names.map((name, i) => (
-        <Button
-          key={`skin-${name}`}
-          label={name === look.prefs.skin ? `${name} ●` : name}
-          plain
-          dimColor={name !== look.prefs.skin}
-          onPress={() => actions.pick(name)}
-          {...(i < 9 ? { hotkey: String(i + 1) } : {})}
-        />
-      ))}
+    <Button key={`skin-${name}`} {...(isOn ? { variant: 'secondary' as const } : { plain: true as const, dimColor: true })} onPress={() => parts.actions.pick(name)} {...(i < HOTKEYS ? { hotkey: String(i + 1) } : {})}>
+      {dots}
+      <Text bold={isOn}>{` ${name}${isOn ? ' ✓' : ''}`}</Text>
+    </Button>
+  )
+}
+
+function skinButtons(parts: Parts) {
+  const { Box, Button } = parts.ui
+  const isOff = parts.look.prefs.skin === OFF
+
+  return (
+    <Box flexDirection="row" flexWrap="wrap" columnGap={2} rowGap={1}>
+      {parts.model.names.map((name, i) => skinButton(parts, name, i))}
+      <Button key="skin-off" label={isOff ? 'Kapalı ✓' : 'Kapalı'} hotkey="0" {...(isOff ? { variant: 'secondary' as const } : { plain: true as const, dimColor: true })} onPress={() => parts.actions.pick(OFF)} />
     </Box>
   )
 }
 
 function optionButtons({ look, ui, actions }: Parts) {
-  const { Box, Button } = ui
+  const { Box, Button, Text } = ui
   const { prefs } = look
   const toggle = (word: ToggleWord, hotkey: string, on: boolean) => (
-    <Button
-      key={`toggle-${word}`}
-      label={`${TOGGLE_LABELS[word]} ${mark(on)}`}
-      hotkey={hotkey}
-      plain
-      dimColor={!on}
-      onPress={() => actions.toggle(word)}
-    />
+    <Button key={`toggle-${word}`} hotkey={hotkey} plain dimColor={!on} onPress={() => actions.toggle(word)}>
+      <Text color={on ? look.skin.palette.ok : look.skin.palette.muted}>{on ? '●' : '○'}</Text>
+      {` ${TOGGLE_LABELS[word]}`}
+    </Button>
   )
 
   return (
@@ -129,7 +145,7 @@ function optionButtons({ look, ui, actions }: Parts) {
       {toggle('shimmer', 's', prefs.shimmer)}
       {toggle('band', 'b', prefs.band)}
       {toggle('clip', 'c', prefs.clipOutput)}
-      <Button key="icons" label={`ikonlar ${prefs.icons}`} hotkey="i" plain onPress={() => actions.icons()} />
+      <Button key="icons" label={`İkonlar: ${prefs.icons}`} hotkey="i" plain onPress={() => actions.icons()} />
     </Box>
   )
 }
@@ -174,19 +190,23 @@ function colorControls({ look, ui, model, actions }: Parts) {
 }
 
 export function settingsPane(look: Look, ui: PaneUi, model: SettingsModel, actions: SettingsActions) {
-  const { Box, Text } = ui
+  const { Box, Button, Text } = ui
   const { palette } = look.skin
   const parts: Parts = { look, ui, model, actions }
+  const count = model.names.length
 
   return (
     <Box flexDirection="column" rowGap={1}>
-      {section(look, 'Skin', skinButtons(parts))}
+      {section(look, { title: 'Tema', hint: `${count} skin` }, skinButtons(parts))}
       {preview(look, model.width)}
-      {section(look, 'Seçenekler', optionButtons(parts))}
-      {section(look, 'Renkler', colorControls(parts))}
-      <Text color={palette.muted}>
-        Ya da Claude'a sor: <Text color={palette.fg}>“gün batımı gibi hissettiren bir skin yap”</Text>. Esc kapatır.
-      </Text>
+      {section(look, { title: 'Seçenekler' }, optionButtons(parts))}
+      {section(look, { title: 'Renkler', hint: 'bir yuva seç, hex yaz' }, colorControls(parts))}
+      <Box flexDirection="row" flexWrap="wrap" columnGap={2} alignItems="center">
+        <Text color={palette.muted}>
+          Ya da Claude'a sor: <Text color={palette.fg}>“gün batımı gibi hissettiren bir skin yap”</Text>
+        </Text>
+        <Button key="gallery" label="Galeriyi aç" hotkey="g" plain onPress={() => actions.gallery()} />
+      </Box>
     </Box>
   )
 }

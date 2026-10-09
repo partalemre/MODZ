@@ -15,7 +15,7 @@ import { askBand, desktopSpinnerRow, diffCard, footerRow, terminalCard, usageBan
 import type { Look, SvgElement, Ui } from './rows'
 import { galleryPane } from './gallery'
 import { EMPTY_HUB, HUB_PANE, hubDetail, isOwnOpen } from './hub'
-import { settingsPane } from './settings'
+import { settingsPane, swatchesOf } from './settings'
 import { ICONS } from './skin'
 import type { Skin } from './skin'
 import { hunksOf } from './svg-diff'
@@ -437,7 +437,12 @@ yanıt genişliği: ${lastColumns} sütun`
     const look = lookOf(ui, { prefs, custom, skin }, e.surface)
     const state = { prefs, custom }
 
-    return settingsPane(look, ui, { names: skinNames(custom), editing, width: e.props.bodyColumns }, {
+    const isLight = await read($, lightAtom)
+    const names = skinNames(custom)
+    const skins = names.flatMap(name => resolveSkin(name, custom) ?? []).map(one => forTheme(one, isLight))
+
+    return settingsPane(look, ui, { names, editing, width: e.props.bodyColumns, swatches: swatchesOf(skins) }, {
+      gallery: () => void $.ui.open({ id: GALLERY, title: 'Skin galerisi', focus: true, closeOnEscape: true }),
       pick: name => void commit($, { ...state, prefs: { ...prefs, skin: name } }),
       toggle: word => void commit($, { ...state, prefs: { ...prefs, [TOGGLES[word]]: !prefs[TOGGLES[word]] } }),
       icons: () =>

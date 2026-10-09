@@ -228,7 +228,7 @@ test('a new file with an empty patch shows its content as added lines', async ()
 
   const card = diffSvg(diff!, 'a.ts', tokyoNight.palette, 600)
 
-  expect(card.source).toContain('new file')
+  expect(card.source).toContain('yeni dosya')
   expect(card.alt).toBe('a.ts: +2 −0')
 })
 
@@ -240,7 +240,7 @@ test('shell output loses its colour codes, keeps stderr apart and folds the midd
   expect(lines[0]).toEqual({ text: 'ok', isErr: false })
   expect(lines[6]).toEqual({ fold: 30 })
   expect(lines.at(-1)).toEqual({ text: 'warn: x', isErr: true })
-  expect(terminalSvg(shell!, true, tokyoNight.palette, 600).source).toContain('failed')
+  expect(terminalSvg(shell!, true, tokyoNight.palette, 600).source).toContain('hata')
   expect(shellOutputOf({ content: 'x' })).toBeNull()
 })
 

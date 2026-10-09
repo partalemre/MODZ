@@ -54,18 +54,18 @@ export function outputLines(output: ShellOutput): Line[] {
 export function terminalSvg(output: ShellOutput, isErrored: boolean, palette: Palette, width: number, hasControl = false): { source: string; width: number; height: number; alt: string } {
   const lines = outputLines(output)
   const status = output.interrupted
-    ? { text: 'interrupted', color: palette.warn }
+    ? { text: 'durduruldu', color: palette.warn }
     : output.timedOutAfterMs !== undefined
-      ? { text: 'timed out', color: palette.warn }
+      ? { text: 'zaman aşımı', color: palette.warn }
       : isErrored
-        ? { text: 'failed', color: palette.err }
-        : { text: 'ok', color: palette.ok }
+        ? { text: 'hata', color: palette.err }
+        : { text: 'tamam', color: palette.ok }
 
-  const rows = (lines.length === 0 ? [{ text: 'no output', isErr: false, isNote: true }] : lines).map((line, i) => {
+  const rows = (lines.length === 0 ? [{ text: 'çıktı yok', isErr: false, isNote: true }] : lines).map((line, i) => {
     const top = HEADER_H + 6 + i * LINE_H
 
     if ('fold' in line) {
-      return `<g class="rise" ${riseDelay(i, 22)}><text x="20" y="${top + 14}" font-size="11.5" style="fill:${palette.muted}">⋯  ${line.fold} more lines</text></g>`
+      return `<g class="rise" ${riseDelay(i, 22)}><text x="20" y="${top + 14}" font-size="11.5" style="fill:${palette.muted}">⋯  ${line.fold} satır daha</text></g>`
     }
 
     const color = 'isNote' in line ? palette.muted : line.isErr ? palette.err : palette.fg
@@ -74,7 +74,7 @@ export function terminalSvg(output: ShellOutput, isErrored: boolean, palette: Pa
   })
 
   const height = HEADER_H + 6 + Math.max(1, lines.length) * LINE_H + 10
-  const note = output.returnCodeInterpretation === undefined ? 'Output' : `Output · ${output.returnCodeInterpretation}`
+  const note = output.returnCodeInterpretation === undefined ? 'Çıktı' : `Çıktı · ${output.returnCodeInterpretation}`
   const header = [
     strokeIcon(PROMPT, 16, HEADER_MID - 9, 18, palette.fg),
     `<text x="42" y="${HEADER_MID + 4}" font-size="12" style="fill:${palette.muted};letter-spacing:.04em">${escape(note)}</text>`,
@@ -86,6 +86,6 @@ export function terminalSvg(output: ShellOutput, isErrored: boolean, palette: Pa
     source: svgCard(width, height, palette, '', header + rows.join('')),
     width,
     height,
-    alt: lines.map(line => ('fold' in line ? `… ${line.fold} more lines` : line.text)).join('\n') || 'no output',
+    alt: lines.map(line => ('fold' in line ? `… ${line.fold} satır daha` : line.text)).join('\n') || 'çıktı yok',
   }
 }

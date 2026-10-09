@@ -83,7 +83,7 @@ export function diffSvg(input: DiffInput, shownPath: string, palette: Palette, w
     if (line.kind === 'gap') {
       y += GAP_H
 
-      return `<g ${riseDelay(i, 18)} class="rise"><text x="${codeX}" y="${top + 14}" font-size="11" style="fill:${palette.muted}">⋯  line ${line.at}</text></g>`
+      return `<g ${riseDelay(i, 18)} class="rise"><text x="${codeX}" y="${top + 14}" font-size="11" style="fill:${palette.muted}">⋯  satır ${line.at}</text></g>`
     }
 
     y += LINE_H
@@ -97,9 +97,9 @@ export function diffSvg(input: DiffInput, shownPath: string, palette: Palette, w
     return `<g ${riseDelay(i, 18)} class="rise">${band}${number(line.old, 44)}${number(line.new, 80)}<text x="96" y="${top + 15}" font-family="${MONO}" font-size="${CODE}" style="fill:${tint ?? palette.muted}">${sign}</text><text x="${codeX}" y="${top + 15}" font-family="${MONO}" font-size="${CODE}" style="fill:${line.kind === 'ctx' ? palette.muted : palette.fg}" xml:space="preserve">${escape(fitText(line.text, codeWidth, true, CODE))}</text></g>`
   })
 
-  const footer = hidden > 0 ? `<text x="${codeX}" y="${y + 18}" font-size="11.5" style="fill:${palette.muted}">${hidden} more line${hidden === 1 ? '' : 's'}</text>` : ''
+  const footer = hidden > 0 ? `<text x="${codeX}" y="${y + 18}" font-size="11.5" style="fill:${palette.muted}">${hidden} satır daha</text>` : ''
   const height = y + (hidden > 0 ? 30 : 8)
-  const tag = input.isNewFile ? pill(width - 16, 12, 'new file', palette.user, palette) : ''
+  const tag = input.isNewFile ? pill(width - 16, 12, 'yeni dosya', palette.user, palette) : ''
   const counts = `<text x="${width - (input.isNewFile ? 100 : 16)}" y="27" text-anchor="end" font-family="${MONO}" font-size="12.5"><tspan style="fill:${palette.ok}">+${added}</tspan><tspan style="fill:${palette.muted}">  </tspan><tspan style="fill:${palette.err}">−${removed}</tspan></text>`
   const header = [
     strokeIcon(input.isNewFile ? NEW_FILE : PENCIL, 16, 13, 18, palette.fg),

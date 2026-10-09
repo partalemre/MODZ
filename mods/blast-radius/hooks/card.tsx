@@ -121,11 +121,14 @@ function sizeText(ui: Ui, row: Row) {
   return <Text>{part(`+${diff[1]}`, diff[1], 'ok')}{part(` −${diff[2]}`, diff[2], 'danger')}</Text>
 }
 
-function terminalRow(ui: Ui, row: Row, index: number, isStruck: boolean) {
+const TERMINAL_INDENT: Record<Row['kind'], string> = { file: '    ', more: '', folder: '▸ ', item: '▸ ' }
+
+function terminalRow(ui: Ui, row: Row, place: { index: number; isStruck: boolean }) {
   const { Box, Text } = ui
+  const { index, isStruck } = place
   const isFolder = row.kind === 'folder'
   const strike = isStruck && !isFolder ? { strikethrough: true, dimColor: true } : {}
-  const indent = row.kind === 'file' ? '    ' : row.kind === 'more' ? '' : '▸ '
+  const indent = TERMINAL_INDENT[row.kind]
 
   return (
     <Box key={`r${index}`} flexDirection="row" gap={2}>
@@ -163,7 +166,7 @@ export function terminalCard(ui: Ui, props: CardProps) {
       </Text>
       {view.fullCommand === null ? null : <Text dimColor wrap="truncate-end">{`tam komut: ${view.fullCommand}`}</Text>}
       {view.banner === null ? null : <Text color={TERMINAL_KEY[view.banner.tone]}>{`! ${view.banner.text}`}</Text>}
-      <Box flexDirection="column" marginTop={1}>{rows.map((row, i) => terminalRow(ui, row, i, props.phase === 'striking'))}</Box>
+      <Box flexDirection="column" marginTop={1}>{rows.map((row, i) => terminalRow(ui, row, { index: i, isStruck: props.phase === 'striking' }))}</Box>
       {toggleOf(ui, props)}
       <Box marginTop={1}>{actions(ui, props, undefined)}</Box>
     </Box>

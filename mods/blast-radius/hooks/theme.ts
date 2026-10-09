@@ -56,7 +56,9 @@ export function svgStyle(extra = ''): string {
 const named = (value: unknown): boolean | undefined => {
   const name = typeof value === 'string' ? value.trim().toLowerCase() : ''
 
-  return name.includes('light') ? true : name.includes('dark') ? false : undefined
+  if (name.includes('light')) return true
+
+  return name.includes('dark') ? false : undefined
 }
 
 // `COLORFGBG` is `<fg>;<bg>`; background 7 or 15 is a light one.

@@ -138,16 +138,21 @@ type Columns = { barX: number; barW: number; sizeRight: number; countRight: numb
 const FOLDER_X = 26
 const NAME_GAP = 8
 const NAME_SIZE = 13
+const FILE_X = 48
+const MORE_X = 2
+const NAME_X: Record<Row['kind'], number> = { file: FILE_X, more: MORE_X, folder: FOLDER_X, item: FOLDER_X }
+const NAME_COLOR: Record<Row['kind'], string> = { folder: 'var(--hi)', more: 'var(--lo)', file: 'var(--mid)', item: 'var(--mid)' }
+const BAR_GAP = 14
 
 // A narrow pane gives up the folder's file count before it would cut a folder's name.
 function columnsOf(width: number, rows: Row[]): Columns {
   const barW = width < NARROW ? BAR_W_NARROW : BAR_W
   const barX = width - barW
-  const countRight = barX - 14 - SIZE_W
+  const countRight = barX - BAR_GAP - SIZE_W
   const nameRoom = countRight - COUNT_W - FOLDER_X - NAME_GAP
   const hasCount = rows.every(row => row.kind !== 'folder' || measure(row.name, { size: NAME_SIZE, isBold: true }) <= nameRoom)
 
-  return { barX, barW, sizeRight: barX - 14, countRight, hasCount }
+  return { barX, barW, sizeRight: barX - BAR_GAP, countRight, hasCount }
 }
 
 function bar(row: Row, top: number, cols: Columns): string {
@@ -181,18 +186,25 @@ function sizeRuns(size: string, paint: string): string {
   return `<tspan style="fill:${paintOf(diff[1] ?? '', 'ok')}">+${diff[1]}</tspan><tspan style="fill:${paintOf(diff[2] ?? '', 'danger')}"> −${diff[2]}</tspan>`
 }
 
+function nameRight(row: Row, cols: Columns): number {
+  if (row.kind === 'folder' && cols.hasCount) return cols.countRight - COUNT_W
+  if (row.size === '') return cols.barX - BAR_GAP
+
+  return cols.sizeRight - SIZE_W
+}
+
 function rowSvg(placed: Placed, cols: Columns): string {
   const { row, top } = placed
   const base = top + 18
   const isFolder = row.kind === 'folder'
-  const nameX = row.kind === 'file' ? 48 : row.kind === 'more' ? 2 : FOLDER_X
+  const nameX = NAME_X[row.kind]
   const tagW = row.tag === '' ? 0 : measure(row.tag, { size: 11.5, isMono: true }) + 10
-  const right = isFolder && cols.hasCount ? cols.countRight - COUNT_W : row.size === '' ? cols.barX - 14 : cols.sizeRight - SIZE_W
+  const right = nameRight(row, cols)
   const spec = { size: NAME_SIZE, isBold: isFolder }
   const name = fitMiddle(row.name, Math.max(40, right - nameX - tagW - NAME_GAP), spec)
   const glyph = row.kind === 'more' ? '' : icon(row.icon, { x: isFolder || row.kind === 'item' ? 2 : 26, y: top + 7, size: isFolder ? 16 : 14, color: isFolder ? 'var(--mid)' : 'var(--lo)' })
   const tag = row.tag === '' ? '' : `<text x="${nameX}" y="${base}" class="mono" font-size="11.5" font-weight="${tagPaint(row.tag) === 'var(--lo)' ? 400 : 700}" style="fill:${tagPaint(row.tag)}">${escape(row.tag)}</text>`
-  const nameColor = isFolder ? 'var(--hi)' : row.kind === 'more' ? 'var(--lo)' : 'var(--mid)'
+  const nameColor = NAME_COLOR[row.kind]
   const dim = placed.strikeIndex === null ? '' : ` class="dim" style="animation-delay:${placed.strikeIndex * STRIKE_STAGGER_MS}ms"`
   const texts = [
     `<text x="${nameX + tagW}" y="${base}" font-size="13" font-weight="${isFolder ? 600 : 400}" style="fill:${nameColor}">${escape(name)}</text>`,

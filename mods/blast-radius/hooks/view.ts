@@ -83,8 +83,10 @@ function fileRows(report: Report, isExpanded: boolean): { rows: Row[]; listed: n
   return { rows, listed, shown }
 }
 
+const ITEM_ICON: Partial<Record<Report['kind'], IconName>> = { commits: 'commit', migrations: 'database' }
+
 function itemRows(report: Report, isExpanded: boolean): { rows: Row[]; listed: number; shown: number } {
-  const icon: IconName = report.kind === 'commits' ? 'commit' : report.kind === 'migrations' ? 'database' : 'file'
+  const icon = ITEM_ICON[report.kind] ?? 'file'
   const totalWeight = report.items.reduce((sum, item) => sum + item.weight, 0)
   const items = isExpanded ? report.items : report.items.slice(0, ITEMS_COLLAPSED)
   const rows: Row[] = items.map(item => ({ kind: 'item', name: item.name, tag: item.tag, count: '', size: item.meta, share: totalWeight > 0 ? item.weight / totalWeight : null, icon }))

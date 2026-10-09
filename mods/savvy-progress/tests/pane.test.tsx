@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { PANE, SECOND, SURFACES, finish, setup, spawn, svgOf, threeRunning, tool } from './fixtures'
+import { PANE, SECOND, SURFACES, finish, measure, setup, spawn, svgOf, threeRunning, tool } from './fixtures'
 
 for (const surface of SURFACES) {
   const mount = ($: any) => $.ui.mount({ ...PANE, surface })
@@ -22,7 +22,9 @@ for (const surface of SURFACES) {
     expect(all).toContain('Opus 5.5 · xhigh')
     expect(all).toContain('› Edit src/hero.tsx')
     expect(all).toContain('1 araç')
-    expect(all).toMatch(/ctx 13% · 129k · ≈\$0\.\d\d/)
+    const metrics = /bağlam %13 · 129k token · ≈\$0\.\d\d/
+    if (surface === 'terminal') expect(all).toMatch(metrics)
+    else expect(await svgOf(ui)).toMatch(metrics)
     expect(all).toContain('2:36')
     expect(await ui.find({ type: 'Text', text: 'Çalışıyor · 3' })).toBeDefined()
   })
@@ -91,6 +93,43 @@ for (const surface of SURFACES) {
 
     await ui.press({ key: 'open-a3' })
     expect(await text(ui)).not.toContain('İş geçmişi')
+  })
+
+  test(`${surface}: each row shows its percent, marked ~ when estimated`, async ($, on) => {
+    await setup($, on)
+    await threeRunning($)
+    await tool($, { tool: 'mcp__savvy-progress__step', done: 3, total: 5, agentId: 'a2' })
+    await finish($, 'a1')
+    const all = await text(await mount($))
+    expect(all).toContain('%100')
+    expect(all).toContain('%60')
+    expect(all).toMatch(/~%\d+/)
+  })
+
+  test(`${surface}: once the 5h window moved, rows and the header show each share of it`, async ($, on) => {
+    await setup($, on)
+    await threeRunning($)
+    const pane = await mount($)
+    const words = async () => (surface === 'terminal' ? text(pane) : svgOf(pane))
+    expect(await words()).not.toContain('5s ≈')
+    await measure($, 23.5, 1)
+    const shown = await words()
+    expect(shown).toContain('5s ≈%2.0')
+    expect(shown).toContain('5s payı ≈%5.9')
+  })
+
+  test(`${surface}: an open finished row shows its work mix and a cheerful result card`, async ($, on) => {
+    await setup($, on)
+    await threeRunning($)
+    await tool($, { tool: 'Read', file_path: '/w/site/src/a.ts', agentId: 'a3' })
+    await finish($, 'a3')
+    const pane = await mount($)
+    await pane.press({ key: 'open-a3' })
+    const open = await text(pane)
+    expect(open).toContain('düzenleme 1')
+    expect(open).toContain('okuma 1')
+    expect(open).toContain('(ᵔᴗᵔ) bitirdim')
+    if (surface === 'desktop') expect(await svgOf(pane)).toContain('okuma 1 · düzenleme 1')
   })
 
   test(`${surface}: /agents-info toggles the pane`, async ($, on) => {

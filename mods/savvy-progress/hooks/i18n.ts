@@ -38,11 +38,18 @@ type Strings = {
   result: string
   noCalls: string
   agentsTile: string
+  context: string
+  limit: string
+  limitTile: string
+  kinds: Record<'read' | 'edit' | 'run' | 'agent' | 'other', string>
+  cheerDone: string
+  cheerFailed: string
+  shareOf: (share: string) => string
   earlier: (n: number) => string
   after: (list: string) => string
   tools: (n: number) => string
   errors: (n: number) => string
-  pct: (n: number) => string
+  pct: (n: number | string) => string
 }
 
 const tr: Strings = {
@@ -82,6 +89,13 @@ const tr: Strings = {
   result: 'Sonuç',
   noCalls: 'Henüz araç çağrısı yok.',
   agentsTile: 'Ajan',
+  context: 'bağlam',
+  limit: '5s',
+  limitTile: '5s payı',
+  kinds: { read: 'okuma', edit: 'düzenleme', run: 'komut', agent: 'ajan', other: 'diğer' },
+  cheerDone: '(ᵔᴗᵔ) bitirdim',
+  cheerFailed: '(×_×) olmadı',
+  shareOf: share => `5 saatlik limitin ≈%${share} kadarı`,
   earlier: n => `${n} önceki adım gizli`,
   after: list => `${list} sonrası`,
   tools: n => `${n} araç`,
@@ -126,6 +140,13 @@ const en: Strings = {
   result: 'Result',
   noCalls: 'No tool calls yet.',
   agentsTile: 'Agents',
+  context: 'context',
+  limit: '5h',
+  limitTile: '5h share',
+  kinds: { read: 'read', edit: 'edit', run: 'run', agent: 'agent', other: 'other' },
+  cheerDone: '(ᵔᴗᵔ) all done',
+  cheerFailed: '(×_×) did not finish',
+  shareOf: share => `≈${share}% of the 5h limit`,
   earlier: n => `${n} earlier ${n === 1 ? 'step' : 'steps'} hidden`,
   after: list => `after ${list}`,
   tools: n => `${n} ${n === 1 ? 'tool' : 'tools'}`,
@@ -171,6 +192,13 @@ const ru: Strings = {
   result: 'Результат',
   noCalls: 'Вызовов инструментов пока нет.',
   agentsTile: 'Агенты',
+  context: 'контекст',
+  limit: '5ч',
+  limitTile: 'доля 5ч',
+  kinds: { read: 'чтение', edit: 'правка', run: 'команда', agent: 'агент', other: 'другое' },
+  cheerDone: '(ᵔᴗᵔ) готово',
+  cheerFailed: '(×_×) не вышло',
+  shareOf: share => `≈${share}% лимита 5ч`,
   earlier: n => `скрыто ранних шагов: ${n}`,
   after: list => `после ${list}`,
   tools: n => `инструментов: ${n}`,

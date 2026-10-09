@@ -5,6 +5,8 @@ import type { StepInput } from './agents'
 import { addRun, endRun, isRunning, ownTasks, patchRun, stepReport, stepUsage, toolActivity } from './agents'
 import { isNewFlow, mergeFlow } from './flow'
 import { closeEvent, openEvent } from './history'
+import { readingOf, trackLimit } from './limit'
+import type { LimitReading } from './limit'
 import type { ProgressInput } from './flow'
 import { deriveJob, joinJob, sealJob } from './job'
 import { STEP_TOOL, TOOL } from './state'
@@ -16,6 +18,7 @@ const flow = atom({ plugin: 'savvy-progress', key: 'flow' } as const, null)
 const job = atom({ plugin: 'savvy-progress', key: 'job' } as const, null)
 const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
 const tasks = atom({ plugin: 'savvy-progress', key: 'tasks' } as const, [])
+const limit = atom({ plugin: 'savvy-progress', key: 'limit' } as const, null)
 
 type On = Parameters<Register>[0]
 
@@ -131,7 +134,19 @@ function onActivity(on: On): void {
   })
 }
 
+const follow = ($: EngineInterface, reading: LimitReading | null) =>
+  reading ? update($, limit, prev => trackLimit(prev, reading)) : Promise.resolve()
+
+// Each measure moves the 5h window and the session's dollars, for each agent's share of the limit.
+function onLimit(on: On): void {
+  on('session.measure', async ($, e, next) => {
+    await follow($, readingOf(e.rateLimits, e.cost?.usd))
+    return next(e)
+  })
+}
+
 export function onEvents(on: On): void {
+  onLimit(on)
   onReports(on)
   onLaunches(on)
   onActivity(on)

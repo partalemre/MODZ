@@ -7,11 +7,13 @@ import { onEvents } from './events'
 import { PHASES } from './flow'
 import { isLang, langOf, setLang } from './i18n'
 import type { Lang } from './i18n'
+import { readingOf, trackLimit } from './limit'
 import { onPane } from './pane'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
 const agents = atom({ plugin: 'savvy-progress', key: 'agents' } as const, [])
 const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
+const limit = atom({ plugin: 'savvy-progress', key: 'limit' } as const, null)
 
 const TICK_MS = 1000
 
@@ -82,6 +84,17 @@ async function detectLang($: EngineInterface, option: unknown): Promise<Lang> {
   return langOf(locale) ?? 'tr'
 }
 
+// Where the 5h window and the session's dollars stood when the session started.
+async function seedLimit($: EngineInterface): Promise<void> {
+  try {
+    const usage = await $.session.usage()
+    const reading = readingOf(usage.rateLimits, usage.cost?.usd)
+    if (reading) await update($, limit, prev => trackLimit(prev, reading))
+  } catch (error) {
+    $.ui.log(`savvy-progress: no usage yet, the 5h share waits for a measure (${String(error)})`, { to: 'debug' })
+  }
+}
+
 // Ticks the running agents' clocks; quiet when nothing runs.
 function startTicker($: EngineInterface): void {
   $.clock.every(TICK_MS, () => {
@@ -105,6 +118,7 @@ export const register: Register = (on, options) => {
       description: 'Ajan panelini aç/kapat: çalışan, biten ve planlı alt ajanlar; model, bağlam, maliyet ve süre',
     })
     startTicker($)
+    await seedLimit($)
     return started
   })
 

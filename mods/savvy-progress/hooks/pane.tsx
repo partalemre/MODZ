@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, ThemeKey } from 'claude-code'
 
-import type { AgentRun, Panel } from '../types'
+import type { AgentRun, LimitTrack, Panel } from '../types'
 import { isRunning, totals } from './agents'
 import type { Totals } from './agents'
 import type { Planned } from './flow'
@@ -9,6 +9,7 @@ import { plannedOf } from './flow'
 import { fmtCost, fmtTime, fmtTokens } from './format'
 import { t } from './i18n'
 import { deriveJob } from './job'
+import { shareNumber, shareOf } from './limit'
 import { COMPACT_H, CRAB, HEADER_H, compactSvg, headerSvg } from './pane-svg'
 import { agentRow, plannedRow } from './rows'
 import type { RowContext, Ui } from './rows'
@@ -22,6 +23,7 @@ const job = atom({ plugin: 'savvy-progress', key: 'job' } as const, null)
 const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
 const panel = atom({ plugin: 'savvy-progress', key: 'panel' } as const, { isCompact: false, isDoneCollapsed: false })
 const tasks = atom({ plugin: 'savvy-progress', key: 'tasks' } as const, [])
+const limit = atom({ plugin: 'savvy-progress', key: 'limit' } as const, null)
 
 type On = Parameters<Register>[0]
 
@@ -41,6 +43,7 @@ export type PaneData = {
   title: string
   at: number
   panel: Panel
+  limit: LimitTrack | null
 }
 
 async function paneData($: EngineInterface): Promise<PaneData> {
@@ -58,6 +61,7 @@ async function paneData($: EngineInterface): Promise<PaneData> {
     title: view && !view.isFinished ? view.title : '',
     at,
     panel: await read($, panel),
+    limit: await read($, limit),
   }
 }
 
@@ -90,8 +94,11 @@ const summaryOf = (sum: Totals): string => `≈${fmtCost(sum.cost)} · ${fmtToke
 function headTree(ui: Ui, d: PaneData, ctx: { compact: unknown; layout: Layout }) {
   const { Box, Text, Svg } = ui
   const s = t()
-  const totalsLine = `${s.cost} ≈${fmtCost(d.sum.cost)} · ${s.tokens} ${fmtTokens(d.sum.tokens)} · ${s.time} ${fmtTime(d.sum.time)}`
-  const counts = { running: d.running.length, total: d.list.length }
+  const share = shareOf(d.sum.cost, d.limit)
+  const shareText = share === null ? null : shareNumber(share)
+  const counts = { running: d.running.length, total: d.list.length, share: shareText }
+  const limitPart = shareText === null ? '' : ` · ${s.limitTile} ≈${s.pct(shareText)}`
+  const totalsLine = `${s.cost} ≈${fmtCost(d.sum.cost)} · ${s.tokens} ${fmtTokens(d.sum.tokens)} · ${s.time} ${fmtTime(d.sum.time)}${limitPart}`
   return (
     <Box flexDirection="column" rowGap={1}>
       <Box flexDirection="row" justifyContent="space-between" columnGap={2}>
@@ -99,7 +106,7 @@ function headTree(ui: Ui, d: PaneData, ctx: { compact: unknown; layout: Layout }
         {ctx.compact}
       </Box>
       {ctx.layout.isDesktop
-        ? <Svg key="head" source={headerSvg(ctx.layout.W, d.sum, counts)} alt={[d.title, summaryOf(d.sum)].filter(Boolean).join(': ')} width={ctx.layout.W} height={HEADER_H} />
+        ? <Svg key="head" source={headerSvg(ctx.layout.W, d.sum, counts)} alt={[d.title, summaryOf(d.sum) + limitPart].filter(Boolean).join(': ')} width={ctx.layout.W} height={HEADER_H} />
         : <Text dimColor>{totalsLine}</Text>}
     </Box>
   )
@@ -136,6 +143,7 @@ function listTree(ui: Ui, $: EngineInterface, d: PaneData, layout: Layout) {
     width: layout.width,
     frameWidth: layout.isDesktop ? FRAME_PX : FRAME_COLS,
     isDesktop: layout.isDesktop,
+    limit: d.limit,
     selected: d.panel.selected,
     onToggle,
   }

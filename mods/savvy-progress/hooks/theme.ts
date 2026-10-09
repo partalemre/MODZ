@@ -14,8 +14,8 @@ const WORDS_LIGHT = '.w-fable{fill:#5e55c7}.w-heavy{fill:#b8452a}.w-careful{fill
 const WORDS_DARK = '.w-fable{fill:#a29bf0}.w-heavy{fill:#e58466}.w-careful{fill:#d9a24a}.w-medium{fill:#6aa6e6}.w-light{fill:#4cc48f}.w-other{fill:#a8a8a4}'
 
 const PANE_CSS = `<style>
-.t{fill:#1c1b19}.s{fill:#57544e}.m{fill:#8a867e}.k{fill:#e6e3dc}.ln{stroke:#e4e4e1}.tile{fill:#f4f2ec}${WORDS_LIGHT}
-@media (prefers-color-scheme: dark){.t{fill:#f0eee8}.s{fill:#c2beb4}.m{fill:#8e8a80}.k{fill:#34332f}.ln{stroke:#333331}.tile{fill:#1f1f1c}${WORDS_DARK}}
+.t{fill:#1c1b19}.s{fill:#57544e}.m{fill:#8a867e}.k{fill:#e6e3dc}.ln{stroke:#e4e4e1}.tile{fill:#f4f2ec}.chip{fill:#f1eee7}.rk{stroke:#dcd8cf}${WORDS_LIGHT}
+@media (prefers-color-scheme: dark){.t{fill:#f0eee8}.s{fill:#c2beb4}.m{fill:#8e8a80}.k{fill:#34332f}.ln{stroke:#333331}.tile{fill:#1f1f1c}.chip{fill:#262522}.rk{stroke:#3a3934}${WORDS_DARK}}
 .live{animation:p 1s ease-in-out infinite}@keyframes p{50%{opacity:.3}}
 @media (prefers-reduced-motion: reduce){.live{animation:none}}
 </style>`

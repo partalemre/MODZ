@@ -47,6 +47,8 @@ export async function setup($: any, on: any) {
   })
   on('turn.complete', (_: any, e: any) => ({ text: e.answer }))
   on('prompt.submit', (_: any, e: any) => ({ text: e.text }))
+  on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: [{ kind: 'five_hour', percentUsed: 20, resetsAt: 'r1' }], cost: { usd: 0 } } }))
+  on('session.measure', (_: any, e: any) => ({ changed: e.changed }))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/w' })
   return { clock, world }
 }
@@ -62,6 +64,10 @@ export async function modelStep($: any, agentId: string, effort?: string) {
 
 export const finish = ($: any, agentId: string, reason = 'answer') =>
   $.turn.complete({ answer: 'ok', durationMs: 1, isAborted: reason === 'aborted', turnId: `turn-${agentId}`, agentId, reason })
+
+/** The 5h window at `percentUsed` after the session spent `usd`. */
+export const measure = ($: any, percentUsed: number, usd: number, resetsAt = 'r1') =>
+  $.session.measure({ context: {}, rateLimits: [{ kind: 'five_hour', percentUsed, resetsAt }], cost: { usd }, changed: ['rateLimits', 'cost'] })
 
 export const tool = ($: any, input: Record<string, unknown>) => $.tool.call(input)
 

@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { BAND, PANE, SECOND, finish, modelStep, setup, spawn, threeRunning, tool } from './fixtures'
+import { BAND, PANE, SECOND, finish, measure, modelStep, setup, spawn, threeRunning, tool } from './fixtures'
 
 // Desktop trees for bin/preview: each logged tree becomes a PNG.
 const dump = async (label: string, ui: any) => {
@@ -65,6 +65,7 @@ test('preview: band, done', async ($, on) => {
 test('preview: panel with running, finished and planned', async ($, on) => {
   const { clock } = await setup($, on)
   await launchKit($, clock)
+  await measure($, 23.5, 1)
   await dump('panel-running-finished-planned', await $.ui.mount({ ...PANE, surface: 'desktop' }))
 })
 
@@ -73,6 +74,7 @@ test('preview: panel of effort-dressed agents', async ($, on) => {
   await threeRunning($)
   await clock.advance(156 * SECOND)
   await finish($, 'a2')
+  await measure($, 23.5, 1)
   await dump('panel-effort-costumes', await $.ui.mount({ ...PANE, surface: 'desktop' }))
 })
 
@@ -85,7 +87,21 @@ test('preview: panel with one agent work history open', async ($, on) => {
   }
   await tool($, { tool: 'Bash', command: 'npm test', agentId: 'a3' })
   await clock.advance(7 * SECOND)
+  await measure($, 23.5, 1)
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   await ui.press({ key: 'open-a3' })
   await dump('panel-history-open', ui)
+})
+
+test('preview: panel with a finished agent open on its result', async ($, on) => {
+  const { clock } = await setup($, on)
+  await threeRunning($)
+  await tool($, { tool: 'Read', file_path: '/w/mods/modz/hooks/catalog.ts', agentId: 'a1' })
+  await tool($, { tool: 'Bash', command: 'bun test', agentId: 'a1' })
+  await clock.advance(131 * SECOND)
+  await $.turn.complete({ answer: 'Five findings, two verified by running the code. One bad marketplace entry kills the whole pane.', durationMs: 1, isAborted: false, turnId: 'turn-a1', agentId: 'a1', reason: 'answer' })
+  await measure($, 23.5, 1)
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await ui.press({ key: 'open-a1' })
+  await dump('panel-result-open', ui)
 })

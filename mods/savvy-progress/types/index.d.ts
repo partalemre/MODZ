@@ -82,6 +82,17 @@ export type Job = {
   isHidden: boolean
 }
 
+/** The 5h window and the session's dollars: where this session started and where it is now. */
+export type LimitTrack = {
+  basePercent: number
+  baseUsd: number
+  percent: number
+  usd: number
+  resetsAt?: string
+  /** Points per dollar learned before the window last reset. */
+  carriedRate?: number
+}
+
 export type Panel = {
   isCompact: boolean
   isDoneCollapsed: boolean
@@ -98,6 +109,7 @@ declare module 'claude-code' {
       now: number
       job: Job | null
       tasks: TrackedTask[]
+      limit: LimitTrack | null
     }
   }
 }

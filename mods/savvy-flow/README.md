@@ -19,6 +19,6 @@ An orchestrated delivery flow for Claude Code. Run `/savvy-flow <task>` (`/savvy
 
 ## With savvy-progress
 
-The skill and the agents run fine alone. With the [savvy-progress](../savvy-progress) mod installed, the orchestrator reports the plan and accepted tasks to a progress bar above the prompt, and each worker reports its own steps to the agents panel. Without the mod those calls are skipped.
+The skill and the agents run fine alone. With the [savvy-progress](../savvy-progress) mod installed, the orchestrator reports the plan and accepted tasks to a progress bar above the prompt (`mcp__savvy-progress__progress`), and each worker reports its own steps to the agents panel (`mcp__savvy-progress__step`, loaded through ToolSearch when it is deferred). Each planned task's `title` is reused verbatim as the Agent call's `description`, which is how the panel ties a run to its task. Without the mod those calls are skipped.
 
 Install instructions are in the [repository README](../../README.md).

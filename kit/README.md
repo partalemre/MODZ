@@ -10,22 +10,22 @@ bin/kit-sync                           # refresh every mod that already has hook
 
 The kit is pure: no `$`, no state, no timers. Svg builders return `{ source, width, height, alt }` (an `SvgPic`)
 that spreads into `<Svg {...pic} />`; colours inside are CSS variables for both schemes
-(`prefers-color-scheme`), so no hex reaches the markup. Element helpers take `(ui, surface, isLight, opts)`, where
-`ui = $.ui.resolve(e)`, `surface = e.surface`, and `isLight` comes from `resolveLight`. On the terminal (or any
-table without `Svg`) they draw glyphs and theme keys instead.
+(`prefers-color-scheme`), so no hex reaches the markup. Element helpers take `(draw, opts)`, where `draw` is
+`{ ui, surface, isLight }` (`DrawCtx`): `ui = $.ui.resolve(e)`, `surface = e.surface`, and `isLight` comes from
+`resolveLight`. On the terminal (or any table without `Svg`) they draw glyphs and theme keys instead.
 
 ```tsx
 import { Card, ButtonRow, Meter, cardInnerWidth } from './kit/ui'
 import { resolveLight } from './kit/tokens'
 
-const ui = $.ui.resolve(e)
+const draw = { ui: $.ui.resolve(e), surface: e.surface, isLight }
 const width = cardInnerWidth(e.props.bodyColumns)
-return Card(ui, e.surface, isLight, {
+return Card(draw, {
   role: 'read',
   header: { icon: 'eye', eyebrow: 'Şu an', meta: '2 dk önce', headline: 'Claude client.ts dosyasını okuyor', width },
   children: [
-    Meter(ui, e.surface, isLight, { label: 'Bağlam', value: 0.42, pace: 0.35, width }),
-    ButtonRow(ui, e.surface, isLight, { buttons: [{ label: 'Aç', variant: 'primary', onPress: open }] }),
+    Meter(draw, { label: 'Bağlam', value: 0.42, pace: 0.35, width }),
+    ButtonRow(draw, { buttons: [{ label: 'Aç', variant: 'primary', onPress: open }] }),
   ],
 })
 ```
@@ -64,7 +64,7 @@ cube, bookmark, bulb, play, pause, folder, file, branch, terminal, bell, sparkle
 | Builder | Example |
 |---|---|
 | `textWidth(text, size, weight)` | `textWidth('Mesaj', 13, 600)` → px, measured SF Pro advances |
-| `monoWidth`, `fitText`, `wrapText` | `wrapText(s, 300, 2, t => textWidth(t, 17, 620))` |
+| `monoWidth`, `fitText`, `wrapText` | `wrapText(s, { max: 300, maxLines: 2, measure: t => textWidth(t, 17, 620) })` |
 | `iconTile` | `iconTile({ icon: 'trash', role: 'danger', size: 36 })` (rx 9, tint, 18 px icon) |
 | `eyebrow` | `eyebrow({ text: 'Tüm dosyalar', width: 400, hasDot: true, meta: '2 dk önce', hasRule: true })` |
 | `headline` | `headline({ text, width: 400, mark: 'yaklaşık $0,45', markRole: 'warn' })` (17/620, ≤2 lines) |
@@ -88,14 +88,14 @@ cube, bookmark, bulb, play, pause, folder, file, branch, terminal, bell, sparkle
 
 | Helper | Example |
 |---|---|
-| `Card` | `Card(ui, surface, isLight, { role, isDanger, header, children })` (round; danger = single + Flare) |
-| `HeaderBlock` | `HeaderBlock(ui, surface, isLight, { icon: 'clock', role: 'warn', eyebrow: 'Önbellek soğudu', width })` |
-| `Eyebrow` | `Eyebrow(ui, surface, isLight, { text: 'Tüm dosyalar', meta: 'WEATHER-APP', width })` |
-| `ButtonRow` | `ButtonRow(ui, surface, isLight, { buttons, isDanger: true })` (one primary; safe gets focus) |
-| `Highlight` | `Highlight(ui, surface, isLight, { text: 'pnpm', role: 'ok' })` |
-| `StatRow` | `StatRow(ui, surface, isLight, { stats, width })` |
-| `Meter` | `Meter(ui, surface, isLight, { value, pace, label, width, cells: 20 })` (terminal `━━━╸┊───`) |
-| `Pill` | `Pill(ui, surface, isLight, { text: 'Commit', role: 'ok', icon: 'branch' })` |
+| `Card` | `Card(draw, { role, isDanger, header, children })` (round; danger = single + Flare) |
+| `HeaderBlock` | `HeaderBlock(draw, { icon: 'clock', role: 'warn', eyebrow: 'Önbellek soğudu', width })` |
+| `Eyebrow` | `Eyebrow(draw, { text: 'Tüm dosyalar', meta: 'WEATHER-APP', width })` |
+| `ButtonRow` | `ButtonRow(draw, { buttons, isDanger: true })` (one primary; safe gets focus) |
+| `Highlight` | `Highlight(draw, { text: 'pnpm', role: 'ok' })` |
+| `StatRow` | `StatRow(draw, { stats, width })` |
+| `Meter` | `Meter(draw, { value, pace, label, width, cells: 20 })` (terminal `━━━╸┊───`) |
+| `Pill` | `Pill(draw, { text: 'Commit', role: 'ok', icon: 'branch' })` |
 | `planButtons` | `planButtons(specs, isDanger)` (the pure rules behind ButtonRow) |
 | `meterGlyphs` | `meterGlyphs(0.4, 20, 0.7)` → `{ fill: '━━━━━━━╸', rest: '──────', pace: '┊', after: '─────' }` |
 | `cardInnerWidth`, `pxWidth`, `isTextSurface`, `toneKey` | `cardInnerWidth(e.props.bodyColumns)` → Svg px inside a card |

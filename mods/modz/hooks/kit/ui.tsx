@@ -1,5 +1,5 @@
-// MODZ kit — element helpers. Each takes (ui, surface, isLight, opts): `ui` is
-// `$.ui.resolve(e)`, `surface` is `e.surface`, `isLight` comes from resolveLight. On the
+// MODZ kit — element helpers. Each takes (draw, opts), where `draw` is { ui, surface, isLight }:
+// `ui` is `$.ui.resolve(e)`, `surface` is `e.surface`, `isLight` comes from resolveLight. On the
 // terminal (or any table without Svg) each draws glyphs and theme keys instead of Svg.
 import type { ElementTable, RenderChildren, RenderElement, RenderSurface } from 'claude-code'
 
@@ -18,6 +18,9 @@ import { planButtons } from './ui-buttons'
 import type { ButtonSpec } from './ui-buttons'
 
 export type Ui = ElementTable
+
+// Where an element draws; a caller's own context with more fields passes as it is.
+export type DrawCtx = { ui: Ui; surface: RenderSurface; isLight: boolean }
 
 // Svg px per layout cell on the desktop; card padding and border in cells (DESIGN.md §4).
 export const PX_PER_CELL = 8
@@ -49,7 +52,8 @@ function svgOf(ui: Ui, pic: { source: string; width: number; height: number; alt
 
 export type EyebrowOpts = { text: string; role?: Role; meta?: string; width: number; hasRule?: boolean }
 
-export function Eyebrow(ui: Ui, surface: RenderSurface, isLight: boolean, o: EyebrowOpts): RenderElement {
+export function Eyebrow(draw: DrawCtx, o: EyebrowOpts): RenderElement {
+  const { ui, surface } = draw
   const { Box, Text } = ui
 
   if (isTextSurface(ui, surface)) {
@@ -64,7 +68,8 @@ export function Eyebrow(ui: Ui, surface: RenderSurface, isLight: boolean, o: Eye
   return svgOf(ui, eyebrow({ ...o, hasDot: true })) ?? <Box />
 }
 
-export function HeaderBlock(ui: Ui, surface: RenderSurface, isLight: boolean, o: HeaderOpts): RenderElement {
+export function HeaderBlock(draw: DrawCtx, o: HeaderOpts): RenderElement {
+  const { ui, surface } = draw
   const { Box, Text } = ui
 
   if (!isTextSurface(ui, surface)) return svgOf(ui, headerSvg(o)) ?? <Box />
@@ -85,13 +90,14 @@ export function HeaderBlock(ui: Ui, surface: RenderSurface, isLight: boolean, o:
 export type CardOpts = { header?: HeaderOpts; role?: Role; isDanger?: boolean; children?: RenderChildren }
 
 // Round border informs, single border asks for a consequential decision (Flare line).
-export function Card(ui: Ui, surface: RenderSurface, isLight: boolean, o: CardOpts): RenderElement {
+export function Card(draw: DrawCtx, o: CardOpts): RenderElement {
+  const { ui, surface, isLight } = draw
   const { Box } = ui
   const isText = isTextSurface(ui, surface)
   const p = palette(isLight)
   const role = o.isDanger ? 'danger' : o.role
   const borderColor = isText ? (role ? ROLE_KEY[role] : LINE_KEY) : role ? p.roles[role].line : p.line
-  const header = o.header ? HeaderBlock(ui, surface, isLight, { role, ...o.header }) : null
+  const header = o.header ? HeaderBlock(draw, { role, ...o.header }) : null
 
   return (
     <Box
@@ -113,8 +119,8 @@ export function Card(ui: Ui, surface: RenderSurface, isLight: boolean, o: CardOp
 
 export type ButtonRowOpts = { buttons: readonly ButtonSpec[]; isDanger?: boolean }
 
-export function ButtonRow(ui: Ui, surface: RenderSurface, isLight: boolean, o: ButtonRowOpts): RenderElement {
-  const { Box, Button } = ui
+export function ButtonRow(draw: DrawCtx, o: ButtonRowOpts): RenderElement {
+  const { Box, Button } = draw.ui
   const planned = planButtons(o.buttons, o.isDanger)
 
   return (
@@ -137,7 +143,8 @@ export function ButtonRow(ui: Ui, surface: RenderSurface, isLight: boolean, o: B
 export type HighlightOpts = { text: string; role: Role }
 
 // Tint behind, role colour in front, not bold; one padding space each side on the desktop.
-export function Highlight(ui: Ui, surface: RenderSurface, isLight: boolean, o: HighlightOpts): RenderElement {
+export function Highlight(draw: DrawCtx, o: HighlightOpts): RenderElement {
+  const { ui, surface, isLight } = draw
   const { Text } = ui
 
   if (isTextSurface(ui, surface)) return <Text color={ROLE_KEY[o.role]}>{o.text}</Text>
@@ -150,7 +157,8 @@ export function Highlight(ui: Ui, surface: RenderSurface, isLight: boolean, o: H
 
 export type StatRowOpts = { stats: readonly StatTileOpts[]; width: number }
 
-export function StatRow(ui: Ui, surface: RenderSurface, isLight: boolean, o: StatRowOpts): RenderElement {
+export function StatRow(draw: DrawCtx, o: StatRowOpts): RenderElement {
+  const { ui, surface } = draw
   const { Box, Text } = ui
 
   if (!isTextSurface(ui, surface)) return svgOf(ui, statRowSvg(o)) ?? <Box />
@@ -187,7 +195,8 @@ export function meterGlyphs(ratio: number, cells = DEFAULT_CELLS, pace?: number)
 
 export type MeterElementOpts = MeterOpts & { cells?: number }
 
-export function Meter(ui: Ui, surface: RenderSurface, isLight: boolean, o: MeterElementOpts): RenderElement {
+export function Meter(draw: DrawCtx, o: MeterElementOpts): RenderElement {
+  const { ui, surface } = draw
   const { Box, Text } = ui
 
   if (!isTextSurface(ui, surface)) return svgOf(ui, meter(o)) ?? <Box />
@@ -207,7 +216,8 @@ export function Meter(ui: Ui, surface: RenderSurface, isLight: boolean, o: Meter
   )
 }
 
-export function Pill(ui: Ui, surface: RenderSurface, isLight: boolean, o: PillOpts): RenderElement {
+export function Pill(draw: DrawCtx, o: PillOpts): RenderElement {
+  const { ui, surface } = draw
   const { Box, Text } = ui
 
   if (!isTextSurface(ui, surface)) return svgOf(ui, pill(o)) ?? <Box />

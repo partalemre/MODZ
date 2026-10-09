@@ -97,9 +97,12 @@ export function fitText(text: string, max: number, measure: Measure): string {
   return chars.length === 0 ? '' : `${chars.join('').trimEnd()}…`
 }
 
+export type WrapOpts = { max: number; maxLines: number; measure: Measure }
+
 // Words laid into at most `maxLines` lines of `max` px; the last line ends in an ellipsis
 // when text is left over. A word longer than a line is cut.
-export function wrapText(text: string, max: number, maxLines: number, measure: Measure): string[] {
+export function wrapText(text: string, o: WrapOpts): string[] {
+  const { max, maxLines, measure } = o
   const words = text.split(/\s+/).filter(Boolean)
   const lines: string[] = []
   let line = ''

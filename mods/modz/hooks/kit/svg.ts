@@ -1,6 +1,7 @@
 // MODZ kit — every Svg builder in one import. Each returns { source, width, height, alt },
 // ready to spread into <Svg {...pic} />; the matching *Part gives the body for composites.
 export { textWidth, monoWidth, fitText, wrapText } from './svg-metrics'
+export type { WrapOpts } from './svg-metrics'
 export { TYPE, toPic, place, escapeXml, upperTr } from './svg-core'
 export type { SvgPic, Part } from './svg-core'
 export { eyebrow, eyebrowPart, eyebrowWidth, headline, linesPart, bodyPart, EYEBROW_H } from './svg-text'

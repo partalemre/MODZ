@@ -35,7 +35,8 @@ function demote(buttons: readonly ButtonSpec[], isDanger: boolean): ButtonSpec[]
 
   return buttons.map(button => {
     const wantsPrimary = (button.variant ?? 'secondary') === 'primary' && !(isDanger && button.isDestructive)
-    const variant: ButtonVariant = wantsPrimary && !hasPrimary ? 'primary' : button.variant === 'plain' ? 'plain' : 'secondary'
+    const fallback: ButtonVariant = button.variant === 'plain' ? 'plain' : 'secondary'
+    const variant: ButtonVariant = wantsPrimary && !hasPrimary ? 'primary' : fallback
     hasPrimary = hasPrimary || variant === 'primary'
     return { ...button, variant }
   })

@@ -13,9 +13,9 @@ import { pill } from './svg-shapes'
 import { eyebrow } from './svg-text'
 import type { PillOpts, StatTileOpts } from './svg-shapes'
 import { LINE_KEY, palette, ROLE_KEY, ROLES } from './tokens'
-import type { Role, ThemeKey } from './tokens'
+import type { Palette, Role, ThemeKey } from './tokens'
 import { planButtons } from './ui-buttons'
-import type { ButtonSpec } from './ui-buttons'
+import type { ButtonSpec, ButtonVariant } from './ui-buttons'
 
 export type Ui = ElementTable
 
@@ -89,6 +89,12 @@ export function HeaderBlock(draw: DrawCtx, o: HeaderOpts): RenderElement {
 
 export type CardOpts = { header?: HeaderOpts; role?: Role; isDanger?: boolean; children?: RenderChildren }
 
+function borderOf(isText: boolean, p: Palette, role?: Role): string {
+  if (isText) return role ? ROLE_KEY[role] : LINE_KEY
+
+  return role ? p.roles[role].line : p.line
+}
+
 // Round border informs, single border asks for a consequential decision (Flare line).
 export function Card(draw: DrawCtx, o: CardOpts): RenderElement {
   const { ui, surface, isLight } = draw
@@ -96,7 +102,7 @@ export function Card(draw: DrawCtx, o: CardOpts): RenderElement {
   const isText = isTextSurface(ui, surface)
   const p = palette(isLight)
   const role = o.isDanger ? 'danger' : o.role
-  const borderColor = isText ? (role ? ROLE_KEY[role] : LINE_KEY) : role ? p.roles[role].line : p.line
+  const borderColor = borderOf(isText, p, role)
   const header = o.header ? HeaderBlock(draw, { role, ...o.header }) : null
 
   return (
@@ -117,6 +123,9 @@ export function Card(draw: DrawCtx, o: CardOpts): RenderElement {
 
 // ---------------------------------------------------------------------------
 
+// A plain button is drawn with the `plain` flag, not a variant.
+const BUTTON_VARIANT: Record<ButtonVariant, 'primary' | 'secondary' | undefined> = { primary: 'primary', secondary: 'secondary', plain: undefined }
+
 export type ButtonRowOpts = { buttons: readonly ButtonSpec[]; isDanger?: boolean }
 
 export function ButtonRow(draw: DrawCtx, o: ButtonRowOpts): RenderElement {
@@ -130,7 +139,7 @@ export function ButtonRow(draw: DrawCtx, o: ButtonRowOpts): RenderElement {
           key={b.key ?? b.label}
           label={b.label}
           onPress={b.onPress}
-          variant={b.variant === 'primary' ? 'primary' : b.variant === 'secondary' ? 'secondary' : undefined}
+          variant={BUTTON_VARIANT[b.variant]}
           plain={b.variant === 'plain' ? true : undefined}
           hotkey={b.hotkey}
           autoFocus={b.isFocused ? true : undefined}
@@ -180,11 +189,17 @@ export type MeterGlyphs = { fill: string; rest: string; pace: string; after: str
 
 const DEFAULT_CELLS = 20
 
+// The fill's last cell: a half head while the meter runs, a whole one when it is full.
+function headOf(filled: number, cells: number): string {
+  if (filled <= 0) return ''
+
+  return filled < cells ? '╸' : '━'
+}
+
 // `━━━━╸┊────`: the fill, the head, the pace mark (only where it is still ahead), the rest.
 export function meterGlyphs(ratio: number, cells = DEFAULT_CELLS, pace?: number): MeterGlyphs {
   const filled = Math.round(Math.max(0, Math.min(1, ratio)) * cells)
-  const head = filled > 0 && filled < cells ? '╸' : filled > 0 ? '━' : ''
-  const fill = '━'.repeat(Math.max(0, filled - 1)) + head
+  const fill = '━'.repeat(Math.max(0, filled - 1)) + headOf(filled, cells)
   const at = pace === undefined ? -1 : Math.round(Math.max(0, Math.min(1, pace)) * cells)
   const empty = cells - filled
 

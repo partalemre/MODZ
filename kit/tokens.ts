@@ -244,7 +244,9 @@ const LIGHT_ANSI_BACKGROUNDS = [7, 15]
 const named = (value: unknown): boolean | undefined => {
   const name = typeof value === 'string' ? value.trim().toLowerCase() : ''
 
-  return name.includes('light') ? true : name.includes('dark') ? false : undefined
+  if (name.includes('light')) return true
+
+  return name.includes('dark') ? false : undefined
 }
 
 const terminalLight = (colorfgbg: string | undefined): boolean | undefined => {

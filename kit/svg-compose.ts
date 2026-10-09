@@ -35,7 +35,8 @@ export function headerPart(o: HeaderOpts): Part {
   const title = o.headline ? linesPart({ text: o.headline, width: textW, mark: o.mark, markRole: o.role }) : null
   const subTop = headlineTop + (title ? title.height + HEADLINE_TO_SUB : 0)
   const sub = o.sub ? bodyPart({ text: o.sub, width: textW }) : null
-  const bottom = sub ? subTop + sub.height : title ? headlineTop + title.height : EYEBROW_H
+  const titleBottom = title ? headlineTop + title.height : EYEBROW_H
+  const bottom = sub ? subTop + sub.height : titleBottom
   const body = [
     tile ? tile.body : '',
     place(eyebrow.body, textX, 0),

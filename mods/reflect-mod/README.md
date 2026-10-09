@@ -5,8 +5,8 @@
 > - **Kart.** Prompt'un üstünde tek bir kart: yeşil yer imi diski, "KURAL OLARAK KAYDEDİLSİN Mİ?", sağda modelin kendi
 >   güveni ("%95 emin", aynı tek çağrıda istenir; `remember:` ile söylenen kuralda gösterilmez), başlık olarak kuralın kendisi,
 >   altında "Söylediğin: “…”". **NEREYE** altında iki satır: *Sadece bu proje · <proje>/CLAUDE.md* ve
->   *Tüm projelerin · ~/.claude/CLAUDE.md* (seçili satır Moss zemin + çizgi, radyo noktası yok; `1`/`2`). Ana düğme seçimi izler
->   (**Bu projeye kaydet** / **Tüm projelere kaydet**), diğeri ikincil; **Yeniden yaz** kartın içinde bir alan açar (alanı olmayan
+>   *Tüm projelerin · ~/.claude/CLAUDE.md* (seçili satır Moss zemin + çizgi, radyo noktası yok; `1`/`2`). Ana düğme (kartın tek `primary` düğmesi, `k`) seçimi izler
+>   (**Bu projeye kaydet** / **Tüm projelere kaydet**), diğeri ikincil; dar bantta iki satır da yolu etiketin altına alır; **Yeniden yaz** kartın içinde bir alan açar (alanı olmayan
 >   yüzeyde kural boş istem kutusuna konur); **Kaydetme** atlar. Kaydedince birkaç saniye "KURAL KAYDEDİLDİ" durumu.
 >   Birden çok kural bekliyorsa altta "+N kural daha · /reflect-queue".
 > - **Daha akıllı, daha ucuz.** Yukarı akışın ön elemesi (insan istemi, kısa, onay değil, sır yok) aynen; üstüne Türkçe ve
@@ -93,5 +93,5 @@ Code config directory) until you decide on them.
 
 ```bash
 claude plugin validate mod
-claude plugin test mod        # 17 tests, mocked model - free
+claude plugin test mod        # 24 tests, mocked model - free
 ```

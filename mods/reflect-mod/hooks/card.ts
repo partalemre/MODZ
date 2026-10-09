@@ -74,30 +74,38 @@ function actionsRow(ui: TextUi, c: CardInput): RenderElement {
     ] })
   }
   return Box({ flexDirection: 'row', gap: 1, flexWrap: 'wrap', alignItems: 'center', children: [
-    Button({ key: `save:${id}`, label: SAVE_LABEL[c.picked], variant: 'secondary', hotkey: 'k', onPress: () => c.on.save(c.picked) }),
+    Button({ key: `save:${id}`, label: SAVE_LABEL[c.picked], variant: 'primary', hotkey: 'k', onPress: () => c.on.save(c.picked) }),
     Button({ key: `other:${id}`, label: SAVE_LABEL[other(c.picked)], variant: 'secondary', onPress: () => c.on.save(other(c.picked)) }),
     Button({ key: `edit:${id}`, label: 'Yeniden yaz', variant: 'secondary', hotkey: 'y', onPress: c.on.reword }),
     Button({ key: `skip:${id}`, label: 'Kaydetme', plain: true, onPress: c.on.skip }),
   ] })
 }
 
-type Dest = { scope: Scope; p: Palette; width: number }
+// `isStacked`: both rows put the path under the label when either one's path would not fit beside it.
+type Dest = { scope: Scope; p: Palette; isStacked: boolean }
 
 /** What a destination row needs beside its path: its frame and padding, the icon, the gaps and the label button. */
 const rowChromeOf = (label: string): number => DEST_CHROME + measure(label, LABEL_FONT)
 
-// The path stays whole: when it and the label do not fit on one line it moves under the label.
+/** Whether either destination's path would not fit beside its label at this width. */
+function stacksAt(c: CardInput, width: number): boolean {
+  return (['project', 'global'] as const).some(scope => rowChromeOf(ROW_LABEL[scope]) + pathSvg(c.paths[scope], '').width > width)
+}
+
+// The path stays whole: when it and the label do not fit on one line it moves under the label. The picked
+// row's label reads text.hi, the other one dim.
 function destDesktop(ui: Elements['desktop'], c: CardInput, d: Dest): RenderElement {
-  const { Box, Button, Svg } = ui
+  const { Box, Button, Svg, Text } = ui
   const { scope, p } = d
   const isPicked = c.picked === scope
   const tone = p.role.ok
   const path = pathSvg(c.paths[scope], isPicked ? p.hi : p.lo)
-  const isStacked = rowChromeOf(ROW_LABEL[scope]) + path.width > d.width
+  const isStacked = d.isStacked
   const pathEl = Svg({ source: path.source, alt: c.paths[scope], width: path.width, height: path.height })
+  const label = Text({ color: isPicked ? p.hi : p.lo, bold: isPicked, children: [ROW_LABEL[scope]] })
   const pick = [
     Svg({ source: iconSvg(ROW_ICONS[scope], ROW_ICON, isPicked ? tone.fg : p.lo), alt: '', width: ROW_ICON, height: ROW_ICON }),
-    Button({ key: `pick-${scope}:${c.l.id}`, label: ROW_LABEL[scope], plain: true, hotkey: HOTKEY[scope], dimColor: !isPicked, onPress: () => c.on.pick(scope) }),
+    Button({ key: `pick-${scope}:${c.l.id}`, label: ROW_LABEL[scope], plain: true, hotkey: HOTKEY[scope], onPress: () => c.on.pick(scope), children: [label] }),
   ]
   const frame = { key: `dest-${scope}:${c.l.id}`, paddingX: 1, borderStyle: 'round', borderColor: isPicked ? tone.line : p.line, backgroundColor: isPicked ? tone.tint : p.card } as const
   if (isStacked) {
@@ -117,10 +125,11 @@ export function cardDesktop(ui: Elements['desktop'], c: CardInput, look: Look): 
   const p = palette(look.isLight)
   const width = contentWidth(look.columns)
   const head = proposalSvg(width, { rule: c.l.rule, said: c.l.said ?? '', meta: metaOf(c.l) }, p)
+  const isStacked = stacksAt(c, width)
   const more = c.more > 0 ? [ui.Text({ color: p.lo, children: [`+${c.more} kural daha · /reflect-queue`] })] : []
   return shell(ui, p, [
     ui.Svg({ source: head.source, alt: `Kural olarak kaydedilsin mi? “${c.l.rule}”`, width, height: head.height }),
-    ui.Box({ flexDirection: 'column', gap: 0, children: [destDesktop(ui, c, { scope: 'project', p, width }), destDesktop(ui, c, { scope: 'global', p, width })] }),
+    ui.Box({ flexDirection: 'column', gap: 0, children: (['project', 'global'] as const).map(scope => destDesktop(ui, c, { scope, p, isStacked })) }),
     actionsRow(ui, c),
     ...more,
   ])

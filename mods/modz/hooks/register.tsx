@@ -5,7 +5,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { HubCard, ModzView } from '../types'
-import { loadCatalog, marketRoot } from './catalog'
+import { linkCheck, loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
 import { cardOf, focusOf, MODS_PANE, rowsOf } from './hub'
 import type { Presence } from './hub'
@@ -40,14 +40,13 @@ async function enabledPlugins($: EngineInterface): Promise<Record<string, unknow
   }
 }
 
-const SKILLS_DIR = '.claude/skills'
-
-// Mods are enabled by a ~/.claude/skills/<name> symlink, which settings never mention.
+// Mods are enabled by a skills-folder symlink (~/.claude/skills, or the project's
+// .claude/skills in a cloud session), which settings never mention.
 async function skillLinks($: EngineInterface): Promise<(name: string) => Promise<boolean>> {
   const home = await $.env.get('HOME').catch(() => undefined)
-  if (!home) return async () => false
+  const cwd = await $.session.cwd().catch(() => undefined)
 
-  return name => $.fs.exists(`${home}/${SKILLS_DIR}/${name}`).catch(() => false)
+  return linkCheck({ roots: [home, cwd], exists: path => $.fs.exists(path) })
 }
 
 async function marketOf($: EngineInterface): Promise<Market> {

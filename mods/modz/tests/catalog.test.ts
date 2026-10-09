@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { headline, loadCatalog } from '../hooks/catalog'
+import { headline, linkCheck, loadCatalog } from '../hooks/catalog'
 import type { ModInfo } from '../hooks/catalog'
 
 const ROOT = '/m'
@@ -81,6 +81,27 @@ test('a failing or absent link check, and an unsafe name, leave the state unknow
   expect(mods.map(mod => mod.isEnabled)).toEqual([null, null])
   expect(seen).toEqual(['a'])
   expect((await loadCatalog(market([local('a')], files))).mods[0]?.isEnabled).toBeNull()
+})
+
+test("a link counts from the user's skills folder or the project's, and a failing check is no link", async () => {
+  const present = new Set(['/home/u/.claude/skills/user-mod', '/repo/.claude/skills/cloud-mod'])
+  const asked: string[] = []
+  const hasLink = linkCheck({
+    roots: ['/home/u', undefined, '/repo'],
+    exists: async path => {
+      asked.push(path)
+      if (path.endsWith('/broken')) throw new Error('EACCES')
+
+      return present.has(path)
+    },
+  })
+
+  expect(await hasLink('user-mod')).toBe(true)
+  expect(await hasLink('cloud-mod')).toBe(true)
+  expect(await hasLink('broken')).toBe(false)
+  expect(await hasLink('none')).toBe(false)
+  expect(asked).toContain('/repo/.claude/skills/cloud-mod')
+  expect(asked.some(path => path.includes('undefined'))).toBe(false)
 })
 
 test('the headline counts against known mods and reports the unknown ones', () => {

@@ -73,7 +73,8 @@ export function groupSvg(spec: { width: number; theme: Theme; label: string; cou
 
 function healthDot(mod: ModInfo, cx: number): string {
   if (!mod.isHealthy) return `<path d="M${cx - 3} 17l6 6M${cx + 3} 17l-6 6" stroke-width="1.8" stroke-linecap="round" class="st-danger"/>`
-  if (mod.isEnabled === false) return `<circle cx="${cx}" cy="20" r="3.5" fill="none" stroke-width="1.3" class="strong"/>`
+  // Off is a hollow ring, unknown a dashed one; only a known-on mod gets the green dot.
+  if (mod.isEnabled !== true) return `<circle cx="${cx}" cy="20" r="3.5" fill="none" stroke-width="1.3"${mod.isEnabled === null ? ' stroke-dasharray="2 1.6"' : ''} class="strong"/>`
 
   return `<circle cx="${cx}" cy="20" r="4" class="fg-ok"/>`
 }
@@ -93,6 +94,13 @@ function badges(mod: ModInfo, width: number): { svg: string; left: number } {
   return { svg: parts.join(''), left: right }
 }
 
+function stateLabel(mod: ModInfo): string {
+  if (!mod.isHealthy) return 'sağlıksız'
+  if (mod.isEnabled === null) return 'durum bilinmiyor'
+
+  return mod.isEnabled ? 'sağlıklı' : 'kapalı'
+}
+
 export function rowSvg(spec: { width: number; theme: Theme; mod: ModInfo }): Drawing {
   const { mod, width } = spec
   const right = badges(mod, width)
@@ -107,7 +115,7 @@ export function rowSvg(spec: { width: number; theme: Theme; mod: ModInfo }): Dra
     `<text x="${TEXT_X}" y="44" class="lb lo">${esc(fit(mod.description, width - TEXT_X - 8, 12))}</text>`,
   ].join('')
   const source = mod.upstream === null ? 'MODZ' : `asıl: ${mod.upstream}`
-  const state = !mod.isHealthy ? 'plugin.json okunamadı' : mod.isEnabled === false ? 'kapalı' : 'sağlıklı'
+  const state = stateLabel(mod)
   const alt = `${mod.name} v${mod.version} · ${mod.surfaces.join(', ')} · ${source} · ${state} · ${mod.description}`
 
   return { source: svgDoc({ width, height: ROW, theme: spec.theme, body }), alt, height: ROW }

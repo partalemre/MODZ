@@ -25,7 +25,9 @@ function sourceText(mod: ModInfo): string {
 function stateOf(mod: ModInfo): { glyph: string; color: string } {
   if (!mod.isHealthy) return { glyph: '✕', color: 'error' }
 
-  return mod.isEnabled === false ? { glyph: '○', color: 'subtle' } : { glyph: '●', color: 'success' }
+  if (mod.isEnabled === null) return { glyph: '◌', color: 'subtle' }
+
+  return mod.isEnabled ? { glyph: '●', color: 'success' } : { glyph: '○', color: 'subtle' }
 }
 
 function terminalRow(ui: Ui, mod: ModInfo) {

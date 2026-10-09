@@ -3,6 +3,7 @@ import { baseName } from './parse'
 import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, percentText, progressOf, windowOf } from './progress'
 import type { Tracks } from './progress'
 import type { StepTrack } from '../types'
+import { planState, stateNote } from './freshness'
 import { deskDetails } from './plan-detail'
 import { EMPTY_HOW, EMPTY_LEAD, emptySvg } from './plan-empty'
 import { planSvg } from './plan-svg'
@@ -12,7 +13,7 @@ import type { Theme } from './ui/theme'
 // The resolved element table of the surface that draws the pane.
 export type Ui = Record<string, any>
 
-export type PaneView = { plan: Plan | null; tracks: Tracks; now: number; theme: Theme }
+export type PaneView = { plan: Plan | null; tracks: Tracks; now: number; theme: Theme; touchedAt: number }
 export type Layout = { columns: number; rows: number; surface: string }
 
 const SVG_RANGE = { min: 280, max: 640 }
@@ -202,13 +203,21 @@ function desktopPane(ui: Ui, view: PaneView, layout: Layout) {
   const steps = plan.steps
   const current = steps[currentIndex(steps, view.tracks)]
   const details = current === undefined ? { meta: '', files: [], running: [] } : deskDetails(current, view.tracks[current.key])
-  const drawing = planSvg({ plan, tracks: view.tracks, now: view.now, theme: view.theme, width }, details)
+  const note = noteOf(view)
+  const drawing = planSvg({ plan, tracks: view.tracks, now: view.now, theme: view.theme, width, note }, details)
 
   return (
     <Box flexDirection="column" paddingX={1} paddingY={1}>
       <Svg key="plan-svg" source={drawing.source} alt={`${headline(plan)}${current === undefined ? '' : ` · şimdi: ${current.title}`}`} width={width} height={drawing.height} />
     </Box>
   )
+}
+
+// "başlamadı" or "bekliyor · 45dk önce" for a plan that is not under way, else nothing.
+function noteOf(view: PaneView): string {
+  const at = { now: view.now, touchedAt: view.touchedAt }
+
+  return stateNote(planState(view.plan, at), at)
 }
 
 export function planPane(ui: Ui, view: PaneView, layout: Layout) {
@@ -220,8 +229,8 @@ export function planPane(ui: Ui, view: PaneView, layout: Layout) {
 
   return (
     <Box flexDirection="column" paddingX={PAD}>
-      {header(ui, headline(plan), plan.source)}
-      {bar(ui, { percent: progressOf(plan).percent, columns: layout.columns, eta: eta === null ? '' : `kalan ~${formatDuration(eta)}` })}
+      {header(ui, headline(plan), [plan.source, noteOf(view)].filter(Boolean).join(' · '))}
+      {bar(ui, { percent: progressOf(plan).percent, columns: layout.columns, eta: eta === null || noteOf(view) !== '' ? '' : `kalan ~${formatDuration(eta)}` })}
       <Text>{' '}</Text>
       {stepList(ui, { ...view, plan }, layout.rows)}
     </Box>

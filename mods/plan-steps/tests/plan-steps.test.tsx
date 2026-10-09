@@ -75,6 +75,23 @@ async function rowText(pane: any, key: string): Promise<string | undefined> {
   return (await pane.find({ type: 'Box', key }))?.text
 }
 
+// Stands for the MODZ main panel: it writes open requests and reads the cards, as `modz` does.
+const modz = {
+  name: 'modz',
+  register(on: any) {
+    on('command.run', { command: 'modz-open' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'open' }, { pane: e.args, at: 1 })
+
+      return {}
+    })
+    on('command.run', { command: 'modz-hub' }, async ($: any) => ({ text: JSON.stringify((await $.state.get({ plugin: 'plan-steps', key: 'hub' })).value ?? null) }))
+  },
+}
+
+async function hubOf($: any) {
+  return JSON.parse((await $.command.run({ command: 'modz-hub', args: '' })).text)
+}
+
 for (const surface of SURFACES) {
   test(`${surface}: a TodoWrite plan shows done, current and upcoming steps with times, files and agents`, async ($: any, on: any) => {
     await setup($, on)
@@ -117,7 +134,7 @@ for (const surface of SURFACES) {
     await setup($, on)
     files[PLAN_PATH] = '### Task 1: Tipleri yaz\n- [ ] a\n### Task 2: Ayrıştırıcıyı yaz\n- [ ] a\n- [ ] b\n### Task 3: Paneli çiz\n'
     await $.tool.call({ tool: 'Write', file_path: PLAN_PATH, content: files[PLAN_PATH] })
-    expect(lastStatus()).toBe('plan 0/3')
+    expect(lastStatus()).toBeUndefined()
 
     await $.tool.call({ tool: 'TaskCreate', subject: 'Task 1: types', description: 'd' })
     await $.tool.call({ tool: 'TaskCreate', subject: 'Ayrıştırıcıyı yaz', description: 'd' })
@@ -191,12 +208,39 @@ test('ETA appears only after three timed steps and reads kalan ~Ndk', async ($: 
   expect(await rowText(pane, 'head')).toBe('Plan · 3/5 adım · %60görev listesi')
 })
 
-test('an approved plan from plan mode becomes the plan', async ($: any, on: any) => {
+test('an approved plan becomes the plan; the status line waits for its first step to start', { plugins: [modz] }, async ($: any, on: any) => {
   await setup($, on)
   await $.tool.call({ tool: 'ExitPlanMode' })
 
-  expect(lastStatus()).toBe('plan 0/3')
+  expect(lastStatus()).toBeUndefined()
+  expect(await hubOf($)).toMatchObject({ detail: '3 adım · başlamadı', tone: 'idle' })
+  await $.tool.call(todos([['Tipleri yaz', 'in_progress'], ['Paneli çiz', 'pending'], ['Testle', 'pending']]))
+  expect(lastStatus()).toBe('plan 0/3 · Tipleri yaz')
 })
+
+for (const surface of SURFACES) {
+  test(`${surface}: a plan nothing touched for 30 minutes leaves the status line and says so; work brings it back`, { plugins: [modz] }, async ($: any, on: any) => {
+    await setup($, on)
+    await $.tool.call(todos([['Tipleri yaz', 'completed'], ['Ayrıştırıcı', 'in_progress'], ['Paneli çiz', 'pending']]))
+    expect(lastStatus()).toBe('plan 1/3 · Ayrıştırıcı')
+
+    await clock.advance(31 * MIN)
+    expect(lastStatus()).toBeUndefined()
+    expect(await hubOf($)).toMatchObject({ detail: '1/3 adım · bekliyor', tone: 'idle' })
+    const pane = await $.ui.mount(paneOf(surface))
+    if (surface === 'desktop') {
+      const svg = await svgOf(pane)
+      expect(svg).toContain('bekliyor · 31dk önce')
+      expect(svg).not.toContain('class="breathe"')
+    } else {
+      expect(await rowText(pane, 'head')).toBe('Plan · 1/3 adım · ~%50görev listesi · bekliyor · 31dk önce')
+    }
+
+    await $.tool.call({ tool: 'Edit', file_path: '/w/hooks/parse.ts', old_string: 'a', new_string: 'b' })
+    expect(lastStatus()).toBe('plan 1/3 · Ayrıştırıcı')
+    expect(await hubOf($)).toMatchObject({ detail: '1/3 adım', tone: 'live' })
+  })
+}
 
 test('a finished plan says tamam, then clears the status line at the next prompt', async ($: any, on: any) => {
   await setup($, on)
@@ -215,23 +259,6 @@ test('a failed or refused call leaves the plan alone', async ($: any, on: any) =
 
   expect(statuses).toEqual([])
 })
-
-// Stands for the MODZ main panel: it writes open requests and reads the cards, as `modz` does.
-const modz = {
-  name: 'modz',
-  register(on: any) {
-    on('command.run', { command: 'modz-open' }, async ($: any, e: any) => {
-      await $.state.set({ plugin: 'modz', key: 'open' }, { pane: e.args, at: 1 })
-
-      return {}
-    })
-    on('command.run', { command: 'modz-hub' }, async ($: any) => ({ text: JSON.stringify((await $.state.get({ plugin: 'plan-steps', key: 'hub' })).value ?? null) }))
-  },
-}
-
-async function hubOf($: any) {
-  return JSON.parse((await $.command.run({ command: 'modz-hub', args: '' })).text)
-}
 
 test('the MODZ hub card says how far the plan is, and is written only when that changes', { plugins: [modz] }, async ($: any, on: any) => {
   await setup($, on)

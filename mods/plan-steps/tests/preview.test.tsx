@@ -58,4 +58,16 @@ for (const theme of ['dark', 'light']) {
       await pane.unmount()
     }
   })
+
+  test(`preview ${theme}: stale and not started`, async ($: any, on: any) => {
+    const clock = await setup($, on, theme)
+    await $.tool.call({ tool: 'TodoWrite', todos: todos(2) })
+    await clock.advance(45 * MIN)
+    const stale = await $.ui.mount(paneOf('desktop', WIDTHS.narrow))
+    console.log(`@@TREE@@plan-steps-stale-narrow-${theme}@@` + JSON.stringify(await stale.drawn()))
+    await stale.unmount()
+    await $.tool.call({ tool: 'TodoWrite', todos: TITLES.slice(0, 5).map(content => ({ content, activeForm: content, status: 'pending' })) })
+    const fresh = await $.ui.mount(paneOf('desktop', WIDTHS.narrow))
+    console.log(`@@TREE@@plan-steps-unstarted-narrow-${theme}@@` + JSON.stringify(await fresh.drawn()))
+  })
 }

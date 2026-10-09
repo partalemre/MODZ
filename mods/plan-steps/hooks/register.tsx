@@ -1,6 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Register } from 'claude-code'
 
+import { isShown, planState, STALE_MS } from './freshness'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import type { HubShown } from './hub'
 import { resolvePlan } from './match'
@@ -29,8 +30,11 @@ const tracksAtom = atom({ plugin: 'plan-steps', key: 'tracks' } as const, {})
 const tickAtom = atom({ plugin: 'plan-steps', key: 'tick' } as const, 0)
 const hubRef = { plugin: 'plan-steps', key: 'hub' } as const
 
-// Session-local facts no drawing reads. `isSettled`: a finished plan's status line was cleared.
-const flags = { cwd: '', isSettled: false, ticker: null as { cancel: () => void } | null, theme: 'auto' as Theme }
+type Timer = { cancel: () => void }
+
+// Session-local facts. `isSettled`: a finished plan's status line was cleared. `touchedAt`: the last
+// time the plan or the step under way moved; `quiet` re-checks the status line once that goes stale.
+const flags = { cwd: '', isSettled: false, ticker: null as Timer | null, theme: 'auto' as Theme, touchedAt: 0, quiet: null as Timer | null }
 
 type Ran = { deny?: unknown; isError?: unknown; result?: unknown }
 type Call = { tool: string; tool_use_id: string; agentId?: string } & Record<string, unknown>
@@ -55,25 +59,36 @@ async function writeHub($: EngineInterface, shown: HubShown): Promise<void> {
   await $.state.set(hubRef, card)
 }
 
-// Re-reads the plan, stamps status changes with the time, and refreshes the status line.
+// Re-reads the plan, stamps status changes with the time, and refreshes the status line: only a
+// plan under way (or just finished) is on it; one not started or gone stale stays in the pane.
 async function sync($: EngineInterface): Promise<void> {
   const plan = await currentPlan($)
   const now = await $.clock.now()
   const tracks = await update($, tracksAtom, before => (plan === null ? before : observe(before, plan.steps, now)))
   const progress = plan === null ? null : progressOf(plan)
+  const state = planState(plan, { now, touchedAt: flags.touchedAt })
   if (progress === null || progress.done < progress.total) flags.isSettled = false
-  $.ui.status(flags.isSettled ? undefined : statusText(plan, tracks))
-  await writeHub($, hubOf(progress))
+  $.ui.status(flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks))
+  await writeHub($, hubOf(progress, state))
+}
+
+// The plan moved: it is fresh again, and goes quiet if nothing moves it for STALE_MS.
+async function touch($: EngineInterface): Promise<void> {
+  flags.touchedAt = await $.clock.now()
+  flags.quiet?.cancel()
+  flags.quiet = $.clock.after(STALE_MS, () => void sync($))
 }
 
 async function setTasks($: EngineInterface, change: (tasks: PlanTask[]) => PlanTask[]): Promise<void> {
   await update($, tasksAtom, change)
+  await touch($)
   await sync($)
 }
 
 async function offerDoc($: EngineInterface, doc: PlanDoc | null): Promise<void> {
   if (doc === null || !isReplacing(await read($, docAtom), doc)) return
   await update($, docAtom, () => doc)
+  await touch($)
   await sync($)
 }
 
@@ -81,13 +96,23 @@ async function offerDoc($: EngineInterface, doc: PlanDoc | null): Promise<void> 
 async function onCurrent($: EngineInterface, change: (track: StepTrack) => StepTrack): Promise<void> {
   const plan = await currentPlan($)
   if (plan === null) return
+  let isMoved = false
   await update($, tracksAtom, tracks => {
     const step = plan.steps[currentIndex(plan.steps, tracks)]
     const track = step === undefined ? undefined : tracks[step.key]
     if (step === undefined || track === undefined) return tracks
+    isMoved = true
 
     return { ...tracks, [step.key]: change(track) }
   })
+  if (isMoved) await revive($)
+}
+
+// Work on the step under way keeps the plan fresh; a plan that had gone stale comes back.
+async function revive($: EngineInterface): Promise<void> {
+  const wasStale = (await $.clock.now()) - flags.touchedAt >= STALE_MS
+  await touch($)
+  if (wasStale) await sync($)
 }
 
 async function afterFile($: EngineInterface, call: Call): Promise<void> {
@@ -152,8 +177,10 @@ async function reset($: EngineInterface): Promise<void> {
   await update($, docAtom, () => null)
   await update($, tracksAtom, () => ({}))
   flags.isSettled = false
+  flags.quiet?.cancel()
+  flags.quiet = null
   $.ui.status(undefined)
-  await writeHub($, hubOf(null))
+  await writeHub($, hubOf(null, 'none'))
 }
 
 // The same pane whoever asks: /steps or the MODZ main panel; an open pane comes forward.
@@ -178,7 +205,8 @@ function lifecycle(on: On): void {
     flags.cwd = e.cwd.replace(/\/$/, '')
     await refreshTheme($)
     const plan = await currentPlan($)
-    await writeHub($, hubOf(plan === null ? null : progressOf(plan)))
+    const state = planState(plan, { now: await $.clock.now(), touchedAt: flags.touchedAt })
+    await writeHub($, hubOf(plan === null ? null : progressOf(plan), state))
     try {
       await $.command.register({ name: 'steps', description: 'Plandaki adımları ve işin nerede olduğunu gösteren paneli aç' })
     } catch {
@@ -242,7 +270,7 @@ export const register: Register = on => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     await read($, tickAtom)
-    const view = { plan: await currentPlan($), tracks: await read($, tracksAtom), now: await $.clock.now(), theme: flags.theme }
+    const view = { plan: await currentPlan($), tracks: await read($, tracksAtom), now: await $.clock.now(), theme: flags.theme, touchedAt: flags.touchedAt }
     const layout = { columns: e.props.bodyColumns || DEFAULT_COLUMNS, rows: e.props.scroll?.bodyRows || e.viewport?.rows || DEFAULT_ROWS, surface: e.surface }
 
     return planPane($.ui.resolve(e), view, layout)

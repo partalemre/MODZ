@@ -1,3 +1,4 @@
+import type { PlanState } from './freshness'
 import type { HubTone } from '../types'
 
 // The MODZ main panel's side of this mod (DESIGN.md §9): a one-line summary card it collects, and its
@@ -7,9 +8,12 @@ export const HUB_PANE = 'plan'
 
 export type HubShown = { detail: string; tone: HubTone }
 
-export function hubOf(progress: { done: number; total: number } | null): HubShown {
+// Iris only while the plan is under way; a plan not started or gone quiet reads idle.
+export function hubOf(progress: { done: number; total: number } | null, state: PlanState): HubShown {
   if (progress === null || progress.total === 0) return { detail: '', tone: 'idle' }
   if (progress.done >= progress.total) return { detail: `${progress.total}/${progress.total} bitti`, tone: 'ok' }
+  if (state === 'unstarted') return { detail: `${progress.total} adım · başlamadı`, tone: 'idle' }
+  if (state === 'stale') return { detail: `${progress.done}/${progress.total} adım · bekliyor`, tone: 'idle' }
 
   return { detail: `${progress.done}/${progress.total} adım`, tone: 'live' }
 }

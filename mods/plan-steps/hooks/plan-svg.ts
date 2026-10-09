@@ -8,7 +8,8 @@ import { DOT_CSS, stepDot, stepRail } from './ui/steps'
 import { svgDoc } from './ui/theme'
 import type { Theme } from './ui/theme'
 
-export type PlanSvgModel = { plan: Plan; tracks: Tracks; now: number; theme: Theme; width: number }
+// `note`: what a plan not under way says instead of its ETA ("başlamadı", "bekliyor · 45dk önce").
+export type PlanSvgModel = { plan: Plan; tracks: Tracks; now: number; theme: Theme; width: number; note: string }
 
 const ROW = 32
 const LINE = 17
@@ -35,15 +36,23 @@ const CSS = `${DOT_CSS}${DETAIL_CSS}.row-on{fill:var(--plan-t)}.breathe{animatio
 
 type Placed = { step: Step; index: number; top: number; height: number; isCurrent: boolean; title: string[]; detail: Block | null }
 
-// Eyebrow with the honest ETA on its right, the count as the headline, a full-width meter, then the plan's source.
+// The eyebrow's right side: a quiet plan's note, else the honest ETA, else nothing.
+function rightOfEyebrow(model: PlanSvgModel): string {
+  if (model.note !== '') return model.note
+  const eta = etaOf(model.plan, model.tracks)
+
+  return eta === null ? '' : `kalan ~${formatDuration(eta)}`
+}
+
+// Eyebrow with the ETA or the plan's state on its right, the count as the headline, a full-width meter, then the plan's source.
 function header(model: PlanSvgModel): Block {
   const progress = progressOf(model.plan)
-  const eta = etaOf(model.plan, model.tracks)
+  const right = rightOfEyebrow(model)
   const fill = Math.round((model.width * progress.percent) / 100)
   const source = wrap(model.plan.source, { width: model.width, size: SOURCE_SIZE, maxLines: 2 })
   const parts = [
     `<text x="0" y="14" class="eyebrow f-plan">${eyebrow('Plan')}</text>`,
-    eta === null ? '' : `<text x="${model.width}" y="14" text-anchor="end" class="label lo">kalan ~${formatDuration(eta)}</text>`,
+    right === '' ? '' : `<text x="${model.width}" y="14" text-anchor="end" class="label lo">${escape(right)}</text>`,
     `<text x="0" y="42"><tspan class="headline hi">${progress.done} / ${progress.total} adım</tspan><tspan class="headline mid"> · ${percentText(progress)}</tspan></text>`,
     `<rect x="0" y="${METER_Y}" width="${model.width}" height="${METER_H}" rx="3" fill="var(--track)"/>`,
     fill > 0 ? `<rect x="0" y="${METER_Y}" width="${Math.max(METER_H, fill)}" height="${METER_H}" rx="3" fill="var(--plan)"/>` : '',
@@ -57,7 +66,7 @@ function rightText(model: PlanSvgModel, step: Step, isCurrent: boolean): { text:
   const elapsed = durationOf(model.tracks[step.key], model.now)
   const time = elapsed === null ? '' : formatDuration(elapsed)
   if (step.status === 'completed') return { text: time, cls: 'lo' }
-  if (isCurrent) return { text: time, cls: 'f-plan' }
+  if (isCurrent) return { text: time, cls: model.note === '' ? 'f-plan' : 'lo' }
   const checks = step.checksTotal > 0 ? `${step.checksDone}/${step.checksTotal}` : ''
 
   return { text: [checks, step.status === 'in_progress' ? time : ''].filter(Boolean).join(' · '), cls: 'lo' }
@@ -70,7 +79,7 @@ function rowSvg(model: PlanSvgModel, row: Placed): string {
   const size = row.isCurrent ? '' : ` font-size="${TITLE_SIZE}"`
   const cy = row.top + DOT_CY
   const parts = [
-    row.isCurrent ? `<circle cx="${DOT_X}" cy="${cy}" r="13.5" fill="none" stroke="var(--plan-l)" stroke-width="1.5" class="breathe"/>` : '',
+    row.isCurrent ? `<circle cx="${DOT_X}" cy="${cy}" r="13.5" fill="none" stroke="var(--plan-l)" stroke-width="1.5"${model.note === '' ? ' class="breathe"' : ''}/>` : '',
     stepDot({ cx: DOT_X, cy, n: row.index + 1, state, tone: 'moss' }),
     ...row.title.map((line, n) => `<text x="${TITLE_X}" y="${row.top + TITLE_BASE + n * LINE}" class="${titleCls}"${size}>${escape(line)}</text>`),
     right.text === '' ? '' : `<text x="${model.width - RIGHT_GAP}" y="${row.top + TITLE_BASE}" text-anchor="end" class="mono micro ${right.cls}">${right.text}</text>`,

@@ -45,8 +45,12 @@ Long plans scroll to keep the current step in view, with a little of the done wo
 ## Commands
 - `/steps` opens the pane. The mod never opens it by itself. (`/plan` is a built-in Claude Code command, so this mod cannot take that name.)
 
-The status line entry `plan 3/9 · <current step>` shows whenever there is a plan. When every step is done it reads `plan 9/9 · tamam`, and it clears at your next prompt. `/clear` empties everything.
+The status line entry `plan 3/9 · <current step>` shows only while the plan is under way. When every step is done it reads `plan 9/9 · tamam`, and it clears at your next prompt. `/clear` empties everything.
+
+A plan that is not the work under way stays out of the status line, so it never reads a bare `plan 0/5`:
+- **Not started** (every step pending, e.g. a plan file that was only read, or a plan just approved): the pane's eyebrow says `başlamadı`, the MODZ card `5 adım · başlamadı` (idle).
+- **Gone quiet** (no step change, plan edit, file edit or agent on the current step for 30 minutes): the pane's eyebrow says `bekliyor · 45dk önce` in place of the ETA, the current step stops breathing, the MODZ card reads `3/9 adım · bekliyor` (idle). The next piece of work on the plan brings the line back.
 
 ## Performance
-- Nothing runs on a timer except a 30-second tick while the pane is open, so elapsed times move.
+- Nothing runs on a timer except a 30-second tick while the pane is open, so elapsed times move, and one 30-minute timer, restarted whenever the plan moves, that takes a quiet plan off the status line.
 - The only file reads are re-reads of markdown files the assistant has just read or written.

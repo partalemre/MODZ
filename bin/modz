@@ -16,7 +16,7 @@ usage() {
 modz <komut>
   list                 modları listele (sürüm + açıklama)
   new <ad> [açıklama]  templates/blank'ten yeni mod oluştur ve marketplace'e ekle
-  check [ad]           validate + test (ad verilmezse hepsi)
+  check [ad]           validate + test, CLI ve masaüstü motoruyla (ad verilmezse hepsi)
   sync                 marketplace.json'u mods/ klasörüyle eşitle
   import <klasör>      bir dev-mods klasöründeki modu MODZ'a kopyala
   dev                  ~/.claude/dev-mods altındaki tüm oturum modlarını göster
@@ -71,17 +71,38 @@ PY
   echo "oluşturuldu: $MODS/$name"
 }
 
+# Masaüstü uygulaması kendi motorunu taşır, çoğu zaman CLI'dan bir sürüm geride: birinin kabul ettiği ağacı
+# öteki reddedebilir. En yeni sürüm klasöründeki motor; yoksa boş döner.
+desktop_engine() {
+  local base="$HOME/Library/Application Support/Claude/claude-code" newest bin
+  newest="$(ls "$base" 2>/dev/null | sort -V | tail -1)"
+  [[ -n "$newest" ]] || return 0
+  for bin in "$base/$newest"/*/claude.app/Contents/MacOS/claude; do
+    [[ -x "$bin" ]] && { echo "$bin"; return 0; }
+  done
+}
+
+# Bir motorla validate + test; satırın başında motorun adı ve sürümü.
+check_with() {
+  local engine="$1" mod="$2" label out failed=0
+  label="$3 $("$engine" --version 2>/dev/null | awk '{print $1}')"
+  "$engine" plugin validate "$mod" >/dev/null 2>&1 && echo "  $label validate ✔" || { echo "  $label validate ✘"; failed=1; }
+  if compgen -G "$mod/tests/*.test.ts*" >/dev/null; then
+    out="$("$engine" plugin test "$mod" 2>&1)" || failed=1
+    echo "  $label test: $(grep -E '^ *[0-9]+ (pass|fail)' <<<"$out" | xargs)"
+  fi
+  return $failed
+}
+
 cmd_check() {
-  local targets=("${1:-}")
+  local targets=("${1:-}") desktop
   [[ -z "${1:-}" ]] && targets=($(mod_names))
+  desktop="$(desktop_engine)"
   local failed=0
   for m in "${targets[@]}"; do
     echo "== $m"
-    claude plugin validate "$MODS/$m" >/dev/null 2>&1 && echo "  validate ✔" || { echo "  validate ✘"; failed=1; }
-    if compgen -G "$MODS/$m/tests/*.test.ts*" >/dev/null; then
-      claude plugin test "$MODS/$m" 2>&1 | grep -E '^ *[0-9]+ (pass|fail)' | sed 's/^/  /'
-      claude plugin test "$MODS/$m" >/dev/null 2>&1 || failed=1
-    fi
+    check_with claude "$MODS/$m" cli || failed=1
+    [[ -n "$desktop" ]] && { check_with "$desktop" "$MODS/$m" desktop || failed=1; }
   done
   return $failed
 }

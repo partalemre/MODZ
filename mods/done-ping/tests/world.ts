@@ -61,12 +61,15 @@ export async function setup($: any, on: any, spy: Spy) {
   await $.session.start({ surface: spy.surface, isInteractive: true, cwd: '/work/eliti' })
 }
 
-export async function turn($: any, spy: Spy, durationMs: number, answer = 'Testler geçti, sürüm hazır.') {
+// Every test turn ends with the same answer; only how long it ran matters to the ping.
+const ANSWER = 'Testler geçti, sürüm hazır.'
+
+export async function turn($: any, spy: Spy, durationMs: number) {
   await $.turn.start({ text: 'go', turnId: 't' })
   await $.tool.call({ tool: 'Bash', command: 'npm test' })
   await $.tool.call({ tool: 'Write', file_path: 'a.ts', content: 'x' })
   await $.tool.call({ tool: 'Edit', file_path: 'b.ts', old_string: 'a', new_string: 'b' })
-  await $.turn.complete({ answer, durationMs, isAborted: false, turnId: 't', reason: 'answer' })
+  await $.turn.complete({ answer: ANSWER, durationMs, isAborted: false, turnId: 't', reason: 'answer' })
   await spy.clock.advance(5)
 }
 

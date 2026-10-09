@@ -56,20 +56,7 @@ export function stub($: any, on: any, setup: Setup) {
 
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
-  on('tool.call', async (_: any, e: any) => {
-    if (e.tool === 'AskUserQuestion') {
-      const question = e.questions[0].question
-      setup.asked.push(question)
-      await drawCard($, setup, e.questions)
-      // The question is still open here: what a test does now happens while the card is up.
-      await setup.whileAsked?.(e.questions)
-
-      return { result: { answers: { [question]: setup.choice } } }
-    }
-    setup.ran.push(e)
-
-    return { result: 'ran' }
-  })
+  on('tool.call', (_: any, e: any) => answerTool($, setup, e))
 }
 
 export async function start($: any, on: any, setup: Setup) {
@@ -79,4 +66,20 @@ export async function start($: any, on: any, setup: Setup) {
 
 export function fresh(choice: string, surface: 'terminal' | 'desktop' = 'terminal'): Setup {
   return { choice, asked: [], files: {}, ran: [], git: {}, cards: [], trees: [], dialogs: [], theme: 'dark', surface }
+}
+
+// The AskUserQuestion draws its card and answers with the test's choice; any other tool just runs.
+async function answerTool($: any, setup: Setup, e: any) {
+  if (e.tool === 'AskUserQuestion') {
+    const question = e.questions[0].question
+    setup.asked.push(question)
+    await drawCard($, setup, e.questions)
+    // The question is still open here: what a test does now happens while the card is up.
+    await setup.whileAsked?.(e.questions)
+
+    return { result: { answers: { [question]: setup.choice } } }
+  }
+  setup.ran.push(e)
+
+  return { result: 'ran' }
 }

@@ -17,6 +17,7 @@ modz <komut>
   list                 modları listele (sürüm + açıklama)
   new <ad> [açıklama]  templates/blank'ten yeni mod oluştur ve marketplace'e ekle
   check [ad]           validate + test, CLI ve masaüstü motoruyla (ad verilmezse hepsi)
+  desk                 masaüstü motoruyla uçtan uca: hub satırları, paneller, bant ve tıklamalar
   sync                 marketplace.json'u mods/ klasörüyle eşitle
   import <klasör>      bir dev-mods klasöründeki modu MODZ'a kopyala
   dev                  ~/.claude/dev-mods altındaki tüm oturum modlarını göster
@@ -107,6 +108,9 @@ cmd_check() {
   return $failed
 }
 
+# Gerçek masaüstü motoru, Code sekmesinin kontrol protokolüyle: her hub satırına eski ağaçtan basar.
+cmd_desk() { python3 -I "$ROOT/tools/desk/check.py" "$ROOT"; }
+
 cmd_import() {
   local src="${1:?kaynak klasör gerekli}" name
   name="$(basename "$src")"
@@ -172,6 +176,7 @@ case "${1:-}" in
   list) cmd_list ;;
   new) shift; cmd_new "$@" ;;
   check) shift; cmd_check "$@" ;;
+  desk) cmd_desk ;;
   sync) cmd_sync ;;
   import) shift; cmd_import "$@" ;;
   dev) cmd_dev ;;

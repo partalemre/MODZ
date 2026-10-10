@@ -58,7 +58,7 @@ Ortak çizim kiti `kit/` altında (`bin/kit-sync` modlara dağıtır). `bin/prev
 
 ## Yönetim
 
-`bin/modz status | check [ad] | new <ad> "açıklama" | link [ad] | unlink <ad> | cloud | list | sync | dev | import <klasör>`.
+`bin/modz status | check [ad] | desk | new <ad> "açıklama" | link [ad] | unlink <ad> | cloud | list | sync | dev | import <klasör>`.
 Oturum açılınca sağda MODZ ana paneli gelir: ajanlar, dosyalar, plan, testler, kontrol noktaları, tekrar, kullanım ve görünüm birer tıkla açılır; "Modlar" satırı tüm modları listeler. Kapatmak için `/config` → modz → "Oturum başında aç". Modlar birbirine `$.state` ile haber verir (DESIGN.md §9).
 
 Akış: `bin/modz new <ad>` → düzenle → `bin/modz check <ad>` → `bin/modz link <ad>` → `bin/modz cloud` (commit'le).

@@ -242,21 +242,9 @@ function hookDialog(on: On): void {
   })
 }
 
-// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-// left, so its first click would be refused. Drawing again on attach hands it live buttons.
-function hookAttach(on: On): void {
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
-  })
-}
-
 export const register: Register = on => {
   hookSession(on)
   hookCommand(on)
   hookCall(on)
   hookDialog(on)
-  hookAttach(on)
 }

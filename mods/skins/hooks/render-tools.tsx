@@ -1,7 +1,7 @@
 import type { RenderElement } from 'claude-code'
 
 import { groupRow, toolRow } from './row-tool'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import { clippedOutput, metaOf, resultCard } from './tool-result'
 import { kindOf, summarize } from './tools'
 import { DEFAULT_COLUMNS } from './view'
@@ -40,7 +40,7 @@ export async function toolResultView({ view, e, pass }: Drawing<'ToolResult'>): 
     const card = await resultCard(look, look.svg, { props: e.props, columns: e.viewport?.columns ?? DEFAULT_COLUMNS, cwd: view.cwd })
 
     if (card !== null) {
-      return stamped(look.ui, card)
+      return pinned(e, card)
     }
   }
 

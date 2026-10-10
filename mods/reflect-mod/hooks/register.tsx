@@ -8,7 +8,7 @@ import { decide, isHere, items, record } from './learn'
 import type { Io } from './learn'
 import { SYSTEM, checkPrompt, parseVerdict } from './policy'
 import { MAX_PROMPT, cleanRule, hasTrigger, isTrivial, looksSecret, remembered, withRule } from './rules'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import { isLightTheme } from './theme'
 
 export { cleanRule, hasTrigger, isTrivial, looksSecret, similarity, withRule } from './rules'
@@ -253,7 +253,7 @@ function wireBand(on: On) {
     const ui = $.ui.resolve(e)
     if (done !== null) {
       const card = e.surface === 'desktop' ? savedDesktop($.ui.resolve(e), done, look) : savedText(ui, done)
-      return stamped(ui, <ui.Box flexDirection="column" gap={1}>{card}{theirs}</ui.Box>)
+      return pinned(e, <ui.Box flexDirection="column" gap={1}>{card}{theirs}</ui.Box>)
     }
     if (l === undefined) return theirs
     const hasField = 'Input' in ui
@@ -262,18 +262,7 @@ function wireBand(on: On) {
       paths: shownPaths(await $.session.root()), on: actions($, l, hasField),
     }
     const card = e.surface === 'desktop' ? cardDesktop($.ui.resolve(e), input, look) : cardText(ui, input)
-    return stamped(ui, <ui.Box flexDirection="column" gap={1}>{card}{theirs}</ui.Box>)
-  })
-}
-
-// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-// left, so its first click would be refused. Drawing again on attach hands it live buttons.
-function wireAttach(on: On) {
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
+    return pinned(e, <ui.Box flexDirection="column" gap={1}>{card}{theirs}</ui.Box>)
   })
 }
 
@@ -283,5 +272,4 @@ export const register: Register = (on, options) => {
   wirePrompts(on)
   wireCommands(on)
   wireBand(on)
-  wireAttach(on)
 }

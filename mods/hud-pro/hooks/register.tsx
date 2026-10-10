@@ -3,13 +3,12 @@ import type { EngineInterface, ModelUsage, Register, SessionUsage } from 'claude
 
 import { bandRow } from './band'
 import { labelOf, longLabelOf, resetText, untilReset, valueText } from './format'
-import { settleFocus } from './focus'
 import { addSample, isHistory } from './history'
 import { EMPTY_HUB, HUB_PANE, hubOf, isOwnOpen } from './hub'
 import { gaugeViews } from './model'
 import { paneTree } from './pane'
 import { isSame } from './same'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import type { HudTurn, HudUsage } from '../types'
 
 type Measured = Pick<SessionUsage, 'context' | 'rateLimits' | 'cost'>
@@ -208,11 +207,10 @@ function onRender(on: On) {
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    await settleFocus(e, ms => $.clock.sleep(ms))
     const turn = await read($, turnAtom)
     const ui = $.ui.resolve(e)
 
-    return stamped(ui, paneTree(ui, {
+    return pinned(e, paneTree(ui, {
       usage: await read($, usageAtom),
       history: await read($, historyAtom),
       turn: turn.requests > 0 ? turn : await read($, lastTurnAtom),
@@ -220,17 +218,6 @@ function onRender(on: On) {
       nowMs: await $.clock.now(),
       ...(e.surface !== 'terminal' && 'Svg' in ui ? { svg: ui.Svg } : {}),
     }))
-  })
-}
-
-// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-// left, so its first click would be refused. Drawing again on attach hands it live buttons.
-function onAttach(on: On) {
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
   })
 }
 
@@ -256,7 +243,7 @@ function onBand(on: On) {
       return (
         <Box flexDirection="column">
           {theirs}
-          {stamped(ui, row)}
+          {pinned(e, row)}
         </Box>
       )
     } catch {
@@ -271,6 +258,5 @@ export const register: Register = on => {
   onUsage(on)
   onOpen(on)
   onRender(on)
-  onAttach(on)
   onBand(on)
 }

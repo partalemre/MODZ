@@ -1,6 +1,7 @@
 import type { EngineInterface, On, PromptSubmitInput, PromptSubmitResult, Register, TurnCompleteInput } from 'claude-code'
 
 import { composeBand } from './band'
+import { pinned } from './pin'
 import type { Prefs } from './band'
 import { AUTO_WARM_MS, BIG_TOKENS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, freshState, isCold, isFullMiss, parseDuration, priceOf, resetForClear } from './core'
 import type { State } from './core'
@@ -208,19 +209,9 @@ function wireBand(on: On, c: Ctx) {
     const theirs = await next(e)
     if (!s.hasBand || e.props.hasSurvey) return theirs
     const band = { s, prefs: c.prefs, actions: actions($, s), columns: e.props.bodyColumns, now: await $.clock.now() }
-    if (e.surface === 'desktop') return composeBand({ surface: 'desktop', ui: $.ui.resolve(e) }, theirs, band)
-    if (e.surface === 'terminal') return composeBand({ surface: 'terminal', ui: $.ui.resolve(e) }, theirs, band)
+    if (e.surface === 'desktop') return pinned(e, composeBand({ surface: 'desktop', ui: $.ui.resolve(e) }, theirs, band))
+    if (e.surface === 'terminal') return pinned(e, composeBand({ surface: 'terminal', ui: $.ui.resolve(e) }, theirs, band))
     return theirs
-  })
-}
-
-// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-// left, so its first click would be refused. Drawing again on attach hands it live buttons.
-function onAttach(on: On) {
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-    return attached
   })
 }
 
@@ -293,7 +284,6 @@ function wireTurns(on: On, s: State) {
 export const register: Register = on => {
   const c: Ctx = { s: freshState(), prefs: { isLight: false, noColor: false }, drawn: '' }
   wireBand(on, c)
-  onAttach(on)
   wireSession(on, c)
   wireTurns(on, c.s)
 }

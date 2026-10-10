@@ -3,7 +3,6 @@ import type { EngineInterface, On, Register, RenderSurface, Timer } from 'claude
 
 import { PROBED_TEXTS, detect, goModuleOf, isSource } from './detect'
 import type { RootInfo } from './detect'
-import { settleFocus } from './focus'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { DEBOUNCE_MS, DISMISS_AFTER_MS, EMPTY, NICE, OPEN_TIMEOUT_MS, PRIORITY, REFRESH_MS, TIMEOUT_MS, TIMEOUT_SLACK_MS, VENDOR_TOOLS, WRITE_TOOLS } from './limits'
 import { openCandidates, pathOf, placeOf } from './open'
@@ -12,7 +11,7 @@ import { badgeText, isFailing, parseLint, parseTests } from './parse'
 import type { ParseContext } from './text'
 import { bandTree } from './band'
 import { isLive } from './notice'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import { AUTO, themeFrom } from './tidemark'
 import { paneTree } from './view'
 import type { CheckOutcome, Failure, HubCard, SuiteFilter, TestBadge } from '../types'
@@ -258,7 +257,7 @@ function hookDrawing(on: On, overrides: Overrides): void {
     const { badge, isNotice } = shown
 
     const ui = $.ui.resolve(e)
-    return stamped(ui, bandTree(ui, {
+    return pinned(e, bandTree(ui, {
       badge, now, columns: e.props.bodyColumns, theme: await read($, themeAtom), isRich: e.surface !== 'terminal',
       hasDetails: !badge.isRunning && isFailing(badge),
       onDetails: () => void openPane($),
@@ -267,12 +266,11 @@ function hookDrawing(on: On, overrides: Overrides): void {
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    await settleFocus(e, ms => $.clock.sleep(ms))
     const badge = await read($, badgeAtom)
     const where = { root: badge.root ?? (await $.session.cwd()), template: overrides.open, surface: e.surface }
 
     const ui = $.ui.resolve(e)
-    return stamped(ui, paneTree(ui, {
+    return pinned(e, paneTree(ui, {
       badge, now: await $.clock.now(), columns: e.props.bodyColumns, filter: await read($, filterAtom),
       theme: await read($, themeAtom), isRich: e.surface !== 'terminal',
       onOpen: failure => void openFailure($, failure, where),
@@ -287,12 +285,4 @@ export const register: Register = (on, options) => {
   hookRuns(on, overrides)
   hookHub(on)
   hookDrawing(on, overrides)
-  // A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-  // left, so its first click would be refused. Drawing again on attach hands it live buttons.
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
-  })
 }

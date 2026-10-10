@@ -4,7 +4,7 @@ import { replyRows } from './cards'
 import { pick } from './format'
 import { cardSegments, isOwnPrompt } from './messages'
 import { desktopSpinnerRow, footerRow, promptRow, spinnerRow } from './rows'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import { DEFAULT_COLUMNS } from './view'
 import type { Drawing } from './view'
 
@@ -38,7 +38,7 @@ export async function replyView({ view, e, pass }: Drawing<'AssistantMessage'>):
   // Every surface's table names Svg, but the terminal draws it as nothing.
   const look = view.look(active, true)
 
-  return stamped(look.ui, replyRows(look, { segments, maxWidth: e.viewport?.columns ?? DEFAULT_COLUMNS, Svg: look.svg }))
+  return pinned(e, replyRows(look, { segments, maxWidth: e.viewport?.columns ?? DEFAULT_COLUMNS, Svg: look.svg }))
 }
 
 // The terminal's spinner gets the skin's word with a shimmer; the desktop's keeps its

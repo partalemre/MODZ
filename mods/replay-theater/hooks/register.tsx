@@ -11,13 +11,12 @@ import type { EngineInterface, Register } from 'claude-code'
 import { ageText } from './age'
 import { shortLine } from './explain'
 import { explainReplay, why } from './explainer'
-import { settleFocus } from './focus'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { offerCard } from './offer'
 import { replayView } from './pane'
 import { currentStep, planAfter, PLAN_TOOLS } from './plan'
 import { EDIT_TOOLS, isAnswered, stepsFor } from './record'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import type { EditCall } from './record'
 import { themeOf } from './ui/theme'
 import type { HubCard, ReplayStep } from '../types'
@@ -242,19 +241,18 @@ function hookBand(on: On): void {
       const model = { steps: replay.steps, index: await read($, indexAtom), explain: replay.explain, theme: view.theme }
       const site = { surface: e.surface, columns: e.props.bodyColumns, inBand: true, maxRows: e.props.maxRows, on: handlers($) }
 
-      return stamped(ui, <Box flexDirection="column">{replayView(ui, model, site)}{theirs}</Box>)
+      return pinned(e, <Box flexDirection="column">{replayView(ui, model, site)}{theirs}</Box>)
     }
     if (!(await read($, offeredAtom)) || e.props.isWorking || view.isOpen || replay === null) return theirs
     const offer = { steps: replay.steps, quote: replay.quote, theme: view.theme, columns: e.props.bodyColumns, surface: e.surface }
     const actions = { onOpen: () => void openReplay($), onDismiss: () => void update($, offeredAtom, () => false) }
 
-    return stamped(ui, <Box flexDirection="column">{offerCard(ui, offer, actions)}{theirs}</Box>)
+    return pinned(e, <Box flexDirection="column">{offerCard(ui, offer, actions)}{theirs}</Box>)
   })
 }
 
 function hookPane(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e) => {
-    await settleFocus(e, ms => $.clock.sleep(ms))
     const replay = await read($, replayAtom)
     const view = await read($, viewAtom)
     const context = { ask: replay?.ask ?? '', age: ageText(replay?.at, await $.clock.now()) }
@@ -263,7 +261,7 @@ function hookPane(on: On): void {
 
     const ui = $.ui.resolve(e)
 
-    return stamped(ui, replayView(ui, model, site))
+    return pinned(e, replayView(ui, model, site))
   })
 
   // The person closed the pane (Escape, the close mark): keep the view in step.
@@ -272,17 +270,6 @@ function hookPane(on: On): void {
 
     return next(e)
   }).catch(($, e, next) => next(e))
-}
-
-// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-// left, so its first click would be refused. Drawing again on attach hands it live buttons.
-function hookAttach(on: On): void {
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
-  })
 }
 
 function handlers($: EngineInterface) {
@@ -294,5 +281,4 @@ export const register: Register = on => {
   hookRecording(on)
   hookBand(on)
   hookPane(on)
-  hookAttach(on)
 }

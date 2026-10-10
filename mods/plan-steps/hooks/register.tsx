@@ -1,7 +1,6 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Register } from 'claude-code'
 
-import { settleFocus } from './focus'
 import { isShown, planState, STALE_MS } from './freshness'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import type { HubShown } from './hub'
@@ -267,25 +266,12 @@ function tracking(on: On): void {
   }).catch(($, e, next) => next(e))
 }
 
-// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-// left, so its first click would be refused. Drawing again on attach hands it live buttons.
-function onAttach(on: On): void {
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
-  })
-}
-
 export const register: Register = on => {
   lifecycle(on)
   paneOpening(on)
   tracking(on)
-  onAttach(on)
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    await settleFocus(e, ms => $.clock.sleep(ms))
     await read($, tickAtom)
     const view = { plan: await currentPlan($), tracks: await read($, tracksAtom), now: await $.clock.now(), theme: flags.theme, touchedAt: flags.touchedAt }
     const layout = { columns: e.props.bodyColumns || DEFAULT_COLUMNS, rows: e.props.scroll?.bodyRows || e.viewport?.rows || DEFAULT_ROWS, surface: e.surface }

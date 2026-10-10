@@ -1,10 +1,9 @@
 import { expect, test } from 'claude-code/testing'
 
-import { FOCUS_SETTLE_MS } from '../hooks/focus'
 import { runSkin, start, stubEngine } from './world'
 
-// The two desktop press races: a click that focuses a pane redraws it under the click, and a desktop
-// that reattaches keeps a tree whose buttons the engine already released.
+// A desktop clicks the tree it last painted. Every redraw keeps each button's press handle, so a click
+// on an earlier tree still lands.
 
 const SITE = { plugin: 'skins', surface: 'desktop', viewport: { columns: 100, rows: 30 } } as const
 const SETTINGS = {
@@ -20,64 +19,42 @@ const BAND = {
   requestId: 'band',
   props: { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 100, scroll: { offset: 0, bodyRows: 4 }, view: {} },
 } as const
-const STAMP = { key: 'render-stamp' }
+const WIDER_BY = 20
 
-async function stampOf(ui: any): Promise<string | undefined> {
-  return (await ui.find(STAMP))?.text
+function handlesOf(node: any, out: Record<string, number> = {}): Record<string, number> {
+  if (node === null || typeof node !== 'object') return out
+  if (node.press !== undefined && typeof node.props?.key === 'string') out[`${node.type}:${node.props.key}`] = node.press.handle
+  for (const child of node.children ?? []) handlesOf(child, out)
+
+  return out
 }
 
-// Whether the work finishes before the clock moves at all; it is let finish either way.
-async function isImmediate(clock: any, work: Promise<unknown>): Promise<boolean> {
-  let isDone = false
-  const watched = work.then(() => {
-    isDone = true
-  })
-  await clock.settle()
-  const wasDone = isDone
-  await clock.advance(FOCUS_SETTLE_MS)
-  await watched
-
-  return wasDone
-}
-
-// The settings pane is left out here: the desktop engine 2.1.293 refuses its labelless skin Buttons, so it
-// draws no stamp there. The redraw is the same `ui.render` invalidation for every drawing.
-test('a reattaching desktop gets the gallery and the band drawn again', async ($: any, on: any) => {
+async function startSkins($: any, on: any) {
   stubEngine(on)
   on('ui.render', () => ({ type: 'Text', props: {}, children: ['stock row'] }))
-  on('session.attach', (_: unknown, e: any) => ({ clientId: e.clientId }))
   await start($)
-  // The band is off by default (hud-pro shows usage); turned on it draws the context meter.
-  await runSkin($, 'band on')
-  const gallery = await $.ui.mount(PANES[1])
-  const band = await $.ui.mount(BAND)
-  const before = [await stampOf(gallery), await stampOf(band)]
-  expect(before).not.toContain(undefined)
-
-  await $.session.attach({ surface: 'desktop', clientId: 'desktop-2' })
-
-  expect(await stampOf(gallery)).not.toBe(before[0])
-  expect(await stampOf(band)).not.toBe(before[1])
-})
+}
 
 for (const pane of PANES) {
-  test(`a ${pane.requestId} render whose focus flipped waits for the click; first and same-focus ones do not`, async ($: any, on: any) => {
-    const { clock } = stubEngine(on)
-    on('ui.render', () => ({ type: 'Text', props: {}, children: ['stock row'] }))
-    await start($)
-    const mounting = $.ui.mount(pane)
-    expect(await isImmediate(clock, mounting)).toBe(true)
-    const ui = await mounting
-    expect(await isImmediate(clock, ui.redraw(pane.props))).toBe(true)
+  test(`a ${pane.requestId} redraw keeps every button’s press handle`, async ($: any, on: any) => {
+    await startSkins($, on)
+    const ui = await $.ui.mount(pane)
+    const before = handlesOf(await ui.drawn())
+    await ui.redraw({ ...pane.props, isFocused: !pane.props.isFocused })
 
-    let isDone = false
-    const flip = ui.redraw({ ...pane.props, isFocused: !pane.props.isFocused }).then(() => {
-      isDone = true
-    })
-    await clock.advance(FOCUS_SETTLE_MS - 1)
-    expect(isDone).toBe(false)
-    await clock.advance(1)
-    await flip
-    expect(isDone).toBe(true)
+    expect(Object.keys(before).length).toBeGreaterThan(0)
+    expect(handlesOf(await ui.drawn())).toEqual(before)
   })
 }
+
+test('a band redraw keeps every button’s press handle', async ($: any, on: any) => {
+  await startSkins($, on)
+  // The band is off by default (hud-pro shows usage); turned on it draws the context meter.
+  await runSkin($, 'band on')
+  const band = await $.ui.mount(BAND)
+  const before = handlesOf(await band.drawn())
+  await band.redraw({ ...BAND.props, bodyColumns: BAND.props.bodyColumns + WIDER_BY })
+
+  expect(Object.keys(before).length).toBeGreaterThan(0)
+  expect(handlesOf(await band.drawn())).toEqual(before)
+})

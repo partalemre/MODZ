@@ -1,6 +1,6 @@
 // The engine beneath secret-guard in tests: files, git answers, the dialog answered with `choice`.
 
-export type Setup = { choice: string; asked: string[]; files: Record<string, string>; ran: any[]; git: Record<string, string>; cards: string[][]; trees: any[]; dialogs: any[]; theme: string; surface: 'terminal' | 'desktop'; columns?: number; whileAsked?: (questions: unknown[]) => Promise<void> }
+export type Setup = { choice: string; asked: string[]; files: Record<string, string>; ran: any[]; git: Record<string, string>; cards: string[][]; trees: any[]; dialogs: any[]; theme: string; surface: 'terminal' | 'desktop'; columns?: number }
 
 // The card as the person reads it: one string per line, indents included.
 export function textOf(node: any): string {
@@ -74,8 +74,6 @@ async function answerTool($: any, setup: Setup, e: any) {
     const question = e.questions[0].question
     setup.asked.push(question)
     await drawCard($, setup, e.questions)
-    // The question is still open here: what a test does now happens while the card is up.
-    await setup.whileAsked?.(e.questions)
 
     return { result: { answers: { [question]: setup.choice } } }
   }

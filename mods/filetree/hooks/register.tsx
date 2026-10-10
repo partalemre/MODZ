@@ -1,7 +1,6 @@
 import { type EngineInterface, type On, type Register, update } from 'claude-code'
 
 import { drawDesktop } from './desktop'
-import { settleFocus } from './focus'
 import { gitDir } from './gitread'
 import type { Host, IoHost, StateHost, UiHost } from './host'
 import { HUB_PANE, isOpenFor } from './hub'
@@ -12,7 +11,7 @@ import { promptContext } from './prompt'
 import { settleBackground, touched } from './scan'
 import { sceneOf } from './scene'
 import { mem } from './session'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import { openByCommand, resumePane, startPane } from './start'
 import { drawTerminal } from './terminal'
 import { afterCall, beforeCall, callFailed, isWatched } from './toolcall'
@@ -211,7 +210,6 @@ function onPane(on: On): void {
 
 function onRender(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e, next) => {
-    await settleFocus(e, ms => $.clock.sleep(ms))
     if (e.surface !== 'terminal' && e.surface !== 'desktop') return next(e)
     if (e.surface === 'terminal' && e.props.placement === 'inline') {
       mem.noDock = true
@@ -224,21 +222,10 @@ function onRender(on: On): void {
     const room = { width: Math.max(MIN_WIDTH, e.props.bodyColumns), bodyRows: e.props.scroll?.bodyRows ?? DEFAULT_ROWS }
     if (e.surface === 'desktop') {
       const desk = $.ui.resolve(e)
-      return stamped(desk, drawDesktop(host, desk, { s, room }))
+      return pinned(e, drawDesktop(host, desk, { s, room }))
     }
     const ui = $.ui.resolve(e)
-    return stamped(ui, drawTerminal(host, ui, { s, room }))
-  })
-}
-
-// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-// left, so its first click would be refused. Drawing again on attach hands it live buttons.
-function onAttach(on: On): void {
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
+    return pinned(e, drawTerminal(host, ui, { s, room }))
   })
 }
 
@@ -255,5 +242,4 @@ export const register: Register = (on, options) => {
   onClassic(on)
   onPane(on)
   onRender(on)
-  onAttach(on)
 }

@@ -10,7 +10,7 @@ import type { PrefsHost } from './prefs-store'
 import { settingsPane, swatchesOf } from './settings'
 import { settingsActions } from './settings-actions'
 import type { SettingsPorts } from './settings-actions'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import type { Drawing } from './view'
 
 // The settings pane's tab title, wherever it is opened from.
@@ -28,7 +28,7 @@ export async function galleryView({ view, e }: Omit<Drawing<'Pane'>, 'pass'>): P
 
   const look = view.look(active)
 
-  return stamped(look.ui, galleryPane(look, e.props.bodyColumns))
+  return pinned(e, galleryPane(look, e.props.bodyColumns))
 }
 
 // The settings pane's reach, bound in register.tsx.
@@ -57,5 +57,5 @@ export async function settingsView(host: SettingsHost, e: Frozen<RenderInput<'Pa
   const skins = names.flatMap(name => resolveSkin(name, custom) ?? []).map(one => forTheme(one, isLight))
   const model = { names, editing, width: e.props.bodyColumns, swatches: swatchesOf(skins) }
 
-  return stamped(ui, settingsPane({ look, ui, model, actions: settingsActions({ prefs, custom, editing }, host.ports) }))
+  return pinned(e, settingsPane({ look, ui, model, actions: settingsActions({ prefs, custom, editing }, host.ports) }))
 }

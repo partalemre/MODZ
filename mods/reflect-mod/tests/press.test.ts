@@ -1,24 +1,30 @@
 import { expect, test } from 'claude-code/testing'
 
-import { BAND, press, say, start, world } from './world'
+import { BAND, say, start, world } from './world'
 
-// The desktop press race the band can meet: a desktop that reattaches keeps a tree whose buttons the
-// engine already released. The band draws no Pane, so a focus flip never redraws it under a click.
+// A desktop clicks the tree it last painted. Every redraw keeps each button's press handle, so a click
+// on an earlier tree still lands.
 
 const PNPM = { is_rule: true, rule: 'Use pnpm, not npm, in this repo', scope: 'project', confidence: 0.92 }
-const STAMP = { key: 'render-stamp' }
+const WIDER_BY = 20
 
-test('a reattaching desktop gets the band drawn again', async ($, on) => {
+function handlesOf(node: any, out: Record<string, number> = {}): Record<string, number> {
+  if (node === null || typeof node !== 'object') return out
+  if (node.press !== undefined && typeof node.props?.key === 'string') out[`${node.type}:${node.props.key}`] = node.press.handle
+  for (const child of node.children ?? []) handlesOf(child, out)
+
+  return out
+}
+
+test('a band redraw keeps every button’s press handle', async ($, on) => {
   const w = world(on, { verdicts: { 'нет, используй pnpm': PNPM }, files: { '/repo/CLAUDE.md': '# Repo\n' } })
-  on('session.attach', (_: unknown, e: any) => ({ clientId: e.clientId }) as never)
   await start($)
   await say($, w, 'нет, используй pnpm')
-  await press($, 'save:')
-  const band = await $.ui.mount({ plugin: 'reflect-mod', surface: 'desktop', ...BAND })
-  const before = (await band.find(STAMP))?.text
-  expect(before).toBeDefined()
+  const site = { plugin: 'reflect-mod', surface: 'desktop', ...BAND } as const
+  const band = await $.ui.mount(site)
+  const before = handlesOf(await band.drawn())
+  await band.redraw({ ...site.props, bodyColumns: site.props.bodyColumns + WIDER_BY })
 
-  await $.session.attach({ surface: 'desktop', clientId: 'desktop-2' } as never)
-
-  expect((await band.find(STAMP))?.text).not.toBe(before)
+  expect(Object.keys(before).length).toBeGreaterThan(0)
+  expect(handlesOf(await band.drawn())).toEqual(before)
 })

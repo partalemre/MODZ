@@ -5,7 +5,6 @@ import type { SkinSlot, UsageSnap } from '../types'
 import { DEFAULT_PREFS } from './command'
 import { DESIGN, DESIGN_TOOL, runDesign } from './designer'
 import { diffstat } from './format'
-import { settleFocus } from './focus'
 import { EMPTY_HUB, isOwnOpen } from './hub'
 import { lookOf } from './look'
 import { activeSkin, commit, load, syncHub } from './prefs-store'
@@ -261,12 +260,10 @@ function onCommands(on: On, live: Live): void {
 
 function onRenders(on: On, live: Live): void {
   on('ui.render', { component: 'Pane', requestId: SETTINGS }, async ($, e) => {
-    await settleFocus(e, ms => $.clock.sleep(ms))
 
     return settingsView(paneOf($, e), e)
   })
   on('ui.render', { component: 'Pane', requestId: GALLERY }, async ($, e) => {
-    await settleFocus(e, ms => $.clock.sleep(ms))
 
     return galleryView({ view: viewOf($, e, live), e })
   })
@@ -289,12 +286,4 @@ export const register: Register = on => {
   onTurnEnd(on, live)
   onCommands(on, live)
   onRenders(on, live)
-  // A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-  // left, so its first click would be refused. Drawing again on attach hands it live buttons.
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
-  })
 }

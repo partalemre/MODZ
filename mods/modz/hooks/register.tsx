@@ -10,9 +10,8 @@ import type { Market } from './catalog'
 import { cardOf, focusOf, MODS_PANE, MODS_TITLE, rowsOf } from './hub'
 import type { Presence } from './hub'
 import { hubTree } from './hub-pane'
-import { settleFocus } from './kit/focus'
 import { isSame } from './kit/same'
-import { stamped } from './kit/stamp'
+import { pinned } from './kit/pin'
 import { modzTree } from './pane'
 import type { Theme } from './theme'
 
@@ -120,15 +119,6 @@ function hubHooks(on: On, options: Options): void {
     return done
   }).catch(($, e, next) => next(e))
 
-  // A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-  // left, so its first click would be refused. Drawing again on attach hands it live buttons.
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
-  })
-
   on('command.run', { command: 'modz' }, async $ => {
     await $.ui.open({ id: PANE, title: TITLE, focus: true })
 
@@ -138,7 +128,6 @@ function hubHooks(on: On, options: Options): void {
 
 function paneHooks(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    await settleFocus(e, ms => $.clock.sleep(ms))
     const ui = $.ui.resolve(e)
     const market = await marketOf($)
     const theme = await themeNow($)
@@ -146,15 +135,14 @@ function paneHooks(on: On): void {
     const rows = rowsOf(await read($, cardsAtom), presenceOf(market))
     const onOpen = (pane: string) => void openPane($, pane).catch(cause => $.ui.log(`modz: ${pane} could not be opened: ${String(cause)}`, { to: 'debug' }))
 
-    return stamped(ui, hubTree(ui, { rows, focus: focusOf(rows), meta: metaOf(market), surface: e.surface, columns, theme, onOpen }))
+    return pinned(e, hubTree(ui, { rows, focus: focusOf(rows), meta: metaOf(market), surface: e.surface, columns, theme, onOpen }))
   })
 
   on('ui.render', { component: 'Pane', requestId: MODS_PANE }, async ($, e) => {
-    await settleFocus(e, ms => $.clock.sleep(ms))
     const ui = $.ui.resolve(e)
     const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS
 
-    return stamped(ui, modzTree(ui, { market: await marketOf($), surface: e.surface, columns, theme: await themeNow($) }))
+    return pinned(e, modzTree(ui, { market: await marketOf($), surface: e.surface, columns, theme: await themeNow($) }))
   })
 }
 

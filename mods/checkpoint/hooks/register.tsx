@@ -1,14 +1,13 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { settleFocus } from './focus'
 import { apply, gitBinary, list, locate, numstat, plan, prune, slug, snapshot } from './git'
 import type { Repo, Run } from './git'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { glyphOf, keepListed, markUndone, pendingOf, sortGlyphs } from './meta'
 import type { MetaMap } from './meta'
 import { clip, paneTree } from './pane'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import { AUTO, themeFrom } from './tidemark'
 import type { CheckpointEntry, CheckpointStatus, CheckpointView, HubCard } from '../types'
 
@@ -257,21 +256,9 @@ function hookTurns(on: On): void {
   })
 }
 
-// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-// left, so its first click would be refused. Drawing again on attach hands it live buttons.
-function hookAttach(on: On): void {
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
-  })
-}
-
 export const register: Register = on => {
   hookCommands(on)
   hookTurns(on)
-  hookAttach(on)
 
   // The main panel's open request: opens only, so a pane already open comes forward instead of closing.
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
@@ -282,7 +269,6 @@ export const register: Register = on => {
   }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    await settleFocus(e, ms => $.clock.sleep(ms))
     const actions = {
       onUndo: (entry: CheckpointEntry) => void ask($, entry),
       onConfirm: () => void confirm($),
@@ -292,6 +278,6 @@ export const register: Register = on => {
 
     const ui = $.ui.resolve(e)
 
-    return stamped(ui, paneTree(ui, await read($, viewAtom), { now: await $.clock.now(), meta: await read($, metaAtom), look, actions }))
+    return pinned(e, paneTree(ui, await read($, viewAtom), { now: await $.clock.now(), meta: await read($, metaAtom), look, actions }))
   })
 }

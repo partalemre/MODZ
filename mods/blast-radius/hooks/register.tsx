@@ -23,10 +23,9 @@ import { desktopCard, terminalCard } from './card'
 import type { CardProps } from './card'
 import { classify } from './classify'
 import type { Risk } from './classify'
-import { settleFocus } from './focus'
 import { measure, missingFolder } from './measure'
 import type { Report, Run } from './report'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import { resolveLight } from './theme'
 import { viewOf } from './view'
 
@@ -234,13 +233,12 @@ function drawHooks(on: On): void {
 
   // Only its own pane waits out a focus flip: every other mod's pane passes through this hook too.
   on('ui.render', { component: 'Pane' }, async ($, e, next) => {
-    if (e.requestId === PANE_ID) await settleFocus(e, ms => $.clock.sleep(ms))
     const mine = held
     if (e.requestId !== PANE_ID || !isMeasured(mine)) return next(e)
     const redraw = () => $.ui.invalidate('ui.render')
     const ui = $.ui.resolve(e)
 
-    return stamped(ui, draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, place: 'pane', redraw }))
+    return pinned(e, draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, place: 'pane', redraw }))
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -250,7 +248,7 @@ function drawHooks(on: On): void {
     const ui = $.ui.resolve(e)
     const { Box } = ui
     const redraw = () => $.ui.invalidate('ui.render')
-    const card = stamped(ui, draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, place: 'band', redraw }))
+    const card = pinned(e, draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, place: 'band', redraw }))
 
     // A decision card goes above the other mods' rows (DESIGN.md §6).
     return (
@@ -265,12 +263,4 @@ function drawHooks(on: On): void {
 export const register: Register = on => {
   holdHooks(on)
   drawHooks(on)
-  // A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-  // left, so its first click would be refused. Drawing again on attach hands it live buttons.
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
-  })
 }

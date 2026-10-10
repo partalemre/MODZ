@@ -122,18 +122,6 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(await catalog.find({ key: 'mod-savvy-progress' })).toBeDefined()
   })
 
-  test(`every drawing of the hub carries a new stamp, so the surface takes the live press handles (${surface})`, async ($: any, on: any) => {
-    stubWorld(on)
-    await $.session.start({ surface, isInteractive: true, cwd: '/work' })
-    const ui = await $.ui.mount({ ...PANE, surface })
-    const first = (await ui.find({ key: 'render-stamp' }))?.text
-    await ui.redraw()
-    const second = (await ui.find({ key: 'render-stamp' }))?.text
-
-    expect(first).toBeDefined()
-    expect(second).not.toBe(first)
-    expect((await ui.find({ key: 'render-stamp' }))?.props.display).toBe('none')
-  })
 }
 
 test('Transceiver shows in Çalışma once it reports its line, and its row asks it to open', { plugins: [transceiverReporter] }, async ($: any, on: any) => {

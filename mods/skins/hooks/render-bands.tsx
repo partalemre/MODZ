@@ -3,7 +3,7 @@ import type { RenderElement } from 'claude-code'
 import { headersOf } from './messages'
 import { usageBand } from './row-usage'
 import { askBand } from './rows'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import { metersOf } from './svg-usage'
 import type { Drawing } from './view'
 
@@ -23,7 +23,7 @@ export async function abovePromptView({ view, e, pass }: Drawing<'AbovePrompt'>)
   // Compacting mid-turn would cut the turn's own context out from under it.
   const isCompacting = await view.isCompacting()
 
-  return stamped(look.ui, (
+  return pinned(e, (
     <Box flexDirection="column">
       {usageBand(look, { meters, canCompact: !e.props.isWorking && !isCompacting, compact: view.compact })}
       {theirs}

@@ -3,7 +3,7 @@ import type { EngineInterface, On, PromptOrigin, Register } from 'claude-code'
 
 import { WARN_RATIO, advance, describe, parseCommand, raise, ratioOf, readingOf, spendText, startBudget, stepText } from './budget'
 import { fullCard, isLive, noticeAbove, stoppedRow, warnRow } from './notice'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import type { Budget, BudgetNotice } from '../types'
 
 const BUDGET = 'budget'
@@ -185,11 +185,11 @@ function registerBand(on: On) {
     if (notice.kind === 'stopped') {
       const spend = budget === null ? '' : spendText(budget)
 
-      return stamped(ui, noticeAbove(ui, stoppedRow(ui, { text: notice.text, spend, surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss }))
+      return pinned(e, noticeAbove(ui, stoppedRow(ui, { text: notice.text, spend, surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss }))
     }
     if (budget === null) return theirs
 
-    return stamped(ui, noticeAbove(ui, warnRow(ui, { budget, nowMs: await $.clock.now(), surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss }))
+    return pinned(e, noticeAbove(ui, warnRow(ui, { budget, nowMs: await $.clock.now(), surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss }))
   })
 
   // The full-budget question keeps Claude Code's own options; the card above says what is full.
@@ -199,18 +199,7 @@ function registerBand(on: On) {
     const budget = await read($, budgetAtom)
     if (first?.header !== HEADER || budget === null) return theirs
 
-    return fullCard($.ui.resolve(e), { budget, columns: e.viewport?.columns ?? 100, surface: e.surface, theirs })
-  })
-}
-
-// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-// left, so its first click would be refused. Drawing again on attach hands it live buttons.
-function onAttach(on: On) {
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
+    return pinned(e, fullCard($.ui.resolve(e), { budget, columns: e.viewport?.columns ?? 100, surface: e.surface, theirs }))
   })
 }
 
@@ -218,5 +207,4 @@ export const register: Register = on => {
   registerSetup(on)
   registerFlow(on)
   registerBand(on)
-  onAttach(on)
 }

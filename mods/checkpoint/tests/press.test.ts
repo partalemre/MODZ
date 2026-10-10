@@ -1,59 +1,30 @@
 import { expect, test } from 'claude-code/testing'
 
-import { FOCUS_SETTLE_MS } from '../hooks/focus'
 import { newFake, paneOf, stub } from './stubs'
 
-// The two desktop press races: a click that focuses the pane redraws it under the click, and a desktop
-// that reattaches keeps a tree whose buttons the engine already released.
+// A desktop clicks the tree it last painted. Every redraw keeps each button's press handle, so a click
+// on an earlier tree still lands.
 
 const PANE = paneOf('desktop')
-const STAMP = { key: 'render-stamp' }
 
-async function stampOf(ui: any): Promise<string | undefined> {
-  return (await ui.find(STAMP))?.text
+function handlesOf(node: any, out: Record<string, number> = {}): Record<string, number> {
+  if (node === null || typeof node !== 'object') return out
+  if (node.press !== undefined && typeof node.props?.key === 'string') out[`${node.type}:${node.props.key}`] = node.press.handle
+  for (const child of node.children ?? []) handlesOf(child, out)
+
+  return out
 }
 
-// Whether the work finishes before the clock moves at all; it is let finish either way.
-async function isImmediate(clock: any, work: Promise<unknown>): Promise<boolean> {
-  let isDone = false
-  const watched = work.then(() => {
-    isDone = true
-  })
-  await clock.settle()
-  const wasDone = isDone
-  await clock.advance(FOCUS_SETTLE_MS)
-  await watched
-
-  return wasDone
-}
-
-test('a reattaching desktop gets the pane drawn again', async ($: any, on: any) => {
-  stub(on, newFake())
-  on('session.attach', (_: any, e: any) => ({ clientId: e.clientId }))
+test('a pane redraw keeps every button’s press handle', async ($: any, on: any) => {
+  stub(on, newFake({ refs: 'refs/checkpoints/s/1\tc1\t100\tfix login', diff: 'M\0a.ts\0' }))
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/w' })
+  await $.command.run({ command: 'checkpoints', args: '' })
   const pane = await $.ui.mount(PANE)
-  const before = await stampOf(pane)
+  const before = handlesOf(await pane.drawn())
+  await pane.redraw({ ...PANE.props, isFocused: !PANE.props.isFocused })
 
-  await $.session.attach({ surface: 'desktop', clientId: 'desktop-2' })
-
-  expect(await stampOf(pane)).not.toBe(before)
-})
-
-test('a pane render whose focus flipped waits for the click; first and same-focus renders do not', async ($: any, on: any) => {
-  const clock = stub(on, newFake())
-  await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/w' })
-  const mounting = $.ui.mount(PANE)
-  expect(await isImmediate(clock, mounting)).toBe(true)
-  const pane = await mounting
-  expect(await isImmediate(clock, pane.redraw(PANE.props))).toBe(true)
-
-  let isDone = false
-  const flip = pane.redraw({ ...PANE.props, isFocused: !PANE.props.isFocused }).then(() => {
-    isDone = true
-  })
-  await clock.advance(FOCUS_SETTLE_MS - 1)
-  expect(isDone).toBe(false)
-  await clock.advance(1)
-  await flip
-  expect(isDone).toBe(true)
+  expect(Object.keys(before).length).toBeGreaterThan(0)
+  expect(handlesOf(await pane.drawn())).toEqual(before)
+  await pane.press({ key: 'cp-undo-0' })
+  expect(await pane.find({ key: 'cp-confirm' })).toBeDefined()
 })

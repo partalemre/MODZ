@@ -2,7 +2,6 @@
 import type { EngineInterface, Register } from 'claude-code'
 import type { Browser } from './browser'
 import { post } from './bridge-client'
-import { settleFocus } from './focus'
 import { imageGrid, imageSource, paneStatus } from './frame'
 import type { Host } from './host'
 import { browserClosed, closeBrowser, openBrowser } from './pane-control'
@@ -114,7 +113,6 @@ function onCommands(on: On): void {
 
 function onPaneRender(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    await settleFocus(e, ms => $.clock.sleep(ms))
     if (e.surface !== 'terminal') {
       const { Box } = await $.ui.resolve(e)
       return <Box />
@@ -168,17 +166,6 @@ function onPaneInput(on: On): void {
   })
 }
 
-// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-// left, so its first click would be refused. Drawing again on attach hands it live buttons.
-function onAttach(on: On): void {
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
-  })
-}
-
 export const register: Register = (on, options) => {
   const agentToolEnabled = options.agentTool === true
   onBrowserNoun(on)
@@ -186,7 +173,6 @@ export const register: Register = (on, options) => {
   onCommands(on)
   onPaneRender(on)
   onPaneInput(on)
-  onAttach(on)
   on('ui.close', { id: PANE }, async ($, e, next) => {
     const r = await next(e)
     await browserClosed(hostOf($))

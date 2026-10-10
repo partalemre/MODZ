@@ -7,7 +7,7 @@ import type { Ping, PingConfig, TestsSeen } from './ping'
 import { AUTO, themeFrom } from './tidemark'
 import { ring } from './ring'
 import type { RingIo } from './ring'
-import { stamped } from './stamp'
+import { pinned } from './pin'
 import type { PingNotice } from '../types'
 
 const COMMAND = 'done-ping'
@@ -201,18 +201,6 @@ export const register: Register = (on, options) => {
   })
 
   registerBand(on)
-  registerAttach(on)
-}
-
-// A desktop that comes back keeps showing the tree it had; the engine released that tree's buttons when it
-// left, so its first click would be refused. Drawing again on attach hands it live buttons.
-function registerAttach(on: On): void {
-  on('session.attach', async ($, e, next) => {
-    const attached = await next(e)
-    $.ui.invalidate('ui.render')
-
-    return attached
-  })
 }
 
 // The fallback row: drawn above the others, and stepping aside once the person writes again.
@@ -234,6 +222,6 @@ function registerBand(on: On): void {
 
     const ui = $.ui.resolve(e)
 
-    return stamped(ui, pingRow(ui, band, theirs))
+    return pinned(e, pingRow(ui, band, theirs))
   })
 }

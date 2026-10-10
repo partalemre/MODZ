@@ -41,7 +41,7 @@ test('the pace says when the budget runs out; going on raises it a step past wha
   expect(raise(startBudget('percent', 10, at(0))).limit).toBe(12)
 })
 
-type World = { asked: string[]; answer: string; submitted: string[]; surfaces?: string[] }
+type World = { asked: string[]; answer: string; submitted: string[]; surfaces?: string[]; filled?: string[]; draft?: string }
 
 async function setup($: any, on: any, world: World) {
   const clock = mock.clock(on)
@@ -54,6 +54,13 @@ async function setup($: any, on: any, world: World) {
   on('command.register', () => ({ value: undefined }))
   on('ui.log', () => ({ value: undefined }))
   on('ui.render', () => ({ type: 'engine', ref: 1 }))
+  on('prompt.read', () => ({ value: { text: world.draft ?? '', cursor: 0 } }))
+  on('prompt.fill', (_: any, e: any) => {
+    world.filled?.push(e.text)
+    world.draft = e.text
+
+    return { isFilled: true, box: { text: e.text, cursor: e.text.length } }
+  })
   on('prompt.submit', (_: any, e: any) => {
     world.submitted.push(e.text)
 
@@ -99,24 +106,46 @@ test('80% shows one amber line above the other rows on both surfaces; it clears 
   expect(await ui.find({ type: 'Svg' })).toBeUndefined()
 })
 
-test('at 100% a typed prompt asks; Dur drops it with a red line, Devam et raises the budget a step', async ($: any, on: any) => {
-  const world: World = { asked: [], answer: 'Dur', submitted: [] }
-  await setup($, on, world)
+for (const surface of SURFACES) {
+  test(`at 100% a typed prompt asks; Dur drops it with a red line and puts it back in the box (${surface})`, async ($: any, on: any) => {
+    const world: World = { asked: [], answer: 'Dur', submitted: [], filled: [] }
+    const clock = await setup($, on, world)
+    await $.command.run({ command: 'budget', args: '5' })
+    await measure($, 46)
+
+    const stopped = await $.prompt.submit(typed('one more thing'))
+    expect(world.asked[0]).toBe('Oturum bütçesi doldu: 5s %6 / %5 (%120). Yine de devam edilsin mi?')
+    expect(stopped.drop).toMatch(/^Oturum bütçesi doldu/)
+    expect(world.submitted).toEqual([])
+    const ui = await $.ui.mount(band(surface))
+    if (surface === 'terminal') {
+      expect((await ui.find({ type: 'Text', text: /^Durduruldu: bütçe doldu/ }))?.props.color).toBe('error')
+    } else {
+      const svg = (await ui.find({ type: 'Svg' })) as { props: { alt: string; source: string } } | undefined
+      expect(svg?.props.alt).toBe('Durduruldu: bütçe doldu · 5s %6 / %5 · /budget ile artır')
+      expect(svg?.props.source).toContain('f-danger-t')
+    }
+    await clock.advance(1_000)
+    expect(world.filled).toEqual(['one more thing'])
+
+    world.answer = 'Devam et (+%1)'
+    await $.prompt.submit(typed('go on'))
+    await $.prompt.submit(typed('and again'))
+    expect(world.asked).toHaveLength(2)
+    expect(world.submitted).toEqual(['go on', 'and again'])
+  })
+}
+
+test('Dur leaves a draft typed meanwhile alone', async ($: any, on: any) => {
+  const world: World = { asked: [], answer: 'Dur', submitted: [], filled: [] }
+  const clock = await setup($, on, world)
   await $.command.run({ command: 'budget', args: '5' })
   await measure($, 46)
+  await $.prompt.submit(typed('one more thing'))
+  world.draft = 'yeni taslak'
+  await clock.advance(1_000)
 
-  const stopped = await $.prompt.submit(typed('one more thing'))
-  expect(world.asked[0]).toBe('Oturum bütçesi doldu: 5s %6 / %5 (%120). Yine de devam edilsin mi?')
-  expect(stopped.drop).toMatch(/^Oturum bütçesi doldu/)
-  expect(world.submitted).toEqual([])
-  const ui = await $.ui.mount(band('terminal'))
-  expect((await ui.find({ type: 'Text', text: /^Durduruldu: bütçe doldu/ }))?.props.color).toBe('error')
-
-  world.answer = 'Devam et (+%1)'
-  await $.prompt.submit(typed('go on'))
-  await $.prompt.submit(typed('and again'))
-  expect(world.asked).toHaveLength(2)
-  expect(world.submitted).toEqual(['go on', 'and again'])
+  expect(world.filled).toEqual([])
 })
 
 test('under budget, off, or a plugin prompt: nothing is asked', async ($: any, on: any) => {
@@ -161,14 +190,16 @@ const LOUDER = {
   },
 }
 
-test('a higher-ranked notice (reflect) owns the line while it shows', { plugins: [LOUDER] }, async ($: any, on: any) => {
-  const world: World = { asked: [], answer: 'Dur', submitted: [] }
-  await setup($, on, world)
-  await $.command.run({ command: 'budget', args: '10%' })
-  await measure($, 48.5)
-  const ui = await $.ui.mount(band('terminal'))
-  expect(await ui.find({ type: 'Text', text: /Bütçe/ })).toBeUndefined()
-})
+for (const surface of SURFACES) {
+  test(`a higher-ranked notice (reflect) owns the line while it shows (${surface})`, { plugins: [LOUDER] }, async ($: any, on: any) => {
+    const world: World = { asked: [], answer: 'Dur', submitted: [] }
+    await setup($, on, world)
+    await $.command.run({ command: 'budget', args: '10%' })
+    await measure($, 48.5)
+    const ui = await $.ui.mount(band(surface))
+    expect(JSON.stringify(await ui.drawn())).not.toContain('Bütçe')
+  })
+}
 
 const question = (surface: (typeof SURFACES)[number]) => ({
   plugin: 'session-budget', component: 'AskUserQuestion', requestId: `q-${surface}`, surface, viewport: { columns: 100, rows: 40 },

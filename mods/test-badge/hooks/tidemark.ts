@@ -63,10 +63,3 @@ const varsOf = (palette: Palette): string => [
 export function themeCss(): string {
   return `svg,.t-dark{${varsOf(DARK)}}.t-light{${varsOf(LIGHT)}}@media (prefers-color-scheme: light){.t-auto{${varsOf(LIGHT)}}}`
 }
-
-// A role's color for a Box border or a Text: the hex once the theme is pinned, the theme key before.
-export function boxColor(theme: Theme, role: Role, part: keyof Swatch = 'fg'): string {
-  if (theme.mode === 'auto') return THEME_KEY[role]
-
-  return (theme.isLight ? LIGHT : DARK)[role][part]
-}

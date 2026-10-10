@@ -1,23 +1,29 @@
 import type { AgentRun } from '../types'
-import type { Totals } from './agents'
 import { elapsed } from './agents'
 import { crab } from './crabs'
+import type { CrabOptions } from './crabs'
 import type { Planned } from './flow'
-import { fitText, fmtCost, fmtTime, fmtTokens, modelName, xml } from './format'
+import { fmtTime, modelName } from './format'
 import { t } from './i18n'
+import { lookAt } from './identity'
+import type { Look } from './identity'
 import { countTasks } from './tasks'
 import { FONT, paneSvg } from './theme'
 import { TIER_MODEL, plannedTierOf } from './tiers'
 
-// The agents panel's small drawings: the crab, the pulse and the header tiles. The
+// The agents panel's small drawings: the crab, the open call's dot and the compact strip. The
 // words around them are native text; each drawing keeps one source while its state holds, so its
 // motion runs on without restarting at the panel's once-a-second redraw.
 export const COMPACT_H = 32
+const CRAB_PITCH = 36
+const MORE_ROOM = 40
+const LIVE_DOT = { x: 32, y: 4, r: 3 } as const
 export const CRAB = { w: 36, h: 32 } as const
 export const PULSE = 12
+const PULSE_CORE = 3
 
-// The narrative part: the worker's own steps or task list, then what it is doing now.
-const stepsOf = (a: AgentRun): string => {
+/** The worker's own count of its steps or its task list, when it keeps one: "3/5 · Hero copy". */
+export const stepsOf = (a: AgentRun): string => {
   if (a.stepTotal) return `${a.stepDone ?? 0}/${a.stepTotal}${a.stepNote ? ' · ' + a.stepNote : ''}`
   const own = countTasks(a.todos ?? [])
   if (!own.total) return ''
@@ -45,13 +51,27 @@ export const clockOf = (a: AgentRun, at: number): string => {
   return a.status === 'running' ? time : `${t().total} ${time}`
 }
 
-export const crabSvg = (opts: { costume: string; isWalking?: boolean; isDim?: boolean }): string => paneSvg(CRAB.w, CRAB.h, crab(1, 0, opts))
+export const crabSvg = (opts: CrabOptions): string => paneSvg(CRAB.w, CRAB.h, crab(1, 0, opts))
 
-// A live dot with a ring breathing out of it.
-export const pulseSvg = (color: string): string => {
+// The card's crab: the same sprite drawn larger, so each agent's shell, eyes and costume read at a glance.
+export const CARD_CRAB = { w: 50, h: 44, scale: 1.5 } as const
+
+export const cardCrabSvg = (opts: Omit<CrabOptions, 'scale'>): string =>
+  paneSvg(CARD_CRAB.w, CARD_CRAB.h, crab(1, 0, { ...opts, scale: CARD_CRAB.scale }))
+
+// The empty panel's host: one resting crab, larger, standing still until there is work.
+export const HERO_CRAB = { w: 76, h: 66, scale: 2.3 } as const
+
+// Two still z's over its shoulder: it is resting, not stuck.
+const SNOOZE = `<text class="m" x="62" y="16" font-family="${FONT}" font-size="11" font-weight="700">z</text><text class="m" x="69" y="8" font-family="${FONT}" font-size="8" font-weight="700">z</text>`
+
+export const heroCrabSvg = (): string =>
+  paneSvg(HERO_CRAB.w, HERO_CRAB.h, crab(0, 2, { costume: 'other', look: lookAt(0), scale: HERO_CRAB.scale }) + SNOOZE)
+
+// The call still open, as a still Iris dot in a faint ring: the crabs carry the panel's one motion.
+export const pulseSvg = (): string => {
   const c = PULSE / 2
-  const css = `<style>.rg{transform-origin:${c}px ${c}px;animation:rg 1s ease-out infinite}@keyframes rg{from{transform:scale(.45);opacity:.9}to{transform:scale(1);opacity:0}}@media (prefers-reduced-motion: reduce){.rg{animation:none;opacity:0}}</style>`
-  return paneSvg(PULSE, PULSE, `${css}<circle class="rg" cx="${c}" cy="${c}" r="${c - 0.5}" fill="${color}"/><circle cx="${c}" cy="${c}" r="3" fill="${color}"/>`)
+  return paneSvg(PULSE, PULSE, `<circle class="b-run l-run" cx="${c}" cy="${c}" r="${c - 1}" stroke-width="1"/><circle class="f-run" cx="${c}" cy="${c}" r="${PULSE_CORE}"/>`)
 }
 
 export const plannedLine = (p: Planned): string => {
@@ -61,51 +81,16 @@ export const plannedLine = (p: Planned): string => {
   return parts.filter(Boolean).join(' · ')
 }
 
-export const HEADER_H = 52
-const TILE_GAP = 8
-const TILES = 5
+type Icon = { costume: string; look: Look; color: string; isRunning: boolean; isDim: boolean }
 
-type TileSpec = { x: number; w: number; label: string; value: string; isLive?: boolean }
-
-const tile = (spec: TileSpec): string => {
-  const dot = spec.isLive ? `<circle class="live" cx="${spec.x + spec.w - 12}" cy="14" r="3.5" fill="#6FC593"/>` : ''
-  return `<rect class="tile" x="${spec.x}" y="0" width="${spec.w}" height="${HEADER_H}" rx="10"/>
-<text class="s" x="${spec.x + 12}" y="19" font-family="${FONT}" font-size="12" font-weight="500">${xml(fitText(spec.label, 12, spec.w - 30))}</text>
-<text class="t" x="${spec.x + 12}" y="41" font-family="${FONT}" font-size="18" font-weight="650" font-variant-numeric="tabular-nums">${xml(fitText(spec.value, 18, spec.w - 20))}</text>${dot}`
-}
-
-export type HeaderCounts = { running: number; total: number; share: string | null }
-
-// Five tiles: how many agents run, what they cost, their tokens, the wall time and their share
-// of the 5h limit.
-export const headerSvg = (W: number, sum: Totals, counts: HeaderCounts): string => {
-  const s = t()
-  const w = (W - TILE_GAP * (TILES - 1)) / TILES
-  const tiles: Omit<TileSpec, 'x' | 'w'>[] = [
-    { label: s.agentsTile, value: counts.running ? `${counts.running}/${counts.total}` : `${counts.total}`, isLive: counts.running > 0 },
-    { label: s.cost, value: '≈' + fmtCost(sum.cost) },
-    { label: s.tokens, value: fmtTokens(sum.tokens) },
-    { label: s.time, value: fmtTime(sum.time) },
-    { label: s.limitTile, value: counts.share === null ? '—' : `≈${s.pct(counts.share)}` },
-  ]
-  return paneSvg(W, HEADER_H, tiles.map((spec, i) => tile({ ...spec, x: i * (w + TILE_GAP), w })).join(''))
-}
-
-type Icon = { costume: string; color: string; isRunning: boolean; isDim: boolean }
-
-export const compactSvg = (W: number, icons: Icon[], sum: Totals): string => {
-  const pitch = 36
-  const fit = Math.max(1, Math.floor((W - 150) / pitch))
+// The whole crew as a row of crabs, a "+n" past what fits; the header above keeps the totals.
+export const compactSvg = (W: number, icons: Icon[]): string => {
+  const fit = Math.max(1, Math.floor((W - MORE_ROOM) / CRAB_PITCH))
   const shown = icons.slice(0, fit)
   const more = icons.length - shown.length
   const body = shown
-    .map((ic, i) => crab(i * pitch, 0, { costume: ic.costume, isDim: ic.isDim, isWalking: ic.isRunning }) + (ic.isRunning ? `<circle class="live" cx="${i * pitch + 32}" cy="4" r="3" fill="${ic.color}"/>` : ''))
+    .map((ic, i) => crab(i * CRAB_PITCH, 0, { costume: ic.costume, look: ic.look, isDim: ic.isDim, isWalking: ic.isRunning }) + (ic.isRunning ? `<circle cx="${i * CRAB_PITCH + LIVE_DOT.x}" cy="${LIVE_DOT.y}" r="${LIVE_DOT.r}" fill="${ic.color}"/>` : ''))
     .join('')
-  const x = shown.length * pitch + (more ? 4 : 0)
-  return paneSvg(
-    W,
-    COMPACT_H,
-    `${body}${more ? `<text class="s" x="${x}" y="21" font-family="${FONT}" font-size="12">+${more}</text>` : ''}
-<text class="s" x="${W}" y="21" text-anchor="end" font-family="${FONT}" font-size="12" font-variant-numeric="tabular-nums">≈${fmtCost(sum.cost)} · ${fmtTokens(sum.tokens)} · ${fmtTime(sum.time)}</text>`,
-  )
+  const plus = more ? `<text class="s" x="${shown.length * CRAB_PITCH + 4}" y="21" font-family="${FONT}" font-size="12">+${more}</text>` : ''
+  return paneSvg(W, COMPACT_H, body + plus)
 }

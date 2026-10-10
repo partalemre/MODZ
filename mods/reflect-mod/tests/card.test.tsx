@@ -7,9 +7,12 @@ import { BAND, mount, rows, say, start, world } from './world'
 const TR = 'hayır, bu repoda hep pnpm kullan, npm değil'
 const PNPM_TR = { is_rule: true, rule: 'Bu projede paket yönetimi için npm yerine pnpm kullan.', scope: 'project', confidence: 0.95 }
 
-const buttons = async ($: Engine) => {
-  const ui = await mount($)
-  const found = (await ui.findAll({ type: 'Button' })).map(b => `${b.props.variant === 'primary' ? '*' : ''}${b.props.label}`)
+const buttons = async ($: Engine, surface: 'terminal' | 'desktop' = 'terminal') => {
+  const ui = surface === 'terminal' ? await mount($) : await $.ui.mount({ plugin: 'reflect-mod', surface, ...BAND })
+  // `*` marks the recommended save: the card's one primary button, on the `k` key, first in the row.
+  const all = await ui.findAll({ type: 'Button' })
+  expect(all.filter(b => b.props.variant === 'primary').map(b => b.props.hotkey)).toEqual(['k'])
+  const found = all.map(b => `${b.props.hotkey === 'k' ? '*' : ''}${b.props.label}`)
   await ui.unmount()
   return found
 }
@@ -42,7 +45,18 @@ test('a Turkish correction: the card shows the rule, its confidence and the word
   expect(await buttons($)).toEqual(['Sadece bu proje', 'Tüm projelerin', '*Bu projeye kaydet', 'Tüm projelere kaydet', 'Yeniden yaz', 'Kaydetme'])
 })
 
-test('picking the global row moves the primary button, and saving writes the global file', async ($, on) => {
+for (const surface of ['terminal', 'desktop'] as const) {
+  test(`the card has one primary button, the save the picked row asks for (${surface})`, async ($, on) => {
+    const w = world(on, { verdicts: { [TR]: PNPM_TR } })
+    await start($)
+    await say($, w, TR)
+    expect((await buttons($, surface)).filter(label => label.startsWith('*'))).toEqual(['*Bu projeye kaydet'])
+    await pressKey($, 'pick-global:', surface)
+    expect((await buttons($, surface)).filter(label => label.startsWith('*'))).toEqual(['*Tüm projelere kaydet'])
+  })
+}
+
+test('picking the global row moves the recommended button, and saving writes the global file', async ($, on) => {
   const w = world(on, { verdicts: { [TR]: PNPM_TR }, files: { '/home/u/.claude/CLAUDE.md': '# Me\n' } })
   await start($)
   await say($, w, TR)
@@ -76,5 +90,17 @@ test('desktop draws the card in Svg with selectable rows and the band of others 
   await ui.press({ key: (await ui.findAll({ type: 'Button' })).find(b => b.key?.startsWith('pick-global:'))?.key ?? '' })
   const global = (await ui.findAll({ type: 'Box' })).find(b => b.key?.startsWith('dest-global:'))
   expect(global?.props.backgroundColor).toBe('#1B2F25')
+  const picks = (await ui.findAll({ type: 'Button' })).filter(b => b.key?.startsWith('pick-'))
+  expect(picks.map(b => [b.props.label, b.props.dimColor])).toEqual([['Sadece bu proje', true], ['Tüm projelerin', false]])
+  await ui.unmount()
+})
+
+test('on a narrow desktop band both destinations stack their path the same way', async ($, on) => {
+  const w = world(on, { verdicts: { [TR]: PNPM_TR }, root: () => '/Users/me/a-rather-long-project-name' })
+  await start($)
+  await say($, w, TR)
+  const ui = await $.ui.mount({ plugin: 'reflect-mod', surface: 'desktop', ...BAND, props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 50 } as never })
+  const rows = (await ui.findAll({ type: 'Box' })).filter(b => b.key?.startsWith('dest-'))
+  expect(rows.map(b => b.props.flexDirection)).toEqual(['column', 'column'])
   await ui.unmount()
 })

@@ -22,26 +22,80 @@ const SIZE_W = 64
 const STRIKE_MS = 220
 const STRIKE_STAGGER_MS = 60
 
+const LINE_STEP = 19
+const EYEBROW_BASELINE = 13
+const EYEBROW_SIZE = 10.5
+const EYEBROW_TRACKING = 1.05
+const EYEBROW_DOT = 3
+const EYEBROW_TEXT_X = 10
+const META_GAP = 12
+const FIRST_BASELINE = 35
+const FULL_STEP = 18
+const HEAD_BOTTOM = 6
+const HEAD_MIN = 46
+const GLUE = ' · '
+// DESIGN.md §3: every card opens with an eyebrow in its role colour.
+export const EYEBROW = 'Komut bekletildi'
+
+type Line = { y: number; markup: string }
+
+const commandRun = (command: string): string =>
+  `<tspan class="mono" font-size="${CMD_SIZE}" font-weight="700" style="fill:var(--hi)">${escape(command)}</tspan>`
+
+function payloadRun(view: View, room: number): string {
+  const color = view.isPayloadEmpty ? 'var(--lo)' : 'var(--danger)'
+  const tail = fit(view.tail, Math.max(0, room - measure(view.payload, { size: HEAD_SIZE, isBold: true })), { size: HEAD_SIZE })
+
+  return `<tspan font-size="${HEAD_SIZE}" font-weight="700" style="fill:${color}">${escape(view.payload)}</tspan><tspan font-size="${HEAD_SIZE}" style="fill:var(--mid)">${escape(tail)}</tspan>`
+}
+
+// The headline on one line when it fits; in a narrow pane the command takes a line of its own
+// and what it does goes under it, so neither is cut.
+function headlineLines(view: View, room: number): Line[] {
+  const spec = { size: CMD_SIZE, isMono: true, isBold: true }
+  const said = measure(view.payload, { size: HEAD_SIZE, isBold: true }) + measure(view.tail, { size: HEAD_SIZE })
+  const glue = `<tspan font-size="${HEAD_SIZE}" style="fill:var(--lo)">${GLUE}</tspan>`
+  if (measure(view.command, spec) + measure(GLUE, { size: HEAD_SIZE }) + said <= room) {
+    return [{ y: FIRST_BASELINE, markup: commandRun(view.command) + glue + payloadRun(view, room) }]
+  }
+
+  return [
+    { y: FIRST_BASELINE, markup: commandRun(fitMiddle(view.command, room, spec)) },
+    { y: FIRST_BASELINE + LINE_STEP, markup: payloadRun(view, room) },
+  ]
+}
+
+/** `● KOMUT BEKLETİLDİ` in Flare, and where it would run (`demo-app içinde`) on the right while it fits. */
+function eyebrowLine(view: View, room: number): string {
+  const label = EYEBROW.toLocaleUpperCase('tr')
+  const labelW = measure(label, { size: EYEBROW_SIZE, isBold: true }) + [...label].length * EYEBROW_TRACKING
+  const metaRoom = room - EYEBROW_TEXT_X - labelW - META_GAP
+  const meta = view.context === '' || metaRoom < HEAD_X ? '' : fit(view.context, metaRoom, { size: META_SIZE })
+  const y = EYEBROW_BASELINE
+
+  return [
+    `<circle cx="${HEAD_X + EYEBROW_DOT}" cy="${y - 3.5}" r="${EYEBROW_DOT}" style="fill:var(--danger)"/>`,
+    `<text x="${HEAD_X + EYEBROW_TEXT_X}" y="${y}" font-size="${EYEBROW_SIZE}" font-weight="700" letter-spacing="${EYEBROW_TRACKING}" style="fill:var(--danger)">${escape(label)}</text>`,
+    meta === '' ? '' : `<text x="${HEAD_X + room}" y="${y}" text-anchor="end" font-size="${META_SIZE - 1}" style="fill:var(--lo)">${escape(meta)}</text>`,
+  ].join('')
+}
+
 export function headerSvg(view: View, width: number): { source: string; height: number } {
-  const height = view.fullCommand === null ? 46 : 64
   const room = width - HEAD_X
-  const glue = ' · '
-  const fixed = measure(glue, { size: HEAD_SIZE }) + measure(view.payload, { size: HEAD_SIZE, isBold: true }) + measure(view.tail, { size: HEAD_SIZE })
-  const command = fit(view.command, Math.max(60, room - fixed), { size: CMD_SIZE, isMono: true, isBold: true })
-  const payloadColor = view.isPayloadEmpty ? 'var(--lo)' : 'var(--danger)'
-  const full = view.fullCommand === null ? '' : `<text x="${HEAD_X}" y="58" class="mono" font-size="11.5" style="fill:var(--lo)">${escape(fitMiddle(view.fullCommand, room, { size: 11.5, isMono: true }))}</text>`
+  const lines = headlineLines(view, room)
+  const fullY = (lines[lines.length - 1]?.y ?? FIRST_BASELINE) + FULL_STEP
+  const full = view.fullCommand === null ? '' : `<text x="${HEAD_X}" y="${fullY}" class="mono" font-size="11.5" style="fill:var(--lo)">${escape(fitMiddle(view.fullCommand, room, { size: 11.5, isMono: true }))}</text>`
+  const lastY = view.fullCommand === null ? (lines[lines.length - 1]?.y ?? FIRST_BASELINE) : fullY
+  const height = Math.max(HEAD_MIN, lastY + HEAD_BOTTOM)
 
   return {
     height,
     source: [
       svgOpen(width, height),
       svgStyle(),
-      tile(view.icon, { x: 0, y: 4, size: TILE, role: 'danger' }),
-      `<text x="${HEAD_X}" y="21"><tspan class="mono" font-size="${CMD_SIZE}" font-weight="700" style="fill:var(--hi)">${escape(command)}</tspan>`,
-      `<tspan font-size="${HEAD_SIZE}" style="fill:var(--lo)">${glue}</tspan>`,
-      `<tspan font-size="${HEAD_SIZE}" font-weight="700" style="fill:${payloadColor}">${escape(view.payload)}</tspan>`,
-      `<tspan font-size="${HEAD_SIZE}" style="fill:var(--mid)">${escape(view.tail)}</tspan></text>`,
-      `<text x="${HEAD_X}" y="40" font-size="${META_SIZE}" style="fill:var(--lo)">${escape(fit(view.context, room, { size: META_SIZE }))}</text>`,
+      tile(view.icon, { x: 0, y: 2, size: TILE, role: 'danger' }),
+      eyebrowLine(view, room),
+      ...lines.map(line => `<text x="${HEAD_X}" y="${line.y}">${line.markup}</text>`),
       full,
       '</svg>',
     ].join(''),
@@ -79,13 +133,26 @@ export function bannerSvg(banner: Banner, width: number): { source: string; heig
   }
 }
 
-type Columns = { barX: number; barW: number; sizeRight: number; countRight: number }
+type Columns = { barX: number; barW: number; sizeRight: number; countRight: number; hasCount: boolean }
 
-function columnsOf(width: number): Columns {
+const FOLDER_X = 26
+const NAME_GAP = 8
+const NAME_SIZE = 13
+const FILE_X = 48
+const MORE_X = 2
+const NAME_X: Record<Row['kind'], number> = { file: FILE_X, more: MORE_X, folder: FOLDER_X, item: FOLDER_X }
+const NAME_COLOR: Record<Row['kind'], string> = { folder: 'var(--hi)', more: 'var(--lo)', file: 'var(--mid)', item: 'var(--mid)' }
+const BAR_GAP = 14
+
+// A narrow pane gives up the folder's file count before it would cut a folder's name.
+function columnsOf(width: number, rows: Row[]): Columns {
   const barW = width < NARROW ? BAR_W_NARROW : BAR_W
   const barX = width - barW
+  const countRight = barX - BAR_GAP - SIZE_W
+  const nameRoom = countRight - COUNT_W - FOLDER_X - NAME_GAP
+  const hasCount = rows.every(row => row.kind !== 'folder' || measure(row.name, { size: NAME_SIZE, isBold: true }) <= nameRoom)
 
-  return { barX, barW, sizeRight: barX - 14, countRight: barX - 14 - SIZE_W }
+  return { barX, barW, sizeRight: barX - BAR_GAP, countRight, hasCount }
 }
 
 function bar(row: Row, top: number, cols: Columns): string {
@@ -99,23 +166,50 @@ function bar(row: Row, top: number, cols: Columns): string {
 
 type Placed = { row: Row; top: number; strikeIndex: number | null }
 
+// A git status letter by role: added Moss, modified Amber, deleted Flare, renamed Tide; a commit hash stays meta.
+const STATUS_ROLE: Record<string, string> = { A: 'ok', M: 'warn', D: 'danger', R: 'read', C: 'read', U: 'danger' }
+const DIFF = /^\+(\d+) −(\d+)$/
+
+export const tagPaint = (tag: string): string => {
+  const role = STATUS_ROLE[tag.trim().charAt(0)]
+
+  return tag.length <= 2 && role !== undefined ? `var(--${role})` : 'var(--lo)'
+}
+
+/** `+61 −0`: the added count in Moss, the removed one in Flare; any other size stays as one run. */
+function sizeRuns(size: string, paint: string): string {
+  const diff = DIFF.exec(size)
+  if (diff === null) return `<tspan style="fill:${paint}">${escape(size)}</tspan>`
+
+  const paintOf = (count: string, role: string) => (count === '0' ? 'var(--lo)' : `var(--${role})`)
+
+  return `<tspan style="fill:${paintOf(diff[1] ?? '', 'ok')}">+${diff[1]}</tspan><tspan style="fill:${paintOf(diff[2] ?? '', 'danger')}"> −${diff[2]}</tspan>`
+}
+
+function nameRight(row: Row, cols: Columns): number {
+  if (row.kind === 'folder' && cols.hasCount) return cols.countRight - COUNT_W
+  if (row.size === '') return cols.barX - BAR_GAP
+
+  return cols.sizeRight - SIZE_W
+}
+
 function rowSvg(placed: Placed, cols: Columns): string {
   const { row, top } = placed
   const base = top + 18
   const isFolder = row.kind === 'folder'
-  const nameX = row.kind === 'file' ? 48 : row.kind === 'more' ? 2 : 26
+  const nameX = NAME_X[row.kind]
   const tagW = row.tag === '' ? 0 : measure(row.tag, { size: 11.5, isMono: true }) + 10
-  const right = isFolder ? cols.countRight - COUNT_W : row.size === '' ? cols.barX - 14 : cols.sizeRight - SIZE_W
-  const spec = { size: 13, isBold: isFolder }
-  const name = fitMiddle(row.name, Math.max(40, right - nameX - tagW - 8), spec)
+  const right = nameRight(row, cols)
+  const spec = { size: NAME_SIZE, isBold: isFolder }
+  const name = fitMiddle(row.name, Math.max(40, right - nameX - tagW - NAME_GAP), spec)
   const glyph = row.kind === 'more' ? '' : icon(row.icon, { x: isFolder || row.kind === 'item' ? 2 : 26, y: top + 7, size: isFolder ? 16 : 14, color: isFolder ? 'var(--mid)' : 'var(--lo)' })
-  const tag = row.tag === '' ? '' : `<text x="${nameX}" y="${base}" class="mono" font-size="11.5" style="fill:var(--lo)">${escape(row.tag)}</text>`
-  const nameColor = isFolder ? 'var(--hi)' : row.kind === 'more' ? 'var(--lo)' : 'var(--mid)'
+  const tag = row.tag === '' ? '' : `<text x="${nameX}" y="${base}" class="mono" font-size="11.5" font-weight="${tagPaint(row.tag) === 'var(--lo)' ? 400 : 700}" style="fill:${tagPaint(row.tag)}">${escape(row.tag)}</text>`
+  const nameColor = NAME_COLOR[row.kind]
   const dim = placed.strikeIndex === null ? '' : ` class="dim" style="animation-delay:${placed.strikeIndex * STRIKE_STAGGER_MS}ms"`
   const texts = [
     `<text x="${nameX + tagW}" y="${base}" font-size="13" font-weight="${isFolder ? 600 : 400}" style="fill:${nameColor}">${escape(name)}</text>`,
-    row.count === '' ? '' : `<text x="${cols.countRight}" y="${base}" text-anchor="end" font-size="12.5" style="fill:var(--lo)">${escape(row.count)}</text>`,
-    row.size === '' ? '' : `<text x="${cols.sizeRight}" y="${base}" text-anchor="end" class="num" font-size="12.5" font-weight="${isFolder ? 600 : 400}" style="fill:${isFolder ? 'var(--hi)' : 'var(--lo)'}">${escape(row.size)}</text>`,
+    row.count === '' || !cols.hasCount ? '' : `<text x="${cols.countRight}" y="${base}" text-anchor="end" font-size="12.5" style="fill:var(--lo)">${escape(row.count)}</text>`,
+    row.size === '' ? '' : `<text x="${cols.sizeRight}" y="${base}" text-anchor="end" class="num" font-size="12.5" font-weight="${isFolder ? 600 : 400}">${sizeRuns(row.size, isFolder ? 'var(--hi)' : 'var(--lo)')}</text>`,
   ]
 
   return `${glyph}<g${dim}>${tag}${texts.join('')}</g>${bar(row, top, cols)}${strike(placed, nameX + tagW, measure(name, spec))}`
@@ -134,7 +228,7 @@ const STRIKE_CSS = `.st{fill:none;stroke-width:1.5;stroke-linecap:round;stroke-d
 
 /** The list as one drawing; `isStruck` strikes every file, item and the overflow line. */
 export function listSvg(rows: Row[], width: number, isStruck: boolean): { source: string; height: number } {
-  const cols = columnsOf(width)
+  const cols = columnsOf(width, rows)
   const placed: Placed[] = []
   let y = LIST_TOP
   let struck = 0

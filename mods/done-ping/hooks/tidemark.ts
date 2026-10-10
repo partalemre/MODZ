@@ -41,11 +41,6 @@ const LIGHT: Palette = {
   orchid: { fg: '#A8337F', tint: '#FBE9F4', line: '#EDBFDC' },
 }
 
-// The terminal's theme keys for each role (DESIGN.md §2, "Terminal eşlemesi").
-export const THEME_KEY: Record<Role, string> = {
-  tide: 'suggestion', kiln: 'claude', iris: 'permission', moss: 'success', amber: 'warning', flare: 'error', orchid: 'merged',
-}
-
 export function themeFrom(value: unknown): Theme {
   const name = typeof value === 'string' ? value.trim().toLowerCase() : ''
   if (name === 'light') return { mode: 'light', isLight: true }
@@ -62,11 +57,4 @@ const varsOf = (palette: Palette): string => [
 // Dark by default; a pinned light theme, or an unpinned one on a light surface, swaps the set.
 export function themeCss(): string {
   return `svg,.t-dark{${varsOf(DARK)}}.t-light{${varsOf(LIGHT)}}@media (prefers-color-scheme: light){.t-auto{${varsOf(LIGHT)}}}`
-}
-
-// A role's color for a Box border or a Text: the hex once the theme is pinned, the theme key before.
-export function boxColor(theme: Theme, role: Role, part: keyof Swatch = 'fg'): string {
-  if (theme.mode === 'auto') return THEME_KEY[role]
-
-  return (theme.isLight ? LIGHT : DARK)[role][part]
 }

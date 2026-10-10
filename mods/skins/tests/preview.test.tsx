@@ -2,11 +2,16 @@ import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 // Visual check, not behaviour: logs each drawn tree for the preview renderer
 // (`@@TREE@@<label>@@<json>`), once on a dark and once on a light Claude Code theme.
 
 const SITE = { plugin: 'skins', surface: 'desktop', viewport: { columns: 100, rows: 30 } } as const
 
+// The settings pane at the desktop's narrow (≈400 px) and wide (≈600 px) side panel, in columns.
+const PANE_WIDTHS = [['400', 62], ['600', 94]] as const
 const BASH_MS = 2140
 const EDIT_MS = 380
 const CONTEXT_FULL = 85
@@ -84,7 +89,7 @@ const runSkin = ($: Engine, args: string) =>
 async function previewAll($: Engine, theme: Theme) {
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   await $.tool.call({ tool: 'Bash', tool_use_id: 'bash', command: 'pnpm test --filter hub' })
-  await $.tool.call({ tool: 'Edit', tool_use_id: 'edit', file_path: '/work/apps/hub/src/server.ts' })
+  await $.tool.call({ tool: 'Edit', tool_use_id: 'edit', file_path: '/work/apps/hub/src/server.ts', old_string: '', new_string: '' })
 
   for (const [name, props] of ROWS) {
     await logTree(`${theme}-tidemark-rows-${name}`, await $.ui.mount({ ...SITE, component: 'ToolUse', requestId: props.tool_use_id, props }))
@@ -93,8 +98,10 @@ async function previewAll($: Engine, theme: Theme) {
   const result = { tool_use_id: 'diff', tool: 'Edit', output: DIFF_OUTPUT, isErrored: false }
   await logTree(`${theme}-tidemark-diff-card`, await $.ui.mount({ ...SITE, component: 'ToolResult', requestId: 'diff', props: result }))
 
-  const pane = { title: "Skin'ler", isFocused: true, bodyColumns: 90, placement: 'inline', scroll: { offset: 0, bodyRows: 40 }, view: {} } as const
-  await logTree(`${theme}-tidemark-settings`, await $.ui.mount({ ...SITE, component: 'Pane', requestId: 'skins-settings', props: pane }))
+  for (const [label, columns] of PANE_WIDTHS) {
+    const pane = { title: 'Görünüm', isFocused: true, bodyColumns: columns, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} } as const
+    await logTree(`${theme}-tidemark-settings-${label}`, await $.ui.mount({ ...SITE, component: 'Pane', requestId: 'skins-settings', props: pane }))
+  }
 
   await runSkin($, 'band on')
   const band = { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 90, scroll: { offset: 0, bodyRows: 4 }, view: {} }

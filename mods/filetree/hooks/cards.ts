@@ -14,6 +14,8 @@ import {
   iconBox,
   measure,
   pill,
+  type Font,
+  type Pt,
   PILL_H,
   pillWidth,
   svgDoc,
@@ -35,7 +37,8 @@ const TOP_BLOCK = 66
 const frame = (w: number, h: number): string =>
   `<rect x=".5" y=".5" width="${w - 1}" height="${h - 1}" rx="12" class="card"/>`
 
-function fitEnd(text: string, width: number, size: number, isBold = false): string {
+function fitEnd(text: string, width: number, font: Font): string {
+  const { size, isBold = false } = font
   if (measure(text, size, isBold) <= width) return text
   const chars = [...text]
   while (chars.length > 1 && measure(`${chars.join('')}…`, size, isBold) > width) chars.pop()
@@ -49,7 +52,7 @@ export function spans(parts: Part[], width: number, size: number): string {
   for (const p of parts) {
     const room = width - used
     if (room < size) break
-    const text = fitEnd(p.text, room, size, p.isBold)
+    const text = fitEnd(p.text, room, { size, isBold: p.isBold })
     used += measure(text, size, p.isBold)
     const weight = p.isBold ? ' font-weight="650"' : ''
     out.push(`<tspan class="${p.cls}${p.isNum ? ' num' : ''}"${weight}>${escape(text)}</tspan>`)
@@ -58,11 +61,11 @@ export function spans(parts: Part[], width: number, size: number): string {
   return out.join('')
 }
 
-function titleLine(hero: Hero, x: number, y: number, width: number): string {
+function titleLine(hero: Hero, { x, y, width }: Pt & { width: number }): string {
   const { lead, name, tail } = hero.title
   const room = width - measure(lead + tail, TITLE, true)
-  const fitted = name ? fitMiddle(name, Math.max(TITLE * 3, room), TITLE, true) : ''
-  const full = fitEnd(`${lead}${fitted}${tail}`, width, TITLE, true)
+  const fitted = name ? fitMiddle(name, Math.max(TITLE * 3, room), { size: TITLE, isBold: true }) : ''
+  const full = fitEnd(`${lead}${fitted}${tail}`, width, { size: TITLE, isBold: true })
   return `<text x="${x}" y="${y}" font-size="${TITLE}" font-weight="620" class="hi">${escape(full)}</text>`
 }
 
@@ -78,12 +81,12 @@ function gitLine(git: GitRow, y: number, w: number): string {
   const statusW = status.reduce((s, p) => s + measure(p.text, ROW, p.isBold), 0)
   const moves = `${git.ahead ? ` ↑${git.ahead}` : ''}${git.behind ? ` ↓${git.behind}` : ''}`
   const nameRoom = w - 2 * PAD - 22 - statusW - measure(moves, ROW, true) - GAP
-  const name = fitMiddle(git.branch, Math.max(40, nameRoom), ROW, true)
+  const name = fitMiddle(git.branch, Math.max(40, nameRoom), { size: ROW, isBold: true })
   const upRoom = nameRoom - measure(name, ROW, true) - 10
-  const upstream = git.upstream && upRoom > 40 ? `<tspan dx="8" font-size="12" class="lo">${escape(fitMiddle(git.upstream, upRoom, 12))}</tspan>` : ''
+  const upstream = git.upstream && upRoom > 40 ? `<tspan dx="8" font-size="12" class="lo">${escape(fitMiddle(git.upstream, upRoom, { size: 12 }))}</tspan>` : ''
   const branch = `<text x="${PAD + 22}" y="${y}" font-size="${ROW}"><tspan font-weight="650" class="hi">${escape(name)}</tspan>${git.ahead ? `<tspan font-weight="650" class="f-ok"> ↑${git.ahead}</tspan>` : ''}${git.behind ? `<tspan font-weight="650" class="f-warn"> ↓${git.behind}</tspan>` : ''}${upstream}</text>`
   const right = `<text x="${w - PAD}" y="${y}" text-anchor="end" font-size="${ROW}">${spans(status, statusW + 4, ROW)}</text>`
-  return `${icon('branch', PAD, y - 12, 15, 'read')}${branch}${right}`
+  return `${icon('branch', { x: PAD, y: y - 12, size: 15 }, 'read')}${branch}${right}`
 }
 
 function legendLine(items: LegendItem[], y: number): string {
@@ -98,13 +101,15 @@ function legendLine(items: LegendItem[], y: number): string {
     .join('')
 }
 
-export function heroCard(hero: Hero, git: GitRow | null, legend: LegendItem[], look: Look, w: number): Drawn {
+export type Canvas = { look: Look; w: number }
+
+export function heroCard(hero: Hero, { git, legend }: { git: GitRow | null; legend: LegendItem[] }, { look, w }: Canvas): Drawn {
   const textX = PAD + ICON_BOX + GAP
   const textW = w - textX - PAD
   const top = [
-    iconBox(hero.icon, PAD, PAD + 2, hero.role),
-    eyebrowText(hero.eyebrow, textX, PAD + 10, hero.role === 'neutral' ? 'lo' : `f-${hero.role}`),
-    titleLine(hero, textX, PAD + 31, textW),
+    iconBox(hero.icon, { x: PAD, y: PAD + 2 }, hero.role),
+    eyebrowText(hero.eyebrow, { x: textX, y: PAD + 10 }, hero.role === 'neutral' ? 'lo' : `f-${hero.role}`),
+    titleLine(hero, { x: textX, y: PAD + 31, width: textW }),
     `<text x="${textX}" y="${PAD + 50}" font-size="${SUB}">${spans(hero.sub, textW, SUB)}</text>`,
   ]
   const rows: string[] = []
@@ -114,7 +119,7 @@ export function heroCard(hero: Hero, git: GitRow | null, legend: LegendItem[], l
   if (legend.length) rows.push(legendLine(legend, (y += LINE)))
   const h = rows.length ? y + PAD - 2 : TOP_BLOCK + PAD
   const alt = `${hero.eyebrow}: ${hero.title.lead}${hero.title.name}${hero.title.tail}. ${hero.sub.map(p => p.text).join('')}`
-  return { source: svgDoc(w, h, look, frame(w, h) + top.join('') + rows.join('')), width: w, height: h, alt }
+  return { source: svgDoc({ width: w, height: h }, look, frame(w, h) + top.join('') + rows.join('')), width: w, height: h, alt }
 }
 
 export type TouchedRow = { name: string; dir: string; badge: BadgeKind; pill: { text: string; role: Role }; diff?: [number, number] }
@@ -129,13 +134,13 @@ function touchedRow(r: TouchedRow, y: number, w: number): string {
   const diffW = diff ? measure(diff, 12) + GAP : 0
   const nameX = PAD + 38
   const room = w - nameX - PAD - pillW - diffW - GAP
-  const name = fitMiddle(r.name, Math.max(48, room * 0.7), ROW, true)
+  const name = fitMiddle(r.name, Math.max(48, room * 0.7), { size: ROW, isBold: true })
   const dirRoom = room - measure(name, ROW, true) - 8
-  const dir = r.dir && dirRoom > 24 ? fitMiddle(r.dir, dirRoom, 12) : ''
+  const dir = r.dir && dirRoom > 24 ? fitMiddle(r.dir, dirRoom, { size: 12 }) : ''
   const parts = [
-    badge(r.badge.label, PAD, y + (ROW_H - BADGE_H) / 2, r.badge.role),
+    badge(r.badge.label, { x: PAD, y: y + (ROW_H - BADGE_H) / 2 }, r.badge.role),
     `<text x="${nameX}" y="${y + 19.5}" font-size="${ROW}"><tspan font-weight="650" class="hi">${escape(name)}</tspan>${dir ? `<tspan dx="8" font-size="12" class="lo">${escape(dir)}</tspan>` : ''}</text>`,
-    pill(r.pill.text, w - PAD, y + (ROW_H - PILL_H) / 2, r.pill.role),
+    pill(r.pill.text, { right: w - PAD, y: y + (ROW_H - PILL_H) / 2 }, r.pill.role),
   ]
   if (diff) {
     const [add = 0, del = 0] = r.diff ?? []
@@ -156,13 +161,13 @@ export function touchedCard(rows: TouchedRow[], look: Look, w: number): Drawn {
   const listH = shown.length ? HEAD_H - 6 + shown.length * ROW_H : HEAD_H + 18
   const moreLine = more > 0 ? `<text x="${PAD}" y="${listH + 14}" font-size="12" class="lo">+${more} dosya daha</text>` : ''
   const h = listH + (more > 0 ? 22 : 0) + 10
-  const head = eyebrowText(title, PAD, PAD + 10, 'lo')
+  const head = eyebrowText(title, { x: PAD, y: PAD + 10 }, 'lo')
   const alt = `${title}: ${rows.map(r => `${r.name} ${r.pill.text}`).join(', ') || 'henüz yok'}`
-  return { source: svgDoc(w, h, look, frame(w, h) + head + body + moreLine), width: w, height: h, alt }
+  return { source: svgDoc({ width: w, height: h }, look, frame(w, h) + head + body + moreLine), width: w, height: h, alt }
 }
 
-export function sectionLine(left: string, right: string, look: Look, w: number): Drawn {
+export function sectionLine({ left, right }: { left: string; right: string }, { look, w }: Canvas): Drawn {
   const h = 22
-  const body = `${eyebrowText(left, 2, 15, 'lo')}${right ? eyebrowText(right, w - 2, 15, 'lo', 'end') : ''}`
-  return { source: svgDoc(w, h, look, body), width: w, height: h, alt: right ? `${left} · ${right}` : left }
+  const body = `${eyebrowText(left, { x: 2, y: 15 }, 'lo')}${right ? eyebrowText(right, { x: w - 2, y: 15, anchor: 'end' }, 'lo') : ''}`
+  return { source: svgDoc({ width: w, height: h }, look, body), width: w, height: h, alt: right ? `${left} · ${right}` : left }
 }

@@ -1,5 +1,6 @@
 import type { Palette } from './skin'
 import { escape, fitText, MONO, pill, riseDelay, strokeIcon, svgCard } from './svg-kit'
+import type { CardFrame } from './svg-kit'
 
 // An edit as a card: the file, how many lines it added and removed, and the changed
 // lines with their numbers, green and red, rising in one after another.
@@ -9,6 +10,7 @@ const LINE_H = 22
 const GAP_H = 20
 const CODE = 12.5
 const MAX_LINES = 30
+const CODE_X = 112
 const PENCIL = '<path d="M4 20h4L18.5 9.5a2.83 2.83 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>'
 const NEW_FILE = '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M12 11v6M9 14h6"/>'
 
@@ -67,15 +69,19 @@ export function hunksOf(output: unknown): DiffInput | null {
   return null
 }
 
-export function diffSvg(input: DiffInput, shownPath: string, palette: Palette, width: number): { source: string; height: number; alt: string } {
-  const all = diffLines(input.hunks)
-  const shown = all.slice(0, MAX_LINES)
-  const hidden = all.length - shown.length
-  const added = all.filter(line => line.kind === 'add').length
-  const removed = all.filter(line => line.kind === 'del').length
-  const codeX = 112
-  const codeWidth = width - codeX - 16
+type Mark = { sign: string; color?: keyof Palette }
 
+const MARKS: Readonly<Record<'add' | 'del' | 'ctx', Mark>> = {
+  add: { sign: '+', color: 'ok' },
+  del: { sign: '−', color: 'err' },
+  ctx: { sign: '' },
+}
+
+type Laid = { rows: string[]; bottom: number }
+
+// The changed lines as rows, stacked from the header down, with where they end.
+function diffRows(shown: readonly Line[], { palette, width }: CardFrame): Laid {
+  const codeWidth = width - CODE_X - 16
   let y = HEADER_H
   const rows = shown.map((line, i) => {
     const top = y
@@ -83,34 +89,46 @@ export function diffSvg(input: DiffInput, shownPath: string, palette: Palette, w
     if (line.kind === 'gap') {
       y += GAP_H
 
-      return `<g ${riseDelay(i, 18)} class="rise"><text x="${codeX}" y="${top + 14}" font-size="11" style="fill:${palette.muted}">⋯  line ${line.at}</text></g>`
+      return `<g ${riseDelay(i, 18)} class="rise"><text x="${CODE_X}" y="${top + 14}" font-size="11" style="fill:${palette.muted}">⋯  satır ${line.at}</text></g>`
     }
 
     y += LINE_H
 
-    const tint = line.kind === 'add' ? palette.ok : line.kind === 'del' ? palette.err : undefined
-    const sign = line.kind === 'add' ? '+' : line.kind === 'del' ? '−' : ''
+    const mark = MARKS[line.kind]
+    const tint = mark.color === undefined ? undefined : palette[mark.color]
     const band = tint === undefined ? '' : `<rect y="${top}" width="${width}" height="${LINE_H}" fill="${tint}" fill-opacity=".1"/><rect y="${top}" width="2" height="${LINE_H}" fill="${tint}"/>`
     const number = (value: number | undefined, x: number) =>
       value === undefined ? '' : `<text x="${x}" y="${top + 15}" text-anchor="end" font-family="${MONO}" font-size="11" style="fill:${palette.muted}">${value}</text>`
 
-    return `<g ${riseDelay(i, 18)} class="rise">${band}${number(line.old, 44)}${number(line.new, 80)}<text x="96" y="${top + 15}" font-family="${MONO}" font-size="${CODE}" style="fill:${tint ?? palette.muted}">${sign}</text><text x="${codeX}" y="${top + 15}" font-family="${MONO}" font-size="${CODE}" style="fill:${line.kind === 'ctx' ? palette.muted : palette.fg}" xml:space="preserve">${escape(fitText(line.text, codeWidth, true, CODE))}</text></g>`
+    return `<g ${riseDelay(i, 18)} class="rise">${band}${number(line.old, 44)}${number(line.new, 80)}<text x="96" y="${top + 15}" font-family="${MONO}" font-size="${CODE}" style="fill:${tint ?? palette.muted}">${mark.sign}</text><text x="${CODE_X}" y="${top + 15}" font-family="${MONO}" font-size="${CODE}" style="fill:${line.kind === 'ctx' ? palette.muted : palette.fg}" xml:space="preserve">${escape(fitText(line.text, codeWidth, { isMono: true, size: CODE }))}</text></g>`
   })
 
-  const footer = hidden > 0 ? `<text x="${codeX}" y="${y + 18}" font-size="11.5" style="fill:${palette.muted}">${hidden} more line${hidden === 1 ? '' : 's'}</text>` : ''
+  return { rows, bottom: y }
+}
+
+export function diffSvg(input: DiffInput, shownPath: string, frame: CardFrame): { source: string; height: number; alt: string } {
+  const { palette, width } = frame
+  const all = diffLines(input.hunks)
+  const shown = all.slice(0, MAX_LINES)
+  const hidden = all.length - shown.length
+  const added = all.filter(line => line.kind === 'add').length
+  const removed = all.filter(line => line.kind === 'del').length
+  const { rows, bottom: y } = diffRows(shown, frame)
+
+  const footer = hidden > 0 ? `<text x="${CODE_X}" y="${y + 18}" font-size="11.5" style="fill:${palette.muted}">${hidden} satır daha</text>` : ''
   const height = y + (hidden > 0 ? 30 : 8)
-  const tag = input.isNewFile ? pill(width - 16, 12, 'new file', palette.user, palette) : ''
+  const tag = input.isNewFile ? pill(palette, { right: width - 16, y: 12, text: 'yeni dosya', color: palette.user }) : ''
   const counts = `<text x="${width - (input.isNewFile ? 100 : 16)}" y="27" text-anchor="end" font-family="${MONO}" font-size="12.5"><tspan style="fill:${palette.ok}">+${added}</tspan><tspan style="fill:${palette.muted}">  </tspan><tspan style="fill:${palette.err}">−${removed}</tspan></text>`
   const header = [
-    strokeIcon(input.isNewFile ? NEW_FILE : PENCIL, 16, 13, 18, palette.fg),
-    `<text x="44" y="27" font-family="${MONO}" font-size="13" style="fill:${palette.fg}">${escape(fitText(shownPath, width - 220, true, 13))}</text>`,
+    strokeIcon(input.isNewFile ? NEW_FILE : PENCIL, { x: 16, y: 13, size: 18, color: palette.fg }),
+    `<text x="44" y="27" font-family="${MONO}" font-size="13" style="fill:${palette.fg}">${escape(fitText(shownPath, width - 220, { isMono: true, size: 13 }))}</text>`,
     counts,
     tag,
     `<line x1="0" y1="${HEADER_H - 0.5}" x2="${width}" y2="${HEADER_H - 0.5}" stroke="${palette.muted}" stroke-opacity=".3"/>`,
   ].join('')
 
   return {
-    source: svgCard(width, height, palette, '', header + rows.join('') + footer),
+    source: svgCard({ width, height, palette, body: header + rows.join('') + footer }),
     height,
     alt: `${shownPath}: +${added} −${removed}`,
   }

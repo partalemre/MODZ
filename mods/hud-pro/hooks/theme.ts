@@ -70,7 +70,7 @@ function rules(scheme: Scheme): string {
 export function svgStyle(extra = ''): string {
   return [
     '<style>',
-    `text{font-family:${FONT}}.num{font-family:${MONO};font-variant-numeric:tabular-nums}`,
+    `text{font-family:${FONT}}.num{font-family:${MONO};font-variant-numeric:tabular-nums}.tab{font-variant-numeric:tabular-nums}`,
     rules('dark'),
     `@media (prefers-color-scheme: light){${rules('light')}}`,
     extra,

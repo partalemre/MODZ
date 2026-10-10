@@ -10,6 +10,9 @@ test('risky commands are classified, the rest pass', () => {
   expect(classify('rm -rf build')).toMatchObject({ kind: 'rm', label: 'rm -rf', targets: ['build'] })
   expect(classify('sudo -u me nice -n 5 \\rm -r "my dir"')).toMatchObject({ kind: 'rm', targets: ['my dir'] })
   expect(classify('rm file.txt')).toBeNull()
+  expect(classify('D=demo-app; rm -rf $D')).toMatchObject({ kind: 'rm', targets: ['demo-app'] })
+  expect(classify('export OUT=dist && rm -rf "${OUT}/cache"')).toMatchObject({ kind: 'rm', targets: ['dist/cache'] })
+  expect(classify('rm -rf $UNSET')).toMatchObject({ kind: 'rm', targets: ['$UNSET'] })
   expect(classify('cd app && git reset --hard')).toMatchObject({ kind: 'git-reset', dir: 'app' })
   expect(classify('(cd sub && make) > log; rm -rf out')).toMatchObject({ kind: 'rm', dir: null })
   expect(classify('pushd a && pushd b && popd && rm -rf x')).toMatchObject({ dir: 'a' })
@@ -36,7 +39,7 @@ test('the files scan groups by folder; git clean keeps only dry-run flags', () =
 
 test('the view: consequence headline, untracked banner, capped rows with an honest overflow', () => {
   const scan = parseScan(BUILD_SCAN)
-  const report = { kind: 'files' as const, summary: '', count: 9, bytes: scan.bytes, groups: scan.groups, items: [], more: 0, tracked: 0, where: null, added: 0, removed: 0, note: null }
+  const report = { kind: 'files' as const, summary: '', count: 9, bytes: scan.bytes, groups: scan.groups, items: [], more: 0, tracked: 0, where: null, added: 0, removed: 0, note: null, isEmpty: false }
   const risk = classify('rm -rf build')!
   const view = viewOf({ command: 'rm -rf build', risk, report, cwd: '/work/demo-app', isExpanded: false })
 
@@ -83,7 +86,7 @@ for (const surface of SURFACES) {
     await call
 
     expect(w.ran).toMatchObject([{ command: 'rm -rf build' }])
-    expect(w.toasts).toEqual(['Blast Radius: komut çalışıyor'])
+    expect(w.toasts).toEqual([])
   })
 
   test(`the band draws above the other rows and yields to a survey (${surface})`, async ($, on) => {
@@ -97,7 +100,7 @@ for (const surface of SURFACES) {
 
     expect(JSON.stringify(drawn.children?.[0])).toContain('9 dosyayı sil')
     expect(JSON.stringify(drawn.children?.[1])).toContain('other mod row')
-    const survey = await mountBand($, surface, true)
+    const survey = await mountBand($, surface, { hasSurvey: true })
     expect(JSON.stringify(await survey.drawn())).not.toContain('9 dosyayı sil')
     await band.press({ key: 'cancel' })
     await pass(w)
@@ -105,22 +108,65 @@ for (const surface of SURFACES) {
   })
 }
 
-test('git reset lists the changes it drops; plain commands are never held', async ($, on) => {
-  const w = world({ answers: { 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })
+for (const surface of SURFACES) {
+  test(`git reset lists the changes it drops; plain commands are never held (${surface})`, async ($, on) => {
+    const w = world({ answers: { 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })
+    stub(on, w)
+    await ($ as any).tool.call({ tool: 'Bash', command: 'ls -la' })
+    expect(w.opened).toHaveLength(0)
+
+    const call = ($ as any).tool.call({ tool: 'Bash', command: 'git reset --hard' })
+    await pass(w, 0)
+    const ui = await mountPane($, surface)
+    const drawn = JSON.stringify(await ui.drawn())
+    expect(drawn).toContain('Değişiklikleri sil')
+    expect(drawn).toContain('KOMUT BEKLETİLDİ')
+    await ui.press({ key: 'cancel' })
+    await pass(w)
+    const result: any = await call
+
+    expect(result.deny).toMatch(/discard uncommitted changes in 3 files/)
+    expect(w.ran).toHaveLength(1)
+  })
+
+  test(`a path the shell fills in at run time is held with that reason (${surface})`, async ($, on) => {
+    const w = world()
+    stub(on, w)
+    const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf $UNSET' })
+    await pass(w, 0)
+    const ui = await mountPane($, surface)
+    expect(JSON.stringify(await ui.drawn())).toContain('komut çalışırken belirleniyor')
+    await ui.press({ key: 'cancel' })
+    await pass(w)
+
+    expect(((await call) as any).deny).toMatch(/paths decided at run time/)
+  })
+
+  test(`the list opens and closes; the pane says the folder, not who holds it (${surface})`, async ($, on) => {
+    const w = world({ answers: { files: BUILD_SCAN } })
+    stub(on, w)
+    const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
+    await pass(w, 0)
+    const ui = await mountPane($, surface)
+    expect(JSON.stringify(await ui.drawn())).not.toContain('robots.txt')
+    expect(JSON.stringify(await ui.drawn())).not.toContain('Blast Radius bekletiyor')
+    await ui.press({ key: 'toggle' })
+    expect(JSON.stringify(await ui.drawn())).toContain('robots.txt')
+    expect(JSON.stringify(await ui.drawn())).toContain('Daha az göster')
+    await ui.press({ key: 'cancel' })
+    await pass(w)
+    await call
+  })
+}
+
+test('a command that would change nothing runs with no card', async ($, on) => {
+  const w = world()
   stub(on, w)
-  await ($ as any).tool.call({ tool: 'Bash', command: 'ls -la' })
+  const result: any = await ($ as any).tool.call({ tool: 'Bash', command: 'D=missing; rm -rf $D' })
+
+  expect(result?.deny).toBeUndefined()
   expect(w.opened).toHaveLength(0)
-
-  const call = ($ as any).tool.call({ tool: 'Bash', command: 'git reset --hard' })
-  await pass(w, 0)
-  const ui = await mountPane($, 'desktop')
-  expect(JSON.stringify(await ui.drawn())).toContain('Değişiklikleri sil')
-  await ui.press({ key: 'cancel' })
-  await pass(w)
-  const result: any = await call
-
-  expect(result.deny).toMatch(/discard uncommitted changes in 3 files/)
-  expect(w.ran).toHaveLength(1)
+  expect(w.toasts).toEqual([])
 })
 
 test('fail closed: an error while holding refuses the command', async ($, on) => {

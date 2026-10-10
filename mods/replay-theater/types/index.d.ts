@@ -26,6 +26,10 @@ export type Replay = {
   explain: ReplayExplain
   // The first sentence of Claude's answer that ended the turn; '' when it had none.
   quote: string
+  // The person's own words that started the turn, one short line; absent before this was kept.
+  ask?: string
+  // When the turn ended (ms), for "3 dk önce": the replay stays after turns without edits.
+  at?: number
 }
 
 export type ReplayPlanStatus = 'pending' | 'in_progress' | 'completed'
@@ -34,6 +38,10 @@ export type ReplayPlanStatus = 'pending' | 'in_progress' | 'completed'
 export type ReplayPlanItem = { id: string; title: string; status: ReplayPlanStatus }
 
 export type ReplayView = { isOpen: boolean; inBand: boolean; theme: 'light' | 'dark' | 'auto' }
+
+// The one-line card the MODZ main panel collects from every mod (DESIGN.md §9).
+export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
 
 declare module 'claude-code' {
   interface PluginState {
@@ -46,6 +54,9 @@ declare module 'claude-code' {
       isOffered: boolean
       view: ReplayView
       plan: ReplayPlanItem[]
+      hub: HubCard
     }
+    // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
+    modz: { open: { pane: string; at: number } }
   }
 }

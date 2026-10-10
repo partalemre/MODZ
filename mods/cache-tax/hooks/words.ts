@@ -1,8 +1,10 @@
 // Every line the mod says, in Turkish. Command names and their arguments stay English.
 
+import type { CommandSpec } from 'claude-code'
+
 import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, TTL_MS, breakEvenPings, coldUsd, isCold, priceOf, warmUsd } from './core'
 import type { State } from './core'
-import { fmtDuration, fmtInt, fmtTok, fmtUsd } from './fmt'
+import { fmtDuration, fmtInt, fmtTok, fmtUsd, trDecimal } from './fmt'
 
 export const AUTO_WARM = fmtDuration(AUTO_WARM_MS)
 
@@ -11,7 +13,7 @@ export const coldFor = (s: State, now: number): number => now - s.lastRequestAt 
 
 export function rateText(s: State): string {
   const price = priceOf(s.lastModel)
-  return price ? `$${price[1]}/MTok` : 'önbellek yazma fiyatı'
+  return price ? `$${trDecimal(price[1])}/MTok` : 'önbellek yazma fiyatı'
 }
 
 export function guardText(s: State, now: number): string {
@@ -74,8 +76,24 @@ export const alwaysText = (s: State, now: number): string =>
   `keepwarm hep açık: her oturum ${fmtDuration(DEFAULT_WINDOW_MS)} pencereyle başlar; /keepwarm off kalıcı olarak kapatır` +
   (isCold(s, now) ? coldNowText(s) : '')
 
+/** The two commands as the command list shows them. */
+export const COMMANDS: Record<'keepwarm' | 'cacheTax', CommandSpec> = {
+  keepwarm: {
+    name: 'keepwarm',
+    description: 'Önbelleği sıcak tut: tek başına 6 saat, 90m gibi bir süre, always, off ya da status (cache-tax)',
+    argumentHint: '[6h | always | off | status]',
+    immediate: true,
+  },
+  cacheTax: {
+    name: 'cache-tax',
+    description: 'Önbellek durumu, soğuk fiyatı ve bu oturumun soğuk yazımları; guard warn|refuse (cache-tax)',
+    argumentHint: '[status | guard warn | guard refuse]',
+    immediate: true,
+  },
+}
+
 export const KEEPWARM = {
-  off: 'keepwarm kapalı',
+  off:'keepwarm kapalı',
   offAlways: 'keepwarm kapalı; oturum başında artık kendiliğinden açılmayacak',
   usage: 'keepwarm bir süre alır (6h, 90m) ya da always, off, status',
   every: 'every en az 1m bir süre alır',

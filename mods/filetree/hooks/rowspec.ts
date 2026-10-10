@@ -1,7 +1,7 @@
 // One tree row as the rows Client draws it: upstream's terminal row, and the desktop row
 // with a file-type badge, a role tint while Claude touches the file and a status pill.
 
-import type { FileTree, Theme } from '../types'
+import type { FileNode, FileTree, Theme } from '../types'
 import { badgeOf } from './badges'
 import { CHEVRON_CLOSED, CHEVRON_OPEN, fileIcon, GIT_COLOR } from './icons'
 import type { RowSpec, Seg } from './rows'
@@ -57,32 +57,62 @@ function metaOf(ctx: RowCtx, r: Row): string {
 
 const fit = (name: string, cols: number): string => (name.length > cols ? name.slice(0, Math.max(1, cols - 1)) + '…' : name)
 
+function gitColorOf(status: string | undefined, theme: Theme): string | undefined {
+  if (status === 'D' || status === 'U') return theme.urgent
+  return status ? (GIT_COLOR[status] ?? theme.muted) : undefined
+}
+
+function terminalColors(theme: Theme, n: FileNode, git: { color: string | undefined; isIgnored: boolean }) {
+  if (git.isIgnored) return { icon: theme.muted, name: theme.muted }
+  if (git.color !== undefined) return { icon: git.color, name: git.color }
+  if (n.hidden) return { icon: theme.muted, name: theme.muted }
+  return { icon: n.kind === 'dir' ? theme.accent : theme.muted, name: theme.fg || undefined }
+}
+
+function badgeText(ctx: RowCtx, s: { status: string | undefined; isIgnored: boolean; hasCounts: boolean }): string {
+  if (s.hasCounts) return ''
+  if (s.status) return ` ${s.status}`
+  if (!s.isIgnored) return '  '
+  return ctx.unicode ? ' ⊘' : ' \u{f05e}'
+}
+
+function caretOf(r: Row, unicode: boolean): string {
+  if (r.node.kind !== 'dir') return '  '
+  if (unicode) return (r.open ? '▾' : '▸') + ' '
+  return (r.open ? CHEVRON_OPEN : CHEVRON_CLOSED) + ' '
+}
+
+function glyphOf(ctx: RowCtx, r: Row): string {
+  const n = r.node
+  if (!ctx.unicode) return fileIcon(n, r.open, n.kind === 'dir' && n.id === ctx.t.top)
+  return n.kind === 'dir' ? '■' : '·'
+}
+
 export function terminalRow(ctx: RowCtx, r: Row): RowSpec {
   const { t, theme, unicode } = ctx
   const n = r.node
   const status = statusOf(ctx, n.id)
   const isIgnored = !status && underAny(n.id, ctx.ignored, t.root)
-  const gitColor = status === 'D' || status === 'U' ? theme.urgent : status ? (GIT_COLOR[status] ?? theme.muted) : undefined
+  const gitColor = gitColorOf(status, theme)
   const isBright = ctx.bright.has(n.id)
   const isDim = !isBright && ctx.dimmed.has(n.id)
   const tone = t.flashTones[n.id] ?? 'orange'
-  const iconColor = isIgnored ? theme.muted : (gitColor ?? (n.hidden ? theme.muted : n.kind === 'dir' ? theme.accent : theme.muted))
-  const nameColor = isIgnored ? theme.muted : (gitColor ?? (n.hidden ? theme.muted : theme.fg || undefined))
+  const colors = terminalColors(theme, n, { color: gitColor, isIgnored })
   const loc = t.diff[n.id]
   const meta = metaOf(ctx, r)
   const locText = loc ? `${loc[0] ? ` +${loc[0]}` : ''}${loc[1] ? ` -${loc[1]}` : ''}` : ''
   const dirCounts = n.kind === 'dir' ? countSegs(t.counts[n.id], theme) : []
-  const badge = dirCounts.length ? '' : status ? ` ${status}` : isIgnored ? (unicode ? ' ⊘' : ' \u{f05e}') : '  '
+  const badge = badgeText(ctx, { status, isIgnored, hasCounts: dirCounts.length > 0 })
   const countsText = dirCounts.map(c => c.t).join('')
   const cols = Math.max(4, ctx.width - r.depth * 2 - 6 - (meta ? meta.length + 1 : 0) - locText.length - badge.length - countsText.length)
-  const caret = n.kind === 'dir' ? (unicode ? (r.open ? '▾' : '▸') : r.open ? CHEVRON_OPEN : CHEVRON_CLOSED) + ' ' : '  '
-  const glyph = unicode ? (n.kind === 'dir' ? '■' : '·') : fileIcon(n, r.open, n.kind === 'dir' && n.id === t.top)
+  const caret = caretOf(r, unicode)
+  const glyph = glyphOf(ctx, r)
   const lit = isBright || isDim
   const left: Seg[] = [
     { t: '  '.repeat(r.depth) },
     { t: caret, c: theme.muted },
-    lit ? { t: glyph + ' ', sh: tone, dim: isDim, one: true } : { t: glyph + ' ', c: iconColor },
-    lit ? { t: fit(n.name, cols), sh: tone, dim: isDim, b: isBright } : { t: fit(n.name, cols), c: nameColor, b: n.id === t.selected, s: status === 'D' && n.kind !== 'dir' },
+    lit ? { t: glyph + ' ', sh: tone, dim: isDim, one: true } : { t: glyph + ' ', c: colors.icon },
+    lit ? { t: fit(n.name, cols), sh: tone, dim: isDim, b: isBright } : { t: fit(n.name, cols), c: colors.name, b: n.id === t.selected, s: status === 'D' && n.kind !== 'dir' },
   ]
   const right: Seg[] = []
   if (meta) right.push({ t: ` ${meta}`, c: theme.muted })
@@ -93,12 +123,17 @@ export function terminalRow(ctx: RowCtx, r: Row): RowSpec {
   return { id: n.id, left: clean(left), right: clean(right) }
 }
 
+function folderGlyphColor(pal: Palette, n: FileNode, changes: number): string {
+  if (n.hidden) return pal.lo
+  return changes ? pal.roles.warn.fg : folderColor(pal)
+}
+
 function desktopIcon(ctx: RowCtx, r: Row, role: Role | null): Seg[] {
   const { pal } = ctx
   const n = r.node
   if (n.kind === 'dir') {
     const changes = (ctx.t.counts[n.id] ?? [0, 0, 0]).reduce((a, b) => a + b, 0)
-    const color = n.hidden ? pal.lo : changes ? pal.roles.warn.fg : folderColor(pal)
+    const color = folderGlyphColor(pal, n, changes)
     const glyph = { t: '■', c: role ? pal.roles[role].fg : color }
     return [{ t: r.open ? '▾ ' : '▸ ', c: pal.lo }, glyph, { t: ' '.repeat(ICON_CELLS - 3) }]
   }

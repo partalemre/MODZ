@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { StepInput } from './agents'
-import { addRun, endRun, isRunning, ownTasks, patchRun, stepReport, stepUsage, toolActivity } from './agents'
+import { addRun, endRun, heard, isRunning, ownTasks, patchRun, stepReport, stepUsage, toolActivity } from './agents'
 import { isNewFlow, mergeFlow } from './flow'
 import { closeEvent, openEvent } from './history'
 import { readingOf, trackLimit } from './limit'
@@ -11,6 +11,8 @@ import type { ProgressInput } from './flow'
 import { deriveJob, joinJob, sealJob } from './job'
 import { STEP_TOOL, TOOL } from './state'
 import { TASK_TOOLS, applyTaskTool, openTasks } from './tasks'
+import { isSame } from './same'
+import { touchFile } from './touched'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
 const agents = atom({ plugin: 'savvy-progress', key: 'agents' } as const, [])
@@ -49,7 +51,8 @@ function onReports(on: On): void {
     const agentId = e.agentId
     if (!agentId) return { result: 'ignored: only subagents report steps' }
     const input = e as unknown as StepInput
-    await update($, agents, list => patchRun(list, agentId, a => stepReport(a, input)))
+    const at = await $.clock.now()
+    await update($, agents, list => patchRun(list, agentId, a => heard(stepReport(a, input), at)))
     return { result: 'ok' }
   })
 }
@@ -83,14 +86,17 @@ function onLaunches(on: On): void {
     const result = await next(e)
     if (e.origin.kind === 'task-notification') return result
     const list = await read($, agents)
-    const kept = await update($, job, prev => sealJob(prev, list))
-    if (!kept || kept.isSealed) await update($, tasks, openTasks)
-    await update($, flow, f => (f?.isFinished ? null : f))
+    // Each write redraws its readers, so one that would change nothing is left out.
+    const before = await read($, job)
+    const kept = isSame(sealJob(before, list), before) ? before : await update($, job, prev => sealJob(prev, list))
+    const open = await read($, tasks)
+    if ((!kept || kept.isSealed) && !isSame(openTasks(open), open)) await update($, tasks, openTasks)
+    if ((await read($, flow))?.isFinished) await update($, flow, f => (f?.isFinished ? null : f))
     return result
   })
 }
 
-// What each loop is doing: tool calls, task lists, model requests and the end of a run.
+// What each loop is doing: its tool calls and task lists.
 function onActivity(on: On): void {
   on('tool.call', async ($, e, next) => {
     const call = e as unknown as Record<string, unknown>
@@ -100,19 +106,23 @@ function onActivity(on: On): void {
     const isTracked = name !== STEP_TOOL
     if (agentId && isTracked) {
       const at = await $.clock.now()
-      await update($, agents, list => patchRun(list, agentId, a => openEvent(toolActivity(a, call), { call, at, id })))
+      const facts = { call, at, id }
+      await update($, agents, list => patchRun(list, agentId, a => heard(openEvent(touchFile(toolActivity(a, call), facts), facts), at)))
     }
     const result = await next(e)
     if (agentId && isTracked) {
       const facts = { id, tool: name, at: await $.clock.now(), isError: result.deny !== undefined || result.isError === true }
-      await update($, agents, list => patchRun(list, agentId, a => closeEvent(a, facts)))
+      await update($, agents, list => patchRun(list, agentId, a => heard(closeEvent(a, facts), facts.at)))
     }
     if (!TASK_TOOLS.includes(name) || result.deny !== undefined || result.isError) return result
     if (agentId) await update($, agents, list => patchRun(list, agentId, a => ownTasks(a, call, result.result)))
     else await update($, tasks, list => applyTaskTool(list, call, result.result))
     return result
   })
+}
 
+// Each loop's model requests and its end.
+function onSteps(on: On): void {
   // Each model request of a subagent: live context, tokens and cost.
   on('turn.step', async function* ($, e, next) {
     const result = yield* next(e)
@@ -120,7 +130,8 @@ function onActivity(on: On): void {
     const usage = result.usage
     if (!agentId || !usage) return result
     const facts = { model: usage.model || e.model, effort: e.effort, usage }
-    await update($, agents, list => patchRun(list, agentId, a => stepUsage(a, facts)))
+    const at = await $.clock.now()
+    await update($, agents, list => patchRun(list, agentId, a => heard(stepUsage(a, facts), at)))
     return result
   })
 
@@ -134,8 +145,12 @@ function onActivity(on: On): void {
   })
 }
 
-const follow = ($: EngineInterface, reading: LimitReading | null) =>
-  reading ? update($, limit, prev => trackLimit(prev, reading)) : Promise.resolve()
+// A measure that moved nothing is not written: every write redraws the band and the pane.
+async function follow($: EngineInterface, reading: LimitReading | null): Promise<void> {
+  if (!reading) return
+  const prev = await read($, limit)
+  if (!isSame(trackLimit(prev, reading), prev)) await update($, limit, p => trackLimit(p, reading))
+}
 
 // Each measure moves the 5h window and the session's dollars, for each agent's share of the limit.
 function onLimit(on: On): void {
@@ -150,4 +165,5 @@ export function onEvents(on: On): void {
   onReports(on)
   onLaunches(on)
   onActivity(on)
+  onSteps(on)
 }

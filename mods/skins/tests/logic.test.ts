@@ -134,10 +134,10 @@ test('a made skin lays its slots over its base, and bad drafts are refused with 
 })
 
 test('painting a slot on a built-in skin forks it into my-<name>', async () => {
-  const made = withSlot('nord', {}, 'user', '#123456')
+  const made = withSlot('nord', {}, { slot: 'user', hex: '#123456' })
 
   expect(typeof made === 'string' ? made : made.name).toBe('my-nord')
-  expect(withSlot('nord', {}, 'user', 'blue')).toContain('#7aa2f7')
+  expect(withSlot('nord', {}, { slot: 'user', hex: 'blue' })).toContain('#7aa2f7')
 })
 
 test('the design tool saves, applies, changes settings and deletes', async () => {
@@ -189,12 +189,11 @@ test('cells are read as colours, diffs, numbers, code or text', async () => {
 test('a vector table stays within its width and escapes what it draws', async () => {
   const card = tableSvg(
     { kind: 'table', header: ['a', 'b'], align: ['left', 'right'], rows: [['<b>', 'Q'.repeat(400)]] },
-    tokyoNight.palette,
-    5000,
+    { palette: tokyoNight.palette, width: 5000 },
   )
 
   expect(card.width).toBe(1600)
-  expect(tableSvg({ kind: 'table', header: ['a'], align: ['left'], rows: [['b']] }, tokyoNight.palette, 700).width).toBe(700)
+  expect(tableSvg({ kind: 'table', header: ['a'], align: ['left'], rows: [['b']] }, { palette: tokyoNight.palette, width: 700 }).width).toBe(700)
   // A long cell wraps instead of being cut: every one of its 400 characters is drawn.
   expect(card.source).not.toContain('…')
   expect((card.source.match(/Q+/g) ?? []).join('').length).toBe(400)
@@ -226,9 +225,9 @@ test('a new file with an empty patch shows its content as added lines', async ()
   expect(diff?.hunks[0]?.lines).toEqual(['+x', '+y'])
   expect(hunksOf({ stdout: '' })).toBeNull()
 
-  const card = diffSvg(diff!, 'a.ts', tokyoNight.palette, 600)
+  const card = diffSvg(diff!, 'a.ts', { palette: tokyoNight.palette, width: 600 })
 
-  expect(card.source).toContain('new file')
+  expect(card.source).toContain('yeni dosya')
   expect(card.alt).toBe('a.ts: +2 −0')
 })
 
@@ -240,7 +239,7 @@ test('shell output loses its colour codes, keeps stderr apart and folds the midd
   expect(lines[0]).toEqual({ text: 'ok', isErr: false })
   expect(lines[6]).toEqual({ fold: 30 })
   expect(lines.at(-1)).toEqual({ text: 'warn: x', isErr: true })
-  expect(terminalSvg(shell!, true, tokyoNight.palette, 600).source).toContain('failed')
+  expect(terminalSvg(shell!, true, { palette: tokyoNight.palette, width: 600 }).source).toContain('hata')
   expect(shellOutputOf({ content: 'x' })).toBeNull()
 })
 
@@ -249,7 +248,7 @@ test('code is split into comments, strings, numbers and keywords by language', a
     'keyword', 'plain', 'plain', 'plain', 'string', 'plain', 'comment',
   ])
   expect(tokenize('x = 1  # note', 'python').at(-1)).toEqual({ text: '# note', role: 'comment' })
-  expect(codeSvg('a\nb', 'ts', tokyoNight.palette, 600).source).toContain('TS')
+  expect(codeSvg('a\nb', 'ts', { palette: tokyoNight.palette, width: 600 }).source).toContain('TS')
 })
 
 test('plan limits read as 5s and 7g, and a meter warns as it fills', async () => {
@@ -264,9 +263,9 @@ test('plan limits read as 5s and 7g, and a meter warns as it fills', async () =>
 })
 
 test('a long cell wraps on its words, breaks a word too long for the column, and caps its lines', async () => {
-  expect(wrapCell('the quick brown fox jumps', 90, false)).toEqual(['the quick', 'brown fox', 'jumps'])
-  expect(wrapCell('x'.repeat(30), 60, true).every(line => measure(line, true) <= 60)).toBe(true)
-  expect(wrapCell('word '.repeat(80), 60, false, 2).at(-1)).toMatch(/…$/)
+  expect(wrapCell('the quick brown fox jumps', 90, { isMono: false })).toEqual(['the quick', 'brown fox', 'jumps'])
+  expect(wrapCell('x'.repeat(30), 60, { isMono: true }).every(line => measure(line, true) <= 60)).toBe(true)
+  expect(wrapCell('word '.repeat(80), 60, { isMono: false, maxLines: 2 }).at(-1)).toMatch(/…$/)
 })
 
 test('short columns keep their width and long ones share the rest', async () => {

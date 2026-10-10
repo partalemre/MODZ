@@ -1,28 +1,46 @@
+import { lookAt } from './identity'
+import type { Eyes, Look } from './identity'
 import { colorOf } from './tiers'
 
 // Pixel Clawd from DockCrab (Clawdy): a 24×18 crab on a 30×28 grid, one costume per tier.
-// The body keeps the brand clay; the tier's color lives in the costume's accent.
-export const CLAY = '#D97757'
+// The body wears the agent's own shell colour (clay by default); the tier's color lives in the costume's accent.
 const INK = '#1F1E1D'
+
+type Box = [x: number, y: number, w: number, h: number]
 
 // `cls` puts a pixel in a named group: `bd` (the default) is the body and its
 // costume, `la`/`lb` the leg pairs, anything else a prop with its own motion.
-type Fill = (x: number, y: number, w: number, h: number, c: string, cls?: string) => void
+type Fill = (box: Box, c: string, cls?: string) => void
 
-const stamp = (f: Fill, x: number, y: number, rows: string[], map: Record<string, string>, cls?: string): void =>
-  rows.forEach((row, dy) => [...row].forEach((ch, dx) => map[ch] && f(x + dx, y + dy, 1, 1, map[ch] ?? '', cls)))
+type Sprite = { x: number; y: number; rows: string[]; map: Record<string, string>; cls?: string }
 
-// `armCls` lets a raised claw travel with the prop it holds.
-const crabBody = (f: Fill, armFront = 0, armCls?: string): void => {
-  f(7, 10, 16, 12, CLAY)
-  f(3, 14, 4, 4, CLAY)
-  f(23, 14 + armFront, 4, 4, CLAY, armCls)
-  f(9, 12, 2, 2, INK)
-  f(19, 12, 2, 2, INK)
-  f(7, 22, 2, 4, CLAY, 'la')
-  f(17, 22, 2, 4, CLAY, 'la')
-  f(11, 22, 2, 4, CLAY, 'lb')
-  f(21, 22, 2, 4, CLAY, 'lb')
+const stamp = (f: Fill, { x, y, rows, map, cls }: Sprite): void =>
+  rows.forEach((row, dy) => [...row].forEach((ch, dx) => map[ch] && f([x + dx, y + dy, 1, 1], map[ch] ?? '', cls)))
+
+// Four pairs of eyes tell agents of one tier apart; a wink keeps one eye and closes the other.
+const eyesOf = (f: Fill, kind: Eyes): void => {
+  const isWide = kind === 'wide'
+  const isTall = kind === 'tall'
+  const y = isTall ? 11 : 12
+  const h = isTall ? 3 : 2
+  f([isWide ? 8 : 9, y, 2, h], INK)
+  if (kind === 'wink') f([19, 13, 3, 1], INK)
+  else f([isWide ? 20 : 19, y, 2, h], INK)
+}
+
+// `front` lifts a claw and `cls` lets it travel with the prop it holds.
+type Arm = { front?: number; cls?: string }
+
+const crabBody = (f: Fill, arm: Arm, look: Look): void => {
+  const c = look.shell
+  f([7, 10, 16, 12], c)
+  f([3, 14, 4, 4], c)
+  f([23, 14 + (arm.front ?? 0), 4, 4], c, arm.cls)
+  eyesOf(f, look.eyes)
+  f([7, 22, 2, 4], c, 'la')
+  f([17, 22, 2, 4], c, 'la')
+  f([11, 22, 2, 4], c, 'lb')
+  f([21, 22, 2, 4], c, 'lb')
 }
 
 // Pure CSS, run by the compositor: no redraws. Periods divide one second, so the
@@ -54,67 +72,68 @@ export const CRAB_CSS = `<style>
 @media (prefers-reduced-motion: reduce){.run,.run g{animation:none!important}}
 </style>`
 
-const COSTUMES: Record<string, (f: Fill, t: string) => void> = {
+const COSTUMES: Record<string, (f: Fill, t: string, look: Look) => void> = {
   // Fable: astronaut in a glass dome; floats instead of walking, the antenna and the star blink.
-  fable: (f, t) => {
-    crabBody(f)
-    f(6, 7, 18, 1, '#E6E8EE'); f(5, 8, 1, 14, '#E6E8EE'); f(24, 8, 1, 14, '#E6E8EE'); f(6, 22, 18, 1, '#C9CCD2')
-    f(6, 8, 18, 14, 'rgba(169,214,245,.32)'); f(8, 9, 2, 1, '#fff'); f(8, 10, 1, 2, '#fff')
-    f(14, 4, 2, 3, '#C9CCD2'); f(14, 2, 2, 2, t, 'ant'); f(13, 18, 4, 2, t)
-    f(27, 3, 1, 3, '#F5C542', 'star'); f(26, 4, 3, 1, '#F5C542', 'star')
+  fable: (f, t, look) => {
+    crabBody(f, {}, look)
+    f([6, 7, 18, 1], '#E6E8EE'); f([5, 8, 1, 14], '#E6E8EE'); f([24, 8, 1, 14], '#E6E8EE'); f([6, 22, 18, 1], '#C9CCD2')
+    f([6, 8, 18, 14], 'rgba(169,214,245,.32)'); f([8, 9, 2, 1], '#fff'); f([8, 10, 1, 2], '#fff')
+    f([14, 4, 2, 3], '#C9CCD2'); f([14, 2, 2, 2], t, 'ant'); f([13, 18, 4, 2], t)
+    f([27, 3, 1, 3], '#F5C542', 'star'); f([26, 4, 3, 1], '#F5C542', 'star')
   },
   // Heavy: detective with a deerstalker; the magnifier sweeps and glints.
-  heavy: (f, t) => {
-    crabBody(f, -4, 'it')
-    stamp(f, 6, 3, ['......bbbbbb......', '....bbcbbcbbbb....', '...bbbbbbbbbbbb...', '..bcbbcbbcbbcbbb..', '.bbbbbbbbbbbbbbbb.', 'dddddddddddddddddd'], { b: '#7A4A26', c: '#A0703F', d: '#5A3519' })
-    f(6, 9, 18, 1, t)
-    stamp(f, 23, 1, ['.kkk.', 'k...k', 'k...k', 'k...k', '.kkk.'], { k: '#3A3A3C' }, 'it')
-    f(24, 2, 3, 3, 'rgba(169,214,245,.7)', 'it'); f(25, 6, 1, 4, '#7A4A26', 'it'); f(24, 2, 1, 1, '#fff', 'gl')
+  heavy: (f, t, look) => {
+    crabBody(f, { front: -4, cls: 'it' }, look)
+    stamp(f, { x: 6, y: 3, rows: ['......bbbbbb......', '....bbcbbcbbbb....', '...bbbbbbbbbbbb...', '..bcbbcbbcbbcbbb..', '.bbbbbbbbbbbbbbbb.', 'dddddddddddddddddd'], map: { b: '#7A4A26', c: '#A0703F', d: '#5A3519' } })
+    f([6, 9, 18, 1], t)
+    stamp(f, { x: 23, y: 1, rows: ['.kkk.', 'k...k', 'k...k', 'k...k', '.kkk.'], map: { k: '#3A3A3C' }, cls: 'it' })
+    f([24, 2, 3, 3], 'rgba(169,214,245,.7)', 'it'); f([25, 6, 1, 4], '#7A4A26', 'it'); f([24, 2, 1, 1], '#fff', 'gl')
   },
   // Careful: engineer in a hard hat; the wrench turns a bolt.
-  careful: (f, t) => {
-    crabBody(f)
-    stamp(f, 6, 4, ['.....yyyyyyyy.....', '...yyyyyhhyyyyy...', '..yyyyyyhhyyyyyy..', '..yyyyyyhhyyyyyy..', '.yyyyyyyhhyyyyyyy.', 'dddddddddddddddddd'], { y: '#F5C542', h: '#FBE08A', d: '#C99A1E' })
-    f(13, 5, 4, 2, t)
-    stamp(f, 0, 10, ['.s.s', 'sss.', '.s..', '.s..'], { s: '#8E929A' }, 'it')
+  careful: (f, t, look) => {
+    crabBody(f, {}, look)
+    stamp(f, { x: 6, y: 4, rows: ['.....yyyyyyyy.....', '...yyyyyhhyyyyy...', '..yyyyyyhhyyyyyy..', '..yyyyyyhhyyyyyy..', '.yyyyyyyhhyyyyyyy.', 'dddddddddddddddddd'], map: { y: '#F5C542', h: '#FBE08A', d: '#C99A1E' } })
+    f([13, 5, 4, 2], t)
+    stamp(f, { x: 0, y: 10, rows: ['.s.s', 'sss.', '.s..', '.s..'], map: { s: '#8E929A' }, cls: 'it' })
   },
   // Medium: chef, the toque traced from DockCrab's Sprites.chefHat; tosses the omelette.
-  medium: (f, t) => {
-    crabBody(f, -4, 'pan')
-    stamp(f, 6, 0, ['........lll.......', '.......lllll......', '.wwwwgwwwwwwgwwwww', 'wwwwwwwwwwwwwwwwww', 'wwwwwwwwwwwwwwwwww', 'wwwwwgwwwwwggwwwww', '.wwwwgwwwwwggwwwww', '.dddbbbbbbbbbbbbb.', '.dddbbbbbbbbbbbbb.', '.dddbbbbbbbbbbbbb.'], { w: '#F4F3EE', l: '#F7F6F2', g: '#D2D1C8', b: t, d: '#B45F43' })
-    f(22, 8, 7, 2, '#4A4A48', 'pan'); f(26, 10, 1, 1, '#4A4A48', 'pan'); f(24, 7, 3, 1, '#F5B731', 'egg')
+  medium: (f, t, look) => {
+    crabBody(f, { front: -4, cls: 'pan' }, look)
+    stamp(f, { x: 6, y: 0, rows: ['........lll.......', '.......lllll......', '.wwwwgwwwwwwgwwwww', 'wwwwwwwwwwwwwwwwww', 'wwwwwwwwwwwwwwwwww', 'wwwwwgwwwwwggwwwww', '.wwwwgwwwwwggwwwww', '.dddbbbbbbbbbbbbb.', '.dddbbbbbbbbbbbbb.', '.dddbbbbbbbbbbbbb.'], map: { w: '#F4F3EE', l: '#F7F6F2', g: '#D2D1C8', b: t, d: '#B45F43' } })
+    f([22, 8, 7, 2], '#4A4A48', 'pan'); f([26, 10, 1, 1], '#4A4A48', 'pan'); f([24, 7, 3, 1], '#F5B731', 'egg')
   },
   // Light: racer in a helmet; runs at double pace, the checkered flag flutters.
-  light: (f, t) => {
-    crabBody(f, -4)
-    stamp(f, 6, 5, ['....rrrrrrrrrr....', '..rrrrrrwwrrrrrr..', '.rrrrrrrwwrrrrrrr.', '.rrrrrrrwwrrrrrrr.', '.rrrrrrrwwrrrrrrr.', '.kkkkkkkkkkkkkkkkr'], { r: t, w: '#F8F6F1', k: INK })
-    f(25, 1, 1, 9, '#8E929A')
-    stamp(f, 26, 1, ['wkwk', 'kwkw', 'wkwk'], { w: '#F8F6F1', k: INK }, 'flag')
+  light: (f, t, look) => {
+    crabBody(f, { front: -4 }, look)
+    stamp(f, { x: 6, y: 5, rows: ['....rrrrrrrrrr....', '..rrrrrrwwrrrrrr..', '.rrrrrrrwwrrrrrrr.', '.rrrrrrrwwrrrrrrr.', '.rrrrrrrwwrrrrrrr.', '.kkkkkkkkkkkkkkkkr'], map: { r: t, w: '#F8F6F1', k: INK } })
+    f([25, 1, 1, 9], '#8E929A')
+    stamp(f, { x: 26, y: 1, rows: ['wkwk', 'kwkw', 'wkwk'], map: { w: '#F8F6F1', k: INK }, cls: 'flag' })
   },
   // Explore: pirate scouting the code; the cutlass fences.
-  explore: f => {
-    crabBody(f)
-    stamp(f, 5, 3, ['.kk..............kk.', '.kkk....kkkk....kkk.', '..kkkkkkkwwkkkkkkk..', '..kkkkkkkkkkkkkkkk..', '.gggggggggggggggggg.'], { k: '#55514C', w: '#F8F6F1', g: '#F5C542' })
-    f(7, 11, 11, 1, INK); f(18, 11, 4, 3, INK)
-    f(27, 6, 1, 9, '#C9CCD2', 'it'); f(26, 15, 3, 1, '#7A4A26', 'it')
+  explore: (f, _t, look) => {
+    crabBody(f, {}, look)
+    stamp(f, { x: 5, y: 3, rows: ['.kk..............kk.', '.kkk....kkkk....kkk.', '..kkkkkkkwwkkkkkkk..', '..kkkkkkkkkkkkkkkk..', '.gggggggggggggggggg.'], map: { k: '#55514C', w: '#F8F6F1', g: '#F5C542' } })
+    f([7, 11, 11, 1], INK); f([18, 11, 4, 3], INK)
+    f([27, 6, 1, 9], '#C9CCD2', 'it'); f([26, 15, 3, 1], '#7A4A26', 'it')
   },
-  other: f => crabBody(f),
+  other: (f, _t, look) => crabBody(f, {}, look),
 }
 
 const CRAB_SCALE = 1.1
 
 // Body and props nest inside `bd` so a prop rides the bob and adds its own motion;
 // legs stay outside it and step on their own.
-export type CrabOptions = { costume: string; isDim?: boolean; isWalking?: boolean; scale?: number }
+export type CrabOptions = { costume: string; look?: Look; isDim?: boolean; isWalking?: boolean; scale?: number }
 
 export const crab = (x: number, y: number, opts: CrabOptions): string => {
   const groups = new Map<string, string[]>([['bd', []]])
-  const f: Fill = (cx, cy, w, h, c, cls = 'bd') => {
+  const f: Fill = ([cx, cy, w, h], c, cls = 'bd') => {
     if (!groups.has(cls)) groups.set(cls, [])
     groups.get(cls)?.push(`<rect x="${cx}" y="${cy}" width="${w}" height="${h}" fill="${c}"/>`)
   }
-  const draw = COSTUMES[opts.costume] ?? ((g: Fill) => crabBody(g))
-  draw(f, colorOf(opts.costume))
+  const look = opts.look ?? lookAt(0)
+  const draw = COSTUMES[opts.costume] ?? ((g: Fill, _t: string, l: Look) => crabBody(g, {}, l))
+  draw(f, colorOf(opts.costume), look)
   const group = (cls: string) => `<g class="${cls}">${(groups.get(cls) ?? []).join('')}</g>`
   const props = [...groups.keys()].filter(k => k !== 'bd' && k !== 'la' && k !== 'lb')
   const body = `<g class="bd">${(groups.get('bd') ?? []).join('')}${props.map(group).join('')}</g>`

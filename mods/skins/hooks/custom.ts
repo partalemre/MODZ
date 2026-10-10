@@ -165,8 +165,7 @@ export function buildCustom(draft: Draft, existing: CustomSkin | undefined): Cus
 export function withSlot(
   current: string,
   custom: Customs,
-  slot: SkinSlot,
-  hex: string,
+  { slot, hex }: { slot: SkinSlot; hex: string },
 ): { name: string; skin: CustomSkin } | string {
   if (!HEX.test(hex)) {
     return 'use a colour like #7aa2f7'

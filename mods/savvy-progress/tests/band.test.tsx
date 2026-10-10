@@ -98,7 +98,7 @@ for (const surface of SURFACES) {
     expect(await (await mount($)).drawn()).toEqual(OTHERS)
   })
 
-  test(`${surface}: the crew button opens the Ajanlar pane`, async ($, on) => {
+  test(`${surface}: the crew button opens the İlerleme pane`, async ($, on) => {
     last = undefined
     const { world } = await setup($, on)
     await spawn($, 'One')

@@ -1,4 +1,4 @@
-import { ago, failuresOf, isFailing } from './parse'
+import { ago, failuresOf } from './parse'
 import type { Role } from './tidemark'
 import type { CheckOutcome, Failure, Suite, SuiteFilter, TestBadge } from '../types'
 
@@ -20,16 +20,22 @@ const CHIPS: { filter: SuiteFilter; label: string }[] = [
 ]
 export const SUITE_TAG: Record<Suite, string> = { unit: 'birim', e2e: 'e2e', lint: 'lint', typecheck: 'tip' }
 
-const failedOf = (outcome: CheckOutcome): number | null =>
-  outcome.passed === null || outcome.total === null ? null : outcome.total - outcome.passed
+// How many tests failed, when the runner counted them. A failing run with none counted as failed
+// (a coverage gate, a crash after the last test) has no count to show: it reads "kaldı" alone.
+function failedOf(outcome: CheckOutcome): number | null {
+  if (outcome.passed === null || outcome.total === null) return null
+  const failed = outcome.total - outcome.passed
+
+  return outcome.status === 'fail' && failed <= 0 ? null : failed
+}
 
 function testsPill(outcome: CheckOutcome): BadgePill {
   if (outcome.status === 'timeout') return { tone: 'amber', glyph: 'x', label: 'test zaman aşımı' }
   if (outcome.status === 'error') return { tone: 'amber', glyph: 'x', label: 'test başlamadı' }
   const failed = failedOf(outcome)
-  if (outcome.status === 'pass') return { tone: 'moss', glyph: 'check', label: failed === null ? 'test geçti' : `test ${outcome.passed}/${outcome.total}` }
+  if (outcome.status === 'pass') return { tone: 'moss', glyph: 'check', label: failed === null ? 'test geçti' : `${outcome.passed}/${outcome.total} geçti` }
 
-  return { tone: 'flare', glyph: 'x', label: failed === null ? 'test kaldı' : `${failed}/${outcome.total}` }
+  return { tone: 'flare', glyph: 'x', label: failed === null ? 'test kaldı' : `${failed}/${outcome.total} kaldı` }
 }
 
 function lintPill(outcome: CheckOutcome): BadgePill {
@@ -37,7 +43,7 @@ function lintPill(outcome: CheckOutcome): BadgePill {
   if (outcome.status === 'error') return { tone: 'amber', label: 'lint başlamadı' }
   if (outcome.status === 'pass') return { tone: 'neutral', label: 'lint temiz' }
 
-  return { tone: 'amber', label: outcome.errors !== null && outcome.errors > 0 ? `lint ${outcome.errors}` : 'lint kaldı' }
+  return { tone: 'amber', label: outcome.errors !== null && outcome.errors > 0 ? `lint ${outcome.errors} hata` : 'lint kaldı' }
 }
 
 // The band: one pill per check, then how long ago, in text.lo; while running, one Iris pill.
@@ -74,7 +80,9 @@ export function headlineOf(badge: TestBadge): Headline {
   if (tests !== null && tests.status === 'fail') {
     const failed = failedOf(tests)
 
-    return failed === null ? { lead: 'Testler kaldı', tone: 'flare', rest: '' } : { lead: `${failed} başarısız`, tone: 'flare', rest: ` · ${tests.passed} geçti` }
+    const rest = tests.passed === null ? '' : ` · ${tests.passed} geçti`
+
+    return failed === null ? { lead: 'Testler kaldı', tone: 'flare', rest } : { lead: `${failed} başarısız`, tone: 'flare', rest }
   }
   const linted = lintLead(lint)
   if (linted !== null) return { ...linted, rest: passedRest(tests) }
@@ -82,11 +90,12 @@ export function headlineOf(badge: TestBadge): Headline {
   return { lead: 'Hepsi geçti', tone: 'moss', rest: `${passedRest(tests)}${lint === null ? '' : ' · lint temiz'}` }
 }
 
+// The eyebrow wears the headline's role: Flare only when tests failed, Amber for lint or a run that
+// did not finish, Moss when all passed.
 export function eyebrowRole(badge: TestBadge): Role {
-  if (badge.isRunning) return 'iris'
-  if (badge.finishedAt === null) return 'tide'
+  const tone = headlineOf(badge).tone
 
-  return isFailing(badge) ? 'flare' : 'moss'
+  return tone === 'neutral' ? 'tide' : tone
 }
 
 export function runMeta(badge: TestBadge, now: number): string {
@@ -95,10 +104,12 @@ export function runMeta(badge: TestBadge, now: number): string {
   return `${ago(now - badge.finishedAt)} · ${Math.max(1, Math.round(badge.durationMs / SECOND))} sn sürdü`
 }
 
-export function chipsOf(badge: TestBadge): Chip[] {
+// The filter chips worth a press: "Hepsi", every suite that has failures, and the one in use.
+export function chipsOf(badge: TestBadge, current: SuiteFilter = 'all'): Chip[] {
   const all = failuresOf(badge)
+  const counted = CHIPS.map(chip => ({ ...chip, count: chip.filter === 'all' ? all.length : all.filter(item => item.suite === chip.filter).length }))
 
-  return CHIPS.map(chip => ({ ...chip, count: chip.filter === 'all' ? all.length : all.filter(item => item.suite === chip.filter).length }))
+  return counted.filter(chip => chip.filter === 'all' || chip.filter === current || chip.count > 0)
 }
 
 // The failures the filter keeps, grouped by file: test suites first, files in order of appearance.

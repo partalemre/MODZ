@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
-# Copy the MODZ kit (kit/*.ts, kit/*.tsx) into <mod>/hooks/kit/, byte for byte.
+# Keep each mod's copy of the MODZ kit byte-identical to kit/, and only as large as the mod needs.
 # Usage: bin/kit-sync [mod ...]   a mod is a name under mods/ or .staging/, or a plugin folder.
-# With no mods: every mod under mods/ and .staging/ that already has hooks/kit.
-# Writes only inside <mod>/hooks/kit/; never deletes. Kit files there that kit/ no longer
-# has are listed as stale for you to remove.
+# With no mods: every mod under mods/ and .staging/.
+#
+# hooks/kit/: the kit files the mod's own hooks and tests import, followed through the kit's own imports, are
+# copied; kit files nothing reaches are removed. A flat copy (hooks/pin.ts) whose first line is the kit
+# file's own header is refreshed in place.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-KIT="$ROOT/kit"
-shopt -s nullglob
 
 resolve() {
   if [[ -d "$1/hooks" ]]; then (cd "$1" && pwd); return; fi
-  if [[ -d "$ROOT/$1/hooks" ]]; then (cd "$ROOT/$1" && pwd); return; fi
   for base in "$ROOT/mods" "$ROOT/.staging"; do
     if [[ -d "$base/$1/hooks" ]]; then echo "$base/$1"; return; fi
   done
@@ -22,21 +21,52 @@ targets=()
 if [[ $# -gt 0 ]]; then
   for arg in "$@"; do targets+=("$(resolve "$arg")"); done
 else
-  for dir in "$ROOT"/mods/*/hooks/kit "$ROOT"/.staging/*/hooks/kit; do targets+=("$(dirname "$(dirname "$dir")")"); done
+  for dir in "$ROOT"/mods/*/hooks "$ROOT"/.staging/*/hooks; do [[ -d "$dir" ]] && targets+=("$(dirname "$dir")"); done
 fi
-[[ ${#targets[@]} -gt 0 ]] || { echo "kit-sync: nothing to sync (no mod has hooks/kit; name one)"; exit 0; }
 
-sources=("$KIT"/*.ts "$KIT"/*.tsx)
-for mod in "${targets[@]}"; do
-  dest="$mod/hooks/kit"
-  mkdir -p "$dest"
-  changed=0
-  for src in "${sources[@]}"; do
-    name="$(basename "$src")"
-    if ! cmp -s "$src" "$dest/$name"; then cp "$src" "$dest/$name"; changed=$((changed + 1)); fi
-  done
-  echo "${mod#$ROOT/}: $changed of ${#sources[@]} kit files updated"
-  for file in "$dest"/*.ts "$dest"/*.tsx; do
-    [[ -e "$KIT/$(basename "$file")" ]] || echo "  stale: ${file#$ROOT/} (not in kit/)"
-  done
-done
+python3 - "$ROOT/kit" "${targets[@]}" <<'PY'
+import pathlib, re, shutil, sys
+
+kit = pathlib.Path(sys.argv[1])
+sources = {p.name: p for p in kit.iterdir() if p.suffix in ('.ts', '.tsx')}
+IMPORT = re.compile(r"""from ['"]\./(?:kit/)?([\w-]+)['"]""")
+
+
+def stem_file(stem):
+    return next((n for n in (stem + '.ts', stem + '.tsx') if n in sources), None)
+
+
+def kit_closure(names):
+    seen, todo = set(), list(names)
+    while todo:
+        name = todo.pop()
+        if name in seen:
+            continue
+        seen.add(name)
+        todo += [f for f in map(stem_file, IMPORT.findall(sources[name].read_text())) if f]
+    return seen
+
+
+for mod in map(pathlib.Path, sys.argv[2:]):
+    hooks, dest, changed, removed = mod / 'hooks', mod / 'hooks' / 'kit', 0, 0
+    if dest.is_dir():
+        own = [p for p in hooks.rglob('*.ts*') if dest not in p.parents] + list((mod / 'tests').rglob('*.ts*'))
+        wanted = kit_closure({f for p in own for f in map(stem_file, re.findall(r"from ['\"]\.{1,2}/(?:[\w-]+/)*kit/([\w-]+)['\"]", p.read_text())) if f})
+        for name in wanted:
+            if not (dest / name).exists() or (dest / name).read_bytes() != sources[name].read_bytes():
+                shutil.copy(sources[name], dest / name)
+                changed += 1
+        for p in dest.iterdir():
+            if p.name not in wanted:
+                p.unlink()
+                removed += 1
+    for p in hooks.iterdir():
+        src = sources.get(p.name)
+        if src is None or not p.is_file():
+            continue
+        head = src.read_text().split('\n', 1)[0]
+        if p.read_text().split('\n', 1)[0] == head and p.read_bytes() != src.read_bytes():
+            shutil.copy(src, p)
+            changed += 1
+    print(f"{mod.name}: {changed} kit files updated, {removed} unused removed")
+PY

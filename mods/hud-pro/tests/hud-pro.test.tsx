@@ -1,7 +1,8 @@
 import { expect, test } from 'claude-code/testing'
 
 import { costText, filledCells, paceOf, toneOf, untilReset } from '../hooks/format'
-import { BAND, MS_PER_HOUR, PANE, USAGE, start, stubSession, toasts } from './stubs'
+import { hubOf, isOwnOpen } from '../hooks/hub'
+import { BAND, MS_PER_HOUR, PANE, USAGE, opens, start, stubSession, toasts } from './stubs'
 
 const SURFACES = ['terminal', 'desktop'] as const
 
@@ -28,7 +29,7 @@ test('terminal: one text line under what others drew, 5s with reset, 7g, bağlam
 
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
 
-  for (const text of ['theirs', '5s', '%32', '· 2sa 0dk', '7g', '%91', '· 3g 22sa', 'bağlam', '%41', '≈$1,23']) {
+  for (const text of ['theirs', '5s', '%32', '↻ 2sa 0dk', '7g', '%91', '↻ 3g 22sa', 'bağlam', '%41', '≈$1,23']) {
     expect(await ui.find({ type: 'Text', text })).toBeDefined()
   }
   const order = (await ui.findAll({ type: 'Text' })).map((found: any) => found.text)
@@ -51,7 +52,7 @@ test('desktop: one transparent Svg line of pills with meters and pace ticks, und
   expect(svg?.props.source).not.toContain('<path')
   expect(svg?.props.isInteractive).toBeUndefined()
   expect(svg?.props.source).toContain('prefers-color-scheme: light')
-  expect(svg?.props.source).toContain('f-warn num')
+  expect(svg?.props.source).toContain('f-warn tab')
   const drawn = JSON.stringify(await ui.drawn())
   expect(drawn.indexOf('theirs')).toBeLessThan(drawn.indexOf('"Svg"'))
   expect(await ui.find({ key: 'compact' })).toBeUndefined()
@@ -63,7 +64,8 @@ test('a narrow band drops bars first, then the reset and cost; the desktop line 
 
   const medium = await $.ui.mount({ ...BAND, surface: 'terminal', props: { ...BAND.props, bodyColumns: 60 } })
   expect(await medium.find({ type: 'Text', text: /━/ })).toBeUndefined()
-  expect(await medium.find({ type: 'Text', text: '· 2sa 0dk' })).toBeDefined()
+  expect(await medium.find({ type: 'Text', text: '↻ 2sa 0dk' })).toBeDefined()
+  expect(await medium.find({ type: 'Text', text: '↻ 3g 22sa' })).toBeUndefined()
   await medium.unmount()
 
   const narrow = await $.ui.mount({ ...BAND, surface: 'terminal', props: { ...BAND.props, bodyColumns: 40 } })
@@ -75,7 +77,45 @@ test('a narrow band drops bars first, then the reset and cost; the desktop line 
   expect(((await desk.find({ type: 'Svg' })) as Drawn)?.props.width).toBeLessThanOrEqual(50 * 6.4)
 })
 
+const CRITICAL: any = {
+  ...USAGE,
+  rateLimits: [
+    { kind: 'five_hour', percentUsed: 99, resetsAt: new Date(MS_PER_HOUR + 20 * 60_000).toISOString() },
+    { kind: 'seven_day', percentUsed: 24, resetsAt: new Date(94 * MS_PER_HOUR).toISOString() },
+  ],
+}
+// Columns at which every other reset has dropped from the line, on each surface.
+const NARROW_COLUMNS = { terminal: 40, desktop: 64 } as const
+
 for (const surface of SURFACES) {
+  test(`a critical window keeps its reset on a narrow band and reads Flare (${surface})`, async ($, on) => {
+    stubSession(on, CRITICAL)
+    await start($, surface)
+
+    const ui = await $.ui.mount({ ...BAND, surface, props: { ...BAND.props, bodyColumns: NARROW_COLUMNS[surface] } })
+    if (surface === 'terminal') {
+      expect((await ui.find({ type: 'Text', text: '%99' }))?.props?.color).toBe('error')
+      expect((await ui.find({ type: 'Text', text: '↻ 1sa 20dk' }))?.props?.color).toBe('error')
+      expect(await ui.find({ type: 'Text', text: '↻ 3g 22sa' })).toBeUndefined()
+    } else {
+      const source = ((await ui.find({ type: 'Svg' })) as Drawn)?.props.source ?? ''
+      expect(source).toContain('f-danger-t s-danger-l')
+      expect(source).toContain('↻ 1sa 20dk')
+      expect(source).not.toContain('↻ 3g 22sa')
+      expect(((await ui.find({ type: 'Svg' })) as Drawn)?.props.width).toBeLessThanOrEqual(NARROW_COLUMNS.desktop * 6.4)
+    }
+  })
+
+  test(`a full window reads "dolu", never past 100 (${surface})`, async ($, on) => {
+    stubSession(on, { ...CRITICAL, rateLimits: [{ ...CRITICAL.rateLimits[0], percentUsed: 104 }] })
+    await start($, surface)
+
+    const ui = await $.ui.mount({ ...BAND, surface })
+    if (surface === 'terminal') expect(await ui.find({ type: 'Text', text: 'dolu' })).toBeDefined()
+    else expect(((await ui.find({ type: 'Svg' })) as Drawn)?.props.alt).toContain('5 saat dolu, 1sa 20dk sonra sıfırlanır')
+    expect(await ui.find({ type: 'Text', text: '%104' })).toBeUndefined()
+  })
+
   test(`the line gives way to a survey and to /hud (${surface})`, async ($, on) => {
     stubSession(on)
     await start($, surface)
@@ -128,7 +168,7 @@ test('a limit past 90% raises one notice per window', async ($, on) => {
   await $.session.measure(MEASURE)
   await $.session.measure(MEASURE)
 
-  expect(toasts.filter(text => text === '7 gün limiti %91 dolu').length).toBe(1)
+  expect(toasts.filter(text => text === '7 gün limiti %91 dolu · ↻ 3g 22sa').length).toBe(1)
 })
 
 async function fullPane($: any, on: any, surface: string) {
@@ -173,4 +213,59 @@ test('the pane says so before the first reading', async ($, on) => {
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
 
   expect(await ui.find({ type: 'Text', text: /^Henüz ölçüm yok/ })).toBeDefined()
+})
+
+const fiveAt = (percentUsed: number) => ({ ...MEASURE, rateLimits: [{ ...USAGE.rateLimits[0], percentUsed }, USAGE.rateLimits[1]] })
+
+// Every card hud-pro writes, in order.
+function watchHub(on: any): any[] {
+  const cards: any[] = []
+  on('state.set', { plugin: 'hud-pro', key: 'hub' }, (_: any, e: any, next: any) => {
+    cards.push(e.value)
+
+    return next(e)
+  })
+
+  return cards
+}
+
+test('the MODZ card reads both plan windows, the 5-hour one sets its tone, a same card is not rewritten', async ($, on) => {
+  stubSession(on)
+  const cards = watchHub(on)
+  await start($, 'desktop')
+
+  expect(cards).toEqual([expect.objectContaining({ pane: 'usage', detail: '5s %32 · 7g %91', tone: 'idle' })])
+  await $.session.measure(MEASURE)
+  expect(cards).toHaveLength(1)
+  await $.session.measure(fiveAt(85))
+  await $.session.measure(fiveAt(96))
+  expect(cards.slice(1)).toEqual([
+    expect.objectContaining({ detail: '5s %85 · 7g %91', tone: 'warn' }),
+    expect.objectContaining({ detail: '5s %96 · 7g %91', tone: 'bad' }),
+  ])
+  expect(hubOf(null)).toEqual({ detail: '', tone: 'idle' })
+})
+
+// A stand-in for the MODZ main panel: a press on one of its rows writes `modz.open`.
+const MODZ = {
+  name: 'modz',
+  register(on: any) {
+    on('command.run', { command: 'modz-press' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'open' }, { pane: e.args, at: 1 })
+
+      return {}
+    })
+  },
+}
+
+test('a MODZ open request for usage opens the Kullanım pane, and only that one', { plugins: [MODZ] } as any, async ($: any, on: any) => {
+  stubSession(on)
+  await start($, 'desktop')
+
+  expect(isOwnOpen({ pane: 'usage', at: 1 })).toBe(true)
+  expect(isOwnOpen(undefined)).toBe(false)
+  await $.command.run({ command: 'modz-press', args: 'skins' })
+  expect(opens).toEqual([])
+  await $.command.run({ command: 'modz-press', args: 'usage' })
+  expect(opens).toEqual([expect.objectContaining({ id: 'hud-pro', title: 'Kullanım', focus: true })])
 })

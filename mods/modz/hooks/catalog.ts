@@ -13,7 +13,7 @@ export type ModInfo = {
   // "owner/repo" of the project a mod is built on; null for one made in MODZ.
   upstream: string | null
   isHealthy: boolean
-  // settings' enabledPlugins, else a ~/.claude/skills/<name> link; null when neither says.
+  // settings' enabledPlugins, else a skills link (user's or the project's); null when neither says.
   isEnabled: boolean | null
 }
 
@@ -27,11 +27,25 @@ export type CatalogOptions = {
   root: string
   // settings' enabledPlugins, keyed "name@market"; narrowed to this marketplace here.
   enabledPlugins?: Record<string, unknown>
-  // Whether ~/.claude/skills/<name> exists: how this repo's mods are enabled.
+  // Whether a skills-folder link to the mod exists: how this repo's mods are enabled.
   hasLink?: HasLink
 }
 
 export type Market = { name: string; mods: ModInfo[] }
+
+const SKILLS_DIR = '.claude/skills'
+
+// A mod is linked from the user's skills folder (every session on this machine) or from the
+// project's (a cloud session gets only what the repo carries). Blank roots are skipped.
+export function linkCheck(spec: { roots: (string | undefined)[]; exists: (path: string) => Promise<boolean> }): HasLink {
+  const dirs = spec.roots.filter((root): root is string => Boolean(root)).map(root => `${root}/${SKILLS_DIR}`)
+
+  return async name => {
+    for (const dir of dirs) if (await spec.exists(`${dir}/${name}`).catch(() => false)) return true
+
+    return false
+  }
+}
 
 // The mod lives in MODZ/mods/modz; given its real path (not the ~/.claude/skills
 // symlink), the marketplace root is two levels up.
@@ -77,7 +91,7 @@ function infoOf(facts: Facts): ModInfo {
   return {
     name,
     version: text(manifest?.version) ?? text(entry.version) ?? UNKNOWN_VERSION,
-    description: problem ?? text(manifest?.description) ?? text(entry.description) ?? (manifest ? '' : UNREADABLE),
+    description: problem ?? meta?.summary ?? text(manifest?.description) ?? text(entry.description) ?? (manifest ? '' : UNREADABLE),
     group: meta?.group ?? 'Diğer',
     surfaces: meta?.surfaces ?? BOTH,
     upstream: upstreamOf(name, manifest),
@@ -141,4 +155,11 @@ export function headline(mods: ModInfo[]): string {
   const unknown = mods.length - known.length
 
   return unknown === 0 ? `${mods.length} mod · ${state}` : `${mods.length} mod · ${state} · ${unknown} bilinmiyor`
+}
+
+// The catalog head's right side: problems are named, a clean catalog says so quietly.
+export function healthOf(mods: ModInfo[]): { text: string; isBad: boolean } {
+  const bad = mods.filter(mod => !mod.isHealthy).length
+
+  return bad === 0 ? { text: 'hepsi sağlıklı', isBad: false } : { text: `${bad} sorunlu`, isBad: true }
 }

@@ -1,5 +1,5 @@
 import { SUITE_TAG, durationText, eyebrowRole, headlineOf, runMeta, spanOf } from './summary'
-import { bar, eyebrow, fileBadge, fit, highlight, icon, measure, rect, runs, svgDoc, text } from './svg'
+import { bar, esc, eyebrow, fileBadge, fit, fitStart, highlight, icon, measure, rect, runs, svgDoc, text, wrapText } from './svg'
 import type { Ink } from './svg'
 import type { Mode } from './tidemark'
 import type { Failure, TestBadge } from '../types'
@@ -19,9 +19,22 @@ const PATH = { size: 12.5, weight: 600 }
 const HEADER_H = 66
 const HEADER_BARLESS_H = 52
 const FILE_H = 26
-const ROW_H = 44
-const ROW_SHORT_H = 26
+const ROW_BASE = 17
+const NAME_LINE = 18
+const MESSAGE_GAP = 19
+const MESSAGE_LINE = 16
+const ROW_PAD = 9
+const TEXT_INDENT = 4
+const NAME_LINES = 4
+const MESSAGE_LINES = 8
 const SKELETON_H = 64
+const EMPTY_FONT = { size: 13 }
+const EMPTY_LINE = 18
+const EMPTY_TOP = 40
+// Semibold runs wider than the regular advance `measure` assumes.
+const BOLD_WIDEN = 1.06
+export const EMPTY_LEAD = 'Henüz test koşusu yok'
+export const EMPTY_HOW = 'kaynak dosya değişince kendiliğinden çalışır'
 
 const inkOf = (tone: string): Ink => (tone === 'neutral' ? 'hi' : (tone as Ink))
 
@@ -51,7 +64,7 @@ export function fileHeadSvg(frame: Frame, spec: { file: string | null; count: nu
   const path = spec.file ?? 'dosya belirtilmemiş'
   const cut = path.lastIndexOf('/')
   const name = fit(path.slice(cut + 1), room, PATH)
-  const dir = fit(path.slice(0, cut + 1), Math.max(0, room - measure(name, PATH)), { size: PATH.size }, true)
+  const dir = fitStart(path.slice(0, cut + 1), Math.max(0, room - measure(name, PATH)), { size: PATH.size })
   const body = fileBadge({ x: 0, y: 5, path })
     + runs({ x: 34, y: 17.5, size: PATH.size, parts: [{ text: dir === '…' ? '' : dir, ink: 'lo', weight: 500 }, { text: name, ink: 'hi', weight: PATH.weight }] })
     + text({ ...META, x: frame.width, y: 17.5, text: count, ink: 'lo', anchor: 'end' })
@@ -59,21 +72,50 @@ export function fileHeadSvg(frame: Frame, spec: { file: string | null; count: nu
   return { source: svgDoc({ width: frame.width, height: FILE_H, mode: frame.mode, body }), width: frame.width, height: FILE_H, alt: `${path}: ${count}` }
 }
 
-// One failure: `file:line` span, the test's name, suite and time on the right, the error below.
+// One failure: `file:line` span, suite and time on the right, the test's name beside the span when it fits
+// and on lines of its own when not, then the error, wrapped rather than cut.
 export function rowSvg(frame: Frame, failure: Failure): Drawing {
   const isCheck = failure.suite === 'lint' || failure.suite === 'typecheck'
-  const span = highlight({ x: 0, y: 17, text: spanOf(failure), role: isCheck ? 'amber' : 'flare', font: SPAN })
+  const span = highlight({ x: 0, y: ROW_BASE, text: spanOf(failure), role: isCheck ? 'amber' : 'flare', font: SPAN })
   const meta = [SUITE_TAG[failure.suite], durationText(failure.durationMs)].filter(part => part !== '').join(' · ')
   const titleX = span.width + 10
-  const room = frame.width - titleX - measure(meta, META) - 14
-  const title = text({ ...TITLE, x: titleX, y: 17, text: fit(failure.name, room, TITLE), ink: 'hi' })
-  const right = text({ ...META, x: frame.width, y: 17, text: meta, ink: 'lo', anchor: 'end' })
-  const hasMessage = failure.message !== ''
-  const height = hasMessage ? ROW_H : ROW_SHORT_H
-  const message = hasMessage ? text({ ...MESSAGE, x: 4, y: 36, text: fit(failure.message, frame.width - 4, MESSAGE), ink: 'mid' }) : ''
-  const source = svgDoc({ width: frame.width, height, mode: frame.mode, body: span.svg + title + right + message })
+  const isInline = measure(failure.name, TITLE) <= frame.width - titleX - measure(meta, META) - 14
+  const names = isInline ? [failure.name] : wrapText(failure.name, { width: frame.width - TEXT_INDENT, font: TITLE, maxLines: NAME_LINES })
+  const title = names.map((line, n) => text({ ...TITLE, x: isInline ? titleX : TEXT_INDENT, y: ROW_BASE + (isInline ? 0 : (n + 1) * NAME_LINE), text: line, ink: 'hi' }))
+  const right = text({ ...META, x: frame.width, y: ROW_BASE, text: meta, ink: 'lo', anchor: 'end' })
+  const nameBottom = ROW_BASE + (isInline ? 0 : names.length * NAME_LINE)
+  const messages = failure.message === '' ? [] : wrapText(failure.message, { width: frame.width - TEXT_INDENT, font: MESSAGE, maxLines: MESSAGE_LINES })
+  const message = messages.map((line, n) => text({ ...MESSAGE, x: TEXT_INDENT, y: nameBottom + MESSAGE_GAP + n * MESSAGE_LINE, text: line, ink: 'mid' }))
+  const height = (messages.length === 0 ? nameBottom : nameBottom + MESSAGE_GAP + (messages.length - 1) * MESSAGE_LINE) + ROW_PAD
+  const source = svgDoc({ width: frame.width, height, mode: frame.mode, body: span.svg + title.join('') + right + message.join('') })
 
-  return { source, width: frame.width, height, alt: `${spanOf(failure)} ${failure.name}${hasMessage ? `: ${failure.message}` : ''}` }
+  return { source, width: frame.width, height, alt: `${spanOf(failure)} ${failure.name}${failure.message === '' ? '' : `: ${failure.message}`}` }
+}
+
+// No run yet: the eyebrow and one sentence, its lead in text.hi, laid into lines that keep each word's ink.
+export function emptySvg(frame: Frame): Drawing {
+  const words = [...`${EMPTY_LEAD} ·`.split(' ').map(word => ({ word, isLead: word !== '·' })), ...EMPTY_HOW.split(' ').map(word => ({ word, isLead: false }))]
+  const lines: (typeof words)[] = [[]]
+  let used = 0
+  for (const item of words) {
+    const line = lines[lines.length - 1] as typeof words
+    const wide = measure(item.word, EMPTY_FONT) * (item.isLead ? BOLD_WIDEN : 1)
+    const next = used + (line.length === 0 ? 0 : measure(' ', EMPTY_FONT)) + wide
+    const isBreak = line.length > 0 && next > frame.width
+    if (isBreak) lines.push([item])
+    else line.push(item)
+    used = isBreak ? wide : next
+  }
+  const body = lines.map((line, n) => {
+    const spans = line.map((item, k) => `<tspan${item.isLead ? ' font-weight="600"' : ''} style="fill:var(--${item.isLead ? 'hi' : 'mid'})">${k === 0 ? '' : ' '}${esc(item.word)}</tspan>`)
+
+    return `<text x="0" y="${EMPTY_TOP + n * EMPTY_LINE}" font-size="${EMPTY_FONT.size}" xml:space="preserve">${spans.join('')}</text>`
+  })
+  const height = EMPTY_TOP + (lines.length - 1) * EMPTY_LINE + ROW_PAD
+  const head = eyebrow({ x: 0, y: 13, width: frame.width, label: 'Testler', role: 'tide' })
+  const source = svgDoc({ width: frame.width, height, mode: frame.mode, body: head + body.join('') })
+
+  return { source, width: frame.width, height, alt: `Testler: ${EMPTY_LEAD} · ${EMPTY_HOW}` }
 }
 
 export function tailHeadSvg(frame: Frame, title: string): Drawing {

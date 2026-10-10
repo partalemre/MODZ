@@ -36,12 +36,15 @@ export async function gitBinary(run: Run, cwd: string): Promise<string | null> {
   return null
 }
 
-async function git(run: Run, repo: Repo, args: string[], init: ProcessRunInit = {}): Promise<string> {
+async function gitWith(run: Run, repo: Repo, call: { args: string[]; init: ProcessRunInit }): Promise<string> {
+  const { args, init } = call
   const out = await run(argvOf(repo, args), { cwd: repo.root, ...init })
   if (out.exitCode !== 0) throw new Error(`git ${args[0]} failed: ${out.stderr.trim().slice(0, 200)}`)
 
   return out.stdout.trim()
 }
+
+const git = (run: Run, repo: Repo, args: string[]): Promise<string> => gitWith(run, repo, { args, init: {} })
 
 function chunks<T>(items: T[]): T[][] {
   const out: T[][] = []
@@ -56,7 +59,8 @@ export function slug(text: string): string {
   return text.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^[-.]+|[-.]+$/g, '').slice(0, 120) || 'root'
 }
 
-export async function locate(run: Run, opts: { cwd: string; home: string; bin: string }): Promise<Repo | null> {
+// `isProbeOnly` finds a shadow repo made before but never makes one (a look at what exists, not a snapshot).
+export async function locate(run: Run, opts: { cwd: string; home: string; bin: string; isProbeOnly?: boolean }): Promise<Repo | null> {
   const { cwd, home, bin } = opts
   const found = await run([bin, 'rev-parse', '--show-toplevel', '--absolute-git-dir'], { cwd })
   const [root, gitDir] = found.stdout.trim().split('\n')
@@ -65,6 +69,7 @@ export async function locate(run: Run, opts: { cwd: string; home: string; bin: s
   if (home === '' || cwd === home || cwd === '/') return null
   const repo: Repo = { root: cwd, gitDir: `${home}/.cache/claude-checkpoint/${slug(cwd)}.git`, isShadow: true, bin }
   const probe = await run([bin, `--git-dir=${repo.gitDir}`, 'rev-parse', '--git-dir'], { cwd })
+  if (probe.exitCode !== 0 && opts.isProbeOnly === true) return null
   if (probe.exitCode !== 0) {
     await git(run, { ...repo, isShadow: false }, ['init', '-q', '--bare', repo.gitDir])
     await git(run, { ...repo, isShadow: false }, [`--git-dir=${repo.gitDir}`, 'config', 'core.bare', 'false'])
@@ -88,11 +93,11 @@ export async function writeTree(run: Run, repo: Repo): Promise<string> {
   await run(['rm', '-f', index], { cwd: repo.root })
   if (!repo.isShadow) await run(['cp', `${repo.gitDir}/index`, index], { cwd: repo.root })
   const big = await bigFiles(run, repo)
-  await git(run, repo, ['add', '-A', '--', '.', ...big.map(path => `:(exclude,literal)${path}`)], { env })
+  await gitWith(run, repo, { args: ['add', '-A', '--', '.', ...big.map(path => `:(exclude,literal)${path}`)], init: { env } })
   for (const part of chunks(big)) {
-    await git(run, repo, ['rm', '--cached', '-q', '--ignore-unmatch', '--', ...part.map(literal)], { env })
+    await gitWith(run, repo, { args: ['rm', '--cached', '-q', '--ignore-unmatch', '--', ...part.map(literal)], init: { env } })
   }
-  const tree = await git(run, repo, ['write-tree'], { env })
+  const tree = await gitWith(run, repo, { args: ['write-tree'], init: { env } })
   await run(['rm', '-f', index], { cwd: repo.root })
 
   return tree
@@ -102,7 +107,7 @@ export async function snapshot(run: Run, repo: Repo, opts: { ref: string; label:
   const tree = await writeTree(run, repo)
   const head = await run(argvOf(repo, ['rev-parse', '--verify', '-q', 'HEAD']), { cwd: repo.root })
   const parent = head.exitCode === 0 ? ['-p', head.stdout.trim()] : []
-  const commit = await git(run, repo, ['commit-tree', tree, ...parent, '-m', opts.label], { env: IDENTITY })
+  const commit = await gitWith(run, repo, { args: ['commit-tree', tree, ...parent, '-m', opts.label], init: { env: IDENTITY } })
   await git(run, repo, ['update-ref', `${REF_ROOT}${opts.ref}`, commit])
 
   return commit
@@ -126,7 +131,7 @@ export async function prune(run: Run, repo: Repo, keep = KEEP): Promise<Checkpoi
   const stale = all.slice(keep)
   if (stale.length === 0) return all
   const stdin = stale.map(entry => `delete ${entry.ref}\n`).join('')
-  await git(run, repo, ['update-ref', '--stdin'], { stdin })
+  await gitWith(run, repo, { args: ['update-ref', '--stdin'], init: { stdin } })
   if (repo.isShadow) await run(argvOf(repo, ['gc', '--auto', '--quiet']), { cwd: repo.root })
 
   return all.slice(0, keep)

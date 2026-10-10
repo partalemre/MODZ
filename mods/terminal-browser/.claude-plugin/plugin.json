@@ -1,6 +1,6 @@
 {
   "name": "terminal-browser",
-  "version": "0.0.3",
+  "version": "0.1.0",
   "description": "Claude Code içinde, terminalde çalışan bir tarayıcı: siteleri ve HTML belgelerini önizle, ajanın yerleşik tarayıcıyı yönetsin. Yalnızca terminal; masaüstünde hiçbir şey çizmez.",
   "author": {
     "name": "zenbu-labs"

@@ -1,5 +1,5 @@
 import { failuresOf, isFailing } from './parse'
-import { fileHeadSvg, headerSvg, rowSvg, skeletonSvg, tailHeadSvg } from './pane-svg'
+import { emptySvg, fileHeadSvg, headerSvg, rowSvg, skeletonSvg, tailHeadSvg } from './pane-svg'
 import type { Drawing } from './pane-svg'
 import { groupsOf } from './summary'
 import { svgWidth } from './svg'
@@ -25,6 +25,8 @@ export type PaneView = {
 // Room the "Aç" button and the row indent take beside a failure row, in columns.
 const ROW_RESERVE = 12
 const WIDTH = { min: 300, max: 880 }
+// A failure row is narrower than the pane by the button beside it; it never runs past a narrow pane.
+const ROW_WIDTH = { min: 220, max: 880, reserve: ROW_RESERVE }
 
 function picture(ui: Ui, drawing: Drawing, key: string) {
   const { Svg } = ui
@@ -35,7 +37,7 @@ function picture(ui: Ui, drawing: Drawing, key: string) {
 function groupTree(ui: Ui, view: PaneView, group: { file: string | null; failures: Failure[] }) {
   const { Box, Button } = ui
   const all = failuresOf(view.badge)
-  const frame = { width: svgWidth(view.columns, { ...WIDTH, reserve: ROW_RESERVE }), mode: view.theme.mode }
+  const frame = { width: svgWidth(view.columns, ROW_WIDTH), mode: view.theme.mode }
   const head = fileHeadSvg({ width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }, { file: group.file, count: group.failures.length })
 
   return (
@@ -64,16 +66,15 @@ function tailTree(ui: Ui, view: PaneView, spec: { name: string; outcome: CheckOu
   return (
     <Box key={`tb-tail-${spec.name}`} flexDirection="column">
       {picture(ui, drawing, `tb-tail-head-${spec.name}`)}
-      {unplaced.lines.map((line, index) => <Text key={`tb-tail-${spec.name}-${index}`} dimColor wrap="truncate">{`   ${line}`}</Text>)}
+      {unplaced.lines.map((line, index) => <Text key={`tb-tail-${spec.name}-${index}`} dimColor wrap="wrap">{`   ${line}`}</Text>)}
     </Box>
   )
 }
 
 function bodyTree(ui: Ui, view: PaneView) {
-  const { Box, Text } = ui
+  const { Box } = ui
   const { badge } = view
-  if (badge.finishedAt === null && badge.isRunning) return picture(ui, skeletonSvg({ width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }), 'tb-skeleton')
-  if (badge.finishedAt === null) return <Text dimColor>Kaynak dosya düzenleyen bir turdan sonra kendiliğinden çalışır.</Text>
+  if (badge.finishedAt === null) return picture(ui, skeletonSvg({ width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }), 'tb-skeleton')
   if (!isFailing(badge)) return null
 
   return (
@@ -89,12 +90,14 @@ function bodyTree(ui: Ui, view: PaneView) {
 export function paneTree(ui: Ui, view: PaneView) {
   const { Box } = ui
   if (!view.isRich) return textPane(ui, view)
-  const header = headerSvg({ width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }, { badge: view.badge, now: view.now })
+  const frame = { width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }
+  const isEmpty = view.badge.finishedAt === null && !view.badge.isRunning
+  const header = isEmpty ? emptySvg(frame) : headerSvg(frame, { badge: view.badge, now: view.now })
 
   return (
     <Box flexDirection="column" rowGap={1}>
       {picture(ui, header, 'tb-header')}
-      {bodyTree(ui, view)}
+      {!isEmpty && bodyTree(ui, view)}
       {rerunRow(ui, view)}
     </Box>
   )

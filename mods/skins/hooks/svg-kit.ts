@@ -29,7 +29,9 @@ export function measure(text: string, isMono: boolean, size: number): number {
   }, 0)
 }
 
-export function fitText(text: string, width: number, isMono: boolean, size: number): string {
+export type Font = { isMono: boolean; size: number }
+
+export function fitText(text: string, width: number, { isMono, size }: Font): string {
   if (measure(text, isMono, size) <= width) {
     return text
   }
@@ -72,8 +74,14 @@ export const CONTROL_SLOT = 84
 // one text row down from the card's top edge.
 export const HEADER_MID = 29
 
+// What a card is drawn in and how wide; `hasControl` leaves the header's right corner
+// free for a Copy button laid over it.
+export type CardFrame = { palette: Palette; width: number; hasControl?: boolean }
+
+export type CardShell = { width: number; height: number; palette: Palette; style?: string; body: string }
+
 // The card: a rounded hairline outline, with everything inside clipped to its corners.
-export function svgCard(width: number, height: number, palette: Palette, style: string, body: string): string {
+export function svgCard({ width, height, palette, style = '', body }: CardShell): string {
   // Unique per size, so cards placed together in one document keep their own corners.
   const clip = `corners-${width}x${height}`
 
@@ -90,16 +98,22 @@ export function svgCard(width: number, height: number, palette: Palette, style: 
 }
 
 // A band behind a row, as a faint tint of the text colour, so it reads on any page.
-export const tint = (palette: Palette, y: number, width: number, height: number, opacity = 0.05): string =>
+export type Band = { y: number; width: number; height: number; opacity?: number }
+
+export const tint = (palette: Palette, { y, width, height, opacity = 0.05 }: Band): string =>
   `<rect y="${y}" width="${width}" height="${height}" fill="${palette.fg}" fill-opacity="${opacity}"/>`
 
 // A small rounded label, such as `exit 0` or `new file`, right-aligned at `right`.
-export function pill(right: number, y: number, text: string, color: string, palette: Palette): string {
+export type Pill = { right: number; y: number; text: string; color: string }
+
+export function pill(palette: Palette, { right, y, text, color }: Pill): string {
   const width = Math.ceil(measure(text, true, 11) + 16)
   const left = right - width
 
   return `<rect x="${left}" y="${y}" width="${width}" height="20" rx="10" fill="${color}" fill-opacity=".14"/><text x="${left + width / 2}" y="${y + 14}" text-anchor="middle" font-family="${MONO}" font-size="11" style="fill:${color}">${escape(text)}</text>`
 }
 
-export const strokeIcon = (path: string, x: number, y: number, size: number, color: string): string =>
+export type Place = { x: number; y: number; size: number; color: string }
+
+export const strokeIcon = (path: string, { x, y, size, color }: Place): string =>
   `<g transform="translate(${x} ${y}) scale(${size / 24})" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${path}</g>`

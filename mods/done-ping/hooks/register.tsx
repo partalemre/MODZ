@@ -7,6 +7,7 @@ import type { Ping, PingConfig, TestsSeen } from './ping'
 import { AUTO, themeFrom } from './tidemark'
 import { ring } from './ring'
 import type { RingIo } from './ring'
+import { pinned } from './pin'
 import type { PingNotice } from '../types'
 
 const COMMAND = 'done-ping'
@@ -219,6 +220,8 @@ function registerBand(on: On): void {
       onDismiss: () => void update($, noticeAtom, () => null),
     }
 
-    return pingRow($.ui.resolve(e), band, theirs)
+    const ui = $.ui.resolve(e)
+
+    return pinned(e, pingRow(ui, band, theirs))
   })
 }

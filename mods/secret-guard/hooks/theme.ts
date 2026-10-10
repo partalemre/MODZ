@@ -18,11 +18,6 @@ const ROLES: Record<RoleName, { dark: Role; light: Role }> = {
   plan: { dark: { fg: '#E07BC0', tint: '#351F2E', line: '#6B3A5C' }, light: { fg: '#A8337F', tint: '#FBE9F4', line: '#EDBFDC' } },
 }
 
-// Terminal theme keys per role (DESIGN.md §2, terminal mapping).
-export const TERMINAL_KEY: Record<RoleName, string> = {
-  read: 'suggestion', edit: 'claude', run: 'permission', ok: 'success', warn: 'warning', danger: 'error', plan: 'merged',
-}
-
 export const palette = (isLight: boolean): Neutrals => (isLight ? LIGHT : DARK)
 export const role = (name: RoleName, isLight: boolean): Role => ROLES[name][isLight ? 'light' : 'dark']
 
@@ -56,7 +51,9 @@ export function svgStyle(extra = ''): string {
 const named = (value: unknown): boolean | undefined => {
   const name = typeof value === 'string' ? value.trim().toLowerCase() : ''
 
-  return name.includes('light') ? true : name.includes('dark') ? false : undefined
+  if (name.includes('light')) return true
+
+  return name.includes('dark') ? false : undefined
 }
 
 // `COLORFGBG` is `<fg>;<bg>`; background 7 or 15 is a light one.

@@ -6,8 +6,6 @@ type Pair = { readonly dark: string; readonly light: string }
 type RoleColors = { readonly fg: Pair; readonly tint: Pair; readonly line: Pair }
 
 export type Role = 'read' | 'edit' | 'run' | 'ok' | 'warn' | 'danger' | 'plan'
-// What a value's state asks of its color: `neutral` until it runs ahead or high.
-export type Tone = 'neutral' | Role
 
 const NEUTRALS = {
   sheet: { dark: '#191917', light: '#F4F2EC' },
@@ -35,17 +33,6 @@ const ROLES: Readonly<Record<Role, RoleColors>> = {
   warn: role(['#E9B949', '#8A6000'], ['#332D19', '#FBF2D9'], ['#66552A', '#EBD48F']),
   danger: role(['#F2727F', '#C0263A'], ['#3B2023', '#FCE8EA'], ['#74343C', '#F1B9C0']),
   plan: role(['#E07BC0', '#A8337F'], ['#351F2E', '#FBE9F4'], ['#6B3A5C', '#EDBFDC']),
-}
-
-// Terminal theme keys per role (DESIGN.md §2, terminal mapping).
-export const TERMINAL_KEY: Readonly<Record<Role, string>> = {
-  read: 'suggestion',
-  edit: 'claude',
-  run: 'permission',
-  ok: 'success',
-  warn: 'warning',
-  danger: 'error',
-  plan: 'merged',
 }
 
 export const FONT = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`
@@ -78,12 +65,3 @@ export function svgStyle(extra = ''): string {
     '</style>',
   ].join('')
 }
-
-// The class a value's fill takes for its tone; neutral values read in the strongest text color.
-export const fillOf = (tone: Tone, neutral: keyof typeof NEUTRALS = 'hi'): string =>
-  tone === 'neutral' ? `f-${neutral}` : `f-${tone}`
-
-export const strokeOf = (tone: Tone, neutral: keyof typeof NEUTRALS = 'mid'): string =>
-  tone === 'neutral' ? `s-${neutral}` : `s-${tone}`
-
-export const terminalColor = (tone: Tone): string | undefined => (tone === 'neutral' ? undefined : TERMINAL_KEY[tone])

@@ -28,6 +28,10 @@ export type HudSample = {
   cost?: number
 }
 
+// The MODZ main panel's card for this mod (DESIGN.md §9).
+export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+
 declare module 'claude-code' {
   interface PluginState {
     'hud-pro': {
@@ -37,6 +41,7 @@ declare module 'claude-code' {
       isHidden: boolean
       history: HudSample[]
       isCompacting: boolean
+      hub: HubCard
     }
   }
 }

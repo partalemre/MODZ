@@ -117,7 +117,7 @@ export function linesPart(o: LinesOpts): Part {
     paint: o.paint ?? 'hi',
     maxLines: o.maxLines ?? 2,
   }
-  const lines = wrapText(o.text, o.width - MARK_PAD, opts.maxLines, sans(size, opts.weight))
+  const lines = wrapText(o.text, { max: o.width - MARK_PAD, maxLines: opts.maxLines, measure: sans(size, opts.weight) })
   const spans = markSpans(lines, o.text, o.mark)
   const body = lines.map((line, i) => lineMarkup({ line, span: spans[i] ?? null, top: i * opts.lineHeight, opts })).join('')
 

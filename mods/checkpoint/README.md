@@ -5,7 +5,7 @@ Takes a silent snapshot of the project before the first file write of every turn
 ## The pane (`/checkpoints`)
 
 A vertical timeline of turns, newest first: a step dot on a rail, `Tur 12 · 21 dk önce`, the prompt's first line, `+4 dosya` and a monogram chip per tool kind the turn used (`E` edit, `W` write, `$` bash, `R` read, `S` search, `G` web, `A` agent, `T` todo). Turns an undo went back past are struck through in a dim color; the snapshot an undo takes first shows as `Geri almadan önce`.
-**Geri al** opens a confirm card (single Amber border): `Tur 12'ye dönülsün mü? 4 dosya değişecek`, a diffstat (`+27 −40`, per file `+18 −4`, which files are deleted) and **Geri al** (`g`) / **Vazgeç** (`v`). After the undo, **Yinele** (`y`) goes back to the files as they were. Turn numbers, file counts and tool chips are kept in the plugin store, not in git. `MODZ_THEME=light|dark` pins the pane's theme.
+**Geri al** opens a confirm card (single Amber border): `Tur 12 öncesine dönülsün mü? 4 dosya değişecek`, a diffstat (`+27 −40`, per file `+18 −4`, which files are deleted, `+N dosya daha` past five) and **4 dosyayı geri al** (`g`) / **Vazgeç** (`v`, focused, so Enter changes nothing). After the undo, **Yinele** (`y`) goes back to the files as they were. Turn numbers, file counts and tool chips are kept in the plugin store, not in git. `MODZ_THEME=light|dark` pins the pane's theme.
 
 ## How it works
 
@@ -23,7 +23,7 @@ Zero per turn. The `prompt.submit` and `tool.call` hooks hand the event on uncha
 
 ## Undo
 
-`/checkpoints` opens a pane: `Kontrol noktaları` with the count and the newest one's age, then one row per turn, newest first, each with **Geri al**. Pressing it works out what would change and shows a confirm card in the pane (`! "<turn>" öncesine dönülsün mü?`, how many files are restored and removed, up to 5 of them) with **Geri al** and **Vazgeç**. On **Geri al**:
+`/checkpoints` opens a pane: `Kontrol noktaları` with the count and the newest one's age, then one row per turn, newest first, each with **Geri al**. Pressing it works out what would change and shows a confirm card in the pane (`Tur 12 öncesine dönülsün mü?`, or the prompt's words for a turn with no number, how many files are restored and removed, up to 5 of them) with **N dosyayı geri al** and **Vazgeç**. On confirm:
 
 1. A safety checkpoint of the current state is taken (`geri almadan önce: …`), so the undo can itself be undone.
 2. Changed and deleted files come back with `git restore --source=<checkpoint> --worktree` (index untouched).

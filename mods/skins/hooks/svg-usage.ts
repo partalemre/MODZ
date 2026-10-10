@@ -1,3 +1,5 @@
+import type { SessionUsage } from 'claude-code'
+
 import type { UsageSnap } from '../types'
 import type { Palette } from './skin'
 import { escape, FONT } from './svg-kit'
@@ -28,6 +30,12 @@ export function limitLabel(kind: string): string {
   return name.replace(/_/g, ' ')
 }
 
+// The figures the band keeps from the session's usage.
+export const usageSnap = (usage: SessionUsage): UsageSnap => ({
+  context: usage.context.percent ?? null,
+  limits: usage.rateLimits.map(limit => ({ label: limitLabel(limit.kind), percent: limit.percentUsed })),
+})
+
 export function metersOf(usage: UsageSnap): Meter[] {
   return [
     ...(usage.context === null ? [] : [{ label: CONTEXT_LABEL, percent: usage.context }]),
@@ -36,8 +44,13 @@ export function metersOf(usage: UsageSnap): Meter[] {
 }
 
 // Accent while there is room; the warning colour from 80 %, the error colour from 95 %.
-export const meterColor = (percent: number, palette: Palette): string =>
-  percent >= 95 ? palette.err : percent >= 80 ? palette.warn : palette.user
+export function meterColor(percent: number, palette: Palette): string {
+  if (percent >= 95) {
+    return palette.err
+  }
+
+  return percent >= 80 ? palette.warn : palette.user
+}
 
 export function usageSvg(meters: readonly Meter[], palette: Palette): { source: string; width: number; height: number; alt: string } {
   const width = meters.length * ITEM_W

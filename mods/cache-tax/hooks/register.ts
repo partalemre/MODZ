@@ -1,6 +1,7 @@
 import type { EngineInterface, On, PromptSubmitInput, PromptSubmitResult, Register, TurnCompleteInput } from 'claude-code'
 
 import { composeBand } from './band'
+import { pinned } from './pin'
 import type { Prefs } from './band'
 import { AUTO_WARM_MS, BIG_TOKENS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, freshState, isCold, isFullMiss, parseDuration, priceOf, resetForClear } from './core'
 import type { State } from './core'
@@ -8,9 +9,9 @@ import type { HoldActions } from './hold'
 import { bandKey } from './row'
 import { seedFromResume } from './session'
 import { isLightTheme } from './theme'
-import { KEY_ALWAYS, KEY_GUARD, arm, deadlineKey, everyKey, prune, startWindow, stop, updateStatus } from './warm'
+import { KEY_ALWAYS, KEY_GUARD, arm, deadlineKey, everyKey, prune, startWindow, stop, stopForGood, updateStatus } from './warm'
 import type { Io } from './warm'
-import { GUARD, HOOK_TWICE, KEEPWARM, alwaysText, armedText, cardText, dropText, paidText, statusText, warnText } from './words'
+import { COMMANDS, GUARD, HOOK_TWICE, KEEPWARM, alwaysText, armedText, cardText, dropText, paidText, statusText, warnText } from './words'
 
 export { fmtDuration } from './fmt'
 export { freshState, parseDuration, resetForClear } from './core'
@@ -82,24 +83,14 @@ async function restore($: EngineInterface, s: State, now: number) {
   s.guard = (await $.store.get(KEY_GUARD)) === 'warn' ? 'warn' : 'refuse'
   s.always = (await $.store.get(KEY_ALWAYS)) === true
   // Always means a fresh default window every session, whatever the last one left behind.
-  if (s.always) await startWindow(io($), s, DEFAULT_WINDOW_MS, PING_AFTER_MS)
+  if (s.always) await startWindow(io($), s, { windowMs: DEFAULT_WINDOW_MS, every: PING_AFTER_MS })
   const usage = await $.session.usage()
   if (usage.context.tokens) s.ctx = usage.context.tokens
 }
 
 async function registerCommands($: EngineInterface) {
-  await $.command.register({
-    name: 'keepwarm',
-    description: 'Önbelleği sıcak tut: tek başına 6 saat, 90m gibi bir süre, always, off ya da status (cache-tax)',
-    argumentHint: '[6h | always | off | status]',
-    immediate: true,
-  })
-  await $.command.register({
-    name: NAME,
-    description: 'Önbellek durumu, soğuk fiyatı ve bu oturumun soğuk yazımları; guard warn|refuse (cache-tax)',
-    argumentHint: '[status | guard warn | guard refuse]',
-    immediate: true,
-  })
+  await $.command.register(COMMANDS.keepwarm)
+  await $.command.register(COMMANDS.cacheTax)
   // The hook form of cache-tax ships a /cache-tax:status skill; both installed means two guards.
   if ((await $.command.list()).some(cmd => cmd.name === 'cache-tax:status')) $.ui.log(HOOK_TWICE)
 }
@@ -109,13 +100,13 @@ async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<s
   const now = await $.clock.now()
   if (words[0] === 'off') {
     const wasAlways = s.always
-    await stop(io($), s, null, true)
+    await stopForGood(io($), s)
     return wasAlways ? KEEPWARM.offAlways : KEEPWARM.off
   }
   if (words[0] === 'always') {
     s.always = true
     await $.store.set(KEY_ALWAYS, true)
-    await startWindow(io($), s, DEFAULT_WINDOW_MS, PING_AFTER_MS)
+    await startWindow(io($), s, { windowMs: DEFAULT_WINDOW_MS, every: PING_AFTER_MS })
     return alwaysText(s, now)
   }
   if (words[0] === 'status') return statusText(s, now) ?? KEEPWARM.off
@@ -128,7 +119,7 @@ async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<s
     if (period == null || period < MIN_PING_MS) return KEEPWARM.every
     every = period
   }
-  await startWindow(io($), s, window, every)
+  await startWindow(io($), s, { windowMs: window, every })
   return armedText(s, now, window)
 }
 
@@ -141,10 +132,10 @@ async function onCacheTax($: EngineInterface, s: State, args: string): Promise<s
   return s.guard === 'refuse' ? GUARD.refuse : GUARD.warn
 }
 
-type Next = (e: PromptSubmitInput) => Promise<PromptSubmitResult>
+type Submit = { e: PromptSubmitInput; next: (e: PromptSubmitInput) => Promise<PromptSubmitResult> }
 
 // The message that pays. Of a typed prompt only its first character is read, and its text kept while it waits.
-async function onPrompt($: EngineInterface, s: State, e: PromptSubmitInput, next: Next): Promise<PromptSubmitResult> {
+async function onPrompt($: EngineInterface, s: State, { e, next }: Submit): Promise<PromptSubmitResult> {
   if (e.origin.kind === 'plugin') {
     // The card's own resend: the person pressed pay, so its cold write is scored.
     if (e.origin.name === NAME && e.text === s.resend) {
@@ -188,18 +179,18 @@ async function onTurnComplete($: EngineInterface, s: State, e: TurnCompleteInput
     const write = u.cache_creation_input_tokens
     const live = (await $.session.usage()).context.tokens
     s.ctx = live && live > 0 ? live : u.input_tokens + u.cache_read_input_tokens + write
-    if (isFullMiss(prev, write) || s.coldWritePending) await scoreMiss($, s, now, write)
+    if (isFullMiss(prev, write) || s.coldWritePending) await scoreMiss($, s, { now, write })
   }
   s.coldWritePending = false
   await arm(io($), s)
 }
 
-async function scoreMiss($: EngineInterface, s: State, now: number, write: number) {
+async function scoreMiss($: EngineInterface, s: State, { now, write }: { now: number; write: number }) {
   const price = priceOf(s.lastModel)
   const usd = price ? write * price[1] / 1e6 : null
   s.misses.push({ at: now, tokens: write, usd })
   if (s.deadline >= now + AUTO_WARM_MS) return
-  await startWindow(io($), s, AUTO_WARM_MS, s.every)
+  await startWindow(io($), s, { windowMs: AUTO_WARM_MS, every: s.every })
   $.ui.log(paidText(write, usd))
 }
 
@@ -218,11 +209,10 @@ function wireBand(on: On, c: Ctx) {
     const theirs = await next(e)
     if (!s.hasBand || e.props.hasSurvey) return theirs
     const band = { s, prefs: c.prefs, actions: actions($, s), columns: e.props.bodyColumns, now: await $.clock.now() }
-    if (e.surface === 'desktop') return composeBand({ surface: 'desktop', ui: $.ui.resolve(e) }, theirs, band)
-    if (e.surface === 'terminal') return composeBand({ surface: 'terminal', ui: $.ui.resolve(e) }, theirs, band)
+    if (e.surface === 'desktop') return pinned(e, composeBand({ surface: 'desktop', ui: $.ui.resolve(e) }, theirs, band))
+    if (e.surface === 'terminal') return pinned(e, composeBand({ surface: 'terminal', ui: $.ui.resolve(e) }, theirs, band))
     return theirs
   })
-
 }
 
 function wireSession(on: On, c: Ctx) {
@@ -260,13 +250,12 @@ function wireSession(on: On, c: Ctx) {
     await arm(io($), s)
     return r
   })
-
 }
 
 function wireTurns(on: On, s: State) {
   on('command.run', { command: 'keepwarm' }, async ($, e) => ({ text: await onKeepwarm($, s, String(e.args ?? '')) }))
   on('command.run', { command: NAME }, async ($, e) => ({ text: await onCacheTax($, s, String(e.args ?? '')) }))
-  on('prompt.submit', ($, e, next) => onPrompt($, s, e, next))
+  on('prompt.submit', ($, e, next) => onPrompt($, s, { e, next }))
 
   on('turn.step', async function* ($, e, next) {
     if (!e.agentId) s.lastRequestAt = await $.clock.now()

@@ -1,84 +1,8 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, test } from 'claude-code/testing'
 
-type World = {
-  runs: string[][]
-  statuses: (string | undefined)[]
-  opened: string[]
-  copied: string[]
-  toasts: string[]
-  outs: { test: string; lint: string }
-  code: number
-  canOpen: boolean
-  hold?: Promise<void>
-}
+import { ESLINT_FAIL, bandOf, done, editAndRun, newWorld, paneOf, result, setup } from './world'
 
 const SURFACES = ['terminal', 'desktop'] as const
-const VITEST_FAIL = [
-  ' FAIL  src/auth/login.test.ts > login > rejects an expired token',
-  'AssertionError: expected 200 to be 401',
-  ' ❯ src/auth/login.test.ts:42:22',
-  ' Tests  1 failed | 41 passed (42)',
-].join('\n')
-const ESLINT_FAIL = [
-  '/w/src/api/user.ts',
-  "   3:7  error  'x' is assigned a value but never used  no-unused-vars",
-  '   9:1  error  Unexpected any  @typescript-eslint/no-explicit-any',
-  '✖ 2 problems (2 errors, 0 warnings)',
-].join('\n')
-
-const newWorld = (over: Partial<World> = {}): World => ({
-  runs: [], statuses: [], opened: [], copied: [], toasts: [], outs: { test: VITEST_FAIL, lint: ESLINT_FAIL }, code: 1, canOpen: true, ...over,
-})
-const result = (stdout: string, exitCode: number) => ({ value: { exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
-const pkg = JSON.stringify({ scripts: { test: 'vitest run', lint: 'eslint .' } })
-
-function stubHost(on: any, world: World) {
-  on('session.start', () => ({ cwd: '/w' }))
-  on('session.cwd', () => ({ value: '/w' }))
-  on('store.get', () => ({ value: undefined }))
-  on('store.set', () => ({ value: undefined }))
-  on('command.register', () => ({ value: undefined }))
-  on('ui.log', () => ({ value: undefined }))
-  on('ui.status', (_: any, e: any) => (world.statuses.push(e.text), { value: undefined }))
-  on('ui.toast', (_: any, e: any) => (world.toasts.push(e.text), { value: undefined }))
-  on('ui.open', (_: any, e: any) => (world.opened.push(e.id), { value: { isPlaced: true } }))
-  on('ui.copy', (_: any, e: any) => (world.copied.push(e.text), { value: { isCopied: true } }))
-  on('ui.render', () => ({ type: 'engine', ref: 1 }))
-  on('fs.list', () => ({ value: [{ name: 'package.json', kind: 'file', size: 10 }] }))
-  on('fs.read', () => ({ value: pkg }))
-  on('fs.exists', () => ({ value: false }))
-  on('tool.call', () => ({ result: 'ok' }))
-  on('turn.complete', (_: any, e: any) => ({ text: e.answer }))
-}
-
-async function setup($: any, on: any, world: World) {
-  const clock = mock.clock(on)
-  stubHost(on, world)
-  on('process.run', async (_: any, e: any) => {
-    world.runs.push(e.argv)
-    if (e.argv[0] !== 'nice') {
-      if (!world.canOpen) throw new Error('not found')
-
-      return result('', 0)
-    }
-    await world.hold
-
-    return result(e.argv.at(-1) === 'lint' ? world.outs.lint : world.outs.test, world.code)
-  })
-  await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/w' })
-
-  return clock
-}
-
-const done = (turnId: string, agentId?: string) => ({ answer: 'ok', durationMs: 1, isAborted: false, turnId, reason: 'answer', agentId })
-const bandOf = (surface: string) => ({
-  plugin: 'test-badge', component: 'AbovePrompt', requestId: 'band', surface, viewport: { columns: 120, rows: 40 },
-  props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 115, scroll: { offset: 0, bodyRows: 10 }, view: {} },
-})
-const paneOf = (surface: string) => ({
-  plugin: 'test-badge', component: 'Pane', requestId: 'test-badge', surface, viewport: { columns: 120, rows: 40 },
-  props: { title: 'Testler', isFocused: true, bodyColumns: 80, placement: 'dock', scroll: { offset: 0, bodyRows: 30 }, view: {} },
-})
 
 // Every Svg alt in a drawn tree: what the desktop's pictures say.
 function alts(tree: any): string[] {
@@ -91,12 +15,6 @@ function alts(tree: any): string[] {
 
 const shown = async (ui: any, surface: string): Promise<string> =>
   surface === 'desktop' ? alts(await ui.drawn()).join('\n') : (await ui.findAll({ type: 'Text' })).map((t: any) => t.text).join('\n')
-
-async function editAndRun($: any, clock: any) {
-  await $.tool.call({ tool: 'Edit', file_path: '/w/src/a.ts', old_string: 'a', new_string: 'b' })
-  await $.turn.complete(done('t1'))
-  await clock.advance(5_500)
-}
 
 test('a turn that edited source runs tests then lint, niced, 5s after it ends', async ($: any, on: any) => {
   const world = newWorld()
@@ -114,14 +32,23 @@ test('a turn that edited source runs tests then lint, niced, 5s after it ends', 
   expect(world.statuses.at(-1)).toBe('testler 41/42 · lint 2 hata · 0 sn önce')
 })
 
+test('the status line holds a failure only: a green run clears it', async ($: any, on: any) => {
+  const world = newWorld({ outs: { test: ' Tests  42 passed (42)', lint: '' }, code: 0 })
+  await editAndRun($, await setup($, on, world))
+
+  expect(world.statuses.filter(text => text !== undefined)).toEqual([])
+})
+
 for (const surface of SURFACES) {
   test(`${surface}: one band line above the others, Ayrıntı opens the pane grouped by file`, async ($: any, on: any) => {
     const world = newWorld()
     await editAndRun($, await setup($, on, world))
 
     const band = await $.ui.mount(bandOf(surface))
-    expect(await shown(band, surface)).toMatch(/✕ 1\/42[\s\S]*lint 2[\s\S]*\d sn önce/)
-    expect((await band.drawn() as any).children.at(-1)).toEqual({ type: 'engine', ref: 1 })
+    expect(await shown(band, surface)).toMatch(/✕ 1\/42 kaldı[\s\S]*lint 2 hata[\s\S]*\d sn önce/)
+    // The other plugins' lines stay last.
+    const shownChildren = (await band.drawn() as any).children
+    expect(shownChildren.at(-1)).toEqual({ type: 'engine', ref: 1 })
     await band.press({ key: 'tb-details' })
     expect(world.opened).toEqual(['test-badge'])
 
@@ -132,6 +59,8 @@ for (const surface of SURFACES) {
     expect(text).toContain('src/api/user.ts')
     expect(text).toMatch(/AssertionError: expected 200 to be 401/)
     expect((await pane.find({ key: 'tb-filter-lint' }))?.text).toBe('Lint 2')
+    expect(await pane.find({ key: 'tb-filter-e2e' })).toBeUndefined()
+    expect(await pane.find({ key: 'tb-filter-typecheck' })).toBeUndefined()
     expect(await pane.find({ key: 'tb-open-0' })).toBeDefined()
     await pane.press({ key: 'tb-filter-lint' })
     expect(await pane.find({ key: 'tb-open-0' })).toBeUndefined()
@@ -173,10 +102,42 @@ for (const surface of SURFACES) {
     await editAndRun($, await setup($, on, world))
 
     const band = await $.ui.mount(bandOf(surface))
-    expect(await shown(band, surface)).toMatch(/✓ test 42\/42[\s\S]*lint temiz/)
+    expect(await shown(band, surface)).toMatch(/✓ 42\/42 geçti[\s\S]*lint temiz/)
     expect(await band.find({ key: 'tb-details' })).toBeUndefined()
     const pane = await $.ui.mount(paneOf(surface))
     expect(await shown(pane, surface)).toMatch(/Hepsi geçti\s*· 42 test geçti · lint temiz/)
+  })
+}
+
+for (const surface of SURFACES) {
+  test(`${surface}: lint errors alone read Amber, not Flare, from the eyebrow down`, async ($: any, on: any) => {
+    const world = newWorld({ outs: { test: ' Tests  42 passed (42)', lint: ESLINT_FAIL }, code: 0, lintCode: 1 })
+    await editAndRun($, await setup($, on, world))
+
+    const pane = await $.ui.mount(paneOf(surface))
+    expect(await shown(pane, surface)).toMatch(/2 lint hatası\s*· 42 test geçti/)
+    expect(await pane.find({ key: 'tb-filter-unit' })).toBeUndefined()
+    if (surface === 'terminal') {
+      expect((await pane.find({ type: 'Text', text: /TEST SONUÇLARI/ }))?.props?.color).toBe('warning')
+
+      return
+    }
+    const header = String((await pane.find({ type: 'Svg' }))?.props?.source ?? '')
+    expect(header).toContain('var(--amber)')
+    expect(header).not.toContain('var(--flare)')
+  })
+}
+
+for (const surface of SURFACES) {
+  test(`${surface}: a test command that fails with every test passed says "test kaldı", never "0 başarısız"`, async ($: any, on: any) => {
+    const world = newWorld({ outs: { test: ' Tests  42 passed (42)\nERROR: Coverage for lines (71%) does not meet threshold (80%)', lint: '' }, code: 1, lintCode: 0 })
+    await editAndRun($, await setup($, on, world))
+
+    const band = await $.ui.mount(bandOf(surface))
+    expect(await shown(band, surface)).toMatch(/✕ test kaldı/)
+    const text = await shown(await $.ui.mount(paneOf(surface)), surface)
+    expect(text).toMatch(/Testler kaldı\s*· 42 geçti/)
+    expect(text).not.toContain('0 başarısız')
   })
 }
 

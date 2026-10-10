@@ -1,6 +1,7 @@
 import { failuresOf, isFailing } from './parse'
 import { chipsOf, durationText, eyebrowRole, groupsOf, headlineOf, runMeta, SUITE_TAG } from './summary'
 import type { Tone } from './summary'
+import { EMPTY_HOW, EMPTY_LEAD } from './pane-svg'
 import { upper } from './svg'
 import { THEME_KEY } from './tidemark'
 import type { PaneView } from './view'
@@ -13,18 +14,19 @@ const LINE_WIDTH = 4
 const ROW_INDENT = 4
 const ROW_GLYPH = '› '
 const NAME_GAP = '  '
-const MESSAGE_INDENT = ' '.repeat(ROW_GLYPH.length + LINE_WIDTH + NAME_GAP.length)
+const MESSAGE_INDENT = ROW_GLYPH.length + LINE_WIDTH + NAME_GAP.length
 const BAR_MAX = 40
 const BAR_MIN = 8
 
 const colorOf = (tone: Tone): { color?: string; dimColor?: boolean } => (tone === 'neutral' ? { dimColor: true } : { color: THEME_KEY[tone] })
+const WHY_UNPLACED: Partial<Record<CheckOutcome['status'], string>> = { timeout: 'zaman aşımına uğradı', error: 'başlatılamadı' }
 const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, Math.max(1, max - 1))}…` : text)
 
 // A failing check whose output no parser could place: say so, and keep the output's last lines.
 export function unplacedOf(spec: { name: string; outcome: CheckOutcome | null }): { title: string; lines: string[] } | null {
   const { outcome } = spec
   if (outcome === null || outcome.status === 'pass' || outcome.failures.length > 0) return null
-  const why = outcome.status === 'timeout' ? 'zaman aşımına uğradı' : outcome.status === 'error' ? 'başlatılamadı' : 'kaldı; hata yeri okunamadı'
+  const why = WHY_UNPLACED[outcome.status] ?? 'kaldı; hata yeri okunamadı'
 
   return { title: `${spec.name} ${why}`, lines: outcome.tail }
 }
@@ -34,7 +36,7 @@ export function chipRow(ui: Ui, view: PaneView) {
 
   return (
     <Box flexDirection="row" columnGap={1} flexWrap="wrap">
-      {chipsOf(view.badge).map(chip => {
+      {chipsOf(view.badge, view.filter).map(chip => {
         const isOn = chip.filter === view.filter
         const look = isOn ? { variant: 'secondary' } : { plain: true, dimColor: chip.count === 0 }
 
@@ -50,7 +52,7 @@ export function rerunRow(ui: Ui, view: PaneView) {
 
   return (
     <Box flexDirection="row">
-      <Button key="tb-rerun" variant="primary" hotkey="r" label={label} onPress={view.onRerun} />
+      <Button key="tb-rerun" variant="secondary" hotkey="r" label={label} onPress={view.onRerun} />
     </Box>
   )
 }
@@ -83,7 +85,11 @@ function rowText(ui: Ui, view: PaneView, failure: Failure) {
         {failure.file === null ? <Text>{label}</Text> : <Button key={`tb-open-${index}`} plain label={label} onPress={() => view.onOpen(failure)} />}
         <Text dimColor>{meta}</Text>
       </Box>
-      {failure.message !== '' && <Text dimColor wrap="truncate">{`${MESSAGE_INDENT}${failure.message}`}</Text>}
+      {failure.message !== '' && (
+        <Box paddingLeft={MESSAGE_INDENT}>
+          <Text dimColor wrap="wrap">{failure.message}</Text>
+        </Box>
+      )}
     </Box>
   )
 }
@@ -110,7 +116,26 @@ function tailText(ui: Ui, spec: { name: string; outcome: CheckOutcome | null }) 
   return (
     <Box key={`tb-tail-${spec.name}`} flexDirection="column">
       <Text bold>{unplaced.title}</Text>
-      {unplaced.lines.map((line, index) => <Text key={`tb-tail-${spec.name}-${index}`} dimColor wrap="truncate">{`   ${line}`}</Text>)}
+      {unplaced.lines.map((line, index) => <Text key={`tb-tail-${spec.name}-${index}`} dimColor wrap="wrap">{`   ${line}`}</Text>)}
+    </Box>
+  )
+}
+
+// No run yet: the eyebrow, one sentence and the one action.
+function emptyText(ui: Ui, view: PaneView) {
+  const { Box, Text } = ui
+
+  return (
+    <Box flexDirection="column">
+      <Text color={THEME_KEY.tide} bold>{`● ${upper('Testler')}`}</Text>
+      <Box key="tb-empty">
+        <Text wrap="wrap">
+          <Text bold>{EMPTY_LEAD}</Text>
+          <Text dimColor>{` · ${EMPTY_HOW}`}</Text>
+        </Text>
+      </Box>
+      <Text> </Text>
+      {rerunRow(ui, view)}
     </Box>
   )
 }
@@ -118,6 +143,7 @@ function tailText(ui: Ui, spec: { name: string; outcome: CheckOutcome | null }) 
 export function textPane(ui: Ui, view: PaneView) {
   const { Box, Text } = ui
   const { badge } = view
+  if (badge.finishedAt === null && !badge.isRunning) return emptyText(ui, view)
   const head = headlineOf(badge)
   const role = eyebrowRole(badge)
 
@@ -133,7 +159,6 @@ export function textPane(ui: Ui, view: PaneView) {
       </Box>
       {barText(ui, view)}
       <Text> </Text>
-      {badge.finishedAt === null && !badge.isRunning && <Text dimColor>Kaynak dosya düzenleyen bir turdan sonra kendiliğinden çalışır.</Text>}
       {isFailing(badge) && chipRow(ui, view)}
       {isFailing(badge) && failuresText(ui, view)}
       {isFailing(badge) && view.filter === 'all' && tailText(ui, { name: 'testler', outcome: badge.tests })}

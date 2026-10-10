@@ -8,6 +8,7 @@ import { decide, isHere, items, record } from './learn'
 import type { Io } from './learn'
 import { SYSTEM, checkPrompt, parseVerdict } from './policy'
 import { MAX_PROMPT, cleanRule, hasTrigger, isTrivial, looksSecret, remembered, withRule } from './rules'
+import { pinned } from './pin'
 import { isLightTheme } from './theme'
 
 export { cleanRule, hasTrigger, isTrivial, looksSecret, similarity, withRule } from './rules'
@@ -252,7 +253,7 @@ function wireBand(on: On) {
     const ui = $.ui.resolve(e)
     if (done !== null) {
       const card = e.surface === 'desktop' ? savedDesktop($.ui.resolve(e), done, look) : savedText(ui, done)
-      return <ui.Box flexDirection="column" gap={1}>{card}{theirs}</ui.Box>
+      return pinned(e, <ui.Box flexDirection="column" gap={1}>{card}{theirs}</ui.Box>)
     }
     if (l === undefined) return theirs
     const hasField = 'Input' in ui
@@ -261,7 +262,7 @@ function wireBand(on: On) {
       paths: shownPaths(await $.session.root()), on: actions($, l, hasField),
     }
     const card = e.surface === 'desktop' ? cardDesktop($.ui.resolve(e), input, look) : cardText(ui, input)
-    return <ui.Box flexDirection="column" gap={1}>{card}{theirs}</ui.Box>
+    return pinned(e, <ui.Box flexDirection="column" gap={1}>{card}{theirs}</ui.Box>)
   })
 }
 

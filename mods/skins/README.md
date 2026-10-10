@@ -3,7 +3,9 @@
 > **Dayandığı proje:** [hellosverre/claude-skins](https://github.com/hellosverre/claude-skins), MIT. Bu kopya (0.1.2) MODZ için uyarlandı:
 > varsayılan skin **Tidemark** (DESIGN.md rol renkleri; daha önce skin seçilmediyse), kullanım bandı varsayılan kapalı
 > (kullanım bilgisi hud-pro'da; `/skin band on` ya da `/skin` ayarlarındaki "kullanım bandı" açar, eski kayıtlardaki bant bir kez kapatılır),
-> mod arayüzü Türkçe (ayarlar, galeri, Kopyala, Sıkıştır).
+> mod arayüzü Türkçe (ayarlar, galeri, Kopyala, Sıkıştır). `/skin` ayar paneli "Görünüm" adını taşır; MODZ ana
+> panelindeki `skins` satırı da onu açar ama klavyeyi almaz (harf kısayolları yalnızca `/skin` ile açılınca odakta),
+> MODZ kartı (`skins.hub`) etkin skin'i ve zemini yazar: `tidemark · koyu`.
 
 
 A modern skin for Claude Code. A [mod](https://code.claude.com/docs/en/plugins/mods/overview) that

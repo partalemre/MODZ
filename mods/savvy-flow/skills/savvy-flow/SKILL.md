@@ -18,11 +18,13 @@ Task from the user: $ARGUMENTS
 
 ## Progress bar
 
-If the tool `mcp__savvy-progress__progress` is available, keep it current; skip silently if it is not. Call it:
-- after presenting the plan: `title` (a few words), `total` (number of worker tasks), `tasks` (`[{ title, tier, after }]` in plan order; `tier` without the `savvy-` prefix, `after` the numbers of the tasks it waits for), `phase: "delegate"` (or `"design"` while in section 2);
-- each time a task is accepted in review: `done` (accepted so far); switch `phase` to `"review"` while reviewing;
+If the tool `mcp__savvy-progress__progress` is available, keep it current; skip silently if it is not. It may be listed only as a deferred tool: then load it first with ToolSearch (`select:mcp__savvy-progress__progress`). Fields left out keep their previous value. Call it:
+- after presenting the plan: `title` (a few words), `total` (number of worker tasks), `tasks` (`[{ title, tier, after }]` in plan order; `title` and `tier` are required, `tier` one of `fable`, `heavy`, `careful`, `medium`, `light`, `after` the 1-based numbers of the tasks it waits for), `phase: "delegate"` (or `"design"` while in section 2);
+- each time a task is accepted in review: `done` (accepted so far); switch `phase` to `"review"` while reviewing and back to `"delegate"` when the next tasks go out;
 - if re-planning changes the tasks: the new `tasks` and `total`;
 - once at close: `finished: true`.
+
+Keep `title` the same in every later call, or leave it out: a different title starts a new flow and resets the counters.
 
 When delegating, pass the task's `title` verbatim as the Agent tool's `description` (a return round reuses it too): the agents panel matches runs to planned tasks by it.
 
@@ -57,10 +59,10 @@ No delegation until the spec is approved. Workers cannot see this chat, so the s
 Design decisions are yours. Workers never invent UI, with one exception below.
 
 - **Small/contained UI** (a component, a state, a screen tweak): decide the design yourself and write it into the worker brief as concrete specs (structure, states, spacing/typography rules, which existing components to reuse).
-- **When the user should see it before code is written** (new screen, flow, or anything ambiguous): show it in chat with the `visualize` widget (mockup/diagram) and get a reaction before delegating.
-- **Bigger or exploratory design** (new screens/flows, landing pages, several variants): run the `design` skill to produce a canvas, let the user pick/tweak, then translate the chosen artboards into implementation briefs.
+- **When the user should see it before code is written** (new screen, flow, or anything ambiguous): show it in chat (a mockup or diagram, with the `visualize` widget when available) and get a reaction before delegating.
+- **Bigger or exploratory design** (new screens/flows, landing pages, several variants): run the `design` skill (when available) to produce a canvas, let the user pick/tweak, then translate the chosen artboards into implementation briefs.
 - **Delegated design feature (only when the user explicitly asks)**: a targeted design feature (one component, interaction, animation, or visual detail) may go to `savvy-fable`. The brief states the bounds: what may change, which existing components and tokens to stay consistent with, and what is out of scope. You still review the visual result and own acceptance.
-- For frontend styling direction, consult the `frontend-design` skill. For any chart/graph, consult `dataviz` before specifying it.
+- For frontend styling direction, consult the `frontend-design` skill; for any chart/graph, consult `dataviz` before specifying it (each when available).
 - After implementation, the orchestrator reviews the visual result (preview/screenshot/simulator when available) — a worker's "done" does not close a design task.
 
 ## 3. Tiering

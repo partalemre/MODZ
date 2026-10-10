@@ -1,4 +1,6 @@
-import { AHEAD_POINTS, cachePercent, compact, CONTEXT, costText, percentText } from './format'
+import type { RenderElement } from 'claude-code'
+
+import { AHEAD_POINTS, cachePercent, compact, CONTEXT, costText, percentText, resetText, valueText } from './format'
 import { costSeries, seriesOf } from './history'
 import { barTree, toneText } from './line'
 import type { Ui } from './line'
@@ -17,7 +19,7 @@ export type PaneView = {
   turn: HudTurn | null
   columns: number
   nowMs: number
-  svg?: (props: { source: string; alt: string; width: number; height: number }) => unknown
+  svg?: (props: { source: string; alt: string; width: number; height: number }) => RenderElement
 }
 
 const PX_PER_COLUMN = 6.4
@@ -51,12 +53,13 @@ function noteOf(gauge: GaugeView, context: HudContext | null): { note: string; n
 function gaugeTile(gauge: GaugeView, view: PaneView): Tile {
   const series = seriesOf(view.history, gauge.id)
   const context = view.usage?.context ?? null
-  const meta = gauge.id === CONTEXT && context !== null ? `${compact(context.tokens)} / ${compact(context.window)}` : gauge.reset
+  const reset = gauge.reset === '' ? '' : resetText(gauge.reset)
+  const meta = gauge.id === CONTEXT && context !== null ? `${compact(context.tokens)} / ${compact(context.window)}` : reset
 
   return {
     eyebrow: gauge.long,
     meta,
-    value: percentText(gauge.percent),
+    value: valueText(gauge.percent),
     ...noteOf(gauge, context),
     tone: gauge.tone,
     arc: { percent: gauge.percent, pace: gauge.pace },
@@ -113,7 +116,7 @@ function terminalRow(ui: Ui, gauge: GaugeView, view: PaneView) {
     <Box key={`gauge-${gauge.id}`} flexDirection="row" columnGap={1}>
       <Text dimColor>{gauge.short.padEnd(LABEL_WIDTH)}</Text>
       {barTree(ui, { gauge, width })}
-      {toneText(ui, { text: percentText(gauge.percent), tone: gauge.tone })}
+      {toneText(ui, { text: valueText(gauge.percent), tone: gauge.tone })}
       {extras.length > 0 && <Text dimColor>{`· ${extras.join(' · ')}`}</Text>}
       {series.length > 1 && <Text dimColor>{sparkText(series, 100)}</Text>}
     </Box>

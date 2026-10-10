@@ -1,34 +1,12 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { gitBinary, list, locate, parseNameStatus, parseNumstat, prune, snapshot } from '../hooks/git'
-import { dative, markUndone } from '../hooks/meta'
+import { markUndone, pendingOf } from '../hooks/meta'
+import { diffstatSvg } from '../hooks/pane-svg'
 import type { Run } from '../hooks/git'
+import { fakeFor, newFake, ok, paneOf, stub } from './stubs'
+import type { Fake } from './stubs'
 
-type Call = { argv: string[]; env: Record<string, string>; stdin?: string }
-type Fake = { calls: Call[]; isRepo: boolean; big: string; refs: string; diff: string; numstat?: string; asked: string[]; answer: string }
-
-const ok = (stdout = '', exitCode = 0) => ({ exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false })
-
-function fakeFor(fake: Fake) {
-  return (argv: string[], init: { env?: Record<string, string>; stdin?: string } = {}) => {
-    fake.calls.push({ argv, env: init.env ?? {}, stdin: init.stdin })
-    const sub = argv.filter(arg => !arg.startsWith('--git-dir=') && !arg.startsWith('--work-tree='))
-    const line = sub.join(' ')
-    if (line.startsWith('git rev-parse --show-toplevel')) return fake.isRepo ? ok('/w\n/w/.git\n') : ok('', 128)
-    if (line.startsWith('git rev-parse --git-dir')) return ok('', 128)
-    if (line.startsWith('git rev-parse --verify')) return ok('head1\n')
-    if (argv[0] === 'find') return ok(fake.big)
-    if (line.startsWith('git write-tree')) return ok('tree1\n')
-    if (line.startsWith('git commit-tree')) return ok('commit1\n')
-    if (line.startsWith('git for-each-ref')) return ok(fake.refs)
-    if (line.startsWith('git diff --numstat')) return ok(fake.numstat ?? '')
-    if (line.startsWith('git diff')) return ok(fake.diff)
-
-    return ok()
-  }
-}
-
-const newFake = (over: Partial<Fake> = {}): Fake => ({ calls: [], isRepo: true, big: '', refs: '', diff: '', asked: [], answer: 'Restore', ...over })
 const runOf = (fake: Fake): Run => async (argv, init) => fakeFor(fake)([...argv], init as never)
 const lines = (fake: Fake) => fake.calls.map(call => call.argv.join(' '))
 
@@ -90,23 +68,6 @@ test('a diff splits into files to restore and files made since', () => {
   expect(parseNameStatus('M\0a.ts\0A\0new.ts\0D\0gone.ts\0')).toEqual({ restore: ['a.ts', 'gone.ts'], remove: ['new.ts'] })
 })
 
-function stub(on: any, fake: Fake, seen: any[] = [], stored: Record<string, unknown> = {}) {
-  mock.clock(on)
-  on('session.start', () => ({ cwd: '/w' }))
-  on('env.get', () => ({ value: '/Users/x' }))
-  on('session.cwd', () => ({ value: '/w' }))
-  on('session.id', () => ({ value: 'sess-1' }))
-  on('ui.log', () => ({ value: undefined }))
-  on('ui.toast', (_: any, e: any) => (fake.asked.push(`toast:${e.text}`), { value: undefined }))
-  on('ui.open', () => ({ value: { isPlaced: true } }))
-  on('store.get', () => ({ value: undefined }))
-  on('store.set', (_: any, e: any) => ((stored[e.key] = e.value), { value: undefined }))
-  on('command.register', () => ({ value: undefined }))
-  on('prompt.submit', (_: any, e: any) => (seen.push(e), { text: e.text }))
-  on('process.run', (_: any, e: any) => ({ value: fakeFor(fake)(e.argv, e.init) }))
-  on('tool.call', (_: any, e: any) => (seen.push(e), { result: 'written' }))
-}
-
 const PROMPT = { context: [], wait: false, origin: { kind: 'composer' } }
 const commits = (fake: Fake) => lines(fake).filter(line => line.startsWith('git commit-tree'))
 const SURFACES = ['terminal', 'desktop'] as const
@@ -130,7 +91,7 @@ test('zero tokens: the prompt, tool results and commands reach the model untouch
   // mock.session is newer than the shared _types this tsconfig reads.
   const session = (mock as any).session(on)
   const seen: any[] = []
-  stub(on, fake, seen)
+  stub(on, fake, { seen })
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/w' })
 
   const prompt = { text: 'fix it', ...PROMPT }
@@ -157,12 +118,6 @@ test('/checkpoint off stops snapshots and says so in a toast, not the transcript
   await $.prompt.submit({ text: 'go', ...PROMPT })
   await $.tool.call({ tool: 'Write', file_path: '/w/a.ts', content: 'x' })
   expect(commits(fake)).toHaveLength(0)
-})
-
-const paneOf = (surface: string) => ({
-  plugin: 'checkpoint', component: 'Pane', requestId: 'checkpoints', surface,
-  viewport: { columns: 120, rows: 30 },
-  props: { title: 'Kontrol noktaları', isFocused: true, bodyColumns: 80, placement: 'dock', scroll: { offset: 0, bodyRows: 24 }, view: {} },
 })
 
 async function openPane($: any, on: any, spec: { fake: Fake; surface: string }) {
@@ -196,6 +151,8 @@ for (const surface of SURFACES) {
     await pane.press({ key: 'cp-undo-0' })
     const card = await shown(pane)
     expect(card).toContain('"fix login" öncesine dönülsün mü? 2 dosya değişecek')
+    expect(((await pane.find({ key: 'cp-confirm' })) as any)?.props.label).toBe('2 dosyayı geri al')
+    expect(((await pane.find({ key: 'cp-cancel' })) as any)?.props.autoFocus).toBe(true)
     expect(card).toMatch(/\+12\s*−23/)
     expect(card).toMatch(/new\.ts/)
     expect(await pane.find({ key: 'cp-undo-0' })).toBeUndefined()
@@ -226,7 +183,7 @@ for (const surface of SURFACES) {
 test('a turn is numbered and keeps its files and tools; undo marks it and later turns undone', async ($: any, on: any) => {
   const fake = newFake({ diff: 'M\0a.ts\0' })
   const stored: Record<string, unknown> = {}
-  stub(on, fake, [], stored)
+  stub(on, fake, { stored })
   on('turn.complete', (_: any, e: any) => ({ text: e.answer }))
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/w' })
 
@@ -240,15 +197,25 @@ test('a turn is numbered and keeps its files and tools; undo marks it and later 
   expect(Object.values(meta)).toEqual([{ turn: 2, files: 2, tools: ['E', 'W', '$'] }])
 })
 
-test('undo bookkeeping and Turkish number endings', () => {
+test('undo bookkeeping and git numstat', () => {
   const entries = [1, 2, 3].map(at => ({ ref: `r${at}`, commit: `c${at}`, at, label: `t${at}` }))
   const out = markUndone({ r1: { turn: 1 }, r2: { turn: 2 } }, { entries: [...entries, { ref: 's', commit: 'cs', at: 4, label: 'x' }], target: entries[1]!, safetyRef: 's' })
   expect(out).toEqual({ r1: { turn: 1, isUndone: false }, r2: { turn: 2, isUndone: true }, r3: { isUndone: true }, s: { isSafety: true } })
-  expect([1, 2, 3, 6, 9, 10, 12, 20, 30, 40, 50, 70, 100].map(dative)).toEqual(["1'e", "2'ye", "3'e", "6'ya", "9'a", "10'a", "12'ye", "20'ye", "30'a", "40'a", "50'ye", "70'e", "100'e"])
   expect(parseNumstat('3\t1\ta.ts\0-\t-\timg.png\0')).toEqual([{ path: 'a.ts', added: 3, removed: 1 }, { path: 'img.png', added: 0, removed: 0 }])
 })
 
-test('an empty project says how checkpoints are made', async ($: any, on: any) => {
-  const pane = await openPane($, on, { fake: newFake(), surface: 'desktop' })
-  expect(await pane.find({ type: 'Text', text: /^Henüz kontrol noktası yok/ })).toBeDefined()
+for (const surface of SURFACES) {
+  test(`${surface}: an empty project says how checkpoints are made`, async ($: any, on: any) => {
+    const pane = await openPane($, on, { fake: newFake(), surface })
+    expect(await shown(pane)).toContain('Henüz kontrol noktası yok · ilk dosya yazımından önce sessizce alınır')
+  })
+}
+
+test('the desktop card counts the files it has no row for, as the terminal card does', () => {
+  const paths = Array.from({ length: 7 }, (_, i) => `src/f${i}.ts`)
+  const entry = { ref: 'r', commit: 'c', at: 1, label: 'x' }
+  const pending = pendingOf(entry, { changes: { restore: paths, remove: [] }, stats: paths.map(path => ({ path, added: 1, removed: 0 })), turn: 3 })
+  const drawn = diffstatSvg({ width: 400, mode: 'dark' }, pending)
+  expect(drawn.source).toContain('+2 dosya daha')
+  expect(drawn.alt).toMatch(/\+2 dosya daha$/)
 })

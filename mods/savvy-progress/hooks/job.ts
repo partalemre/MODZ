@@ -25,6 +25,10 @@ export type JobView = {
   launched: number
   /** Unit boundaries to tick on the track (tasks or agents). */
   units: number
+  /** Whole units finished, failed ones included: the meter's settled segments. */
+  done: number
+  /** Units handed out and not finished yet: the meter's running segments. */
+  active: number
   isFinished: boolean
   isWorking: boolean
   crew: number
@@ -52,7 +56,9 @@ const creditOf = (list: AgentRun[]): Credit => {
 const NO_CREDIT: Credit = { sum: 0, isEstimate: false }
 
 // Nothing measurable reads as null ("—"), never as 0%; a running job never reaches 100% on credit.
-const ratioOf = (done: number, credit: Credit, total: number, isFinished: boolean): number | null => {
+type Progress = { done: number; credit: Credit; total: number; isFinished: boolean }
+
+const ratioOf = ({ done, credit, total, isFinished }: Progress): number | null => {
   if (isFinished) return 1
   if (!total) return null
   const ratio = Math.min(NEAR_DONE, (done + credit.sum) / total)
@@ -86,14 +92,17 @@ function reportView(f: Flow, list: AgentRun[], input: JobInput): JobView {
   const credit = f.total ? creditOf(running) : NO_CREDIT
   const handed = new Set(list.map(a => norm(a.description))).size
   const launched = f.total ? Math.min(f.total, Math.max(f.done + running.length, handed)) / f.total : 0
+  const done = f.isFinished ? f.total : Math.min(f.done, f.total)
   return {
     source: 'report',
     title: f.title,
     label: reportLabel(f, running.length),
-    ratio: ratioOf(f.done, credit, f.total, f.isFinished),
+    ratio: ratioOf({ done: f.done, credit, total: f.total, isFinished: f.isFinished }),
     isEstimate: credit.isEstimate && !f.isFinished,
     launched: f.isFinished ? 1 : launched,
     units: f.total,
+    done,
+    active: f.isFinished ? 0 : Math.max(0, Math.round(launched * f.total) - done),
     isFinished: f.isFinished,
     isWorking: running.length > 0,
     crew: input.agents.length + plannedOf(f, input.agents).length,
@@ -109,10 +118,12 @@ function tasksView(tasks: TrackedTask[], list: AgentRun[]): JobView {
     source: 'tasks',
     title: agentsTitle(list),
     label: isFinished ? t().done : `${t().tasks} ${count.done}/${count.total}`,
-    ratio: ratioOf(count.done, NO_CREDIT, count.total, isFinished),
+    ratio: ratioOf({ done: count.done, credit: NO_CREDIT, total: count.total, isFinished }),
     isEstimate: false,
     launched: isFinished ? 1 : (count.done + count.active) / count.total,
     units: count.total,
+    done: count.done,
+    active: isFinished ? 0 : count.active,
     isFinished,
     isWorking: running > 0,
     crew: list.length,
@@ -132,10 +143,12 @@ function agentsView(list: AgentRun[]): JobView {
     source: 'agents',
     title: agentsTitle(list),
     label: isFinished ? done : `${s.agents} ${ended}/${list.length}`,
-    ratio: ratioOf(ended, credit, list.length, isFinished),
+    ratio: ratioOf({ done: ended, credit, total: list.length, isFinished }),
     isEstimate: credit.isEstimate && !isFinished,
     launched: 1,
     units: list.length,
+    done: ended,
+    active: running.length,
     isFinished,
     isWorking: !isFinished,
     crew: list.length,

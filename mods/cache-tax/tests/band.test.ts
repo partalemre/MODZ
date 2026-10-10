@@ -83,7 +83,7 @@ describe('status row', () => {
       expect(w.forks.length).toBe(0)
       await $.command.run(run('keepwarm', 'off'))
       // keepwarm is off, but a cold cache this big still earns its row.
-      expect((await ui.find(ROW))?.text).toMatch(/soğuk · 0dk önce soğudu · sonraki mesaj en fazla \$4\.01/)
+      expect((await ui.find(ROW))?.text).toMatch(/soğuk · 0 dk önce soğudu · sonraki mesaj en fazla \$4,01/)
     })
 
     test(`${surface}: NO_COLOR uses a bold text icon and uncolored state`, async ($, on) => {
@@ -112,7 +112,7 @@ describe('status row', () => {
       expect((await ui.find(ROW))?.text).toMatch(/bilinmiyor.*ilk tur bekleniyor/)
       await $.turn.complete(turn())
       expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(MOSS_OF[surface])
-      expect((await ui.find(ROW))?.text).toMatch(/sıcak.*ping 1s 30dk sonra/)
+      expect((await ui.find(ROW))?.text).toMatch(/sıcak.*ping 1 sa 30 dk sonra/)
       await clock.advance(HOUR)
       expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(KILN_OF[surface])
       expect((await ui.find(ROW))?.text).toMatch(/soğuk.*şimdi soğuk/)
@@ -185,7 +185,7 @@ describe('status row', () => {
       await $.session.start({ ...session, surface })
       await $.turn.complete(turn())
       await $.command.run(run('keepwarm', '90m'))
-      expect(w.status.at(-1)).toBe('keepwarm 1s 30dk kaldı · ping 50dk sonra')
+      expect(w.status.at(-1)).toBe('keepwarm 1 sa 30 dk kaldı · ping 50 dk sonra')
       expect(w.status.at(-1)).not.toMatch(/\x1b/)
       expect(w.forks.length).toBe(0)
     })
@@ -241,9 +241,9 @@ describe('status row visibility', () => {
     await clock.advance(49 * MIN)
     expect(await ui.find(ROW)).toBe(undefined)
     await clock.advance(2 * MIN)
-    expect((await ui.find(ROW))?.text).toBe('Önbellek · sıcak · 9dk içinde soğuyacak · /keepwarm ile sıcak tut')
+    expect((await ui.find(ROW))?.text).toBe('Önbellek · sıcak · 9 dk içinde soğuyacak · /keepwarm ile sıcak tut')
     await clock.advance(10 * MIN)
-    expect((await ui.find(ROW))?.text).toBe('Önbellek · soğuk · 1dk önce soğudu · sonraki mesaj en fazla $4.01')
+    expect((await ui.find(ROW))?.text).toBe('Önbellek · soğuk · 1 dk önce soğudu · sonraki mesaj en fazla $4,01')
     expect(w.forks.length).toBe(0)
   })
 
@@ -264,7 +264,7 @@ describe('status row visibility', () => {
     await $.turn.complete(turn())
     await $.command.run(run('keepwarm', '90m'))
     const ui = await $.ui.mount({ plugin: 'cache-tax', surface: 'terminal', component: 'AbovePrompt', props: { ...bandProps, bodyColumns: 50 } })
-    expect((await ui.find(ROW))?.text).toBe(' Önbellek · sıcak · keepwarm 1s 30dk kaldı')
+    expect((await ui.find(ROW))?.text).toBe(' Önbellek · sıcak · keepwarm 1 sa 30 dk kaldı')
   })
 })
 
@@ -285,13 +285,13 @@ describe('hold card', () => {
   for (const surface of ['terminal', 'desktop'] as const) {
     test(`${surface}: a cold send waits on the card, and pay sends it as the person's own words`, async ($, on) => {
       const { w, ui, dropped } = await holdOn($, on, surface)
-      expect(dropped.drop).toBe('cache-tax: mesajın bekletiliyor, kartta seç (soğuk önbellek, en fazla $4.01).')
+      expect(dropped.drop).toBe('cache-tax: mesajın bekletiliyor, kartta seç (soğuk önbellek, en fazla $4,01).')
       expect(await ui.find({ key: 'cache-tax:hold' })).not.toBe(undefined)
       expect(await ui.find(ROW)).toBe(undefined)
       if (surface === 'desktop') {
         const header = String((await ui.find({ type: 'Svg' }))?.props.source)
         expect(header).toContain('ÖNBELLEK VERGİSİ')
-        expect(header).toContain('Önbellek 6s önce soğudu.')
+        expect(header).toContain('Önbellek 6 sa önce soğudu.')
       } else expect(await ui.find({ type: 'Text', text: '● ÖNBELLEK VERGİSİ' })).not.toBe(undefined)
       expect((await ui.find({ type: 'Text', text: /^(⏸ )?Bekleyen: / }))?.text).toContain(`“${HELD}”`)
       expect((await ui.findAll({ type: 'Button' })).map(b => b.props.label)).toEqual(['Öde ve gönder', 'Yeni başla', 'Önbellek durumu'])
@@ -300,33 +300,43 @@ describe('hold card', () => {
       expect(w.origins.at(-1)).toMatchObject({ kind: 'plugin', name: 'cache-tax', asUser: true })
       expect(await ui.find({ key: 'cache-tax:hold' })).toBe(undefined)
       await $.turn.complete(turn({ usage: usage({ cache_read_input_tokens: 0, cache_creation_input_tokens: 200502 }) }))
-      expect(w.logs.at(-1)).toMatch(/201k token soğuk yazım ödendi \(\$4\.01\)/)
+      expect(w.logs.at(-1)).toMatch(/201k token soğuk yazım ödendi \(\$4,01\)/)
     })
   }
 
-  test('start fresh runs /clear and puts the held text back in the prompt box', async ($, on) => {
-    const { w, ui } = await holdOn($, on, 'desktop')
-    await ui.press({ key: 'cache-tax:fresh' })
-    expect(w.ran).toContain('clear')
-    expect(w.fills).toEqual([HELD])
-    expect(w.entered).toEqual([])
-    expect(await ui.find({ key: 'cache-tax:hold' })).toBe(undefined)
-  })
+  for (const surface of ['terminal', 'desktop'] as const) {
+    test(`start fresh runs /clear and puts the held text back in the prompt box (${surface})`, async ($, on) => {
+      const { w, ui } = await holdOn($, on, surface)
+      await ui.press({ key: 'cache-tax:fresh' })
+      expect(w.ran).toContain('clear')
+      expect(w.fills).toEqual([HELD])
+      expect(w.entered).toEqual([])
+      expect(await ui.find({ key: 'cache-tax:hold' })).toBe(undefined)
+    })
 
-  test('cache status leaves the card up, and typing the message again pays as before', async ($, on) => {
-    const { w, ui } = await holdOn($, on, 'desktop')
-    await ui.press({ key: 'cache-tax:status' })
-    expect(await ui.find({ key: 'cache-tax:hold' })).not.toBe(undefined)
-    await $.prompt.submit(prompt(HELD))
-    expect(w.entered).toEqual([HELD])
-    expect(await ui.find({ key: 'cache-tax:hold' })).toBe(undefined)
-  })
+    test(`cache status leaves the card up, and typing the message again pays as before (${surface})`, async ($, on) => {
+      const { w, ui } = await holdOn($, on, surface)
+      await ui.press({ key: 'cache-tax:status' })
+      expect(await ui.find({ key: 'cache-tax:hold' })).not.toBe(undefined)
+      await $.prompt.submit(prompt(HELD))
+      expect(w.entered).toEqual([HELD])
+      expect(await ui.find({ key: 'cache-tax:hold' })).toBe(undefined)
+    })
+  }
 
-  test('the comparison shows both prices, the token span and a visible warm sliver', async ($, on) => {
+  test('the comparison shows both prices, the token span, the price ratio and a visible warm sliver', async ($, on) => {
     const { ui } = await holdOn($, on, 'desktop')
     const compare = String((await ui.findAll({ type: 'Svg' }))[1]?.props.source)
-    for (const part of ['Şimdi gönder', '$4.01', 'Sıcak bir tur', '$0.05', '~200.502 token', 'yeniden yazılır · $20/MTok', 'olurdu']) {
+    for (const part of ['Şimdi gönder', '$4,01', 'Sıcak bir tur', '$0,05', '~200.502 token', 'yeniden yazılır · $20/MTok', 'sıcakken olurdu · 80 kat ucuz']) {
       expect(compare).toContain(part)
+    }
+  })
+
+  test('the terminal card says the same prices and ratio in text', async ($, on) => {
+    const { ui } = await holdOn($, on, 'terminal')
+    const drawn = JSON.stringify(await ui.drawn())
+    for (const part of ['● ÖNBELLEK VERGİSİ', '$4,01', '$0,05', '80 kat ucuz', 'keepwarm önbelleği 3 sa tutsun']) {
+      expect(drawn).toContain(part)
     }
   })
 })

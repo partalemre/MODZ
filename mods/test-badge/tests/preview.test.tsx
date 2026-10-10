@@ -1,5 +1,8 @@
 import { mock, test } from 'claude-code/testing'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 // Draws each state on the desktop for bin/preview, once per pinned theme.
 const VITEST = [
   ' FAIL  src/auth/login.test.ts > login > rejects an expired token 14ms',
@@ -17,12 +20,15 @@ const ESLINT = ['/w/src/api/user.ts', "   3:7  error  'x' is assigned a value bu
 const PASS = ' Tests  42 passed (42)'
 const pkg = JSON.stringify({ scripts: { test: 'vitest run', lint: 'eslint .' } })
 const result = (stdout: string, exitCode: number) => ({ value: { exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
+// About 400 px (the desktop's right pane) and 600 px.
+const WIDTHS = { narrow: 52, wide: 84 }
 const bandOf = { plugin: 'test-badge', component: 'AbovePrompt', requestId: 'band', surface: 'desktop', viewport: { columns: 110, rows: 40 }, props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 100, scroll: { offset: 0, bodyRows: 10 }, view: {} } }
-const paneOf = { plugin: 'test-badge', component: 'Pane', requestId: 'test-badge', surface: 'desktop', viewport: { columns: 110, rows: 40 }, props: { title: 'Testler', isFocused: true, bodyColumns: 92, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} } }
+const paneOf = (bodyColumns: number) => ({ plugin: 'test-badge', component: 'Pane', requestId: 'test-badge', surface: 'desktop', viewport: { columns: 110, rows: 40 }, props: { title: 'Testler', isFocused: true, bodyColumns, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} } })
+const narrowBand = { ...bandOf, requestId: 'band-narrow', props: { ...bandOf.props, bodyColumns: WIDTHS.narrow } }
 
 type Run = { test: string; lint: string; code: number; hold?: Promise<void> }
 
-async function setup($: any, on: any, spec: { theme: string; run: Run }) {
+async function setup($: any, on: any, spec: { theme: string; run: Run; isIdle?: boolean }) {
   const clock = mock.clock(on)
   mock.env(on, { MODZ_THEME: spec.theme })
   for (const name of ['store.get', 'store.set', 'command.register', 'ui.log', 'ui.status', 'ui.toast', 'ui.open']) on(name, () => ({ value: undefined }))
@@ -41,6 +47,7 @@ async function setup($: any, on: any, spec: { theme: string; run: Run }) {
     return result(isLint ? spec.run.lint : spec.run.test, isLint && spec.run.lint === '' ? 0 : spec.run.code)
   })
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/w' })
+  if (spec.isIdle === true) return
   await $.tool.call({ tool: 'Edit', file_path: '/w/src/a.ts', old_string: 'a', new_string: 'b' })
   await $.turn.complete({ answer: 'ok', durationMs: 1, isAborted: false, turnId: 't', reason: 'answer' })
   await clock.advance(5_500)
@@ -49,17 +56,31 @@ async function setup($: any, on: any, spec: { theme: string; run: Run }) {
 
 const dump = async (label: string, ui: any) => console.log(`@@TREE@@${label}@@${JSON.stringify(await ui.drawn())}`)
 
+async function dumpPanes($: any, label: string) {
+  for (const [name, columns] of Object.entries(WIDTHS)) {
+    const pane = await $.ui.mount(paneOf(columns))
+    await dump(`${label}-${name}`, pane)
+    await pane.unmount()
+  }
+}
+
 for (const theme of ['dark', 'light']) {
   test(`preview ${theme}: failing band and details pane`, async ($: any, on: any) => {
     await setup($, on, { theme, run: { test: VITEST, lint: ESLINT, code: 1 } })
     await dump(`band-fail-${theme}`, await $.ui.mount(bandOf))
-    await dump(`pane-fail-${theme}`, await $.ui.mount(paneOf))
+    await dump(`band-fail-narrow-${theme}`, await $.ui.mount(narrowBand))
+    await dumpPanes($, `pane-fail-${theme}`)
   })
 
   test(`preview ${theme}: passing band`, async ($: any, on: any) => {
     await setup($, on, { theme, run: { test: PASS, lint: ESLINT, code: 0 } })
     await dump(`band-pass-${theme}`, await $.ui.mount(bandOf))
-    await dump(`pane-pass-${theme}`, await $.ui.mount(paneOf))
+    await dumpPanes($, `pane-pass-${theme}`)
+  })
+
+  test(`preview ${theme}: no run yet`, async ($: any, on: any) => {
+    await setup($, on, { theme, run: { test: PASS, lint: '', code: 0 }, isIdle: true })
+    await dumpPanes($, `pane-empty-${theme}`)
   })
 
   test(`preview ${theme}: running band`, async ($: any, on: any) => {

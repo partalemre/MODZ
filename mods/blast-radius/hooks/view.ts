@@ -83,8 +83,10 @@ function fileRows(report: Report, isExpanded: boolean): { rows: Row[]; listed: n
   return { rows, listed, shown }
 }
 
+const ITEM_ICON: Partial<Record<Report['kind'], IconName>> = { commits: 'commit', migrations: 'database' }
+
 function itemRows(report: Report, isExpanded: boolean): { rows: Row[]; listed: number; shown: number } {
-  const icon: IconName = report.kind === 'commits' ? 'commit' : report.kind === 'migrations' ? 'database' : 'file'
+  const icon = ITEM_ICON[report.kind] ?? 'file'
   const totalWeight = report.items.reduce((sum, item) => sum + item.weight, 0)
   const items = isExpanded ? report.items : report.items.slice(0, ITEMS_COLLAPSED)
   const rows: Row[] = items.map(item => ({ kind: 'item', name: item.name, tag: item.tag, count: '', size: item.meta, share: totalWeight > 0 ? item.weight / totalWeight : null, icon }))
@@ -114,7 +116,7 @@ function bannerOf(report: Report): Banner | null {
 }
 
 function headline(report: Report): { payload: string; tail: string } {
-  if (report.count === 0) return { payload: 'ölçülecek bir şey yok', tail: '' }
+  if (report.count === 0) return { payload: 'önceden ölçülemedi', tail: '' }
   if (report.kind === 'files') return { payload: report.bytes === null ? `${report.count} yol` : `${report.count} dosya · ${trSize(report.bytes)}`, tail: ' silinecek' }
   if (report.kind === 'changes') return { payload: `${report.count} dosyadaki değişiklik`, tail: ' silinecek' }
   if (report.kind === 'commits') return { payload: `${report.count} commit`, tail: ' düşecek' }

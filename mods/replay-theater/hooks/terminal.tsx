@@ -76,13 +76,18 @@ function contextRows(ui: Ui, step: ReplayStep, isPending: boolean) {
 function header(ui: Ui, model: PaneModel) {
   const { Box, Text } = ui
   const sum = totals(model.steps)
+  const ask = model.ask ?? ''
 
   return (
-    <Box key="rt-head" flexDirection="row" columnGap={1}>
-      <Text bold>{`${sum.files} dosyada ${model.steps.length} düzenleme`}</Text>
-      <Box flexGrow={1} />
-      <Text color="success">{`+${sum.add}`}</Text>
-      <Text color="error">{`−${sum.del}`}</Text>
+    <Box key="rt-head" flexDirection="column">
+      <Box flexDirection="row" columnGap={1}>
+        <Text bold>{`${sum.files} dosyada ${model.steps.length} düzenleme`}</Text>
+        {(model.age ?? '') !== '' && <Text dimColor>{`· ${model.age}`}</Text>}
+        <Box flexGrow={1} />
+        <Text color="success">{`+${sum.add}`}</Text>
+        <Text color="error">{`−${sum.del}`}</Text>
+      </Box>
+      {ask !== '' && <Text dimColor italic wrap="truncate-end">{`“${ask}”`}</Text>}
     </Box>
   )
 }
@@ -99,7 +104,9 @@ export function terminalView(ui: Ui, model: PaneModel, site: TerminalSite) {
     <Box key="rt-pane" flexDirection="column" paddingX={1}>
       {!site.isCompact && header(ui, model)}
       {!site.isCompact && model.steps.slice(shown.start, shown.end).map((one, n) => stepRow(ui, one, { k: shown.start + n, index: model.index }))}
-      <Text key="rt-eyebrow" color="merged" bold>{`● DÜZENLEME ${model.index + 1} / ${model.steps.length}`}</Text>
+      <Box key="rt-eyebrow" marginTop={site.isCompact ? 0 : 1}>
+        <Text color="merged" bold>{`● DÜZENLEME ${model.index + 1} / ${model.steps.length}`}</Text>
+      </Box>
       <Box key="rt-file" flexDirection="row" columnGap={1}>
         <Text bold>{baseName(step.file)}</Text>
         <Text dimColor wrap="truncate-start">{meta}</Text>

@@ -57,8 +57,14 @@ export type BadgeNotice = {
   expiresAt: number
 }
 
+// The MODZ main panel's summary card (DESIGN.md §9): lo · Iris · Moss · Amber · Flare.
+export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+
 declare module 'claude-code' {
   interface PluginState {
-    'test-badge': { badge: TestBadge; notice: BadgeNotice | null; isEnabled: boolean; filter: SuiteFilter; theme: BadgeTheme }
+    'test-badge': { badge: TestBadge; notice: BadgeNotice | null; isEnabled: boolean; filter: SuiteFilter; theme: BadgeTheme; hub: HubCard }
+    // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
+    modz: { open: { pane: string; at: number } }
   }
 }

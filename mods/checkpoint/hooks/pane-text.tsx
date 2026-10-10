@@ -1,7 +1,7 @@
-import { ago, changedText, headerMeta, questionOf, statusRow, titleOf } from './pane'
+import { EMPTY_TEXT, ago, changedText, confirmLabel, headerMeta, questionOf, statusRow, titleOf } from './pane'
 import type { PaneOpts, Ui } from './pane'
 import { upper } from './svg'
-import type { CheckpointView, PendingUndo } from '../types'
+import type { CheckpointMeta, CheckpointView, PendingUndo } from '../types'
 
 // The pane in text (terminal): the same timeline with ●/○ step glyphs and the confirm card.
 
@@ -29,11 +29,17 @@ function confirmText(ui: Ui, pending: PendingUndo, opts: PaneOpts) {
       ))}
       {more > 0 && <Text dimColor>{`+${more} daha`}</Text>}
       <Box flexDirection="row" columnGap={1} marginTop={1}>
-        <Button key="cp-confirm" variant="primary" hotkey="g" label="Geri al" onPress={opts.actions.onConfirm} />
-        <Button key="cp-cancel" variant="secondary" hotkey="v" label="Vazgeç" onPress={opts.actions.onCancel} />
+        <Button key="cp-confirm" variant="secondary" hotkey="g" label={confirmLabel(pending)} onPress={opts.actions.onConfirm} />
+        <Button key="cp-cancel" variant="secondary" hotkey="v" label="Vazgeç" autoFocus onPress={opts.actions.onCancel} />
       </Box>
     </Box>
   )
+}
+
+function glyphOf(meta: CheckpointMeta): string {
+  if (meta.isSafety === true) return '◆'
+
+  return meta.isUndone === true ? '○' : '●'
 }
 
 function rowText(ui: Ui, view: CheckpointView, spec: { index: number; opts: PaneOpts }) {
@@ -43,7 +49,7 @@ function rowText(ui: Ui, view: CheckpointView, spec: { index: number; opts: Pane
   const meta = spec.opts.meta[entry.ref] ?? {}
   const named = titleOf(entry, spec.opts.meta)
   const isUndone = meta.isUndone === true
-  const glyph = meta.isSafety === true ? '◆' : isUndone ? '○' : '●'
+  const glyph = glyphOf(meta)
   const facts = [ago(spec.opts.now - entry.at), meta.files ? `+${meta.files} dosya` : '', (meta.tools ?? []).join(' ')].filter(part => part !== '')
 
   return (
@@ -73,7 +79,7 @@ export function textPane(ui: Ui, view: CheckpointView, opts: PaneOpts) {
       <Text> </Text>
       {statusRow(ui, view, opts.actions)}
       {view.pending !== null && confirmText(ui, view.pending, opts)}
-      {view.pending === null && view.entries.length === 0 && <Text dimColor>Henüz kontrol noktası yok. Her turun ilk dosya yazımından önce bir tane alınır.</Text>}
+      {view.pending === null && view.entries.length === 0 && <Text dimColor>{EMPTY_TEXT}</Text>}
       {view.pending === null && view.entries.map((_, index) => rowText(ui, view, { index, opts }))}
     </Box>
   )

@@ -16,6 +16,8 @@ export const escape = (text: string): string =>
 
 const NARROW = 'iljtf.,:;|!\'` ·'
 const WIDE = 'mwMW@%'
+// Digits of the system font, tabular or not, are a little wider than an average lower-case letter.
+const DIGIT_EM = 0.6
 
 // Width of a text in px, close enough to lay out a line without a renderer.
 export function measure(text: string, size: number, isMono = false): number {
@@ -24,6 +26,7 @@ export function measure(text: string, size: number, isMono = false): number {
   return [...text].reduce((sum, char) => {
     if (NARROW.includes(char)) return sum + size * 0.3
     if (WIDE.includes(char)) return sum + size * 0.82
+    if (char >= '0' && char <= '9') return sum + size * DIGIT_EM
 
     return sum + (char >= 'A' && char <= 'Z' ? size * 0.66 : size * 0.55)
   }, 0)
@@ -78,11 +81,8 @@ export function sparkline(spec: SparkSpec): string {
 }
 
 // The upper-case label each card and tile opens with.
-export function eyebrow(text: string, x: number, y: number, cls: string): string {
+export function eyebrow(text: string, at: { x: number; y: number; cls: string }): string {
   const label = escape(text.toLocaleUpperCase('tr'))
 
-  return `<text class="${cls}" x="${x}" y="${y}" font-size="${EYEBROW_SIZE}" font-weight="700" letter-spacing="${EYEBROW_TRACKING}">${label}</text>`
+  return `<text class="${at.cls}" x="${at.x}" y="${at.y}" font-size="${EYEBROW_SIZE}" font-weight="700" letter-spacing="${EYEBROW_TRACKING}">${label}</text>`
 }
-
-export const eyebrowWidth = (text: string): number =>
-  measure(text.toLocaleUpperCase('tr'), EYEBROW_SIZE) + [...text].length * EYEBROW_TRACKING

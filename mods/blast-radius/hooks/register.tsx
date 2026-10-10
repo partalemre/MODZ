@@ -5,6 +5,7 @@
 //
 // tool.call (Bash): if the command is risky, work out its blast radius, open a
 // pane with the delete button and Vazgeç, and hold the call until one is pressed.
+// A command that would change nothing (no such file, no changes) runs with no card.
 // ui.render (Pane): draws the card. If the surface won't place the pane (a
 // narrow terminal), the same card is drawn in the AbovePrompt band, above the
 // other mods' rows.
@@ -24,6 +25,7 @@ import { classify } from './classify'
 import type { Risk } from './classify'
 import { measure, missingFolder } from './measure'
 import type { Report, Run } from './report'
+import { pinned } from './pin'
 import { resolveLight } from './theme'
 import { viewOf } from './view'
 
@@ -122,6 +124,11 @@ async function hold($: EngineInterface, mine: Held, signal: AbortSignal): Promis
   let isPlaced = false
   try {
     await survey($, mine)
+    if (mine.report?.isEmpty) {
+      mine.decision = 'proceed'
+
+      return
+    }
     isPlaced = (await $.ui.open({ id: PANE_ID, title: 'Blast Radius', focus: true, closeOnEscape: true, rows: paneRows(mine) })).isPlaced
     if (!isPlaced) mine.where = 'band'
     $.ui.invalidate('ui.render')
@@ -203,11 +210,7 @@ function holdHooks(on: On): void {
     const mine: Held = { command, risk, report: null, cwd: '', decision: null, where: 'pane', phase: 'asking', isExpanded: false }
     held = mine
     await hold($, mine, next.signal)
-    if (mine.decision === 'proceed') {
-      $.ui.toast('Blast Radius: komut çalışıyor')
-
-      return next(e)
-    }
+    if (mine.decision === 'proceed') return next(e)
 
     return refusal(WHY[mine.decision ?? 'error'], mine.report?.summary ?? risk.label)
   }).catch(($, e, next) => {
@@ -228,12 +231,14 @@ function drawHooks(on: On): void {
     return next(e)
   })
 
-  on('ui.render', { component: 'Pane' }, ($, e, next) => {
+  // Only its own pane waits out a focus flip: every other mod's pane passes through this hook too.
+  on('ui.render', { component: 'Pane' }, async ($, e, next) => {
     const mine = held
     if (e.requestId !== PANE_ID || !isMeasured(mine)) return next(e)
     const redraw = () => $.ui.invalidate('ui.render')
+    const ui = $.ui.resolve(e)
 
-    return draw(mine, { ui: $.ui.resolve(e), surface: e.surface, columns: e.props.bodyColumns, place: 'pane', redraw })
+    return pinned(e, draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, place: 'pane', redraw }))
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -243,7 +248,7 @@ function drawHooks(on: On): void {
     const ui = $.ui.resolve(e)
     const { Box } = ui
     const redraw = () => $.ui.invalidate('ui.render')
-    const card = draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, place: 'band', redraw })
+    const card = pinned(e, draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, place: 'band', redraw }))
 
     // A decision card goes above the other mods' rows (DESIGN.md §6).
     return (

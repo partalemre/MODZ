@@ -1,6 +1,6 @@
 // The engine beneath secret-guard in tests: files, git answers, the dialog answered with `choice`.
 
-export type Setup = { choice: string; asked: string[]; files: Record<string, string>; ran: any[]; git: Record<string, string>; cards: string[][]; trees: any[]; dialogs: any[]; theme: string; surface: 'terminal' | 'desktop' }
+export type Setup = { choice: string; asked: string[]; files: Record<string, string>; ran: any[]; git: Record<string, string>; cards: string[][]; trees: any[]; dialogs: any[]; theme: string; surface: 'terminal' | 'desktop'; columns?: number }
 
 // The card as the person reads it: one string per line, indents included.
 export function textOf(node: any): string {
@@ -18,7 +18,7 @@ export function linesOf(node: any, indent = 0): string[] {
 export async function drawCard($: any, setup: Setup, questions: unknown[]): Promise<void> {
   const ui = await $.ui.mount({
     plugin: 'secret-guard', component: 'AskUserQuestion', requestId: 'q', surface: setup.surface,
-    viewport: { columns: 100, rows: 40 }, props: { tool: 'AskUserQuestion', questions },
+    viewport: { columns: setup.columns ?? 100, rows: 40 }, props: { tool: 'AskUserQuestion', questions },
   })
   const tree = await ui.drawn()
   setup.trees.push(tree)
@@ -56,18 +56,7 @@ export function stub($: any, on: any, setup: Setup) {
 
     return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
   })
-  on('tool.call', async (_: any, e: any) => {
-    if (e.tool === 'AskUserQuestion') {
-      const question = e.questions[0].question
-      setup.asked.push(question)
-      await drawCard($, setup, e.questions)
-
-      return { result: { answers: { [question]: setup.choice } } }
-    }
-    setup.ran.push(e)
-
-    return { result: 'ran' }
-  })
+  on('tool.call', (_: any, e: any) => answerTool($, setup, e))
 }
 
 export async function start($: any, on: any, setup: Setup) {
@@ -77,4 +66,18 @@ export async function start($: any, on: any, setup: Setup) {
 
 export function fresh(choice: string, surface: 'terminal' | 'desktop' = 'terminal'): Setup {
   return { choice, asked: [], files: {}, ran: [], git: {}, cards: [], trees: [], dialogs: [], theme: 'dark', surface }
+}
+
+// The AskUserQuestion draws its card and answers with the test's choice; any other tool just runs.
+async function answerTool($: any, setup: Setup, e: any) {
+  if (e.tool === 'AskUserQuestion') {
+    const question = e.questions[0].question
+    setup.asked.push(question)
+    await drawCard($, setup, e.questions)
+
+    return { result: { answers: { [question]: setup.choice } } }
+  }
+  setup.ran.push(e)
+
+  return { result: 'ran' }
 }

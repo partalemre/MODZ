@@ -1,17 +1,5 @@
 {
-  "compilerOptions": {
-    "target": "es2023",
-    "lib": ["es2023"],
-    "types": [],
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noEmit": true,
-    "skipLibCheck": true,
-    "jsx": "react",
-    "jsxFactory": "h",
-    "jsxFragmentFactory": "Fragment"
-  },
-  "include": [".claude/types", "types", "hooks", "tests"]
+  "extends": "/Users/partalle/AI-Tools/claude-mods/_types/tsconfig.json",
+  "compilerOptions": { "typeRoots": ["/Users/partalle/AI-Tools/claude-mods/_types"] },
+  "include": ["hooks", "types", "tests"]
 }

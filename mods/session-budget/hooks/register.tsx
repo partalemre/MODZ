@@ -3,6 +3,7 @@ import type { EngineInterface, On, PromptOrigin, Register } from 'claude-code'
 
 import { WARN_RATIO, advance, describe, parseCommand, raise, ratioOf, readingOf, spendText, startBudget, stepText } from './budget'
 import { fullCard, isLive, noticeAbove, stoppedRow, warnRow } from './notice'
+import { pinned } from './pin'
 import type { Budget, BudgetNotice } from '../types'
 
 const BUDGET = 'budget'
@@ -14,6 +15,8 @@ const CONTINUE = 'Devam et'
 const HEADER = 'Bütçe'
 const PRIORITY = 1
 const DISMISS_AFTER_MS = 20_000
+// After "Dur" the dropped prompt goes back in the box once the dialog has given it back.
+const RESTORE_AFTER_MS = 300
 // Prompts a person typed; a plugin's, a peer's or a scheduled one is never held back.
 const TYPED_ORIGINS = new Set<PromptOrigin['kind']>(['composer', 'bridge'])
 
@@ -85,6 +88,16 @@ async function confirm($: EngineInterface, budget: Budget): Promise<boolean> {
   return true
 }
 
+// The typed prompt is not lost: it returns to the empty box, for the person to send after /budget.
+function restoreDraft($: EngineInterface, text: string): void {
+  $.clock.after(RESTORE_AFTER_MS, () => {
+    void (async () => {
+      const box = await $.prompt.read()
+      if (box.text.trim() === '' && text.trim() !== '') await $.prompt.fill({ text })
+    })().catch(() => $.ui.log('session-budget: could not put the prompt back', { to: 'debug' }))
+  })
+}
+
 async function isPersonTyped($: EngineInterface, origin: PromptOrigin): Promise<boolean> {
   if (TYPED_ORIGINS.has(origin.kind)) return true
 
@@ -154,6 +167,7 @@ function registerFlow(on: On) {
     if (!isOver || !(await read($, enabledAtom)) || !(await isPersonTyped($, e.origin))) return next(e)
     if (await confirm($, budget)) return next(e)
     await notify($, 'stopped', `Durduruldu: bütçe doldu · ${spendText(budget)} · /budget ile artır`)
+    restoreDraft($, e.text)
 
     return { drop: `Oturum bütçesi doldu: ${describe(budget)}. /budget ile artır ya da /budget off ile kaldır.` }
   }).catch(($, e, next) => next(e))
@@ -171,11 +185,11 @@ function registerBand(on: On) {
     if (notice.kind === 'stopped') {
       const spend = budget === null ? '' : spendText(budget)
 
-      return noticeAbove(ui, stoppedRow(ui, { text: notice.text, spend, surface: e.surface }), { theirs, dismiss })
+      return pinned(e, noticeAbove(ui, stoppedRow(ui, { text: notice.text, spend, surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss }))
     }
     if (budget === null) return theirs
 
-    return noticeAbove(ui, warnRow(ui, { budget, nowMs: await $.clock.now(), surface: e.surface }), { theirs, dismiss })
+    return pinned(e, noticeAbove(ui, warnRow(ui, { budget, nowMs: await $.clock.now(), surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss }))
   })
 
   // The full-budget question keeps Claude Code's own options; the card above says what is full.
@@ -185,7 +199,7 @@ function registerBand(on: On) {
     const budget = await read($, budgetAtom)
     if (first?.header !== HEADER || budget === null) return theirs
 
-    return fullCard($.ui.resolve(e), { budget, columns: e.viewport?.columns ?? 100, surface: e.surface, theirs })
+    return pinned(e, fullCard($.ui.resolve(e), { budget, columns: e.viewport?.columns ?? 100, surface: e.surface, theirs }))
   })
 }
 

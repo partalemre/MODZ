@@ -2,14 +2,19 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, ModelUsage, Register, SessionUsage } from 'claude-code'
 
 import { bandRow } from './band'
-import { labelOf, longLabelOf, percentText } from './format'
+import { labelOf, longLabelOf, resetText, untilReset, valueText } from './format'
 import { addSample, isHistory } from './history'
+import { EMPTY_HUB, HUB_PANE, hubOf, isOwnOpen } from './hub'
+import { gaugeViews } from './model'
 import { paneTree } from './pane'
+import { isSame } from './same'
+import { pinned } from './pin'
 import type { HudTurn, HudUsage } from '../types'
 
 type Measured = Pick<SessionUsage, 'context' | 'rateLimits' | 'cost'>
 
 const PANE = 'hud-pro'
+const PANE_TITLE = 'Kullanım'
 const HIDDEN_KEY = 'hud-pro.hidden'
 const HISTORY_KEY = 'hud-pro.history'
 // Reset countdowns move by the minute, so the idle line redraws once a minute.
@@ -23,8 +28,11 @@ const lastTurnAtom = atom({ plugin: 'hud-pro', key: 'lastTurn' } as const, null)
 const hiddenAtom = atom({ plugin: 'hud-pro', key: 'isHidden' } as const, false)
 const historyAtom = atom({ plugin: 'hud-pro', key: 'history' } as const, [])
 const compactingAtom = atom({ plugin: 'hud-pro', key: 'isCompacting' } as const, false)
+const hubAtom = atom({ plugin: 'hud-pro', key: 'hub' } as const, EMPTY_HUB)
 
 const noticed = new Set<string>()
+// What the minute clock last moved on screen: the gauges' countdowns and pace marks.
+let shownGauges: unknown = null
 
 function toUsage(measured: Measured): HudUsage {
   const gauges = measured.rateLimits.map(limit => ({
@@ -60,13 +68,26 @@ async function record($: EngineInterface, fresh: HudUsage): Promise<void> {
   await $.store.set(HISTORY_KEY, after)
 }
 
-// One short notice per plan window once it passes 90%.
-function noticeHigh($: EngineInterface, fresh: HudUsage): void {
+// The MODZ card: written once at the start, then only when what it shows changes.
+async function writeHub($: EngineInterface, usage: HudUsage, isFirst = false): Promise<void> {
+  const fresh = hubOf(usage)
+  const current = await read($, hubAtom)
+  if (!isFirst && current.detail === fresh.detail && current.tone === fresh.tone) return
+  const at = await $.clock.now()
+  await update($, hubAtom, () => ({ pane: HUB_PANE, ...fresh, at }))
+}
+
+// One short notice per plan window once it passes 90%, with when it resets.
+async function noticeHigh($: EngineInterface, fresh: HudUsage): Promise<void> {
+  const nowMs = await $.clock.now()
   for (const gauge of fresh.gauges.filter(entry => entry.id !== 'context' && entry.percent >= NOTICE_PERCENT)) {
     const id = `${gauge.id}:${gauge.resetsAt}`
     if (noticed.has(id)) continue
     noticed.add(id)
-    $.ui.toast(`${longLabelOf(gauge.id)} limiti ${percentText(gauge.percent)} dolu`)
+    const value = valueText(gauge.percent)
+    const reset = untilReset(gauge.resetsAt, nowMs)
+    const head = value === 'dolu' ? `${longLabelOf(gauge.id)} limiti doldu` : `${longLabelOf(gauge.id)} limiti ${value} dolu`
+    $.ui.toast(reset === '' ? head : `${head} · ${resetText(reset)}`)
   }
 }
 
@@ -78,9 +99,14 @@ async function toggle($: EngineInterface): Promise<{ text: string }> {
   return { text: isHidden ? 'HUD gizlendi.' : 'HUD gösteriliyor.' }
 }
 
+// Opens the pane, or brings it forward when it is open already; never closes it.
+async function openPane($: EngineInterface): Promise<void> {
+  await $.ui.open({ id: PANE, title: PANE_TITLE, focus: true, closeOnEscape: true })
+}
+
 async function runCommand($: EngineInterface, args: string): Promise<{ text?: string }> {
   if (args.trim().toLowerCase() !== 'full') return toggle($)
-  await $.ui.open({ id: PANE, title: 'HUD', focus: true, closeOnEscape: true })
+  await openPane($)
 
   return {}
 }
@@ -97,14 +123,26 @@ function compactNow($: EngineInterface): void {
   )
 }
 
+// The minute clock moves only the gauges' countdowns and pace marks; a minute that moves none of
+// them redraws nothing, since every redraw also hands out new press handles.
+async function redrawIfMoved($: EngineInterface): Promise<void> {
+  const usage = await read($, usageAtom)
+  const gauges = usage === null ? null : gaugeViews(usage, await $.clock.now())
+  if (isSame(gauges, shownGauges)) return
+  shownGauges = gauges
+  $.ui.invalidate('ui.render')
+}
+
 async function setup($: EngineInterface): Promise<void> {
-  const current = await $.session.usage()
-  await update($, usageAtom, () => toUsage(current))
+  const current = toUsage(await $.session.usage())
+  await update($, usageAtom, () => current)
+  shownGauges = gaugeViews(current, await $.clock.now())
+  await writeHub($, current, true)
   await update($, hiddenAtom, () => false)
   if ((await $.store.get(HIDDEN_KEY)) === true) await update($, hiddenAtom, () => true)
   const saved = await $.store.get(HISTORY_KEY)
   if (isHistory(saved)) await update($, historyAtom, () => saved)
-  $.clock.every(REFRESH_MS, () => $.ui.invalidate('ui.render'))
+  $.clock.every(REFRESH_MS, () => void redrawIfMoved($))
   await $.command.register({ name: 'hud', description: 'HUD satırını aç/kapat; "/hud full" limit ayrıntılarını açar' })
 }
 
@@ -121,7 +159,8 @@ function onUsage(on: On) {
     try {
       const fresh = toUsage(e)
       await update($, usageAtom, () => fresh)
-      noticeHigh($, fresh)
+      await writeHub($, fresh)
+      await noticeHigh($, fresh)
       await record($, fresh)
     } catch {
       $.ui.log('hud-pro: measure failed', { to: 'debug' })
@@ -147,6 +186,17 @@ function onUsage(on: On) {
   })
 }
 
+// The MODZ main panel asks for this pane by writing `{ pane: 'usage' }` to `modz.open`. modz's
+// contract is not this mod's to import, so its address stays untyped here.
+function onOpen(on: On) {
+  on('state.set', { plugin: 'modz', key: 'open' } as any, async ($: EngineInterface, e: any, next: any) => {
+    const done = await next(e)
+    if (isOwnOpen(e.value)) await openPane($)
+
+    return done
+  }).catch(($: EngineInterface, e: any, next: any) => next(e))
+}
+
 function onRender(on: On) {
   on('command.run', { command: 'hud' }, async ($, e) => {
     try {
@@ -160,14 +210,14 @@ function onRender(on: On) {
     const turn = await read($, turnAtom)
     const ui = $.ui.resolve(e)
 
-    return paneTree(ui, {
+    return pinned(e, paneTree(ui, {
       usage: await read($, usageAtom),
       history: await read($, historyAtom),
       turn: turn.requests > 0 ? turn : await read($, lastTurnAtom),
       columns: e.props.bodyColumns,
       nowMs: await $.clock.now(),
       ...(e.surface !== 'terminal' && 'Svg' in ui ? { svg: ui.Svg } : {}),
-    })
+    }))
   })
 }
 
@@ -193,7 +243,7 @@ function onBand(on: On) {
       return (
         <Box flexDirection="column">
           {theirs}
-          {row}
+          {pinned(e, row)}
         </Box>
       )
     } catch {
@@ -206,6 +256,7 @@ function onBand(on: On) {
 
 export const register: Register = on => {
   onUsage(on)
+  onOpen(on)
   onRender(on)
   onBand(on)
 }

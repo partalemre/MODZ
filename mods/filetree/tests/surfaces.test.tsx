@@ -230,6 +230,10 @@ test('macOS app: every header button and the search box work on the desktop surf
   const ui = await $.ui.mount({ plugin: 'filetree', surface: 'desktop', component: 'Pane', requestId: 'filetree', props: paneProps(60) })
   await clock.settle()
   expect(await texts(ui)).toContain('.env')
+  expect(await texts(ui)).not.toContain('Gizlileri gizle')
+  await ui.press({ key: 'more' })
+  await clock.settle()
+  expect(await texts(ui)).toContain('Gizlileri gizle')
   await ui.press({ key: 'hidden' })
   await clock.settle()
   expect(await texts(ui)).not.toContain('.env')
@@ -504,13 +508,13 @@ test('a listing error keeps the cached rows and says so', { timeoutMs: 20_000 },
 })
 
 test('replacing many folders in one batch keeps unchanged nodes and drops what vanished', async () => {
-  const dir = (id: string, loaded: boolean) => ({ id, parent: id.slice(0, id.lastIndexOf('/')) || '/', name: id.slice(id.lastIndexOf('/') + 1), kind: 'dir' as const, hidden: false, mtime: 0, loaded })
+  const dir = (id: string, loaded: boolean) => ({ id, parent: id.slice(0, id.lastIndexOf('/')) || '/', name: id.slice(id.lastIndexOf('/') + 1), kind: 'dir' as const, hidden: false, mtime: 0, size: 0, loaded })
   const file = (id: string) => ({ ...dir(id, false), kind: 'file' as const })
   const nodes = [dir('/r/a', true), dir('/r/b', true), file('/r/a/x'), dir('/r/b/y', true), file('/r/b/y/z')]
   const out = replaceChildren(nodes, new Map([
-    ['/r/a', toNodes('/r/a', [{ name: 'w', kind: 'file', mtimeMs: 0, isLink: false }])],
+    ['/r/a', toNodes('/r/a', [{ name: 'w', kind: 'file', mtimeMs: 0, size: 0, isLink: false }])],
     ['/r/b', []],
-    ['/r/b/y', toNodes('/r/b/y', [{ name: 'z', kind: 'file', mtimeMs: 0, isLink: false }])],
+    ['/r/b/y', toNodes('/r/b/y', [{ name: 'z', kind: 'file', mtimeMs: 0, size: 0, isLink: false }])],
   ]))
   expect(out.map(n => n.id).sort()).toEqual(['/r/a', '/r/a/w', '/r/b'])
   expect(out.find(n => n.id === '/r/b')?.loaded).toBe(true)
@@ -595,7 +599,7 @@ test('git activity is only certified by evidence: HEAD for commits, the exit cod
   await $.tool.call({ tool: 'Bash', command: 'git commit -m test || true' } as any)
   await clock.settle()
   let shown = await texts(ui)
-  expect(shown).toContain('commit başarısız')
+  expect(shown).toContain('commit oluşmadı')
   expect(shown).not.toContain('commit edildi')
   expect(ran.some(a => a.includes('diff-tree'))).toBe(false)
   w.heads = ['abc1234def0', 'fed4321cba9']
@@ -859,5 +863,5 @@ test('calm: a session start opens no pane; /filetree opens it in the desktop app
   const r = await $.command.run({ command: 'filetree', args: '', origin: { kind: 'person' }, presentation: { isFullscreen: false, columns: 80 } } as any)
   await clock.settle()
   expect(JSON.stringify(r)).toContain('Dosya ağacı: ~/proj')
-  expect(opens.slice(before).some((o: any) => o.id === 'filetree' && o.focus === true && o.title === 'Dosyalar: proj')).toBe(true)
+  expect(opens.slice(before).some((o: any) => o.id === 'filetree' && o.focus === true && o.title === 'Dosyalar')).toBe(true)
 })

@@ -46,9 +46,14 @@ const TURN_USAGE = {
 }
 
 export const toasts: string[] = []
+export const opens: Array<{ id: string; title?: string; focus?: boolean }> = []
+// How many times the mod asked for a redraw.
+export const invalidations = { count: 0 }
 
 export function stubSession(on: any, usage: any = USAGE) {
   toasts.length = 0
+  opens.length = 0
+  invalidations.count = 0
   const clock = mock.clock(on)
   on('session.usage', () => ({ value: usage }))
   on('command.register', () => ({ value: undefined }))
@@ -59,8 +64,17 @@ export function stubSession(on: any, usage: any = USAGE) {
 
     return { value: undefined }
   })
-  on('ui.open', () => ({ value: { isPlaced: true } }))
-  on('ui.invalidate', () => ({ value: undefined }))
+  on('ui.open', (_: any, e: any) => {
+    opens.push(e)
+
+    return { value: { isPlaced: true } }
+  })
+  // Counted, then answered by the kit beneath, so a mounted drawing follows the redraw.
+  on('ui.invalidate', (_: any, e: any, next: any) => {
+    invalidations.count += 1
+
+    return next(e)
+  })
   on('session.measure', (_: any, e: any) => ({ changed: e.changed }))
   on('ui.log', () => ({ value: undefined }))
   on('session.start', () => ({ cwd: '/work' }))

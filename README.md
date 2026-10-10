@@ -6,10 +6,14 @@ Claude Code modlarının (hooks plugin'leri: bant, panel, status, toast, guard) 
 - Etkinleştirme: `~/.claude/skills/<ad>` → `MODZ/mods/<ad>` symlink'i. Claude skills klasöründeki plugin'leri
   her oturumda kendiliğinden yükler; kopya yok, kurulum yok.
 - `~/AI-Tools/claude-mods/src/<ad>` da buraya bakan symlink; orada yapılan düzenleme buraya yazılır.
+- Cloud: cloud oturumu yalnızca repoyu klonlar, `~/.claude/skills` orada yok. Bu yüzden repo
+  `.claude/skills/<ad>` → `../../mods/<ad>` göreli linklerini taşır; Claude bu proje klasöründeki plugin'leri de
+  kendiliğinden yükler. Makineye bağlı üç mod (done-ping, terminal-browser, filetree) cloud'a bağlanmaz.
+  Yerelde aynı ada sahip `~/.claude/skills` linki önce gelir; ikisi aynı klasörü gösterdiği için mod bir kez yüklenir.
 - Klasör aynı zamanda `modz` adlı marketplace (`.claude-plugin/marketplace.json`), paylaşmak için.
 - Taşıma öncesi yedekler: `~/.claude/mods-backup-20261009/`.
 
-## Modlar (18)
+## Modlar (17)
 
 Gruplar `/modz` panelindekiyle aynı (`mods/modz/hooks/meta.ts`).
 
@@ -18,7 +22,7 @@ Gruplar `/modz` panelindekiyle aynı (`mods/modz/hooks/meta.ts`).
 | Mod | Ne yapar |
 | --- | --- |
 | `filetree` | File tree of what Claude touches: what it is doing now, files touched this turn and git status |
-| `modz` | /modz: every mod in the marketplace grouped by Görünüm / Koruma / Ölçüm / Akış, with version, surfaces, source and health |
+| `modz` | MODZ ana paneli: oturum açılınca sağda açılır; her modun canlı özeti ve paneli tek tıkla, ayrıca tüm modların kataloğu (`/modz`) |
 | `replay-theater` | Replay the last turn's file edits step by step: what each step did, which plan step it belongs to, colored diff |
 | `skins` | Skins for the transcript: themed tool rows, reply gutters and spinner words; /skin swaps them live |
 | `terminal-browser` | A browser that runs in the terminal: preview sites and HTML files, let the agent drive the built-in browser. Terminal only |
@@ -38,14 +42,13 @@ Gruplar `/modz` panelindekiyle aynı (`mods/modz/hooks/meta.ts`).
 | Mod | Ne yapar |
 | --- | --- |
 | `hud-pro` | One quiet line at the bottom of the band: 5h limit with reset, 7d, context and session ≈cost; /hud full shows details |
-| `savvy-progress` | Progress band above the prompt and /agents-info panel: running, finished and planned subagents with model, effort, tools, context, cost and time |
+| `savvy-progress` | Progress band above the prompt and the single **Ajanlar** panel: each agent a crab card with progress %, cost and time, message and stop; a crew timeline, a quiet-agent warning and Yeni görev to start one |
 | `test-badge` | After a turn that edited source files, runs tests and lint in the background and shows a badge (testler 41/42 · lint 2 hata) with a failure pane |
 
 **Akış**
 
 | Mod | Ne yapar |
 | --- | --- |
-| `agent-deck-pro` | Agent deck: each subagent's task, step, time, tools, files, tokens and ≈cost; flags silent agents and broken tests; read, message, stop or dispatch |
 | `done-ping` | A notification when a long turn finishes or Claude waits on you: the desktop app's own notification, else a macOS banner |
 | `plan-steps` | Shows the plan's steps when there is one (task list, approved plan or plan file): /steps pane and a quiet status line |
 | `reflect-mod` | Finds reusable corrections in your prompts (Turkish and English prefilter, one model check) and saves them to the chosen CLAUDE.md |
@@ -55,10 +58,10 @@ Ortak çizim kiti `kit/` altında (`bin/kit-sync` modlara dağıtır). `bin/prev
 
 ## Yönetim
 
-`bin/modz status | check [ad] | new <ad> "açıklama" | link [ad] | unlink <ad> | list | sync | dev | import <klasör>`.
-Oturum içinde `/modz` hepsini panelde listeler.
+`bin/modz status | check [ad] | desk | new <ad> "açıklama" | link [ad] | unlink <ad> | cloud | list | sync | dev | import <klasör>`.
+Oturum açılınca sağda MODZ ana paneli gelir: ajanlar, dosyalar, plan, testler, kontrol noktaları, tekrar, kullanım ve görünüm birer tıkla açılır; "Modlar" satırı tüm modları listeler. Kapatmak için `/config` → modz → "Oturum başında aç". Modlar birbirine `$.state` ile haber verir (DESIGN.md §9).
 
-Akış: `bin/modz new <ad>` → düzenle → `bin/modz check <ad>` → `bin/modz link <ad>`.
+Akış: `bin/modz new <ad>` → düzenle → `bin/modz check <ad>` → `bin/modz link <ad>` → `bin/modz cloud` (commit'le).
 Oturumda Claude'a yazdırılan mod `~/.claude/dev-mods/<oturum>/` altına düşer: `bin/modz dev` → `bin/modz import <klasör>` → `bin/modz link <ad>`.
 
 ## Paylaşım

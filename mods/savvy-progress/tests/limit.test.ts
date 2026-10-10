@@ -29,7 +29,7 @@ test('only the five_hour window with a dollar figure makes a reading', () => {
 })
 
 test('shares read as <0.1, one decimal under 10, whole points above', () => {
-  expect(shareNumber(0.04)).toBe('<0.1')
-  expect(shareNumber(3.44)).toBe('3.4')
+  expect(shareNumber(0.04)).toBe('<0,1')
+  expect(shareNumber(3.44)).toBe('3,4')
   expect(shareNumber(12.6)).toBe('13')
 })

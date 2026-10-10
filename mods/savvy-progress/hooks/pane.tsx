@@ -1,20 +1,27 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register, ThemeKey } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 
-import type { AgentRun, LimitTrack, Panel } from '../types'
-import { isRunning, totals } from './agents'
-import type { Totals } from './agents'
-import type { Planned } from './flow'
-import { plannedOf } from './flow'
-import { fmtCost, fmtTime, fmtTokens } from './format'
+import type { Draft, Panel } from '../types'
+import { BUILTIN_TYPES, DEFAULT_TYPE, TASK_TITLE_MAX, blankDraft, chosenOf } from './agent-types'
+import { addRun } from './agents'
+import { draftTree } from './dispatch'
+import type { DraftView } from './dispatch'
+import { clip } from './format'
 import { t } from './i18n'
-import { deriveJob } from './job'
-import { shareNumber, shareOf } from './limit'
-import { COMPACT_H, CRAB, HEADER_H, compactSvg, headerSvg } from './pane-svg'
-import { agentRow, plannedRow } from './rows'
+import { lookOf } from './identity'
+import { paneDataOf } from './pane-data'
+import type { PaneData } from './pane-data'
+import { FRAME_COLS, FRAME_PX, agentRow, plannedRow } from './rows'
 import type { RowContext, Ui } from './rows'
+import { attentionTree, compactTree, emptyTree, headTree, sectionHead, timelineTree, toolbarTree } from './sections'
+import type { Layout, PaneHandlers, PaneView } from './sections'
+import { pinned } from './pin'
 import { PANE } from './state'
-import { colorOf, costumeOf, keyOf, plannedTierOf, tierOf } from './tiers'
+import { deliveryText } from './steer'
+import type { StopNoun } from './steer'
+
+// The Ajanlar panel: the header card, the toolbar ("Yeni görev", Daralt), the attention line, the
+// form while it is open, the timeline, then the running, finished and planned agents as cards.
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
 const agents = atom({ plugin: 'savvy-progress', key: 'agents' } as const, [])
@@ -24,164 +31,159 @@ const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
 const panel = atom({ plugin: 'savvy-progress', key: 'panel' } as const, { isCompact: false, isDoneCollapsed: false })
 const tasks = atom({ plugin: 'savvy-progress', key: 'tasks' } as const, [])
 const limit = atom({ plugin: 'savvy-progress', key: 'limit' } as const, null)
+const types = atom({ plugin: 'savvy-progress', key: 'types' } as const, BUILTIN_TYPES)
 
 type On = Parameters<Register>[0]
 
 const MIN_W = 240
 const MAX_W = 900
+// MODZ measures the desktop in 8 px cells (kit `PX_PER_CELL`).
 const PX_PER_COL = 8
-// The open row's round frame: a cell of padding and a border on each side.
-const FRAME_PX = 2 * PX_PER_COL + 2
-const FRAME_COLS = 4
+const MIN_COLS = 24
+const DEFAULT_COLS = 40
 
-export type PaneData = {
-  list: AgentRun[]
-  running: AgentRun[]
-  finished: AgentRun[]
-  planned: Planned[]
-  sum: Totals
-  title: string
-  at: number
-  panel: Panel
-  limit: LimitTrack | null
+// Talking to a running agent, and stopping it through the engine's own TaskStop tool (the normal
+// permission chain applies).
+async function sendTo($: EngineInterface, agentId: string, text: string): Promise<void> {
+  const message = text.trim()
+  if (!message) return
+  $.ui.toast(deliveryText(await $.session.send({ to: { agentId }, text: message })))
 }
 
+async function requestStop($: StopNoun, agentId: string): Promise<boolean> {
+  const ran = await $.tool.call({ tool: 'TaskStop', task_id: agentId })
+  return ran.deny === undefined
+}
+
+async function stopAgent($: EngineInterface, agentId: string): Promise<void> {
+  try {
+    const isStopped = await requestStop($ as unknown as StopNoun, agentId)
+    $.ui.toast(isStopped ? t().stopAsked : t().stopRefused)
+  } catch (error) {
+    $.ui.log(`savvy-progress: stop failed (${String(error)})`, { to: 'debug' })
+    $.ui.toast(t().stopFailed)
+  }
+}
+
+// Every value the panel draws from; each read subscribes the pane to it.
 async function paneData($: EngineInterface): Promise<PaneData> {
-  const list = await read($, agents)
-  const f = await read($, flow)
-  const at = Math.max(await read($, now), ...list.map(a => a.startedAt), 0)
-  const view = deriveJob({ flow: f, agents: list, job: await read($, job), tasks: await read($, tasks) })
-  const ended = (a: AgentRun) => a.endedAt ?? a.startedAt
-  return {
-    list,
-    running: list.filter(isRunning).reverse(),
-    finished: list.filter(a => !isRunning(a)).sort((a, b) => ended(b) - ended(a)),
-    planned: plannedOf(f, list),
-    sum: totals(list, at),
-    title: view && !view.isFinished ? view.title : '',
-    at,
+  return paneDataOf({
+    list: await read($, agents),
+    flow: await read($, flow),
+    job: await read($, job),
+    tasks: await read($, tasks),
+    now: await read($, now),
     panel: await read($, panel),
     limit: await read($, limit),
+    types: await read($, types),
+  })
+}
+
+const draftOf = (draft: Draft | undefined): Draft => draft ?? blankDraft()
+
+// Changes the "Yeni görev" form and leaves the rest of the panel as it was.
+const patchDraft = ($: EngineInterface, patch: Partial<Draft>) =>
+  update($, panel, prev => ({ ...prev, draft: { ...draftOf(prev.draft), ...patch } }))
+
+// Starts the task; a refusal stays on the form, a start closes it and opens the new agent's card.
+async function startTask($: EngineInterface, type: string, text: string): Promise<void> {
+  const prompt = text.trim()
+  if (!prompt) return
+  try {
+    const description = clip(prompt.split('\n')[0] ?? prompt, TASK_TITLE_MAX)
+    const started = await $.agent.spawn({ subagentType: type, prompt, description })
+    if (started.deny !== undefined) {
+      await patchDraft($, { notice: t().denied(started.deny) })
+      return
+    }
+    const id = started.agentId
+    // Our own spawn hook does not see a spawn this plugin made: the card is added here, at once.
+    const at = await $.clock.now()
+    const spawn = { id: id ?? `task-${at}`, agentId: id, type, description, brief: prompt, model: started.model, at }
+    const list = await update($, agents, prev => (prev.some(a => a.agentId !== undefined && a.agentId === id) ? prev : addRun(prev, spawn)))
+    await update($, panel, prev => ({ ...prev, selected: spawn.id, draft: { ...draftOf(prev.draft), isOpen: false, notice: undefined } }))
+    const run = list.find(a => a.id === spawn.id)
+    $.ui.toast(t().launched(run ? lookOf(run).name : type))
+  } catch (error) {
+    $.ui.log(`savvy-progress: spawn failed (${String(error)})`, { to: 'debug' })
+    await patchDraft($, { notice: t().spawnFailed })
   }
 }
 
-type Layout = { isDesktop: boolean; width: number; W: number }
+const draftHandlers = ($: EngineInterface, view: Omit<DraftView, 'layout'>): Pick<PaneHandlers, 'onNewTask' | 'onCancelTask' | 'onPickType' | 'onStartTask'> => ({
+  onNewTask: () => void patchDraft($, { isOpen: !draftOf(view.draft).isOpen, notice: undefined }),
+  onCancelTask: () => void patchDraft($, { isOpen: false, notice: undefined }),
+  onPickType: name => void patchDraft($, { type: name, notice: undefined }),
+  onStartTask: text => void startTask($, chosenOf(view.types, view.draft)?.name ?? DEFAULT_TYPE, text),
+})
 
-function toggles(ui: Ui, $: EngineInterface, d: PaneData) {
-  const { Button } = ui
-  const s = t()
-  const compact = (
-    <Button key="compact" label={d.panel.isCompact ? s.expand : s.collapse} plain dimColor onPress={() => update($, panel, prev => ({ ...prev, isCompact: !prev.isCompact }))} />
-  )
-  const done = (
-    <Button
-      key="done"
-      label={`${d.panel.isDoneCollapsed ? '▸' : '▾'} ${s.finished} · ${d.finished.length}`}
-      plain
-      onPress={() => update($, panel, prev => ({ ...prev, isDoneCollapsed: !prev.isDoneCollapsed }))}
-    />
-  )
-  return { compact, done }
-}
-
-const iconsOf = (d: PaneData) => [
-  ...[...d.running, ...d.finished].map(a => ({ costume: costumeOf(a), color: colorOf(tierOf(a)), isRunning: isRunning(a), isDim: false })),
-  ...d.planned.map(p => ({ costume: plannedTierOf(p.tier), color: colorOf(p.tier), isRunning: false, isDim: true })),
-]
-
-const summaryOf = (sum: Totals): string => `≈${fmtCost(sum.cost)} · ${fmtTokens(sum.tokens)} ${t().tokensWord} · ${fmtTime(sum.time)}`
-
-function headTree(ui: Ui, d: PaneData, ctx: { compact: unknown; layout: Layout }) {
-  const { Box, Text, Svg } = ui
-  const s = t()
-  const share = shareOf(d.sum.cost, d.limit)
-  const shareText = share === null ? null : shareNumber(share)
-  const counts = { running: d.running.length, total: d.list.length, share: shareText }
-  const limitPart = shareText === null ? '' : ` · ${s.limitTile} ≈${s.pct(shareText)}`
-  const totalsLine = `${s.cost} ≈${fmtCost(d.sum.cost)} · ${s.tokens} ${fmtTokens(d.sum.tokens)} · ${s.time} ${fmtTime(d.sum.time)}${limitPart}`
-  return (
-    <Box flexDirection="column" rowGap={1}>
-      <Box flexDirection="row" justifyContent="space-between" columnGap={2}>
-        <Text bold wrap="truncate-end">{d.title}</Text>
-        {ctx.compact}
-      </Box>
-      {ctx.layout.isDesktop
-        ? <Svg key="head" source={headerSvg(ctx.layout.W, d.sum, counts)} alt={[d.title, summaryOf(d.sum) + limitPart].filter(Boolean).join(': ')} width={ctx.layout.W} height={HEADER_H} />
-        : <Text dimColor>{totalsLine}</Text>}
-    </Box>
-  )
-}
-
-const glyphKeyOf = (a: AgentRun): ThemeKey => {
-  if (a.status === 'failed') return 'error'
-  return a.status === 'done' ? 'success' : keyOf(tierOf(a))
-}
-
-function compactTree(ui: Ui, d: PaneData, layout: Layout) {
-  const { Svg, Text } = ui
-  if (layout.isDesktop) {
-    return <Svg key="compact-icons" source={compactSvg(layout.W, iconsOf(d), d.sum)} alt={`${d.list.length} ${t().agentsCount}, ${summaryOf(d.sum)}`} width={layout.W} height={COMPACT_H} />
+function handlersOf($: EngineInterface, d: PaneData): PaneHandlers {
+  const flip = (fn: (prev: Panel) => Panel) => () => void update($, panel, fn)
+  return {
+    onToggle: id => void update($, panel, prev => ({ ...prev, selected: prev.selected === id ? undefined : id })),
+    onLook: id => void update($, panel, prev => ({ ...prev, selected: id, isCompact: false })),
+    onBrief: id => void update($, panel, prev => ({ ...prev, briefOpen: prev.briefOpen === id ? undefined : id })),
+    onSend: (id, text) => void sendTo($, id, text),
+    onStop: id => void stopAgent($, id),
+    onCompact: flip(prev => ({ ...prev, isCompact: !prev.isCompact })),
+    onDone: flip(prev => ({ ...prev, isDoneCollapsed: !prev.isDoneCollapsed })),
+    onTimeline: flip(prev => ({ ...prev, isTimelineHidden: prev.isTimelineHidden !== true })),
+    ...draftHandlers($, { draft: d.panel.draft, types: d.types }),
   }
-  const glyphs = [...d.running, ...d.finished].map(a => (
-    <Text key={a.id} color={glyphKeyOf(a)}>{`${a.status === 'done' ? '✓' : '●'} `}</Text>
-  ))
-  return (
-    <Text wrap="truncate-end">
-      {glyphs}
-      {d.planned.length ? <Text dimColor>{'○ '.repeat(d.planned.length)}</Text> : null}
-    </Text>
-  )
 }
 
-function listTree(ui: Ui, $: EngineInterface, d: PaneData, layout: Layout) {
-  const { Box, Text } = ui
+function listTree(ui: Ui, view: PaneView) {
+  const { Box } = ui
+  const { d, layout, on } = view
   const s = t()
-  const { done } = toggles(ui, $, d)
-  const onToggle = (id: string) => update($, panel, prev => ({ ...prev, selected: prev.selected === id ? undefined : id }))
-  const ctx: RowContext = {
-    at: d.at,
-    width: layout.width,
-    frameWidth: layout.isDesktop ? FRAME_PX : FRAME_COLS,
-    isDesktop: layout.isDesktop,
-    limit: d.limit,
-    selected: d.panel.selected,
-    onToggle,
-  }
-  const section = (label: string) => <Text key={`h-${label}`} bold>{label}</Text>
+  const ctx: RowContext = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen }
+  const isDoneOpen = !d.panel.isDoneCollapsed
   return (
-    <Box flexDirection="column" rowGap={1}>
-      {d.list.length === 0 && d.planned.length === 0 && <Text dimColor>{s.empty}</Text>}
-      {d.running.length > 0 && section(`${s.running} · ${d.running.length}`)}
+    <Box key="list" flexDirection="column" rowGap={1}>
+      {d.running.length > 0 && sectionHead(ui, layout, { label: `${s.running} · ${d.running.length}`, dot: 'run' })}
       {d.running.map(a => agentRow(ui, a, ctx))}
-      {d.finished.length > 0 && <Box key="h-done" flexDirection="row">{done}</Box>}
-      {!d.panel.isDoneCollapsed && d.finished.map(a => agentRow(ui, a, ctx))}
-      {d.planned.length > 0 && section(`${s.planned} · ${d.planned.length}`)}
+      {d.finished.length > 0 && sectionHead(ui, layout, { label: `${s.finished} · ${d.finished.length}`, dot: 'ok', toggle: { key: 'done', isOpen: isDoneOpen, onPress: on.onDone } })}
+      {isDoneOpen && d.finished.map(a => agentRow(ui, a, ctx))}
+      {d.planned.length > 0 && sectionHead(ui, layout, { label: `${s.planned} · ${d.planned.length}`, dot: 'idle' })}
       {d.planned.map(p => plannedRow(ui, p, ctx))}
     </Box>
   )
 }
 
-function paneTree(ui: Ui, $: EngineInterface, d: PaneData, layout: Layout) {
+function paneTree(ui: Ui, view: PaneView) {
   const { Box } = ui
-  const { compact } = toggles(ui, $, d)
+  const { d, layout, on } = view
+  const isDrafting = d.panel.draft?.isOpen === true
+  const form = isDrafting && draftTree(ui, { draft: d.panel.draft, types: d.types, layout }, on)
+  if (d.list.length === 0 && d.planned.length === 0) {
+    return <Box flexDirection="column" rowGap={2}>{isDrafting ? form : emptyTree(ui, layout, on)}</Box>
+  }
   return (
     <Box flexDirection="column" rowGap={1}>
-      {headTree(ui, d, { compact, layout })}
-      {d.panel.isCompact ? compactTree(ui, d, layout) : listTree(ui, $, d, layout)}
+      {headTree(ui, d, layout)}
+      {toolbarTree(ui, d, on)}
+      {attentionTree(ui, view)}
+      {form}
+      {d.panel.isCompact ? compactTree(ui, d, layout) : timelineTree(ui, view)}
+      {!d.panel.isCompact && listTree(ui, view)}
     </Box>
   )
 }
 
-const layoutOf = (isDesktop: boolean, columns: number): Layout => {
-  if (!isDesktop) return { isDesktop, W: 0, width: columns }
-  const W = Math.max(MIN_W, Math.min(MAX_W, columns * PX_PER_COL - PX_PER_COL))
-  return { isDesktop, W, width: W - CRAB.w - PX_PER_COL }
+/** The pane's room: the desktop in px (a card's inside less its frame), the terminal in cells. */
+export const layoutOf = (isDesktop: boolean, columns: number): Layout => {
+  if (!isDesktop) return { isDesktop, W: 0, inner: columns, cols: columns }
+  const W = Math.max(MIN_W, Math.min(MAX_W, columns * PX_PER_COL))
+  return { isDesktop, W, inner: W - FRAME_PX, cols: columns - FRAME_COLS }
 }
 
 export function onPane(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const ui = $.ui.resolve(e) as Ui
+    const table = $.ui.resolve(e)
+    const ui = table as Ui
     const isDesktop = e.surface === 'desktop' && 'Svg' in ui
-    return paneTree(ui, $, await paneData($), layoutOf(isDesktop, Math.max(24, e.props.bodyColumns || 40)))
+    const d = await paneData($)
+    const layout = layoutOf(isDesktop, Math.max(MIN_COLS, e.props.bodyColumns || DEFAULT_COLS))
+    return pinned(e, paneTree(ui, { d, layout, on: handlersOf($, d) }))
   })
 }

@@ -3,6 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { changedSpans, countChanges, diffLines } from '../hooks/diff'
 import { buildPrompt, notesFromMessages, parseReply, shortLine, unexplained } from '../hooks/explain'
 import { currentStep, planAfter } from '../hooks/plan'
+import { diffSvg } from '../hooks/diff-svg'
 import { fit, wrap } from '../hooks/ui/svg'
 
 test('an Edit diff keeps one line of context and marks the skipped run', () => {
@@ -87,4 +88,13 @@ test('svg text fits its room and wraps into at most the lines asked for', () => 
   const lines = wrap('bir iki üç dört beş altı yedi sekiz dokuz on on bir on iki', { width: 90, size: 13, maxLines: 2 })
   expect(lines).toHaveLength(2)
   expect(lines[1]?.endsWith('…')).toBe(true)
+})
+
+test('a diff line longer than the pane widens the drawing instead of being cut', () => {
+  const long = `const message = ${'"x" + '.repeat(30)}"end"`
+  const narrow = diffSvg({ lines: [{ op: '+', t: long }], width: 300, theme: 'dark' })
+  expect(narrow.contentWidth).toBeGreaterThan(300)
+  expect(narrow.source).toContain('"end"'.replace(/"/g, '&quot;'))
+  expect(narrow.source).not.toContain('…')
+  expect(diffSvg({ lines: [{ op: '+', t: 'short' }], width: 300, theme: 'dark' }).contentWidth).toBe(300)
 })

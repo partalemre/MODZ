@@ -1,5 +1,6 @@
 import type { AgentRun } from '../types'
-import { clip, norm, toolName, toolTarget } from './format'
+import { clip, norm, toolDetail, toolName, toolTarget } from './format'
+import { nextLook } from './identity'
 import { costOf, tokensOf, windowOf } from './pricing'
 import type { Usage } from './pricing'
 import { MAX_RUNS } from './state'
@@ -43,6 +44,8 @@ export function addRun(list: AgentRun[], spawn: Spawn): AgentRun[] {
     costUsd: 0,
     steps: 0,
     round: 1 + same.length,
+    // A run the roster met first keeps the look it arrived with.
+    look: list.find(a => a.id === spawn.id)?.look ?? nextLook(list),
     toolCount: 0,
   }
   return [...list.filter(a => a.id !== run.id), run].slice(-MAX_RUNS)
@@ -91,6 +94,7 @@ export const toolActivity = (a: AgentRun, call: Record<string, unknown>): AgentR
   toolCount: (a.toolCount || 0) + 1,
   lastTool: toolName(String(call.tool ?? '')),
   lastTarget: toolTarget(call) || undefined,
+  lastDetail: toolDetail(call) || undefined,
 })
 
 export const ownTasks = (a: AgentRun, call: Record<string, unknown>, result: unknown): AgentRun => ({
@@ -106,6 +110,9 @@ export const stepReport = (a: AgentRun, input: StepInput): AgentRun => {
   const done = Math.max(0, Math.round(input.done ?? a.stepDone ?? 0))
   return { ...a, stepTotal: total, stepDone: total ? Math.min(total, done) : done, stepNote: input.note?.trim() || undefined }
 }
+
+/** Anything an agent's own loop reports counts as hearing from it: the quiet check reads this. */
+export const heard = (a: AgentRun, at: number): AgentRun => ({ ...a, heardAt: Math.max(a.heardAt ?? 0, at) })
 
 export const isRunning = (a: AgentRun): boolean => a.status === 'running'
 

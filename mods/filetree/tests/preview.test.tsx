@@ -1,5 +1,8 @@
 import { expect, test } from 'claude-code/testing'
 
+/** The test runner's console: bin/preview reads the trees it prints. */
+declare const console: { log: (text: string) => void }
+
 // Draws the desktop pane in the states the video walks through, for bin/preview.
 // Each tree is logged as @@TREE@@<theme>-<state>@@<json>, the rows Client spliced in.
 
@@ -51,7 +54,9 @@ function world(on: any, opts: { root: string; dirs: Files; git: Git | null; them
   on('turn.complete', (_$: any, e: any) => ({ text: e.answer }))
 }
 
-const paneProps = { title: 'Dosyalar', isFocused: false, bodyColumns: 56, placement: 'dock', scroll: { offset: 0, bodyRows: 64 }, view: {} } as any
+// Narrow is the desktop's right panel at ≈400 px, wide ≈600 px (bin/preview --width 400 / 600, 8 px a column).
+const SIZES = [['narrow', 50], ['wide', 75]] as const
+const paneProps = (bodyColumns: number) => ({ title: 'Dosyalar', isFocused: false, bodyColumns, placement: 'dock', scroll: { offset: 0, bodyRows: 64 }, view: {} }) as any
 
 async function snap(ui: any, label: string) {
   const tree = (await ui.drawn()) as any
@@ -88,31 +93,40 @@ function weather(): { root: string; dirs: Files; git: Git } {
   }
 }
 
-for (const theme of ['dark', 'light'] as const) {
-  test(`preview ${theme}: reading, editing, committed`, { timeoutMs: 30_000 }, async ($, on) => {
+for (const theme of ['dark', 'light'] as const) for (const [size, cols] of SIZES) {
+  test(`preview ${theme} ${size}: reading, editing, committed`, { timeoutMs: 30_000 }, async ($, on) => {
     const w = weather()
     world(on, { ...w, theme })
     await $.session.start({ cwd: w.root, surface: 'desktop', isInteractive: true })
-    const ui = await $.ui.mount({ plugin: 'filetree', surface: 'desktop', component: 'Pane', requestId: 'filetree', props: paneProps })
+    const ui = await $.ui.mount({ plugin: 'filetree', surface: 'desktop', component: 'Pane', requestId: 'filetree', props: paneProps(cols) })
+    await snap(ui, `${size}-${theme}-0-fresh`)
     await ($ as any).turn.start(turn('t1'))
     await $.tool.call({ tool: 'Read', file_path: `${w.root}/tests/client.test.js` } as any)
-    await snap(ui, `${theme}-1-reading`)
+    await snap(ui, `${size}-${theme}-1-reading`)
     w.git.status = '## main...origin/main\0 M src/api/client.js\0'
     w.git.numstat = '1\t1\tsrc/api/client.js\0'
     await $.tool.call({ tool: 'Edit', file_path: `${w.root}/src/api/client.js`, old_string: 'a', new_string: 'b' } as any)
-    await snap(ui, `${theme}-2-editing`)
+    await snap(ui, `${size}-${theme}-2-editing`)
     w.git.heads = ['a1c9e42f00', 'b7d2e91c3a']
     w.git.status = '## main...origin/main [ahead 1]\0'
     w.git.numstat = ''
     w.git.committed = 'src/api/client.js\0tests/client.test.js\0'
     await $.tool.call({ tool: 'Bash', command: 'git commit -am "Fix client retry"' } as any)
     await ($ as any).turn.complete(done('t1'))
-    await snap(ui, `${theme}-3-committed`)
+    await snap(ui, `${size}-${theme}-3-committed`)
     expect(JSON.stringify(await ui.drawn())).toContain('commit etti')
+    w.git.status = '## main...origin/main\0 M src/index.js\0?? docs/setup.md\0'
+    w.git.numstat = '4\t2\tsrc/index.js\0'
+    await ($ as any).turn.start(turn('t3'))
+    await $.tool.call({ tool: 'Bash', command: 'git commit -m "nothing staged"' } as any)
+    await ($ as any).turn.complete(done('t3'))
+    await ui.press({ key: 'more' })
+    await snap(ui, `${size}-${theme}-6-tools-open`)
+    expect(JSON.stringify(await ui.drawn())).toContain('commit oluşmadı')
     await ui.unmount()
   })
 
-  test(`preview ${theme}: a folder outside git`, { timeoutMs: 30_000 }, async ($, on) => {
+  test(`preview ${theme} ${size}: a folder outside git`, { timeoutMs: 30_000 }, async ($, on) => {
     const root = '/Users/k/tax-return-2026'
     const dirs: Files = {
       [root]: [['bank-statements', 'dir'], ['receipts', 'dir'], ['deductions.csv', 'file', 2 * DAY], ['income.csv', 'file', 6 * DAY], ['notes.md', 'file', 5 * DAY], ['tax-return.docx', 'file', 30 * DAY]],
@@ -121,13 +135,13 @@ for (const theme of ['dark', 'light'] as const) {
     }
     world(on, { root, dirs, git: null, theme })
     await $.session.start({ cwd: root, surface: 'desktop', isInteractive: true })
-    const ui = await $.ui.mount({ plugin: 'filetree', surface: 'desktop', component: 'Pane', requestId: 'filetree', props: paneProps })
+    const ui = await $.ui.mount({ plugin: 'filetree', surface: 'desktop', component: 'Pane', requestId: 'filetree', props: paneProps(cols) })
     await ($ as any).turn.start(turn('t2'))
     for (const f of ['desk-chair.pdf', 'laptop.pdf', 'phone-bill.pdf']) await $.tool.call({ tool: 'Read', file_path: `${root}/receipts/${f}` } as any)
-    await snap(ui, `${theme}-4-nongit-reading`)
+    await snap(ui, `${size}-${theme}-4-nongit-reading`)
     await $.tool.call({ tool: 'Edit', file_path: `${root}/deductions.csv`, old_string: 'a', new_string: 'b' } as any)
     await ($ as any).turn.complete(done('t2'))
-    await snap(ui, `${theme}-5-nongit-done`)
+    await snap(ui, `${size}-${theme}-5-nongit-done`)
     expect(JSON.stringify(await ui.drawn())).toContain('düzenledi')
     await ui.unmount()
   })

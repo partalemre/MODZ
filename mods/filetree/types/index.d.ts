@@ -51,6 +51,8 @@ export type FileTree = {
   flashOn: boolean
   flashTones: Record<string, string>
   scroll: number | null
+  // The desktop toolbar's "Daha fazla" row is open.
+  showTools: boolean
 }
 
 export type TouchRole = 'read' | 'edit' | 'commit'
@@ -83,6 +85,10 @@ export type Theme = {
   bg: string
 }
 
+// The MODZ main panel's summary card (DESIGN.md §9): lo · Iris · Moss · Amber · Flare.
+export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+
 declare module 'claude-code' {
   interface PluginState {
     filetree: {
@@ -91,6 +97,7 @@ declare module 'claude-code' {
       activity: Activity[]
       turn: TurnLog
       look: Look
+      hub: HubCard
     }
   }
 }

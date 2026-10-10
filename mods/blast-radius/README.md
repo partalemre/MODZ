@@ -6,7 +6,7 @@ A Claude Code mod that holds a risky shell command and shows you what it would c
 
 ## What this shows
 
-When Claude calls Bash with one of the commands below, Blast Radius stops the call, works out what the command would touch, and opens a pane with a card: the command and its consequence as one headline (`rm -rf build · 9 dosya · 286 KB silinecek`), a risk banner that says why it can't be undone (for example `Bunların hiçbiri git'te değil, geri getirilemez.` when none of the files is tracked), and the files grouped by folder with size bars on one scale (the share of the whole delete). Two buttons answer it: the destructive one names what it does (**9 dosyayı sil**, hotkey `s`), **Vazgeç** (hotkey `v`) refuses it and holds the focus, so Enter is always the safe answer. Closing the pane (Esc or its close mark) is Vazgeç too. After the delete button the listed files are struck through for a moment, then the command runs. Claude sees a refusal and the reason.
+When Claude calls Bash with one of the commands below, Blast Radius stops the call, works out what the command would touch, and opens a pane with a card: a `KOMUT BEKLETİLDİ` eyebrow with the folder it would run in, the command and its consequence as one headline (`rm -rf build · 9 dosya · 286 KB silinecek`), a risk banner that says why it can't be undone (for example `Bunların hiçbiri git'te değil, geri getirilemez.` when none of the files is tracked), and the files grouped by folder with size bars on one scale (the share of the whole delete). Two buttons answer it: the destructive one names what it does (**9 dosyayı sil**, hotkey `s`), **Vazgeç** (hotkey `v`) refuses it and holds the focus, so Enter is always the safe answer. Closing the pane (Esc or its close mark) is Vazgeç too. After the delete button the listed files are struck through for a moment, then the command runs. Claude sees a refusal and the reason.
 
 | Command | What the pane shows |
 |---|---|
@@ -24,7 +24,7 @@ The patterns it demonstrates:
 
 - Holding a `tool.call` until the user answers, and returning `{ deny }` with a reason Claude can act on.
 - Drawing the same card in a `Pane`, or in the `AbovePrompt` band when the terminal is too narrow for a pane. The band calls `next(e)` and stacks the card above the other mods' rows, and yields to a survey.
-- On desktop the card is drawn with `Svg` (icon tile, headline, banner, size bars, the strike); the terminal gets the same words as text.
+- On desktop the card is drawn with `Svg` (icon tile, eyebrow, headline, banner, size bars, git status letters and `+added −removed` in their role colours, the strike); the terminal gets the same words as text.
 - Failing closed: the `tool.call` hook has a `.catch` that refuses a risky command if the hook throws, overruns or is re-entered.
 - Measuring with `$.process.run`, passing paths as arguments so nothing in them runs as shell.
 
@@ -111,7 +111,7 @@ No environment variables or configuration.
 **Using the pane:**
 
 - Press the destructive button's letter (`s` for sil, `z` for a force push, `u` for migrations, `c` for "Yine de çalıştır") or `v` for Vazgeç. You can also click a button, or Tab to it and press Enter. Vazgeç has the focus when the pane opens.
-- `d` shows the rest of the list ("3 tane daha göster") and folds it again.
+- `d` shows the rest of the list ("Daha fazla göster") and folds it again.
 - In the band above the prompt, focus the band first (ctrl+x tab or a click); letters never answer from the prompt, so a stray keystroke can't delete anything.
 - Esc or the pane's close mark refuses the command, as Vazgeç does.
 - If nobody answers within 10 minutes, the command is refused.

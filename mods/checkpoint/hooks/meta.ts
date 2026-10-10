@@ -44,17 +44,3 @@ export function pendingOf(entry: CheckpointEntry, spec: { changes: RestorePlan; 
 
   return { entry, turn: spec.turn, restore: changes.restore.length, remove: changes.remove.length, added: sum('added'), removed: sum('removed'), files }
 }
-
-const ONES = ['a', 'e', 'ye', 'e', 'e', 'e', 'ya', 'ye', 'e', 'a']
-const TENS = ['', 'a', 'ye', 'a', 'a', 'ye', 'a', 'e', 'e', 'a']
-const HUNDRED_SUFFIX = 'e'
-const TEN = 10
-const HUNDRED = 100
-
-// The dative ending a number takes when read aloud in Turkish: 12'ye, 30'a, 100'e.
-export function dative(value: number): string {
-  if (value % TEN !== 0) return `${value}'${ONES[value % TEN]}`
-  if (value % HUNDRED !== 0) return `${value}'${TENS[(value % HUNDRED) / TEN]}`
-
-  return value === 0 ? "0'a" : `${value}'${HUNDRED_SUFFIX}`
-}

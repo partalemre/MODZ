@@ -1,5 +1,5 @@
 // Small SVG builders: text that is measured, fitted and wrapped without a renderer, eyebrows,
-// icon tiles and discs. Every drawing ends with the reduced-motion rule (DESIGN.md §5).
+// and icon tiles. Every drawing ends with the reduced-motion rule (DESIGN.md §5).
 
 import { FONT, MONO, upper } from './theme'
 
@@ -38,8 +38,11 @@ export function fit(text: string, width: number, font: Font): string {
   return `${chars.join('').trimEnd()}…`
 }
 
+export type Box = { width: number; font: Font; maxLines: number }
+
 /** Word-wrapped lines, the last one fitted with an ellipsis when the text runs past `maxLines`. */
-export function wrap(text: string, width: number, font: Font, maxLines: number): string[] {
+export function wrap(text: string, box: Box): string[] {
+  const { width, font, maxLines } = box
   const lines: string[] = []
   let line = ''
   for (const word of text.split(/\s+/).filter(Boolean)) {
@@ -74,27 +77,27 @@ export function text(t: TextSpec): string {
 export const EYEBROW: Font = { size: 10.5, weight: 700, tracking: 1.05 }
 
 /** BÜYÜK HARF label, tracked, in the role colour. */
-export const eyebrow = (x: number, y: number, label: string, fill: string): string =>
-  text({ ...EYEBROW, x, y, fill, text: upper(label) })
+export const eyebrow = (at: { x: number; y: number; fill: string }, label: string): string =>
+  text({ ...EYEBROW, ...at, text: upper(label) })
 
 export const ICON_STROKE = 1.75
 
 /** A 24-grid line icon drawn at `size`, top-left at (x, y). */
-export const icon = (paths: string, x: number, y: number, size: number, color: string): string =>
+export type IconSpec = { x: number; y: number; size: number; color: string }
+
+export const icon = (paths: string, { x, y, size, color }: IconSpec): string =>
   `<g transform="translate(${x} ${y}) scale(${size / 24})" fill="none" stroke="${color}" stroke-width="${ICON_STROKE * 24 / size}" ` +
   `stroke-linecap="round" stroke-linejoin="round">${paths}</g>`
 
-const TILE_RADIUS = 9
+const TILE_RADIUS = 10
 
-export const tile = (x: number, y: number, size: number, tint: string): string =>
+export const tile = ({ x, y, size, tint }: { x: number; y: number; size: number; tint: string }): string =>
   `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${TILE_RADIUS}" fill="${tint}"/>`
-
-export const disc = (x: number, y: number, size: number, tint: string): string =>
-  `<circle cx="${x + size / 2}" cy="${y + size / 2}" r="${size / 2}" fill="${tint}"/>`
 
 const REDUCED = '@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}'
 
-export function doc(width: number, height: number, body: string, style = ''): string {
+export function doc(size: { width: number; height: number; style?: string }, body: string): string {
+  const { width, height, style = '' } = size
   const w = Math.round(width)
   const h = Math.round(height)
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">` +
@@ -103,4 +106,4 @@ export function doc(width: number, height: number, body: string, style = ''): st
 
 /** A line icon on its own, sized to sit beside body text. */
 export const iconSvg = (paths: string, size: number, color: string): string =>
-  doc(size, size, icon(paths, 0, 0, size, color))
+  doc({ width: size, height: size }, icon(paths, { x: 0, y: 0, size, color }))

@@ -7,11 +7,21 @@ import type { Budget } from '../types'
 // with a ✕, and the full-budget card above the question. Svg on the desktop, text on the terminal.
 type Ui = Record<string, any>
 
-const PX_PER_COLUMN = 6.4
+// About 8 px a reported column on the desktop; a card's border and padding take 6 of them,
+// the ✕ beside a band row about as many.
+const PX_PER_COLUMN = 8
+const CARD_CHROME = 6
+const DISMISS_RESERVE = 6
+// The full card is one Svg with its frame drawn in: as wide as a Box card's content plus the
+// 16 px padding each side and the 1 px border that Box would add.
+const BOX_FRAME_PX = 34
 const CARD_MAX_PX = 560
-const CARD_MIN_PX = 320
+const CARD_MIN_PX = 300
+const ROW_MIN_PX = 240
 const TERMINAL_CELLS = 10
 const TERMINAL_MARK = 8
+
+const rowRoom = (columns: number): number => Math.max(ROW_MIN_PX, (columns - DISMISS_RESERVE) * PX_PER_COLUMN)
 
 export const isDesktop = (ui: Ui, surface: string): boolean => surface !== 'terminal' && 'Svg' in ui
 
@@ -35,11 +45,17 @@ export function noticeAbove(ui: Ui, row: unknown, spec: { theirs: unknown; dismi
   )
 }
 
+function cellAt(index: number, filled: number): string {
+  if (index === TERMINAL_MARK) return '┃'
+
+  return index < filled ? '━' : '─'
+}
+
 // The terminal's meter: spent in warning, the budget as a ┃ tidemark, room past it dim.
 function terminalMeter(ui: Ui, ratio: number) {
   const { Text } = ui
   const filled = Math.min(TERMINAL_CELLS, Math.max(1, Math.round(ratio * TERMINAL_MARK)))
-  const cells = Array.from({ length: TERMINAL_CELLS }, (_, index) => (index === TERMINAL_MARK ? '┃' : index < filled ? '━' : '─'))
+  const cells = Array.from({ length: TERMINAL_CELLS }, (_, index) => cellAt(index, filled))
 
   return (
     <Text>
@@ -49,11 +65,11 @@ function terminalMeter(ui: Ui, ratio: number) {
   )
 }
 
-export function warnRow(ui: Ui, spec: { budget: Budget; nowMs: number; surface: string }) {
+export function warnRow(ui: Ui, spec: { budget: Budget; nowMs: number; surface: string; columns: number }) {
   const { Box, Text } = ui
   const { budget } = spec
   const eta = etaText(etaMinutes(budget, spec.nowMs))
-  if (isDesktop(ui, spec.surface)) return svgOf(ui, warnRowSvg({ percent: percentOf(budget), spend: spendText(budget), eta, ratio: ratioOf(budget) }))
+  if (isDesktop(ui, spec.surface)) return svgOf(ui, warnRowSvg({ percent: percentOf(budget), spend: spendText(budget), eta, ratio: ratioOf(budget), room: rowRoom(spec.columns) }))
   const text = [`Bütçe ${percentOf(budget)}`, spendText(budget), eta].filter(part => part !== '').join(' · ')
 
   return (
@@ -65,9 +81,9 @@ export function warnRow(ui: Ui, spec: { budget: Budget; nowMs: number; surface: 
   )
 }
 
-export function stoppedRow(ui: Ui, spec: { text: string; spend: string; surface: string }) {
+export function stoppedRow(ui: Ui, spec: { text: string; spend: string; surface: string; columns: number }) {
   const { Box, Text } = ui
-  if (isDesktop(ui, spec.surface)) return svgOf(ui, stoppedRowSvg(spec.spend))
+  if (isDesktop(ui, spec.surface)) return svgOf(ui, stoppedRowSvg(spec.spend, rowRoom(spec.columns)))
 
   return (
     <Box flexDirection="row" columnGap={1}>
@@ -81,11 +97,11 @@ export function stoppedRow(ui: Ui, spec: { text: string; spend: string; surface:
 export function fullCard(ui: Ui, spec: { budget: Budget; columns: number; surface: string; theirs: unknown }) {
   const { Box, Text } = ui
   const { budget } = spec
-  const width = Math.round(Math.max(CARD_MIN_PX, Math.min(CARD_MAX_PX, spec.columns * PX_PER_COLUMN)))
+  const width = Math.max(CARD_MIN_PX, Math.min(CARD_MAX_PX, (spec.columns - CARD_CHROME) * PX_PER_COLUMN + BOX_FRAME_PX))
   const card = isDesktop(ui, spec.surface) ? (
     svgOf(ui, fullCardSvg({ spend: spendText(budget), percent: percentOf(budget), step: stepText(budget), width }))
   ) : (
-    <Box flexDirection="column" borderStyle="round" borderColor="warning" paddingX={2}>
+    <Box flexDirection="column" borderStyle="round" borderColor="warning" paddingX={1}>
       <Text color="warning" bold>{'● OTURUM BÜTÇESİ'}</Text>
       <Text bold>{`Bütçe doldu · ${spendText(budget)} (${percentOf(budget)})`}</Text>
       <Text dimColor>{`Mesajın bekletiliyor. Devam edersen bütçe ${stepText(budget)} artar.`}</Text>

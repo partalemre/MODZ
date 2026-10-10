@@ -114,14 +114,32 @@ test('a tool description explains its edit at no cost, and the lines are cached'
   expect(world.modelCalls).toHaveLength(0)
 })
 
-test('a refused edit is not recorded and /replay says there is nothing', async ($: any, on: any) => {
+test('a refused edit is not recorded; /replay opens the pane on its empty state, with no transcript text', async ($: any, on: any) => {
   const world = newWorld()
   world.isDenying = true
-  await setup($, on, world)
+  const clock = await setup($, on, world)
   await oneEdit($, world, {})
 
   expect(await texts(await $.ui.mount(bandOf('terminal')))).toEqual(['engine'])
-  expect(await $.command.run({ command: 'replay', args: '' })).toMatchObject({ text: 'Tekrar: son turda düzenleme yok.' })
+  const opening = $.command.run({ command: 'replay', args: '' })
+  await clock.advance(OPEN_WAIT_MS)
+  expect((await opening)?.text).toBeUndefined()
+  expect(world.opened).toEqual(['replay-theater'])
+  for (const surface of SURFACES) {
+    const pane = await $.ui.mount(paneOf(surface))
+    const shown = [...(await texts(pane)), await svgText(pane)].join('\n')
+    expect(shown).toContain('Henüz düzenleme yok')
+  }
+})
+
+test('with no room for the pane and nothing to replay, /replay says so in one line', async ($: any, on: any) => {
+  const world = newWorld()
+  world.isPlaced = false
+  const clock = await setup($, on, world)
+  const opening = $.command.run({ command: 'replay', args: '' })
+  await clock.advance(OPEN_WAIT_MS)
+  expect(await opening).toMatchObject({ text: 'Tekrar: henüz düzenleme yok.' })
+  expect(await texts(await $.ui.mount(bandOf('terminal')))).toEqual(['engine'])
 })
 
 test('Şimdi değil dismisses the offer; /replay still opens the last edits', async ($: any, on: any) => {

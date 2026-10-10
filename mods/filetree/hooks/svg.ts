@@ -8,6 +8,9 @@ export const FONT = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sy
 export const MONO = `ui-monospace, 'SF Mono', Menlo, monospace`
 const BOLD_WIDTH = 1.07
 
+export type Font = { size: number; isBold?: boolean }
+export type Pt = { x: number; y: number }
+
 export const escape = (text: string): string =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -22,7 +25,8 @@ export function measure(text: string, size: number, isBold = false): number {
 }
 
 // Cuts the middle out of a name that does not fit, so its extension stays readable.
-export function fitMiddle(text: string, width: number, size: number, isBold = false): string {
+export function fitMiddle(text: string, width: number, font: Font): string {
+  const { size, isBold = false } = font
   if (measure(text, size, isBold) <= width) return text
   const chars = [...text]
   let keep = chars.length - 1
@@ -57,7 +61,7 @@ export function style(look: Look): string {
   return `<style>${fonts}${rules(paletteOf(look.isLight))}${scheme}${motion}</style>`
 }
 
-export const svgDoc = (width: number, height: number, look: Look, body: string): string =>
+export const svgDoc = ({ width, height }: { width: number; height: number }, look: Look, body: string): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${style(look)}${body}</svg>`
 
 export type IconName = 'eye' | 'pencil' | 'check' | 'sparkle' | 'branch'
@@ -71,7 +75,7 @@ const ICONS: Record<IconName, string> = {
   branch: '<circle cx="6.5" cy="5.5" r="2.2"/><circle cx="6.5" cy="18.5" r="2.2"/><circle cx="17.5" cy="7.5" r="2.2"/><path d="M6.5 7.7v8.6M17.5 9.7c0 4.6-5.2 4.2-9.6 7.2"/>',
 }
 
-export function icon(name: IconName, x: number, y: number, size: number, role: Role): string {
+export function icon(name: IconName, { x, y, size }: Pt & { size: number }, role: Role): string {
   const scale = size / 24
   return `<g transform="translate(${x} ${y}) scale(${scale})" fill="none" class="s-${role}" stroke-width="${1.8 / Math.max(scale, 0.6)}" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</g>`
 }
@@ -79,8 +83,8 @@ export function icon(name: IconName, x: number, y: number, size: number, role: R
 // DESIGN.md's icon box: a rounded square in the role's tint, the line icon in its color.
 export const ICON_BOX = 38
 
-export const iconBox = (name: IconName, x: number, y: number, role: Role): string =>
-  `<rect x="${x}" y="${y}" width="${ICON_BOX}" height="${ICON_BOX}" rx="10" class="t-${role}"/>${icon(name, x + 9.5, y + 9.5, 19, role)}`
+export const iconBox = (name: IconName, { x, y }: Pt, role: Role): string =>
+  `<rect x="${x}" y="${y}" width="${ICON_BOX}" height="${ICON_BOX}" rx="10" class="t-${role}"/>${icon(name, { x: x + 9.5, y: y + 9.5, size: 19 }, role)}`
 
 export const BADGE_H = 16
 
@@ -88,7 +92,7 @@ export function badgeWidth(label: string): number {
   return Math.max(26, Math.ceil(measure(label, 9.5, true) + 10))
 }
 
-export function badge(label: string, x: number, y: number, role: Role): string {
+export function badge(label: string, { x, y }: Pt, role: Role): string {
   const w = badgeWidth(label)
   return `<rect x="${x}" y="${y}" width="${w}" height="${BADGE_H}" rx="4" class="t-${role}"/><text x="${x + w / 2}" y="${y + 11.5}" text-anchor="middle" font-size="9.5" font-weight="700" class="num f-${role}">${escape(label)}</text>`
 }
@@ -98,13 +102,11 @@ export const PILL_H = 20
 export const pillWidth = (text: string): number => Math.ceil(measure(text, 11, true) + 18)
 
 // A status pill whose right edge sits at `right`.
-export function pill(text: string, right: number, y: number, role: Role): string {
+export function pill(text: string, { right, y }: { right: number; y: number }, role: Role): string {
   const w = pillWidth(text)
   const x = right - w
   return `<rect x="${x + 0.5}" y="${y + 0.5}" width="${w - 1}" height="${PILL_H - 1}" rx="${(PILL_H - 1) / 2}" class="t-${role} l-${role}"/><text x="${x + w / 2}" y="${y + 14}" text-anchor="middle" font-size="11" font-weight="600" class="f-${role}">${escape(text)}</text>`
 }
 
-export const eyebrowText = (text: string, x: number, y: number, cls: string, anchor = 'start'): string =>
+export const eyebrowText = (text: string, { x, y, anchor = 'start' }: Pt & { anchor?: string }, cls: string): string =>
   `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="10.5" font-weight="700" letter-spacing="1.05" class="${cls}">${escape(text)}</text>`
-
-export const eyebrowWidth = (text: string): number => measure(text, 10.5, true) + text.length * 1.05

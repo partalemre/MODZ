@@ -37,6 +37,14 @@ export type ToolEvent = {
   isError?: boolean
 }
 
+/** A file an agent read or changed: how often each, and when it last touched it. */
+export type TouchedFile = {
+  path: string
+  reads: number
+  edits: number
+  at: number
+}
+
 export type AgentRun = {
   id: string
   agentId?: string
@@ -57,9 +65,13 @@ export type AgentRun = {
   costUsd: number
   steps: number
   round: number
+  /** Arrival order among the session's agents: picks its shell, eyes and name. */
+  look?: number
   toolCount: number
   lastTool?: string
   lastTarget?: string
+  /** The latest call's target in full (a whole path, a command's first line), for the open card. */
+  lastDetail?: string
   /** Self-reported by the worker through the `step` tool. */
   stepDone?: number
   stepTotal?: number
@@ -72,6 +84,10 @@ export type AgentRun = {
   answer?: string
   /** Its latest tool calls, oldest first. */
   history?: ToolEvent[]
+  /** The files its calls read or changed, the latest last. */
+  files?: TouchedFile[]
+  /** When it was last heard from: a tool call opened or closed, a model request answered. */
+  heardAt?: number
 }
 
 /** The agents the main loop launched for the current request. */
@@ -93,12 +109,37 @@ export type LimitTrack = {
   carriedRate?: number
 }
 
+/** The "Yeni görev" form: open or not, the agent type picked, and why the last start was refused. */
+export type Draft = {
+  isOpen: boolean
+  type: string
+  notice?: string
+}
+
 export type Panel = {
   isCompact: boolean
   isDoneCollapsed: boolean
   /** The agent whose work history is open. */
   selected?: string
+  /** The agent whose task text is shown whole rather than cut short. */
+  briefOpen?: string
+  isTimelineHidden?: boolean
+  draft?: Draft
 }
+
+/** An agent type the panel can start: a built-in, one the engine offered, or an agents/*.md file. */
+export type AgentType = {
+  name: string
+  description: string
+  /** `built-in`, `plugin`, `project`, `user` or the settings source the engine named. */
+  source: string
+}
+
+/** The MODZ hub's tone for this mod's card (DESIGN.md §9): lo · Iris · Moss · Amber · Flare. */
+export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
+
+/** This mod's one-line summary on the MODZ hub; `pane` is the key the hub's open request names. */
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
 
 declare module 'claude-code' {
   interface PluginState {
@@ -110,6 +151,10 @@ declare module 'claude-code' {
       job: Job | null
       tasks: TrackedTask[]
       limit: LimitTrack | null
+      hub: HubCard
+      types: AgentType[]
     }
+    // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
+    modz: { open: { pane: string; at: number } }
   }
 }

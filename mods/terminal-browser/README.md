@@ -1,6 +1,8 @@
 > **MODZ notu (Türkçe):** Bu mod yalnızca terminalde çalışır; Claude masaüstü uygulamasında hiçbir şey çizmez ve
-> `/browser` komutunu kaydetmez (masaüstünün kendi tarayıcısıyla çakışmasın diye). Görünen metinler Türkçeleştirildi,
-> davranış değişmedi.
+> `/browser` komutunu kaydetmez (masaüstünün kendi tarayıcısıyla çakışmasın diye). Görünen metinler Türkçeleştirildi.
+> MODZ eklemeleri: ilk kare gelene kadar panel adresi ve "Sayfa yükleniyor…" ya da köprünün hata nedenini gösterir;
+> `localhost:3000` ve `example.com:8080` gibi port'lu adresler doğru açılır; kopan köprü bir sonraki `/browser`'da
+> yeniden başlatılır.
 >
 > Dayandığı proje: [zenbu-labs/terminal-browser](https://github.com/zenbu-labs/terminal-browser), MIT.
 

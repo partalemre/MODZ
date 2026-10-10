@@ -40,9 +40,9 @@ test('the headline counts enabled mods honestly', () => {
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
-  test(`the pane lists each mod with its version, group and source (${surface})`, async ($, on) => {
+  test(`the pane lists each mod with its version, group and source (${surface})`, async ($: any, on) => {
     on('fs.stat', () => ({
-      value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' },
+      value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' },
     }))
     on('fs.read', (_, e) => {
       const text = FILES[e.path]
@@ -51,14 +51,14 @@ for (const surface of ['terminal', 'desktop'] as const) {
       return { value: text }
     })
     on('settings.read', () => ({ value: { enabledPlugins: { 'hud@modz': true, 'ghost@modz': true, 'cache-tax@modz': false } } }))
-    on('command.register', () => ({ value: undefined }))
+    on('command.register', () => ({ value: { command: 'modz' } }))
     on('ui.open', () => ({ value: { isPlaced: true } }))
     on('session.start', () => ({ cwd: '/work' }))
     on('config.list', () => ({ value: [] }))
     await $.session.start({ surface, isInteractive: true, cwd: '/work' })
     await $.command.run({ command: 'modz', args: '' })
 
-    const ui = await $.ui.mount({ ...PANE, surface })
+    const ui = await $.ui.mount({ ...PANE, requestId: 'modz-mods', surface })
     const said = async (text: RegExp) => {
       if ((await ui.find({ type: 'Text', text })) !== undefined) return true
       const svgs = await ui.findAll({ type: 'Svg' })
@@ -74,8 +74,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
   })
 }
 
-test('with no settings flag, a ~/.claude/skills link turns a mod on in the pane headline', async ($, on) => {
-  on('fs.stat', () => ({ value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
+test('with no settings flag, a ~/.claude/skills link turns a mod on in the pane headline', async ($: any, on) => {
+  on('fs.stat', () => ({ value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
   on('fs.read', (_, e) => {
     const text = FILES[e.path]
     if (!text) throw new Error(`ENOENT ${e.path}`)
@@ -85,14 +85,14 @@ test('with no settings flag, a ~/.claude/skills link turns a mod on in the pane 
   on('fs.exists', (_, e) => ({ value: e.path === '/home/u/.claude/skills/hud' }))
   on('env.get', () => ({ value: '/home/u' }))
   on('settings.read', () => ({ value: {} }))
-  on('command.register', () => ({ value: undefined }))
+  on('command.register', () => ({ value: { command: 'modz' } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('session.start', () => ({ cwd: '/work' }))
   on('config.list', () => ({ value: [] }))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
   await $.command.run({ command: 'modz', args: '' })
 
-  const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  const ui = await $.ui.mount({ ...PANE, requestId: 'modz-mods', surface: 'terminal' })
 
   expect(await ui.find({ type: 'Text', text: /3 mod · hepsi açık · 2 bilinmiyor/ })).toBeDefined()
 })

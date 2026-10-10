@@ -123,9 +123,10 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
 - **Öne getirme:** ana panel açık kalır, her satır kendi sekmesini açar. Yüzey, klavyeyi tutan paneli yerinden
   etmez; bu yüzden sahibi `$.ui.open`'ı `focus: true` ile çağırır: oluru yüzey verir (masaüstünde istem kutusu boş
   ve tur yokken), panel klavyeyi ve önü alır. Olmazsa panel ana panelin yanında sekme olarak bekler.
-- **Basış damgası:** her yeniden çizim yeni basış tutamaçları verir, ama masaüstü aynı görünen ağacı eskisiyle
-  tutar ve ilk tıklama reddedilir. Button, Input ya da Select çizen her ağaç kökünde kit'in `stamped` damgasını
-  taşır (`kit/stamp.tsx`, görünmez); değişmeyen değer `$.state`'e yeniden yazılmaz (`kit/same.ts`).
+- **Sabit basış tutamacı:** JSX her çizimde yeni tutamaç verir, host da yeniden çizimde eskileri bırakır; masaüstü
+  son boyadığı ağaca tıkladığı için araya giren her çizim tıklamayı düşürürdü. Button, Input ya da Select çizen her
+  `ui.render` kancası ağacını `pinned(e, ağaç)` ile döner (`kit/pin.ts`): her öğe yeri ve anahtarı için ilk aldığı
+  tutamacı korur, eski ağaç da basılabilir kalır. Değişmeyen değer `$.state`'e yeniden yazılmaz (`kit/same.ts`).
 - **Özet kartı:** her mod kendi `{ plugin: '<mod>', key: 'hub' }` değerine `HubCard` yazar; ana panel
   `on('state.set', { key: 'hub' }, …)` ile hepsini toplar. Yalnızca gösterilen metin değişince yazılır.
 

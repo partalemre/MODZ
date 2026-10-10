@@ -3,9 +3,9 @@
 The desktop draws mod trees it gets from `ui_render` and sends clicks back as `ui_press`; this does the same over
 stream-json, so a test sees exactly what a desktop click would. Used by check.py and the transceiver e2e.
 """
+import atexit
 import json
 import os
-import queue
 import subprocess
 import threading
 import time
@@ -46,7 +46,10 @@ class Engine:
         args = [engine or desktop_engine(), '-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', *extra]
         self.p = subprocess.Popen(args, cwd=cwd, env=env, text=True, bufsize=1,
                                   stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-        self.n, self.replies, self.msgs = 0, {}, []
+        self.n, self.replies, self.msgs, self.asks = 0, {}, [], []
+        self.approve = True
+        # A script that stops early must not leave its engine running.
+        atexit.register(self.close)
         threading.Thread(target=self._read, daemon=True).start()
         self.req({'subtype': 'initialize'}, 60)
 
@@ -59,8 +62,18 @@ class Engine:
             if m.get('type') == 'control_response':
                 r = m.get('response', {})
                 self.replies[r.get('request_id')] = r
+            elif m.get('type') == 'control_request' and m.get('request', {}).get('subtype') == 'can_use_tool':
+                self.asks.append(m['request'])
+                self._answer(m)
             else:
                 self.msgs.append(m)
+
+    def _answer(self, m):
+        """The person's answer to a permission dialog: yes while `approve`, else no."""
+        req = m['request']
+        verdict = {'behavior': 'allow', 'updatedInput': req.get('input', {})} if self.approve else {'behavior': 'deny', 'message': 'declined'}
+        self.p.stdin.write(json.dumps({'type': 'control_response', 'response': {'subtype': 'success', 'request_id': m['request_id'], 'response': verdict}}) + '\n')
+        self.p.stdin.flush()
 
     def req(self, request, timeout=REPLY_TIMEOUT_S):
         self.n += 1
@@ -83,8 +96,9 @@ class Engine:
         return shown[-1]['panes'] if shown else []
 
     def close(self):
-        self.p.stdin.close()
-        self.p.terminate()
+        if self.p.poll() is None:
+            self.p.stdin.close()
+            self.p.terminate()
 
 
 def walk(tree, kind):

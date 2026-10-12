@@ -63,7 +63,8 @@ export async function say($: Engine, w: { clock: { settle: () => Promise<void> }
   await $.prompt.submit({ text, origin: { kind }, wait: false } as never)
   await w.clock.settle()
 }
-export const BAND = { component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 80 } as never } as const
+export const BAND_PROPS = { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 80 }
+export const BAND = { component: 'AbovePrompt', props: BAND_PROPS as never } as const
 export const mount = ($: Engine) => $.ui.mount({ plugin: 'reflect-mod', surface: 'terminal', ...BAND })
 /** What the band shows: the card's rule (with its repeat count) and the "+N" line under it. */
 export async function rows($: Engine) {

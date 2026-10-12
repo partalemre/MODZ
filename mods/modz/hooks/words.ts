@@ -39,7 +39,7 @@ const PANES = {
 
 // A pane the tables do not know keeps its id as its title.
 export function paneWords(pane: string): PaneWords {
-  const table: Record<string, PaneWords> = pick(PANES)
+  const table = pick<Readonly<Record<string, PaneWords>>>(PANES)
 
   return table[pane] ?? { title: pane, hint: '' }
 }

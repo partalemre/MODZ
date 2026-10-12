@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "description": "Shows the plan's steps when there is one (task list, approved plan or plan file): the /steps pane and a quiet status line",
   "author": {
-    "name": "Partal"
+    "name": "Faik Emre Partal"
   },
   "types": "./types/index.d.ts"
 }

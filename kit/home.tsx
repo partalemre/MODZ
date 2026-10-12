@@ -17,3 +17,16 @@ export function HomeButton(ui: Table, onPress: () => void) {
     </Box>
   )
 }
+
+// The pane's tree with the way back above it; null while the hub is off draws the pane as it is.
+export function withHome<T>(ui: Table, tree: T, onHome: (() => void) | null) {
+  if (onHome === null) return tree
+  const { Box } = ui
+
+  return (
+    <Box flexDirection="column" rowGap={1}>
+      {HomeButton(ui, onHome)}
+      {tree}
+    </Box>
+  )
+}

@@ -7,7 +7,7 @@ import { GROUPS } from './meta'
 import type { Group } from './meta'
 import type { Theme } from './theme'
 import { catalogWords, placeLine } from './words'
-import { HomeButton } from './kit/home'
+import { withHome } from './kit/home'
 
 // The resolved element table of the surface that draws the pane.
 type Ui = Record<string, any>
@@ -96,16 +96,7 @@ function desktopTree(ui: Ui, view: View) {
 }
 
 // The catalog with its "← MODZ" button on top: the hub is a tab beside it, and the button brings it back if closed.
-export function modzTree(ui: Ui, view: View) {
-  const { Box } = ui
-
-  return (
-    <Box flexDirection="column" rowGap={1}>
-      {HomeButton(ui, view.onHome)}
-      {catalogTree(ui, view)}
-    </Box>
-  )
-}
+export const modzTree = (ui: Ui, view: View) => withHome(ui, catalogTree(ui, view), view.onHome)
 
 function catalogTree(ui: Ui, view: View) {
   const { Box, Text } = ui

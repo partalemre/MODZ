@@ -2,7 +2,8 @@
 
 A session starts in the repo with every linked mod, a desktop attaches, and the MODZ hub opens by itself. Each hub
 row is pressed on a tree drawn before a redraw (what a desktop click is), and must open its panel; every panel and
-the band must draw a tree of their own and keep each button's press handle across a focus flip.
+the band must draw a tree of their own and keep each button's press handle across a focus flip, and every panel
+but the hub must offer "← MODZ" back to it.
 Usage: python3 -I tools/desk/check.py [repo]   (exit 1 on any failure)
 """
 import os
@@ -40,6 +41,14 @@ def check_site(desk, inst, comp='Pane'):
     return None if handles(first) == handles(again) else f'{comp} {inst}: press handles changed on a redraw'
 
 
+def check_home(desk, inst):
+    """The panel's way back: a "← MODZ" button whose press the panel's mod handles."""
+    tree = desk.render(inst)
+    if 'modz-home' not in [key for key, _ in walk(tree, 'Button')]:
+        return f'Pane {inst}: no ← MODZ button'
+    return None if desk.press('modz-home', tree=tree).get('handled') else f'Pane {inst}: the ← MODZ press was dropped'
+
+
 def main(repo):
     engine = Engine(repo)
     desk = Desk(engine)
@@ -63,6 +72,11 @@ def main(repo):
     for pane in engine.panes():
         problem = check_site(desk, pane['id'])
         print(f'  pane {pane["id"]:<18} {"✘ " + problem if problem else "✔"}')
+        failures += [problem] if problem else []
+    for pane in engine.panes():
+        problem = None if pane['id'] == HUB else check_home(desk, pane['id'])
+        if pane['id'] != HUB:
+            print(f'  home {pane["id"]:<18} {"✘ " + problem if problem else "✔"}')
         failures += [problem] if problem else []
     problem = check_site(desk, 'above-prompt', 'AbovePrompt')
     print(f'  band {"":<18} {"✘ " + problem if problem else "✔"}')

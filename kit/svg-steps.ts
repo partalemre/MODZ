@@ -3,6 +3,7 @@
 import { baseline, iconEl, num, rectEl, sans, TYPE, textEl, toPic } from './svg-core'
 import type { Part, SvgPic } from './svg-core'
 import type { Role } from './tokens'
+import { pick } from './lang'
 
 export type StepState = 'done' | 'active' | 'pending' | 'failed' | 'skipped'
 
@@ -98,7 +99,10 @@ export function stepCirclePart(o: StepCircleOpts): Part {
     future: `<circle cx="${c}" cy="${num(cy)}" r="${c - RING_STROKE / 2}" class="s-line-strong" stroke-width="${RING_STROKE}" fill="none"/>${textEl({ x: c, y, text: label, paint: 'lo', ...NUMBER, weight: 600, anchor: 'middle' })}`,
   }[o.state]
 
-  return { body: rails(o, height) + face, width: CIRCLE, height, alt: `${label}. adım, ${{ current: 'şimdiki', done: 'bitti', future: 'sırada' }[o.state]}` }
+  return { body: rails(o, height) + face, width: CIRCLE, height, alt: pick({
+    en: `step ${label}, ${{ current: 'current', done: 'done', future: 'next' }[o.state]}`,
+    tr: `${label}. adım, ${{ current: 'şimdiki', done: 'bitti', future: 'sırada' }[o.state]}`,
+  }) }
 }
 
 export const stepCircle = (o: StepCircleOpts): SvgPic => toPic(stepCirclePart(o))

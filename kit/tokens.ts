@@ -112,7 +112,7 @@ export function fileType(name: string): FileType {
   const ext = (dot >= 0 ? base.slice(dot + 1) : base).toLowerCase()
   const isGit = base.toLowerCase().startsWith('.git')
   const kind = isGit ? 'misc' : EXT_KIND[ext] ?? 'misc'
-  const label = isGit ? 'GIT' : EXT_LABEL[ext] ?? ext.slice(0, BADGE_CHARS).toLocaleUpperCase('tr')
+  const label = isGit ? 'GIT' : EXT_LABEL[ext] ?? ext.slice(0, BADGE_CHARS).toUpperCase()
 
   return { kind, label: label || '·' }
 }

@@ -3,6 +3,7 @@
 import { baseline, num, rectEl, TYPE, textEl, toPic, upperTr } from './svg-core'
 import type { Part, SvgPic } from './svg-core'
 import type { Role } from './tokens'
+import { pick } from './lang'
 
 const AHEAD_OF_PACE = 0.1
 const NEAR_FULL = 0.95
@@ -180,7 +181,7 @@ export function sparklinePart(o: SparklineOpts): Part {
     `<circle cx="${num(x(last))}" cy="${num(y(values[last] ?? 0))}" r="${DOT_R}" class="f-${paint} s-${o.bg ?? 'card'}" stroke-width="${SPARK_STROKE}"/>`,
   ]
 
-  return { body: body.join(''), width, height, alt: `${values.length} değer, son ${values[last]}` }
+  return { body: body.join(''), width, height, alt: pick({ en: `${values.length} values, last ${values[last]}`, tr: `${values.length} değer, son ${values[last]}` }) }
 }
 
 export const sparkline = (o: SparklineOpts): SvgPic => toPic(sparklinePart(o))

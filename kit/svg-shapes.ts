@@ -7,6 +7,7 @@ import { eyebrowPart } from './svg-text'
 import { sparklinePart } from './svg-meters'
 import { badgePaints, fileType } from './tokens'
 import type { Role } from './tokens'
+import { pick } from './lang'
 
 const HAIRLINE_OPACITY = 0.6
 
@@ -185,7 +186,7 @@ export function skeletonPart(o: SkeletonOpts): Part {
     return rectEl({ x: 0, y: i * SKELETON_PITCH, width: Math.round(o.width * share), height: SKELETON_H, radius: SKELETON_H / 2, paint: 'track', className: 'shimmer' }, style)
   })
 
-  return { body: bars.join(''), width: o.width, height: (lines - 1) * SKELETON_PITCH + SKELETON_H, alt: 'Yükleniyor' }
+  return { body: bars.join(''), width: o.width, height: (lines - 1) * SKELETON_PITCH + SKELETON_H, alt: pick({ en: 'Loading', tr: 'Yükleniyor' }) }
 }
 
 export const skeleton = (o: SkeletonOpts): SvgPic => toPic(skeletonPart(o))

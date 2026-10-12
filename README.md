@@ -120,6 +120,8 @@ To remove a mod: `claude plugin uninstall <name>@modz`. To remove everything: al
 
 - **Unit checks.** `bin/modz check [name]` validates each mod and runs its tests, on both the terminal engine and the desktop app's engine.
 - **End to end.** `bin/modz desk` starts a real session, speaks the desktop app's own protocol to it, and clicks through every panel. Run both before opening a pull request.
+- **Types.** Claude Code writes its API types into `.claude-plugin/types/` beside a mod it hot-reloads. Each mod's `tsconfig.json` extends them, so `tsc -p mods/<name>` type-checks that mod.
+- **Kit gallery.** `tools/kit-gallery` draws every kit component; its tests check contrast in both themes.
 - **Design rules.** [DESIGN.md](DESIGN.md) (in Turkish) covers colour, type, components and the rules every mod follows.
 
 ## Credits

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Keep each mod's copy of the MODZ kit byte-identical to kit/, and only as large as the mod needs.
-# Usage: bin/kit-sync [mod ...]   a mod is a name under mods/ or .staging/, or a plugin folder.
-# With no mods: every mod under mods/ and .staging/.
+# Usage: bin/kit-sync [mod ...]   a mod is a name under mods/ or tools/, or a plugin folder.
+# With no mods: every mod under mods/, and tools/kit-gallery.
 #
 # hooks/kit/: the kit files the mod's own hooks and tests import, followed through the kit's own imports, are
 # copied; kit files nothing reaches are removed. A flat copy (hooks/pin.ts) whose first line is the kit
@@ -11,7 +11,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 resolve() {
   if [[ -d "$1/hooks" ]]; then (cd "$1" && pwd); return; fi
-  for base in "$ROOT/mods" "$ROOT/.staging"; do
+  for base in "$ROOT/mods" "$ROOT/tools"; do
     if [[ -d "$base/$1/hooks" ]]; then echo "$base/$1"; return; fi
   done
   echo "kit-sync: no plugin with hooks/ at '$1'" >&2; return 1
@@ -21,7 +21,7 @@ targets=()
 if [[ $# -gt 0 ]]; then
   for arg in "$@"; do targets+=("$(resolve "$arg")"); done
 else
-  for dir in "$ROOT"/mods/*/hooks "$ROOT"/.staging/*/hooks; do [[ -d "$dir" ]] && targets+=("$(dirname "$dir")"); done
+  for dir in "$ROOT"/mods/*/hooks "$ROOT"/tools/kit-gallery/hooks; do [[ -d "$dir" ]] && targets+=("$(dirname "$dir")"); done
 fi
 
 python3 - "$ROOT/kit" "${targets[@]}" <<'PY'

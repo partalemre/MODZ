@@ -1,30 +1,30 @@
 #!/usr/bin/env bash
-# MODZ: Claude Code modlarının tek kaynağı. Marketplace adı: modz
+# MODZ: the one source of these Claude Code mods. Marketplace name: modz
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MODS="$ROOT/mods"
 DEV_MODS="$HOME/.claude/dev-mods"
 SKILLS="$HOME/.claude/skills"
-# Cloud oturumları yalnızca reponun kendi .claude/skills klasörünü görür.
+# Cloud sessions see only the repo's own .claude/skills folder.
 PROJECT_SKILLS="$ROOT/.claude/skills"
-# Bu makinenin sesine, tarayıcısına ya da diskine bağlı modlar: cloud'a bağlanmaz.
+# Mods bound to this machine's sound, browser or disk: never linked for the cloud.
 LOCAL_ONLY=" done-ping terminal-browser filetree "
 
 usage() {
   cat <<USAGE
-modz <komut>
-  list                 modları listele (sürüm + açıklama)
-  new <ad> [açıklama]  templates/blank'ten yeni mod oluştur ve marketplace'e ekle
-  check [ad]           validate + test, CLI ve masaüstü motoruyla (ad verilmezse hepsi)
-  desk                 masaüstü motoruyla uçtan uca: hub satırları, paneller, bant ve tıklamalar
-  sync                 marketplace.json'u mods/ klasörüyle eşitle
-  import <klasör>      bir dev-mods klasöründeki modu MODZ'a kopyala
-  dev                  ~/.claude/dev-mods altındaki tüm oturum modlarını göster
-  status               her modun etkin olup olmadığını göster
-  link [ad]            modu (veya hepsini) ~/.claude/skills'e bağla: her oturumda yüklenir
-  unlink <ad>          bağlantıyı kaldır (mod MODZ'da kalır)
-  cloud                .claude/skills linklerini eşitle: cloud oturumları yerel olmayan her modu yükler
+modz <command>
+  list                 list the mods (version + description)
+  new <name> [desc]    make a mod from templates/blank and add it to the marketplace
+  check [name]         validate + test on the CLI and the desktop engine (all mods without a name)
+  desk                 end to end on the desktop engine: hub rows, panes, the band and presses
+  sync                 bring marketplace.json in line with mods/
+  import <folder>      copy a mod from a dev-mods folder into MODZ
+  dev                  show every session mod under ~/.claude/dev-mods
+  status               show whether each mod is linked
+  link [name]          link a mod (or all) into ~/.claude/skills: it loads in every session
+  unlink <name>        remove the link (the mod stays in MODZ)
+  cloud                sync the .claude/skills links: cloud sessions load every mod not bound to this machine
 USAGE
 }
 
@@ -58,8 +58,8 @@ PY
 }
 
 cmd_new() {
-  local name="${1:?mod adı gerekli}" desc="${2:-Yeni mod}"
-  [[ "$name" =~ ^[a-z0-9-]+$ ]] || { echo "ad sadece a-z, 0-9 ve - içerebilir" >&2; exit 1; }
+  local name="${1:?a mod name is needed}" desc="${2:-A new mod}"
+  [[ "$name" =~ ^[a-z0-9-]+$ ]] || { echo "a name holds only a-z, 0-9 and -" >&2; exit 1; }
   [[ -e "$MODS/$name" ]] && { echo "$name zaten var" >&2; exit 1; }
   cp -R "$ROOT/templates/blank" "$MODS/$name"
   NAME="$name" DESC="$desc" python3 - "$MODS/$name" <<'PY'
@@ -70,11 +70,11 @@ for p in pathlib.Path(sys.argv[1]).rglob("*"):
         p.write_text(s.replace("__NAME__", os.environ["NAME"]).replace("__DESC__", os.environ["DESC"]))
 PY
   cmd_sync
-  echo "oluşturuldu: $MODS/$name"
+  echo "made: $MODS/$name"
 }
 
-# Masaüstü uygulaması kendi motorunu taşır, çoğu zaman CLI'dan bir sürüm geride: birinin kabul ettiği ağacı
-# öteki reddedebilir. En yeni sürüm klasöründeki motor; yoksa boş döner.
+# The desktop app carries its own engine, often a release behind the CLI: a tree one accepts the other may
+# refuse. The engine in the newest version folder; empty when there is none.
 desktop_engine() {
   local base="$HOME/Library/Application Support/Claude/claude-code" newest bin
   newest="$(ls "$base" 2>/dev/null | sort -V | tail -1)"
@@ -84,7 +84,7 @@ desktop_engine() {
   done
 }
 
-# Bir motorla validate + test; satırın başında motorun adı ve sürümü.
+# validate + test with one engine; each line starts with the engine's name and version.
 check_with() {
   local engine="$1" mod="$2" label out failed=0
   label="$3 $("$engine" --version 2>/dev/null | awk '{print $1}')"
@@ -109,15 +109,15 @@ cmd_check() {
   return $failed
 }
 
-# Gerçek masaüstü motoru, Code sekmesinin kontrol protokolüyle: her hub satırına eski ağaçtan basar.
+# The real desktop engine over the Code tab's control protocol: presses every hub row from an older tree.
 cmd_desk() { python3 -I "$ROOT/tools/desk/check.py" "$ROOT"; }
 
 cmd_import() {
-  local src="${1:?kaynak klasör gerekli}" name
+  local src="${1:?a source folder is needed}" name
   name="$(basename "$src")"
   rsync -a --exclude '.claude-plugin/types/' --exclude node_modules "$src/" "$MODS/$name/"
   cmd_sync
-  echo "içe aktarıldı: $name"
+  echo "imported: $name"
 }
 
 cmd_dev() {
@@ -129,22 +129,22 @@ is_local_only() { [[ "$LOCAL_ONLY" == *" $1 "* ]]; }
 
 cmd_status() {
   for m in $(mod_names); do
-    local target="$SKILLS/$m" state="kapalı" cloud="cloud: yok"
-    if [[ -L "$target" && "$(readlink "$target")" == "$MODS/$m" ]]; then state="aktif"
-    elif [[ -e "$target" ]]; then state="çakışma: $target MODZ'a bağlı değil"; fi
-    if is_local_only "$m"; then cloud="cloud: yerel"
-    elif [[ -L "$PROJECT_SKILLS/$m" ]]; then cloud="cloud: var"; fi
+    local target="$SKILLS/$m" state="off" cloud="cloud: no"
+    if [[ -L "$target" && "$(readlink "$target")" == "$MODS/$m" ]]; then state="on"
+    elif [[ -e "$target" ]]; then state="conflict: $target is not linked to MODZ"; fi
+    if is_local_only "$m"; then cloud="cloud: local"
+    elif [[ -L "$PROJECT_SKILLS/$m" ]]; then cloud="cloud: yes"; fi
     printf "%-18s %-8s %s\n" "$m" "$state" "$cloud"
   done
 }
 
-# Göreli linkler: repo nereye klonlanırsa klonlansın (cloud dahil) çalışır.
+# Relative links: they work wherever the repo is cloned (the cloud included).
 cmd_cloud() {
   mkdir -p "$PROJECT_SKILLS"
   for link in "$PROJECT_SKILLS"/*; do
     [[ -L "$link" ]] || continue
     local m; m="$(basename "$link")"
-    if [[ ! -d "$MODS/$m" ]] || is_local_only "$m"; then rm "$link" && echo "cloud'dan çıktı: $m"; fi
+    if [[ ! -d "$MODS/$m" ]] || is_local_only "$m"; then rm "$link" && echo "out of the cloud: $m"; fi
   done
   for m in $(mod_names); do
     is_local_only "$m" && continue
@@ -157,7 +157,7 @@ link_one() {
   local m="$1" target="$SKILLS/$1"
   [[ -d "$MODS/$m" ]] || { echo "$m yok" >&2; return 1; }
   if [[ -L "$target" ]]; then ln -sfn "$MODS/$m" "$target"
-  elif [[ -e "$target" ]]; then echo "$target gerçek bir klasör; önce 'modz import $target'" >&2; return 1
+  elif [[ -e "$target" ]]; then echo "$target is a real folder; first 'modz import $target'" >&2; return 1
   else ln -s "$MODS/$m" "$target"; fi
   echo "aktif: $m"
 }
@@ -168,9 +168,9 @@ cmd_link() {
 }
 
 cmd_unlink() {
-  local target="$SKILLS/${1:?mod adı gerekli}"
-  [[ -L "$target" ]] || { echo "$target bir bağlantı değil" >&2; exit 1; }
-  rm "$target" && echo "kapalı: $1"
+  local target="$SKILLS/${1:?a mod name is needed}"
+  [[ -L "$target" ]] || { echo "$target is not a link" >&2; exit 1; }
+  rm "$target" && echo "off: $1"
 }
 
 case "${1:-}" in

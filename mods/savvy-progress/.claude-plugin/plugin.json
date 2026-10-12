@@ -1,6 +1,6 @@
 {
   "name": "savvy-progress",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "description": "A progress band above the prompt and the Agents pane: each subagent gets a crab and a card with its status, progress, cost and time, a timeline and a quiet-agent warning. Progress comes only from what was observed.",
   "author": {
     "name": "johnnyvizz",

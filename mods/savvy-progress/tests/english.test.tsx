@@ -97,6 +97,7 @@ const HUB_STAND_IN = {
 test('the hub card reads the job and how many agents run', { plugins: [HUB_STAND_IN] }, async ($, on) => {
   await setup($, on, EN)
   await threeRunning($)
-  const card = JSON.parse((await $.command.run({ command: 'hub-card', args: '' })).text)
+  const out = await $.command.run({ command: 'hub-card', args: '' } as never)
+  const card = JSON.parse(out.text ?? '')
   expect(card.value.detail).toBe('Agents 0/3 · 3 running')
 })

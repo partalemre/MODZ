@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { BAND, say, start, world } from './world'
+import { BAND, BAND_PROPS, say, start, world } from './world'
 
 // A desktop clicks the tree it last painted. Every redraw keeps each button's press handle, so a click
 // on an earlier tree still lands.
@@ -23,7 +23,7 @@ test('a band redraw keeps every button’s press handle', async ($, on) => {
   const site = { plugin: 'reflect-mod', surface: 'desktop', ...BAND } as const
   const band = await $.ui.mount(site)
   const before = handlesOf(await band.drawn())
-  await band.redraw({ ...site.props, bodyColumns: site.props.bodyColumns + WIDER_BY })
+  await band.redraw({ ...BAND_PROPS, bodyColumns: BAND_PROPS.bodyColumns + WIDER_BY } as never)
 
   expect(Object.keys(before).length).toBeGreaterThan(0)
   expect(handlesOf(await band.drawn())).toEqual(before)

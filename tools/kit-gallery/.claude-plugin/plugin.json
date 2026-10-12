@@ -1,0 +1,8 @@
+{
+  "name": "kit-gallery",
+  "version": "0.1.0",
+  "description": "Visual QA for the MODZ kit: /kit-gallery opens a pane drawing every kit component in several states",
+  "author": {
+    "name": "Faik Emre Partal"
+  }
+}

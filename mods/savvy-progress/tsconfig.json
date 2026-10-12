@@ -1,5 +1,3 @@
 {
-  "extends": "/Users/partalle/AI-Tools/claude-mods/_types/tsconfig.json",
-  "compilerOptions": { "typeRoots": ["/Users/partalle/AI-Tools/claude-mods/_types"] },
-  "include": ["hooks", "types", "tests"]
+  "extends": "./.claude-plugin/types/tsconfig.json"
 }

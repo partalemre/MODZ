@@ -4,7 +4,7 @@ The shared drawing kit every MODZ mod uses, implementing [DESIGN.md](../DESIGN.m
 truth; each mod carries a byte-identical copy in `hooks/kit/`, made by `bin/kit-sync`. Never edit a copy.
 
 ```sh
-bin/kit-sync filetree secret-guard     # copy into those mods (name under mods/ or .staging/, or a path)
+bin/kit-sync filetree secret-guard     # copy into those mods (name under mods/ or tools/, or a path)
 bin/kit-sync                           # refresh every mod that already has hooks/kit
 ```
 
@@ -118,6 +118,6 @@ Mods that do not vendor the kit carry a byte-identical `hooks/pin.ts` (and `hook
 
 ## Visual QA
 
-`.staging/kit-gallery` draws every component; `bin/preview .staging/kit-gallery <out>` (and `--theme light`)
+`tools/kit-gallery` draws every component; `bin/preview tools/kit-gallery <out>` (and `--theme light`)
 renders it. Its `tests/kit.test.ts` checks contrast (WCAG, both themes), meter bounds, text measuring and the
 button rules.

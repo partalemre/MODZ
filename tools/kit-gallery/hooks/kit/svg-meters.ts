@@ -1,5 +1,5 @@
 // MODZ kit — measures: the meter with its pace tick, the segmented 270° arc, the sparkline.
-// The fill never passes 100 %; past it the value reads "dolu".
+// The fill never passes 100 %; past it the value reads "full" ("dolu" in Turkish).
 import { baseline, num, rectEl, TYPE, textEl, toPic, upperTr } from './svg-core'
 import type { Part, SvgPic } from './svg-core'
 import type { Role } from './tokens'
@@ -8,7 +8,7 @@ import { pick } from './lang'
 const AHEAD_OF_PACE = 0.1
 const NEAR_FULL = 0.95
 const PERCENT = 100
-export const FULL_TEXT = 'dolu'
+export const fullText = (): string => pick({ en: 'full', tr: 'dolu' })
 
 // The fill's paint: neutral (text.mid, or the role) on pace, Amber when more than 10 points
 // ahead of the pace, Flare from 95 %.
@@ -22,9 +22,13 @@ export function meterTone(ratio: number, pace?: number, role?: Role): string {
 export const clampRatio = (value: number, max = 1): number =>
   max > 0 && !Number.isNaN(value) ? Math.max(0, Math.min(1, value / max)) : 0
 
-// "%42", or "dolu" once the value reaches its max (Turkish puts % first).
-export const percentText = (value: number, max = 1): string =>
-  max > 0 && value >= max ? FULL_TEXT : `%${Math.round(clampRatio(value, max) * PERCENT)}`
+// "42%" ("%42" in Turkish, which puts % first), or "full" once the value reaches its max.
+export function percentText(value: number, max = 1): string {
+  if (max > 0 && value >= max) return fullText()
+  const percent = Math.round(clampRatio(value, max) * PERCENT)
+
+  return pick({ en: `${percent}%`, tr: `%${percent}` })
+}
 
 // ---------------------------------------------------------------------------
 

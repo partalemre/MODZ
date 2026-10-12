@@ -10,6 +10,7 @@ import { overridesOf, type Overrides } from './options'
 import { badgeText, isFailing, parseLint, parseTests } from './parse'
 import type { ParseContext } from './text'
 import { bandTree } from './band'
+import { withHome } from './home-pane'
 import { isLive } from './notice'
 import { pinned } from './pin'
 import { AUTO, themeFrom } from './tidemark'
@@ -30,6 +31,7 @@ const enabledAtom = atom({ plugin: 'test-badge', key: 'isEnabled' } as const, tr
 const filterAtom = atom({ plugin: 'test-badge', key: 'filter' } as const, 'all' as SuiteFilter)
 const themeAtom = atom({ plugin: 'test-badge', key: 'theme' } as const, AUTO)
 const hubRef = { plugin: 'test-badge', key: 'hub' } as const
+const homeRef = { plugin: 'test-badge', key: 'home' } as const
 // The shared notice line: every one of these outranks this mod's line (session-budget ties at 1 and wins).
 const cacheTaxNotice = { plugin: 'cache-tax', key: 'notice' } as const
 const knowNotice = { plugin: 'you-should-know', key: 'notice' } as const
@@ -272,14 +274,19 @@ function hookDrawing(on: On, overrides: Overrides): void {
     const badge = await read($, badgeAtom)
     const where = { root: badge.root ?? (await $.session.cwd()), template: overrides.open, surface: e.surface }
 
+    const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
+    // Written when pressed, never while drawing; a failure only goes to the debug log.
+    const goHome = () => void $.clock.now().then(at => $.state.set(homeRef, { at })).catch(() => $.ui.log('test-badge: could not go back to MODZ', { to: 'debug' }))
     const ui = $.ui.resolve(e)
-    return pinned(e, paneTree(ui, {
+    const tree = paneTree(ui, {
       badge, now: await $.clock.now(), columns: e.props.bodyColumns, filter: await read($, filterAtom),
       theme: await read($, themeAtom), isRich: e.surface !== 'terminal',
       onOpen: failure => void openFailure($, failure, where),
       onRerun: () => void runAll($, overrides),
       onFilter: filter => void update($, filterAtom, () => filter),
-    }))
+    })
+
+    return pinned(e, withHome(ui, tree, isHubOn ? goHome : null))
   })
 }
 

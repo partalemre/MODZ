@@ -153,8 +153,10 @@ declare module 'claude-code' {
       limit: LimitTrack | null
       hub: HubCard
       types: AgentType[]
+      // The person pressed "← MODZ" in the Agents pane; the hub hears it and comes forward.
+      home: { at: number }
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
-    modz: { open: { pane: string; at: number } }
+    modz: { open: { pane: string; at: number }; isOn: boolean }
   }
 }

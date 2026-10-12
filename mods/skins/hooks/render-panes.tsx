@@ -36,6 +36,7 @@ export async function galleryView({ view, e }: Omit<Drawing<'Pane'>, 'pass'>): P
 export type SettingsHost = PrefsHost & {
   ui(): Elements[RenderSurface]
   editing(): Promise<SkinSlot>
+  isHubOn(): Promise<boolean>
   ports: SettingsPorts
 }
 
@@ -58,5 +59,7 @@ export async function settingsView(host: SettingsHost, e: Frozen<RenderInput<'Pa
   const skins = names.flatMap(name => resolveSkin(name, custom) ?? []).map(one => forTheme(one, isLight))
   const model = { names, editing, width: e.props.bodyColumns, swatches: swatchesOf(skins) }
 
-  return pinned(e, settingsPane({ look, ui, model, actions: settingsActions({ prefs, custom, editing }, host.ports) }))
+  const home = (await host.isHubOn()) ? host.ports.home : undefined
+
+  return pinned(e, settingsPane({ look, ui, model, home, actions: settingsActions({ prefs, custom, editing }, host.ports) }))
 }

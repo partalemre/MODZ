@@ -57,8 +57,10 @@ declare module 'claude-code' {
       // Bumped by a timer while the pane is open, so elapsed times move.
       tick: number
       hub: HubCard
+      // The person pressed "← MODZ" in the Plan pane; the hub hears it and comes forward.
+      home: { at: number }
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
-    modz: { open: { pane: string; at: number } }
+    modz: { open: { pane: string; at: number }; isOn: boolean }
   }
 }

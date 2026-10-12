@@ -40,7 +40,7 @@
         "source": "github",
         "repo": "partalemre/transceiver"
       },
-      "description": "Your team, inside Claude. Chat with teammates and let your agents ask theirs about the repo, at zero tokens."
+      "description": "Beta. Your team, inside Claude. Chat with teammates and let your agents ask theirs about the repo, at zero tokens."
     },
     {
       "name": "blast-radius",

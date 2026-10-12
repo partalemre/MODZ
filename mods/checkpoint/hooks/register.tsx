@@ -7,6 +7,7 @@ import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { glyphOf, keepListed, markUndone, pendingOf, sortGlyphs } from './meta'
 import type { MetaMap } from './meta'
 import { clip, paneTree, targetOf } from './pane'
+import { withHome } from './home-pane'
 import { pinned } from './pin'
 import { setLang } from './lang'
 import { AUTO, themeFrom } from './tidemark'
@@ -27,6 +28,7 @@ const viewAtom = atom({ plugin: 'checkpoint', key: 'view' } as const, EMPTY_VIEW
 const enabledAtom = atom({ plugin: 'checkpoint', key: 'isEnabled' } as const, true)
 const metaAtom = atom({ plugin: 'checkpoint', key: 'meta' } as const, {} as MetaMap)
 const HUB = { plugin: 'checkpoint', key: 'hub' } as const
+const HOME = { plugin: 'checkpoint', key: 'home' } as const
 const themeAtom = atom({ plugin: 'checkpoint', key: 'theme' } as const, AUTO)
 
 // Armed by each prompt; the first write after it takes the snapshot, later writes wait for it.
@@ -278,8 +280,12 @@ export const register: Register = on => {
     }
     const look = { theme: await read($, themeAtom), columns: e.props.bodyColumns, isRich: e.surface !== 'terminal' }
 
+    const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
+    // Written when pressed, never while drawing; a failure only goes to the debug log.
+    const goHome = () => void $.clock.now().then(at => $.state.set(HOME, { at })).catch(() => $.ui.log('checkpoint: could not go back to MODZ', { to: 'debug' }))
     const ui = $.ui.resolve(e)
+    const tree = paneTree(ui, await read($, viewAtom), { now: await $.clock.now(), meta: await read($, metaAtom), look, actions })
 
-    return pinned(e, paneTree(ui, await read($, viewAtom), { now: await $.clock.now(), meta: await read($, metaAtom), look, actions }))
+    return pinned(e, withHome(ui, tree, isHubOn ? goHome : null))
   })
 }

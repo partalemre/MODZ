@@ -2,8 +2,8 @@
 // (icon tile, title, the mod's own live line or a quiet hint, a status dot).
 import type { HubCard } from '../types'
 import type { Drawing } from './draw'
-import { esc, eyebrow, fit } from './draw'
-import type { Focus, HubRow, Section } from './hub'
+import { esc, eyebrow, fit, measure, pill } from './draw'
+import type { Focus, HubRow } from './hub'
 import { ROLE_OF_TONE } from './hub'
 import { ICON_GRID, icon } from './kit/icons'
 import { svgDoc } from './theme'
@@ -19,6 +19,9 @@ const ICON = 18
 const TEXT_X = TILE + 12
 const DOT_R = 3.5
 const STROKE = 1.75
+const BADGE_GAP = 8
+// The badge's own padding and the gap before it.
+const BADGE_ROOM = 24
 
 type HeadSpec = { width: number; theme: Theme; focus: Focus | null; meta: string }
 
@@ -43,8 +46,9 @@ export function hubHeadSvg(spec: HeadSpec): Drawing {
   return { source: svgDoc({ width, height: HEAD, theme: spec.theme, body }), alt, height: HEAD }
 }
 
-export function sectionSvg(spec: { width: number; theme: Theme; section: Section }): Drawing {
-  const label = hubWords().sections[spec.section]
+// A group's eyebrow: a section's name, or "Hidden" while the person customizes the hub.
+export function sectionSvg(spec: { width: number; theme: Theme; label: string }): Drawing {
+  const label = spec.label
   const body = eyebrow({ y: 16, width: spec.width, label, role: null, meta: '' })
 
   return { source: svgDoc({ width: spec.width, height: SECTION, theme: spec.theme, body }), alt: label, height: SECTION }
@@ -80,17 +84,29 @@ function detailOf(row: HubRow): { text: string; ink: string } {
   return { text: card.detail, ink: role === null ? 'mid' : `fg-${role}` }
 }
 
+// The title, and the row's badge ("Beta") right after it when it has one.
+function titleOf(row: HubRow, room: number): string {
+  const font = { size: 13.5, weight: 600 }
+  const badge = row.entry.badge
+  const badgeRoom = badge === null ? 0 : measure(badge, 10.5, 600) + BADGE_ROOM
+  const title = fit(row.entry.title, room - badgeRoom, font)
+  const text = `<text x="${TEXT_X}" y="21" class="ti hi" style="font-size:13.5px">${esc(title)}</text>`
+  if (badge === null) return text
+
+  return text + pill({ right: TEXT_X + measure(title, font.size, font.weight) + BADGE_GAP, y: 7, text: badge, role: 'plan', isLeft: true }).svg
+}
+
 export function hubRowSvg(spec: { width: number; theme: Theme; row: HubRow }): Drawing {
   const { width, row } = spec
   const room = width - TEXT_X - DOT_R * 2 - 10
   const detail = detailOf(row)
   const body = [
     iconTile(row),
-    `<text x="${TEXT_X}" y="21" class="ti hi" style="font-size:13.5px">${esc(fit(row.entry.title, room, { size: 13.5, weight: 600 }))}</text>`,
+    titleOf(row, room),
     `<text x="${TEXT_X}" y="38" class="lb ${detail.ink}">${esc(fit(detail.text, room, { size: 12 }))}</text>`,
     statusDot(row.card, width),
   ].join('')
-  const alt = `${row.entry.title}: ${detail.text}`
+  const alt = `${row.entry.title}${row.entry.badge === null ? '' : ` (${row.entry.badge})`}: ${detail.text}`
 
   return { source: svgDoc({ width, height: ROW, theme: spec.theme, body }), alt, height: ROW }
 }

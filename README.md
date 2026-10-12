@@ -68,11 +68,11 @@ Each subagent gets a crab, a name and a card with its task, step, progress, cost
 
 `rm -rf`, `git reset --hard`, `git clean`, force pushes and migrations stop before they run. The card shows exactly what each would delete or throw away, and the safe choice has the focus.
 
-## Your team, inside Claude.
+## Your team, inside Claude. <sup>beta</sup>
 
 <img src="docs/img/team.jpg" alt="Two Transceiver windows: teammates chatting, and one agent's diff question answered by the other machine at zero tokens">
 
-Transceiver lets you chat with teammates without leaving Claude Code. Your agent can ask theirs for `status`, `diff`, `tests`, `log` or a file. The answer is computed on their machine and costs zero tokens. Only collaborators on the repo can ask, and secrets never leave your machine. Rooms are private claude.ai artifacts; there is no extra server. [How it works](https://github.com/partalemre/transceiver)
+Transceiver lets you chat with teammates without leaving Claude Code. Your agent can ask theirs for `status`, `diff`, `tests`, `log` or a file. The answer is computed on their machine and costs zero tokens. Only collaborators on the repo can ask, and secrets never leave your machine. Rooms are private claude.ai artifacts; there is no extra server. Transceiver is in beta: it works end to end, and its rough edges are being found. [How it works](https://github.com/partalemre/transceiver)
 
 ## The mods
 
@@ -83,7 +83,7 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 | | `savvy-flow` | Orchestrated delivery: the session model plans, tiered worker agents build |
 | | `filetree` | Files Claude touched this turn, what it is doing now, git status |
 | | `plan-steps` | The plan's steps as Claude works through them |
-| | `transceiver` | Team chat and zero-token agent questions between teammates |
+| | `transceiver` | Team chat and zero-token agent questions between teammates (beta) |
 | **Safety** | `blast-radius` | Holds destructive shell commands and shows what they would change |
 | | `secret-guard` | Stops keys and tokens in writes, edits, `git add` and commits |
 | | `checkpoint` | A silent git snapshot before each turn's first write; undo a turn |
@@ -98,6 +98,22 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 | | `terminal-browser` | A browser inside the terminal that the agent can drive |
 
 Most mods use no model tokens. Three can: `reflect-mod` makes one small check per correction it finds; `cache-tax` warming sends a request when you turn it on; Transceiver's free-form `ask` uses a small model on the other side, at most ten a day per room.
+
+## Make it yours
+
+- **Arrange the panel.** Press **Customize** at the bottom of the MODZ panel: move rows up, hide the ones you do not use, and bring them back from **Hidden**. **Reset** puts everything back. Your layout is kept across sessions.
+- **Get back from any pane.** Every pane the panel opens has a **← MODZ** button at the top. It brings the panel forward, and opens it again if it was closed. `/modz` does the same.
+- **Choose what loads.** Each mod is its own plugin: install or uninstall any of them, and the panel follows. `/plugin configure modz@modz` turns off opening at session start.
+
+## Add your own mod to the panel
+
+The panel lists any mod that reports to it, with no change to MODZ. Your mod talks to it through `$.state`:
+
+1. **Report a line.** Write your own `{ plugin: '<your-mod>', key: 'hub' }` value: `{ pane, detail, tone, at }`, plus your row's `title`, `hint`, `icon` (a kit icon name), `section` (`work`, `safety` or `meter`) and an optional `badge`. `tone` is `idle`, `live`, `ok`, `warn` or `bad`; write it only when the text changes.
+2. **Open on request.** Hook `state.set` on `{ plugin: 'modz', key: 'open' }`; when its `pane` is yours, call `$.ui.open({ id, title, focus: true })`.
+3. **Offer the way back.** While `{ plugin: 'modz', key: 'isOn' }` is `true`, draw `HomeButton` from [`kit/home.tsx`](kit/home.tsx) first in your pane; its press writes your own `{ plugin: '<your-mod>', key: 'home' }` as `{ at }`.
+
+[DESIGN.md §9](DESIGN.md) has the full contract, and [`mods/modz/types/index.d.ts`](mods/modz/types/index.d.ts) the types. `bin/modz new <name>` starts a mod from the template.
 
 ## For AI agents
 

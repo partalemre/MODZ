@@ -55,8 +55,9 @@ declare module 'claude-code' {
       view: ReplayView
       plan: ReplayPlanItem[]
       hub: HubCard
+      home: { at: number }
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
-    modz: { open: { pane: string; at: number } }
+    modz: { open: { pane: string; at: number }; isOn: boolean }
   }
 }

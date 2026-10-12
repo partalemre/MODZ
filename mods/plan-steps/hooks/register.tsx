@@ -1,6 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Register } from 'claude-code'
 
+import { HomeButton } from './home'
 import { isShown, planState, STALE_MS } from './freshness'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import type { HubShown } from './hub'
@@ -24,6 +25,8 @@ const DEFAULT_ROWS = 24
 const DEFAULT_COLUMNS = 48
 const EDIT_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit']
 const FILE_TOOLS = ['Read', ...EDIT_TOOLS]
+// The "← MODZ" button's row.
+const HOME_ROWS = 1
 const LIVE_AGENT = ['async_launched', 'teammate_spawned']
 
 const tasksAtom = atom({ plugin: 'plan-steps', key: 'tasks' } as const, [])
@@ -51,6 +54,15 @@ function relative(path: string): string {
 
 async function currentPlan($: EngineInterface): Promise<Plan | null> {
   return resolvePlan(await read($, tasksAtom), await read($, docAtom))
+}
+
+// Asks the hub to come forward; the hub hears this mod's own `home` value. A failure only shows in the debug log.
+async function goHome($: EngineInterface): Promise<void> {
+  try {
+    await $.state.set({ plugin: 'plan-steps', key: 'home' }, { at: await $.clock.now() })
+  } catch (error) {
+    $.ui.log(`plan-steps: home failed (${String(error)})`, { to: 'debug' })
+  }
 }
 
 // The MODZ main panel's card (DESIGN.md §9), written only when what it shows changes.
@@ -280,6 +292,16 @@ export const register: Register = on => {
     const view = { plan: await currentPlan($), tracks: await read($, tracksAtom), now: await $.clock.now(), theme: flags.theme, touchedAt: flags.touchedAt }
     const layout = { columns: e.props.bodyColumns || DEFAULT_COLUMNS, rows: e.props.scroll?.bodyRows || e.viewport?.rows || DEFAULT_ROWS, surface: e.surface }
 
-    return planPane($.ui.resolve(e), view, layout)
+    const ui = $.ui.resolve(e)
+    const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
+    if (!isHubOn) return planPane(ui, view, layout)
+    const { Box } = ui
+
+    return (
+      <Box flexDirection="column">
+        {HomeButton(ui, () => void goHome($))}
+        {planPane(ui, view, { ...layout, rows: layout.rows - HOME_ROWS })}
+      </Box>
+    )
   })
 }

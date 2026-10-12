@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Register } from 'claude-code'
 
 import { HomeButton } from './home'
+import { pinned } from './pin'
 import { isShown, planState, STALE_MS } from './freshness'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import type { HubShown } from './hub'
@@ -294,14 +295,14 @@ export const register: Register = on => {
 
     const ui = $.ui.resolve(e)
     const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
-    if (!isHubOn) return planPane(ui, view, layout)
+    if (!isHubOn) return pinned(e, planPane(ui, view, layout))
     const { Box } = ui
 
-    return (
+    return pinned(e, (
       <Box flexDirection="column">
         {HomeButton(ui, () => void goHome($))}
         {planPane(ui, view, { ...layout, rows: layout.rows - HOME_ROWS })}
       </Box>
-    )
+    ))
   })
 }

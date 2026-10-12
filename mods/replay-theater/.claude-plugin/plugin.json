@@ -1,6 +1,6 @@
 {
   "name": "replay-theater",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Replay Theater: step through the file edits of the last turn, with what each step does, the plan step it served and a colored diff.",
   "author": {
     "name": "Claude Code DevRel"

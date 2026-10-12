@@ -1,6 +1,6 @@
 {
   "name": "filetree",
-  "version": "0.2.25",
+  "version": "0.3.0",
   "description": "A file tree of what Claude touches: what it is doing now, the files it touched this turn, and git status",
   "types": "./types/index.d.ts",
   "author": {

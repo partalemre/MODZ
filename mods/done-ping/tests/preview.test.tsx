@@ -14,7 +14,7 @@ const SIZES = [{ tag: '', columns: 100 }, { tag: '-w520', columns: 65 }, { tag: 
 
 async function setup($: any, on: any, theme: string, isTestFailing = false) {
   const clock = mock.clock(on)
-  mock.env(on, { MODZ_THEME: theme })
+  mock.env(on, { MODZ_THEME: theme, MODZ_LANG: 'tr' })
   for (const name of ['store.get', 'store.set', 'command.register', 'ui.log']) on(name, () => ({ value: undefined }))
   on('session.start', () => ({ cwd: '/work/eliti' }))
   on('session.surfaces', () => ({ value: ['desktop'] }))

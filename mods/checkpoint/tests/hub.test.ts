@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { hubOf, isOpenFor } from '../hooks/hub'
+import { setLang } from '../hooks/lang'
 
 // The MODZ main panel's side (DESIGN.md §9): the hub card this mod writes and the open requests it answers.
 const NOW_S = 10_000
@@ -26,7 +27,7 @@ type World = { isRepo: boolean; refs: string; argv: string[]; opened: any[] }
 async function start($: any, on: any, world: World) {
   const clock = mock.clock(on)
   await clock.advance(NOW_S * 1000)
-  mock.env(on, { HOME: '/Users/x' })
+  mock.env(on, { HOME: '/Users/x', MODZ_LANG: 'tr' })
   for (const name of ['ui.log', 'ui.toast', 'store.set', 'store.get', 'command.register']) on(name, () => ({ value: undefined }))
   on('session.start', () => ({ cwd: '/w' }))
   on('session.cwd', () => ({ value: '/w' }))
@@ -74,6 +75,7 @@ test('a MODZ open request for checkpoints opens the pane in front; one for anoth
 })
 
 test('the card and the open match are pure', () => {
+  setLang('tr')
   expect(hubOf([], 0)).toEqual({ detail: '', tone: 'idle' })
   expect(hubOf([{ ref: 'r', commit: 'c', at: 0, label: 'x' }], 45 * 1000)).toEqual({ detail: '1 nokta · son 45 sn önce', tone: 'ok' })
   expect(isOpenFor({ pane: 'checkpoints', at: 1 }, 'checkpoints')).toBe(true)

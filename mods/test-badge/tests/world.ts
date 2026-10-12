@@ -16,6 +16,8 @@ export type World = {
   hold?: Promise<void>
   // Where the session starts; terminal unless a test needs the desktop.
   surface?: 'terminal' | 'desktop'
+  // What $.env.get answers: Turkish unless a test asks for the English default.
+  env?: Record<string, string>
 }
 
 export const VITEST_FAIL = [
@@ -58,6 +60,7 @@ function stubHost(on: any, world: World) {
 
 export async function setup($: any, on: any, world: World) {
   const clock = mock.clock(on)
+  mock.env(on, world.env ?? { MODZ_LANG: 'tr' })
   stubHost(on, world)
   on('process.run', async (_: any, e: any) => {
     world.runs.push(e.argv)

@@ -2,6 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { costText, filledCells, paceOf, toneOf, untilReset } from '../hooks/format'
 import { hubOf, isOwnOpen } from '../hooks/hub'
+import { setLang } from '../hooks/lang'
 import { BAND, MS_PER_HOUR, PANE, USAGE, opens, start, stubSession, toasts } from './stubs'
 
 const SURFACES = ['terminal', 'desktop'] as const
@@ -9,6 +10,7 @@ const SURFACES = ['terminal', 'desktop'] as const
 type Drawn = { props: { source: string; alt: string; width: number; isInteractive?: boolean } } | undefined
 
 test('tone stays neutral on pace, Amber 10 points ahead, Flare from 95; context warns from 70', () => {
+  setLang('tr')
   expect(toneOf({ id: 'five_hour', percent: 32, pace: 60 })).toBe('neutral')
   expect(toneOf({ id: 'five_hour', percent: 70, pace: 60 })).toBe('warn')
   expect(toneOf({ id: 'seven_day', percent: 95, pace: 99 })).toBe('danger')

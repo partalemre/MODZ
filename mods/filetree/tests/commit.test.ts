@@ -2,6 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { commitOutcome, commitReason, gitDirOf, placeOf } from '../hooks/commit'
 import { hubOf, isOpenFor, isSameCard } from '../hooks/hub'
+import { setLang } from '../hooks/lang'
 
 const AT = { cwd: '/Users/k/MODZ', home: '/Users/k' }
 
@@ -33,6 +34,7 @@ test('placeOf keeps the tree repo here and names any other', () => {
 })
 
 test('a commit is a failure only with proof, and the reason is said plainly', () => {
+  setLang('tr')
   const base = { sha: '', place: '', isDirKnown: false, hasFailed: false, text: '' }
   expect(commitOutcome({ ...base, sha: 'fed4321cba9', place: 'playground' })).toEqual({ state: 'done', label: 'commit edildi · playground', detail: 'fed4321' })
   expect(commitOutcome({ ...base, text: 'On branch main\nnothing to commit, working tree clean' }).label).toBe('commit olmadı: değişiklik yok')
@@ -44,6 +46,7 @@ test('a commit is a failure only with proof, and the reason is said plainly', ()
 })
 
 test('hub card: live files this turn, then uncommitted work, then clean', () => {
+  setLang('tr')
   expect(hubOf({ isRunning: true, touched: 4, hasRepo: true, changed: 3 })).toEqual({ detail: '4 dosya bu tur', tone: 'live' })
   expect(hubOf({ isRunning: false, touched: 4, hasRepo: true, changed: 3 })).toEqual({ detail: '3 değişiklik commit edilmedi', tone: 'warn' })
   expect(hubOf({ isRunning: true, touched: 0, hasRepo: true, changed: 0 })).toEqual({ detail: 'temiz', tone: 'ok' })

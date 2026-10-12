@@ -8,6 +8,7 @@ import { DOT_CSS, stepDot, stepRail } from './ui/steps'
 import type { DotState } from './ui/steps'
 import { svgDoc } from './ui/theme'
 import type { Theme } from './ui/theme'
+import { words } from './words'
 
 // `note`: what a plan not under way says instead of its ETA ("başlamadı", "bekliyor · 45dk önce").
 export type PlanSvgModel = { plan: Plan; tracks: Tracks; now: number; theme: Theme; width: number; note: string }
@@ -42,7 +43,7 @@ function rightOfEyebrow(model: PlanSvgModel): string {
   if (model.note !== '') return model.note
   const eta = etaOf(model.plan, model.tracks)
 
-  return eta === null ? '' : `kalan ~${formatDuration(eta)}`
+  return eta === null ? '' : words().left(formatDuration(eta))
 }
 
 // Eyebrow with the ETA or the plan's state on its right, the count as the headline, a full-width meter, then the plan's source.
@@ -54,7 +55,7 @@ function header(model: PlanSvgModel): Block {
   const parts = [
     `<text x="0" y="14" class="eyebrow f-plan">${eyebrow('Plan')}</text>`,
     right === '' ? '' : `<text x="${model.width}" y="14" text-anchor="end" class="label lo">${escape(right)}</text>`,
-    `<text x="0" y="42"><tspan class="headline hi">${progress.done} / ${progress.total} adım</tspan><tspan class="headline mid"> · ${percentText(progress)}</tspan></text>`,
+    `<text x="0" y="42"><tspan class="headline hi">${escape(words().drawnCount(progress.done, progress.total))}</tspan><tspan class="headline mid"> · ${percentText(progress)}</tspan></text>`,
     `<rect x="0" y="${METER_Y}" width="${model.width}" height="${METER_H}" rx="3" fill="var(--track)"/>`,
     fill > 0 ? `<rect x="0" y="${METER_Y}" width="${Math.max(METER_H, fill)}" height="${METER_H}" rx="3" fill="var(--plan)"/>` : '',
     ...source.map((line, n) => `<text x="0" y="${SOURCE_Y + n * SOURCE_LINE}" class="micro lo" font-size="${SOURCE_SIZE}">${escape(line)}</text>`),
@@ -136,8 +137,8 @@ export function planSvg(model: PlanSvgModel, details: DeskDetails): { source: st
   const rails = centers.slice(1).map((cy, n) => stepRail(DOT_X, centers[n] as number, cy))
   const last = rows[rows.length - 1]
   const bottom = last === undefined ? head.height : last.top + last.height
-  const above = placed.start > 0 ? `<text x="${TITLE_X}" y="${head.height + 13}" class="micro lo">✓ ${placed.start} adım daha</text>` : ''
-  const below = placed.end < steps.length ? `<text x="${TITLE_X}" y="${bottom + 14}" class="micro lo">+${steps.length - placed.end} adım daha</text>` : ''
+  const above = placed.start > 0 ? `<text x="${TITLE_X}" y="${head.height + 13}" class="micro lo">✓ ${words().moreSteps(placed.start)}</text>` : ''
+  const below = placed.end < steps.length ? `<text x="${TITLE_X}" y="${bottom + 14}" class="micro lo">+${words().moreSteps(steps.length - placed.end)}</text>` : ''
   const height = bottom + (below === '' ? 4 : MORE_H)
   const tints = rows.filter(row => row.isCurrent).map(row => `<rect x="0" y="${row.top + 1}" width="${model.width}" height="${row.height - 2}" rx="9" class="row-on"/>`)
   const body = [head.svg, above, ...tints, ...rails, ...rows.map(row => rowSvg(model, row)), below].join('')

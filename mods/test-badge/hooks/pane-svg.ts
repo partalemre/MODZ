@@ -1,7 +1,8 @@
-import { SUITE_TAG, durationText, eyebrowRole, headlineOf, runMeta, spanOf } from './summary'
+import { durationText, eyebrowRole, headlineOf, runMeta, spanOf, suiteTag } from './summary'
 import { bar, esc, eyebrow, fileBadge, fit, fitStart, highlight, icon, measure, rect, runs, svgDoc, text, wrapText } from './svg'
 import type { Ink } from './svg'
 import type { Mode } from './tidemark'
+import { words } from './words'
 import type { Failure, TestBadge } from '../types'
 
 // The details pane's vector parts: the header (eyebrow, headline, result bar), a file's heading,
@@ -33,8 +34,6 @@ const EMPTY_LINE = 18
 const EMPTY_TOP = 40
 // Semibold runs wider than the regular advance `measure` assumes.
 const BOLD_WIDEN = 1.06
-export const EMPTY_LEAD = 'Henüz test koşusu yok'
-export const EMPTY_HOW = 'kaynak dosya değişince kendiliğinden çalışır'
 
 const inkOf = (tone: string): Ink => (tone === 'neutral' ? 'hi' : (tone as Ink))
 
@@ -44,7 +43,7 @@ export function headerSvg(frame: Frame, spec: { badge: TestBadge; now: number })
   const tests = badge.tests
   const hasBar = badge.isRunning || (tests !== null && tests.total !== null && tests.passed !== null)
   const height = hasBar ? HEADER_H : HEADER_BARLESS_H
-  const top = eyebrow({ x: 0, y: 13, width: frame.width, label: 'Test sonuçları', role: eyebrowRole(badge), meta: runMeta(badge, spec.now), isLive: badge.isRunning })
+  const top = eyebrow({ x: 0, y: 13, width: frame.width, label: words().eyebrowResults, role: eyebrowRole(badge), meta: runMeta(badge, spec.now), isLive: badge.isRunning })
   const title = runs({ x: 0, y: 42, size: HEADLINE.size, parts: [{ text: head.lead, ink: inkOf(head.tone), weight: 650 }, { text: head.rest, ink: 'hi', weight: HEADLINE.weight }] })
   let meter = ''
   if (badge.isRunning) meter = rect({ x: 0, y: 55, w: frame.width, h: 6, rx: 3, fill: 'iris-l', className: 'shimmer' })
@@ -55,13 +54,13 @@ export function headerSvg(frame: Frame, spec: { badge: TestBadge; now: number })
   }
   const source = svgDoc({ width: frame.width, height, mode: frame.mode, body: top + title + meter })
 
-  return { source, width: frame.width, height, alt: `Test sonuçları: ${head.lead}${head.rest}` }
+  return { source, width: frame.width, height, alt: `${words().eyebrowResults}: ${head.lead}${head.rest}` }
 }
 
 export function fileHeadSvg(frame: Frame, spec: { file: string | null; count: number }): Drawing {
-  const count = `${spec.count} hata`
+  const count = words().errorCount(spec.count)
   const room = frame.width - 34 - measure(count, META) - 12
-  const path = spec.file ?? 'dosya belirtilmemiş'
+  const path = spec.file ?? words().noFile
   const cut = path.lastIndexOf('/')
   const name = fit(path.slice(cut + 1), room, PATH)
   const dir = fitStart(path.slice(0, cut + 1), Math.max(0, room - measure(name, PATH)), { size: PATH.size })
@@ -77,7 +76,7 @@ export function fileHeadSvg(frame: Frame, spec: { file: string | null; count: nu
 export function rowSvg(frame: Frame, failure: Failure): Drawing {
   const isCheck = failure.suite === 'lint' || failure.suite === 'typecheck'
   const span = highlight({ x: 0, y: ROW_BASE, text: spanOf(failure), role: isCheck ? 'amber' : 'flare', font: SPAN })
-  const meta = [SUITE_TAG[failure.suite], durationText(failure.durationMs)].filter(part => part !== '').join(' · ')
+  const meta = [suiteTag(failure.suite), durationText(failure.durationMs)].filter(part => part !== '').join(' · ')
   const titleX = span.width + 10
   const isInline = measure(failure.name, TITLE) <= frame.width - titleX - measure(meta, META) - 14
   const names = isInline ? [failure.name] : wrapText(failure.name, { width: frame.width - TEXT_INDENT, font: TITLE, maxLines: NAME_LINES })
@@ -94,11 +93,12 @@ export function rowSvg(frame: Frame, failure: Failure): Drawing {
 
 // No run yet: the eyebrow and one sentence, its lead in text.hi, laid into lines that keep each word's ink.
 export function emptySvg(frame: Frame): Drawing {
-  const words = [...`${EMPTY_LEAD} ·`.split(' ').map(word => ({ word, isLead: word !== '·' })), ...EMPTY_HOW.split(' ').map(word => ({ word, isLead: false }))]
-  const lines: (typeof words)[] = [[]]
+  const says = words()
+  const items = [...`${says.emptyLead} ·`.split(' ').map(word => ({ word, isLead: word !== '·' })), ...says.emptyHow.split(' ').map(word => ({ word, isLead: false }))]
+  const lines: (typeof items)[] = [[]]
   let used = 0
-  for (const item of words) {
-    const line = lines[lines.length - 1] as typeof words
+  for (const item of items) {
+    const line = lines[lines.length - 1] as typeof items
     const wide = measure(item.word, EMPTY_FONT) * (item.isLead ? BOLD_WIDEN : 1)
     const next = used + (line.length === 0 ? 0 : measure(' ', EMPTY_FONT)) + wide
     const isBreak = line.length > 0 && next > frame.width
@@ -112,10 +112,10 @@ export function emptySvg(frame: Frame): Drawing {
     return `<text x="0" y="${EMPTY_TOP + n * EMPTY_LINE}" font-size="${EMPTY_FONT.size}" xml:space="preserve">${spans.join('')}</text>`
   })
   const height = EMPTY_TOP + (lines.length - 1) * EMPTY_LINE + ROW_PAD
-  const head = eyebrow({ x: 0, y: 13, width: frame.width, label: 'Testler', role: 'tide' })
+  const head = eyebrow({ x: 0, y: 13, width: frame.width, label: says.eyebrowTests, role: 'tide' })
   const source = svgDoc({ width: frame.width, height, mode: frame.mode, body: head + body.join('') })
 
-  return { source, width: frame.width, height, alt: `Testler: ${EMPTY_LEAD} · ${EMPTY_HOW}` }
+  return { source, width: frame.width, height, alt: `${says.eyebrowTests}: ${says.emptyLead} · ${says.emptyHow}` }
 }
 
 export function tailHeadSvg(frame: Frame, title: string): Drawing {
@@ -132,5 +132,5 @@ export function skeletonSvg(frame: Frame): Drawing {
     return rect({ x: 0, y, w: 52, h: 10, rx: 3, fill: 'track', className: 'shimmer' }) + rect({ x: 62, y, w: width - 62, h: 10, rx: 3, fill: 'track', className: 'shimmer' })
   })
 
-  return { source: svgDoc({ width: frame.width, height: SKELETON_H, mode: frame.mode, body: rows.join('') }), width: frame.width, height: SKELETON_H, alt: 'Yükleniyor' }
+  return { source: svgDoc({ width: frame.width, height: SKELETON_H, mode: frame.mode, body: rows.join('') }), width: frame.width, height: SKELETON_H, alt: words().loading }
 }

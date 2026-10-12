@@ -2,6 +2,7 @@ import { bar, eyebrow, eyebrowWidth, fileBadge, fit, fitStart, iconTile, line, m
 import type { Font, Ink } from './svg'
 import type { Mode, Role } from './tidemark'
 import type { CheckpointMeta, PendingUndo, UndoFile } from '../types'
+import { words } from './words'
 
 // The pane's vector parts: the header, one timeline row (a step dot on the rail), and the
 // confirm card's heading and diffstat. A narrow panel stacks what a wide one puts side by side,
@@ -86,9 +87,9 @@ function railOf(spec: RowSpec, height: number): string {
   return top === bottom ? '' : line({ x1: DOT_X, y1: top, x2: DOT_X, y2: bottom, ink: 'line' })
 }
 
-const filesText = (meta: CheckpointMeta): string => (meta.files === undefined || meta.files === 0 ? '' : `+${meta.files} dosya`)
+const filesText = (meta: CheckpointMeta): string => (meta.files === undefined || meta.files === 0 ? '' : words().files(meta.files))
 
-// Tool monograms and "+3 dosya" as one strip starting at `x`, top at `y`; answers the drawing and its width.
+// Tool monograms and "+3 files" as one strip starting at `x`, top at `y`; answers the drawing and its width.
 // Beside the title the count leads so the chips sit flush right; stacked under the label the chips lead.
 function factsOf(meta: CheckpointMeta, at: { x: number; y: number; isCountFirst: boolean }): { svg: string; width: number } {
   const tools = meta.tools ?? []
@@ -146,7 +147,7 @@ export function rowSvg(frame: Frame, spec: RowSpec & { isStacked: boolean }): Dr
   const all = railOf(spec, height) + dotOf(spec) + head + facts.svg + body + strikes
   const files = filesText(meta)
 
-  return drawing(frame, { height, body: all, alt: `${spec.title}, ${spec.when}${isUndone ? ', geri alındı' : ''}${files === '' ? '' : `, ${files}`}: ${spec.label}` })
+  return drawing(frame, { height, body: all, alt: `${spec.title}, ${spec.when}${isUndone ? `, ${words().undone}` : ''}${files === '' ? '' : `, ${files}`}: ${spec.label}` })
 }
 
 const STAT_LINE_Y = 17
@@ -159,10 +160,9 @@ const FILE_ROW_TALL = 38
 const FILE_NAME: Font = { size: 12.5 }
 const FILE_DIR: Font = { size: 11 }
 const TAG: Font = { size: 11 }
-const REMOVED_TAG = 'silinecek'
 
 const countsOf = (file: UndoFile): string => `+${file.added} −${file.removed}`
-const rightOfFile = (file: UndoFile): number => measure(countsOf(file), META) + (file.isRemoved ? measure(REMOVED_TAG, TAG) + STAT_GAP : 0)
+const rightOfFile = (file: UndoFile): number => measure(countsOf(file), META) + (file.isRemoved ? measure(words().willDelete, TAG) + STAT_GAP : 0)
 const fileFits = (frame: Frame, file: UndoFile): boolean => FILE_X + measure(file.path, FILE_NAME) + STAT_GAP + rightOfFile(file) <= frame.width
 
 // One file of the undo: on one line when its whole path fits, else its name over its folder.
@@ -172,7 +172,7 @@ function fileRow(frame: Frame, file: UndoFile, at: { y: number; isTall: boolean 
   const cut = file.path.lastIndexOf('/')
   const name = at.isTall && cut >= 0 ? file.path.slice(cut + 1) : file.path
   const folder = at.isTall && cut >= 0 ? file.path.slice(0, cut + 1) : ''
-  const tag = file.isRemoved ? text({ ...TAG, x: frame.width - countsW - STAT_GAP, y: at.y + 15, text: REMOVED_TAG, ink: 'flare', anchor: 'end' }) : ''
+  const tag = file.isRemoved ? text({ ...TAG, x: frame.width - countsW - STAT_GAP, y: at.y + 15, text: words().willDelete, ink: 'flare', anchor: 'end' }) : ''
   const under = folder === '' ? '' : text({ ...FILE_DIR, x: FILE_X, y: at.y + 30, text: fitStart(folder, frame.width - FILE_X, FILE_DIR), ink: 'lo' })
 
   return fileBadge({ x: 0, y: at.y + 3, path: file.path })
@@ -190,7 +190,7 @@ const MORE_H = 22
 function moreOf(pending: PendingUndo, y: number): { svg: string; height: number; text: string } {
   const more = pending.restore + pending.remove - pending.files.length
   if (more <= 0) return { svg: '', height: 0, text: '' }
-  const said = `+${more} dosya daha`
+  const said = words().moreFiles(more)
 
   return { svg: text({ size: 11.5, x: FILE_X, y: y + 15, text: said, ink: 'lo' }), height: MORE_H, text: said }
 }
@@ -202,7 +202,7 @@ export function diffstatSvg(frame: Frame, pending: PendingUndo): Drawing {
   const summary = runs({ x: 0, y: STAT_LINE_Y, size: sumFont.size, parts: [{ text: `+${pending.added}`, ink: 'moss', weight: 650, isMono: true }, { text: ` −${pending.removed}`, ink: 'flare', weight: 650, isMono: true }] })
   const sumW = measure(`+${pending.added} −${pending.removed}`, sumFont) + STAT_GAP
   const blocks = bar({ x: sumW, y: STAT_LINE_Y - 8, width: STAT_BAR_W, height: 6, total: Math.max(1, total), parts: [{ value: pending.added, ink: 'moss' }, { value: pending.removed, ink: 'flare' }] })
-  const parts = [`${pending.restore} geri yüklenecek`, pending.remove > 0 ? `${pending.remove} silinecek` : ''].filter(part => part !== '').join(' · ')
+  const parts = [words().toRestore(pending.restore), pending.remove > 0 ? words().toDelete(pending.remove) : ''].filter(part => part !== '').join(' · ')
   const noteX = sumW + STAT_BAR_W + STAT_GAP
   const isNoteBeside = noteX + measure(parts, { size: 11.5 }) <= frame.width
   const note = text({ size: 11.5, x: isNoteBeside ? noteX : 0, y: isNoteBeside ? STAT_LINE_Y : STAT_NOTE_Y, text: parts, ink: 'lo' })
@@ -214,5 +214,5 @@ export function diffstatSvg(frame: Frame, pending: PendingUndo): Drawing {
   const height = statH + pending.files.length * rowH + more.height
   const listed = [...pending.files.map(file => file.path), ...(more.text === '' ? [] : [more.text])].join(', ')
 
-  return drawing(frame, { height, body: summary + blocks + note + files.join('') + more.svg, alt: `+${pending.added} −${pending.removed} satır, ${parts}: ${listed}` })
+  return drawing(frame, { height, body: summary + blocks + note + files.join('') + more.svg, alt: `+${pending.added} −${pending.removed} ${words().lines}, ${parts}: ${listed}` })
 }

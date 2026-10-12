@@ -14,6 +14,7 @@ import { jump, search } from './search'
 import { mem } from './session'
 import { unsized, wantSizes } from './sizes'
 import type { Role } from './theme'
+import { words } from './words'
 
 type Ui = ElementTable<'terminal'>
 type Act = ReturnType<typeof actionsOf>
@@ -54,7 +55,7 @@ function branchTotals(ui: Ui, s: Scene) {
       {rootCounts.map(c => (
         <Text color={c.c}>{c.t}</Text>
       ))}
-      {rootCounts.length === 0 && totals[0] === 0 && totals[1] === 0 && <Text color={theme.muted}> temiz</Text>}
+      {rootCounts.length === 0 && totals[0] === 0 && totals[1] === 0 && <Text color={theme.muted}>{` ${words().clean}`}</Text>}
     </Box>
   )
 }
@@ -93,7 +94,7 @@ function searchRow(host: Host, ui: Ui, at: { t: FileTree; label?: string; clear:
   return (
     <Box flexDirection="row" gap={1}>
       <Box flexGrow={1}>
-        <Input key="q" {...(at.label ? { label: at.label } : {})} placeholder="Dosya bul" submitLabel="git" autoFocus value={t.query} onInput={(v: string) => void search(host, v)} onSubmit={(v: string) => void jump(host, v)} />
+        <Input key="q" {...(at.label ? { label: at.label } : {})} placeholder={words().find} submitLabel={words().findGo} autoFocus value={t.query} onInput={(v: string) => void search(host, v)} onSubmit={(v: string) => void jump(host, v)} />
       </Box>
       {t.query ? <Button key="clear" plain dimColor label={at.clear} onPress={() => void search(host, '')} /> : null}
     </Box>
@@ -155,7 +156,7 @@ export function drawTerminal(host: Host, ui: Ui, frame: { s: Scene; room: Room }
     <Box flexDirection="column" minHeight={Math.max(1, room.bodyRows)} backgroundColor={theme.bg || undefined}>
       {headRow(ui, { t, theme, unicode, act: actionsOf(host, t) })}
       {terminalBranch(ui, s, unicode)}
-      {!t.top && <Text color={theme.muted}>{unicode ? '± ' : '\u{e702} '}git deposu yok · git durumu git init sonrası görünür</Text>}
+      {!t.top && <Text color={theme.muted}>{unicode ? '± ' : '\u{e702} '}{words().noRepo}</Text>}
       {s.turn.hasRun && nowLine(ui, s)}
       {searchRow(host, ui, { t, label: '/ ', clear: unicode ? '×' : '\u{f0156}' })}
       <Client key="rows" module="./rows.tsx" props={rows} />

@@ -2,6 +2,7 @@
 // off and the toggles' state; and a failed call said in a word, not by colour alone.
 import type { On } from 'claude-code'
 import { expect, mock, test } from 'claude-code/testing'
+import type { Engine } from 'claude-code/testing'
 
 const SURFACES = ['terminal', 'desktop'] as const
 
@@ -20,7 +21,7 @@ function stubEngine(on: On): { opened: string[] } {
   const opened: string[] = []
   mock.clock(on, { now: 10_000 })
   on('session.cwd', () => ({ value: '/work' }))
-  on('env.get', () => ({ value: undefined }))
+  on('env.get', ($, e) => ({ value: e.name === 'MODZ_LANG' ? 'tr' : undefined }))
   on('store.get', () => ({ value: undefined }))
   on('store.set', () => ({ value: undefined }))
   on('ui.toast', () => ({ value: undefined }))
@@ -31,9 +32,16 @@ function stubEngine(on: On): { opened: string[] } {
   })
   on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200000, percent: 42 }, rateLimits: [] } }))
   on('ui.render', () => ({ type: 'Text', props: {}, children: ['stock row'] }))
+  on('config.list', () => ({ value: [] }))
+  on('session.start', () => ({ cwd: '/work' }))
+  on('command.register', () => ({ value: { command: 'skin' } }))
+  on('tool.register', () => ({ value: { tool: 'mcp__skins__design' } }))
 
   return { opened }
 }
+
+// The session start reads MODZ_LANG: these tests read Turkish.
+const begin = ($: Engine, surface: (typeof SURFACES)[number]) => $.session.start({ surface, isInteractive: true, cwd: '/work' })
 
 type Node = { type?: string; props?: Record<string, unknown>; children?: readonly unknown[] }
 
@@ -66,6 +74,7 @@ for (const surface of SURFACES) {
 
   test(`${surface}: Kapalı turns the skin off; the toggles say on or off; the gallery opens`, async ($, on) => {
     const world = stubEngine(on)
+    await begin($, surface)
     const ui = await $.ui.mount(pane(surface))
 
     expect(String(((await ui.find({ key: 'toggle-rail' })) as Node | undefined)?.props?.label)).toBe('● Yanıt çizgisi')

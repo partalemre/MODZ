@@ -4,8 +4,9 @@ import { escape, eyebrow, fit, measure, wrap } from './ui/svg'
 import { DOT_CSS, stepDot, stepRail } from './ui/steps'
 import { svgDoc } from './ui/theme'
 import type { Theme } from './ui/theme'
+import { words } from './words'
 
-// `ask` is the prompt that started the turn and `age` how long ago it ended ("3 dk önce"); '' when unknown.
+// `ask` is the prompt that started the turn and `age` how long ago it ended ("3m ago"); '' when unknown.
 export type PaneModel = { steps: ReplayStep[]; index: number; explain: ReplayExplain; theme: Theme; width: number; ask?: string; age?: string }
 
 const ROW = 32
@@ -79,21 +80,22 @@ function headOf(model: PaneModel): { svg: string[]; listTop: number } {
   const ask = model.ask ?? ''
   const askLine = ask === '' ? '' : `<text x="0" y="82" class="mid" font-size="12.5" font-style="italic">${escape(fit(`“${ask}”`, model.width, 12.5))}</text>`
   const listTop = HEAD_TOP - (ask === '' ? ASK_LINE : 0)
+  const w = words()
 
   return {
     svg: [
-      `<rect x="0" y="5" width="6" height="6" rx="1.5" fill="var(--plan)"/><text x="13" y="12" class="eyebrow f-plan">${eyebrow('Tekrar')}</text>`,
+      `<rect x="0" y="5" width="6" height="6" rx="1.5" fill="var(--plan)"/><text x="13" y="12" class="eyebrow f-plan">${eyebrow(w.title)}</text>`,
       age === '' ? '' : `<text x="${model.width}" y="12" text-anchor="end" class="label lo">${escape(age)}</text>`,
-      `<text x="0" y="40" class="headline hi">${sum.files} dosyada ${model.steps.length} düzenleme</text>`,
-      `<text x="0" y="60" class="label"><tspan class="f-ok">${sum.add} satır eklendi</tspan><tspan class="lo">, </tspan><tspan class="f-danger">${sum.del} silindi</tspan></text>`,
+      `<text x="0" y="40" class="headline hi">${escape(w.editsInFiles(model.steps.length, sum.files))}</text>`,
+      `<text x="0" y="60" class="label"><tspan class="f-ok">${escape(w.linesAdded(sum.add))}</tspan><tspan class="lo">, </tspan><tspan class="f-danger">${escape(w.removedCount(sum.del))}</tspan></text>`,
       askLine,
-      `<text x="0" y="${listTop - 12}" class="eyebrow lo">${eyebrow('Sırayla düzenlemeler')}</text>`,
+      `<text x="0" y="${listTop - 12}" class="eyebrow lo">${eyebrow(w.inOrder)}</text>`,
     ],
     listTop,
   }
 }
 
-// The eyebrow and age, "4 dosyada 4 düzenleme", the totals, the prompt that started the turn, then every
+// The eyebrow and age, "4 edits in 4 files", the totals, the prompt that started the turn, then every
 // edit as a numbered circle on a rail.
 export function overviewSvg(model: PaneModel): { source: string; height: number } {
   const head = headOf(model)
@@ -110,7 +112,8 @@ export function overviewSvg(model: PaneModel): { source: string; height: number 
 }
 
 function moreLines(total: number, shown: { start: number; end: number }, top: number): { svg: string; height: number } {
-  const parts = [shown.start > 0 ? `↑ ${shown.start} önceki` : '', shown.end < total ? `↓ ${total - shown.end} düzenleme daha` : ''].filter(Boolean)
+  const w = words()
+  const parts = [shown.start > 0 ? w.earlier(shown.start) : '', shown.end < total ? w.moreEdits(total - shown.end) : ''].filter(Boolean)
   if (parts.length === 0) return { svg: '', height: 0 }
 
   return { svg: `<text x="${NAME_X}" y="${top + 14}" class="micro lo">${parts.join(' · ')}</text>`, height: 20 }
@@ -132,7 +135,7 @@ function noteBlock(model: PaneModel, step: ReplayStep, top: number): { svg: stri
 
 function planPill(model: PaneModel, step: ReplayStep, top: number): { svg: string; height: number } {
   if (step.plan === undefined) return { svg: '', height: 0 }
-  const lead = `Plan adımı ${step.plan.index}/${step.plan.total}`
+  const lead = words().planStep(step.plan.index, step.plan.total)
   const leadWidth = measure(lead, 11.5) + 4
   const title = fit(step.plan.title, model.width - leadWidth - 54, 11.5)
   const width = Math.min(model.width, 30 + leadWidth + (title === '' ? 0 : measure(` · ${title}`, 11.5) + 6) + 12)
@@ -142,7 +145,7 @@ function planPill(model: PaneModel, step: ReplayStep, top: number): { svg: strin
   return { svg: `<rect x="0.5" y="${top + 0.5}" width="${width - 1}" height="${PILL_H - 1}" rx="${PILL_H / 2}" fill="var(--plan-t)" stroke="var(--plan-l)"/>${flag}${label}`, height: PILL_H + 12 }
 }
 
-// "DÜZENLEME 2 / 4", the file, where it lives and the tool, what the change does and the plan step it served.
+// "EDIT 2 / 4", the file, where it lives and the tool, what the change does and the plan step it served.
 export function detailSvg(model: PaneModel): { source: string; height: number } {
   const step = model.steps[model.index] as ReplayStep
   const { add, del } = countChanges(step.diff)
@@ -151,7 +154,7 @@ export function detailSvg(model: PaneModel): { source: string; height: number } 
   const metaLines = wrap(meta, { width: model.width, size: 12, maxLines: 2 })
   const head = [
     `<line x1="0" y1="0.5" x2="${model.width}" y2="0.5" stroke="var(--line)"/>`,
-    `<text x="0" y="30" class="eyebrow f-plan">${eyebrow(`Düzenleme ${model.index + 1} / ${model.steps.length}`)}</text>`,
+    `<text x="0" y="30" class="eyebrow f-plan">${eyebrow(words().editNumber(model.index + 1, model.steps.length))}</text>`,
     `<text x="${model.width}" y="30" text-anchor="end" class="mono micro"><tspan class="f-ok">+${add}</tspan><tspan dx="6" class="f-danger">−${del}</tspan></text>`,
     `<text x="0" y="54" class="headline hi">${escape(fit(baseName(step.file), model.width, 17))}</text>`,
     ...metaLines.map((part, n) => `<text x="0" y="${74 + n * META_LINE}" class="label lo">${escape(part)}</text>`),

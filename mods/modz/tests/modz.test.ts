@@ -1,7 +1,8 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 
 import { headline, marketRoot } from '../hooks/catalog'
 import type { ModInfo } from '../hooks/catalog'
+import { setLang } from '../hooks/kit/lang'
 import { githubName, monogram } from '../hooks/meta'
 
 const FILES: Record<string, string> = {
@@ -34,6 +35,7 @@ test('names: monogram initials and GitHub owner/repo', () => {
 
 test('the headline counts enabled mods honestly', () => {
   const mod = (isEnabled: boolean | null) => ({ isEnabled }) as ModInfo
+  setLang('tr')
   expect(headline([mod(true), mod(true)])).toBe('2 mod · hepsi açık')
   expect(headline([mod(true), mod(false)])).toBe('2 mod · 1 açık')
   expect(headline([mod(null)])).toBe('1 mod')
@@ -41,6 +43,7 @@ test('the headline counts enabled mods honestly', () => {
 
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`the pane lists each mod with its version, group and source (${surface})`, async ($: any, on) => {
+    mock.env(on, { MODZ_LANG: 'tr' })
     on('fs.stat', () => ({
       value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' },
     }))
@@ -83,7 +86,7 @@ test('with no settings flag, a ~/.claude/skills link turns a mod on in the pane 
     return { value: text }
   })
   on('fs.exists', (_, e) => ({ value: e.path === '/home/u/.claude/skills/hud' }))
-  on('env.get', () => ({ value: '/home/u' }))
+  mock.env(on, { HOME: '/home/u', MODZ_LANG: 'tr' })
   on('settings.read', () => ({ value: {} }))
   on('command.register', () => ({ value: { command: 'modz' } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))

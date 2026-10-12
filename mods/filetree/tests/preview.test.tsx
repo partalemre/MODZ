@@ -18,7 +18,9 @@ function world(on: any, opts: { root: string; dirs: Files; git: Git | null; them
   on('session.id', () => ({ value: 'preview' }))
   on('command.register', () => ({ value: undefined }))
   on('config.list', () => ({ value: [{ key: 'theme', label: 'Tema', kind: 'choice', value: theme, provider: { kind: 'engine' }, isLocked: false }] }))
-  on('env.get', (_$: any, e: any) => ({ value: e.name === 'HOME' ? '/Users/k' : undefined }))
+  // The preview keeps drawing the Turkish interface the owner uses.
+  const env: Record<string, string> = { HOME: '/Users/k', MODZ_LANG: 'tr' }
+  on('env.get', (_$: any, e: any) => ({ value: env[e.name] }))
   on('clock.now', () => ({ value: NOW }))
   on('fs.read', () => {
     throw new Error('no file')

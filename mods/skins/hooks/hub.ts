@@ -1,4 +1,5 @@
 import type { HubCard } from '../types'
+import { say } from './words'
 
 // The MODZ main panel's view of this mod (DESIGN.md §9): a one-line card under `hub` naming
 // the skin in use, and the open request the panel writes to `modz.open` when its row is pressed.
@@ -9,9 +10,9 @@ const OFF = 'off'
 
 export const EMPTY_HUB: HubCard = { pane: HUB_PANE, detail: '', tone: 'idle', at: 0 }
 
-// "tidemark · koyu": the skin and the background it is drawn for.
+// "tidemark · dark": the skin and the background it is drawn for.
 export function hubDetail(skin: string, isLight: boolean): string {
-  const detail = skin === OFF ? 'skin kapalı' : `${skin} · ${isLight ? 'açık' : 'koyu'}`
+  const detail = skin === OFF ? say().skinOff : `${skin} · ${isLight ? say().light : say().dark}`
 
   return detail.length > DETAIL_MAX ? `${detail.slice(0, DETAIL_MAX - 1)}…` : detail
 }

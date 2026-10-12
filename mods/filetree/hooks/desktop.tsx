@@ -14,6 +14,8 @@ import { mem } from './session'
 import { unsized, wantSizes } from './sizes'
 import { paletteOf, roleOfTone, shimmerTones } from './theme'
 import { drawToolbar } from './toolbar'
+import { upper } from './lang'
+import { words } from './words'
 
 type Ui = ElementTable<'desktop'>
 
@@ -21,7 +23,7 @@ const PX_PER_COL = 8
 const ROW_PX = 18
 const MIN_SVG_W = 240
 const MAX_SVG_W = 900
-// Rows the desktop toolbar takes: its one line, and with "Daha fazla" open the extra buttons and hint.
+// Rows the desktop toolbar takes: its one line, and with "More" open the extra buttons and hint.
 const TOOLBAR_ROWS = 3
 const TOOLBAR_OPEN_ROWS = 9
 const FOOTER_ROWS = 2
@@ -38,10 +40,11 @@ function gitRowOf(t: FileTree): GitRow | null {
 function legendOf(s: Scene, git: GitRow | null): LegendItem[] {
   const tones = s.t.flashOn ? Object.values(s.t.flashTones).map(roleOfTone) : []
   const has = (role: 'read' | 'edit') => s.turn.touches.some(x => x.role === role) || tones.includes(role)
+  const { legend } = words()
   return [
-    ...(has('read') ? [{ role: 'read' as const, label: 'okudu' }] : []),
-    ...(has('edit') ? [{ role: 'edit' as const, label: 'düzenledi' }] : []),
-    ...(git?.changed ? [{ role: 'warn' as const, label: 'commit edilmedi' }] : []),
+    ...(has('read') ? [{ role: 'read' as const, label: legend.read }] : []),
+    ...(has('edit') ? [{ role: 'edit' as const, label: legend.edit }] : []),
+    ...(git?.changed ? [{ role: 'warn' as const, label: legend.warn }] : []),
   ]
 }
 
@@ -53,7 +56,7 @@ function cardsOf(s: Scene, w: number) {
   const hero = heroCard(heroOf(input), { git, legend: legendOf(s, git) }, { look, w })
   const touchedList = touchedRows(input)
   const touched = touchedList.length ? touchedCard(touchedList, look, w) : null
-  const section = sectionLine({ left: 'TÜM DOSYALAR', right: (t.top ? t.top : t.root).split('/').pop()?.toLocaleUpperCase('tr') ?? '' }, { look, w })
+  const section = sectionLine({ left: words().allFiles, right: upper((t.top ? t.top : t.root).split('/').pop() ?? '') }, { look, w })
   return { hero, touched, section }
 }
 

@@ -8,6 +8,8 @@ import { browserClosed, closeBrowser, openBrowser } from './pane-control'
 import { IMAGE_KEY, START_URL, state, viewKey } from './session'
 import { statusView } from './status'
 import { isInputMessage, isSizeMessage } from './bridge-protocol'
+import { setLang } from './lang'
+import { openedText, word } from './words'
 
 // Hook filters stay literal here (session.ts holds the same id): the scan follows literals, not imports.
 const PANE = 'browser'
@@ -59,6 +61,8 @@ function onBrowserNoun(on: On): void {
 
 function onSessionStart(on: On, agentToolEnabled: boolean): void {
   on('session.start', async ($, e, next) => {
+    // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     const r = await next(e)
     let surfaces: readonly string[] = []
     try {
@@ -71,7 +75,7 @@ function onSessionStart(on: On, agentToolEnabled: boolean): void {
     if (state.isOffTerminal) return r
     await $.command.register({
       name: 'browser',
-      description: 'Sağda bir tarayıcı açar',
+      description: word('command'),
       argumentHint: '[url]',
       immediate: true,
     }).catch(err => $.ui.log(`terminal-browser: /browser kaydedilemedi: ${err}`))
@@ -92,10 +96,10 @@ function onCommands(on: On): void {
     const arg = e.args.trim()
     if (arg === 'close' || (!arg && state.open)) {
       const wasOpen = await closeBrowser(hostOf($))
-      return { text: wasOpen ? 'Tarayıcı kapatıldı' : 'Tarayıcı zaten kapalı' }
+      return { text: word(wasOpen ? 'closed' : 'alreadyClosed') }
     }
     const opened = await openBrowser(hostOf($), arg || null)
-    return { text: opened.ok ? `Tarayıcı açıldı: ${opened.url === START_URL ? 'başlangıç sayfası' : opened.url}` : opened.error }
+    return { text: opened.ok ? openedText(opened.url, opened.url === START_URL) : opened.error }
   })
 
   on('tool.call', { tool: new RegExp(`^${OPEN_TOOL}$`) }, async ($, e) => {

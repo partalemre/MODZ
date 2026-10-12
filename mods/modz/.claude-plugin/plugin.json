@@ -1,7 +1,7 @@
 {
   "name": "modz",
   "version": "0.3.0",
-  "description": "MODZ ana paneli: oturum açılınca sağda açılır; ajanlar, dosyalar, plan, testler, kontrol noktaları, tekrar, kullanım, görünüm ve tüm modlar tek tıkla",
+  "description": "The MODZ hub: opens on the right when a session starts; agents, files, plan, tests, checkpoints, replay, usage, look and every mod, one click away",
   "author": {
     "name": "Partal"
   },
@@ -9,8 +9,8 @@
   "userConfig": {
     "openOnStart": {
       "type": "boolean",
-      "title": "Oturum başında aç",
-      "description": "MODZ ana paneli her oturum açıldığında sağda açık gelsin",
+      "title": "Open at session start",
+      "description": "Open the MODZ hub on the right every time a session starts",
       "default": true
     }
   }

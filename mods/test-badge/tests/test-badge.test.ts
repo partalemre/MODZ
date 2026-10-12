@@ -3,6 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { detect, isSource } from '../hooks/detect'
 import type { RootInfo } from '../hooks/detect'
 import { openCandidates } from '../hooks/open'
+import { setLang } from '../hooks/lang'
 import { badgeText, parseLint, parseTests } from '../hooks/parse'
 
 const root = (names: string[], texts: Record<string, string> = {}, vendor: string[] = []): RootInfo =>
@@ -61,6 +62,7 @@ test('lint errors are read from eslint, tsc and phpstan', () => {
 const outcome = (over: object) => ({ status: 'pass' as const, passed: null, total: null, errors: null, failures: [], tail: [], ...over })
 
 test('the badge reads like "testler 41/42 · lint 2 hata · 4 sn önce"', () => {
+  setLang('tr')
   const badge = {
     tests: outcome({ status: 'fail', passed: 41, total: 42 }),
     lint: outcome({ status: 'fail', errors: 2 }),

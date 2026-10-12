@@ -1,4 +1,5 @@
 import { fitText, textWidth, xml } from './format'
+import { upper } from './lang'
 import { FONT, paneSvg } from './theme'
 
 // The agent card's drawn parts on the desktop: its head (who it is in an eyebrow, the task as the
@@ -45,7 +46,7 @@ export type CardHead = {
   pill: Pill
 }
 
-const caps = (s: string): string => s.toLocaleUpperCase('tr')
+const caps = upper
 
 const eyebrowWidth = (s: string): number => textWidth(s, EYEBROW.size + EYEBROW.tracking)
 

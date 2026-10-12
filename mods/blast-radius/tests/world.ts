@@ -8,6 +8,8 @@ export type World = {
   cwd: string
   isPlaced: boolean
   theme: string
+  // What `$.env.get` answers; the Turkish tests set MODZ_LANG=tr, the English ones leave it unset.
+  env: Record<string, string>
   answers: Record<string, string>
   opened: unknown[]
   closed: unknown[]
@@ -19,10 +21,22 @@ export type World = {
 export const SURFACES = ['terminal', 'desktop'] as const
 
 export function world(over: Partial<World> = {}): World {
-  return { cwd: '/work/demo-app', isPlaced: true, theme: 'dark', answers: {}, opened: [], closed: [], ran: [], toasts: [], clock: null, ...over }
+  return { cwd: '/work/demo-app', isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], ran: [], toasts: [], clock: null, ...over }
 }
 
 const SECOND = 1000
+
+export const EN = { env: {} }
+
+/** Starts the session, which reads MODZ_LANG, as Claude Code does before any call. */
+export async function start($: any, w: World, surface = 'desktop'): Promise<void> {
+  await $.session.start({ surface, isInteractive: true, cwd: w.cwd })
+}
+
+const TURKISH_ONLY = /[çğıöşüİ]/i
+
+/** Whether a drawn tree shows a letter only Turkish has. */
+export const hasTurkish = (tree: unknown): boolean => TURKISH_ONLY.test(JSON.stringify(tree))
 
 /** Lets the hold loop run: every sleep it started resolves as the mocked clock passes it. */
 export async function pass(w: World, ms = SECOND): Promise<void> {
@@ -68,7 +82,7 @@ export function stub(on: any, w: World): void {
     return { value: w.cwd }
   })
   on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'enum', value: w.theme }] }))
-  on('env.get', () => ({ value: undefined }))
+  on('env.get', (_: any, e: any) => ({ value: w.env[e.name] }))
   stubUi(on, w)
   on('process.run', async (_: any, e: any) => {
     if (e.argv[0] === 'sleep') {

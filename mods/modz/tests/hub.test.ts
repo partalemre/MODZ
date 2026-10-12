@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { cardOf, focusOf, rowsOf } from '../hooks/hub'
+import { cardOf, focusOf, presenceOf, rowsOf } from '../hooks/hub'
 import type { Presence } from '../hooks/hub'
 import type { HubCard } from '../types'
 import { stubWorld } from './world'
@@ -159,4 +159,12 @@ test('a card equal to the one kept is not written again, so the hub does not red
 
   await say(card('tests', { tone: 'bad', detail: '41/42 geçti', at: 8 }))
   expect(writes).toHaveLength(2)
+})
+
+test('a marketplace mod shows only once it is on or reports; nobody saying means not drawn yet', () => {
+  const market = { name: 'modz', mods: [
+    { name: 'filetree', isEnabled: true }, { name: 'checkpoint', isEnabled: false }, { name: 'hud-pro', isEnabled: null },
+  ] } as any
+  const presence = presenceOf(market)
+  expect([presence('filetree'), presence('checkpoint'), presence('hud-pro'), presence('transceiver')]).toEqual(['listed', 'off', 'unlisted', 'unlisted'])
 })

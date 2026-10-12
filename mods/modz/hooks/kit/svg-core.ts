@@ -32,7 +32,8 @@ export const num = (value: number): string => String(Math.round(value * DECIMALS
 export const escapeXml = (text: string): string =>
   text.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char] ?? char)
 
-export const upperTr = (text: string): string => text.toLocaleUpperCase('tr')
+// Capitals in the interface language (Turkish keeps its dotted İ; English never gets one).
+export { upper as upperTr } from './lang'
 
 export const sans = (size: number, weight?: number): Measure => text => textWidth(text, size, weight)
 export const mono = (size: number): Measure => text => monoWidth(text, size)

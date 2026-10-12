@@ -2,6 +2,7 @@ import { escape, eyebrow, meter, sparkline, svgDoc } from './svg'
 import type { SvgDoc } from './svg'
 import { fillOf } from './theme'
 import type { Tone } from './theme'
+import { words } from './words'
 
 // `/hud full` on the desktop: a header, then one stat tile per limit and one for the session's
 // cost. Each tile: eyebrow + meta, the Display value, a slim meter with its pace tick, a note on
@@ -69,7 +70,7 @@ function tileSvg(tile: Tile, box: { x: number; y: number; width: number }): stri
 
 function headerSvg(spec: TilesSpec, width: number): string {
   return [
-    eyebrow('HUD · kullanım', { x: 0, y: 12, cls: 'f-lo' }),
+    eyebrow(words().eyebrow, { x: 0, y: 12, cls: 'f-lo' }),
     textAt({ x: 0, y: 36, cls: 'f-hi', size: 17, value: spec.title, weight: 620 }),
     textAt({ x: width, y: 36, cls: 'f-lo', size: 11.5, value: spec.meta, anchor: 'end' }),
   ].join('')

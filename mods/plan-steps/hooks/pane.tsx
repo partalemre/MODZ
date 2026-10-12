@@ -5,10 +5,11 @@ import type { Tracks } from './progress'
 import type { StepTrack } from '../types'
 import { planState, stateNote } from './freshness'
 import { deskDetails } from './plan-detail'
-import { EMPTY_HOW, EMPTY_LEAD, emptySvg } from './plan-empty'
+import { emptySvg } from './plan-empty'
 import { planSvg } from './plan-svg'
 import { widthFor } from './ui/svg'
 import type { Theme } from './ui/theme'
+import { words } from './words'
 
 // The resolved element table of the surface that draws the pane.
 export type Ui = Record<string, any>
@@ -99,15 +100,15 @@ export function filesText(files: string[]): string {
   const names = files.slice(-FILES_SHOWN).reverse().map(baseName).join(', ')
   const more = files.length > FILES_SHOWN ? ` +${files.length - FILES_SHOWN}` : ''
 
-  return `${files.length} dosya: ${names}${more}`
+  return `${words().files(files.length)}: ${names}${more}`
 }
 
 export function detailLines(step: Step, track: StepTrack | undefined): { summary: string; agents: string[] } {
   const done = track?.agents.filter(agent => !agent.isRunning).length ?? 0
   const parts = [
-    step.checksTotal > 0 ? `${step.checksDone}/${step.checksTotal} madde` : '',
+    step.checksTotal > 0 ? words().checks(step.checksDone, step.checksTotal) : '',
     filesText(track?.files ?? []),
-    done > 0 ? `${done} ajan bitti` : '',
+    done > 0 ? words().agentsDone(done) : '',
   ]
   const running = (track?.agents ?? []).filter(agent => agent.isRunning).map(agent => agent.description)
 
@@ -154,13 +155,13 @@ function stepList(ui: Ui, view: PaneView & { plan: Plan }, rows: number) {
   const room = Math.max(MIN_STEP_ROWS, rows - CHROME_ROWS - detailCount(lines))
   const shown = windowOf(steps.length, anchorIndex(steps, view.tracks), room)
   const out: unknown[] = []
-  if (shown.start > 0) out.push(more(ui, 'more-above', `✓ ${shown.start} adım daha`))
+  if (shown.start > 0) out.push(more(ui, 'more-above', `✓ ${words().moreSteps(shown.start)}`))
   steps.slice(shown.start, shown.end).forEach((step, offset) => {
     const isCurrent = shown.start + offset === current
     out.push(stepRow(ui, step, lookOf(step, { track: view.tracks[step.key], now: view.now, isCurrent })))
     if (isCurrent) out.push(...details(ui, lines))
   })
-  if (shown.end < steps.length) out.push(more(ui, 'more-below', `+${steps.length - shown.end} adım daha`))
+  if (shown.end < steps.length) out.push(more(ui, 'more-below', `+${words().moreSteps(steps.length - shown.end)}`))
 
   return out
 }
@@ -168,7 +169,7 @@ function stepList(ui: Ui, view: PaneView & { plan: Plan }, rows: number) {
 export function headline(plan: Plan): string {
   const progress = progressOf(plan)
 
-  return `Plan · ${progress.done}/${progress.total} adım · ${percentText(progress)}`
+  return `Plan · ${words().headline(progress.done, progress.total)} · ${percentText(progress)}`
 }
 
 function emptyPane(ui: Ui) {
@@ -179,8 +180,8 @@ function emptyPane(ui: Ui) {
       <Text bold>{'Plan'}</Text>
       <Box key="empty" flexDirection="row" flexWrap="wrap">
         <Text wrap="wrap">
-          <Text bold>{EMPTY_LEAD}</Text>
-          <Text dimColor>{` · ${EMPTY_HOW}`}</Text>
+          <Text bold>{words().emptyLead}</Text>
+          <Text dimColor>{` · ${words().emptyHow}`}</Text>
         </Text>
       </Box>
     </Box>
@@ -208,12 +209,12 @@ function desktopPane(ui: Ui, view: PaneView, layout: Layout) {
 
   return (
     <Box flexDirection="column" paddingX={1} paddingY={1}>
-      <Svg key="plan-svg" source={drawing.source} alt={`${headline(plan)}${current === undefined ? '' : ` · şimdi: ${current.title}`}`} width={width} height={drawing.height} />
+      <Svg key="plan-svg" source={drawing.source} alt={`${headline(plan)}${current === undefined ? '' : ` · ${words().now}: ${current.title}`}`} width={width} height={drawing.height} />
     </Box>
   )
 }
 
-// "başlamadı" or "bekliyor · 45dk önce" for a plan that is not under way, else nothing.
+// "not started" or "waiting · 45m ago" for a plan that is not under way, else nothing.
 function noteOf(view: PaneView): string {
   const at = { now: view.now, touchedAt: view.touchedAt }
 
@@ -230,7 +231,7 @@ export function planPane(ui: Ui, view: PaneView, layout: Layout) {
   return (
     <Box flexDirection="column" paddingX={PAD}>
       {header(ui, headline(plan), [plan.source, noteOf(view)].filter(Boolean).join(' · '))}
-      {bar(ui, { percent: progressOf(plan).percent, columns: layout.columns, eta: eta === null || noteOf(view) !== '' ? '' : `kalan ~${formatDuration(eta)}` })}
+      {bar(ui, { percent: progressOf(plan).percent, columns: layout.columns, eta: eta === null || noteOf(view) !== '' ? '' : words().left(formatDuration(eta)) })}
       <Text>{' '}</Text>
       {stepList(ui, { ...view, plan }, layout.rows)}
     </Box>

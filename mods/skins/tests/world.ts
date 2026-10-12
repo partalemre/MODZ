@@ -12,7 +12,7 @@ export function stubEngine(on: On, theme = 'dark') {
   const clock = mock.clock(on, { now: 10_000 })
   const world = { opens: [] as Opened[], cards: [] as unknown[], clock }
   on('session.cwd', () => ({ value: '/work' }))
-  on('env.get', () => ({ value: undefined }))
+  on('env.get', ($, e) => ({ value: e.name === 'MODZ_LANG' ? 'tr' : undefined }))
   on('store.get', () => ({ value: undefined }))
   on('store.set', () => ({ value: undefined }))
   on('config.list', () => ({ value: themeRow(theme) as never }))

@@ -4,7 +4,7 @@
 // Blast Radius: holds a risky Bash command and shows what it would change.
 //
 // tool.call (Bash): if the command is risky, work out its blast radius, open a
-// pane with the delete button and Vazgeç, and hold the call until one is pressed.
+// pane with Run anyway and Keep my work, and hold the call until one is pressed.
 // A command that would change nothing (no such file, no changes) runs with no card.
 // ui.render (Pane): draws the card. If the surface won't place the pane (a
 // narrow terminal), the same card is drawn in the AbovePrompt band, above the
@@ -22,12 +22,14 @@ import type { EngineInterface, Register } from 'claude-code'
 import { desktopCard, terminalCard } from './card'
 import type { CardProps } from './card'
 import { classify } from './classify'
+import { setLang } from './lang'
 import type { Risk } from './classify'
 import { measure, missingFolder } from './measure'
 import type { Report, Run } from './report'
 import { pinned } from './pin'
 import { resolveLight } from './theme'
 import { viewOf } from './view'
+import { words } from './words'
 
 const PANE_ID = 'blast-radius'
 const POLL_SECONDS = '0.25'
@@ -54,8 +56,7 @@ type Held = {
 let held: Held | null = null
 const theme = { isLight: false }
 
-const WHY: Record<Exclude<Decision, 'proceed'>, string> = {
-  cancel: 'the user pressed Vazgeç (cancel)',
+const WHY: Record<Exclude<Decision, 'proceed' | 'cancel'>, string> = {
   closed: 'the user closed the Blast Radius pane',
   timeout: 'no answer within 10 minutes',
   interrupted: 'the turn was interrupted',
@@ -65,6 +66,13 @@ const WHY: Record<Exclude<Decision, 'proceed'>, string> = {
 const refusal = (why: string, summary: string): { deny: string } => ({
   deny: `Blast Radius held this command and did not run it: ${why}. It would have: ${summary}. Do not retry it unless the user asks you to.`,
 })
+
+function whyOf(decision: Decision | null): string {
+  if (decision === 'cancel') return words().cancelWhy
+  if (decision === null || decision === 'proceed') return WHY.error
+
+  return WHY[decision]
+}
 
 async function pause($: EngineInterface, seconds: string): Promise<void> {
   await $.process.run(['sleep', seconds], { timeoutMs: SLEEP_TIMEOUT_MS })
@@ -188,10 +196,16 @@ function draw(mine: Held & { report: Report }, input: DrawInput) {
 
 const isMeasured = (mine: Held | null): mine is Held & { report: Report } => mine !== null && mine.report !== null
 
+/** Once the person kept their work, a line says nothing was lost. */
+function sayKept($: EngineInterface, decision: Decision | null): void {
+  if (decision === 'cancel' || decision === 'closed') $.ui.toast(words().kept)
+}
+
 type On = Parameters<Register>[0]
 
 function holdHooks(on: On): void {
   on('session.start', async ($, e, next) => {
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     try {
       await refreshTheme($)
     } catch {
@@ -211,8 +225,9 @@ function holdHooks(on: On): void {
     held = mine
     await hold($, mine, next.signal)
     if (mine.decision === 'proceed') return next(e)
+    sayKept($, mine.decision)
 
-    return refusal(WHY[mine.decision ?? 'error'], mine.report?.summary ?? risk.label)
+    return refusal(whyOf(mine.decision), mine.report?.summary ?? risk.label)
   }).catch(($, e, next) => {
     // Fail closed: a hook that threw, overran or was re-entered refuses a risky command.
     if (String(next.error.kind) !== 're-entry' && next.called) return next(e)
@@ -225,7 +240,7 @@ function holdHooks(on: On): void {
 
 function drawHooks(on: On): void {
   on('ui.close', ($, e, next) => {
-    // Closing the pane (Esc, its close mark) is Vazgeç.
+    // Closing the pane (Esc, its close mark) keeps the work, as Keep my work does.
     if (e.id === PANE_ID && e.origin.kind === 'person' && held !== null && held.decision === null) held.decision = 'closed'
 
     return next(e)

@@ -1,5 +1,6 @@
 import type { Plan, Step } from './match'
 import type { AgentRun, StepStatus, StepTrack } from '../types'
+import { words } from './words'
 
 const SECOND = 1000
 const MINUTE = 60 * SECOND
@@ -93,16 +94,17 @@ export function etaOf(plan: Plan, tracks: Tracks): number | null {
 }
 
 export function formatDuration(ms: number): string {
-  if (ms < MINUTE) return `${Math.max(1, Math.round(ms / SECOND))}sn`
-  if (ms < HOUR) return `${Math.round(ms / MINUTE)}dk`
+  const unit = words().units
+  if (ms < MINUTE) return `${Math.max(1, Math.round(ms / SECOND))}${unit.second}`
+  if (ms < HOUR) return `${Math.round(ms / MINUTE)}${unit.minute}`
   const hours = Math.floor(ms / HOUR)
   const minutes = Math.round((ms % HOUR) / MINUTE)
 
-  return minutes === 0 ? `${hours}sa` : `${hours}sa ${minutes}dk`
+  return minutes === 0 ? `${hours}${unit.hour}` : `${hours}${unit.hour} ${minutes}${unit.minute}`
 }
 
 export function percentText(progress: Progress): string {
-  return `${progress.isEstimate ? '~' : ''}%${progress.percent}`
+  return words().percent(progress.percent, progress.isEstimate)
 }
 
 export function addFile(track: StepTrack, path: string): StepTrack {

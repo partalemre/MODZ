@@ -1,12 +1,10 @@
 import { eyebrow, measure } from './ui/svg'
 import { svgDoc } from './ui/theme'
 import type { Theme } from './ui/theme'
+import { words } from './words'
 
 // The empty pane: the eyebrow, one sentence saying where a plan comes from, and the faint outline of the
 // rail a plan will fill, so the pane reads as waiting rather than broken.
-
-export const EMPTY_LEAD = 'Henüz plan yok'
-export const EMPTY_HOW = 'görev listesi ya da onaylı bir plan gelince adımlar burada belirir'
 
 const SIZE = 13
 const LINE = 18
@@ -25,14 +23,15 @@ type Word = { text: string; isLead: boolean }
 
 // The sentence's words laid into lines; the lead keeps its weight wherever the break falls.
 function layout(width: number): Word[][] {
-  const words: Word[] = [
-    ...`${EMPTY_LEAD} ·`.split(' ').map(text => ({ text, isLead: text !== '·' })),
-    ...EMPTY_HOW.split(' ').map(text => ({ text, isLead: false })),
+  const say = words()
+  const all: Word[] = [
+    ...`${say.emptyLead} ·`.split(' ').map(text => ({ text, isLead: text !== '·' })),
+    ...say.emptyHow.split(' ').map(text => ({ text, isLead: false })),
   ]
   const widthOf = (word: Word) => measure(word.text, SIZE) * (word.isLead ? BOLD_WIDEN : 1)
   const lines: Word[][] = [[]]
   let used = 0
-  for (const word of words) {
+  for (const word of all) {
     const line = lines[lines.length - 1] as Word[]
     const room = used + (line.length === 0 ? 0 : measure(' ', SIZE)) + widthOf(word)
     if (line.length > 0 && room > width) {
@@ -74,5 +73,5 @@ export function emptySvg(theme: Theme, width: number): { source: string; height:
   const height = top + (GHOST_SHARES.length - 1) * GHOST_ROW + 2 * DOT_R + 2
   const body = `<text x="0" y="14" class="eyebrow f-plan">${eyebrow('Plan')}</text>${text.svg}${ghost(width, top)}`
 
-  return { source: svgDoc({ width, height, theme }, body), height, alt: `Plan: ${EMPTY_LEAD} · ${EMPTY_HOW}` }
+  return { source: svgDoc({ width, height, theme }, body), height, alt: `Plan: ${words().emptyLead} · ${words().emptyHow}` }
 }

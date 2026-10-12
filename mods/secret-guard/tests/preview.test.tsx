@@ -1,6 +1,8 @@
 import { test } from 'claude-code/testing'
 
-import { fresh, start } from './setup'
+import { english, start } from './setup'
+
+// The previews draw the English card, as the film shows it.
 
 // Built from pieces so this file never holds a literal that a scanner would take for a real key.
 const ANT = ['sk', 'ant', 'api03', 'Zx9Qw7Er5Ty3Ui1Op8As6Df4Gh2Jk'].join('-')
@@ -16,23 +18,23 @@ for (const [theme, size] of ['dark', 'light'].flatMap(theme => SIZES.map(size =>
   const suffix = `${size.tag}${theme === 'light' ? '-light' : ''}`
 
   test(`preview: a write with two keys (${theme}${size.tag})`, async ($, on) => {
-    const setup = { ...fresh('Vazgeç', 'desktop'), theme, columns: size.columns }
+    const setup = { ...english('Cancel', 'desktop'), theme, columns: size.columns }
     await start($, on, setup)
     await ($ as any).tool.call({ tool: 'Write', file_path: '/work/src/lib/supabase.ts', content: `const a = "${ANT}"\n\nconst g = '${GH}'\n` })
     show(`sg-write${suffix}`, setup.trees[0])
   })
 
   test(`preview: a commit with a key and an env file (${theme}${size.tag})`, async ($, on) => {
-    const setup = { ...fresh('Vazgeç', 'desktop'), theme, columns: size.columns }
+    const setup = { ...english('Cancel', 'desktop'), theme, columns: size.columns }
     setup.git['diff --cached -U0 --no-color'] = `+++ b/src/pay.ts\n@@ -0,0 +1 @@\n+const stripe = "${STRIPE}"\n`
     setup.git['diff --cached --name-only'] = 'src/pay.ts\n.env.production\n'
     await start($, on, setup)
-    await ($ as any).tool.call({ tool: 'Bash', command: 'git commit -m "ödeme"' })
+    await ($ as any).tool.call({ tool: 'Bash', command: 'git commit -m "payment"' })
     show(`sg-commit${suffix}`, setup.trees[0])
   })
 
   test(`preview: git add of an env file only (${theme}${size.tag})`, async ($, on) => {
-    const setup = { ...fresh('Vazgeç', 'desktop'), theme, columns: size.columns }
+    const setup = { ...english('Cancel', 'desktop'), theme, columns: size.columns }
     setup.git['add -n .'] = "add 'src/a.ts'\nadd '.env.local'\n"
     setup.files['/work/src/a.ts'] = 'export const x = 1\n'
     await start($, on, setup)
@@ -42,17 +44,17 @@ for (const [theme, size] of ['dark', 'light'].flatMap(theme => SIZES.map(size =>
 }
 
 test('preview: terminal text card', async ($, on) => {
-  const setup = fresh('Vazgeç')
+  const setup = english('Cancel')
   await start($, on, setup)
   await ($ as any).tool.call({ tool: 'Write', file_path: '/work/src/lib/supabase.ts', content: `const a = "${ANT}"\n\nconst g = '${GH}'\n` })
   show('sg-terminal', setup.trees[0])
 })
 
 test('preview: terminal commit with an env file', async ($, on) => {
-  const setup = fresh('Vazgeç')
+  const setup = english('Cancel')
   setup.git['diff --cached -U0 --no-color'] = `+++ b/src/pay.ts\n@@ -0,0 +1 @@\n+const stripe = "${STRIPE}"\n`
   setup.git['diff --cached --name-only'] = 'src/pay.ts\n.env.production\n'
   await start($, on, setup)
-  await ($ as any).tool.call({ tool: 'Bash', command: 'git commit -m "ödeme"' })
+  await ($ as any).tool.call({ tool: 'Bash', command: 'git commit -m "payment"' })
   show('sg-terminal-commit', setup.trees[0])
 })

@@ -1,4 +1,5 @@
 import type { Skin } from '../skin'
+import { pick } from '../lang'
 
 // The MODZ design language's role colours (DESIGN.md §2), on dark and on light.
 const skin: Skin = {
@@ -38,8 +39,14 @@ const skin: Skin = {
     err: '#c0263a',
     warn: '#8a6000',
   },
-  spinner: ['Düşünüyor', 'Tartıyor', 'Örüyor', 'Yazıyor', 'Deniyor'],
-  done: ['Bitti', 'Tamamlandı', 'Yerleşti'],
+  // The MODZ house skin speaks the person's language, so its words are read when drawn (getters), after
+  // session.start has set it. The character skins keep the words they define.
+  get spinner() {
+    return pick({ en: ['Working', 'Weighing', 'Weaving', 'Writing', 'Trying'], tr: ['Düşünüyor', 'Tartıyor', 'Örüyor', 'Yazıyor', 'Deniyor'] })
+  },
+  get done() {
+    return pick({ en: ['Done', 'Finished', 'Settled'], tr: ['Bitti', 'Tamamlandı', 'Yerleşti'] })
+  },
 }
 
 export default skin

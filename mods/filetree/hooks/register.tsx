@@ -4,6 +4,7 @@ import { drawDesktop } from './desktop'
 import { gitDir } from './gitread'
 import type { Host, IoHost, StateHost, UiHost } from './host'
 import { HUB_PANE, isOpenFor } from './hub'
+import { setLang } from './lang'
 import { onRows, type RowsMessage, scrollBy } from './keys'
 import { refreshLook } from './look'
 import { followCwd, openFromHub, sync } from './pane'
@@ -17,6 +18,7 @@ import { drawTerminal } from './terminal'
 import { afterCall, beforeCall, callFailed, isWatched } from './toolcall'
 import { emptyTree, join, posix, useDrives } from './tree'
 import { NO_TURN, syncHub } from './turn'
+import { words } from './words'
 
 const TREE = { plugin: 'filetree', key: 'tree' } as const
 const THEME = { plugin: 'filetree', key: 'theme' } as const
@@ -25,7 +27,6 @@ const TURN = { plugin: 'filetree', key: 'turn' } as const
 const LOOK = { plugin: 'filetree', key: 'look' } as const
 const HUB = { plugin: 'filetree', key: 'hub' } as const
 const PANE = 'filetree'
-const PANE_TITLE = 'Dosyalar'
 const ACTIVITY_KEEP = 6
 // Git writes its index and HEAD in steps; the tree reads them once the burst settles.
 const GIT_SETTLE_MS = 300
@@ -83,7 +84,7 @@ function ioOf($: EngineInterface): IoHost {
 function uiOf($: EngineInterface): UiHost {
   return {
     toast: text => $.ui.toast(text),
-    openPane: isFocused => $.ui.open(isFocused ? { id: PANE, title: PANE_TITLE, focus: true } : { id: PANE, title: PANE_TITLE }),
+    openPane: isFocused => $.ui.open(isFocused ? { id: PANE, title: words().title, focus: true } : { id: PANE, title: words().title }),
     isPaneOpen: async () => {
       try {
         return (await $.ui.panes()).some(p => p.id === PANE)
@@ -111,7 +112,9 @@ function onStart(on: On): void {
     return done
   }).catch(($, e, next) => next(e))
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'filetree', description: 'Dosya ağacını açar; argüman: [yol] (boşsa çalışma klasörü)' })
+    // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
+    await $.command.register({ name: 'filetree', description: words().command })
     const isWindows = (await $.env.get('OS')) === 'Windows_NT'
     useDrives(isWindows)
     mem.home = posix(((await $.env.get('HOME')) || (await $.env.get('USERPROFILE')) || '').replace(/[\\/]+$/, ''))

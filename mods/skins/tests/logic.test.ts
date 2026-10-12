@@ -14,6 +14,10 @@ import { deepen, isLightTheme, resolveLight, toLight } from '../hooks/light'
 import { parseFolders, prefsFor, withFolder, withoutFolder } from '../hooks/folders'
 import { kindOf, summarize, toolLabel } from '../hooks/tools'
 import tokyoNight from '../hooks/themes/tokyo-night'
+import { setLang } from '../hooks/lang'
+
+// These tests call the word builders directly and read Turkish.
+setLang('tr')
 
 const NAMES = ['tokyo-night', 'dracula', 'nord']
 

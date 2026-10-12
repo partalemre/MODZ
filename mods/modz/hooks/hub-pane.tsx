@@ -5,7 +5,9 @@ import type { Focus, HubRow, Section } from './hub'
 import { ROLE_OF_TONE, SECTIONS } from './hub'
 import { hubHeadSvg, hubRowSvg, sectionSvg } from './hub-draw'
 import { GLYPH } from './kit/icons'
+import { upper } from './kit/lang'
 import type { Theme } from './theme'
+import { hubWords } from './words'
 
 // The resolved element table of the surface that draws the pane.
 type Ui = Record<string, any>
@@ -25,13 +27,12 @@ const WIDTH_MIN = 280
 const WIDTH_MAX = 640
 // Room the native "Aç" button takes beside a row's drawing.
 const BUTTON_ROOM = 64
-const OPEN_LABEL = 'Aç'
 
 export const hubWidth = (columns: number): number => Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, columns * PX_PER_COLUMN - PX_PER_COLUMN))
 
 const inSection = (rows: HubRow[], section: Section) => rows.filter(row => row.entry.section === section)
 
-// The one primary button: straight to whatever leads the head ("Testler panelini aç").
+// The one primary button: straight to whatever leads the head ("Open Tests").
 function focusButton(ui: Ui, view: HubView) {
   const { Box, Button } = ui
   const focus = view.focus
@@ -40,7 +41,7 @@ function focusButton(ui: Ui, view: HubView) {
 
   return (
     <Box key="focus" flexDirection="row">
-      <Button key="open-focus" label={`${focus.row.entry.title} panelini aç`} variant="primary" onPress={() => view.onOpen(pane)} />
+      <Button key="open-focus" label={hubWords().openPane(focus.row.entry.title)} variant="primary" onPress={() => view.onOpen(pane)} />
     </Box>
   )
 }
@@ -50,7 +51,7 @@ function openButton(ui: Ui, view: HubView, row: HubRow) {
   const { Button } = ui
   const hotkey = view.surface === 'desktop' || row.hotkey === null ? {} : { hotkey: row.hotkey }
 
-  return <Button key={`open-${row.entry.pane}`} label={OPEN_LABEL} variant="secondary" {...hotkey} onPress={() => view.onOpen(row.entry.pane)} />
+  return <Button key={`open-${row.entry.pane}`} label={hubWords().open} variant="secondary" {...hotkey} onPress={() => view.onOpen(row.entry.pane)} />
 }
 
 function desktopTree(ui: Ui, view: HubView) {
@@ -71,7 +72,7 @@ function desktopTree(ui: Ui, view: HubView) {
 
         return (
           <Box key={`section-${section}`} flexDirection="column">
-            {draw(sectionSvg({ width, theme: view.theme, label: section }), `eyebrow-${section}`, width)}
+            {draw(sectionSvg({ width, theme: view.theme, section }), `eyebrow-${section}`, width)}
             {rows.map(row => (
               <Box key={`row-${row.entry.pane}`} flexDirection="row" alignItems="center" columnGap={1}>
                 {draw(hubRowSvg({ width: rowWidth, theme: view.theme, row }), `svg-${row.entry.pane}`, rowWidth)}
@@ -107,12 +108,13 @@ function terminalRow(ui: Ui, view: HubView, row: HubRow) {
 function terminalTree(ui: Ui, view: HubView) {
   const { Box, Text } = ui
   const focus = view.focus
+  const words = hubWords()
 
   return (
     <Box flexDirection="column" rowGap={1}>
       <Box flexDirection="row" columnGap={2}>
         <Text color="claude" bold>MODZ</Text>
-        {focus === null ? <Text dimColor>Sakin</Text> : <Text dimColor>{`Şu an · ${focus.row.entry.title}`}</Text>}
+        {focus === null ? <Text dimColor>{words.idleTitle}</Text> : <Text dimColor>{`${words.now} · ${focus.row.entry.title}`}</Text>}
         {focus === null ? null : <Text color={TONE_COLOR[ROLE_OF_TONE[focus.tone] ?? '']} wrap="truncate">{focus.row.card?.detail ?? ''}</Text>}
         <Box flexGrow={1} />
         <Text dimColor>{view.meta}</Text>
@@ -123,7 +125,7 @@ function terminalTree(ui: Ui, view: HubView) {
 
         return rows.length === 0 ? null : (
           <Box key={`section-${section}`} flexDirection="column">
-            <Text bold dimColor>{section.toLocaleUpperCase('tr')}</Text>
+            <Text bold dimColor>{upper(words.sections[section])}</Text>
             {rows.map(row => terminalRow(ui, view, row))}
           </Box>
         )

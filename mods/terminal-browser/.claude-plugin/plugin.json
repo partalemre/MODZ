@@ -1,7 +1,7 @@
 {
   "name": "terminal-browser",
   "version": "0.1.0",
-  "description": "Claude Code içinde, terminalde çalışan bir tarayıcı: siteleri ve HTML belgelerini önizle, ajanın yerleşik tarayıcıyı yönetsin. Yalnızca terminal; masaüstünde hiçbir şey çizmez.",
+  "description": "A browser that runs in the terminal, inside Claude Code: preview sites and HTML documents, and let the agent drive the built-in browser. Terminal only; it draws nothing on the desktop.",
   "author": {
     "name": "zenbu-labs"
   },
@@ -16,8 +16,8 @@
   "userConfig": {
     "agentTool": {
       "type": "boolean",
-      "title": "Ajana terminal-browser'ı açıp kapatan bir araç ver",
-      "description": "Modelin bir sayfayı tarayıcı panelinde göstermek için çağırabileceği bir aç/kapat aracı ekler. Varsayılan kapalı.",
+      "title": "Give the agent a tool that opens and closes terminal-browser",
+      "description": "Adds an open and close tool the model can call to show a page in the browser pane. Off by default.",
       "default": false
     }
   }

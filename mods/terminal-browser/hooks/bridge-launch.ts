@@ -3,6 +3,7 @@ import { forgetBridge } from './bridge-client'
 import type { Host } from './host'
 import { state } from './session'
 import { watchBridge } from './watch'
+import { word } from './words'
 
 const INSTALL_URL = 'https://terminal-browser.sh'
 const REQUIRED_CAPABILITIES = ['embedding', 'image-frames']
@@ -53,13 +54,13 @@ export async function startBridge(host: Host): Promise<{ ok: true } | { ok: fals
     return {
       ok: false,
       error: check.installed
-        ? 'Daha yeni bir terminal-browser gerekiyor: terminal-browser upgrade çalıştır'
-        : `Önce terminal-browser'ı kur: ${INSTALL_URL}`,
+        ? word('upgrade')
+        : `${word('install')}: ${INSTALL_URL}`,
     }
   }
   const report = await launchReport(host, command)
   if (!isLaunchReport(report) || !('port' in report)) {
-    const detail = isLaunchReport(report) && 'error' in report ? report.error : 'terminal-browser başlatılamadı'
+    const detail = isLaunchReport(report) && 'error' in report ? report.error : word('noStart')
     return { ok: false, error: `${detail}` }
   }
   state.port = report.port

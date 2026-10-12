@@ -1,7 +1,8 @@
 // Small SVG builders: text that is measured, fitted and wrapped without a renderer, eyebrows,
 // icon tiles and discs. Every drawing ends with the reduced-motion rule (DESIGN.md §5).
 
-import { FONT, MONO, upper } from './theme'
+import { upper } from './lang'
+import { FONT, MONO } from './theme'
 
 export const esc = (text: string): string =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')

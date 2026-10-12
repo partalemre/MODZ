@@ -1,4 +1,5 @@
 import type { FileNode, FileTree, Theme } from '../types'
+import { words } from './words'
 
 export type Entry = { name: string; kind: 'file' | 'dir' | 'other'; mtimeMs: number; size: number; isLink: boolean }
 export type Row = { node: FileNode; depth: number; open: boolean }
@@ -193,17 +194,16 @@ export function visibleRows(t: FileTree): Row[] {
   return rows
 }
 
-const MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara']
-
-// "15:40" today, "3 Eyl" this year, "3 Eyl 2024" before.
+// "15:40" today, "Sep 3" this year, "Sep 3, 2024" before; Turkish "3 Eyl", "3 Eyl 2024".
 export function stamp(ms: number, now = Date.now()): string {
   if (!ms) return ''
   const d = new Date(ms)
   const today = new Date(now)
   const p = (v: number) => String(v).padStart(2, '0')
   if (d.toDateString() === today.toDateString()) return `${p(d.getHours())}:${p(d.getMinutes())}`
-  const day = `${d.getDate()} ${MONTHS[d.getMonth()]}`
-  return d.getFullYear() === today.getFullYear() ? day : `${day} ${d.getFullYear()}`
+  const w = words()
+  const day = w.day(d.getDate(), w.months[d.getMonth()] ?? '')
+  return d.getFullYear() === today.getFullYear() ? day : w.dayOfYear(day, d.getFullYear())
 }
 
 export function formatSize(bytes: number): string {
@@ -216,5 +216,5 @@ export function formatSize(bytes: number): string {
     v /= 1024
     i++
   }
-  return `${v < 100 ? v.toFixed(1).replace('.', ',') : Math.round(v)} ${units[i]}`
+  return `${v < 100 ? v.toFixed(1).replace('.', words().decimal) : Math.round(v)} ${units[i]}`
 }

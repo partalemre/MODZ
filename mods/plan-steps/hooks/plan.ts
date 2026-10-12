@@ -3,8 +3,8 @@ import { baseName, isMarkdownPath, isPlanPath, parsePlan } from './parse'
 import { clip, currentIndex, progressOf } from './progress'
 import type { Tracks } from './progress'
 import type { PlanDoc } from '../types'
+import { words } from './words'
 
-const APPROVED_LABEL = 'onaylı plan'
 const STATUS_TITLE_MAX = 36
 const STRONG = 2
 const WEAK = 1
@@ -13,7 +13,7 @@ export function statusText(plan: Plan | null, tracks: Tracks): string | undefine
   if (plan === null || plan.steps.length === 0) return undefined
   const progress = progressOf(plan)
   const head = `plan ${progress.done}/${progress.total}`
-  if (progress.done === progress.total) return `${head} · tamam`
+  if (progress.done === progress.total) return `${head} · ${words().allDone}`
   const current = plan.steps[currentIndex(plan.steps, tracks)]
 
   return current === undefined ? head : `${head} · ${clip(current.title, STATUS_TITLE_MAX)}`
@@ -40,7 +40,7 @@ export function approvedDoc(result: unknown): PlanDoc | null {
   if (parsed === null) return null
   const path = typeof record.filePath === 'string' ? record.filePath : null
 
-  return { kind: 'approved', label: APPROVED_LABEL, path, strength: STRONG, steps: parsed.steps }
+  return { kind: 'approved', label: words().approvedLabel, path, strength: STRONG, steps: parsed.steps }
 }
 
 // The plan in view gives way to one as sure or surer, or to a new read of the same file.

@@ -1,3 +1,5 @@
+import { words } from './words'
+
 // `fail`: a finished turn whose own test command failed, the one finish worth a Flare look.
 export type PingKind = 'done' | 'fail' | 'wait'
 
@@ -44,10 +46,10 @@ export function durationText(ms: number): string {
   const seconds = Math.max(0, Math.round(ms / MS_PER_SECOND))
   const minutes = Math.floor(seconds / SECONDS_PER_MINUTE)
   const hours = Math.floor(minutes / MINUTES_PER_HOUR)
-  if (hours > 0) return `${hours}sa ${minutes % MINUTES_PER_HOUR}dk`
-  if (minutes > 0) return `${minutes}dk ${seconds % SECONDS_PER_MINUTE}sn`
+  if (hours > 0) return words().hours(hours, minutes % MINUTES_PER_HOUR)
+  if (minutes > 0) return words().minutes(minutes, seconds % SECONDS_PER_MINUTE)
 
-  return `${seconds}sn`
+  return words().seconds(seconds)
 }
 
 export function projectOf(cwd: string): string {
@@ -86,20 +88,24 @@ export function plainSnippet(markdown: string): string {
 
 export const isTestCommand = (command: unknown): boolean => typeof command === 'string' && TEST_COMMAND.test(command)
 
-const TESTS_TEXT: Record<'pass' | 'fail', string> = { pass: 'testler geçti', fail: 'testler kaldı' }
-const testsText = (tests: TestsSeen): string => (tests === null ? '' : TESTS_TEXT[tests])
+function testsText(tests: TestsSeen): string {
+  if (tests === null) return ''
+
+  return tests === 'pass' ? words().testsPassed : words().testsFailed
+}
 
 // "Tur bitti" · project · "testler geçti · 3 dosya"; with neither fact, how long it took. Facts lead with
 // what matters most on return (the tests), so a narrow row drops the duration first.
 export function donePing(spec: { project: string; durationMs: number; files: number; tests: TestsSeen }): Ping {
   const took = durationText(spec.durationMs)
   const tests = testsText(spec.tests)
-  const files = spec.files === 0 ? '' : `${spec.files} dosya`
-  const body = [tests, files].filter(part => part !== '').join(' · ') || `${took} sürdü`
-  const detail = [tests, files === '' ? '' : `${files} değişti`, took].filter(part => part !== '').join(' · ')
+  const says = words()
+  const hasFiles = spec.files > 0
+  const body = [tests, hasFiles ? says.files(spec.files) : ''].filter(part => part !== '').join(' · ') || says.took(took)
+  const detail = [tests, hasFiles ? says.filesChanged(spec.files) : '', took].filter(part => part !== '').join(' · ')
   const kind = spec.tests === 'fail' ? 'fail' : 'done'
 
-  return { kind, project: spec.project, title: 'Tur bitti', subtitle: spec.project, body, detail }
+  return { kind, project: spec.project, title: says.done, subtitle: spec.project, body, detail }
 }
 
 function baseName(path: string): string {
@@ -108,14 +114,14 @@ function baseName(path: string): string {
 
 // What the tool wants, without its input: a command is never shown, a file by its name, a page by its host.
 export function toolDetail(tool: string, input: Record<string, unknown>): string {
-  if (tool === 'Bash') return 'Bash komutu'
+  if (tool === 'Bash') return words().bashCommand
   for (const key of FILE_KEYS) {
     const value = input[key]
     if (typeof value === 'string' && value.trim() !== '') return `${tool} · ${clip(baseName(value), BODY_CHARS)}`
   }
   const host = typeof input.url === 'string' ? /^https?:\/\/([^/?#]+)/.exec(input.url)?.[1] : undefined
 
-  return host === undefined ? `${tool} izni` : `${tool} · ${host}`
+  return host === undefined ? words().toolPermission(tool) : `${tool} · ${host}`
 }
 
 export function questionOf(input: Record<string, unknown>): string {
@@ -128,13 +134,13 @@ export function questionOf(input: Record<string, unknown>): string {
 export function permissionPing(project: string, tool: string, input: Record<string, unknown>): Ping {
   const body = toolDetail(tool, input)
 
-  return { kind: 'wait', project, title: 'Onay bekliyor', subtitle: project, body, detail: body }
+  return { kind: 'wait', project, title: words().waitingApproval, subtitle: project, body, detail: body }
 }
 
 export function questionPing(project: string, input: Record<string, unknown>): Ping {
-  const body = questionOf(input) || 'Bir sorusu var'
+  const body = questionOf(input) || words().hasQuestion
 
-  return { kind: 'wait', project, title: 'Cevap bekliyor', subtitle: project, body, detail: body }
+  return { kind: 'wait', project, title: words().waitingAnswer, subtitle: project, body, detail: body }
 }
 
 export function parseSeconds(text: string): number | null {

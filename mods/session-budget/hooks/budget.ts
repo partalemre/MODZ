@@ -1,6 +1,7 @@
 import type { SessionRateLimit } from 'claude-code'
 
 import type { Budget, BudgetKind, BudgetReading } from '../types'
+import { words } from './words'
 
 export type BudgetCommand =
   | { kind: 'status' }
@@ -19,7 +20,6 @@ const MIN_PACE_MS = 60_000
 // "Devam et" adds $1, or a fifth of a 5h budget (at least one point).
 const USD_STEP = 1
 const PERCENT_STEP_SHARE = 5
-const USAGE = 'Kullanım: /budget <5s limitinin yüzdesi, ör. 20%> | <$tutar, ör. $5> | off'
 
 export function parseCommand(raw: string): BudgetCommand {
   const arg = raw.trim().toLowerCase().replace(/\s+/g, '')
@@ -30,16 +30,16 @@ export function parseCommand(raw: string): BudgetCommand {
   const percent = /^(\d+(?:\.\d+)?)%?$/.exec(arg)
   if (percent !== null) {
     const limit = Number(percent[1])
-    if (limit > MAX_PERCENT) return { kind: 'error', text: 'Bir 5s bütçesi en çok %100 olabilir.' }
+    if (limit > MAX_PERCENT) return { kind: 'error', text: words().tooMuch }
 
     return positive('percent', limit)
   }
 
-  return { kind: 'error', text: USAGE }
+  return { kind: 'error', text: words().usage }
 }
 
 function positive(kind: BudgetKind, limit: number): BudgetCommand {
-  return limit > 0 ? { kind: 'set', budget: { kind, limit } } : { kind: 'error', text: 'Bütçe sıfırdan büyük olmalı.' }
+  return limit > 0 ? { kind: 'set', budget: { kind, limit } } : { kind: 'error', text: words().notPositive }
 }
 
 export function readingOf(rateLimits: readonly SessionRateLimit[], usd: number | undefined): BudgetReading {
@@ -90,21 +90,21 @@ export function raise(budget: Budget): Budget {
   return { ...budget, limit: Math.max(budget.limit, spentOf(budget)) + stepOf(budget) }
 }
 
-const decimal = (value: number, digits: number): string => value.toFixed(digits).replace('.', ',')
-const trim = (value: number): string => decimal(value, 1).replace(/,0$/, '')
+const decimal = (value: number, digits: number): string => words().decimal(value.toFixed(digits))
+const trim = (value: number): string => words().decimal(value.toFixed(1).replace(/\.0$/, ''))
 
 export const amountOf = (budget: Budget, value: number): string =>
-  budget.kind === 'usd' ? `$${decimal(value, 2)}` : `%${trim(value)}`
+  budget.kind === 'usd' ? `$${decimal(value, 2)}` : words().percent(trim(value))
 
-export const stepText = (budget: Budget): string => (budget.kind === 'usd' ? `+$${stepOf(budget)}` : `+%${stepOf(budget)}`)
+export const stepText = (budget: Budget): string => (budget.kind === 'usd' ? `+$${stepOf(budget)}` : `+${words().percent(String(stepOf(budget)))}`)
 
-export const percentOf = (budget: Budget): string => `%${Math.round(ratioOf(budget) * PERCENT)}`
+export const percentOf = (budget: Budget): string => words().percent(String(Math.round(ratioOf(budget) * PERCENT)))
 
 // "$4,00 / $5,00", or "5s %8,5 / %10" for a share of the 5h limit.
 export function spendText(budget: Budget): string {
   const pair = `${amountOf(budget, spentOf(budget))} / ${amountOf(budget, budget.limit)}`
 
-  return budget.kind === 'usd' ? pair : `5s ${pair}`
+  return budget.kind === 'usd' ? pair : `${words().fiveHour} ${pair}`
 }
 
 export function describe(budget: Budget): string {
@@ -122,8 +122,7 @@ export function etaMinutes(budget: Budget, nowMs: number): number | null {
 
 export function etaText(minutes: number | null): string {
   if (minutes === null) return ''
-  if (minutes < MINUTES_PER_HOUR) return `bu hızla ~${minutes} dk`
-  const rest = minutes % MINUTES_PER_HOUR
+  if (minutes < MINUTES_PER_HOUR) return words().etaMinutes(minutes)
 
-  return `bu hızla ~${Math.floor(minutes / MINUTES_PER_HOUR)} sa${rest === 0 ? '' : ` ${rest} dk`}`
+  return words().etaHours(Math.floor(minutes / MINUTES_PER_HOUR), minutes % MINUTES_PER_HOUR)
 }

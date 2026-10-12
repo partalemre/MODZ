@@ -1,7 +1,7 @@
 {
   "name": "filetree",
   "version": "0.2.25",
-  "description": "Claude'un dokunduğu dosyaları gösteren dosya ağacı: şu an ne yaptığı, bu turda dokunduğu dosyalar ve git durumu",
+  "description": "A file tree of what Claude touches: what it is doing now, the files it touched this turn, and git status",
   "types": "./types/index.d.ts",
   "author": {
     "name": "Kurt Buhler"
@@ -16,8 +16,8 @@
   "userConfig": {
     "activity": {
       "type": "string",
-      "title": "Claude etkinliği",
-      "description": "Ağaçta hangi etkinlik parlasın: okumalar (Read ya da rg, grep, cat gibi okuyucular) mavi, yazmalar turuncu, git işlemleri yeşil",
+      "title": "Claude activity",
+      "description": "Which activity lights up in the tree: reads (Read, or readers such as rg, grep, cat) in blue, writes in orange, git work in green",
       "default": "reads and writes",
       "options": [
         "reads and writes",
@@ -28,8 +28,8 @@
     },
     "glyphs": {
       "type": "string",
-      "title": "Simgeler",
-      "description": "auto: Nerd Font kuruluysa onun simgeleri (masaüstü uygulaması hariç); plain: yalnızca Unicode",
+      "title": "Icons",
+      "description": "auto: Nerd Font icons when one is installed (not in the desktop app); plain: Unicode only",
       "default": "auto",
       "options": [
         "auto",
@@ -39,8 +39,8 @@
     },
     "follow": {
       "type": "string",
-      "title": "Claude'u izle",
-      "description": "on: ağaç Claude'un okuduğu, yazdığı ya da commit ettiği dosyaya kayar. off: görünüm yalnızca senin kaydırmanla değişir; vurgular yine görünür.",
+      "title": "Follow Claude",
+      "description": "on: the tree scrolls to the file Claude reads, writes or commits. off: the view moves only when you scroll; highlights still show.",
       "default": "on",
       "options": [
         "on",
@@ -49,8 +49,8 @@
     },
     "column": {
       "type": "string",
-      "title": "Sağ sütun",
-      "description": "Sağ sütunda varsayılan olarak ne görünsün: date (son değişiklik) ya da size (dosya boyutu, klasörler için arka planda hesaplanan disk kullanımı). Başlıktaki düğme değiştirir.",
+      "title": "Right column",
+      "description": "What the right column shows by default: date (last change) or size (file size; for folders, disk usage worked out in the background). The button in the header switches it.",
       "default": "date",
       "options": [
         "date",

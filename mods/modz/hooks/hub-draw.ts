@@ -3,11 +3,12 @@
 import type { HubCard } from '../types'
 import type { Drawing } from './draw'
 import { esc, eyebrow, fit } from './draw'
-import type { Focus, HubRow } from './hub'
+import type { Focus, HubRow, Section } from './hub'
 import { ROLE_OF_TONE } from './hub'
 import { ICON_GRID, icon } from './kit/icons'
 import { svgDoc } from './theme'
 import type { Theme } from './theme'
+import { hubWords } from './words'
 
 const HEAD = 96
 const HEAD_PAD = 16
@@ -21,17 +22,15 @@ const STROKE = 1.75
 
 type HeadSpec = { width: number; theme: Theme; focus: Focus | null; meta: string }
 
-const IDLE_TITLE = 'Sakin'
-const IDLE_LINE = 'Ajan, test ya da plan hareketlenince burada görünür.'
-
 // The head is the one card on the hub: the most pressing thing now, or a calm line when nothing is.
 export function hubHeadSvg(spec: HeadSpec): Drawing {
   const { width, focus } = spec
   const role = focus === null ? null : ROLE_OF_TONE[focus.tone]
   const inner = width - HEAD_PAD * 2
-  const label = focus === null ? 'MODZ' : `Şu an · ${focus.row.entry.title}`
-  const title = focus === null ? IDLE_TITLE : (focus.row.card?.detail ?? '')
-  const line = focus === null ? IDLE_LINE : focus.row.entry.hint
+  const words = hubWords()
+  const label = focus === null ? 'MODZ' : `${words.now} · ${focus.row.entry.title}`
+  const title = focus === null ? words.idleTitle : (focus.row.card?.detail ?? '')
+  const line = focus === null ? words.idleLine : focus.row.entry.hint
   const frame = role === null ? 'card line' : `card ln-${role}`
   const body = [
     `<rect x="0.5" y="0.5" width="${width - 1}" height="${HEAD - 1}" rx="12" class="${frame}" style="stroke-width:1"/>`,
@@ -39,15 +38,16 @@ export function hubHeadSvg(spec: HeadSpec): Drawing {
     `<text x="${HEAD_PAD}" y="56" class="hl hi">${esc(fit(title, inner, { size: 17, weight: 620 }))}</text>`,
     `<text x="${HEAD_PAD}" y="78" class="lb lo">${esc(fit(line, inner, { size: 12 }))}</text>`,
   ].join('')
-  const alt = `${focus === null ? `MODZ: ${IDLE_TITLE}. ${IDLE_LINE}` : `Şu an, ${focus.row.entry.title}: ${title}`} (${spec.meta})`
+  const alt = `${focus === null ? `MODZ: ${words.idleTitle}. ${words.idleLine}` : `${words.now}, ${focus.row.entry.title}: ${title}`} (${spec.meta})`
 
   return { source: svgDoc({ width, height: HEAD, theme: spec.theme, body }), alt, height: HEAD }
 }
 
-export function sectionSvg(spec: { width: number; theme: Theme; label: string }): Drawing {
-  const body = eyebrow({ y: 16, width: spec.width, label: spec.label, role: null, meta: '' })
+export function sectionSvg(spec: { width: number; theme: Theme; section: Section }): Drawing {
+  const label = hubWords().sections[spec.section]
+  const body = eyebrow({ y: 16, width: spec.width, label, role: null, meta: '' })
 
-  return { source: svgDoc({ width: spec.width, height: SECTION, theme: spec.theme, body }), alt: spec.label, height: SECTION }
+  return { source: svgDoc({ width: spec.width, height: SECTION, theme: spec.theme, body }), alt: label, height: SECTION }
 }
 
 function iconTile(row: HubRow): string {

@@ -8,6 +8,8 @@ import { terminalView } from './terminal'
 import { escape, eyebrow, widthFor, wrap } from './ui/svg'
 import { svgDoc } from './ui/theme'
 import type { Theme } from './ui/theme'
+import { upper } from './lang'
+import { words } from './words'
 
 export type PaneSite = { surface: string; columns: number; inBand: boolean; maxRows: number }
 
@@ -15,9 +17,7 @@ const PANE_GUTTER_COLUMNS = 3
 // The sideways scrollbar of a diff wider than the pane takes this much under it.
 const SCROLLBAR_ROOM = 12
 // The replay outlives turns without edits, so an empty pane means none yet this session.
-const EMPTY_LEAD = 'Henüz düzenleme yok'
-const EMPTY_REST = 'Claude dosya düzenleyen bir turu bitirince adımlar burada oynatılır.'
-export const EMPTY_TEXT = `${EMPTY_LEAD}. ${EMPTY_REST}`
+const emptyText = (): string => `${words().emptyLead}. ${words().emptyRest}`
 const EMPTY_LEAD_Y = 40
 const EMPTY_LINE_H = 19
 const EMPTY_REST_SIZE = 13
@@ -26,7 +26,9 @@ function altOf(model: PaneModel): string {
   const sum = totals(model.steps)
   const step = model.steps[model.index]
 
-  return `${sum.files} dosyada ${model.steps.length} düzenleme; şu an ${model.index + 1}. düzenleme: ${step === undefined ? '' : baseName(step.file)}`
+  const w = words()
+
+  return `${w.editsInFiles(model.steps.length, sum.files)}; ${w.nowOn(model.index + 1, step === undefined ? '' : baseName(step.file))}`
 }
 
 function desktopView(ui: Ui, model: PaneModel, on: PaneHandlers) {
@@ -43,7 +45,7 @@ function desktopView(ui: Ui, model: PaneModel, on: PaneHandlers) {
     <Box key="rt-pane" flexDirection="column" gap={1} paddingX={1} paddingY={1}>
       <Svg key="rt-overview" source={overview.source} alt={altOf(model)} width={model.width} height={overview.height} />
       <Svg key="rt-detail" source={detail.source} alt={step?.said ?? (step === undefined ? '' : step.file)} width={model.width} height={detail.height} />
-      <Svg key="rt-diff" source={diff.source} alt="Değişiklik: silinen ve eklenen satırlar" width={model.width} {...wide} />
+      <Svg key="rt-diff" source={diff.source} alt={words().diffAlt} width={model.width} {...wide} />
       {buttons(ui, model, on)}
     </Box>
   )
@@ -51,24 +53,26 @@ function desktopView(ui: Ui, model: PaneModel, on: PaneHandlers) {
 
 // The eyebrow, the lead and one sentence under it.
 function emptySvg(width: number, theme: Theme): { source: string; height: number } {
-  const rest = wrap(EMPTY_REST, { width, size: EMPTY_REST_SIZE, maxLines: 2 })
-  const lead = `<text x="0" y="${EMPTY_LEAD_Y}" class="headline hi">${EMPTY_LEAD}</text>`
+  const w = words()
+  const rest = wrap(w.emptyRest, { width, size: EMPTY_REST_SIZE, maxLines: 2 })
+  const lead = `<text x="0" y="${EMPTY_LEAD_Y}" class="headline hi">${escape(w.emptyLead)}</text>`
   const lines = rest.map((part, n) => `<text x="0" y="${EMPTY_LEAD_Y + (n + 1) * EMPTY_LINE_H + 2}" class="mid" font-size="${EMPTY_REST_SIZE}">${escape(part)}</text>`)
   const height = EMPTY_LEAD_Y + rest.length * EMPTY_LINE_H + 10
-  const body = `<rect x="0" y="5" width="6" height="6" rx="1.5" fill="var(--plan)"/><text x="13" y="12" class="eyebrow f-plan">${eyebrow('Tekrar')}</text>${lead}${lines.join('')}`
+  const body = `<rect x="0" y="5" width="6" height="6" rx="1.5" fill="var(--plan)"/><text x="13" y="12" class="eyebrow f-plan">${eyebrow(w.title)}</text>${lead}${lines.join('')}`
 
   return { source: svgDoc({ width, height, theme }, body), height }
 }
 
 function emptyView(ui: Ui, spec: { surface: string; width: number; theme: Theme; on: PaneHandlers }) {
   const { Box, Text, Button, Svg } = ui
-  const close = <Button key="rt-close" plain hotkey="c" label="Kapat" onPress={spec.on.onClose} />
+  const w = words()
+  const close = <Button key="rt-close" plain hotkey="c" label={w.close} onPress={spec.on.onClose} />
   if (spec.surface === 'terminal' || !('Svg' in ui)) {
     return (
       <Box key="rt-empty" flexDirection="column" gap={1} paddingX={1}>
-        <Text color="merged" bold>{'● TEKRAR'}</Text>
-        <Text bold>{EMPTY_LEAD}</Text>
-        <Text dimColor>{EMPTY_REST}</Text>
+        <Text color="merged" bold>{`● ${upper(w.title)}`}</Text>
+        <Text bold>{w.emptyLead}</Text>
+        <Text dimColor>{w.emptyRest}</Text>
         <Box flexDirection="row">{close}</Box>
       </Box>
     )
@@ -77,7 +81,7 @@ function emptyView(ui: Ui, spec: { surface: string; width: number; theme: Theme;
 
   return (
     <Box key="rt-empty" flexDirection="column" gap={1} paddingX={1} paddingY={1}>
-      <Svg key="rt-empty-svg" source={drawn.source} alt={EMPTY_TEXT} width={spec.width} height={drawn.height} />
+      <Svg key="rt-empty-svg" source={drawn.source} alt={emptyText()} width={spec.width} height={drawn.height} />
       <Box flexDirection="row">{close}</Box>
     </Box>
   )

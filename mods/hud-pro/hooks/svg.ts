@@ -1,3 +1,4 @@
+import { upper } from './lang'
 import { fillOf, strokeOf, svgStyle } from './theme'
 import type { Tone } from './theme'
 
@@ -82,7 +83,7 @@ export function sparkline(spec: SparkSpec): string {
 
 // The upper-case label each card and tile opens with.
 export function eyebrow(text: string, at: { x: number; y: number; cls: string }): string {
-  const label = escape(text.toLocaleUpperCase('tr'))
+  const label = escape(upper(text))
 
   return `<text class="${at.cls}" x="${at.x}" y="${at.y}" font-size="${EYEBROW_SIZE}" font-weight="700" letter-spacing="${EYEBROW_TRACKING}">${label}</text>`
 }

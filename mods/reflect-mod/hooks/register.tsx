@@ -8,7 +8,9 @@ import { decide, isHere, items, record } from './learn'
 import type { Io } from './learn'
 import { SYSTEM, checkPrompt, parseVerdict } from './policy'
 import { MAX_PROMPT, cleanRule, hasTrigger, isTrivial, looksSecret, remembered, withRule } from './rules'
+import { setLang } from './lang'
 import { pinned } from './pin'
+import { words } from './words'
 import { isLightTheme } from './theme'
 
 export { cleanRule, hasTrigger, isTrivial, looksSecret, similarity, withRule } from './rules'
@@ -29,7 +31,6 @@ const CHECK_MAX_TOKENS = 300
 const GLOBAL_DISPLAY = '~/.claude/CLAUDE.md'
 /** The person's own prompts: typed at the terminal, or sent by Remote Control. */
 const HUMAN = new Set(['composer', 'bridge'])
-const RULE_SHAPE = 'reflect: kaydedilmedi - tek satır, sır yok, en fazla 200 karakter'
 
 // The module's own: a reload drops them; the store keeps the learnings themselves.
 let model = 'haiku'
@@ -86,7 +87,7 @@ async function checkOne($: EngineInterface, text: string) {
   const told = remembered(text)
   if (told !== undefined) {
     const rule = cleanRule(told)
-    if (rule === undefined) return $.ui.toast(RULE_SHAPE)
+    if (rule === undefined) return $.ui.toast(words().ruleShape)
     return record(io($), { verdict: { isRule: true, rule, scope: 'global', confidence: 1 }, root, isExplicit: true, said: text, files })
   }
   const r = await $.model.complete({
@@ -126,7 +127,7 @@ async function saveTo($: EngineInterface, l: Learning, scope: Scope) {
     const path = await fileFor($, scope, root)
     const before = await readText($, path)
     const after = withRule(before, latest.rule)
-    if (after === undefined) return $.ui.toast(`reflect: ${path} içindeki claude-reflect işaretleri bozuk; elle düzelt, bir şey yazılmadı`)
+    if (after === undefined) return $.ui.toast(words().brokenMarks(path))
     if (after !== before) await $.fs.write(path, after)
     await settle($, { id: l.id, status: 'saved', scope, project: root })
     await update($, savedThisSession, rules => [...rules, { rule: latest.rule, scope, project: root }])
@@ -141,13 +142,13 @@ async function saveTo($: EngineInterface, l: Learning, scope: Scope) {
 
 /** Where no field can be drawn: the rule goes into an empty prompt box, and comes back as a "remember:" learning. */
 async function rewordInBox($: EngineInterface, l: Learning) {
-  if ((await $.prompt.read()).text.trim() !== '') return $.ui.toast('reflect: önce istem kutusunu boşalt - kural oraya yazılacak')
+  if ((await $.prompt.read()).text.trim() !== '') return $.ui.toast(words().boxNotEmpty)
   if ((await $.prompt.fill({ text: `remember: ${l.rule}` })).isFilled) await settle($, { id: l.id, status: 'skipped' })
 }
 
 async function reworded($: EngineInterface, l: Learning, value: string) {
   const rule = cleanRule(value)
-  if (rule === undefined) return $.ui.toast(RULE_SHAPE)
+  if (rule === undefined) return $.ui.toast(words().ruleShape)
   await update($, editing, () => null)
   await settle($, { id: l.id, status: 'pending', rule })
 }
@@ -170,8 +171,9 @@ async function readTheme($: EngineInterface) {
 
 function wireSession(on: On) {
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'reflect-queue', description: 'reflect: burada bulunan kurallar ve durumları' })
-    await $.command.register({ name: 'reflect-pause', description: 'reflect: istemlerinin denetimini duraklat ya da sürdür' })
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
+    await $.command.register({ name: 'reflect-queue', description: words().queueHelp })
+    await $.command.register({ name: 'reflect-pause', description: words().pauseHelp })
     await readTheme($)
     await refreshBand($)
     return next(e)
@@ -223,20 +225,22 @@ function wireCommands(on: On) {
   on('command.run', { command: 'reflect-queue' }, async $ => {
     const root = await $.session.root()
     const list = (await items(io($))).filter(l => isHere(l, root))
-    if (list.length === 0) return { text: 'Burada henüz bir şey bulunmadı.' }
+    const says = words()
+    if (list.length === 0) return { text: says.nothingHere }
     const waiting = list.filter(l => l.status === 'pending')
-    const word = { pending: 'bekliyor', saved: 'kayıtlı', skipped: 'atlandı' } as const
+    // Columns as wide as the language's longest word, so the rules line up.
+    const widest = (table: Record<string, string>): number => Math.max(...Object.values(table).map(word => word.length))
     const lines = [...waiting, ...list.filter(l => l.status !== 'pending').sort((a, b) => b.lastAt - a.lastAt)]
       .slice(0, 40)
-      .map(l => `${word[l.status].padEnd(8)} ×${l.count} ${(l.scope === 'global' ? 'genel' : 'proje').padEnd(5)} ${l.rule}`)
-    return { text: [`${waiting.length} bekliyor, toplam ${list.length} (burada ve genel)`, ...lines].join('\n') }
+      .map(l => `${says.status[l.status].padEnd(widest(says.status))} ×${l.count} ${says.scope[l.scope].padEnd(widest(says.scope))} ${l.rule}`)
+    return { text: [says.queueHead(waiting.length, list.length), ...lines].join('\n') }
   })
 
   on('command.run', { command: 'reflect-pause' }, async $ => {
     const isPaused = (await $.store.get('paused')) !== true
     await $.store.set('paused', isPaused)
     if (isPaused) queue.length = 0
-    return { text: isPaused ? 'Duraklatıldı. İstemlerin denetlenmiyor.' : 'Açık. Kısa istemler yeniden denetleniyor.' }
+    return { text: isPaused ? words().paused : words().resumed }
   })
 
 }

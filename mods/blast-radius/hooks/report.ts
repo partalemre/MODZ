@@ -26,7 +26,7 @@ export type Report = {
   where: string | null
   added: number
   removed: number
-  // A Turkish line for the person when something could not be measured.
+  // A line for the person, in their language, when something could not be measured.
   note: string | null
   // Measured, and the command would change nothing: it runs without a card.
   isEmpty: boolean
@@ -38,6 +38,23 @@ export type RunResult = { exitCode: number; stdout: string; stderr: string }
 export type Run = (argv: string[], options: { cwd?: string; timeoutMs?: number }) => Promise<RunResult>
 
 export const LIST_MAX = 10
+
+const KIB = 1024
+const DECIMAL_LIMIT = 10
+const UNITS = ['KB', 'MB', 'GB', 'TB']
+
+/** `286 KB`, `6.3 KB`; `mark` is the language's decimal mark. */
+export function formatSize(bytes: number, mark: string): string {
+  if (!Number.isFinite(bytes) || bytes < KIB) return `${bytes || 0} B`
+  let n = bytes
+  let i = -1
+  while (n >= KIB && i < UNITS.length - 1) {
+    n /= KIB
+    i += 1
+  }
+
+  return `${n.toFixed(n < DECIMAL_LIMIT ? 1 : 0).replace('.', mark)} ${UNITS[i]}`
+}
 
 export function emptyReport(kind: ReportKind, summary: string, note: string | null): Report {
   return { kind, summary, count: 0, bytes: null, groups: [], items: [], more: 0, tracked: null, where: null, added: 0, removed: 0, note, isEmpty: false }

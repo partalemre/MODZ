@@ -15,6 +15,7 @@ type World = { answer: string }
 
 function stub(on: any, world: World) {
   const clock = mock.clock(on)
+  mock.env(on, { MODZ_LANG: 'tr' })
   on('session.start', () => ({ cwd: '/w' }))
   on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: [], cost: { usd: 1 } } }))
   on('session.measure', (_: any, e: any) => ({ changed: e.changed }))

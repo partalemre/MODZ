@@ -3,12 +3,14 @@
 import { expect, test } from 'claude-code/testing'
 
 import { ageText } from '../hooks/age'
+import { setLang } from '../hooks/lang'
 import { SURFACES, bandOf, newWorld, paneOf, plannedTurn, setup, svgText, texts } from './fixtures'
 
 const OPEN_WAIT_MS = 200
 const MINUTE_MS = 60_000
 
 test('the age reads as the pane says it', () => {
+  setLang('tr')
   expect(ageText(undefined, 5)).toBe('')
   expect(ageText(1_000, 500)).toBe('')
   expect(ageText(0, 30_000)).toBe('az önce')

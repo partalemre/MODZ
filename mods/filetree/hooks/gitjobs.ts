@@ -4,6 +4,7 @@ import type { Since } from './changes'
 import { commitOutcome, gitDirOf, type Outcome, placeOf } from './commit'
 import { chainOf, type GitAction } from './git'
 import { headOf } from './gitread'
+import { gitWords } from './gitwords'
 import type { Host } from './host'
 import { mem } from './session'
 
@@ -56,8 +57,8 @@ export async function outcomes(h: Host, p: Pending, run: Run): Promise<Outcome[]
       return commitOutcome({ sha, place: p.place.name, isDirKnown: p.dir !== null, hasFailed: !run.ok && chain.and && chain.size === 1, text: run.text })
     }
     if ((run.op && PROOF[a.verb]?.(run.op)) || (run.ok && chain.and)) return { state: 'done', label: a.done, detail: '' }
-    if (!run.ok && chain.and && chain.size === 1) return { state: 'failed', label: `${a.verb} başarısız`, detail: '' }
-    return { state: 'done', label: `${a.kind} çalıştı`, detail: '' }
+    if (!run.ok && chain.and && chain.size === 1) return { state: 'failed', label: gitWords().failed(a.verb), detail: '' }
+    return { state: 'done', label: gitWords().ran(a.kind), detail: '' }
   })
 }
 
@@ -84,7 +85,7 @@ export async function finishGit(h: Host, p: Pending, results: Outcome[]): Promis
 }
 
 export function failAll(p: Pending): Outcome[] {
-  return p.actions.map(a => ({ state: 'failed', label: `${a.verb} başarısız`, detail: '' }))
+  return p.actions.map(a => ({ state: 'failed', label: gitWords().failed(a.verb), detail: '' }))
 }
 
 // Only git work in the tree's own repository lights its files; another repo's commit is not this one's.

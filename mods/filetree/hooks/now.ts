@@ -1,10 +1,11 @@
-// What the "ŞU AN" card says: the turn's file activity told as one Turkish sentence.
+// What the "NOW" card says: the turn's file activity told as one sentence in the session's language.
 
 import type { Touch, TouchRole, TurnLog } from '../types'
 import { badgeOf } from './badges'
 import type { TouchedRow } from './cards'
 import type { IconName } from './svg'
 import type { Role } from './theme'
+import { words } from './words'
 
 export type Part = { text: string; cls: string; isBold?: boolean; isNum?: boolean }
 export type Hero = {
@@ -23,15 +24,8 @@ export type NowInput = {
   diff: Record<string, [number, number]>
 }
 
-const NOW = 'ŞU AN'
-const DONE = 'BİTTİ'
 const ROLE: Record<TouchRole, Role> = { read: 'read', edit: 'edit', commit: 'ok' }
 const ICON: Record<TouchRole, IconName> = { read: 'eye', edit: 'pencil', commit: 'check' }
-const VERB_NOW: Record<TouchRole, [string, string]> = {
-  read: ['dosyasını okuyor', 'dosyayı okuyor'],
-  edit: ['dosyasını düzenliyor', 'dosyayı düzenliyor'],
-  commit: ['dosyasını commit etti', 'dosyayı commit etti'],
-}
 
 export const baseName = (id: string): string => id.slice(id.lastIndexOf('/') + 1)
 
@@ -45,7 +39,7 @@ export const relPath = (id: string, root: string): string => (id.startsWith(`${r
 
 const where = (id: string, root: string): Part => {
   const dir = relDir(id, root)
-  return { text: dir ? `${dir} klasöründe` : 'proje kökünde', cls: 'mid' }
+  return { text: dir ? words().inDir(dir) : words().inRoot, cls: 'mid' }
 }
 
 export function diffParts(diff: [number, number] | undefined): Part[] {
@@ -59,27 +53,27 @@ export function diffParts(diff: [number, number] | undefined): Part[] {
 const count = (turn: TurnLog, role: TouchRole): number => turn.touches.filter(t => t.role === role).length
 
 function tally(turn: TurnLog): string {
+  const w = words()
   const parts = [
-    count(turn, 'read') ? `${count(turn, 'read')} dosya açtı` : '',
-    count(turn, 'edit') ? `${count(turn, 'edit')} dosya düzenledi` : '',
+    count(turn, 'read') ? w.openedFiles(count(turn, 'read')) : '',
+    count(turn, 'edit') ? w.editedFiles(count(turn, 'edit')) : '',
   ].filter(Boolean)
-  return parts.length ? parts.join(' · ') : 'henüz dosyaya dokunmadı'
+  return parts.length ? parts.join(' · ') : w.noTouchYet
 }
 
 function liveHero(input: NowInput, latest: Touch): Hero {
   const same = input.turn.touches.filter(t => t.role === latest.role && input.live.has(t.id))
-  const [one, many] = VERB_NOW[latest.role]
+  const w = words()
+  const [lead = '', tail = ''] = w.liveOne[latest.role]
   const isMany = same.length > 1
-  const title = isMany
-    ? { lead: `Claude ${same.length} ${many}`, name: '', tail: '' }
-    : { lead: 'Claude ', name: baseName(latest.id), tail: ` ${one}` }
+  const title = isMany ? { lead: w.liveMany[latest.role](same.length), name: '', tail: '' } : { lead, name: baseName(latest.id), tail }
   const sub = latest.role === 'commit' ? shaParts(input) : [where(latest.id, input.root)]
-  return { role: ROLE[latest.role], icon: ICON[latest.role], eyebrow: NOW, title, sub }
+  return { role: ROLE[latest.role], icon: ICON[latest.role], eyebrow: w.now, title, sub }
 }
 
 function shaParts(input: NowInput): Part[] {
   const sha = input.turn.sha ? [{ text: input.turn.sha, cls: 'mid', isNum: true }] : []
-  const branch = input.branch ? [{ text: `${sha.length ? ' · ' : ''}${input.branch} dalında`, cls: 'lo' }] : []
+  const branch = input.branch ? [{ text: `${sha.length ? ' · ' : ''}${words().onBranch(input.branch)}`, cls: 'lo' }] : []
   return [...sha, ...branch]
 }
 
@@ -97,50 +91,50 @@ function names(touches: Touch[]): string {
 
 function doneHero(input: NowInput): Hero {
   const { turn, root } = input
+  const w = words()
   const commits = count(turn, 'commit')
   if (commits || turn.committed) {
     const n = Math.max(commits, turn.committed)
-    return { role: 'ok', icon: 'check', eyebrow: DONE, title: { lead: `Claude ${n} dosyayı commit etti`, name: '', tail: '' }, sub: shaParts(input) }
+    return { role: 'ok', icon: 'check', eyebrow: w.done, title: { lead: w.committedN(n), name: '', tail: '' }, sub: shaParts(input) }
   }
   const edits = turn.touches.filter(t => t.role === 'edit')
   const reads = count(turn, 'read')
-  const opened: Part[] = reads ? [{ text: ` · ${reads} dosya açtı`, cls: 'lo' }] : []
+  const opened: Part[] = reads ? [{ text: ` · ${w.openedFiles(reads)}`, cls: 'lo' }] : []
   if (edits.length) {
     const first = edits[0] as Touch
     const sub = edits.length === 1 ? [{ text: relPath(first.id, root), cls: 'mid' }, ...diffParts(input.diff[first.id])] : [{ text: names(edits), cls: 'mid' }]
-    return { role: 'edit', icon: 'pencil', eyebrow: DONE, title: { lead: `Claude ${edits.length} dosyayı düzenledi`, name: '', tail: '' }, sub: [...sub, ...opened] }
+    return { role: 'edit', icon: 'pencil', eyebrow: w.done, title: { lead: w.editedN(edits.length), name: '', tail: '' }, sub: [...sub, ...opened] }
   }
   if (reads) {
     const sub = [{ text: names(turn.touches), cls: 'mid' }]
-    return { role: 'read', icon: 'eye', eyebrow: DONE, title: { lead: `Claude ${reads} dosyayı okudu`, name: '', tail: '' }, sub }
+    return { role: 'read', icon: 'eye', eyebrow: w.done, title: { lead: w.readN(reads), name: '', tail: '' }, sub }
   }
-  return quiet(DONE, 'Claude dosyalara dokunmadı', 'Son turda dosya okumadı, düzenlemedi.')
+  return quiet(w.done, w.untouched, w.untouchedSub)
 }
 
 export function heroOf(input: NowInput): Hero {
   const { turn } = input
+  const w = words()
   if (turn.isRunning) {
     const latest = [...turn.touches].filter(t => input.live.has(t.id)).sort((a, b) => a.at - b.at).pop()
     if (latest) return liveHero(input, latest)
     if (input.isCommitting) {
-      const sub = input.branch ? [{ text: `${input.branch} dalına`, cls: 'mid' }] : []
-      return { role: 'ok', icon: 'check', eyebrow: NOW, title: { lead: 'Claude commit ediyor', name: '', tail: '' }, sub }
+      const sub = input.branch ? [{ text: w.toBranch(input.branch), cls: 'mid' }] : []
+      return { role: 'ok', icon: 'check', eyebrow: w.now, title: { lead: w.committing, name: '', tail: '' }, sub }
     }
-    return quiet(NOW, 'Claude düşünüyor', tally(turn))
+    return quiet(w.now, w.thinking, tally(turn))
   }
-  if (!turn.hasRun) return quiet(NOW, 'Claude bekliyor', 'Bu oturumda henüz dosyaya dokunmadı')
+  if (!turn.hasRun) return quiet(w.now, w.waiting, w.waitingSub)
   return doneHero(input)
 }
 
 export const heroText = (h: Hero): string => `${h.title.lead}${h.title.name}${h.title.tail}`
 export const subText = (h: Hero): string => h.sub.map(p => p.text).join('')
 
-const PILL_LIVE: Record<TouchRole, string> = { read: 'Okunuyor', edit: 'Düzenleniyor', commit: 'Commit edildi' }
-const PILL_DONE: Record<TouchRole, string> = { read: 'Açıldı', edit: 'Düzenlendi', commit: 'Commit edildi' }
-
 // The touched card's rows: past tense once Claude has moved on, present while it is there.
 export function touchedRows(input: NowInput): TouchedRow[] {
   const { turn, root } = input
+  const w = words()
   return turn.touches.map(t => {
     const isLive = turn.isRunning && input.live.has(t.id)
     const diff = t.role === 'read' ? undefined : input.diff[t.id]
@@ -148,7 +142,7 @@ export function touchedRows(input: NowInput): TouchedRow[] {
       name: baseName(t.id),
       dir: relDir(t.id, root),
       badge: badgeOf(baseName(t.id)),
-      pill: { text: (isLive ? PILL_LIVE : PILL_DONE)[t.role], role: ROLE[t.role] },
+      pill: { text: (isLive ? w.pillLive : w.pillDone)[t.role], role: ROLE[t.role] },
       ...(diff && (diff[0] || diff[1]) ? { diff } : {}),
     }
   })

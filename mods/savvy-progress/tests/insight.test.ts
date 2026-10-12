@@ -1,9 +1,13 @@
 import { expect, test } from 'claude-code/testing'
 
+import { setLang } from '../hooks/i18n'
 import { LONG_TOOL_MS, QUIET_MS, attentionOf, roughSpan, stuckOf } from '../hooks/insight'
 import { laneCells, runsOf, timelineOf } from '../hooks/timeline'
 import { timelineSvg } from '../hooks/timeline-svg'
 import type { AgentRun, ToolEvent } from '../types'
+
+// These words are the Turkish ones (MODZ_LANG=tr).
+setLang('tr')
 
 // The quiet-agent check, the attention line's pick and the timeline's facts, as pure functions.
 

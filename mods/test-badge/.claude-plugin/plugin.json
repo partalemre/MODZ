@@ -1,7 +1,7 @@
 {
   "name": "test-badge",
   "version": "0.2.1",
-  "description": "After a turn that edited source files, runs the project's tests and lint in the background and shows a one-line badge (testler 41/42 · lint 2 hata · 4sn önce) with a details pane listing each failure by suite and file:line",
+  "description": "After a turn that edited source files, runs the project's tests and lint in the background and shows a one-line badge (tests 41/42 · lint 2 errors · 4s ago) with a details pane listing each failure by suite and file:line",
   "author": {
     "name": "Partal"
   },

@@ -1,3 +1,5 @@
+import { upper } from '../lang'
+
 // Text measuring and fitting for hand-laid Svg, close enough to lay out without a renderer.
 
 const NARROW = 'iljtf.,:;|!\'` ()[]'
@@ -66,5 +68,5 @@ export function widthFor(columns: number | undefined, range: { min: number; max:
 }
 
 export function eyebrow(text: string): string {
-  return escape(text.toLocaleUpperCase('tr'))
+  return escape(upper(text))
 }

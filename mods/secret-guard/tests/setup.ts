@@ -1,6 +1,7 @@
 // The engine beneath secret-guard in tests: files, git answers, the dialog answered with `choice`.
 
-export type Setup = { choice: string; asked: string[]; files: Record<string, string>; ran: any[]; git: Record<string, string>; cards: string[][]; trees: any[]; dialogs: any[]; theme: string; surface: 'terminal' | 'desktop'; columns?: number }
+// `env` is what `$.env.get` answers: MODZ_LANG=tr for the Turkish tests, unset for the English ones.
+export type Setup = { choice: string; env: Record<string, string>; asked: string[]; files: Record<string, string>; ran: any[]; git: Record<string, string>; cards: string[][]; trees: any[]; dialogs: any[]; theme: string; surface: 'terminal' | 'desktop'; columns?: number }
 
 // The card as the person reads it: one string per line, indents included.
 export function textOf(node: any): string {
@@ -39,7 +40,7 @@ export function stub($: any, on: any, setup: Setup) {
     return { type: 'engine', ref: 1 }
   })
   on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'enum', value: setup.theme }] }))
-  on('env.get', () => ({ value: undefined }))
+  on('env.get', (_: any, e: any) => ({ value: setup.env[e.name] }))
   on('store.get', () => ({ value: undefined }))
   on('store.set', () => ({ value: undefined }))
   on('command.register', () => ({ value: undefined }))
@@ -65,8 +66,11 @@ export async function start($: any, on: any, setup: Setup) {
 }
 
 export function fresh(choice: string, surface: 'terminal' | 'desktop' = 'terminal'): Setup {
-  return { choice, asked: [], files: {}, ran: [], git: {}, cards: [], trees: [], dialogs: [], theme: 'dark', surface }
+  return { choice, env: { MODZ_LANG: 'tr' }, asked: [], files: {}, ran: [], git: {}, cards: [], trees: [], dialogs: [], theme: 'dark', surface }
 }
+
+/** The same setup with no MODZ_LANG: the English card. */
+export const english = (choice: string, surface: 'terminal' | 'desktop' = 'terminal'): Setup => ({ ...fresh(choice, surface), env: {} })
 
 // The AskUserQuestion draws its card and answers with the test's choice; any other tool just runs.
 async function answerTool($: any, setup: Setup, e: any) {

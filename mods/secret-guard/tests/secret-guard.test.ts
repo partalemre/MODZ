@@ -1,10 +1,13 @@
 import { expect, test } from 'claude-code/testing'
 
-import { ALLOW, CANCEL, QUESTION, moveLabel } from '../hooks/card'
+import { WORDS } from '../hooks/words'
 import { findSecrets, mask } from '../hooks/detect'
 import { addedByFile, dryRunPaths, gitSteps, isEnvFile } from '../hooks/git'
 import { fresh, start } from './setup'
 import { appendText, envLines, hasEnvIgnore, parseEnv, planEntries, rewrite } from '../hooks/move'
+
+// These tests read the Turkish card (MODZ_LANG=tr); english.test.ts reads the default one.
+const { allow: ALLOW, cancel: CANCEL, question: QUESTION, move: moveLabel } = WORDS.tr
 
 // Built from pieces so this file never holds a literal that a scanner would take for a real key.
 const ANT = ['sk', 'ant', 'api03', 'Zx9Qw7Er5Ty3Ui1Op8As6Df4Gh2Jk'].join('-')

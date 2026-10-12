@@ -34,8 +34,10 @@ function toolAnswer(e: any) {
   return { result: 'ok' }
 }
 
+// The Turkish interface these tests read; english.test.tsx covers the default.
 async function setup($: any, on: any) {
   clock = mock.clock(on)
+  mock.env(on, { MODZ_LANG: 'tr' })
   opened = []
   statuses = []
   files = {}

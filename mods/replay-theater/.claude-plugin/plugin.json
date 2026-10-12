@@ -1,7 +1,7 @@
 {
   "name": "replay-theater",
   "version": "0.3.0",
-  "description": "Replay Theater: son turdaki dosya düzenlemelerini adım adım izle; her adımın ne yaptığı ve hangi plan adımına ait olduğu, renkli diff.",
+  "description": "Replay Theater: step through the file edits of the last turn, with what each step does, the plan step it served and a colored diff.",
   "author": {
     "name": "Claude Code DevRel"
   },

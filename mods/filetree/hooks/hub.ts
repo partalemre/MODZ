@@ -1,4 +1,5 @@
 import type { HubCard, HubTone } from '../types'
+import { words } from './words'
 
 // The MODZ main panel's side of this mod (DESIGN.md §9): a one-line summary card it collects,
 // and its "open" requests, which name a pane by key. Pure: register.tsx does the writing.
@@ -14,12 +15,13 @@ const SHA_SHOWN = 7
 // Live work first, then what git says is left to commit, then what the last turn did.
 export function hubOf(s: HubInput): HubShown {
   const edited = s.edited ?? 0
-  if (s.isRunning && s.touched > 0) return { detail: `${s.touched} dosya bu tur`, tone: 'live' }
-  if (!s.hasRepo) return edited > 0 ? { detail: `son tur ${edited} dosya düzenlendi`, tone: 'idle' } : { detail: 'git deposu yok', tone: 'idle' }
-  if (s.changed > 0) return { detail: `${s.changed} değişiklik commit edilmedi`, tone: 'warn' }
-  if (s.sha) return { detail: `commit ${s.sha.slice(0, SHA_SHOWN)} · temiz`, tone: 'ok' }
+  const w = words()
+  if (s.isRunning && s.touched > 0) return { detail: w.hubLive(s.touched, edited), tone: 'live' }
+  if (!s.hasRepo) return edited > 0 ? { detail: w.hubEditedLast(edited), tone: 'idle' } : { detail: w.hubNoRepo, tone: 'idle' }
+  if (s.changed > 0) return { detail: w.hubUncommitted(s.changed), tone: 'warn' }
+  if (s.sha) return { detail: w.hubCommit(s.sha.slice(0, SHA_SHOWN)), tone: 'ok' }
 
-  return { detail: 'temiz', tone: 'ok' }
+  return { detail: w.hubClean, tone: 'ok' }
 }
 
 // Written only when what the card shows changes, so the main panel does not redraw for nothing.

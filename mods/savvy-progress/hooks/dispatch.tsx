@@ -5,6 +5,7 @@ import type { AgentType, Draft } from '../types'
 import { BUILTIN_TYPES, chosenOf, describe, mergeTypes, offered, sourceWord } from './agent-types'
 import { sectionSvg, SECTION_SVG_H } from './card-svg'
 import { t } from './i18n'
+import { upper } from './lang'
 import type { Ui } from './rows'
 import type { Layout, PaneHandlers } from './sections'
 
@@ -22,7 +23,7 @@ export type DraftView = { draft: Draft | undefined; types: AgentType[]; layout: 
 function draftHead(ui: Ui, layout: Layout) {
   const { Svg, Text } = ui
   const label = t().newTask
-  if (!layout.isDesktop) return <Text bold color="permission">{`● ${label.toLocaleUpperCase('tr')}`}</Text>
+  if (!layout.isDesktop) return <Text bold color="permission">{`● ${upper(label)}`}</Text>
   return <Svg key="draft-head" source={sectionSvg(layout.inner, { label, dot: 'run' })} alt={label} width={layout.inner} height={SECTION_SVG_H} />
 }
 

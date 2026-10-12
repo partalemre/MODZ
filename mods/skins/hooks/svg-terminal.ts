@@ -1,6 +1,7 @@
 import type { Palette } from './skin'
 import { CONTROL_SLOT, escape, HEADER_MID, fitText, MONO, pill, riseDelay, strokeIcon, svgCard } from './svg-kit'
 import type { CardFrame } from './svg-kit'
+import { say } from './words'
 
 // A shell command's output as a terminal card: a status pill, the output in mono with
 // stderr in the error colour, and long output folded to its head and tail.
@@ -55,14 +56,14 @@ type Status = { text: string; color: string }
 
 function statusOf(output: ShellOutput, isErrored: boolean, palette: Palette): Status {
   if (output.interrupted) {
-    return { text: 'durduruldu', color: palette.warn }
+    return { text: say().stopped, color: palette.warn }
   }
 
   if (output.timedOutAfterMs !== undefined) {
-    return { text: 'zaman aşımı', color: palette.warn }
+    return { text: say().timedOut, color: palette.warn }
   }
 
-  return isErrored ? { text: 'hata', color: palette.err } : { text: 'tamam', color: palette.ok }
+  return isErrored ? { text: say().failed, color: palette.err } : { text: say().ok, color: palette.ok }
 }
 
 type Shown = Line | { text: string; isErr: boolean; isNote: true }
@@ -79,7 +80,7 @@ function outputRow(line: Shown, i: number, { palette, width }: CardFrame): strin
   const top = HEADER_H + 6 + i * LINE_H
 
   if ('fold' in line) {
-    return `<g class="rise" ${riseDelay(i, 22)}><text x="20" y="${top + 14}" font-size="11.5" style="fill:${palette.muted}">⋯  ${line.fold} satır daha</text></g>`
+    return `<g class="rise" ${riseDelay(i, 22)}><text x="20" y="${top + 14}" font-size="11.5" style="fill:${palette.muted}">⋯  ${escape(say().moreLines(line.fold))}</text></g>`
   }
 
   return `<g class="rise" ${riseDelay(i, 22)}><text x="20" y="${top + 14}" font-family="${MONO}" font-size="${CODE}" style="fill:${lineColor(line, palette)}" xml:space="preserve">${escape(fitText(line.text, width - 40, { isMono: true, size: CODE }))}</text></g>`
@@ -90,11 +91,11 @@ export function terminalSvg(output: ShellOutput, isErrored: boolean, frame: Card
   const { palette, width, hasControl = false } = frame
   const lines = outputLines(output)
   const status = statusOf(output, isErrored, palette)
-  const shown: Shown[] = lines.length === 0 ? [{ text: 'çıktı yok', isErr: false, isNote: true }] : lines
+  const shown: Shown[] = lines.length === 0 ? [{ text: say().noOutput, isErr: false, isNote: true }] : lines
   const rows = shown.map((line, i) => outputRow(line, i, frame))
 
   const height = HEADER_H + 6 + Math.max(1, lines.length) * LINE_H + 10
-  const note = output.returnCodeInterpretation === undefined ? 'Çıktı' : `Çıktı · ${output.returnCodeInterpretation}`
+  const note = output.returnCodeInterpretation === undefined ? say().output : `${say().output} · ${output.returnCodeInterpretation}`
   const header = [
     strokeIcon(PROMPT, { x: 16, y: HEADER_MID - 9, size: 18, color: palette.fg }),
     `<text x="42" y="${HEADER_MID + 4}" font-size="12" style="fill:${palette.muted};letter-spacing:.04em">${escape(note)}</text>`,
@@ -106,6 +107,6 @@ export function terminalSvg(output: ShellOutput, isErrored: boolean, frame: Card
     source: svgCard({ width, height, palette, body: header + rows.join('') }),
     width,
     height,
-    alt: lines.map(line => ('fold' in line ? `… ${line.fold} satır daha` : line.text)).join('\n') || 'çıktı yok',
+    alt: lines.map(line => ('fold' in line ? `… ${say().moreLines(line.fold)}` : line.text)).join('\n') || say().noOutput,
   }
 }

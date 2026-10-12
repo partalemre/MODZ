@@ -8,6 +8,7 @@ import type { RowCtx } from './rowspec'
 import { mem } from './session'
 import { paletteOf, type Role } from './theme'
 import { DEFAULT_THEME, type Row, visibleRows } from './tree'
+import { words } from './words'
 
 export type Scene = {
   t: FileTree
@@ -64,9 +65,10 @@ export function heroInput(s: Scene) {
 export function rowCtx(s: Scene, width: number, unicode: boolean): RowCtx {
   const commits = new Set(s.turn.touches.filter(x => x.role === 'commit').map(x => x.id))
   const live = liveOf(s)
-  const pills: Partial<Record<Role, string>> = { read: 'okunuyor', edit: 'düzenleniyor' }
+  const w = words()
+  const pills: Partial<Record<Role, string>> = w.rowLive
   const pillOf = (id: string, role: Role): string => {
-    if (role === 'ok') return commits.has(id) ? 'commit edildi' : 'stage edildi'
+    if (role === 'ok') return commits.has(id) ? w.rowCommitted : w.rowStaged
     return live.has(id) ? (pills[role] ?? '') : ''
   }
   const { t } = s
@@ -103,7 +105,7 @@ export function treeWindow(s: Scene, room: number, draw: Draw): TreeWindow {
   const shown = rows.slice(from, from + room - pinned.length)
   const { toSpec, colors } = draw
   const note = (text: string): RowSpec => ({ id: '', left: [{ t: text, c: colors.note }], right: [] })
-  const specs = [...(rows.length === 0 ? [note('boş klasör')] : []), ...pinned.map(toSpec), ...(pinned.length > 0 ? [note('  ⋮')] : []), ...shown.map(toSpec)]
+  const specs = [...(rows.length === 0 ? [note(words().emptyFolder)] : []), ...pinned.map(toSpec), ...(pinned.length > 0 ? [note('  ⋮')] : []), ...shown.map(toSpec)]
   const barSize = Math.max(1, Math.round((specs.length * shown.length) / Math.max(1, rows.length)))
   const bar = { pos: max ? Math.round((from / max) * (specs.length - barSize)) : 0, size: barSize, thumb: colors.thumb, track: colors.track }
   return { rows: [...pinned, ...shown], specs, ...(rows.length > shown.length + pinned.length ? { bar } : {}) }

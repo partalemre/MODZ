@@ -3,6 +3,7 @@ import type { BadgePill } from './summary'
 import { measure, pill, svgDoc, svgWidth, text } from './svg'
 import { THEME_KEY } from './tidemark'
 import type { Theme } from './tidemark'
+import { words } from './words'
 import type { TestBadge } from '../types'
 
 // The badge's row above the prompt: Moss "✓ test 42/42", Amber "lint 2", "4 sn önce" in text.lo;
@@ -76,7 +77,7 @@ export function bandTree(ui: Ui, view: BandView, theirs: unknown) {
     <Box flexDirection="column">
       <Box flexDirection="row" alignItems="center" columnGap={1} flexWrap="wrap">
         {drawn === null ? pillTexts(ui, view) : <Svg source={drawn.source} alt={bandAlt(view.badge, view.now)} width={drawn.width} height={ROW_H} />}
-        {view.hasDetails && <Button key="tb-details" variant="secondary" hotkey="t" label="Ayrıntı" onPress={view.onDetails} />}
+        {view.hasDetails && <Button key="tb-details" variant="secondary" hotkey="t" label={words().details} onPress={view.onDetails} />}
         {view.onDismiss !== undefined && <Button key="tb-dismiss" plain dimColor role="dismiss" label="✕" onPress={view.onDismiss} />}
       </Box>
       {theirs}

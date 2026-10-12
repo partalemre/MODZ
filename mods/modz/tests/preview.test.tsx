@@ -1,6 +1,6 @@
 // Draws the desktop MODZ pane from a snapshot of the real marketplace, for bin/preview:
 // the hub calm and busy, narrow and wide, and the catalog view.
-import { test } from 'claude-code/testing'
+import { mock, test } from 'claude-code/testing'
 
 import { MARKET_FILES } from './market-fixture'
 
@@ -22,6 +22,7 @@ function troubled(): Record<string, string> {
 
 function stub(on: any, theme: string, isTroubled: boolean) {
   const files = isTroubled ? troubled() : MARKET_FILES
+  mock.env(on, { MODZ_LANG: 'tr' })
   on('fs.stat', () => ({ value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
   on('fs.read', (_: unknown, e: { path: string }) => {
     const text = files[e.path]

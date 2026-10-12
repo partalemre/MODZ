@@ -1,25 +1,57 @@
-# Replay Theater
+# replay-theater
 
-Dayandığı proje: [anthropics/claude-code-playground](https://github.com/anthropics/claude-code-playground) (`claude-code/mods/replay-theater`), Apache-2.0 (LICENSE dosyası korunmuştur; değiştirilen dosyaların başında not var).
+Records the file edits Claude makes in a turn, then lets you step through them one by one as colored diffs. It never blocks, changes or delays an edit.
 
-Bir turda Claude'un yaptığı dosya düzenlemelerini kaydeder, sonra bir panelde tek tek, diff olarak izletir. Düzenlemeyi asla engellemez, değiştirmez, geciktirmez.
+## Install
 
-## Ne görürsün
-- **Teklif kartı** (prompt'un üstü): düzenleme yapan bir tur bitince Orchid oynat kutucuğu, `TEKRAR` etiketi, `4 düzenleme · 4 dosya`, dosya adları, Claude'un cevabındaki ilk cümle ve **Düzenlemeleri izle** (`r`) / *Şimdi değil*. Bandın diğer satırlarının üstünde durur (`next(e)` çağrılır, `theirs` korunur); soru penceresi açıkken ve tur sürerken görünmez; bir sonraki turda kendiliğinden kalkar.
-- **Panel** (`/replay` ya da kart): `TEKRAR · 3 dk önce`, `4 dosyada 4 düzenleme`, `6 satır eklendi, 6 silindi`, turu başlatan istek (“greet adını welcome yap”), `SIRAYLA DÜZENLEMELER` altında numaralı daireler (şimdiki Orchid dolu, geçilenler gri ✓, sıradakiler halka) ve her adımın dosyası, klasörü, `+N −N`'i. Altında `DÜZENLEME 2 / 4`, dosya adı, `src/greet.js · Edit`, **bu değişikliğin ne yaptığı** (tek satır), **hangi plan adımına ait olduğu** (`Plan adımı 3/9 · <görev>`), satır renkli ve değişen kelimesi vurgulu diff, lejant (Silindi / Eklendi / Değişen kelime / Değişmedi), **Önceki** (`p`), birincil **Sonraki** (`n`, son adımda **Bitir**), *Kapat* (`c`, Esc).
-- Terminalde aynı bilgi metinle; diff Claude Code'un diff renkleriyle (değişen kelime dahil).
+```
+/plugin marketplace add partalemre/MODZ
+/plugin install replay-theater@modz
+```
 
-## Açıklama satırı (önce sıfır token)
-1. Düzenleme çağrısının kendi `description` alanı varsa o.
-2. Yoksa transkriptte Claude'un o düzenlemeden hemen önce yazdığı cümle (ana döngü ve alt ajanlar; token harcamaz).
-3. İkisi de yoksa, panel ilk açıldığında **tur başına tek** Haiku çağrısı (effort low, 20 sn sınır); sonuç tura önbelleklenir, tekrar açınca çağrı yok. Hiçbiri yoksa satır gösterilmez.
+Or in one step: `/plugin install replay-theater --marketplace partalemre/MODZ`.
 
-## Plan adımı
-`TodoWrite`, `TaskCreate`, `TaskUpdate`, `TaskList` izlenir; her düzenleme, çalıştığı anda `in_progress` olan maddeyi kaydeder. Görev listesi yoksa satır yok.
+The MODZ panel (`modz`) shows its line here.
 
-## Notlar
-- Edit için diff `old_string` → `new_string`; Write için yazmadan önce diskteki metin okunur. Değişiklik etrafında 1 satır bağlam, adım başına en çok 12 satır (`… N satır daha`).
-- Reddedilen ya da hata veren düzenleme artık kaydedilmez (asıl modda kaydediliyordu).
-- Panel yerleşemezse (dar terminal) tekrar, bandın içinde diğer satırların üstünde çizilir.
-- Tema: Claude Code'un `theme` ayarı (açık/koyu; `auto` sistemi izler).
-- Durum oturum içindir (`$.state`); oturum bitince kaybolur.
+## What you see
+
+**An offer card** above the prompt, when a turn that edited files ends: the edit and file counts (`4 edits · 4 files`), the file names, the first sentence of Claude's reply, and **Watch the edits** (`r`) or **Not now**. It sits above the other rows, stays out of the way while a survey is open or a turn is running, and disappears on the next turn.
+
+**The pane**, from the card or `/replay`:
+
+- A header with the age of the turn, `4 edits in 4 files`, the lines added and removed, and the request that started the turn.
+- **Edits in order**: numbered circles for each step (the current one filled, finished ones checked, upcoming ones as rings), each with its file, folder and `+N -N`.
+- Below, the current step: `Edit 2 / 4`, the file name, the tool (`Edit`), one line saying what the change does, which plan step it served (`Plan step 3/9 · <task>`), and a diff with changed lines and changed words highlighted, plus a legend (Removed, Added, Changed word, Unchanged).
+- **Previous** (`p`), **Next** (`n`; **Finish** on the last step) and **Close** (`c`, or Esc).
+
+In the terminal the same information is text, with the diff in Claude Code's own diff colours. If the terminal is too narrow for a pane, the replay is drawn in the band above the prompt. The pane follows Claude Code's `theme` setting.
+
+**What each step does.** The one-line description comes from, in order: the edit call's own `description`; the sentence Claude wrote just before the edit, read from the transcript (main loop and subagents); and, if neither exists, one small model call (see Cost). If none is available the line is left out.
+
+**Plan step.** `TodoWrite`, `TaskCreate`, `TaskUpdate` and `TaskList` are watched; each edit records the item that was `in_progress` when it ran. With no task list there is no plan line.
+
+## Commands
+
+- `/replay` opens the pane for the last turn's edits.
+
+## Settings
+
+There are no plugin options.
+
+## Cost
+
+Usually no model tokens. Only when some steps have neither a description nor a sentence in the transcript, opening the pane for the first time makes one `haiku` request (low effort, 20-second limit) for those steps. The result is cached for that turn, so reopening makes no call.
+
+## Limits
+
+- For `Edit`, the diff is `old_string` to `new_string`; for `Write`, the file's text on disk before the write is read first. Each step shows one line of context around the change and at most 12 lines (`... N more lines`).
+- A rejected or failed edit is not recorded.
+- State lives in the session and is lost when it ends.
+
+## Language
+
+The interface is English. Set `MODZ_LANG=tr` in the `env` block of `~/.claude/settings.json` for Turkish. The model-written step lines come back in English.
+
+## Credits
+
+Adapted from [anthropics/claude-code-playground](https://github.com/anthropics/claude-code-playground) (`claude-code/mods/replay-theater`), licensed Apache-2.0. The license file is in this folder.

@@ -1,6 +1,10 @@
 import { expect, test } from 'claude-code/testing'
 
+import { setLang } from '../hooks/i18n'
 import { readingOf, shareNumber, shareOf, trackLimit } from '../hooks/limit'
+
+// These words are the Turkish ones (MODZ_LANG=tr).
+setLang('tr')
 
 const at = (percent: number, usd: number, resetsAt = 'r1') => ({ percent, usd, resetsAt })
 

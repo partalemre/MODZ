@@ -2,6 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { headline, linkCheck, loadCatalog } from '../hooks/catalog'
 import type { ModInfo } from '../hooks/catalog'
+import { setLang } from '../hooks/kit/lang'
 
 const ROOT = '/m'
 
@@ -21,6 +22,7 @@ const local = (name: string, extra: object = {}) => ({ name, source: `./mods/${n
 const byName = (mods: ModInfo[], name: string) => mods.find(mod => mod.name === name)
 
 test('a bad marketplace entry becomes an unhealthy row and the others still load', async () => {
+  setLang('tr')
   const plugins = [null, 'text', {}, { name: 'noSource' }, { name: 'remote', source: { source: 'github', repo: 'o/r' } }, local('good')]
   const { mods } = await loadCatalog({ ...market(plugins, { good: { version: '1.0.0', description: 'ok' } }) })
 
@@ -47,6 +49,7 @@ test('a readable manifest without version is healthy and falls back to the marke
 })
 
 test('plugin.json okunamadı is shown only when the manifest cannot be read', async () => {
+  setLang('tr')
   const { mods } = await loadCatalog(market([local('gone', { description: 'from market' }), local('bare')], {}))
   const base = market([local('broken')])
   const read = async (path: string) => (path.endsWith('plugin.json') ? '{ not json' : base.read(path))
@@ -106,6 +109,7 @@ test("a link counts from the user's skills folder or the project's, and a failin
 
 test('the headline counts against known mods and reports the unknown ones', () => {
   const mod = (isEnabled: boolean | null) => ({ isEnabled }) as ModInfo
+  setLang('tr')
 
   expect(headline([mod(true), mod(true), mod(null)])).toBe('3 mod · hepsi açık · 1 bilinmiyor')
   expect(headline([mod(true), mod(false), mod(null), mod(null)])).toBe('4 mod · 1 açık · 2 bilinmiyor')

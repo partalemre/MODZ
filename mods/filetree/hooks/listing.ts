@@ -2,6 +2,7 @@ import type { FileNode, FileTree } from '../types'
 import { type Host, patch } from './host'
 import { mem } from './session'
 import { ancestorsOf, type Entry, inside, join, replaceChildren, toNodes } from './tree'
+import { words } from './words'
 
 // Each pass loads one more level towards every path; deeper than this is never a tree the pane shows.
 const REVEAL_PASSES = 32
@@ -45,7 +46,7 @@ export async function list(h: Host, dir: string): Promise<FileNode[] | null> {
     if (!(await exists(h, dir))) return []
     if (!unreadable.has(dir)) {
       unreadable.add(dir)
-      h.toast(`${shortPath(dir)} listelenemedi: ${err instanceof Error ? err.message : String(err)}`)
+      h.toast(words().notListed(shortPath(dir), err instanceof Error ? err.message : String(err)))
     }
     return null
   }

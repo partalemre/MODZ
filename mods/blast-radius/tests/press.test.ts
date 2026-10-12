@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { BUILD_SCAN, PANE_PROPS, mountBand, mountPane, pass, stub, world } from './world'
+import { BUILD_SCAN, PANE_PROPS, mountBand, mountPane, pass, start, stub, world } from './world'
 
 // A desktop clicks the tree it last painted. Every redraw keeps each button's press handle, so a click
 // on an earlier tree still lands.
@@ -26,6 +26,7 @@ for (const place of PLACES) {
     const w = world({ isPlaced: place.isPlaced, answers: { files: BUILD_SCAN } })
     stub(on, w)
     on('ui.render', () => ({ type: 'Text', children: ['other mod row'] }))
+    await start($, w)
     const call = $.tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
     const card = await place.mount($)

@@ -14,6 +14,8 @@ import { isLive } from './notice'
 import { pinned } from './pin'
 import { AUTO, themeFrom } from './tidemark'
 import { paneTree } from './view'
+import { setLang } from './lang'
+import { words } from './words'
 import type { CheckOutcome, Failure, HubCard, SuiteFilter, TestBadge } from '../types'
 
 const COMMAND = 'test-badge'
@@ -150,12 +152,12 @@ async function openFailure($: EngineInterface, failure: Failure, where: { root: 
   }
   const place = placeOf(failure)
   const copied = await $.ui.copy({ text: place, surface: where.surface })
-  $.ui.toast(copied.isCopied ? `Açılamadı, kopyalandı: ${place}` : `Açılamadı: ${place}`)
+  $.ui.toast(copied.isCopied ? words().openCopied(place) : words().openFailed(place))
 }
 
 // The same pane whoever asks (Ayrıntı, /test-badge details, the MODZ main panel); an open one comes forward.
 async function openPane($: EngineInterface): Promise<void> {
-  await $.ui.open({ id: PANE, title: 'Testler', focus: true })
+  await $.ui.open({ id: PANE, title: words().paneTitle, focus: true })
 }
 
 // The MODZ main panel's card, written only when what it shows changes.
@@ -171,12 +173,12 @@ async function runCommand($: EngineInterface, arg: string, overrides: Overrides)
   if (arg === 'run') {
     void runAll($, overrides)
 
-    return 'test-badge: testler ve lint çalışıyor'
+    return words().commandRunning
   }
   if (arg === 'details') {
     await openPane($)
 
-    return 'test-badge: ayrıntılar açıldı'
+    return words().commandDetails
   }
   const isOn = SWITCH_ARGS.get(arg) ?? !(await read($, enabledAtom))
   await update($, enabledAtom, () => isOn)
@@ -184,18 +186,19 @@ async function runCommand($: EngineInterface, arg: string, overrides: Overrides)
   if (!isOn) await update($, noticeAtom, () => null)
   await showStatus($)
 
-  return `test-badge ${isOn ? 'açık' : 'kapalı'}`
+  return words().commandSwitched(isOn)
 }
 
 function hookRuns(on: On, overrides: Overrides): void {
   on('session.start', async ($, e, next) => {
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     try {
       const saved = await $.store.get(STORE_KEY)
       await update($, enabledAtom, () => saved !== false)
       const pinned = await $.env.get('MODZ_THEME').catch(() => undefined)
       await update($, themeAtom, () => themeFrom(pinned))
       await writeHub($, await read($, badgeAtom))
-      await $.command.register({ name: COMMAND, description: 'Düzenlemeden sonra arka planda test/lint: aç/kapa; run şimdi çalıştırır, details ayrıntıları açar', argumentHint: '[on|off|run|details]' })
+      await $.command.register({ name: COMMAND, description: words().commandHelp, argumentHint: '[on|off|run|details]' })
       $.clock.every(REFRESH_MS, () => {
         void read($, badgeAtom).then(badge => (badge.finishedAt === null ? undefined : showStatus($)))
       })

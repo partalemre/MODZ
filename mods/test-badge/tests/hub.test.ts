@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { hubOf } from '../hooks/hub'
+import { setLang } from '../hooks/lang'
 
 const VITEST_FAIL = ' FAIL  src/a.test.ts > a > b\nAssertionError: x\n ❯ src/a.test.ts:4:2\n Tests  1 failed | 41 passed (42)'
 const ESLINT_FAIL = "/w/src/u.ts\n   3:7  error  'x' is unused  no-unused-vars\n   9:1  error  Unexpected any  no-explicit-any\n✖ 2 problems (2 errors, 0 warnings)"
@@ -25,6 +26,7 @@ const modz = {
 
 async function setup($: any, on: any, world: World) {
   const clock = mock.clock(on)
+  mock.env(on, { MODZ_LANG: 'tr' })
   for (const name of ['store.get', 'store.set', 'command.register', 'ui.log', 'ui.status', 'ui.toast']) on(name, () => ({ value: undefined }))
   on('ui.open', (_: any, e: any) => (world.opened.push(e.id), { value: { isPlaced: true } }))
   on('session.start', () => ({ cwd: '/w' }))
@@ -92,6 +94,7 @@ test('a MODZ open request for tests opens the details pane; one for another pane
 })
 
 test('a check that could not run is a warning, not a failure', () => {
+  setLang('tr')
   const timedOut = { status: 'timeout' as const, passed: null, total: null, errors: null, failures: [], tail: [] }
   const badge = { tests: timedOut, lint: null, root: '/w', finishedAt: 1, durationMs: 1, isRunning: false }
 

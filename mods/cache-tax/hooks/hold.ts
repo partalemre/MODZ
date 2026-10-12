@@ -10,6 +10,7 @@ import { ICONS } from './icons'
 import { iconSvg } from './svg'
 import { TERMINAL, palette } from './theme'
 import type { Palette } from './theme'
+import { bandWords as words } from './ui-words'
 
 export type HoldActions = { pay: () => void; fresh: () => void; status: () => void }
 export type HoldOptions = { view: HoldView; actions: HoldActions; isLight: boolean; noColor: boolean; columns: number }
@@ -26,14 +27,15 @@ export const contentWidth = (columns: number): number =>
   Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, (columns - CARD_CHROME) * PX_PER_COLUMN))
 
 const heldQuote = (view: HoldView): string => `“${view.held}”`
-const keepText = (view: HoldView): string => `Bir kez öde, keepwarm önbelleği ${view.autoWarm} tutsun.`
+const keepText = (view: HoldView): string => words().keep(view.autoWarm)
 
 function buttons(ui: Elements['desktop'] | Elements['terminal'], actions: HoldActions): RenderElement {
   const { Box, Button } = ui
+  const { pay, fresh, status } = words()
   return Box({ flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'center', children: [
-    Button({ key: 'cache-tax:pay', label: 'Öde ve gönder', variant: 'secondary', hotkey: 'o', onPress: actions.pay }),
-    Button({ key: 'cache-tax:fresh', label: 'Yeni başla', variant: 'secondary', hotkey: 'y', onPress: actions.fresh }),
-    Button({ key: 'cache-tax:status', label: 'Önbellek durumu', plain: true, hotkey: 'd', onPress: actions.status }),
+    Button({ key: 'cache-tax:pay', ...pay, variant: 'secondary', onPress: actions.pay }),
+    Button({ key: 'cache-tax:fresh', ...fresh, variant: 'secondary', onPress: actions.fresh }),
+    Button({ key: 'cache-tax:status', ...status, plain: true, onPress: actions.status }),
   ] })
 }
 
@@ -50,7 +52,7 @@ function desktopInfo(ui: Elements['desktop'], view: HoldView, p: Palette): Rende
   const { Box, Text } = ui
   return Box({ flexDirection: 'column', children: [
     infoRow(ui, { paths: ICONS.pauseCircle, color: p.lo }, [
-      Text({ color: p.mid, wrap: 'truncate-end', children: ['Bekleyen: ', Text({ color: p.hi, children: [heldQuote(view)] })] }),
+      Text({ color: p.mid, wrap: 'truncate-end', children: [words().held, Text({ color: p.hi, children: [heldQuote(view)] })] }),
     ]),
     infoRow(ui, { paths: ICONS.shieldCheck, color: p.lo }, [Text({ color: p.mid, children: [keepText(view)] })]),
   ] })
@@ -60,11 +62,11 @@ export function holdDesktop(ui: Elements['desktop'], o: HoldOptions): RenderElem
   const { Box, Svg } = ui
   const p = palette(o.isLight)
   const width = contentWidth(o.columns)
-  const alt = `Önbellek vergisi: mesajın bekletiliyor. Şimdi gönder ${fmtUsd(o.view.coldUsd)}, sıcak bir tur ${fmtUsd(o.view.warmUsd)}.`
+  const alt = words().alt(fmtUsd(o.view.coldUsd), fmtUsd(o.view.warmUsd))
   return Box({ key: 'cache-tax:hold', flexDirection: 'column', alignSelf: 'flex-start', gap: 1, paddingX: 2, paddingY: 1, borderStyle: 'round',
     borderColor: p.line, backgroundColor: p.card, children: [
       Svg({ source: headerSvg(width, o.view, p), alt, width, height: HEADER_H }),
-      Svg({ source: compareSvg(width, o.view, p), alt: `~${o.view.tokens} token, ${o.view.rate}`, width, height: COMPARE_H }),
+      Svg({ source: compareSvg(width, o.view, p), alt: `${words().tokens(o.view.tokens)}, ${o.view.rate}`, width, height: COMPARE_H }),
       desktopInfo(ui, o.view, p),
       buttons(ui, o.actions),
     ] })
@@ -100,14 +102,15 @@ export function holdTerminal(ui: Elements['terminal'], o: HoldOptions): RenderEl
   const v = o.view
   const share = v.coldUsd && v.warmUsd !== null ? Math.min(1, v.warmUsd / v.coldUsd) : 0
   const cells = Math.max(BAR_MIN, Math.min(BAR_FULL, o.columns - LINE_CHROME))
+  const said = words()
   return Box({ key: 'cache-tax:hold', flexDirection: 'column', paddingX: 1, borderStyle: 'round', borderDimColor: true, children: [
-    Text({ bold: true, color: kiln, children: ['● ÖNBELLEK VERGİSİ'] }),
-    Text({ bold: true, children: ['Mesajın bekletiliyor'] }),
-    Text({ dimColor: true, children: [`Önbellek ${v.coldFor} önce soğudu.`] }),
-    priceLine(ui, { label: 'Şimdi gönder', usd: fmtUsd(v.coldUsd), color: kiln, bar: textBar(1, cells) }),
-    priceLine(ui, { label: 'Sıcak bir tur', usd: fmtUsd(v.warmUsd), color: undefined, bar: `${textBar(share, cells)} ${warmCaptions(v).at(-1) ?? ''}` }),
-    Text({ dimColor: true, children: [`~${v.tokens} token yeniden yazılır · ${v.rate}`] }),
-    Text({ wrap: 'truncate-end', children: [Text({ dimColor: true, children: ['⏸ Bekleyen: '] }), heldQuote(v)] }),
+    Text({ bold: true, color: kiln, children: [said.terminalEyebrow] }),
+    Text({ bold: true, children: [said.headline] }),
+    Text({ dimColor: true, children: [said.wentCold(v.coldFor)] }),
+    priceLine(ui, { label: said.sendNow, usd: fmtUsd(v.coldUsd), color: kiln, bar: textBar(1, cells) }),
+    priceLine(ui, { label: said.warmTurn, usd: fmtUsd(v.warmUsd), color: undefined, bar: `${textBar(share, cells)} ${warmCaptions(v).at(-1) ?? ''}` }),
+    Text({ dimColor: true, children: [`${said.tokens(v.tokens)} ${said.rewritten(v.rate)[0]}`] }),
+    Text({ wrap: 'truncate-end', children: [Text({ dimColor: true, children: [`⏸ ${said.held}`] }), heldQuote(v)] }),
     Text({ dimColor: true, children: [`✓ ${keepText(v)}`] }),
     buttons(ui, o.actions),
   ] })

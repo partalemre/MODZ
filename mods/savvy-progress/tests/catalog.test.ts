@@ -8,6 +8,9 @@ import { cardHeadSvg, pillPart } from '../hooks/card-svg'
 import { reconcile } from '../hooks/roster'
 import type { AgentRun } from '../types'
 
+// These words are the Turkish ones (MODZ_LANG=tr).
+setLang('tr')
+
 // The agent-type catalogue, the roster's edge cases, the languages and the panel's drawings.
 
 const info = (id: string, status: string, patch: Record<string, unknown> = {}) => ({ id, type: 'general-purpose', description: 'Work', status, ...patch }) as any

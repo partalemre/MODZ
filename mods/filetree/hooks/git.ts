@@ -1,4 +1,5 @@
 import { resolve, segments, stripGlobals } from './shell'
+import { saidOf } from './gitwords'
 import { drivesOn, posix } from './tree'
 
 export type GitAction = {
@@ -36,38 +37,41 @@ export const TONES: Record<string, { bright: string[]; dim: string[]; solid: str
   red: { bright: ['#ef4444', '#f87171', '#fca5a5', '#fee2e2'], dim: ['#7f1d1d', '#991b1b', '#b54040', '#c96a6a'], solid: '#f87171' },
 }
 
-const GIT_VERBS: Record<string, Omit<GitAction, 'kind'>> = {
-  commit: { verb: 'commit', running: "commit ediliyor", done: "commit edildi", tone: 'green', icon: ICON.commit },
-  push: { verb: 'push', running: "push ediliyor", done: "push edildi", tone: 'teal', icon: ICON.push },
-  pull: { verb: 'pull', running: "pull ediliyor", done: "pull edildi", tone: 'blue', icon: ICON.pull },
-  fetch: { verb: 'fetch', running: "fetch ediliyor", done: "fetch edildi", tone: 'blue', icon: ICON.pull },
-  checkout: { verb: 'checkout', running: "checkout ediliyor", done: "checkout edildi", tone: 'blue', icon: ICON.branch },
-  switch: { verb: 'switch', running: "dal değiştiriliyor", done: "dal değiştirildi", tone: 'blue', icon: ICON.branch },
-  branch: { verb: 'branch', running: "dal açılıyor", done: "dal açıldı", tone: 'blue', icon: ICON.branch },
-  merge: { verb: 'merge', running: "merge ediliyor", done: "merge edildi", tone: 'iris', icon: ICON.merge },
-  rebase: { verb: 'rebase', running: "rebase ediliyor", done: "rebase edildi", tone: 'iris', icon: ICON.merge },
-  'cherry-pick': { verb: 'cherry-pick', running: "cherry-pick ediliyor", done: "cherry-pick edildi", tone: 'iris', icon: ICON.merge },
-  stash: { verb: 'stash', running: "stash ediliyor", done: "stash edildi", tone: 'orange', icon: ICON.stash },
-  reset: { verb: 'reset', running: "reset ediliyor", done: "reset edildi", tone: 'red', icon: ICON.undo },
-  restore: { verb: 'restore', running: "geri yükleniyor", done: "geri yüklendi", tone: 'red', icon: ICON.undo },
-  revert: { verb: 'revert', running: "revert ediliyor", done: "revert edildi", tone: 'red', icon: ICON.undo },
-  add: { verb: 'add', running: "stage ediliyor", done: "stage edildi", tone: 'green', icon: ICON.git },
-  rm: { verb: 'rm', running: "siliniyor", done: "silindi", tone: 'red', icon: ICON.git },
-  mv: { verb: 'mv', running: "taşınıyor", done: "taşındı", tone: 'orange', icon: ICON.git },
-  tag: { verb: 'tag', running: "etiketleniyor", done: "etiketlendi", tone: 'iris', icon: ICON.tag },
-  init: { verb: 'init', running: "başlatılıyor", done: "başlatıldı", tone: 'green', icon: ICON.git, init: true },
-  clone: { verb: 'clone', running: "klonlanıyor", done: "klonlandı", tone: 'blue', icon: ICON.pull, init: true },
+// What each verb says comes from gitwords.ts when it is found, in the session's language.
+type VerbSpec = Omit<GitAction, 'kind' | 'running' | 'done'>
+
+const GIT_VERBS: Record<string, VerbSpec> = {
+  commit: { verb: 'commit', tone: 'green', icon: ICON.commit },
+  push: { verb: 'push', tone: 'teal', icon: ICON.push },
+  pull: { verb: 'pull', tone: 'blue', icon: ICON.pull },
+  fetch: { verb: 'fetch', tone: 'blue', icon: ICON.pull },
+  checkout: { verb: 'checkout', tone: 'blue', icon: ICON.branch },
+  switch: { verb: 'switch', tone: 'blue', icon: ICON.branch },
+  branch: { verb: 'branch', tone: 'blue', icon: ICON.branch },
+  merge: { verb: 'merge', tone: 'iris', icon: ICON.merge },
+  rebase: { verb: 'rebase', tone: 'iris', icon: ICON.merge },
+  'cherry-pick': { verb: 'cherry-pick', tone: 'iris', icon: ICON.merge },
+  stash: { verb: 'stash', tone: 'orange', icon: ICON.stash },
+  reset: { verb: 'reset', tone: 'red', icon: ICON.undo },
+  restore: { verb: 'restore', tone: 'red', icon: ICON.undo },
+  revert: { verb: 'revert', tone: 'red', icon: ICON.undo },
+  add: { verb: 'add', tone: 'green', icon: ICON.git },
+  rm: { verb: 'rm', tone: 'red', icon: ICON.git },
+  mv: { verb: 'mv', tone: 'orange', icon: ICON.git },
+  tag: { verb: 'tag', tone: 'iris', icon: ICON.tag },
+  init: { verb: 'init', tone: 'green', icon: ICON.git, init: true },
+  clone: { verb: 'clone', tone: 'blue', icon: ICON.pull, init: true },
 }
 
-const GH_VERBS: Record<string, Omit<GitAction, 'kind'>> = {
-  'pr create': { verb: 'pr create', running: "PR açılıyor", done: "PR açıldı", tone: 'iris', icon: ICON.pr },
-  'pr merge': { verb: 'pr merge', running: "PR merge ediliyor", done: "PR merge edildi", tone: 'iris', icon: ICON.merge },
-  'pr checkout': { verb: 'pr checkout', running: "PR checkout ediliyor", done: "PR checkout edildi", tone: 'blue', icon: ICON.pr },
-  'pr comment': { verb: 'pr comment', running: "PR'a yorum yazılıyor", done: "PR'a yorum yazıldı", tone: 'iris', icon: ICON.pr },
-  'pr review': { verb: 'pr review', running: "PR inceleniyor", done: "PR incelendi", tone: 'iris', icon: ICON.pr },
-  'repo clone': { verb: 'repo clone', running: "klonlanıyor", done: "klonlandı", tone: 'blue', icon: ICON.github, init: true },
-  'release create': { verb: 'release create', running: "sürüm yayımlanıyor", done: "sürüm yayımlandı", tone: 'iris', icon: ICON.tag },
-  'issue create': { verb: 'issue create', running: "issue açılıyor", done: "issue açıldı", tone: 'iris', icon: ICON.github },
+const GH_VERBS: Record<string, VerbSpec> = {
+  'pr create': { verb: 'pr create', tone: 'iris', icon: ICON.pr },
+  'pr merge': { verb: 'pr merge', tone: 'iris', icon: ICON.merge },
+  'pr checkout': { verb: 'pr checkout', tone: 'blue', icon: ICON.pr },
+  'pr comment': { verb: 'pr comment', tone: 'iris', icon: ICON.pr },
+  'pr review': { verb: 'pr review', tone: 'iris', icon: ICON.pr },
+  'repo clone': { verb: 'repo clone', tone: 'blue', icon: ICON.github, init: true },
+  'release create': { verb: 'release create', tone: 'iris', icon: ICON.tag },
+  'issue create': { verb: 'issue create', tone: 'iris', icon: ICON.github },
 }
 
 const READ_ONLY_GIT = new Set(['status', 'log', 'diff', 'show', 'blame', 'rev-parse', 'ls-files', 'grep', 'describe', 'config', 'remote', 'reflog', 'shortlog', 'help', 'version', 'check-ignore'])
@@ -106,11 +110,11 @@ export function gitActions(command: string): GitAction[] {
       const rest = tokens.slice(i + 1)
       if (gitReadOnly(verb, rest)) continue
       const spec = verb === 'checkout' && rest.includes('--') ? GIT_VERBS.restore : GIT_VERBS[verb]
-      if (spec) out.push({ kind: `git ${verb}`, ...spec })
+      if (spec) out.push({ kind: `git ${verb}`, ...spec, ...saidOf(spec.verb) })
     } else if (head === 'gh') {
       const pair = `${tokens[1] ?? ''} ${tokens[2] ?? ''}`
       const spec = GH_VERBS[pair]
-      if (spec) out.push({ kind: `gh ${pair}`, ...spec })
+      if (spec) out.push({ kind: `gh ${pair}`, ...spec, ...saidOf(spec.verb) })
     }
   }
   return out

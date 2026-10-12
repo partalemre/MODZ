@@ -1,5 +1,6 @@
 import type { Host } from './host'
 import { openCommand } from './open'
+import { words } from './words'
 
 export type Os = 'linux' | 'darwin' | 'win32'
 
@@ -76,8 +77,8 @@ export async function openFile(h: Host, path: string): Promise<void> {
   const { argv, init } = openCommand(await osName(h), path)
   try {
     const run = await h.run(argv, init)
-    if (run.exitCode !== 0) h.toast(`${path} açılamadı (${argv[0]}): ${run.stderr.trim().split('\n')[0] || `çıkış kodu ${run.exitCode}`}`)
+    if (run.exitCode !== 0) h.toast(`${words().notOpened(path, argv[0] ?? '')}: ${run.stderr.trim().split('\n')[0] || words().exitCode(run.exitCode)}`)
   } catch {
-    h.toast(`${path} açılamadı (${argv[0]})`)
+    h.toast(words().notOpened(path, argv[0] ?? ''))
   }
 }

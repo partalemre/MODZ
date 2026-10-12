@@ -1,5 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
+import { setLang } from '../hooks/lang'
 import { parseLint, parseTests } from '../hooks/parse'
 
 const ctx = { root: '/w', goModule: 'example.com/app' }
@@ -58,6 +59,7 @@ test('pytest: the FAILED summary, the line from its traceback section', () => {
 })
 
 test('go test: subtests, the package mapped to its folder, and build errors', () => {
+  setLang('tr')
   const out = [
     '--- FAIL: TestTable (0.00s)',
     '    --- FAIL: TestTable/expired (0.00s)',

@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { advance, etaMinutes, etaText, parseCommand, raise, ratioOf, spentOf, startBudget } from '../hooks/budget'
+import { setLang } from '../hooks/lang'
 
 const at = (percent: number, resetsAt = 'r1', usd: number | null = null) => ({ percent, resetsAt, usd })
 
@@ -31,6 +32,7 @@ test('a dollar budget counts session cost from when it was set', () => {
 })
 
 test('the pace says when the budget runs out; going on raises it a step past what is spent', () => {
+  setLang('tr')
   const budget = { ...advance(startBudget('usd', 5, at(0, 'r1', 0)), at(0, 'r1', 4)), setAt: 0 }
   expect(etaMinutes(budget, 600_000)).toBe(3)
   expect(etaMinutes(budget, 30_000)).toBeNull()
@@ -41,10 +43,12 @@ test('the pace says when the budget runs out; going on raises it a step past wha
   expect(raise(startBudget('percent', 10, at(0))).limit).toBe(12)
 })
 
-type World = { asked: string[]; answer: string; submitted: string[]; surfaces?: string[]; filled?: string[]; draft?: string }
+// `env` is what $.env.get answers: Turkish unless a test asks for the English default.
+type World = { asked: string[]; answer: string; submitted: string[]; surfaces?: string[]; filled?: string[]; draft?: string; env?: Record<string, string> }
 
 async function setup($: any, on: any, world: World) {
   const clock = mock.clock(on)
+  mock.env(on, world.env ?? { MODZ_LANG: 'tr' })
   on('session.start', () => ({ cwd: '/w' }))
   on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: [{ kind: 'five_hour', percentUsed: 40, resetsAt: 'r1' }], cost: { usd: 1 } } }))
   on('session.measure', (_: any, e: any) => ({ changed: e.changed }))
@@ -219,4 +223,49 @@ test('a full budget puts an Amber card above the question, which keeps its own o
   expect(JSON.stringify(await desktop.drawn())).toContain('"engine"')
   const terminal = await $.ui.mount(question('terminal'))
   expect(await terminal.find({ type: 'Text', text: 'Bütçe doldu · $0,60 / $0,50 (%120)' })).toBeDefined()
+})
+
+// Without MODZ_LANG every word is English, on both surfaces.
+const TURKISH = /[çğıöşüİ]/
+
+for (const surface of SURFACES) {
+  test(`English: the 80% row, the Stop line and the full card (${surface})`, async ($: any, on: any) => {
+    const world: World = { asked: [], answer: 'Stop', submitted: [], env: {} }
+    await setup($, on, world)
+    expect(await $.command.run({ command: 'budget', args: '10%' })).toMatchObject({ text: 'Session budget set: 10% of the 5-hour limit.' })
+    await measure($, 48.5)
+    const warn = await $.ui.mount(band(surface))
+    const warnText = JSON.stringify(await warn.drawn())
+    expect(warnText).toContain(surface === 'terminal' ? 'Budget 85% · 5h 8.5% / 10%' : 'Budget · 85% · 5h 8.5% / 10%')
+    expect(warnText).not.toMatch(TURKISH)
+    await warn.unmount()
+
+    await measure($, 51)
+    const stopped = await $.prompt.submit(typed('one more thing'))
+    expect(world.asked[0]).toBe('Session budget is full: 5h 11% / 10% (110%). Continue anyway?')
+    expect(stopped.drop).toBe('Session budget is full: 5h 11% / 10% (110%). Raise it with /budget, or remove it with /budget off.')
+    const line = JSON.stringify(await (await $.ui.mount(band(surface))).drawn())
+    expect(line).toContain('Stopped: budget is full · 5h 11% / 10%')
+    expect(line).not.toMatch(TURKISH)
+
+    const card = await $.ui.mount({ ...question(surface), props: { ...question(surface).props, questions: [{ header: 'Budget', question: 'Full?', options: [] }] } })
+    const cardText = JSON.stringify(await card.drawn())
+    expect(cardText).toContain(surface === 'terminal' ? 'Budget is full · 5h 11% / 10% (110%)' : 'Your message is on hold; continuing raises the budget by +2%.')
+    expect(cardText).not.toMatch(TURKISH)
+  })
+}
+
+test('English: Continue anyway raises the budget; the commands answer in English', async ($: any, on: any) => {
+  const world: World = { asked: [], answer: 'Continue anyway (+$1)', submitted: [], env: {} }
+  await setup($, on, world)
+  expect(await $.command.run({ command: 'budget', args: '' })).toMatchObject({ text: 'No session budget. Set one with /budget 20% or /budget $5' })
+  expect(await $.command.run({ command: 'budget', args: '$0.5' })).toMatchObject({ text: 'Session budget set: $0.5.' })
+  await $.session.measure({ context: {}, rateLimits: [], cost: { usd: 1.6 }, changed: ['cost'] })
+  await $.prompt.submit(typed('go on'))
+  expect(world.submitted).toEqual(['go on'])
+  expect(await $.command.run({ command: 'budget', args: 'status' })).toMatchObject({ text: 'Session budget: $0.60 / $1.60 (38%)' })
+  expect(await $.command.run({ command: 'budget', args: 'lots' })).toMatchObject({ text: 'Usage: /budget <share of the 5h limit, e.g. 20%> | <$amount, e.g. $5> | off' })
+  expect(await $.command.run({ command: 'session-budget', args: 'off' })).toMatchObject({ text: 'session-budget off' })
+  setLang('en')
+  expect(etaText(80)).toBe('full in ≈1h 20m at this pace')
 })

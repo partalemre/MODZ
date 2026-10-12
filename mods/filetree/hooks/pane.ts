@@ -8,6 +8,7 @@ import { openFile } from './platform'
 import { dropIndex } from './search'
 import { mem } from './session'
 import { forgetSizes } from './sizes'
+import { words } from './words'
 
 const DOUBLE_MS = 450
 const SYNC_MS = 2_000
@@ -75,7 +76,7 @@ export async function copyPath(h: Host, id: string, how: { isAbsolute: boolean; 
   const t = await h.tree()
   const text = !how.isAbsolute && id !== t.root && inside(t.root, id) ? id.slice(t.root.endsWith('/') ? t.root.length : t.root.length + 1) : id
   const done = await h.copy({ text, ...(how.surface ? { surface: how.surface as 'terminal' } : {}) })
-  h.toast(done.isCopied ? `Kopyalandı: ${text}` : 'Yol kopyalanamadı')
+  h.toast(done.isCopied ? words().copied(text) : words().notCopied)
 }
 
 export async function toggle(h: Host, n: FileNode): Promise<void> {

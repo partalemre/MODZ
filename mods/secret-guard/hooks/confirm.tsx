@@ -1,5 +1,8 @@
 // secret-guard's text card for the terminal: the desktop card's words (eyebrow, headline, one row per finding) as text.
 
+import { upper } from './lang'
+import { words } from './words'
+
 // The resolved element table of the surface that draws the dialog.
 export type Ui = Record<string, any>
 
@@ -88,14 +91,14 @@ function detailsOf(ui: Ui, model: CardModel, width: number) {
   return (
     <Box flexDirection="column" paddingLeft={INDENT}>
       {rows.map(row => rowOf(ui, { cells: row, model, widths }))}
-      {more > 0 && <Text dimColor>{`+${more} daha`}</Text>}
+      {more > 0 && <Text dimColor>{words().moreRows(more)}</Text>}
     </Box>
   )
 }
 
 export function confirmCard(ui: Ui, model: CardModel, width: number) {
   const { Box, Text } = ui
-  const head = `● ${model.eyebrow.toLocaleUpperCase('tr')}`
+  const head = `● ${upper(model.eyebrow)}`
   const subject = clipMiddle(model.subject.split('\n')[0] ?? '', Math.max(SUBJECT_MIN, width - head.length - SUBJECT_GLUE.length))
 
   return (

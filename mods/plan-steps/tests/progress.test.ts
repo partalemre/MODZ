@@ -6,8 +6,11 @@ import { statusText } from '../hooks/plan'
 import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, observe, progressOf, windowOf } from '../hooks/progress'
 import type { Tracks } from '../hooks/progress'
 import type { StepStatus } from '../types'
+import { setLang } from '../hooks/lang'
 
 const MIN = 60_000
+
+setLang('tr')
 
 function step(key: string, status: StepStatus, credit?: number): Step {
   const fallback = status === 'completed' ? 1 : status === 'in_progress' ? 0.5 : 0
@@ -112,4 +115,17 @@ test('the current step lists its files, newest first, and its agents', () => {
     summary: '2/5 madde · 1 dosya: x.ts · 1 ajan bitti',
     agents: ['Testleri yaz'],
   })
+})
+
+test('in English, durations, counts and the headline read short and plural', () => {
+  setLang('en')
+  try {
+    expect(formatDuration(12_000)).toBe('12s')
+    expect(formatDuration(95 * MIN)).toBe('1h 35m')
+    expect(headline(planOf(['completed', 'in_progress', 'pending']))).toBe('Plan · 1/3 steps · ≈50%')
+    expect(filesText(['src/x.ts'])).toBe('1 file: x.ts')
+    expect(statusText(planOf(['completed', 'completed']), {})).toBe('plan 2/2 · done')
+  } finally {
+    setLang('tr')
+  }
 })

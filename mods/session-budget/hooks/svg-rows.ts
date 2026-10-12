@@ -1,6 +1,7 @@
 import { escape, eyebrow, eyebrowWidth, measure, svgDoc } from './svg'
 import type { SvgDoc } from './svg'
 import type { Role } from './theme'
+import { words } from './words'
 
 // The desktop drawings, in the MODZ notice family: a band row (24 px tile, the outcome in text.hi,
 // its facts in text.mid, the meter last) and the full-budget card (38 px tile, eyebrow, headline, body).
@@ -81,16 +82,17 @@ export type WarnRow = { percent: string; spend: string; eta: string; ratio: numb
 
 export function warnRowSvg(row: WarnRow): SvgDoc {
   const parts: Part[] = [{ text: row.spend, isMono: true }, ...(row.eta === '' ? [] : [{ text: row.eta }])]
-  const alt = ['Bütçe', row.percent, row.spend, row.eta].filter(part => part !== '').join(' · ')
+  const alt = [words().budget, row.percent, row.spend, row.eta].filter(part => part !== '').join(' · ')
 
-  return rowDoc({ role: 'warn', icon: 'gauge', title: `Bütçe ${row.percent}`, parts, room: row.room, meter: row.ratio, alt })
+  return rowDoc({ role: 'warn', icon: 'gauge', title: words().rowTitle(row.percent), parts, room: row.room, meter: row.ratio, alt })
 }
 
 export function stoppedRowSvg(spend: string, room: number): SvgDoc {
-  const parts: Part[] = [...(spend === '' ? [] : [{ text: spend, isMono: true }]), { text: '/budget ile artır', isKept: true }]
-  const title = 'Durduruldu: bütçe doldu'
+  const hint = words().raiseHint
+  const parts: Part[] = [...(spend === '' ? [] : [{ text: spend, isMono: true }]), { text: hint, isKept: true }]
+  const title = words().stoppedTitle
 
-  return rowDoc({ role: 'danger', icon: 'x', title, parts, room, alt: `${title} · ${spend} · /budget ile artır` })
+  return rowDoc({ role: 'danger', icon: 'x', title, parts, room, alt: `${title} · ${spend} · ${hint}` })
 }
 
 export type FullCard = { spend: string; percent: string; step: string; width: number }
@@ -102,7 +104,6 @@ const HEADLINE = 17
 const BODY = 13
 const META = 11.5
 const META_GAP = 24
-const EYEBROW = 'Oturum bütçesi'
 
 function wrapWords(text: string, width: number): string[] {
   const lines: string[] = []
@@ -118,21 +119,20 @@ function wrapWords(text: string, width: number): string[] {
 export function fullCardSvg(card: FullCard): SvgDoc {
   const inner = card.width - 2 * CARD.padX
   const room = inner - CARD.textX
-  const meta = [`${card.spend} · ${card.percent}`, card.spend].find(text => eyebrowWidth(EYEBROW) + measure(text, META, true) + META_GAP <= room) ?? ''
-  // A no-break space keeps the step with its verb when the line wraps.
-  const said = `Mesajın bekletiliyor. Devam edersen bütçe ${card.step}\u00a0artar.`
-  const lines = wrapWords(said, room)
+  const says = words()
+  const meta = [`${card.spend} · ${card.percent}`, card.spend].find(text => eyebrowWidth(says.eyebrow) + measure(text, META, true) + META_GAP <= room) ?? ''
+  const lines = wrapWords(says.heldWrapped(card.step), room)
   const height = CARD.padTop + CARD_Y.body + (lines.length - 1) * CARD_Y.step + CARD.padBottom
   const x = (at: number): number => CARD.padX + at
   const y = (at: number): number => CARD.padTop + at
   const body = [
     `<rect class="f-card s-warn-l" x=".5" y=".5" width="${card.width - 1}" height="${height - 1}" rx="${CARD.radius}"/>`,
     tile({ x: x(0), y: y(4), size: CARD.tile, glyph: CARD.glyph, radius: CARD.tileRadius, role: 'warn', icon: 'gauge' }),
-    eyebrow(EYEBROW, { x: x(CARD.textX), y: y(CARD_Y.eyebrow), cls: 'f-warn' }),
+    eyebrow(says.eyebrow, { x: x(CARD.textX), y: y(CARD_Y.eyebrow), cls: 'f-warn' }),
     meta === '' ? '' : `<text class="f-lo num" x="${x(inner)}" y="${y(CARD_Y.eyebrow)}" font-size="${META}" text-anchor="end">${escape(meta)}</text>`,
-    `<text class="f-hi" x="${x(CARD.textX)}" y="${y(CARD_Y.headline)}" font-size="${HEADLINE}" font-weight="620">Bütçe doldu</text>`,
+    `<text class="f-hi" x="${x(CARD.textX)}" y="${y(CARD_Y.headline)}" font-size="${HEADLINE}" font-weight="620">${escape(says.full)}</text>`,
     ...lines.map((line, i) => `<text class="f-mid" x="${x(CARD.textX)}" y="${y(CARD_Y.body + i * CARD_Y.step)}" font-size="${BODY}">${escape(line)}</text>`),
   ].join('')
 
-  return svgDoc({ width: card.width, height, body, alt: `Oturum bütçesi doldu: ${card.spend} · ${card.percent}. Mesajın bekletiliyor; devam edersen bütçe ${card.step} artar.` })
+  return svgDoc({ width: card.width, height, body, alt: says.fullAlt(card.spend, card.percent, card.step) })
 }

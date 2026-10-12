@@ -4,6 +4,7 @@ import type { Activity, FileTree } from '../types'
 import { shortPath } from './listing'
 import type { Scene } from './scene'
 import { inside } from './tree'
+import { words } from './words'
 
 type Ui = ElementTable<'terminal' | 'desktop'>
 
@@ -32,7 +33,8 @@ export function footer(ui: Ui, s: Scene, chip: RenderChildren) {
       {s.t.selected ? (
         <Box flexShrink={1}>
           <Text dimColor wrap="truncate-start">
-            seçili: {relOrShort(s.t, s.t.selected)}
+            {words().selected}
+            {relOrShort(s.t, s.t.selected)}
           </Text>
         </Box>
       ) : null}

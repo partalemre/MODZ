@@ -1,4 +1,4 @@
-// The desktop pane's vector cards: "ŞU AN", "CLAUDE'UN DOKUNDUKLARI" and section eyebrows.
+// The desktop pane's vector cards: "NOW", "TOUCHED BY CLAUDE" and section eyebrows.
 
 import type { Look } from '../types'
 import type { BadgeKind } from './badges'
@@ -21,6 +21,7 @@ import {
   svgDoc,
 } from './svg'
 import type { Role } from './theme'
+import { words } from './words'
 
 export type Drawn = { source: string; width: number; height: number; alt: string }
 export type GitRow = { branch: string; upstream: string; ahead: number; behind: number; changed: number; add: number; del: number }
@@ -70,14 +71,15 @@ function titleLine(hero: Hero, { x, y, width }: Pt & { width: number }): string 
 }
 
 function gitLine(git: GitRow, y: number, w: number): string {
+  const said = words()
   const status: Part[] = git.changed
     ? [
         ...(git.add ? [{ text: `+${git.add} `, cls: 'f-ok', isNum: true }] : []),
         ...(git.del ? [{ text: `−${git.del} `, cls: 'f-danger', isNum: true }] : []),
         ...(git.add || git.del ? [{ text: '· ', cls: 'lo' }] : []),
-        { text: `${git.changed} değişiklik`, cls: 'f-warn', isBold: true },
+        { text: said.changes(git.changed), cls: 'f-warn', isBold: true },
       ]
-    : [{ text: 'temiz, değişiklik yok', cls: 'mid' }]
+    : [{ text: said.cleanNoChanges, cls: 'mid' }]
   const statusW = status.reduce((s, p) => s + measure(p.text, ROW, p.isBold), 0)
   const moves = `${git.ahead ? ` ↑${git.ahead}` : ''}${git.behind ? ` ↓${git.behind}` : ''}`
   const nameRoom = w - 2 * PAD - 22 - statusW - measure(moves, ROW, true) - GAP
@@ -152,17 +154,18 @@ function touchedRow(r: TouchedRow, y: number, w: number): string {
 }
 
 export function touchedCard(rows: TouchedRow[], look: Look, w: number): Drawn {
-  const title = `CLAUDE'UN DOKUNDUKLARI · ${rows.length} DOSYA`
+  const said = words()
+  const title = said.touchedTitle(rows.length)
   const shown = rows.slice(0, MAX_ROWS)
   const more = rows.length - shown.length
   const body = shown.length
     ? shown.map((r, i) => touchedRow(r, HEAD_H - 6 + i * ROW_H, w)).join('')
-    : `<text x="${PAD}" y="${HEAD_H + 13}" font-size="${SUB}" class="lo">Bu turda henüz dosyaya dokunmadı.</text>`
+    : `<text x="${PAD}" y="${HEAD_H + 13}" font-size="${SUB}" class="lo">${escape(said.noTouchThisTurn)}</text>`
   const listH = shown.length ? HEAD_H - 6 + shown.length * ROW_H : HEAD_H + 18
-  const moreLine = more > 0 ? `<text x="${PAD}" y="${listH + 14}" font-size="12" class="lo">+${more} dosya daha</text>` : ''
+  const moreLine = more > 0 ? `<text x="${PAD}" y="${listH + 14}" font-size="12" class="lo">${escape(said.moreFiles(more))}</text>` : ''
   const h = listH + (more > 0 ? 22 : 0) + 10
   const head = eyebrowText(title, { x: PAD, y: PAD + 10 }, 'lo')
-  const alt = `${title}: ${rows.map(r => `${r.name} ${r.pill.text}`).join(', ') || 'henüz yok'}`
+  const alt = `${title}: ${rows.map(r => `${r.name} ${r.pill.text}`).join(', ') || said.noneYet}`
   return { source: svgDoc({ width: w, height: h }, look, frame(w, h) + head + body + moreLine), width: w, height: h, alt }
 }
 

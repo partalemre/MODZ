@@ -1,6 +1,7 @@
 import type { Look } from './look'
-import { CONTEXT_LABEL, usageLine, usageSvg } from './svg-usage'
+import { contextLabel, usageLine, usageSvg } from './svg-usage'
 import type { Meter } from './svg-usage'
+import { say } from './words'
 
 // From this full, the band suggests compacting and makes it the main action.
 export const COMPACT_NUDGE = 70
@@ -23,7 +24,7 @@ function meterView(look: Look, meters: readonly Meter[]) {
       {usageLine(meters).map(meter => (
         <Text color={palette.muted}>
           <Text color={palette.user}>{meter.bar}</Text>
-          {` %${meter.percent} ${meter.label}`}
+          {` ${say().percent(meter.percent)} ${meter.label}`}
         </Text>
       ))}
     </Box>
@@ -37,7 +38,7 @@ export type Usage = { meters: readonly Meter[]; canCompact: boolean; compact: ()
 export function usageBand(look: Look, { meters, canCompact, compact }: Usage) {
   const { Box, Text, Button } = look.ui
   const { palette } = look.skin
-  const context = meters.find(meter => meter.label === CONTEXT_LABEL)?.percent ?? 0
+  const context = meters.find(meter => meter.label === contextLabel())?.percent ?? 0
   const isNudge = context >= COMPACT_NUDGE
 
   return (
@@ -45,13 +46,13 @@ export function usageBand(look: Look, { meters, canCompact, compact }: Usage) {
     <Box flexDirection="row" alignItems="center" columnGap={2} paddingRight={5}>
       {meterView(look, meters)}
       <Box flexGrow={1} />
-      {canCompact && isNudge ? <Text color={palette.warn}>{`Bağlam %${context} dolu`}</Text> : ''}
+      {canCompact && isNudge ? <Text color={palette.warn}>{say().contextFull(context)}</Text> : ''}
       {canCompact ? (
         // A digit hotkey: typed alone into an empty prompt it presses the band's button, which
-        // is the only way in where the terminal reports no clicks. `plain` shows it: `0: Sıkıştır`.
+        // is the only way in where the terminal reports no clicks. `plain` shows it: `0: Compact`.
         <Button
           key="compact"
-          label={isNudge ? 'Şimdi sıkıştır' : 'Sıkıştır'}
+          label={isNudge ? say().compactNow : say().compact}
           hotkey={COMPACT_HOTKEY}
           plain
           {...(isNudge ? { variant: 'primary' as const } : { dimColor: true })}

@@ -8,6 +8,8 @@ import { AUTO, themeFrom } from './tidemark'
 import { ring } from './ring'
 import type { RingIo } from './ring'
 import { pinned } from './pin'
+import { setLang } from './lang'
+import { words } from './words'
 import type { PingNotice } from '../types'
 
 const COMMAND = 'done-ping'
@@ -98,21 +100,21 @@ async function runCommand($: EngineInterface, args: string, config: PingConfig):
     const ping = donePing({ project: session.project, ...SAMPLE })
     await later($, ping, { config, isForced: true })
 
-    return { text: 'done-ping: deneme bildirimi gönderildi' }
+    return { text: words().testSent }
   }
   const seconds = word === '' ? null : parseSeconds(word)
-  if (word !== '' && seconds === null) return { text: 'Kullanım: /done-ping [saniye | 2m | test]' }
+  if (word !== '' && seconds === null) return { text: words().usage }
   if (seconds !== null) {
     await update($, thresholdAtom, () => seconds)
     await $.store.set(THRESHOLD_KEY, seconds)
 
-    return { text: `done-ping: ${seconds}sn üstü turlarda bildirir` }
+    return { text: words().thresholdSet(seconds) }
   }
   const isOn = !(await read($, enabledAtom))
   await update($, enabledAtom, () => isOn)
   await $.store.set(ENABLED_KEY, isOn)
 
-  return { text: `done-ping ${isOn ? 'açık' : 'kapalı'} · eşik ${await thresholdOf($, config)}sn` }
+  return { text: words().switched(isOn, await thresholdOf($, config)) }
 }
 
 async function hasLouderNotice($: EngineInterface): Promise<boolean> {
@@ -135,7 +137,7 @@ async function loadSettings($: EngineInterface, cwd: string): Promise<void> {
   if (typeof threshold === 'number') await update($, thresholdAtom, () => threshold)
   const pinned = await $.env.get('MODZ_THEME').catch(() => undefined)
   await update($, themeAtom, () => themeFrom(pinned))
-  await $.command.register({ name: COMMAND, description: 'Bildirimi aç/kapat; "/done-ping 90" eşiği ayarlar, "test" bir kez çalar' })
+  await $.command.register({ name: COMMAND, description: words().help })
 }
 
 async function turnEnded($: EngineInterface, e: { durationMs: number; isAborted: boolean; agentId?: string }, config: PingConfig): Promise<void> {
@@ -178,6 +180,7 @@ export const register: Register = (on, options) => {
   const config = configFrom(options)
 
   on('session.start', async ($, e, next) => {
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     await loadSettings($, e.cwd).catch(() => $.ui.log('done-ping: could not load settings', { to: 'debug' }))
 
     return next(e)

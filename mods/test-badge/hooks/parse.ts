@@ -3,6 +3,7 @@ import { testFailures } from './failures'
 import { lintFailures } from './lint'
 import { clean } from './text'
 import type { ParseContext } from './text'
+import { words } from './words'
 
 type Counts = { passed: number; failed: number }
 type Extract = (text: string) => Counts | null
@@ -111,33 +112,36 @@ export function parseLint(output: string, exitCode: number, ctx: ParseContext): 
 }
 
 export function ago(ms: number): string {
-  if (ms < MINUTE) return `${Math.max(0, Math.round(ms / SECOND))} sn önce`
-  if (ms < HOUR) return `${Math.round(ms / MINUTE)} dk önce`
+  const { ago: says } = words()
+  if (ms < MINUTE) return says.s(Math.max(0, Math.round(ms / SECOND)))
+  if (ms < HOUR) return says.m(Math.round(ms / MINUTE))
 
-  return `${Math.round(ms / HOUR)} sa önce`
+  return says.h(Math.round(ms / HOUR))
 }
 
 function testsText(outcome: CheckOutcome): string {
-  if (outcome.status === 'timeout') return 'testler zaman aşımı'
-  if (outcome.status === 'error') return 'testler başlamadı'
-  if (outcome.total !== null) return `testler ${outcome.passed}/${outcome.total}`
+  const says = words()
+  if (outcome.status === 'timeout') return says.testsTimeout
+  if (outcome.status === 'error') return says.testsNotStarted
+  if (outcome.total !== null) return says.testsCount(outcome.passed, outcome.total)
 
-  return outcome.status === 'pass' ? 'testler geçti' : 'testler kaldı'
+  return outcome.status === 'pass' ? says.testsPassed : says.testsFailed
 }
 
 function lintText(outcome: CheckOutcome): string {
-  if (outcome.status === 'timeout') return 'lint zaman aşımı'
-  if (outcome.status === 'error') return 'lint başlamadı'
-  if (outcome.status === 'pass') return 'lint temiz'
+  const says = words()
+  if (outcome.status === 'timeout') return says.lintTimeout
+  if (outcome.status === 'error') return says.lintNotStarted
+  if (outcome.status === 'pass') return says.lintClean
 
-  return outcome.errors !== null && outcome.errors > 0 ? `lint ${outcome.errors} hata` : 'lint kaldı'
+  return outcome.errors !== null && outcome.errors > 0 ? says.lintErrors(outcome.errors) : says.lintFailed
 }
 
 export function badgeText(badge: TestBadge, now: number): string | undefined {
   const parts: string[] = []
   if (badge.tests !== null) parts.push(testsText(badge.tests))
   if (badge.lint !== null) parts.push(lintText(badge.lint))
-  if (badge.isRunning) return parts.length === 0 ? 'testler çalışıyor…' : `${parts.join(' · ')} · çalışıyor…`
+  if (badge.isRunning) return parts.length === 0 ? words().testsRunning : `${parts.join(' · ')} · ${words().runningTail}`
   if (parts.length === 0 || badge.finishedAt === null) return undefined
 
   return `${parts.join(' · ')} · ${ago(now - badge.finishedAt)}`

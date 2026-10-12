@@ -8,7 +8,7 @@ export const HUB_PANE = 'replay'
 
 export type HubShown = { detail: string; tone: HubTone }
 
-// "4 düzenleme · 4 dosya" for the last turn with edits; nothing to say before one.
+// "4 edits · 4 files" for the last turn with edits; nothing to say before one.
 export function hubOf(replay: Replay | null): HubShown {
   if (replay === null || replay.steps.length === 0) return { detail: '', tone: 'idle' }
 

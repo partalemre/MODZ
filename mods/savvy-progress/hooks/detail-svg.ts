@@ -1,6 +1,7 @@
 import type { TouchedFile } from '../types'
 import { fitMono, fitStart, fitText, monoWidth, shortPath, textWidth, xml } from './format'
 import type { Kind } from './history'
+import { upper } from './lang'
 import type { NowView } from './now'
 import { extOf } from './touched'
 import { FONT, MONO, paneSvg } from './theme'
@@ -69,7 +70,7 @@ export const nowSvg = (W: number, now: NowView): string => {
   const boxY = (NOW.h - NOW.box) / 2
   const x = NOW.pad + NOW.box + NOW.pad
   const spanW = now.span ? textWidth(now.span, NOW.span) + NOW.pad : 0
-  const verb = fitText(now.verb.toLocaleUpperCase('tr'), NOW.eyebrow + NOW.tracking, W - x - NOW.pad - spanW)
+  const verb = fitText(upper(now.verb), NOW.eyebrow + NOW.tracking, W - x - NOW.pad - spanW)
   const iconOffset = (NOW.box - ICON_SIZE) / 2
   const body = [
     `<rect class="tile ${strokeOf(look.role)}" x=".5" y=".5" width="${W - 1}" height="${NOW.h - 1}" rx="${NOW.rx}" stroke-width="1"/>`,

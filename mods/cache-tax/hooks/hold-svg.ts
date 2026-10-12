@@ -6,6 +6,7 @@ import { fmtUsd } from './fmt'
 import { doc, eyebrow, fit, measure, text, tile } from './svg'
 import type { Font } from './svg'
 import type { Palette } from './theme'
+import { bandWords } from './ui-words'
 
 export type HoldView = {
   held: string
@@ -24,8 +25,7 @@ export function timesCheaper(view: HoldView): number | null {
 
 /** What the warm side's caption says, longest first: the ratio makes the comparison read at a glance. */
 export function warmCaptions(view: HoldView): string[] {
-  const times = timesCheaper(view)
-  return times === null ? ['olurdu'] : [`sıcakken olurdu · ${times} kat ucuz`, `${times} kat ucuz`]
+  return bandWords().warmCaptions(timesCheaper(view))
 }
 
 export const HEADER_H = 64
@@ -44,9 +44,9 @@ export function headerSvg(width: number, view: HoldView, p: Palette): string {
   const body = [
     tile({ x: 0, y: TILE_Y, size: TILE }, kiln.tint),
     cube({ x: (TILE - CUBE) / 2, y: TILE_Y + (TILE - CUBE) / 2, size: CUBE }, { lid: kiln.fg, outline: p.hi }),
-    eyebrow({ x: TEXT_X, y: HY.eyebrow, fill: kiln.fg }, 'Önbellek vergisi'),
-    text({ ...HEADLINE, x: TEXT_X, y: HY.headline, fill: p.hi, text: fit('Mesajın bekletiliyor', room, HEADLINE) }),
-    text({ ...BODY, x: TEXT_X, y: HY.body, fill: p.mid, text: fit(`Önbellek ${view.coldFor} önce soğudu.`, room, BODY) }),
+    eyebrow({ x: TEXT_X, y: HY.eyebrow, fill: kiln.fg }, bandWords().eyebrow),
+    text({ ...HEADLINE, x: TEXT_X, y: HY.headline, fill: p.hi, text: fit(bandWords().headline, room, HEADLINE) }),
+    text({ ...BODY, x: TEXT_X, y: HY.body, fill: p.mid, text: fit(bandWords().wentCold(view.coldFor), room, BODY) }),
   ]
   return doc({ width, height: HEADER_H }, body.join(''))
 }
@@ -85,12 +85,12 @@ function column(c: Column, p: Palette): string {
 /** The cold caption: the token count as a highlight span, then the rate. */
 function coldCaption({ x, w }: { x: number; w: number }, view: HoldView, p: Palette): string {
   const kiln = p.role.edit
-  const count = `~${view.tokens} token`
+  const count = bandWords().tokens(view.tokens)
   const spanW = measure(count, CAPTION) * SPAN_SLACK + 2 * SPAN_PAD
   const restX = x + spanW - SPAN_PAD + SPAN_GAP
   // The rate goes first, then the verb, when the column is narrow: a caption is whole or not drawn.
   const room = Math.max(0, PAD + w - restX)
-  const rest = [`yeniden yazılır · ${view.rate}`, 'yeniden yazılır'].find(said => measure(said, CAPTION) <= room) ?? ''
+  const rest = bandWords().rewritten(view.rate).find(said => measure(said, CAPTION) <= room) ?? ''
   return [
     `<rect x="${x - SPAN_PAD}" y="${CY.span}" width="${spanW}" height="${SPAN_H}" rx="${SPAN_RADIUS}" fill="${kiln.tint}"/>`,
     text({ ...CAPTION, x, y: CY.caption, fill: kiln.fg, text: count }),
@@ -104,9 +104,9 @@ export function compareSvg(width: number, view: HoldView, p: Palette): string {
   const share = view.coldUsd && view.warmUsd !== null ? Math.min(1, view.warmUsd / view.coldUsd) : null
   const body = [
     `<rect width="${width}" height="${COMPARE_H}" rx="${RADIUS}" fill="${p.inset}"/>`,
-    column({ x: PAD, w, label: 'Şimdi gönder', usd: view.coldUsd, share: view.coldUsd === null ? null : 1, fg: p.role.edit.fg }, p),
+    column({ x: PAD, w, label: bandWords().sendNow, usd: view.coldUsd, share: view.coldUsd === null ? null : 1, fg: p.role.edit.fg }, p),
     // One accent per card: the price being asked is Kiln, the warm turn it is weighed against is neutral.
-    column({ x: right, w, label: 'Sıcak bir tur', usd: view.warmUsd, share, fg: p.hi }, p),
+    column({ x: right, w, label: bandWords().warmTurn, usd: view.warmUsd, share, fg: p.hi }, p),
     coldCaption({ x: PAD + SPAN_PAD, w }, view, p),
     text({ ...CAPTION, x: right, y: CY.caption, fill: p.lo, text: warmCaptions(view).find(said => measure(said, CAPTION) <= w) ?? '' }),
   ]

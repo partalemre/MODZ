@@ -1,5 +1,6 @@
 import type { SessionMessage } from 'claude-code'
 
+import { words } from './words'
 import type { ReplayStep } from '../types'
 
 export const EXPLAIN_MODEL = 'haiku'
@@ -60,9 +61,11 @@ export function buildPrompt(steps: ReplayStep[], indexes: number[]): { prompt: s
 
     return `### ${n + 1}: ${step.file}\n${diffText(step)}`
   })
+  // The lines show in the pane, so the model answers in the pane's language.
+  const w = words()
   const prompt = [
-    'Her dosya değişikliğinin ne işe yaradığını Türkçe, en fazla 10 kelimelik tek bir cümleyle yaz.',
-    'Yalnızca "<numara>: <açıklama>" satırları yaz, başka hiçbir şey yazma.',
+    w.explainAsk,
+    w.explainForm,
     '',
     ...blocks,
   ].join('\n')

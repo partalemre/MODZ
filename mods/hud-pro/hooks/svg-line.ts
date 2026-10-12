@@ -4,6 +4,7 @@ import type { GaugeView, Resets } from './model'
 import { escape, measure, meter, svgDoc } from './svg'
 import type { SvgDoc } from './svg'
 import { fillOf } from './theme'
+import { words } from './words'
 
 // The desktop's HUD: one Svg line of quiet pills, one per limit and one for the session's ≈cost.
 // A pill reads label, a thin meter with its pace tick, the value, then "↻" and the reset. Drawn as
@@ -81,7 +82,7 @@ function gaugePill(gauge: GaugeView, layout: Layout): Pill {
 
 function costPill(usd: number): Pill {
   return {
-    pieces: [text({ value: costText(usd), cls: 'f-hi tab', size: VALUE_SIZE, weight: 650 }), text({ value: 'oturum', cls: 'f-lo', size: LABEL_SIZE })],
+    pieces: [text({ value: costText(usd), cls: 'f-hi tab', size: VALUE_SIZE, weight: 650 }), text({ value: words().session, cls: 'f-lo', size: LABEL_SIZE })],
     frame: 's-line',
     fill: 'f-card',
   }
@@ -123,9 +124,9 @@ function pillsFor(spec: LineSpec, layout: Layout): Pill[] {
 }
 
 function altOf(spec: LineSpec): string {
-  const gauges = spec.gauges.map(gauge => [`${gauge.long} ${valueText(gauge.percent)}`, ...(gauge.reset === '' ? [] : [`${gauge.reset} sonra sıfırlanır`])].join(', '))
+  const gauges = spec.gauges.map(gauge => [`${gauge.long} ${valueText(gauge.percent)}`, ...(gauge.reset === '' ? [] : [words().resetsAfter(gauge.reset)])].join(', '))
 
-  return [...gauges, ...(spec.costUsd === null ? [] : [`oturum ${costText(spec.costUsd)}`])].join(' · ')
+  return [...gauges, ...(spec.costUsd === null ? [] : [words().sessionAt(costText(spec.costUsd))])].join(' · ')
 }
 
 export function lineSvg(spec: LineSpec): SvgDoc | null {

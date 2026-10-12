@@ -1,6 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { ICON_NAMES } from '../hooks/kit/icons'
+import { setLang } from '../hooks/kit/lang'
 import { arc, fitText, meter, meterGeometry, meterTone, percentText, pill, textWidth, wrapText } from '../hooks/kit/svg'
 import { badgeColors, fileType, palette, resolveLight, ROLES, svgStyle } from '../hooks/kit/tokens'
 import type { FileKind } from '../hooks/kit/tokens'
@@ -70,7 +71,7 @@ test('fitting and wrapping stay inside the width', () => {
   expect(measure(fitText(long, 120, measure))).toBeLessThanOrEqual(120)
 })
 
-test('a meter never draws past 100 % and says "dolu" when full', () => {
+test('a meter never draws past 100 % and says "full" when full ("dolu" in Turkish)', () => {
   for (const value of [0, 0.3, 1, 1.5, 40, Number.POSITIVE_INFINITY, -2]) {
     const g = meterGeometry({ value, width: 200 })
     expect(g.fill).toBeLessThanOrEqual(g.track)
@@ -78,9 +79,14 @@ test('a meter never draws past 100 % and says "dolu" when full', () => {
     const widths = [...meter({ value, width: 200 }).source.matchAll(/width="([\d.]+)"/g)].map(m => Number(m[1]))
     for (const width of widths) expect(width).toBeLessThanOrEqual(200)
   }
+  expect(percentText(1.4)).toBe('full')
+  expect(percentText(0.42)).toBe('42%')
+  expect(arc({ value: 3 }).alt).toBe('full')
+  setLang('tr')
   expect(percentText(1.4)).toBe('dolu')
   expect(percentText(0.42)).toBe('%42')
   expect(arc({ value: 3 }).alt).toBe('dolu')
+  setLang('en')
 })
 
 test('meter tone: neutral on pace, Amber >10 points ahead, Flare from 95 %', () => {

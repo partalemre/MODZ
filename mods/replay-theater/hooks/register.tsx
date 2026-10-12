@@ -12,6 +12,7 @@ import { ageText } from './age'
 import { shortLine } from './explain'
 import { explainReplay, why } from './explainer'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
+import { withHome } from './home'
 import { setLang } from './lang'
 import { offerCard } from './offer'
 import { replayView } from './pane'
@@ -41,6 +42,7 @@ const LIST_ROWS_MAX = 8
 const DIFF_ROWS_MAX = 13
 const EMPTY_ROWS = 8
 const HUB = { plugin: 'replay-theater', key: 'hub' } as const
+const HOME = { plugin: 'replay-theater', key: 'home' } as const
 
 type On = Parameters<Register>[0]
 type Call = EditCall & Record<string, unknown>
@@ -262,9 +264,12 @@ function hookPane(on: On): void {
     const model = { steps: replay?.steps ?? [], index: await read($, indexAtom), explain: replay?.explain ?? 'none', theme: view.theme, ...context }
     const site = { surface: e.surface, columns: e.props.bodyColumns, inBand: false, maxRows: e.props.scroll?.bodyRows ?? PANE_ROWS_MAX, on: handlers($) }
 
+    const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
+    // Written when pressed, never while drawing; a failure only goes to the debug log.
+    const goHome = () => void $.clock.now().then(at => $.state.set(HOME, { at })).catch(() => $.ui.log('replay-theater: could not go back to MODZ', { to: 'debug' }))
     const ui = $.ui.resolve(e)
 
-    return pinned(e, replayView(ui, model, site))
+    return pinned(e, withHome(ui, replayView(ui, model, site), isHubOn ? goHome : null))
   })
 
   // The person closed the pane (Escape, the close mark): keep the view in step.

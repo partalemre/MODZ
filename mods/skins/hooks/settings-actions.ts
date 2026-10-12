@@ -12,6 +12,7 @@ export type SettingsPorts = {
   edit: (slot: SkinSlot) => void
   toast: (text: string) => void
   gallery: () => void
+  home: () => void
 }
 
 export function settingsActions({ prefs, custom, editing }: SettingsState, ports: SettingsPorts): SettingsActions {

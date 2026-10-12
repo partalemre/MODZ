@@ -1,5 +1,6 @@
-// The MODZ hub pane: the head card, then each section's rows with an "Aç" button that asks the
-// owning mod to open its pane. The catalog ("Modlar") is a pane of its own (register.tsx).
+// The MODZ hub pane: the head card, then each section's rows with an "Open" button that asks the
+// owning mod to open its pane. "Customize" turns the buttons into Up and Hide, and lists the hidden rows
+// with Show. The catalog ("Mods") is a pane of its own (register.tsx).
 import type { Drawing } from './draw'
 import type { Focus, HubRow, Section } from './hub'
 import { ROLE_OF_TONE, SECTIONS } from './hub'
@@ -12,46 +13,102 @@ import { hubWords } from './words'
 // The resolved element table of the surface that draws the pane.
 type Ui = Record<string, any>
 
+// What a press asks of the hub; register.tsx writes each one where it is kept.
+export type HubActions = {
+  onOpen: (pane: string) => void
+  onEdit: (isEditing: boolean) => void
+  onMove: (opts: { pane: string; panes: string[] }) => void
+  onHide: (opts: { pane: string; isHidden: boolean }) => void
+  onReset: () => void
+}
+
 export type HubView = {
   rows: HubRow[]
+  hidden: HubRow[]
   focus: Focus | null
   meta: string
   surface: string
   columns: number
   theme: Theme
-  onOpen: (pane: string) => void
+  isEditing: boolean
+  actions: HubActions
 }
 
 const PX_PER_COLUMN = 8
 const WIDTH_MIN = 280
 const WIDTH_MAX = 640
-// Room the native "Aç" button takes beside a row's drawing.
+// Room the native buttons take beside a row's drawing: one "Open", or "Up" and "Hide" while customizing.
 const BUTTON_ROOM = 64
+const EDIT_BUTTON_ROOM = 136
 
 export const hubWidth = (columns: number): number => Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, columns * PX_PER_COLUMN - PX_PER_COLUMN))
 
 const inSection = (rows: HubRow[], section: Section) => rows.filter(row => row.entry.section === section)
 
-// The one primary button: straight to whatever leads the head ("Open Tests").
+// The one primary button: straight to whatever leads the head ("Open Tests"). Not while customizing.
 function focusButton(ui: Ui, view: HubView) {
   const { Box, Button } = ui
   const focus = view.focus
-  if (focus === null) return null
+  if (focus === null || view.isEditing) return null
   const pane = focus.row.entry.pane
 
   return (
     <Box key="focus" flexDirection="row">
-      <Button key="open-focus" label={hubWords().openPane(focus.row.entry.title)} variant="primary" onPress={() => view.onOpen(pane)} />
+      <Button key="open-focus" label={hubWords().openPane(focus.row.entry.title)} variant="primary" onPress={() => view.actions.onOpen(pane)} />
     </Box>
   )
 }
 
-// The terminal shows each row's digit; the desktop's buttons stay one width, so the column lines up.
-function openButton(ui: Ui, view: HubView, row: HubRow) {
+// A row's buttons: "Open" (the terminal shows its digit), or while customizing "Up" (not on a section's
+// first row) and "Hide"; a hidden row offers "Show".
+function rowButtons(ui: Ui, view: HubView, opts: { row: HubRow; panes: string[] | null }) {
   const { Button } = ui
-  const hotkey = view.surface === 'desktop' || row.hotkey === null ? {} : { hotkey: row.hotkey }
+  const { row, panes } = opts
+  const pane = row.entry.pane
+  const words = hubWords()
+  if (panes === null) return [<Button key={`show-${pane}`} label={words.show} variant="secondary" onPress={() => view.actions.onHide({ pane, isHidden: false })} />]
+  if (!view.isEditing) {
+    const hotkey = view.surface === 'desktop' || row.hotkey === null ? {} : { hotkey: row.hotkey }
 
-  return <Button key={`open-${row.entry.pane}`} label={hubWords().open} variant="secondary" {...hotkey} onPress={() => view.onOpen(row.entry.pane)} />
+    return [<Button key={`open-${pane}`} label={words.open} variant="secondary" {...hotkey} onPress={() => view.actions.onOpen(pane)} />]
+  }
+  const up = panes.indexOf(pane) > 0 ? [<Button key={`up-${pane}`} label={words.up} variant="secondary" onPress={() => view.actions.onMove({ pane, panes })} />] : []
+
+  return [...up, <Button key={`hide-${pane}`} label={words.hide} variant="secondary" onPress={() => view.actions.onHide({ pane, isHidden: true })} />]
+}
+
+// "Customize" under the rows; while customizing, "Done" and "Reset" with a line saying what the buttons do.
+function editBar(ui: Ui, view: HubView) {
+  const { Box, Button, Text } = ui
+  const words = hubWords()
+  if (!view.isEditing) {
+    return (
+      <Box key="edit" flexDirection="row">
+        <Button key="customize" label={words.customize} variant="secondary" onPress={() => view.actions.onEdit(true)} />
+      </Box>
+    )
+  }
+
+  return (
+    <Box key="edit" flexDirection="column" rowGap={1}>
+      <Text key="edit-line" dimColor>{words.editLine}</Text>
+      <Box key="edit-buttons" flexDirection="row" columnGap={1}>
+        <Button key="customize-done" label={words.done} variant="primary" onPress={() => view.actions.onEdit(false)} />
+        <Button key="customize-reset" label={words.reset} variant="secondary" onPress={() => view.actions.onReset()} />
+      </Box>
+    </Box>
+  )
+}
+
+type Group = { key: string; label: string; rows: HubRow[]; isHiddenGroup: boolean }
+
+// The sections that have rows, and while customizing the hidden rows as one more group at the end.
+function groupsOf(view: HubView): Group[] {
+  const words = hubWords()
+  const sections = SECTIONS.map(section => ({ key: section, label: words.sections[section], rows: inSection(view.rows, section), isHiddenGroup: false }))
+  const hidden = view.isEditing && view.hidden.length > 0 ? [{ key: 'hidden', label: words.hidden, rows: view.hidden, isHiddenGroup: true }] : []
+
+  return [...sections, ...hidden].filter(group => group.rows.length > 0)
 }
 
 function desktopTree(ui: Ui, view: HubView) {
@@ -60,36 +117,37 @@ function desktopTree(ui: Ui, view: HubView) {
   const draw = (drawing: Drawing, key: string, drawnWidth: number) => (
     <Svg key={key} source={drawing.source} alt={drawing.alt} width={drawnWidth} height={drawing.height} />
   )
-  const rowWidth = width - BUTTON_ROOM
+  const rowWidth = width - (view.isEditing ? EDIT_BUTTON_ROOM : BUTTON_ROOM)
 
   return (
     <Box flexDirection="column" rowGap={1}>
       {draw(hubHeadSvg({ width, theme: view.theme, focus: view.focus, meta: view.meta }), 'head', width)}
       {focusButton(ui, view)}
-      {SECTIONS.map(section => {
-        const rows = inSection(view.rows, section)
-        if (rows.length === 0) return null
+      {groupsOf(view).map(group => {
+        const panes = group.isHiddenGroup ? null : group.rows.map(row => row.entry.pane)
 
         return (
-          <Box key={`section-${section}`} flexDirection="column">
-            {draw(sectionSvg({ width, theme: view.theme, section }), `eyebrow-${section}`, width)}
-            {rows.map(row => (
+          <Box key={`section-${group.key}`} flexDirection="column">
+            {draw(sectionSvg({ width, theme: view.theme, label: group.label }), `eyebrow-${group.key}`, width)}
+            {group.rows.map(row => (
               <Box key={`row-${row.entry.pane}`} flexDirection="row" alignItems="center" columnGap={1}>
                 {draw(hubRowSvg({ width: rowWidth, theme: view.theme, row }), `svg-${row.entry.pane}`, rowWidth)}
-                {openButton(ui, view, row)}
+                {rowButtons(ui, view, { row, panes })}
               </Box>
             ))}
           </Box>
         )
       })}
+      {editBar(ui, view)}
     </Box>
   )
 }
 
 const TONE_COLOR: Record<string, string> = { run: 'permission', ok: 'success', warn: 'warning', danger: 'error' }
 
-function terminalRow(ui: Ui, view: HubView, row: HubRow) {
+function terminalRow(ui: Ui, view: HubView, opts: { row: HubRow; panes: string[] | null }) {
   const { Box, Text } = ui
+  const { row } = opts
   const card = row.card
   const role = card === null ? null : ROLE_OF_TONE[card.tone]
   const hasDetail = card !== null && card.detail !== ''
@@ -98,9 +156,10 @@ function terminalRow(ui: Ui, view: HubView, row: HubRow) {
     <Box key={`row-${row.entry.pane}`} flexDirection="row" columnGap={1}>
       <Text color="claude">{GLYPH[row.entry.icon]}</Text>
       <Text bold>{row.entry.title}</Text>
+      {row.entry.badge === null ? null : <Text color="permission">{row.entry.badge}</Text>}
       {hasDetail ? <Text color={role === null ? undefined : TONE_COLOR[role]} wrap="truncate">{card.detail}</Text> : <Text dimColor wrap="truncate">{row.entry.hint}</Text>}
       <Box flexGrow={1} />
-      {openButton(ui, view, row)}
+      {rowButtons(ui, view, opts)}
     </Box>
   )
 }
@@ -120,16 +179,17 @@ function terminalTree(ui: Ui, view: HubView) {
         <Text dimColor>{view.meta}</Text>
       </Box>
       {focusButton(ui, view)}
-      {SECTIONS.map(section => {
-        const rows = inSection(view.rows, section)
+      {groupsOf(view).map(group => {
+        const panes = group.isHiddenGroup ? null : group.rows.map(row => row.entry.pane)
 
-        return rows.length === 0 ? null : (
-          <Box key={`section-${section}`} flexDirection="column">
-            <Text bold dimColor>{upper(words.sections[section])}</Text>
-            {rows.map(row => terminalRow(ui, view, row))}
+        return (
+          <Box key={`section-${group.key}`} flexDirection="column">
+            <Text bold dimColor>{upper(group.label)}</Text>
+            {group.rows.map(row => terminalRow(ui, view, { row, panes }))}
           </Box>
         )
       })}
+      {editBar(ui, view)}
     </Box>
   )
 }

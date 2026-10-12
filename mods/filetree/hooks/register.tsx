@@ -1,6 +1,7 @@
 import { type EngineInterface, type On, type Register, update } from 'claude-code'
 
 import { drawDesktop } from './desktop'
+import { HomeButton } from './home'
 import { gitDir } from './gitread'
 import type { Host, IoHost, StateHost, UiHost } from './host'
 import { HUB_PANE, isOpenFor } from './hub'
@@ -32,6 +33,8 @@ const ACTIVITY_KEEP = 6
 const GIT_SETTLE_MS = 300
 const MIN_WIDTH = 24
 const DEFAULT_ROWS = 40
+// The "← MODZ" button's row (the desktop's column gap adds one more).
+const HOME_ROWS = 2
 
 function stateOf($: EngineInterface): StateHost {
   return {
@@ -58,6 +61,14 @@ function stateOf($: EngineInterface): StateHost {
     theme: async () => (await $.state.get(THEME)).value,
     setTheme: async theme => {
       await $.state.set(THEME, theme)
+    },
+    isHubOn: async () => (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true,
+    goHome: async () => {
+      try {
+        await $.state.set({ plugin: 'filetree', key: 'home' }, { at: await $.clock.now() })
+      } catch (error) {
+        $.ui.log(`filetree: home failed (${String(error)})`, { to: 'debug' })
+      }
     },
   }
 }
@@ -222,13 +233,16 @@ function onRender(on: On): void {
     }
     const host = hostOf($)
     const s = await sceneOf(host, e.surface === 'desktop')
-    const room = { width: Math.max(MIN_WIDTH, e.props.bodyColumns), bodyRows: e.props.scroll?.bodyRows ?? DEFAULT_ROWS }
+    const isHubOn = await host.isHubOn()
+    const room = { width: Math.max(MIN_WIDTH, e.props.bodyColumns), bodyRows: (e.props.scroll?.bodyRows ?? DEFAULT_ROWS) - (isHubOn ? HOME_ROWS : 0) }
     if (e.surface === 'desktop') {
       const desk = $.ui.resolve(e)
-      return pinned(e, drawDesktop(host, desk, { s, room }))
+      const home = isHubOn ? HomeButton(desk, () => void host.goHome()) : null
+      return pinned(e, drawDesktop(host, desk, { s, room, home }))
     }
     const ui = $.ui.resolve(e)
-    return pinned(e, drawTerminal(host, ui, { s, room }))
+    const home = isHubOn ? HomeButton(ui, () => void host.goHome()) : null
+    return pinned(e, drawTerminal(host, ui, { s, room, home }))
   })
 }
 

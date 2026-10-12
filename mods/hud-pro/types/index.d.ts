@@ -42,6 +42,9 @@ declare module 'claude-code' {
       history: HudSample[]
       isCompacting: boolean
       hub: HubCard
+      home: { at: number }
     }
+    // Written by the MODZ hub, which owns it: true while the hub runs, so this pane draws its way back.
+    modz: { isOn: boolean }
   }
 }

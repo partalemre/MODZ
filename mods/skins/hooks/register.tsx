@@ -128,13 +128,22 @@ function viewOf($: EngineInterface, e: Frozen<RenderInput>, live: Live): View {
   }
 }
 
+// The way back to the MODZ hub: this mod's own `home` value, which the hub hears. A press never throws.
+function goHome($: EngineInterface): void {
+  void $.clock.now()
+    .then(at => $.state.set({ plugin: 'skins', key: 'home' }, { at }))
+    .catch(() => $.ui.log('skins: could not go back to the hub', { to: 'debug' }))
+}
+
 // The settings pane's port (render-panes.tsx).
 function paneOf($: EngineInterface, e: Frozen<RenderInput>): SettingsHost {
   return {
     ...storeOf($),
     ui: () => $.ui.resolve(e),
     editing: () => read($, editingAtom),
+    isHubOn: async () => (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true,
     ports: {
+      home: () => goHome($),
       commit: state => void commit(storeOf($), state),
       edit: slot => void update($, editingAtom, () => slot),
       toast: text => $.ui.toast(text),
@@ -263,14 +272,8 @@ function onCommands(on: On, live: Live): void {
 }
 
 function onRenders(on: On, live: Live): void {
-  on('ui.render', { component: 'Pane', requestId: SETTINGS }, async ($, e) => {
-
-    return settingsView(paneOf($, e), e)
-  })
-  on('ui.render', { component: 'Pane', requestId: GALLERY }, async ($, e) => {
-
-    return galleryView({ view: viewOf($, e, live), e })
-  })
+  on('ui.render', { component: 'Pane', requestId: SETTINGS }, ($, e) => settingsView(paneOf($, e), e))
+  on('ui.render', { component: 'Pane', requestId: GALLERY }, ($, e) => galleryView({ view: viewOf($, e, live), e }))
   on('ui.render', { component: 'ToolUse' }, ($, e, next) => toolUseView({ view: viewOf($, e, live), e, pass: next }))
   on('ui.render', { component: 'ToolGroup' }, ($, e, next) => toolGroupView({ view: viewOf($, e, live), e, pass: next }))
   on('ui.render', { component: 'ToolResult' }, ($, e, next) => toolResultView({ view: viewOf($, e, live), e, pass: next }))

@@ -60,9 +60,9 @@ function cardsOf(s: Scene, w: number) {
   return { hero, touched, section }
 }
 
-export function drawDesktop(host: Host, ui: Ui, frame: { s: Scene; room: Room }) {
+export function drawDesktop(host: Host, ui: Ui, frame: { s: Scene; room: Room; home: JSX.Element | null }) {
   const { Box, Client, Svg } = ui
-  const { s, room } = frame
+  const { s, room, home } = frame
   const { t, look } = s
   const pal = paletteOf(look.isLight)
   const { hero, touched, section } = cardsOf(s, Math.max(MIN_SVG_W, Math.min(MAX_SVG_W, room.width * PX_PER_COL)))
@@ -80,6 +80,7 @@ export function drawDesktop(host: Host, ui: Ui, frame: { s: Scene; room: Room })
   const rows = { rows: win.specs, active: t.cursor, activeBg: pal.line, hoverBg: pal.inset, tones: shimmerTones(pal, look.isLight), pointer: mem.pointer, ...(win.bar ? { bar: win.bar } : {}) } satisfies RowsProps
   return (
     <Box flexDirection="column" gap={1} minHeight={Math.max(1, room.bodyRows)}>
+      {home}
       {svg(hero)}
       {drawToolbar(ui, { t, act: actionsOf(host, t), search: find })}
       {touched ? svg(touched) : null}

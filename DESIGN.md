@@ -131,9 +131,21 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
 - **Özet kartı:** her mod kendi `{ plugin: '<mod>', key: 'hub' }` değerine `HubCard` yazar; ana panel
   `on('state.set', { key: 'hub' }, …)` ile hepsini toplar. Yalnızca gösterilen metin değişince yazılır.
 
+- **Eve dönüş:** hub çalıştıkça `{ plugin: 'modz', key: 'isOn' }` `true`'dur. Hub'ın açtığı her panel bunu çizerken
+  okur ve açıksa ağacın başına `HomeButton` (`kit/home.tsx`, "← MODZ") koyar. Basınca mod kendi
+  `{ plugin: '<mod>', key: 'home' }` değerine `{ at }` yazar; hub `state.set { key: 'home' }` ile duyar ve kendini
+  `focus: true` ile açar, kapanmışsa yeniden. Tek panel kalıp sekme şeridi çizilmese de dönüş yolu hep vardır.
+- **Kişiye göre düzen:** hub'da "Düzenle" satırları yukarı taşır ya da gizler; gizlenenler "Gizli" bölümünde
+  "Göster" ile bekler, "Sıfırla" hepsini geri koyar. Düzen `$.store`'da (`layout`: `{ hidden, order }`) oturumlar
+  arasında kalır.
+- **Yeni mod:** hub'ın tanımadığı bir mod da satır alır: kartına kendi `title`, `hint`, `icon` (kit ikon adı),
+  `section` (`work`, `safety`, `meter`) ve `badge` ("Beta") alanlarını yazar, `modz.open` isteğini dinler, `home`
+  değerini yazar. Tanınan modlar için hub'ın kendi sözcükleri geçerlidir; bilinen bir paneli başka mod alamaz.
+
 ```ts
 type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'   // lo · Iris · Moss · Amber · Flare
-type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+type HubCard = { pane: string; detail: string; tone: HubTone; at: number
+                 title?: string; hint?: string; icon?: string; section?: 'work' | 'safety' | 'meter'; badge?: string }
 ```
 
 | pane | mod | panel başlığı |
@@ -141,7 +153,7 @@ type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
 | agents | savvy-progress | Ajanlar |
 | files | filetree | Dosyalar |
 | plan | plan-steps | Plan |
-| transceiver | transceiver | Transceiver |
+| transceiver | transceiver | Transceiver (Beta) |
 | tests | test-badge | Testler |
 | checkpoints | checkpoint | Kontrol noktaları |
 | replay | replay-theater | Tekrar |

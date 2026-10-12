@@ -142,9 +142,9 @@ function fixedRows(s: Scene): number {
   return HEAD_ROWS + Number(!t.top || Boolean(t.branch)) + Number(Boolean(t.selected || s.latest)) + Number(s.turn.hasRun)
 }
 
-export function drawTerminal(host: Host, ui: Ui, frame: { s: Scene; room: Room }) {
+export function drawTerminal(host: Host, ui: Ui, frame: { s: Scene; room: Room; home: JSX.Element | null }) {
   const { Box, Text, Client } = ui
-  const { s, room } = frame
+  const { s, room, home } = frame
   const { t, theme } = s
   const unicode = mem.glyphSetting === 'plain' || (mem.glyphSetting === 'auto' && mem.noNerd)
   const ctx = rowCtx(s, room.width, unicode)
@@ -154,6 +154,7 @@ export function drawTerminal(host: Host, ui: Ui, frame: { s: Scene; room: Room }
   const rows = { rows: win.specs, active: t.cursor, activeBg: theme.selection, hoverBg: faint(theme.selection), tones: SHIMMER, pointer: mem.pointer, ...(win.bar ? { bar: win.bar } : {}) } satisfies RowsProps
   return (
     <Box flexDirection="column" minHeight={Math.max(1, room.bodyRows)} backgroundColor={theme.bg || undefined}>
+      {home}
       {headRow(ui, { t, theme, unicode, act: actionsOf(host, t) })}
       {terminalBranch(ui, s, unicode)}
       {!t.top && <Text color={theme.muted}>{unicode ? '± ' : '\u{e702} '}{words().noRepo}</Text>}

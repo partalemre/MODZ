@@ -98,6 +98,10 @@ declare module 'claude-code' {
       turn: TurnLog
       look: Look
       hub: HubCard
+      // The person pressed "← MODZ" in the Files pane; the hub hears it and comes forward.
+      home: { at: number }
     }
+    // The MODZ main panel's open request this mod listens for (DESIGN.md §9), and whether the hub runs; modz owns and writes both.
+    modz: { open: { pane: string; at: number }; isOn: boolean }
   }
 }

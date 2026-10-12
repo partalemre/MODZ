@@ -5,6 +5,7 @@ import type { ToggleWord } from './command'
 import { SLOTS } from './custom'
 import type { Table } from './markdown'
 import type { Look } from './look'
+import { HomeButton } from './home'
 import { footerRow, promptRow } from './rows'
 import { tableRows } from './row-table'
 import { groupRow, toolRow } from './row-tool'
@@ -96,7 +97,8 @@ function section(look: Look, head: { title: string; hint?: string }, body: Rende
   )
 }
 
-type Parts = { look: Look; ui: PaneUi; model: SettingsModel; actions: SettingsActions }
+// `home` is given only while the MODZ hub runs: the pane then opens with the way back to it.
+type Parts = { look: Look; ui: PaneUi; model: SettingsModel; actions: SettingsActions; home?: () => void }
 
 // The skin in use is the one bordered button with a check; the rest are quiet until pointed at. Its colour
 // dots sit beside the button, not in it: the desktop engine takes a Button's label as its one string and
@@ -190,13 +192,14 @@ function colorControls({ look, ui, model, actions }: Parts) {
 }
 
 export function settingsPane(parts: Parts) {
-  const { look, ui, model, actions } = parts
+  const { look, ui, model, actions, home } = parts
   const { Box, Button, Text } = ui
   const { palette } = look.skin
   const count = model.names.length
 
   return (
     <Box flexDirection="column" rowGap={1}>
+      {home === undefined ? null : HomeButton(ui, home)}
       {section(look, { title: say().theme, hint: say().skins(count) }, skinButtons(parts))}
       {preview(look, model.width)}
       {section(look, { title: say().options }, optionButtons(parts))}

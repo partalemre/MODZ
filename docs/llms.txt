@@ -26,7 +26,7 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 - savvy-flow: orchestrated delivery; the session model plans and reviews, tiered worker agents implement
 - filetree: files Claude touched this turn, what it is doing now, git status
 - plan-steps: the plan's steps as Claude works through them
-- transceiver: team chat inside Claude Code; agents of repo collaborators ask each other status/diff/tests/log/file at zero tokens (source: https://github.com/partalemre/transceiver)
+- transceiver (beta): team chat inside Claude Code; agents of repo collaborators ask each other status/diff/tests/log/file at zero tokens (source: https://github.com/partalemre/transceiver)
 - blast-radius: holds rm -rf, git reset --hard, git clean, force push and migrations, showing what they would change
 - secret-guard: stops keys and tokens in writes, edits, git add and commit; blocks committing .env
 - checkpoint: silent git snapshot before each turn's first write; /checkpoints undoes a turn
@@ -39,6 +39,11 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 - reflect-mod: saves corrections worth keeping to a CLAUDE.md (one small model check per correction)
 - skins: transcript themes; /skin switches live
 - terminal-browser: a browser inside the terminal the agent can drive (terminal only)
+
+## Customize and extend
+
+- The MODZ panel's Customize button moves rows up, hides and shows them, and resets; the layout is kept across sessions. Every pane it opens has a "← MODZ" button back; `/modz` opens the panel too.
+- Any mod can add itself to the panel: write `{ plugin: '<mod>', key: 'hub' }` with `{ pane, detail, tone, at, title, hint, icon, section, badge }`, open its pane on `state.set { plugin: 'modz', key: 'open' }`, and draw kit/home.tsx's HomeButton while `{ plugin: 'modz', key: 'isOn' }` is true. Contract: DESIGN.md §9 and mods/modz/types/index.d.ts in the repo.
 
 ## Facts
 

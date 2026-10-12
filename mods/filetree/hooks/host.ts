@@ -18,6 +18,9 @@ export type StateHost = {
   setLook(look: Look): Promise<void>
   theme(): Promise<Theme | undefined>
   setTheme(theme: Theme): Promise<void>
+  // Whether the MODZ hub runs, and a request for it to come forward (the "← MODZ" button).
+  isHubOn(): Promise<boolean>
+  goHome(): Promise<void>
 }
 
 // Files, commands, the clock and the session's environment.

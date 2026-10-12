@@ -56,6 +56,14 @@ const HUB = {
     unreadable: 'catalog could not be read',
     command: 'Opens the MODZ hub: agents, files, plan, tests and every mod',
     opened: 'Opened the MODZ pane.',
+    customize: 'Customize',
+    done: 'Done',
+    up: 'Up',
+    hide: 'Hide',
+    show: 'Show',
+    reset: 'Reset',
+    hidden: 'Hidden',
+    editLine: 'Move a row up or hide it. Hidden rows wait here.',
   },
   tr: {
     sections: { work: 'Çalışma', safety: 'Güvence', meter: 'Ayarlar' } as Record<Section, string>,
@@ -68,10 +76,21 @@ const HUB = {
     unreadable: 'katalog okunamadı',
     command: 'MODZ ana panelini açar: ajanlar, dosyalar, plan, testler ve tüm modlar',
     opened: 'MODZ paneli açıldı.',
+    customize: 'Düzenle',
+    done: 'Bitti',
+    up: 'Yukarı',
+    hide: 'Gizle',
+    show: 'Göster',
+    reset: 'Sıfırla',
+    hidden: 'Gizli',
+    editLine: 'Bir satırı yukarı taşı ya da gizle. Gizlenenler burada bekler.',
   },
 }
 
 export const hubWords = () => pick(HUB)
+
+// The word beside a row that is still being tried out.
+export const badgeWord = (): string => pick({ en: 'Beta', tr: 'Beta' })
 
 const CATALOG = {
   en: {

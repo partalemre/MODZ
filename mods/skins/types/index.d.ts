@@ -66,6 +66,9 @@ declare module 'claude-code' {
       compacting: boolean
       pinned: boolean
       hub: HubCard
+      home: { at: number }
     }
+    // Written by the MODZ hub, which owns it: true while the hub runs, so the settings pane draws its way back.
+    modz: { isOn: boolean }
   }
 }

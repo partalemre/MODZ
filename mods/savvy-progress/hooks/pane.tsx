@@ -5,6 +5,7 @@ import type { Draft, Panel } from '../types'
 import { BUILTIN_TYPES, DEFAULT_TYPE, TASK_TITLE_MAX, blankDraft, chosenOf } from './agent-types'
 import { addRun } from './agents'
 import { draftTree } from './dispatch'
+import { HomeButton } from './home'
 import type { DraftView } from './dispatch'
 import { clip } from './format'
 import { t } from './i18n'
@@ -170,6 +171,15 @@ function paneTree(ui: Ui, view: PaneView) {
   )
 }
 
+// Asks the hub to come forward; the hub hears this mod's own `home` value. A failure only shows in the debug log.
+async function goHome($: EngineInterface): Promise<void> {
+  try {
+    await $.state.set({ plugin: 'savvy-progress', key: 'home' }, { at: await $.clock.now() })
+  } catch (error) {
+    $.ui.log(`savvy-progress: home failed (${String(error)})`, { to: 'debug' })
+  }
+}
+
 /** The pane's room: the desktop in px (a card's inside less its frame), the terminal in cells. */
 export const layoutOf = (isDesktop: boolean, columns: number): Layout => {
   if (!isDesktop) return { isDesktop, W: 0, inner: columns, cols: columns }
@@ -184,6 +194,10 @@ export function onPane(on: On): void {
     const isDesktop = e.surface === 'desktop' && 'Svg' in ui
     const d = await paneData($)
     const layout = layoutOf(isDesktop, Math.max(MIN_COLS, e.props.bodyColumns || DEFAULT_COLS))
-    return pinned(e, paneTree(ui, { d, layout, on: handlersOf($, d) }))
+    const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
+    const body = paneTree(ui, { d, layout, on: handlersOf($, d) })
+    if (!isHubOn) return pinned(e, body)
+    const { Box } = ui
+    return pinned(e, <Box flexDirection="column" rowGap={1}>{HomeButton(ui, () => void goHome($))}{body}</Box>)
   })
 }

@@ -59,7 +59,7 @@ export function eyebrow(spec: { y: number; width: number; label: string; role: R
 type PillSpec = { right: number; y: number; text: string; role: RoleName | null; isMono?: boolean; isLeft?: boolean }
 
 // A badge whose right edge is at `right` (its left edge, given `isLeft`); neutral without a role.
-function pill(spec: PillSpec): { svg: string; width: number } {
+export function pill(spec: PillSpec): { svg: string; width: number } {
   const textSize = spec.isMono === true ? monoMeasure(spec.text, 10.5) : measure(spec.text, 10.5, 600)
   const width = Math.ceil(textSize + PILL_PAD * 2)
   const x = spec.isLeft === true ? spec.right : spec.right - width

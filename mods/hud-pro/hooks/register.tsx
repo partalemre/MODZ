@@ -4,6 +4,7 @@ import type { EngineInterface, ModelUsage, Register, SessionUsage } from 'claude
 import { bandRow } from './band'
 import { isFull, labelOf, longLabelOf, resetText, untilReset, valueText } from './format'
 import { addSample, isHistory } from './history'
+import { HomeButton } from './home'
 import { EMPTY_HUB, HUB_PANE, hubOf, isOwnOpen } from './hub'
 import { setLang } from './lang'
 import { gaugeViews } from './model'
@@ -200,6 +201,16 @@ function onOpen(on: On) {
   }).catch(($: EngineInterface, e: any, next: any) => next(e))
 }
 
+// The way back to the MODZ hub: written to this mod's own `home` value, which the hub hears. A press
+// never throws out of the handler, so a failed write is logged and the pane stays as it is.
+async function goHome($: EngineInterface): Promise<void> {
+  try {
+    await $.state.set({ plugin: 'hud-pro', key: 'home' }, { at: await $.clock.now() })
+  } catch {
+    $.ui.log('hud-pro: could not go back to the hub', { to: 'debug' })
+  }
+}
+
 function onRender(on: On) {
   on('command.run', { command: 'hud' }, async ($, e) => {
     try {
@@ -212,15 +223,24 @@ function onRender(on: On) {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const turn = await read($, turnAtom)
     const ui = $.ui.resolve(e)
+    const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
+    const { Box } = ui
 
-    return pinned(e, paneTree(ui, {
+    const tree = paneTree(ui, {
       usage: await read($, usageAtom),
       history: await read($, historyAtom),
       turn: turn.requests > 0 ? turn : await read($, lastTurnAtom),
       columns: e.props.bodyColumns,
       nowMs: await $.clock.now(),
       ...(e.surface !== 'terminal' && 'Svg' in ui ? { svg: ui.Svg } : {}),
-    }))
+    })
+
+    return pinned(e, isHubOn ? (
+      <Box flexDirection="column">
+        {HomeButton(ui, () => void goHome($))}
+        {tree}
+      </Box>
+    ) : tree)
   })
 }
 

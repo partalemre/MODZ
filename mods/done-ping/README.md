@@ -1,50 +1,61 @@
 # done-ping
 
-A notification when Claude needs you: a long turn finished, or Claude is waiting for a permission answer or asking you a question. Zero tokens.
+Sends a notification when a long turn finishes or when Claude is waiting for your permission or your answer, so you can look away while it works.
 
-## What you get
-Every ping has three parts, and never carries code, a command or a reply's text (so no secret can leak through it):
+## Install
 
 ```
-Tur bitti                    <- title: the outcome in at most four words (Tur bitti / Onay bekliyor / Cevap bekliyor)
-eliti                        <- subtitle: the project
-testler geçti · 3 dosya      <- body: facts only, tests first; "testler" comes from a test command Claude ran in the turn
+/plugin marketplace add partalemre/MODZ
+/plugin install done-ping@modz
 ```
 
-- **Turn finished** (main loop, not interrupted, ran ≥ threshold, default 60 s): body `testler geçti · 3 dosya`; with neither fact, how long it took (`1dk 1sn sürdü`).
-- **Permission:** title `Onay bekliyor`, body the tool and, at most, a file name or a host (`Edit · app.ts`, `WebFetch · docs.example.com`, `Bash komutu`); a command is never shown.
-- **Question** (AskUserQuestion): title `Cevap bekliyor`, body the first question without markdown or code.
+Or in one step: `/plugin install done-ping --marketplace partalemre/MODZ`.
 
-Where no notification can show, one row above the prompt says it in the MODZ notice style: a bell tile (Moss when done, **Flare when the turn's tests failed**, Amber when waiting), the title, then the facts, tests first and the duration last, so a narrow band drops the duration first:
-`Tur bitti · testler kaldı · 3 dosya değişti · 2dk 14sn`. The terminal shows the same line after `✓`, `✕` or `!`. It clears itself after 20 s, on ✕, or when you send the next prompt.
-`MODZ_THEME=light|dark` pins the row's theme; otherwise it follows the app's color scheme.
+## What you see
 
-## How it is delivered, in order
-1. **Desktop app (Code tab):** Claude's own notification, with the Claude icon, through the built-in `PushNotification` tool, only when that tool exists and the permission check allows it without a prompt. If the app answers that you are present, nothing is shown. Turn it off with `appNotification: false`.
-2. **Quiet while you look:** if the app this session runs in (Claude, Terminal, iTerm, Ghostty: `__CFBundleIdentifier`) is the frontmost app (`lsappinfo`), no banner. Turn off with `quietWhenFocused: false`.
-3. **terminal-notifier**, if already installed (`/opt/homebrew/bin` or `/usr/local/bin`; nothing is installed for you): the host app's icon (`-sender`), one banner per project (`-group`).
-4. **osascript** `display notification … with title … subtitle … sound name …`. Text is passed as argv items, never spliced into the script.
-5. If no banner could be shown, the row above the prompt (see above). It yields to cache-tax, you-should-know, reflect, session-budget and test-badge notices.
+Every ping has a title, the project name, and a short body of facts. It never carries code, a command or the text of a reply, so nothing sensitive leaks through it.
 
-Debounce: one waiting ping per 15 s burst, and any two pings at least 10 s apart.
+- **Turn finished** (main loop, not interrupted, ran at least the threshold): body such as `tests passed · 3 files`, with the test result first. The tests fact comes from a test command Claude ran in that turn. With neither fact, the body says how long it took (`took 1m 1s`).
+- **Waiting for approval:** the tool and at most a file name or host (`Edit · app.ts`, `WebFetch · docs.example.com`). A command is never shown; it says `Bash command`.
+- **Waiting for an answer:** the first question Claude asked you, without markdown or code.
+
+Where a ping goes, in order:
+
+1. In the desktop app, Claude's own notification (with the Claude icon), when the app allows it without a prompt. If the app reports that you are present, nothing is shown.
+2. If the app this session runs in (Claude, Terminal, iTerm, Ghostty) is the frontmost app, no banner is shown.
+3. `terminal-notifier`, if you already have it installed in `/opt/homebrew/bin` or `/usr/local/bin`. Nothing is installed for you.
+4. A macOS banner through `osascript`, with the sound you chose.
+5. If no banner could be shown, a one-line notice above the prompt: a bell tile (green when done, red if the turn's tests failed, amber when waiting), the title, then the facts. It clears itself after 20 seconds or when you send the next prompt. A live notice from session-budget or test-badge takes that line first.
+
+One waiting ping is sent per 15-second burst, and any two pings are at least 10 seconds apart.
 
 ## Commands
-- `/done-ping` toggles on/off (remembered).
-- `/done-ping 90`, `/done-ping 2m` or `/done-ping 3dk` sets the threshold (remembered).
+
+- `/done-ping` turns the ping on or off (remembered).
+- `/done-ping 90`, `/done-ping 2m` or `/done-ping 3min` sets the threshold (remembered).
 - `/done-ping test` sends a sample ping, ignoring the focus rule.
 
-## Config (userConfig)
-- `thresholdSeconds` (number, 60)
-- `pingOnPermission` (boolean, true)
-- `sound` (string, `Glass`): a system sound name (Glass, Hero, Ping, Purr, Submarine, Funk, Pop), a file path (played with `afplay`), or `none`. The old default `/System/Library/Sounds/Glass.aiff` still works.
-- `quietWhenFocused` (boolean, true)
-- `appNotification` (boolean, true)
+## Settings
 
-## Limits (honest)
-- osascript banners carry the Script Editor icon; macOS gives no way around that without a helper app. terminal-notifier (if you have it) or the desktop app's own notification show the right icon.
-- "Looking at the session" means the host app is frontmost; another session's tab in the same app also counts as looking.
-- The *ask* verdict is the permission decision; in auto mode a classifier may settle an ask without showing you a prompt, so a waiting ping can occasionally fire without a visible dialog.
-- macOS may need notifications allowed for Script Editor the first time.
+| Option | Default | Meaning |
+|---|---|---|
+| `thresholdSeconds` | `60` | A finished turn pings only when it ran at least this long. |
+| `pingOnPermission` | `true` | Also ping when Claude asks for permission or asks you a question. |
+| `sound` | `Glass` | A macOS system sound name (Glass, Hero, Ping, Purr, Submarine, Funk, Pop), a path to a sound file, or `none`. |
+| `quietWhenFocused` | `true` | Skip the banner while the app this session runs in is the frontmost app. |
+| `appNotification` | `true` | In the desktop app, use Claude's own notification when it is available without a prompt. |
 
-## Dev
-`claude plugin validate .`, `claude plugin test .` (31 tests; the row's tests run on both surfaces; `tests/preview.test.tsx` draws done, failed and waiting rows for `bin/preview`).
+Set `MODZ_THEME=light` or `MODZ_THEME=dark` in the `env` block of `~/.claude/settings.json` to pin the theme of the notice line.
+
+## Limits
+
+- `osascript` banners carry the Script Editor icon, and macOS may ask you to allow its notifications the first time. `terminal-notifier` or the desktop app's own notification show the right icon.
+- Another session's tab in the same app counts as "looking at the session".
+- In auto mode a classifier can settle a permission ask without showing you a dialog, so a waiting ping can occasionally fire with nothing visible to answer.
+- Outside the desktop app the banner is macOS only.
+
+Uses no model tokens.
+
+## Language
+
+The interface is English. Set `MODZ_LANG=tr` in the `env` block of `~/.claude/settings.json` for Turkish.

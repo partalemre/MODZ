@@ -1,51 +1,68 @@
 # savvy-progress
 
-Bir Claude Code modu: prompt'un üstünde bir ilerleme bandı ve alt ajanların tek canlı paneli, **Ajanlar**. Her ajan kendi yengeciyle bir kart; onu buradan izler, ona yazar, durdurur ya da yenisini başlatırsın. [savvy-flow](../savvy-flow) becerisi için yapıldı, her alt ajanla da çalışır.
+Shows a progress band above the prompt and one live Agents pane where every subagent is a crab with its own card: watch it work, message it, stop it, or start a new one.
 
-Dayandığı proje: [JohnnyVizz/claude-kit](https://github.com/johnnyvizz/claude-kit) (`plugins/savvy-progress`), MIT. Lisans metni `LICENSE` içinde. Zaman çizelgesi, sessiz ajan uyarısı ve "Yeni görev", bu depodaki eski `agent-deck-pro` modundan bu modun kendi diliyle yeniden yazıldı; o mod artık yok.
+It was built for [savvy-flow](../savvy-flow) and works with any subagent.
 
-## Ajanlar paneli
+## Install
 
-`/agents-info` açar/kapatır; MODZ ana panelindeki "Ajanlar" satırı yalnızca açar. Ajan listesinin doğrusu motorun kendi listesidir (`$.agent.list()`, saniyede bir): mod yüklenmeden başlamış ya da bitiş olayı gelmemiş bir ajan da doğru görünür.
-
-- **Başlık kartı**: işin adı ve yüzdesi, görev/ajan başına segmentli ölçer, sayılar (`2 çalışıyor · 1 bitti · 1 planlı`) ve altta Maliyet, Token, Süre, 5 saat payı. Dört rakam sığmıyorsa ikiye iki dizilir; hiçbiri kesilmez. Ölçülecek bir şey yokken yüzde sessiz bir `—`.
-- **Araç satırı**: `＋ Yeni görev` ve `Daralt` (bütün ekip tek sıra yengeç).
-- **Dikkat satırı**: en çok bakılması gereken tek ajan. Çalışırken 2 dakikadır sesi çıkmayan (açık aracı yok, model yanıtı da gelmedi) ya da tek bir aracı 15 dakikadır süren ajan Amber (`Pip sessiz 3 dk · Research competitors`), son 10 dakikada kendiliğinden hata veren ajan Flare. Senin durdurduğun ajan sayılmaz. `Bak` onun kartını açar.
-- **Zaman çizelgesi** (en az iki ajan varken, `Gizle`/`Göster`): her ajana bir şerit, her araç çağrısı türünün renginde bir parça (okuma, düzenleme, komut, ajan), şeridin sonu nasıl bittiğini söyler, çalışırken "şimdi" çizgisi, sessiz ajanın şeridinde Amber çentik. Terminalde aynı şeritler hücre dizisi olarak.
-- **Kartlar** (Çalışıyor / Bitti / Planlı): yengeç, adı ve katmanı (`Nori · light · Opus 5.5 · low`), görev başlığı, durum pill'i, ilerleme çubuğu ve hemen ardından yüzdesi, altta şu anki iş (`› Write src/Hero.tsx`; bitince yanıtının ilk satırı) ve `3 araç · 0:56 · ≈$0,56`. Yüzde, adımlarını (`step`) ya da görev listesini bildiren ajanda ölçülür (`%60`), bildirmeyende yaptığı işten tahmin edilir (`~%45`, çizgili çubuk; yanıt gelmeden %90'ı geçmez). Hata veren kartın çubuğu `✗` ile biter.
-- **Açık kart**: masaüstünde kartın altındaki `Detay ▾` (işaretçi kartın neresindeyse kenar ve düğme aydınlanır), terminalde kartın başlığı açar; ikisi de gerçek düğme, odak halkası ve Enter ulaşır. Yukarıdan aşağı "ne yapıyor" sorusunu cevaplar: verilen görev (uzunsa `Tamamını göster`), **Şu an** kartı (açık çağrının türü ve rengi, `KOMUT ÇALIŞTIRIYOR · 14 sn`, aracı ve tam hedefi: dosya yolu, komutun ilk satırı, arama; çağrılar arasında `Düşünüyor`, bitince nasıl bittiği), ajanın kendi adımları, iş karışımı ve son 8 çağrı (ne, neye, ne kadar önce, nasıl döndü), **dokunduğu dosyalar** (düzenlenenler önce; tür rozeti, düzenleme ve okuma sayısı), çipler (`Süre 1:17`, `bağlam %13`, `129k token`, `≈$0,85`, `5 saat ≈%2,0`) ve sonuç kartı. Çalışan ajanda **mesaj kutusu** (`Nori'ye yaz, Enter gönderir`, `$.session.send`) ve **`Nori'yi durdur`** (motorun kendi TaskStop aracı, normal izin zinciriyle).
-- **Yeni görev**: ajan türünü seç, işi anlat, Enter başlatır (`$.agent.spawn`); kart hemen açılır ve `Kiko işe koyuldu` der. Türler: yerleşikler (general-purpose, Explore, Plan), motorun modele sunduğu her tür (`agent.offer`: eklentilerin ve ayarların ajanları) ve `.claude/agents/*.md` ile `~/.claude/agents/*.md` dosyaları. Reddedilen başlatma nedeniyle formda kalır.
-- **Boş panel**: dinlenen bir yengeç, tek cümle ve tek eylem (`＋ Yeni görev`).
-- **Yengeçler**: her ajana geliş sırasıyla kendi kabuk rengi, gözleri ve adı (Pip, Mako, Nori…); kostüm katmanı söyler (heavy dedektif, careful mühendis, medium aşçı, light yarışçı, fable astronot, Explore korsan; savvy katmanı yoksa effort seçer). Panelin tek hareketi yengeçlerdir: yalnızca çalışan yürür, sessizleşen durur, iş bitince hareket de biter; `prefers-reduced-motion` hepsini durdurur.
-
-## İlerleme bandı
-
-İş başlığı, aşama ve sayı pill'i (`Görevler 2/4`, `Gözden geçirme 3/4`, `Ajanlar 1/3`, `Bitti`), görev başına bir segmentli ince ölçer, yüzde, paneli açan `×N` ve `✕`. Diğer modların satırlarının üstünde durur; soru penceresi açıkken çekilir.
-
-**Dürüst ilerleme**: sayılar yalnızca gözlenenden gelir. Önce orkestratörün `progress` raporu; yoksa ana döngünün görev listesi (TodoWrite / TaskCreate / TaskUpdate); o da yoksa bu istekte başlatılan ajanlar (biten/toplam). Çalışan bir ajan kendi adımlarını ya da görev listesini bildiriyorsa kısmi pay eklenir ve yüzde `~` ile işaretlenir. Ölçülecek bir şey yokken `—` görünür, asla `%0`. Tahmini bitiş süresi gösterilmez.
-
-## Diğerleri
-
-- **MODZ ana paneli**: `{ plugin: 'savvy-progress', key: 'hub' }` kartı (`Görevler 3/4 · 2 ajan`, iş yokken boş) ve `modz.open` isteğinde `agents` anahtarıyla paneli açar.
-- **Sessiz transkript**: `progress` ve `step` çağrılarının satırları çizilmez; hata veren ya da kesilen çağrının satırı kalır.
-
-## Eklediği araçlar
-
-- `mcp__savvy-progress__progress`: orkestratör planı, aşamayı ve kabul edilen görevleri bildirir.
-- `mcp__savvy-progress__step`: bir işçi kendi adımlarını bildirir (`done`, `total`, `note`).
-
-Maliyet, token sayılarından ve yerleşik fiyat tablosundan (`hooks/pricing.ts`) kaba bir tahmindir, fatura değildir.
-
-## Ayarlar
-
-`language`: `tr` (varsayılan), `en`, `ru` ya da `auto` (Claude Code'un `language` ayarı, sonra sistem dili).
-
-```json
-{ "pluginConfigs": { "savvy-progress": { "options": { "language": "tr" } } } }
+```
+/plugin marketplace add partalemre/MODZ
+/plugin install savvy-progress@modz
 ```
 
-## Sürümler
+Or in one step: `/plugin install savvy-progress --marketplace partalemre/MODZ`.
 
-- **1.5.0**: açık kart yeniden düzenlendi: `Detay ▾` düğmesi ve kart üzerinde aydınlanma, Şu an kartı, okunur son çağrılar (göreli zamanla), dokunduğu dosyalar, açılır görev metni, çiplerde süre.
+The MODZ panel (`modz`) shows its line here, for example `Tasks 3/4 · 2 running`.
 
-Kurulum talimatları [depo README'sinde](../../README.md).
+## What you see
+
+**The progress band** above the prompt: the job title, a phase and count pill (`Tasks 2/4`, `Review 3/4`, `Agents 1/3`, `Done`), a thin segmented meter with one segment per task, the percentage, and a `×N` button that opens the pane. It sits above other mods' rows and steps aside while a survey is open.
+
+Numbers come only from what was observed: first the orchestrator's `progress` report, else the main loop's task list (`TodoWrite`, `TaskCreate`, `TaskUpdate`), else the agents started for this request (finished over total). A running agent that reports its own steps adds partial credit, and the percentage is then marked `~`. With nothing to measure it shows `—`, never `0%`. There is no estimated finish time.
+
+**The Agents pane** (`/agents-info`):
+
+- **Header card:** the job name and percentage, a segmented meter, counts (`2 running · 1 done · 1 planned`) and Cost, Tokens, Time and the share of the 5-hour limit.
+- **Attention row:** the one agent that most needs a look. Amber when a running agent has been silent for 2 minutes, or one tool has run for 15 minutes; red when an agent failed on its own in the last 10 minutes. An agent you stopped does not count.
+- **Timeline** (with two or more agents, `Hide`/`Show`): one strip per agent, a segment per tool call in the colour of its kind (read, edit, run, agent), and a "now" line.
+- **Cards** (Running, Finished, Planned): the crab, a name and tier (`Nori · light · Opus 5.5 · low`), the task, a status pill, a progress bar with its percentage, the current work (`> Write src/Hero.tsx`; the first line of its reply when done) and `3 tools · 0:56 · ≈$0.56`. Progress is measured for an agent that reports its steps or task list, and estimated from its activity otherwise (`~45%`, a dashed bar that stays under 90% until it has replied).
+- **Opened card** (`Details`): the task given, a **Now** card (the open tool call and its full target), the agent's own steps, its last 8 calls, the files it touched (edited first), chips for time, context, tokens, cost and 5-hour share, and its result. A running agent has a message box (`Message Nori, Enter sends`) and a **Stop Nori** button, which goes through the normal permission chain.
+- **New task:** pick an agent type, describe the work, press Enter to start it. Types are the built-ins (general-purpose, Explore, Plan), every type the engine offers the model (from plugins and settings), and files in `.claude/agents/` and `~/.claude/agents/`.
+- **Crabs:** each agent gets its own shell colour, eyes and name in arrival order, with a costume for its savvy-flow tier. Only running agents move; reduced-motion settings stop all of it.
+
+The pane lists the engine's own agent list (refreshed every second), so an agent that started before the mod loaded still shows correctly. The `progress` and `step` tool calls are not drawn in the transcript; a failed or interrupted call keeps its row.
+
+## Commands
+
+- `/agents-info` opens or closes the Agents pane. The Agents row in the MODZ panel only opens it.
+
+## Tools it adds
+
+- `mcp__savvy-progress__progress`: the orchestrator reports the plan, the phase and the accepted tasks.
+- `mcp__savvy-progress__step`: a worker reports its own steps (`done`, `total`, `note`).
+
+## Settings
+
+| Option | Default | Meaning |
+|---|---|---|
+| `language` | `auto` | `tr`, `en` or `ru`. `auto` follows `MODZ_LANG`, then Claude Code's `language` setting, then the system locale, else English. |
+
+```json
+{ "pluginConfigs": { "savvy-progress": { "options": { "language": "en" } } } }
+```
+
+## Limits
+
+- Cost is a rough estimate from token counts and a built-in price table, not a bill.
+- The percentage of an agent that reports nothing is an estimate and is marked `~`.
+
+The mod itself makes no model calls. The two tools are called by Claude, which adds the cost of those tool calls, and a task you start from **New task** or a message you send runs a real agent at normal cost.
+
+## Language
+
+The interface is English. Set `MODZ_LANG=tr` in the `env` block of `~/.claude/settings.json` for Turkish. Unlike the other mods, this one also follows Claude Code's `language` setting and your system locale when `MODZ_LANG` is not set, and it has Russian too.
+
+## Credits
+
+Adapted from [johnnyvizz/claude-kit](https://github.com/johnnyvizz/claude-kit) (`plugins/savvy-progress`), licensed MIT. The license file is in this folder.

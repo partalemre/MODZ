@@ -6,6 +6,7 @@ import { EYEBROW, doc, eyebrow, fit, icon, measure, text, tile, wrap } from './s
 import { upper } from './theme'
 import type { Font } from './svg'
 import type { Palette } from './theme'
+import { words } from './words'
 
 const TILE = 38
 const TILE_Y = 4
@@ -50,7 +51,7 @@ const lines = (rows: string[], spec: { top: number; step: number; font: Font; fi
 /** "Söylediğin: “…”" in the person's own italic, wrapped beside the tile. */
 function saidLines(o: { width: number; top: number; said: string }, p: Palette): { parts: string[]; count: number } {
   const { width, top, said } = o
-  const label = 'Söylediğin: '
+  const label = words().said
   const labelW = measure(label, BODY)
   const [first = '', ...rest] = wrapAfter(`“${said}”`, width - TEXT_X, labelW)
   const parts = [
@@ -76,10 +77,10 @@ export function proposalSvg(width: number, c: Proposal, p: Palette): { source: s
   const bottomText = c.said ? last + BODY_STEP + 4 + (said.count - 1) * BODY_STEP : last
   const whereY = bottomText + SECTION_GAP
   const parts = [
-    ...head({ width, glyph: ICONS.bookmarkPlus, label: 'Kural olarak kaydedilsin mi?', meta: c.meta }, p),
+    ...head({ width, glyph: ICONS.bookmarkPlus, label: words().ask, meta: c.meta }, p),
     ...lines(rule, { top: HEADLINE_TOP, step: HEADLINE_STEP, font: HEADLINE, fill: p.hi }),
     ...said.parts,
-    eyebrow({ x: 0, y: whereY, fill: p.lo }, 'Nereye'),
+    eyebrow({ x: 0, y: whereY, fill: p.lo }, words().where),
   ]
   const height = whereY + BOTTOM
   return { source: doc({ width, height }, parts.join('')), height }
@@ -94,11 +95,12 @@ export function savedSvg(width: number, c: Saved, p: Palette): { source: string;
   const quote = wrap(`“${c.rule}”`, { width: room, font: BODY, maxLines: RULE_LINES })
   const quoteTop = HEADLINE_TOP + BODY_STEP + 4
   const whereY = quoteTop + quote.length * BODY_STEP
-  const lead = c.isNew ? 'Eklendiği yer: ' : 'Zaten burada: '
+  const says = words()
+  const lead = `${c.isNew ? says.addedTo : says.alreadyIn}: `
   const leadW = measure(lead, BODY)
-  const note = wrap('Claude bir sonraki mesajından itibaren buna uyar.', { width: room, font: BODY, maxLines: RULE_LINES })
+  const note = wrap(says.followsNext, { width: room, font: BODY, maxLines: RULE_LINES })
   const parts = [
-    ...head({ width, glyph: ICONS.check, label: 'Kural kaydedildi', meta: '' }, p),
+    ...head({ width, glyph: ICONS.check, label: says.saved, meta: '' }, p),
     text({ ...HEADLINE, x: TEXT_X, y: HEADLINE_TOP, fill: p.hi, text: fit(c.title, room, HEADLINE) }),
     ...lines(quote, { top: quoteTop, step: BODY_STEP, font: BODY, fill: p.mid }),
     text({ ...BODY, x: TEXT_X, y: whereY, fill: p.lo, text: lead }),

@@ -1,4 +1,5 @@
 import type { Tone } from './theme'
+import { longLabels, shortLabels, units } from './words'
 import type { HudGauge, HudTurn } from '../types'
 
 const THOUSAND = 1_000
@@ -26,11 +27,8 @@ const WINDOW_MS: Readonly<Record<string, number>> = {
   seven_day: 7 * HOURS_PER_DAY * MS_PER_HOUR,
 }
 
-const SHORT: Readonly<Record<string, string>> = { five_hour: '5s', seven_day: '7g', spend_limit: 'harcama', context: 'bağlam' }
-const LONG: Readonly<Record<string, string>> = { five_hour: '5 saat', seven_day: '7 gün', spend_limit: 'harcama limiti', context: 'bağlam' }
-
-export const labelOf = (id: string): string => SHORT[id] ?? id.replace(/_/g, ' ')
-export const longLabelOf = (id: string): string => LONG[id] ?? id.replace(/_/g, ' ')
+export const labelOf = (id: string): string => shortLabels()[id] ?? id.replace(/_/g, ' ')
+export const longLabelOf = (id: string): string => longLabels()[id] ?? id.replace(/_/g, ' ')
 
 // Where the value would be if spent evenly across its window, in percent; null without a window.
 export function paceOf(gauge: Pick<HudGauge, 'id' | 'resetsAt'>, nowMs: number): number | null {
@@ -50,18 +48,19 @@ export function toneOf(spec: { id: string; percent: number; pace: number | null 
   return spec.percent >= (spec.id === CONTEXT ? CONTEXT_WARN : NO_PACE_WARN) ? 'warn' : 'neutral'
 }
 
-// Turkish numbers: comma decimals, the percent sign first.
-export const decimal = (value: number, digits: number): string => value.toFixed(digits).replace('.', ',')
+// Numbers in the interface language: Turkish puts a comma decimal and the percent sign first.
+export const decimal = (value: number, digits: number): string => value.toFixed(digits).replace('.', units().decimalMark)
 
-// One decimal at most, none when it is zero: 128k, 12,4k.
-const short = (value: number): string => decimal(value, 1).replace(/,0$/, '')
+// One decimal at most, none when it is zero: 128k, 12.4k (12,4k in Turkish).
+const short = (value: number): string => value.toFixed(1).replace(/\.0$/, '').replace('.', units().decimalMark)
 
-export const percentText = (percent: number): string => `%${Math.round(percent)}`
+export const percentText = (percent: number): string => units().percent(Math.round(percent))
 
-// A gauge's value: a window that ran out reads "dolu", never past 100 (DESIGN.md §4, Ölçer).
-export const valueText = (percent: number): string => (percent >= PERCENT ? 'dolu' : percentText(percent))
+// A gauge's value: a window that ran out reads "full", never past 100 (DESIGN.md §4, Ölçer).
+export const isFull = (percent: number): boolean => percent >= PERCENT
+export const valueText = (percent: number): string => (isFull(percent) ? units().full : percentText(percent))
 
-// The glyph that marks a reset countdown, on both surfaces: "↻ 1sa 20dk".
+// The glyph that marks a reset countdown, on both surfaces: "↻ 1h 20m".
 export const RESET_MARK = '↻'
 export const resetText = (reset: string): string => `${RESET_MARK} ${reset}`
 
@@ -96,8 +95,9 @@ export function untilReset(resetsAt: string | null, nowMs: number): string {
   const minutes = Math.max(0, Math.round((resetMs - nowMs) / MS_PER_MINUTE))
   const days = Math.floor(minutes / MINUTES_PER_DAY)
   const hours = Math.floor((minutes % MINUTES_PER_DAY) / MINUTES_PER_HOUR)
-  if (days > 0) return `${days}g ${hours}sa`
-  if (hours > 0) return `${hours}sa ${minutes % MINUTES_PER_HOUR}dk`
+  const unit = units()
+  if (days > 0) return `${days}${unit.day} ${hours}${unit.hour}`
+  if (hours > 0) return `${hours}${unit.hour} ${minutes % MINUTES_PER_HOUR}${unit.minute}`
 
-  return `${minutes}dk`
+  return `${minutes}${unit.minute}`
 }

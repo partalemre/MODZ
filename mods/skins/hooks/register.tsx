@@ -11,15 +11,17 @@ import { activeSkin, commit, load, syncHub } from './prefs-store'
 import type { PrefsHost } from './prefs-store'
 import { abovePromptView, askView } from './render-bands'
 import { FRAME_MS, replyView, spinnerView, turnDurationView, userMessageView } from './render-messages'
-import { galleryView, SETTINGS_TITLE, settingsView } from './render-panes'
+import { galleryView, settingsTitle, settingsView } from './render-panes'
 import type { SettingsHost } from './render-panes'
 import { toolGroupView, toolResultView, toolUseView } from './render-tools'
-import { runSkin, SKIN_COMMAND } from './skin-command'
+import { runSkin, skinCommand } from './skin-command'
 import { PROBE_MS, refreshTheme } from './theme'
 import type { ThemeHost } from './theme'
 import { usageSnap } from './svg-usage'
 import { addCall, type Live, NO_STATS, withTurn } from './turn-stats'
 import type { View } from './view'
+import { setLang } from './lang'
+import { say } from './words'
 
 const SETTINGS = 'skins-settings'
 const GALLERY = 'skins-gallery'
@@ -82,10 +84,10 @@ async function refreshUsage($: EngineInterface): Promise<void> {
 // stays open, so only a focused pane comes in front of it. Opened otherwise it takes none, so
 // letters typed meant elsewhere never reach its hotkeys.
 async function openSettings($: EngineInterface, isAsked: boolean): Promise<void> {
-  await $.ui.open({ id: SETTINGS, title: SETTINGS_TITLE, closeOnEscape: true, ...(isAsked ? { focus: true } : {}) })
+  await $.ui.open({ id: SETTINGS, title: settingsTitle(), closeOnEscape: true, ...(isAsked ? { focus: true } : {}) })
 }
 
-const openGallery = ($: EngineInterface) => $.ui.open({ id: GALLERY, title: 'Skin galerisi', focus: true, closeOnEscape: true })
+const openGallery = ($: EngineInterface) => $.ui.open({ id: GALLERY, title: say().galleryTitle, focus: true, closeOnEscape: true })
 
 // Runs Claude Code's own /compact, so the person sees its usual progress and result.
 // Work a press starts is abandoned when the press ends, which cancels a compaction
@@ -97,14 +99,14 @@ function compact($: EngineInterface): void {
   $.clock.after(NEXT_TICK_MS, () =>
     $.command
       .run({ command: 'compact' })
-      .catch((error: unknown) => $.ui.toast(`Sıkıştırma başarısız: ${error instanceof Error ? error.message : String(error)}`))
+      .catch((error: unknown) => $.ui.toast(say().compactFailed(error instanceof Error ? error.message : String(error))))
       .finally(() => update($, compactingAtom, () => false)),
   )
 }
 
 // The render modules' port (view.ts), for the drawing `e`.
 function viewOf($: EngineInterface, e: Frozen<RenderInput>, live: Live): View {
-  const copy = (text: string) => void $.ui.copy({ text, surface: e.surface }).then(result => $.ui.toast(result.isCopied ? 'Kopyalandı' : 'Burada kopyalanamadı'))
+  const copy = (text: string) => void $.ui.copy({ text, surface: e.surface }).then(result => $.ui.toast(result.isCopied ? say().copied : say().notCopied))
 
   return {
     active: () => activeSkin(storeOf($)),
@@ -149,7 +151,9 @@ async function refreshLook($: EngineInterface): Promise<void> {
 
 function onSession(on: On, live: Live): void {
   on('session.start', async ($, e, next) => {
-    await $.command.register(SKIN_COMMAND)
+    // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
+    await $.command.register(skinCommand())
     await $.tool.register({ name: DESIGN_TOOL.name, description: DESIGN_TOOL.description, inputSchema: DESIGN_TOOL.inputSchema })
     await load(storeOf($))
     await refreshUsage($)

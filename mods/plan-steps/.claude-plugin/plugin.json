@@ -1,7 +1,7 @@
 {
   "name": "plan-steps",
   "version": "0.2.0",
-  "description": "Plan varsa adımlarını gösterir: görev listesi, onaylı plan ya da plan dosyası; /steps paneli ve sessiz bir durum satırı",
+  "description": "Shows the plan's steps when there is one (task list, approved plan or plan file): the /steps pane and a quiet status line",
   "author": {
     "name": "Partal"
   },

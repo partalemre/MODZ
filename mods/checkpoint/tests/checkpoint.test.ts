@@ -2,6 +2,7 @@ import { expect, mock, test } from 'claude-code/testing'
 
 import { gitBinary, list, locate, parseNameStatus, parseNumstat, prune, snapshot } from '../hooks/git'
 import { markUndone, pendingOf } from '../hooks/meta'
+import { setLang } from '../hooks/lang'
 import { diffstatSvg } from '../hooks/pane-svg'
 import type { Run } from '../hooks/git'
 import { fakeFor, newFake, ok, paneOf, stub } from './stubs'
@@ -212,6 +213,7 @@ for (const surface of SURFACES) {
 }
 
 test('the desktop card counts the files it has no row for, as the terminal card does', () => {
+  setLang('tr')
   const paths = Array.from({ length: 7 }, (_, i) => `src/f${i}.ts`)
   const entry = { ref: 'r', commit: 'c', at: 1, label: 'x' }
   const pending = pendingOf(entry, { changes: { restore: paths, remove: [] }, stats: paths.map(path => ({ path, added: 1, removed: 0 })), turn: 3 })

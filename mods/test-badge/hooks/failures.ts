@@ -1,6 +1,7 @@
 import type { Failure } from '../types'
 import { durationOf, failure, firstMatch, firstText, lineNumber, MAX_FAILURES, sections } from './text'
 import type { ParseContext } from './text'
+import { words } from './words'
 
 type Parser = (lines: string[], ctx: ParseContext) => Failure[]
 
@@ -132,7 +133,7 @@ const cargoTest: Parser = (lines, ctx) => sections(lines, /^---- (\S+) stdout --
 const compileErrors: Parser = (lines, ctx) => lines.flatMap(row => {
   const found = /^(\S+\.go):(\d+):\d+: (.+)$/.exec(row) ?? /^(\S+\.dart):(\d+):\d+: Error: (.+)$/.exec(row)
 
-  return found === null ? [] : [failure({ file: found[1] ?? null, line: lineNumber(found[2]), name: found[3] ?? '', message: 'derleme hatası', suite: 'typecheck' }, ctx)]
+  return found === null ? [] : [failure({ file: found[1] ?? null, line: lineNumber(found[2]), name: found[3] ?? '', message: words().compileError, suite: 'typecheck' }, ctx)]
 })
 
 const PARSERS = [jest, vitest, pytest, goTest, dartTest, bunTest, cargoTest, compileErrors]

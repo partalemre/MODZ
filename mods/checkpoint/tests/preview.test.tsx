@@ -4,18 +4,19 @@ import { mock, test } from 'claude-code/testing'
 declare const console: { log: (text: string) => void }
 
 // Draws the timeline, the confirm card and the empty pane on the desktop for bin/preview, once per pinned theme
-// and per panel width: narrow ≈400 px (bin/preview --width 400) and wide ≈600 px (--width 600).
+// and per panel width: narrow ≈400 px (bin/preview --width 400) and wide ≈600 px (--width 600). No MODZ_LANG:
+// the English pane, as the film shows it.
 const MIN = 60
 const NOW = 2_000_000
 const TURNS = [
-  { n: 14, ago: 2, label: 'Ödeme sayfasındaki hata mesajlarını Türkçeleştir', files: 3, tools: ['E', '$'] },
-  { n: 13, ago: 9, label: 'Sepet toplamını kuruşa yuvarlayan testi ekle', files: 2, tools: ['E', 'W', '$'] },
-  { n: 12, ago: 21, label: 'Giriş formuna şifre göster düğmesi koy', files: 4, tools: ['R', 'E', 'S'] },
-  { n: 11, ago: 48, label: 'README kurulum adımlarını güncelle', files: 1, tools: ['R', 'E'] },
+  { n: 14, ago: 2, label: 'Reword the checkout page error messages', files: 3, tools: ['E', '$'] },
+  { n: 13, ago: 9, label: 'Add a test that rounds the cart total to cents', files: 2, tools: ['E', 'W', '$'] },
+  { n: 12, ago: 21, label: 'Add a show-password button to the login form', files: 4, tools: ['R', 'E', 'S'] },
+  { n: 11, ago: 48, label: 'Update the README install steps', files: 1, tools: ['R', 'E'] },
 ]
 const refOf = (n: number) => `refs/checkpoints/s/${n}`
 const refs = (withSafety: boolean) => [
-  ...(withSafety ? [`${refOf(99)}\tcs\t${NOW - MIN}\tgeri almadan önce: Giriş formuna şifre göster düğmesi koy`] : []),
+  ...(withSafety ? [`${refOf(99)}\tcs\t${NOW - MIN}\tbefore undo: Add a show-password button to the login form`] : []),
   ...TURNS.map(t => `${refOf(t.n)}\tc${t.n}\t${NOW - t.ago * MIN}\t${t.label}`),
 ].join('\n')
 const meta = (isUndone: boolean) => Object.fromEntries([
@@ -24,7 +25,7 @@ const meta = (isUndone: boolean) => Object.fromEntries([
 ])
 const NUMSTAT = ['18\t4\tsrc/auth/LoginForm.tsx', '6\t2\tsrc/auth/login.test.ts', '0\t31\tsrc/auth/PasswordToggle.tsx', '3\t3\tsrc/styles/form.css'].join('\0') + '\0'
 const DIFF = ['M', 'src/auth/LoginForm.tsx', 'M', 'src/auth/login.test.ts', 'A', 'src/auth/PasswordToggle.tsx', 'M', 'src/styles/form.css'].join('\0') + '\0'
-// Seven files for the overflowing card: five rows, then "+2 dosya daha".
+// Seven files for the overflowing card: five rows, then "+ 2 more files".
 const MANY = ['src/cart/total.ts', 'src/cart/total.test.ts', 'src/cart/round.ts', 'src/cart/index.ts', 'src/ui/Price.tsx', 'src/ui/Price.css', 'README.md']
 const MANY_NUMSTAT = MANY.map((path, i) => `${i + 2}\t${i}\t${path}`).join('\0') + '\0'
 const MANY_DIFF = MANY.flatMap(path => ['M', path]).join('\0') + '\0'

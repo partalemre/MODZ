@@ -1,6 +1,6 @@
 import type { Strings } from './strings'
 
-// Turkish, the default. Names take their case with vowel harmony: Pip'i, Mako'yu, Coral'a, Nori'ye.
+// Turkish, with MODZ_LANG=tr. Names take their case with vowel harmony: Pip'i, Mako'yu, Coral'a, Nori'ye.
 const VOWELS = 'aeıioöuü'
 const HARMONY: Record<string, string> = { a: 'ı', ı: 'ı', e: 'i', i: 'i', o: 'u', u: 'u', ö: 'ü', ü: 'ü' }
 
@@ -21,6 +21,7 @@ const dative = (name: string): string => suffixed(name, vowel => (BACK.includes(
 
 export const tr: Strings = {
   pane: 'Ajanlar',
+  command: 'Ajanlar panelini aç/kapat: çalışan, biten ve planlı alt ajanlar; ilerleme, maliyet, zaman çizelgesi, sessiz ajan uyarısı; mesaj, durdur ve yeni görev',
   cost: 'Maliyet',
   tokens: 'Token',
   time: 'Süre',
@@ -95,6 +96,7 @@ export const tr: Strings = {
   tools: n => `${n} araç`,
   errors: n => `${n} hata`,
   crew: n => `${n} ajan`,
+  hubCrew: n => `${n} ajan`,
   pct: n => `%${n}`,
   minutes: n => `${n} dk`,
   seconds: n => `${n} sn`,

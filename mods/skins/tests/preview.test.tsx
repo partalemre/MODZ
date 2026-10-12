@@ -62,7 +62,7 @@ function stubEngine(on: On, theme: Theme) {
   const store: Record<string, unknown> = {}
   const clock = mock.clock(on, { now: 10_000 })
   on('session.cwd', () => ({ value: '/work' }))
-  on('env.get', () => ({ value: undefined }))
+  on('env.get', ($, e) => ({ value: e.name === 'MODZ_LANG' ? 'tr' : undefined }))
   on('config.list', () => ({ value: themeRow(theme) as never }))
   on('store.get', ($, e) => ({ value: store[e.key] }))
   on('store.set', ($, e) => {

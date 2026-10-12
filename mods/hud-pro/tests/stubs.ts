@@ -45,16 +45,21 @@ const TURN_USAGE = {
   model: 'claude-test',
 }
 
+// The existing tests read the owner's Turkish; the English tests pass ENGLISH, an empty environment.
+export const TURKISH = { MODZ_LANG: 'tr' } as const
+export const ENGLISH = {} as const
+
 export const toasts: string[] = []
 export const opens: Array<{ id: string; title?: string; focus?: boolean }> = []
 // How many times the mod asked for a redraw.
 export const invalidations = { count: 0 }
 
-export function stubSession(on: any, usage: any = USAGE) {
+export function stubSession(on: any, usage: any = USAGE, env: Record<string, string> = TURKISH) {
   toasts.length = 0
   opens.length = 0
   invalidations.count = 0
   const clock = mock.clock(on)
+  mock.env(on, env)
   on('session.usage', () => ({ value: usage }))
   on('command.register', () => ({ value: undefined }))
   on('store.get', () => ({ value: undefined }))

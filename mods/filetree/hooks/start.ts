@@ -7,6 +7,7 @@ import { mem } from './session'
 import { shortPath } from './listing'
 import { resolve } from './shell'
 import { syncHub } from './turn'
+import { words } from './words'
 
 const THEME_POLL_MS = 2000
 // The terminal docks a pane beside the transcript only this wide.
@@ -18,7 +19,7 @@ const NERD_CHARSET = 'f04eb'
 async function settleTree(h: Host): Promise<void> {
   const t = await h.tree()
   if (t.flashOn) await patch(h, unlit)
-  await h.setActivities(cur => cur.map(a => (a.state === 'running' ? { ...a, state: 'failed', label: `${a.kind} yarıda kaldı` } : a)))
+  await h.setActivities(cur => cur.map(a => (a.state === 'running' ? { ...a, state: 'failed', label: words().cutShort(a.kind) } : a)))
   const cwd = await cwdOf(h)
   if (!t.root || t.nodes.length === 0 || (mem.follow && t.root !== cwd)) await reset(h, cwd)
   else await showPane(h, false)
@@ -49,13 +50,14 @@ export async function resumePane(h: Host): Promise<void> {
 
 export async function openByCommand(h: Host, e: { args?: string; presentation: { isFullscreen?: boolean; columns: number } }): Promise<string> {
   const isApp = await inApp(h)
-  if (!isApp && !e.presentation.isFullscreen) return 'Dosya ağacı yan panelde açılır; bunun için tam ekran düzen gerekir. Önce /tui fullscreen, sonra /filetree çalıştır.'
-  if (!isApp && e.presentation.columns < MIN_COLUMNS) return 'Dosya ağacı yan panelde açılır; terminal en az 110 sütun genişliğinde olmalı. Pencereyi genişletip /filetree çalıştır.'
+  const w = words()
+  if (!isApp && !e.presentation.isFullscreen) return w.needsFullscreen
+  if (!isApp && e.presentation.columns < MIN_COLUMNS) return w.needsColumns(MIN_COLUMNS)
   mem.noDock = false
   const arg = (e.args ?? '').trim()
   const cwd = await cwdOf(h)
   mem.follow = !arg
   const root = arg ? resolve(cwd, arg, mem.home) : cwd
   await reset(h, root, true)
-  return `Dosya ağacı: ${shortPath(root)}${mem.follow ? ' (çalışma klasörünü izliyor)' : ''}.`
+  return w.opened(shortPath(root), mem.follow)
 }

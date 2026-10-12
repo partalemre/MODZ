@@ -12,6 +12,7 @@ import { ageText } from './age'
 import { shortLine } from './explain'
 import { explainReplay, why } from './explainer'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
+import { setLang } from './lang'
 import { offerCard } from './offer'
 import { replayView } from './pane'
 import { currentStep, planAfter, PLAN_TOOLS } from './plan'
@@ -19,11 +20,11 @@ import { EDIT_TOOLS, isAnswered, stepsFor } from './record'
 import { pinned } from './pin'
 import type { EditCall } from './record'
 import { themeOf } from './ui/theme'
+import { words } from './words'
 import type { HubCard, ReplayStep } from '../types'
 import type { ExplainIo } from './explainer'
 
 export const PANE_ID = 'replay-theater'
-export const PANE_TITLE = 'Tekrar'
 
 export const pendingAtom = atom({ plugin: 'replay-theater', key: 'pending' } as const, [])
 export const replayAtom = atom({ plugin: 'replay-theater', key: 'replay' } as const, null)
@@ -76,7 +77,7 @@ async function openReplay($: EngineInterface): Promise<{ hasEdits: boolean; isPl
   // The pane takes the keys only while nothing else holds them: the band's button held them, so wait a beat.
   await $.clock.sleep(BAND_RELEASE_MS)
   const rows = hasEdits ? paneRows(steps) : EMPTY_ROWS
-  const placed = await $.ui.open({ id: PANE_ID, title: PANE_TITLE, focus: true, closeOnEscape: true, rows, columns: PANE_COLUMNS })
+  const placed = await $.ui.open({ id: PANE_ID, title: words().title, focus: true, closeOnEscape: true, rows, columns: PANE_COLUMNS })
   const isPlaced = placed.isPlaced !== false
   // The band shows a replay when the pane has no room; an empty one has nothing to show there.
   if (!isPlaced) await update($, viewAtom, view => ({ ...view, isOpen: hasEdits, inBand: hasEdits }))
@@ -97,7 +98,7 @@ async function writeHub($: EngineInterface): Promise<void> {
 // The main panel's open request: an open pane only comes forward, keeping its place in the replay.
 async function bringReplay($: EngineInterface): Promise<void> {
   const view = await read($, viewAtom)
-  if (view.isOpen && !view.inBand) await $.ui.open({ id: PANE_ID, title: PANE_TITLE, focus: true })
+  if (view.isOpen && !view.inBand) await $.ui.open({ id: PANE_ID, title: words().title, focus: true })
   else await openReplay($)
 }
 
@@ -160,9 +161,11 @@ async function trackPlan<R extends { deny?: unknown; isError?: unknown; result?:
 
 function hookSession(on: On): void {
   on('session.start', async ($, e, next) => {
+    // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     const r = await next(e)
     flags.cwd = e.cwd.replace(/\/$/, '')
-    await $.command.register({ name: 'replay', description: 'Tekrar: son turdaki dosya düzenlemelerini adım adım izle' })
+    await $.command.register({ name: 'replay', description: words().command })
     await refreshTheme($)
     await writeHub($)
 
@@ -178,10 +181,10 @@ function hookSession(on: On): void {
   on('command.run', { command: 'replay' }, async $ => {
     const opened = await openReplay($)
     const count = (await read($, replayAtom))?.steps.length ?? 0
-    if (opened.hasEdits) return { text: `Tekrar: ${count} düzenleme` }
+    if (opened.hasEdits) return { text: words().commandCount(count) }
 
     // Only a terminal too narrow for the pane hears it as text.
-    return opened.isPlaced ? {} : { text: 'Tekrar: henüz düzenleme yok.' }
+    return opened.isPlaced ? {} : { text: words().commandEmpty }
   })
 
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {

@@ -2,11 +2,12 @@ import { mock } from 'claude-code/testing'
 
 // The engine stand-ins the filetree tests share: one repo folder, its git, and the session around it.
 
-export type World = { root: string; files: string[]; status: string; heads: Record<string, string[]>; tool?: (e: any) => unknown }
+// `env` is what $.env.get answers: Turkish unless a test gives its own, as the English ones do.
+export type World = { root: string; files: string[]; status: string; heads: Record<string, string[]>; tool?: (e: any) => unknown; env?: Record<string, string> }
 export const opens: any[] = []
 
 export function world(on: any, w: World) {
-  mock.env(on, { HOME: '/Users/k' })
+  mock.env(on, w.env ?? { HOME: '/Users/k', MODZ_LANG: 'tr' })
   const clock = mock.clock(on, { now: 1_800_000_000_000 })
   mock.store(on)
   on('session.start', (_$: any, e: any) => ({ cwd: e.cwd }))

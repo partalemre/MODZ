@@ -70,7 +70,7 @@ function stubEngine(on: On, own: { env?: boolean; store?: boolean } = {}) {
   mock.clock(on, { now: 10_000 })
   on('session.cwd', () => ({ value: '/work' }))
   if (!own.env) {
-    on('env.get', () => ({ value: undefined }))
+    on('env.get', ($, e) => ({ value: e.name === 'MODZ_LANG' ? 'tr' : undefined }))
   }
   if (!own.store) {
     on('store.get', () => ({ value: undefined }))
@@ -168,6 +168,28 @@ test('a typed prompt sits in an outline sized to its text, other senders keep th
     expect(await notice.find({ type: 'Text', text: 'stock row' })).toBeDefined()
     await notice.unmount()
   }
+})
+
+test('on the desktop a typed prompt can be copied, in the terminal it is selected as text', async ($, on) => {
+  stubEngine(on)
+  const copied: string[] = []
+  on('ui.copy', ($, e) => {
+    copied.push(e.text)
+    return { value: { isCopied: true } }
+  })
+
+  const prompt = (surface: (typeof SURFACES)[number]) =>
+    ({ ...SITE, surface, component: 'UserMessage', requestId: `p-${surface}`, props: { text: 'fix the build', origin: { kind: 'composer' }, isExpanded: false } }) as const
+
+  const desktop = await $.ui.mount(prompt('desktop'))
+  await desktop.press({ key: 'copy-prompt' })
+  await desktop.unmount()
+
+  const terminal = await $.ui.mount(prompt('terminal'))
+  expect(await terminal.find({ type: 'Button' })).toBeUndefined()
+  await terminal.unmount()
+
+  expect(copied).toEqual(['fix the build'])
 })
 
 test('a reply with a table draws the table, a reply without one keeps its own drawing', async ($, on) => {
@@ -424,6 +446,7 @@ test('the band offers Compact, nudges at 70% context, and compacts on a press', 
     return {}
   })
   on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200000, percent: 85 }, rateLimits: [] } }))
+  on('env.get', ($, e) => ({ value: e.name === 'MODZ_LANG' ? 'tr' : undefined }))
   on('session.start', () => ({ cwd: '/work' }))
   on('command.register', () => ({ value: { command: 'skin' } }))
   on('tool.register', () => ({ value: { tool: 'mcp__skins__design' } }))
@@ -472,6 +495,12 @@ test('cards draw no background of their own', async ($, on) => {
 
 test('/skin gallery opens a pane with every element, numbered, on both surfaces', async ($, on) => {
   stubEngine(on)
+  // The session start reads MODZ_LANG, so the gallery reads Turkish.
+  on('config.list', () => ({ value: [] }))
+  on('session.start', () => ({ cwd: '/work' }))
+  on('command.register', () => ({ value: { command: 'skin' } }))
+  on('tool.register', () => ({ value: { tool: 'mcp__skins__design' } }))
+  await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
 
   expect((await runSkin($, 'gallery')).text).toBeUndefined()
 
@@ -552,7 +581,7 @@ const THEME_AUTO = [{ key: 'theme', label: 'Theme', kind: 'enum', value: 'auto',
 test('an auto theme follows the system, and SKINS_THEME overrides the setting', async ($, on) => {
   let override: string | undefined
   stubEngine(on, { env: true })
-  on('env.get', ($, e) => ({ value: e.name === 'SKINS_THEME' ? override : undefined }))
+  on('env.get', ($, e) => ({ value: e.name === 'SKINS_THEME' ? override : e.name === 'MODZ_LANG' ? 'tr' : undefined }))
   on('config.list', () => ({ value: THEME_AUTO as never }))
   // macOS answers "does not exist" when the system is light.
   on('process.run', () => ({ value: { exitCode: 1, stdout: '', stderr: 'The domain/default pair does not exist' } as never }))

@@ -2,9 +2,11 @@ import { expect, test } from 'claude-code/testing'
 
 import { afplayArgv, asnOf, frontBundleOf, osascriptArgv, soundOf, terminalNotifierArgv } from '../hooks/notifier'
 import { donePing, durationText, editedPath, isTestCommand, parseSeconds, permissionPing, plainSnippet, projectOf, questionPing } from '../hooks/ping'
+import { setLang } from '../hooks/lang'
 import { appMessage } from '../hooks/ring'
 
 test('a done ping: outcome in the title, the project as subtitle, facts in the body', () => {
+  setLang('tr')
   expect(durationText(134_000)).toBe('2dk 14sn')
   expect(durationText(3_720_000)).toBe('1sa 2dk')
   expect(durationText(45_000)).toBe('45sn')
@@ -15,6 +17,7 @@ test('a done ping: outcome in the title, the project as subtitle, facts in the b
 })
 
 test('with no facts the body says how long it took; failing tests say so', () => {
+  setLang('tr')
   expect(donePing({ project: 'x', durationMs: 61_000, files: 0, tests: null })).toMatchObject({ body: '1dk 1sn sürdü', detail: '1dk 1sn' })
   expect(donePing({ project: 'x', durationMs: 61_000, files: 1, tests: 'fail' })).toMatchObject({ kind: 'fail', body: 'testler kaldı · 1 dosya' })
   expect(isTestCommand('npm run test -- --watch=false')).toBe(true)
@@ -31,6 +34,7 @@ test('the body is cut to 80 characters and code blocks are left out', () => {
 })
 
 test('a waiting ping names the tool but never shows a command or code', () => {
+  setLang('tr')
   expect(permissionPing('eliti', 'Bash', { command: 'curl -H "Authorization: sk-123" x' })).toMatchObject({ title: 'Onay bekliyor', subtitle: 'eliti', body: 'Bash komutu' })
   expect(permissionPing('eliti', 'Edit', { file_path: '/w/src/app.ts' }).body).toBe('Edit · app.ts')
   expect(permissionPing('eliti', 'WebFetch', { url: 'https://docs.example.com/a?token=1' }).body).toBe('WebFetch · docs.example.com')

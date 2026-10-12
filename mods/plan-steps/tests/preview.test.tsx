@@ -18,6 +18,7 @@ const paneOf = (surface: 'desktop' | 'terminal', bodyColumns: number) => ({
 
 async function setup($: any, on: any, theme: string) {
   const clock = mock.clock(on)
+  mock.env(on, { MODZ_LANG: 'tr' })
   for (const name of ['command.register', 'ui.log', 'ui.status']) on(name, () => ({ value: undefined }))
   on('session.start', () => ({ cwd: '/w' }))
   on('config.list', () => ({ value: [{ key: 'theme', value: theme }] }))

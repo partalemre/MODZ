@@ -1,6 +1,10 @@
 {
   "name": "secret-guard",
   "version": "0.2.1",
-  "description": "Stops secrets before they land: scans Write/Edit and git add/commit for keys and tokens, blocks git add of .env; a card with masked values, then Anahtarları .env'e taşı, Bir kez izin ver or Vazgeç",
+  "description": "Stops secrets before they land: scans Write/Edit and git add/commit for keys and tokens, blocks git add of .env; a card with masked values, then Move keys to .env, Allow once or Cancel (Turkish with MODZ_LANG=tr)",
+  "author": {
+    "name": "Faik Emre Partal",
+    "url": "https://github.com/partalemre"
+  },
   "types": "./types/index.d.ts"
 }

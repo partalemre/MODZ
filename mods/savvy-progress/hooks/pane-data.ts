@@ -6,6 +6,7 @@ import { plannedOf } from './flow'
 import { fmtCost, fmtTime, fmtTokens } from './format'
 import type { HeaderData, Tone } from './header-svg'
 import { t } from './i18n'
+import { upper } from './lang'
 import { attentionOf } from './insight'
 import type { Attention } from './insight'
 import { deriveJob, percentText } from './job'
@@ -87,7 +88,7 @@ export function headerOf(d: PaneData): HeaderData {
   const share = shareOf(d.sum.cost, d.limit)
   const view = d.view
   return {
-    eyebrow: s.pane.toLocaleUpperCase('tr'),
+    eyebrow: upper(s.pane),
     counts: countsOf(d),
     headline: view?.title || s.crew(d.list.length),
     percent: view ? percentText(view) : '—',

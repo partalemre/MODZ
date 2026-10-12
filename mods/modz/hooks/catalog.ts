@@ -1,5 +1,7 @@
+import { pick } from './kit/lang'
 import { BOTH, META, githubName } from './meta'
 import type { Group, Surface } from './meta'
+import { catalogWords } from './words'
 
 type ReadFile = (path: string) => Promise<unknown>
 type HasLink = (name: string) => Promise<boolean>
@@ -53,9 +55,6 @@ export function marketRoot(realPluginRoot: string): string {
   return realPluginRoot.replace(/\/mods\/[^/]+\/?$/, '')
 }
 
-const UNREADABLE = 'plugin.json okunamadı'
-const INVALID = 'marketplace kaydı geçersiz'
-const REMOTE = 'uzak kaynak: yerel plugin.json yok'
 const UNKNOWN_VERSION = '?'
 const SAFE_NAME = /^[\w.-]+$/
 
@@ -87,12 +86,13 @@ type Facts = { name: string; entry: Entry; manifest: Manifest | undefined; isEna
 function infoOf(facts: Facts): ModInfo {
   const { name, entry, manifest, problem } = facts
   const meta = META[name]
+  const summary = meta?.summary === undefined ? undefined : pick(meta.summary)
 
   return {
     name,
     version: text(manifest?.version) ?? text(entry.version) ?? UNKNOWN_VERSION,
-    description: problem ?? meta?.summary ?? text(manifest?.description) ?? text(entry.description) ?? (manifest ? '' : UNREADABLE),
-    group: meta?.group ?? 'Diğer',
+    description: problem ?? summary ?? text(manifest?.description) ?? text(entry.description) ?? (manifest ? '' : catalogWords().unreadable),
+    group: meta?.group ?? 'other',
     surfaces: meta?.surfaces ?? BOTH,
     upstream: upstreamOf(name, manifest),
     // A manifest without a version is still a readable one.
@@ -113,8 +113,9 @@ async function enabledOf(spec: { name: string; flag: unknown; hasLink: HasLink }
 // An object source ({ source: "github", repo }) points away from this checkout; only a string is a local path.
 function remoteProblem(source: unknown): string {
   const repo = isRecord(source) ? text(source.repo) ?? text(source.url) : undefined
+  const remote = catalogWords().remote
 
-  return repo === undefined ? REMOTE : `${REMOTE} (${repo})`
+  return repo === undefined ? remote : `${remote} (${repo})`
 }
 
 async function entryInfo(spec: { entry: unknown; index: number; options: CatalogOptions; enabled: Record<string, unknown> }): Promise<ModInfo> {
@@ -122,10 +123,11 @@ async function entryInfo(spec: { entry: unknown; index: number; options: Catalog
   const hasLink = options.hasLink ?? (async () => false)
   const entry: Entry = isRecord(spec.entry) ? spec.entry : {}
   const name = text(entry.name)
-  if (name === undefined) return infoOf({ name: `kayıt ${index + 1}`, entry, manifest: undefined, isEnabled: null, problem: INVALID })
+  const invalid = catalogWords().invalid
+  if (name === undefined) return infoOf({ name: catalogWords().entry(index + 1), entry, manifest: undefined, isEnabled: null, problem: invalid })
 
   const isEnabled = await enabledOf({ name, flag: enabled[name], hasLink })
-  if (typeof entry.source !== 'string') return infoOf({ name, entry, manifest: undefined, isEnabled, problem: entry.source === undefined ? INVALID : remoteProblem(entry.source) })
+  if (typeof entry.source !== 'string') return infoOf({ name, entry, manifest: undefined, isEnabled, problem: entry.source === undefined ? invalid : remoteProblem(entry.source) })
   const dir = `${options.root}/${entry.source.replace(/^\.\//, '')}`
 
   return infoOf({ name, entry, manifest: await readJson(options.read, `${dir}/.claude-plugin/plugin.json`), isEnabled })
@@ -146,20 +148,23 @@ export async function loadCatalog(options: CatalogOptions): Promise<Market> {
   return { name, mods }
 }
 
-// "18 mod · hepsi açık", "18 mod · 15 açık", "18 mod · 3 açık · 15 bilinmiyor", or just the count when nothing is known.
+// "18 mods · all on", "18 mods · 15 on", "18 mods · 3 on · 15 unknown", or just the count when nothing is known.
 export function headline(mods: ModInfo[]): string {
+  const words = catalogWords()
   const known = mods.filter(mod => mod.isEnabled !== null)
-  if (known.length === 0) return `${mods.length} mod`
+  const total = words.mods(mods.length)
+  if (known.length === 0) return total
   const on = known.filter(mod => mod.isEnabled === true).length
-  const state = on === known.length ? 'hepsi açık' : `${on} açık`
+  const state = on === known.length ? words.allOn : words.on(on)
   const unknown = mods.length - known.length
 
-  return unknown === 0 ? `${mods.length} mod · ${state}` : `${mods.length} mod · ${state} · ${unknown} bilinmiyor`
+  return unknown === 0 ? `${total} · ${state}` : `${total} · ${state} · ${words.unknown(unknown)}`
 }
 
 // The catalog head's right side: problems are named, a clean catalog says so quietly.
 export function healthOf(mods: ModInfo[]): { text: string; isBad: boolean } {
+  const words = catalogWords()
   const bad = mods.filter(mod => !mod.isHealthy).length
 
-  return bad === 0 ? { text: 'hepsi sağlıklı', isBad: false } : { text: `${bad} sorunlu`, isBad: true }
+  return bad === 0 ? { text: words.allHealthy, isBad: false } : { text: words.broken(bad), isBad: true }
 }

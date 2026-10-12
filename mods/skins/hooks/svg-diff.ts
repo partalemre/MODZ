@@ -1,6 +1,7 @@
 import type { Palette } from './skin'
 import { escape, fitText, MONO, pill, riseDelay, strokeIcon, svgCard } from './svg-kit'
 import type { CardFrame } from './svg-kit'
+import { say } from './words'
 
 // An edit as a card: the file, how many lines it added and removed, and the changed
 // lines with their numbers, green and red, rising in one after another.
@@ -89,7 +90,7 @@ function diffRows(shown: readonly Line[], { palette, width }: CardFrame): Laid {
     if (line.kind === 'gap') {
       y += GAP_H
 
-      return `<g ${riseDelay(i, 18)} class="rise"><text x="${CODE_X}" y="${top + 14}" font-size="11" style="fill:${palette.muted}">⋯  satır ${line.at}</text></g>`
+      return `<g ${riseDelay(i, 18)} class="rise"><text x="${CODE_X}" y="${top + 14}" font-size="11" style="fill:${palette.muted}">⋯  ${say().lineAt(line.at)}</text></g>`
     }
 
     y += LINE_H
@@ -115,9 +116,9 @@ export function diffSvg(input: DiffInput, shownPath: string, frame: CardFrame): 
   const removed = all.filter(line => line.kind === 'del').length
   const { rows, bottom: y } = diffRows(shown, frame)
 
-  const footer = hidden > 0 ? `<text x="${CODE_X}" y="${y + 18}" font-size="11.5" style="fill:${palette.muted}">${hidden} satır daha</text>` : ''
+  const footer = hidden > 0 ? `<text x="${CODE_X}" y="${y + 18}" font-size="11.5" style="fill:${palette.muted}">${escape(say().moreLines(hidden))}</text>` : ''
   const height = y + (hidden > 0 ? 30 : 8)
-  const tag = input.isNewFile ? pill(palette, { right: width - 16, y: 12, text: 'yeni dosya', color: palette.user }) : ''
+  const tag = input.isNewFile ? pill(palette, { right: width - 16, y: 12, text: say().newFile, color: palette.user }) : ''
   const counts = `<text x="${width - (input.isNewFile ? 100 : 16)}" y="27" text-anchor="end" font-family="${MONO}" font-size="12.5"><tspan style="fill:${palette.ok}">+${added}</tspan><tspan style="fill:${palette.muted}">  </tspan><tspan style="fill:${palette.err}">−${removed}</tspan></text>`
   const header = [
     strokeIcon(input.isNewFile ? NEW_FILE : PENCIL, { x: 16, y: 13, size: 18, color: palette.fg }),

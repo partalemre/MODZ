@@ -1,7 +1,7 @@
 {
   "name": "savvy-progress",
   "version": "1.5.0",
-  "description": "Prompt üstü ilerleme bandı ve tek Ajanlar paneli (/agents-info): her ajan kendi yengeciyle bir kart (durum, ilerleme yüzdesi, maliyet, süre; mesaj ve durdur), zaman çizelgesi, sessiz ajan uyarısı ve Yeni görev. İlerleme yalnızca gözlenenden türetilir.",
+  "description": "A progress band above the prompt and the Agents pane: each subagent gets a crab and a card with its status, progress, cost and time, a timeline and a quiet-agent warning. Progress comes only from what was observed.",
   "author": {
     "name": "johnnyvizz",
     "url": "https://github.com/johnnyvizz"
@@ -10,9 +10,9 @@
   "userConfig": {
     "language": {
       "type": "string",
-      "title": "Panel dili",
-      "description": "tr (varsayılan), en, ru; auto Claude Code'un language ayarını, sonra sistem dilini izler",
-      "default": "tr",
+      "title": "Panel language",
+      "description": "auto (default) follows MODZ_LANG, then Claude Code's language setting, then the system locale, else English; or tr, en, ru",
+      "default": "auto",
       "options": [
         "tr",
         "en",

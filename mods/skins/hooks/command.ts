@@ -1,4 +1,5 @@
 import type { Prefs } from '../types'
+import { say } from './words'
 
 export const DEFAULT_PREFS: Prefs = {
   skin: 'tidemark',
@@ -82,7 +83,7 @@ export function runSkinCommand(args: string, current: Prefs, names: readonly str
 
     return value === 'on' || value === 'off'
       ? changed({ ...current, [field]: value === 'on' }, `${head} ${value}`)
-      : refused(current, `kullanım: /skin ${head} on|off`)
+      : refused(current, say().usage(head))
   }
 
   switch (head) {
@@ -92,7 +93,7 @@ export function runSkinCommand(args: string, current: Prefs, names: readonly str
     case 'off':
     case 'default':
     case 'stock':
-      return changed({ ...current, skin: 'off' }, 'skin kapalı')
+      return changed({ ...current, skin: 'off' }, say().skinOff)
     case 'on':
       return current.skin === 'off'
         ? changed({ ...current, skin: DEFAULT_PREFS.skin }, `skin: ${DEFAULT_PREFS.skin}`)
@@ -100,11 +101,11 @@ export function runSkinCommand(args: string, current: Prefs, names: readonly str
     case 'icons':
       return value === 'unicode' || value === 'ascii'
         ? changed({ ...current, icons: value }, `icons: ${value}`)
-        : refused(current, 'kullanım: /skin icons unicode|ascii')
+        : refused(current, say().iconsUsage)
     default:
       return names.includes(head)
         ? changed({ ...current, skin: head }, `skin: ${head}`)
-        : refused(current, `bilinmeyen skin "${head}". /skin list hepsini gösterir`)
+        : refused(current, say().unknown(head))
   }
 }
 
@@ -117,8 +118,8 @@ export function rowReply(message: string, { args, isPinned, columns }: RowContex
     return message
   }
 
-  const width = columns === undefined ? '' : `\nyanıt genişliği: ${columns} sütun`
-  const folder = isPinned ? 'bu klasör: sabitlendi' : 'bu klasör: varsayılanı izler'
+  const width = columns === undefined ? '' : `\n${say().replyWidth(columns)}`
+  const folder = isPinned ? say().folderPinned : say().folderFollows
 
   return `${message}\n${folder}${width}`
 }

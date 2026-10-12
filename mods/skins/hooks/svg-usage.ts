@@ -3,6 +3,7 @@ import type { SessionUsage } from 'claude-code'
 import type { UsageSnap } from '../types'
 import type { Palette } from './skin'
 import { escape, FONT } from './svg-kit'
+import { say } from './words'
 
 // The band above the prompt: how full the context window is and how much of each plan
 // limit is spent, as rings that fill in when they draw.
@@ -13,18 +14,18 @@ const ITEM_W = 132
 export type Meter = { label: string; percent: number }
 
 // The context window's meter, as the band labels it and finds it again.
-export const CONTEXT_LABEL = 'bağlam'
+export const contextLabel = (): string => say().context
 
-// `five_hour` reads as `5s` (saat), `seven_day` as `7g` (gün); any other kind as its own name.
+// `five_hour` reads as `5h` (`5s`, saat, in Turkish), `seven_day` as `7d` (`7g`); any other kind as its own name.
 export function limitLabel(kind: string): string {
   const name = kind.toLowerCase()
 
   if (name.includes('five') || name.includes('5h') || name.includes('5_h')) {
-    return '5s'
+    return say().fiveHour
   }
 
   if (name.includes('seven') || name.includes('7d') || name.includes('week')) {
-    return '7g'
+    return say().sevenDay
   }
 
   return name.replace(/_/g, ' ')
@@ -38,7 +39,7 @@ export const usageSnap = (usage: SessionUsage): UsageSnap => ({
 
 export function metersOf(usage: UsageSnap): Meter[] {
   return [
-    ...(usage.context === null ? [] : [{ label: CONTEXT_LABEL, percent: usage.context }]),
+    ...(usage.context === null ? [] : [{ label: contextLabel(), percent: usage.context }]),
     ...usage.limits.map(limit => ({ label: limit.label, percent: limit.percent })),
   ].map(meter => ({ ...meter, percent: Math.max(0, Math.min(100, Math.round(meter.percent))) }))
 }
@@ -66,7 +67,7 @@ export function usageSvg(meters: readonly Meter[], palette: Palette): { source: 
       return [
         `<circle cx="${x}" cy="15" r="${RING_R}" fill="none" stroke="${palette.muted}" stroke-opacity=".25" stroke-width="3"/>`,
         `<circle class="fill" cx="${x}" cy="15" r="${RING_R}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-dasharray="${filled} ${circumference}" transform="rotate(-90 ${x} 15)" style="--len:${filled}"/>`,
-        `<text x="${x + RING_R + 8}" y="19.5" font-size="12.5"><tspan style="fill:${palette.fg};font-weight:600">%${meter.percent}</tspan><tspan style="fill:${palette.muted}"> ${escape(meter.label)}</tspan></text>`,
+        `<text x="${x + RING_R + 8}" y="19.5" font-size="12.5"><tspan style="fill:${palette.fg};font-weight:600">${say().percent(meter.percent)}</tspan><tspan style="fill:${palette.muted}"> ${escape(meter.label)}</tspan></text>`,
       ].join('')
     })
     .join('')
@@ -82,7 +83,7 @@ export function usageSvg(meters: readonly Meter[], palette: Palette): { source: 
     source: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><style>${style}</style>${items}</svg>`,
     width,
     height,
-    alt: meters.map(meter => `${meter.label} %${meter.percent}`).join(', '),
+    alt: meters.map(meter => `${meter.label} ${say().percent(meter.percent)}`).join(', '),
   }
 }
 

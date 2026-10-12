@@ -4,6 +4,7 @@
 import { emptyReport, nothingReport, plural, lines, LIST_MAX } from './report'
 import type { FileRow, Group, Report, Run } from './report'
 import type { GitRisk, Risk } from './classify'
+import { words } from './words'
 
 // Folders and files per folder the script sends back; the rest is only counted.
 const GROUPS_MAX = 8
@@ -103,9 +104,9 @@ function filesReport(scan: Scan, summary: string, note: string | null): Report {
 
 export async function measureRm(run: Run, risk: Extract<Risk, { kind: 'rm' }>, cwd: string): Promise<Report> {
   const targets = risk.targets.join(' ')
-  if (risk.targets.length === 0) return emptyReport('files', 'rm with no paths', 'Silinecek bir yol verilmemiş.')
+  if (risk.targets.length === 0) return emptyReport('files', 'rm with no paths', words().notes.noPaths)
   const unknown = risk.targets.filter(isUnresolved)
-  if (unknown.length > 0) return emptyReport('files', `${risk.label} ${targets} (paths decided at run time)`, `${unknown.join(' ')} komut çalışırken belirleniyor; neyin silineceği önceden ölçülemiyor.`)
+  if (unknown.length > 0) return emptyReport('files', `${risk.label} ${targets} (paths decided at run time)`, words().notes.decidedAtRun(unknown.join(' ')))
   const ran = await run(['bash', '-c', FILES_SCRIPT, 'blast-radius', ...risk.targets], { cwd, timeoutMs: TIMEOUT_MS })
   const scan = parseScan(ran.stdout)
   if (!scan.found) return nothingReport('files', `delete nothing: no file matches ${targets}`)
@@ -143,7 +144,7 @@ export function cleanArgs(args: string[]): { flags: string[]; paths: string[] } 
 export async function measureClean(run: Run, risk: GitRisk, cwd: string): Promise<Report> {
   const { flags, paths } = cleanArgs(risk.args)
   const dry = await run(['git', 'clean', '-n', ...flags, '--', ...paths], { cwd, timeoutMs: TIMEOUT_MS })
-  if (dry.exitCode !== 0) return emptyReport('files', 'git clean (could not dry-run it)', `git clean -n çalışmadı: ${dry.stderr.trim().slice(0, 160)}`)
+  if (dry.exitCode !== 0) return emptyReport('files', 'git clean (could not dry-run it)', words().notes.cleanFailed(dry.stderr.trim().slice(0, 160)))
   const gone = lines(dry.stdout).filter(l => l.startsWith('Would remove ')).map(l => l.slice('Would remove '.length))
   const summary = gone.length === 0 ? 'remove nothing: no untracked files match' : `remove ${plural(gone.length, 'untracked path', 'untracked paths')}`
   if (gone.length === 0) return nothingReport('files', summary)

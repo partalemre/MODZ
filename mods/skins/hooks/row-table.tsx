@@ -1,6 +1,7 @@
 import type { Look, Ui } from './look'
 import { columnWidths, cutCell } from './markdown'
 import type { Table } from './markdown'
+import { say } from './words'
 
 const CELL_PAD = 1
 
@@ -80,7 +81,7 @@ export function copyButton(look: Look, key: string, text: string) {
   const { Button } = look.ui
   const copy = look.copy
 
-  return copy === undefined ? undefined : <Button key={key} label=" Kopyala " plain dimColor onPress={() => copy(text)} />
+  return copy === undefined ? undefined : <Button key={key} label={` ${say().copy} `} plain dimColor onPress={() => copy(text)} />
 }
 
 // A small Copy button under a card or block, flush right; nothing where nothing can copy.
@@ -94,7 +95,7 @@ export function copyRow(look: Look, key: string, text: string) {
 
   return (
     <Box flexDirection="row" justifyContent="flex-end">
-      <Button key={key} label="Kopyala" plain dimColor onPress={() => copy(text)} />
+      <Button key={key} label={say().copy} plain dimColor onPress={() => copy(text)} />
     </Box>
   )
 }

@@ -6,6 +6,7 @@ import { palette, role, svgStyle } from './theme'
 import { escape, fit, fitMiddle, measure, svgOpen, tile } from './svg-kit'
 import type { Ui } from './confirm'
 import type { GuardPending } from '../types'
+import { words } from './words'
 
 const ROWS_MAX = 5
 const TILE = 38
@@ -30,15 +31,12 @@ type Finding = { chip: string; where: string; value: string; tone: 'danger' | 'w
 
 export const svgWidth = (columns: number): number => Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, (columns - CARD_CHROME) * PX_PER_COLUMN))
 
-const SOURCE_WORD: Record<GuardPending['source'], string> = { write: 'Bu yazımda', add: 'Bu eklemede', commit: 'Bu commit\'te' }
-
 export function headlineOf(pending: GuardPending): { eyebrow: string; title: string; tone: 'danger' | 'warn' } {
+  const said = words()
   const secrets = pending.secrets.length
-  if (secrets > 0) return { eyebrow: 'SIZINTI ENGELLENDİ', title: `${SOURCE_WORD[pending.source]} ${secrets} gizli anahtar var`, tone: 'danger' }
-  const env = pending.envFiles.length
-  const what = env === 1 ? (pending.envFiles[0] ?? '.env') : `${env} ortam dosyası`
+  if (secrets > 0) return { eyebrow: said.leakEyebrow, title: said.leakTitle(pending.source, secrets), tone: 'danger' }
 
-  return { eyebrow: 'ORTAM DOSYASI', title: `${what} git'e ekleniyor`, tone: 'warn' }
+  return { eyebrow: said.envEyebrow, title: said.envTitle(pending.envFiles), tone: 'warn' }
 }
 
 /** The subject (file or git command) beside the eyebrow, only whole; '' when it doesn't fit. */
@@ -49,10 +47,10 @@ function subjectOf(pending: GuardPending, width: number): string {
   return measure(line, { size: 11.5, isMono: true }) <= width - HEAD_X - eyebrowW - META_GAP ? line : ''
 }
 
-// A write whose file the header already names says only the line (`satır 4`); otherwise the full spot.
+// A write whose file the header already names says only the line (`line 4`); otherwise the full spot.
 function findingsOf(pending: GuardPending, isSubjectShown: boolean): Finding[] {
   const isLineEnough = pending.source === 'write' && isSubjectShown
-  const env: Finding[] = pending.envFiles.map(path => ({ chip: '.env', where: path, value: 'git\'e ekleniyor', tone: 'warn' }))
+  const env: Finding[] = pending.envFiles.map(path => ({ chip: '.env', where: path, value: words().toGit, tone: 'warn' }))
   const secrets: Finding[] = pending.secrets.map(secret => ({ chip: secret.chip, where: isLineEnough ? secret.where : secret.at, value: secret.masked, tone: 'danger' }))
 
   return [...env, ...secrets]
@@ -97,7 +95,7 @@ export function leakSvg(pending: GuardPending, width: number): { source: string;
   const top = HEAD_H + ROW_TOP_GAP
   const height = top + shown.length * ROW_H + (more > 0 ? ROW_H - 6 : 0) + 2
   const rows = shown.map((finding, index) => findingSvg(finding, top + index * ROW_H, width))
-  const moreRow = more > 0 ? `<text x="0" y="${top + shown.length * ROW_H + 18}" font-size="12.5" style="fill:var(--lo)">+${more} bulgu daha</text>` : ''
+  const moreRow = more > 0 ? `<text x="0" y="${top + shown.length * ROW_H + 18}" font-size="12.5" style="fill:var(--lo)">${escape(words().moreFindings(more))}</text>` : ''
   const head = headlineOf(pending)
   // The alt reads every full spot, even where the drawing says only the line.
   const said = `${head.title}: ${findingsOf(pending, false).map(finding => `${finding.chip} ${finding.where} ${finding.value}`).join('; ')}`

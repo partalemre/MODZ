@@ -14,6 +14,8 @@ import { createdId, createTask, fromTodos, updateTask } from './tasks'
 import type { HubCard, PlanDoc, PlanTask, StepTrack } from '../types'
 import { themeOf } from './ui/theme'
 import type { Theme } from './ui/theme'
+import { setLang } from './lang'
+import { words } from './words'
 
 const PANE = 'plan-steps'
 const PANE_TITLE = 'Plan'
@@ -138,7 +140,7 @@ async function afterTasks($: EngineInterface, call: Call, ran: Ran): Promise<voi
 }
 
 async function startAgent($: EngineInterface, call: Call): Promise<void> {
-  const description = String(call.description ?? call.subagent_type ?? 'alt ajan')
+  const description = String(call.description ?? call.subagent_type ?? words().subagent)
   await onCurrent($, track => addAgent(track, { key: call.tool_use_id, description, isRunning: true, agentId: null }))
 }
 
@@ -201,13 +203,15 @@ function stopTicker(): void {
 
 function lifecycle(on: On): void {
   on('session.start', async ($, e, next) => {
+    // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     flags.cwd = e.cwd.replace(/\/$/, '')
     await refreshTheme($)
     const plan = await currentPlan($)
     const state = planState(plan, { now: await $.clock.now(), touchedAt: flags.touchedAt })
     await writeHub($, hubOf(plan === null ? null : progressOf(plan), state))
     try {
-      await $.command.register({ name: 'steps', description: 'Plandaki adımları ve işin nerede olduğunu gösteren paneli aç' })
+      await $.command.register({ name: 'steps', description: words().command })
     } catch {
       $.ui.log('plan-steps: could not register /steps', { to: 'debug' })
     }

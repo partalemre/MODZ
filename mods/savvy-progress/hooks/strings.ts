@@ -7,6 +7,8 @@ export type Kinds = Record<'read' | 'edit' | 'run' | 'agent' | 'other', string>
 
 export type Strings = {
   pane: string
+  /** The /agents-info line in the slash command menu. */
+  command: string
   cost: string
   tokens: string
   time: string
@@ -99,6 +101,8 @@ export type Strings = {
   tools: (n: number) => string
   errors: (n: number) => string
   crew: (n: number) => string
+  /** The hub card's running count: "2 ajan", "2 running". */
+  hubCrew: (n: number) => string
   liveCount: (n: number) => string
   endedCount: (n: number) => string
   plannedCount: (n: number) => string

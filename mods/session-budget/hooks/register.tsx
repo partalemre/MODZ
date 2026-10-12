@@ -3,16 +3,14 @@ import type { EngineInterface, On, PromptOrigin, Register } from 'claude-code'
 
 import { WARN_RATIO, advance, describe, parseCommand, raise, ratioOf, readingOf, spendText, startBudget, stepText } from './budget'
 import { fullCard, isLive, noticeAbove, stoppedRow, warnRow } from './notice'
+import { setLang } from './lang'
 import { pinned } from './pin'
+import { words } from './words'
 import type { Budget, BudgetNotice } from '../types'
 
 const BUDGET = 'budget'
 const TOGGLE = 'session-budget'
 const STORE_KEY = 'session-budget.enabled'
-const STOP = 'Dur'
-const CONTINUE = 'Devam et'
-// The question's chip; the card above it is drawn for this header alone.
-const HEADER = 'Bütçe'
 const PRIORITY = 1
 const DISMISS_AFTER_MS = 20_000
 // After "Dur" the dropped prompt goes back in the box once the dialog has given it back.
@@ -44,7 +42,7 @@ async function notify($: EngineInterface, kind: BudgetNotice['kind'], text: stri
 async function checkWarn($: EngineInterface, budget: Budget): Promise<void> {
   if (budget.hasWarned || ratioOf(budget) < WARN_RATIO || ratioOf(budget) >= 1) return
   await update($, budgetAtom, current => (current === null ? null : { ...current, hasWarned: true }))
-  await notify($, 'warn', `Bütçe uyarısı: ${describe(budget)}`)
+  await notify($, 'warn', words().warned(describe(budget)))
 }
 
 async function setBudget($: EngineInterface, args: string): Promise<string> {
@@ -53,35 +51,36 @@ async function setBudget($: EngineInterface, args: string): Promise<string> {
   if (command.kind === 'off') {
     await update($, budgetAtom, () => null)
 
-    return 'Oturum bütçesi kaldırıldı.'
+    return words().removed
   }
   if (command.kind === 'status') {
     const budget = await read($, budgetAtom)
 
-    return budget === null ? 'Oturum bütçesi yok. Kur: /budget 20% ya da /budget $5' : `Oturum bütçesi: ${describe(budget)}`
+    return budget === null ? words().none : words().status(describe(budget))
   }
   const reading = await read($, readingAtom)
   const { kind, limit } = command.budget
   const hasData = kind === 'percent' ? reading.percent !== null : reading.usd !== null
   const setAt = await $.clock.now()
   await update($, budgetAtom, () => ({ ...startBudget(kind, limit, reading), setAt }))
-  const unit = kind === 'percent' ? `%${limit} (5 saatlik limit)` : `$${limit}`
-  const wait = hasData ? '' : ' Sayım ilk kullanım okumasıyla başlar (5s verisi abonelik ister).'
+  const unit = kind === 'percent' ? words().percentUnit(limit) : `$${limit}`
 
-  return `Oturum bütçesi kuruldu: ${unit}.${wait}`
+  return words().set(unit, hasData ? '' : words().waitForData)
 }
 
 // "Dur" first, as the main way; "Devam et (+$1)" raises the budget a step and lets the prompt in.
 async function confirm($: EngineInterface, budget: Budget): Promise<boolean> {
-  const goOn = `${CONTINUE} (${stepText(budget)})`
+  const says = words()
+  const goOn = `${says.goOn} (${stepText(budget)})`
   let answer: string | null = null
   try {
-    answer = await $.ui.ask(`Oturum bütçesi doldu: ${describe(budget)}. Yine de devam edilsin mi?`, { options: [STOP, goOn], header: HEADER })
+    // The question's chip is its header; the card above it is drawn for that header alone.
+    answer = await $.ui.ask(says.question(describe(budget)), { options: [says.stop, goOn], header: says.header })
   } catch {
     // Nobody to ask (a -p run) or dismissed: a budget never blocks a turn it cannot ask about.
     $.ui.log('session-budget: confirm dismissed; prompt let through', { to: 'debug' })
   }
-  if (answer === STOP) return false
+  if (answer === says.stop) return false
   const accept = (current: Budget) => (answer === null ? { ...current, isAccepted: true } : raise(current))
   await update($, budgetAtom, current => (current === null ? null : accept(current)))
 
@@ -116,13 +115,14 @@ async function isOutranked($: EngineInterface): Promise<boolean> {
 
 function registerSetup(on: On) {
   on('session.start', async ($, e, next) => {
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     try {
       const saved = await $.store.get(STORE_KEY)
       await update($, enabledAtom, () => saved !== false)
       const usage = await $.session.usage()
       await update($, readingAtom, () => readingOf(usage.rateLimits, usage.cost?.usd))
-      await $.command.register({ name: BUDGET, description: 'Oturum bütçesi kur: 5s limitinin yüzdesi ya da $tutar', argumentHint: '<20% | $5 | off>' })
-      await $.command.register({ name: TOGGLE, description: 'Bütçe uyarısı ve onayını aç/kapat', argumentHint: '[on|off]' })
+      await $.command.register({ name: BUDGET, description: words().budgetHelp, argumentHint: '<20% | $5 | off>' })
+      await $.command.register({ name: TOGGLE, description: words().toggleHelp, argumentHint: '[on|off]' })
     } catch {
       $.ui.log('session-budget: could not load settings', { to: 'debug' })
     }
@@ -139,7 +139,7 @@ function registerSetup(on: On) {
     await $.store.set(STORE_KEY, isOn)
     if (!isOn) await update($, noticeAtom, () => null)
 
-    return { text: `session-budget ${isOn ? 'açık' : 'kapalı'}` }
+    return { text: words().switched(isOn) }
   })
 }
 
@@ -166,10 +166,10 @@ function registerFlow(on: On) {
     const isOver = budget !== null && !budget.isAccepted && ratioOf(budget) >= 1
     if (!isOver || !(await read($, enabledAtom)) || !(await isPersonTyped($, e.origin))) return next(e)
     if (await confirm($, budget)) return next(e)
-    await notify($, 'stopped', `Durduruldu: bütçe doldu · ${spendText(budget)} · /budget ile artır`)
+    await notify($, 'stopped', words().stoppedNotice(spendText(budget)))
     restoreDraft($, e.text)
 
-    return { drop: `Oturum bütçesi doldu: ${describe(budget)}. /budget ile artır ya da /budget off ile kaldır.` }
+    return { drop: words().dropped(describe(budget)) }
   }).catch(($, e, next) => next(e))
 }
 
@@ -197,7 +197,7 @@ function registerBand(on: On) {
     const theirs = await next(e)
     const first = e.props.questions[0] as { header?: unknown } | undefined
     const budget = await read($, budgetAtom)
-    if (first?.header !== HEADER || budget === null) return theirs
+    if (first?.header !== words().header || budget === null) return theirs
 
     return pinned(e, fullCard($.ui.resolve(e), { budget, columns: e.viewport?.columns ?? 100, surface: e.surface, theirs }))
   })

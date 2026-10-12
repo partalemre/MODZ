@@ -1,3 +1,4 @@
+import { upper } from './lang'
 import { svgStyle } from './theme'
 
 // Svg building blocks of the Tidemark kit: a document shell
@@ -37,10 +38,10 @@ export function svgDoc(spec: { width: number; height: number; body: string; alt:
 // The upper-case label each card and tile opens with.
 export function eyebrow(text: string, at: { x: number; y: number; cls: string }): string {
   const { x, y, cls } = at
-  const label = escape(text.toLocaleUpperCase('tr'))
+  const label = escape(upper(text))
 
   return `<text class="${cls}" x="${x}" y="${y}" font-size="${EYEBROW_SIZE}" font-weight="700" letter-spacing="${EYEBROW_TRACKING}">${label}</text>`
 }
 
 export const eyebrowWidth = (text: string): number =>
-  measure(text.toLocaleUpperCase('tr'), EYEBROW_SIZE) + [...text].length * EYEBROW_TRACKING
+  measure(upper(text), EYEBROW_SIZE) + [...text].length * EYEBROW_TRACKING

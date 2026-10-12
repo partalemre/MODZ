@@ -1,7 +1,11 @@
 import { expect, test } from 'claude-code/testing'
 
+import { setLang } from '../hooks/i18n'
 import { deriveJob, joinJob, percentText, sealJob } from '../hooks/job'
 import type { AgentRun, Flow } from '../types'
+
+// These words are the Turkish ones (MODZ_LANG=tr).
+setLang('tr')
 
 const run = (id: string, over: Partial<AgentRun> = {}): AgentRun => ({
   id, agentId: id, type: 'general-purpose', description: `job ${id}`, model: 'claude-opus-5-5', status: 'running',

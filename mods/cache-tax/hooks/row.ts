@@ -10,12 +10,11 @@ import { fmtDuration, fmtUsd } from './fmt'
 import { statusIcons } from './status-icons'
 import { doc } from './svg'
 import { TERMINAL, palette } from './theme'
+import { bandWords } from './ui-words'
 import { coldFor, statusText } from './words'
 
 export type RowState = 'warm' | 'cold' | 'unknown' | 'stopped'
 export type Row = { state: RowState; detail: string[] }
-
-const WORD: Record<RowState, string> = { warm: 'sıcak', cold: 'soğuk', unknown: 'bilinmiyor', stopped: 'durdu' }
 
 function temperature(s: State, now: number): RowState {
   if (!s.lastRequestAt || s.compacted) return 'unknown'
@@ -35,11 +34,11 @@ export function rowOf(s: State, now: number): Row | null {
   if (s.deadline || s.stopped) return keepwarmRow(s, now)
   if (s.ctx < BIG_TOKENS) return null
   if (isCold(s, now)) {
-    return { state: 'cold', detail: [`${fmtDuration(coldFor(s, now))} önce soğudu`, `sonraki mesaj en fazla ${fmtUsd(coldUsd(s))}`] }
+    return { state: 'cold', detail: [bandWords().coldAgo(fmtDuration(coldFor(s, now))), bandWords().nextUpTo(fmtUsd(coldUsd(s)))] }
   }
   const left = untilCold(s, now)
   if (left === null || left > SOON_MS) return null
-  return { state: 'warm', detail: [`${fmtDuration(left)} içinde soğuyacak`, '/keepwarm ile sıcak tut'] }
+  return { state: 'warm', detail: [bandWords().goesCold(fmtDuration(left)), bandWords().keepWarm] }
 }
 
 /** A key that changes whenever the drawn card or row would: the band is redrawn only then. */
@@ -53,7 +52,7 @@ const ROW_CHROME = 18
 
 /** Detail segments kept from the left while they fit, so a narrow band drops the least important. */
 export function fitDetail(row: Row, columns: number): string {
-  const room = columns - ROW_CHROME - WORD[row.state].length
+  const room = columns - ROW_CHROME - bandWords().states[row.state].length
   const kept: string[] = []
   for (const part of row.detail) {
     if ([...kept, part].join(SEP).length > room && kept.length > 0) break
@@ -81,7 +80,7 @@ export function rowDesktop(ui: Elements['desktop'], o: RowOptions): RenderElemen
   return Box({ key: 'cache-tax:row', flexDirection: 'row', alignItems: 'center', gap: 1, children: [
     Box({ flexShrink: 0, children: [icon] }),
     Text({ color: o.noColor ? undefined : p.mid, wrap: 'truncate-end', children: [
-      'Önbellek · ', Text({ color, bold: true, children: [WORD[o.row.state]] }), `${SEP}${fitDetail(o.row, o.columns)}`,
+      bandWords().cache, Text({ color, bold: true, children: [bandWords().states[o.row.state]] }), `${SEP}${fitDetail(o.row, o.columns)}`,
     ] }),
   ] })
 }
@@ -103,7 +102,7 @@ export function rowTerminal(ui: Elements['terminal'], o: RowOptions): RenderElem
   return Box({ key: 'cache-tax:row', flexDirection: 'row', alignItems: 'center', children: [
     Box({ flexShrink: 0, children: [icon] }),
     Text({ wrap: 'truncate-end', children: [
-      ' Önbellek · ', Text({ color: terminalColor(o.row.state, o.noColor), bold: true, children: [WORD[o.row.state]] }),
+      ` ${bandWords().cache}`, Text({ color: terminalColor(o.row.state, o.noColor), bold: true, children: [bandWords().states[o.row.state]] }),
       `${SEP}${fitDetail(o.row, o.columns)}`,
     ] }),
   ] })

@@ -6,6 +6,7 @@ import type { SectionHead } from './card-svg'
 import { headerSvg } from './header-svg'
 import { KIND_KEY } from './history'
 import { t } from './i18n'
+import { upper } from './lang'
 import { lookAt, lookOf } from './identity'
 import { stuckOf } from './insight'
 import { COMPACT_H, HERO_CRAB, compactSvg, heroCrabSvg } from './pane-svg'
@@ -212,7 +213,7 @@ export function emptyTree(ui: Ui, layout: Layout, on: PaneHandlers) {
     <Box key="empty" flexDirection="row" columnGap={2} alignItems="center">
       {crab}
       <Box flexDirection="column" rowGap={1} flexShrink={1}>
-        <Text bold color="permission">{`● ${s.emptyTitle.toLocaleUpperCase('tr')}`}</Text>
+        <Text bold color="permission">{`● ${upper(s.emptyTitle)}`}</Text>
         <Text dimColor>{s.empty}</Text>
         <Box flexDirection="row"><Button key="new-task" variant="primary" label={`＋ ${s.newTask}`} onPress={on.onNewTask} /></Box>
       </Box>

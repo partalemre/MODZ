@@ -1,5 +1,6 @@
 import { themeCss } from './tidemark'
 import type { Mode, Neutral, Role } from './tidemark'
+import { upper } from './lang'
 
 // Svg building blocks of the Tidemark language (DESIGN.md §3–§5): text, pills, eyebrows, icon
 // tiles, badges and bars. Every color is a CSS variable, so one drawing serves both themes.
@@ -51,7 +52,7 @@ function charEm(ch: string): number {
 
   return /[A-ZÇĞİÖŞÜmwMW@%]/.test(ch) ? WIDE_EM : OTHER_EM
 }
-export const upper = (text: string): string => text.toLocaleUpperCase('tr')
+export { upper }
 
 export function measure(text: string, font: Font): number {
   const chars = [...text]

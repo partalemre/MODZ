@@ -15,6 +15,8 @@ export type Spy = {
   files: Set<string>
   // The turn's test command fails.
   isTestFailing?: boolean
+  // MODZ_LANG as $.env.get answers it: Turkish unless a test asks for the English default (null).
+  lang?: string | null
 }
 
 export function spyOf(over: Partial<Spy> = {}): Spy {
@@ -39,7 +41,8 @@ function toolAnswer(spy: Spy, e: any) {
 
 export async function setup($: any, on: any, spy: Spy) {
   spy.clock = mock.clock(on)
-  mock.env(on, spy.host === undefined ? {} : { __CFBundleIdentifier: spy.host })
+  const lang = spy.lang === undefined ? 'tr' : spy.lang
+  mock.env(on, { ...(lang === null ? {} : { MODZ_LANG: lang }), ...(spy.host === undefined ? {} : { __CFBundleIdentifier: spy.host }) })
   on('session.start', () => ({ cwd: '/work/eliti' }))
   on('session.surfaces', () => ({ value: [spy.surface] }))
   on('store.get', () => ({ value: undefined }))

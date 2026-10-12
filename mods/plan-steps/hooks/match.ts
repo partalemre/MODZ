@@ -1,4 +1,5 @@
 import type { DocStep, PlanDoc, PlanTask, StepStatus } from '../types'
+import { words } from './words'
 
 export type Step = {
   key: string
@@ -12,7 +13,6 @@ export type Step = {
 
 export type Plan = { steps: Step[]; source: string }
 
-export const TASKS_LABEL = 'görev listesi'
 const IN_PROGRESS_CREDIT = 0.5
 const MATCH_MIN = 0.6
 const MIN_WORD = 3
@@ -30,7 +30,7 @@ export function normalize(text: string): string {
     .trim()
 }
 
-function words(text: string): Set<string> {
+function wordSet(text: string): Set<string> {
   return new Set(normalize(text).split(' ').filter(word => word.length >= MIN_WORD))
 }
 
@@ -42,8 +42,8 @@ export function numberOf(text: string): number | null {
 
 // Overlap of the shorter title's words with the longer's: 1 when one title holds the other.
 export function similarity(a: string, b: string): number {
-  const left = words(a)
-  const right = words(b)
+  const left = wordSet(a)
+  const right = wordSet(b)
   const smaller = Math.min(left.size, right.size)
   if (smaller === 0) return normalize(a) !== '' && normalize(a) === normalize(b) ? 1 : 0
   let shared = 0
@@ -124,7 +124,7 @@ function fromTasks(tasks: PlanTask[]): Plan {
     checksTotal: 0,
   }))
 
-  return { steps, source: TASKS_LABEL }
+  return { steps, source: words().tasksLabel }
 }
 
 function fromDoc(doc: PlanDoc, matched: Map<number, PlanTask>): Step[] {
@@ -149,5 +149,5 @@ export function resolvePlan(tasks: PlanTask[], doc: PlanDoc | null): Plan | null
   const needed = Math.ceil(Math.min(doc.steps.length, tasks.length) / 2)
   if (matched.size < needed) return fromTasks(tasks)
 
-  return { steps: fromDoc(doc, matched), source: `${doc.label} · ${TASKS_LABEL}` }
+  return { steps: fromDoc(doc, matched), source: `${doc.label} · ${words().tasksLabel}` }
 }

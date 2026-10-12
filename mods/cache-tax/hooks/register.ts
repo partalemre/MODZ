@@ -11,7 +11,8 @@ import { seedFromResume } from './session'
 import { isLightTheme } from './theme'
 import { KEY_ALWAYS, KEY_GUARD, arm, deadlineKey, everyKey, prune, startWindow, stop, stopForGood, updateStatus } from './warm'
 import type { Io } from './warm'
-import { COMMANDS, GUARD, HOOK_TWICE, KEEPWARM, alwaysText, armedText, cardText, dropText, paidText, statusText, warnText } from './words'
+import { setLang } from './lang'
+import { alwaysText, armedText, cardText, commands, dropText, paidText, say, statusText, warnText } from './words'
 
 export { fmtDuration } from './fmt'
 export { freshState, parseDuration, resetForClear } from './core'
@@ -89,10 +90,11 @@ async function restore($: EngineInterface, s: State, now: number) {
 }
 
 async function registerCommands($: EngineInterface) {
-  await $.command.register(COMMANDS.keepwarm)
-  await $.command.register(COMMANDS.cacheTax)
+  const specs = commands()
+  await $.command.register(specs.keepwarm)
+  await $.command.register(specs.cacheTax)
   // The hook form of cache-tax ships a /cache-tax:status skill; both installed means two guards.
-  if ((await $.command.list()).some(cmd => cmd.name === 'cache-tax:status')) $.ui.log(HOOK_TWICE)
+  if ((await $.command.list()).some(cmd => cmd.name === 'cache-tax:status')) $.ui.log(say().hookTwice)
 }
 
 async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<string> {
@@ -101,7 +103,7 @@ async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<s
   if (words[0] === 'off') {
     const wasAlways = s.always
     await stopForGood(io($), s)
-    return wasAlways ? KEEPWARM.offAlways : KEEPWARM.off
+    return wasAlways ? say().keepwarm.offAlways : say().keepwarm.off
   }
   if (words[0] === 'always') {
     s.always = true
@@ -109,14 +111,14 @@ async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<s
     await startWindow(io($), s, { windowMs: DEFAULT_WINDOW_MS, every: PING_AFTER_MS })
     return alwaysText(s, now)
   }
-  if (words[0] === 'status') return statusText(s, now) ?? KEEPWARM.off
+  if (words[0] === 'status') return statusText(s, now) ?? say().keepwarm.off
   const window = words.length ? parseDuration(words[0] ?? '') : DEFAULT_WINDOW_MS
-  if (window == null) return KEEPWARM.usage
+  if (window == null) return say().keepwarm.usage
   // "every 2m" is a testing knob and lasts only for the window it was given with.
   let every = PING_AFTER_MS
   if (words[1] === 'every') {
     const period = parseDuration(words[2] ?? '')
-    if (period == null || period < MIN_PING_MS) return KEEPWARM.every
+    if (period == null || period < MIN_PING_MS) return say().keepwarm.every
     every = period
   }
   await startWindow(io($), s, { windowMs: window, every })
@@ -126,10 +128,10 @@ async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<s
 async function onCacheTax($: EngineInterface, s: State, args: string): Promise<string> {
   const words = args.trim().split(/\s+/).filter(Boolean)
   if (words[0] !== 'guard') return cardText(s, await $.clock.now())
-  if (words[1] !== 'warn' && words[1] !== 'refuse') return GUARD.usage
+  if (words[1] !== 'warn' && words[1] !== 'refuse') return say().guardMode.usage
   s.guard = words[1]
   await $.store.set(KEY_GUARD, s.guard)
-  return s.guard === 'refuse' ? GUARD.refuse : GUARD.warn
+  return s.guard === 'refuse' ? say().guardMode.refuse : say().guardMode.warn
 }
 
 type Submit = { e: PromptSubmitInput; next: (e: PromptSubmitInput) => Promise<PromptSubmitResult> }
@@ -218,6 +220,8 @@ function wireBand(on: On, c: Ctx) {
 function wireSession(on: On, c: Ctx) {
   const { s } = c
   on('session.start', async ($, e, next) => {
+    // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     const r = await next(e)
     s.hasBand = e.surface === 'terminal' || e.surface === 'desktop'
     if (s.hasBand) {

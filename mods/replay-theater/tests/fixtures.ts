@@ -29,11 +29,14 @@ export type World = {
   closed: string[]
   isPlaced: boolean
   isDenying: boolean
+  // What `$.env.get` answers: Turkish unless a test clears it for the English default.
+  env: Record<string, string>
 }
 
 export const newWorld = (): World => ({
   files: { '/w/README.md': 'Call greet(name) to say hi.\n', '/w/src/greet.js': 'export function greet(name) {\n  return `Hi ${name}`\n}\n' },
   ids: [], messages: () => [], modelCalls: [], reply: '1: Selam dosyasını oluşturur.', theme: 'dark', opened: [], closed: [], isPlaced: true, isDenying: false,
+  env: { MODZ_LANG: 'tr' },
 })
 
 function answerTool(world: World, e: any) {
@@ -68,6 +71,7 @@ function engineIo(on: any, world: World) {
 
 export async function setup($: any, on: any, world: World) {
   const clock = mock.clock(on)
+  mock.env(on, world.env)
   for (const name of ['store.get', 'store.set', 'command.register', 'ui.log']) on(name, () => ({ value: undefined }))
   on('session.start', () => ({ cwd: '/w' }))
   on('session.cwd', () => ({ value: '/w' }))

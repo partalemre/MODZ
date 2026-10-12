@@ -2,6 +2,7 @@
 // What the pane says while it has no picture yet: the page it is loading, or why it stopped.
 // The browser's own picture covers this as soon as the first frame lands.
 import type { ElementTable } from 'claude-code'
+import { word } from './words'
 
 type Ui = Pick<ElementTable<'terminal'>, 'Box' | 'Text'>
 
@@ -11,14 +12,14 @@ const START_URL = 'terminal-browser://start'
 
 // The start page has no address worth showing; a real one is shown whole.
 function shownUrl(url: string | null): string {
-  return url === null || url === START_URL ? 'Başlangıç sayfası' : url
+  return url === null || url === START_URL ? word('startPage') : url
 }
 
 function lead(status: PaneStatus): { text: string; color?: string } {
   if (status.error !== null && status.error !== '') return { text: status.error, color: 'error' }
-  if (status.isAlive === false) return { text: 'Tarayıcı kapandı', color: 'warning' }
+  if (status.isAlive === false) return { text: word('died'), color: 'warning' }
 
-  return { text: 'Sayfa yükleniyor…' }
+  return { text: word('loading') }
 }
 
 export function statusView(ui: Ui, status: PaneStatus) {
@@ -28,10 +29,10 @@ export function statusView(ui: Ui, status: PaneStatus) {
 
   return (
     <Box key="tb-status" flexDirection="column" paddingX={1} paddingY={1}>
-      <Text color="suggestion" bold>{'● TARAYICI'}</Text>
+      <Text color="suggestion" bold>{word('eyebrow')}</Text>
       <Text dimColor wrap="truncate-middle">{shownUrl(status.url)}</Text>
       <Text color={line.color} dimColor={!isStuck}>{line.text}</Text>
-      {isStuck ? <Text dimColor>{'/browser ile yeniden dene · /browser close kapatır'}</Text> : null}
+      {isStuck ? <Text dimColor>{word('retry')}</Text> : null}
     </Box>
   )
 }

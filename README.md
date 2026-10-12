@@ -1,73 +1,139 @@
-# MODZ
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/img/hero-dark.svg">
+    <img src="docs/img/hero-light.svg" width="520" alt="MODZ">
+  </picture>
+</p>
 
-Claude Code modlarının (hooks plugin'leri: bant, panel, status, toast, guard) tek kaynağı.
+<h3 align="center">17 mods for Claude Code. One panel.</h3>
 
-- Kaynak burada: `mods/<ad>/`.
-- Etkinleştirme: `~/.claude/skills/<ad>` → `MODZ/mods/<ad>` symlink'i. Claude skills klasöründeki plugin'leri
-  her oturumda kendiliğinden yükler; kopya yok, kurulum yok.
-- `~/AI-Tools/claude-mods/src/<ad>` da buraya bakan symlink; orada yapılan düzenleme buraya yazılır.
-- Cloud: cloud oturumu yalnızca repoyu klonlar, `~/.claude/skills` orada yok. Bu yüzden repo
-  `.claude/skills/<ad>` → `../../mods/<ad>` göreli linklerini taşır; Claude bu proje klasöründeki plugin'leri de
-  kendiliğinden yükler. Makineye bağlı üç mod (done-ping, terminal-browser, filetree) cloud'a bağlanmaz.
-  Yerelde aynı ada sahip `~/.claude/skills` linki önce gelir; ikisi aynı klasörü gösterdiği için mod bir kez yüklenir.
-- Klasör aynı zamanda `modz` adlı marketplace (`.claude-plugin/marketplace.json`), paylaşmak için.
-- Taşıma öncesi yedekler: `~/.claude/mods-backup-20261009/`.
+<p align="center">See every move Claude makes: agents, files, plans, tests and risky commands, live, beside the chat.</p>
 
-## Modlar (17)
+<p align="center">
+  <a href="https://partalemre.github.io/MODZ/"><img src="docs/img/poster.jpg" width="720" alt="The MODZ film, 50 seconds"></a>
+  <br>
+  <sub><a href="https://partalemre.github.io/MODZ/">Watch the film</a> · 50 seconds</sub>
+</p>
 
-Gruplar `/modz` panelindekiyle aynı (`mods/modz/hooks/meta.ts`).
+## Install
 
-**Görünüm**
+In Claude Code, add the marketplace, then install the panel and the mods you want:
 
-| Mod | Ne yapar |
-| --- | --- |
-| `filetree` | File tree of what Claude touches: what it is doing now, files touched this turn and git status |
-| `modz` | MODZ ana paneli: oturum açılınca sağda açılır; her modun canlı özeti ve paneli tek tıkla, ayrıca tüm modların kataloğu (`/modz`) |
-| `replay-theater` | Replay the last turn's file edits step by step: what each step did, which plan step it belongs to, colored diff |
-| `skins` | Skins for the transcript: themed tool rows, reply gutters and spinner words; /skin swaps them live |
-| `terminal-browser` | A browser that runs in the terminal: preview sites and HTML files, let the agent drive the built-in browser. Terminal only |
-
-**Koruma**
-
-| Mod | Ne yapar |
-| --- | --- |
-| `blast-radius` | Holds risky shell commands (rm -rf, git reset --hard, git clean, force push, migrations) and shows what they would change, with delete and Vazgeç |
-| `cache-tax` | Keeps the one-hour prompt cache warm during breaks and holds a cold send on a card with its estimated rewrite cost. Warming costs tokens |
-| `checkpoint` | Silent git snapshot before each turn's first file write; /checkpoints lists turns and undoes one after a confirm |
-| `secret-guard` | Scans Write/Edit and git add/commit for keys and tokens, blocks git add of .env; masked card with Anahtarları .env'e taşı, Bir kez izin ver or Vazgeç |
-| `session-budget` | A per-session spend budget (% of the 5h limit or $): notice at 80%, Continue anyway / Stop at 100% on a new prompt |
-
-**Ölçüm**
-
-| Mod | Ne yapar |
-| --- | --- |
-| `hud-pro` | One quiet line at the bottom of the band: 5h limit with reset, 7d, context and session ≈cost; /hud full shows details |
-| `savvy-progress` | Progress band above the prompt and the single **Ajanlar** panel: each agent a crab card with progress %, cost and time, message and stop; a crew timeline, a quiet-agent warning and Yeni görev to start one |
-| `test-badge` | After a turn that edited source files, runs tests and lint in the background and shows a badge (testler 41/42 · lint 2 hata) with a failure pane |
-
-**Akış**
-
-| Mod | Ne yapar |
-| --- | --- |
-| `done-ping` | A notification when a long turn finishes or Claude waits on you: the desktop app's own notification, else a macOS banner |
-| `plan-steps` | Shows the plan's steps when there is one (task list, approved plan or plan file): /steps pane and a quiet status line |
-| `reflect-mod` | Finds reusable corrections in your prompts (Turkish and English prefilter, one model check) and saves them to the chosen CLAUDE.md |
-| `savvy-flow` | Orchestrated delivery: the session model plans and reviews, five tiered worker subagents implement. Skill and agents only; pairs with savvy-progress |
-
-Ortak çizim kiti `kit/` altında (`bin/kit-sync` modlara dağıtır). `bin/preview <mod>` bir modun test önizlemelerini PNG'ye çizer.
-
-## Yönetim
-
-`bin/modz status | check [ad] | desk | new <ad> "açıklama" | link [ad] | unlink <ad> | cloud | list | sync | dev | import <klasör>`.
-Oturum açılınca sağda MODZ ana paneli gelir: ajanlar, dosyalar, plan, testler, kontrol noktaları, tekrar, kullanım ve görünüm birer tıkla açılır; "Modlar" satırı tüm modları listeler. Kapatmak için `/config` → modz → "Oturum başında aç". Modlar birbirine `$.state` ile haber verir (DESIGN.md §9).
-
-Akış: `bin/modz new <ad>` → düzenle → `bin/modz check <ad>` → `bin/modz link <ad>` → `bin/modz cloud` (commit'le).
-Oturumda Claude'a yazdırılan mod `~/.claude/dev-mods/<oturum>/` altına düşer: `bin/modz dev` → `bin/modz import <klasör>` → `bin/modz link <ad>`.
-
-## Paylaşım
-
-Repo GitHub'a gidince başkası şöyle kurar:
-
+```text
+/plugin marketplace add partalemre/MODZ
+/plugin install modz@modz
+/plugin install savvy-progress@modz
 ```
-/plugin install <mod> --marketplace <owner>/MODZ
+
+Or install all of them at once from a terminal:
+
+```sh
+claude plugin marketplace add partalemre/MODZ
+for m in modz savvy-progress savvy-flow filetree plan-steps transceiver blast-radius secret-guard checkpoint \
+         test-badge replay-theater session-budget cache-tax hud-pro done-ping reflect-mod skins terminal-browser; do
+  claude plugin install "$m@modz"
+done
 ```
+
+Or ask your coding agent: *Install MODZ for me. Follow https://partalemre.github.io/MODZ/llms.txt and ask me which mods I want.*
+
+Start a new session. The MODZ panel opens on the right with a line from every mod you installed.
+
+- **Where it draws.** The Claude desktop app's Code tab draws everything. The terminal draws the same panels as text.
+- **Requirements.** Claude Code 2.1.295 or later, tested on 2.1.295 and 2.1.296. `terminal-browser` draws in the terminal only. Outside the desktop app, `done-ping` falls back to a macOS banner.
+- **Language.** The interface is in English. Set `MODZ_LANG=tr` for Turkish.
+- **Transceiver** needs a claude.ai login. If Claude Code runs inside another app (an IDE, `claude -p`, an SDK host), also set `CLAUDE_CODE_ARTIFACT=1`.
+
+Both variables go in the `env` block of `~/.claude/settings.json`:
+
+```json
+{ "env": { "MODZ_LANG": "tr", "CLAUDE_CODE_ARTIFACT": "1" } }
+```
+
+## One panel. Every mod, live.
+
+<img src="docs/img/panel.jpg" alt="The MODZ panel beside a Claude Code session, showing Agents, Files, Plan, Tests, Checkpoints and Usage">
+
+The panel opens beside the chat when a session starts. Each mod reports one honest line: what it measured, never a guess. One click opens that mod's own pane next to the panel.
+
+## Every agent gets a face.
+
+<img src="docs/img/agents.jpg" alt="The Agents pane: three subagents as pixel crabs, each with its task, progress, cost and time">
+
+Each subagent gets a crab, a name and a card with its task, step, progress, cost and time, updated as it works. A band above the prompt shows the whole crew while a turn runs.
+
+## Risky commands wait for your OK.
+
+<img src="docs/img/hold.jpg" alt="A held git reset --hard, listing the uncommitted changes it would throw away, with Run anyway and Keep my work">
+
+`rm -rf`, `git reset --hard`, `git clean`, force pushes and migrations stop before they run. The card shows exactly what each would delete or throw away, and the safe choice has the focus.
+
+## Your team, inside Claude.
+
+<img src="docs/img/team.jpg" alt="Two Transceiver windows: teammates chatting, and one agent's diff question answered by the other machine at zero tokens">
+
+Transceiver lets you chat with teammates without leaving Claude Code. Your agent can ask theirs for `status`, `diff`, `tests`, `log` or a file. The answer is computed on their machine and costs zero tokens. Only collaborators on the repo can ask, and secrets never leave your machine. Rooms are private claude.ai artifacts; there is no extra server. [How it works](https://github.com/partalemre/transceiver)
+
+## The mods
+
+| | Mod | What it does |
+|---|---|---|
+| **Panel** | `modz` | The panel itself: one live line per mod and one click to each pane |
+| **Work** | `savvy-progress` | Agents pane and progress band: each subagent's progress, cost and time |
+| | `savvy-flow` | Orchestrated delivery: the session model plans, tiered worker agents build |
+| | `filetree` | Files Claude touched this turn, what it is doing now, git status |
+| | `plan-steps` | The plan's steps as Claude works through them |
+| | `transceiver` | Team chat and zero-token agent questions between teammates |
+| **Safety** | `blast-radius` | Holds destructive shell commands and shows what they would change |
+| | `secret-guard` | Stops keys and tokens in writes, edits, `git add` and commits |
+| | `checkpoint` | A silent git snapshot before each turn's first write; undo a turn |
+| | `test-badge` | Runs tests and lint after edits and shows the result |
+| | `replay-theater` | Replays the last turn's edits step by step |
+| **Meter** | `session-budget` | A spend budget per session, with a stop at 100% |
+| | `cache-tax` | Keeps the prompt cache warm through breaks and prices a cold send |
+| | `hud-pro` | One line with the 5-hour and 7-day limits, context and cost |
+| **Comfort** | `done-ping` | A notification when a long turn ends or Claude waits on you |
+| | `reflect-mod` | Saves corrections worth keeping to your CLAUDE.md |
+| | `skins` | Themes for the transcript, switched live with `/skin` |
+| | `terminal-browser` | A browser inside the terminal that the agent can drive |
+
+Most mods use no model tokens. Three can: `reflect-mod` makes one small check per correction it finds; `cache-tax` warming sends a request when you turn it on; Transceiver's free-form `ask` uses a small model on the other side, at most ten a day per room.
+
+## For AI agents
+
+If a person asks you to install MODZ, do exactly this. Every step is safe to repeat.
+
+1. Check the version: `claude --version` must print 2.1.295 or later. If it is older, ask the person to update Claude Code first.
+2. Add the marketplace: `claude plugin marketplace add partalemre/MODZ`.
+3. Install the panel: `claude plugin install modz@modz`. Then install each mod the person wants, by the names in the table above, as `claude plugin install <name>@modz`. If they did not choose, install all eighteen with the loop under [Install](#install).
+4. Optional settings: put them in the `env` block of `~/.claude/settings.json`, merging with what is already there and never overwriting it:
+   - `"MODZ_LANG": "tr"` for a Turkish interface.
+   - `"CLAUDE_CODE_ARTIFACT": "1"` if Transceiver is installed and this Claude Code is driven by an SDK host.
+5. Verify: `claude plugin list` shows each `<name>@modz` as enabled.
+6. Tell the person to start a new session, or run `/reload-plugins` in an open one.
+
+To remove a mod: `claude plugin uninstall <name>@modz`. To remove everything: also run `claude plugin marketplace remove modz`. A machine-readable summary is at [partalemre.github.io/MODZ/llms.txt](https://partalemre.github.io/MODZ/llms.txt).
+
+## Develop
+
+`mods/<name>/` holds each mod; `kit/` is the shared drawing kit, copied into the mods by `bin/kit-sync`.
+
+- **Unit checks.** `bin/modz check [name]` validates each mod and runs its tests, on both the terminal engine and the desktop app's engine.
+- **End to end.** `bin/modz desk` starts a real session, speaks the desktop app's own protocol to it, and clicks through every panel. Run both before opening a pull request.
+- **Design rules.** [DESIGN.md](DESIGN.md) (in Turkish) covers colour, type, components and the rules every mod follows.
+
+## Credits
+
+Several mods are adaptations of open-source projects, each under its original license, which lives in that mod's folder:
+
+| Mod | Based on | License |
+|---|---|---|
+| `blast-radius`, `replay-theater` | [anthropics/claude-code-playground](https://github.com/anthropics/claude-code-playground) | Apache-2.0 |
+| `cache-tax` | [karanb192/cache-tax](https://github.com/karanb192/cache-tax) | MIT |
+| `filetree` | [data-goblin/claude-code-filetree](https://github.com/data-goblin/claude-code-filetree) | MIT |
+| `reflect-mod` | [bayramannakov/claude-reflect](https://github.com/bayramannakov/claude-reflect) | MIT |
+| `savvy-progress`, `savvy-flow` | [johnnyvizz/claude-kit](https://github.com/johnnyvizz/claude-kit) | MIT |
+| `skins` | [hellosverre/claude-skins](https://github.com/hellosverre/claude-skins) | MIT |
+| `terminal-browser` | [zenbu-labs/terminal-browser](https://github.com/zenbu-labs/terminal-browser) | MIT |
+
+Everything else is [MIT](LICENSE).

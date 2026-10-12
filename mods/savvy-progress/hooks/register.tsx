@@ -10,7 +10,7 @@ import { onEvents } from './events'
 import { PHASES } from './flow'
 import { deriveJob } from './job'
 import { hubDetailOf, toneOf } from './hub'
-import { isLang, langOf, setLang } from './i18n'
+import { isLang, langOf, setLang, t } from './i18n'
 import type { Lang } from './i18n'
 import { readingOf, trackLimit } from './limit'
 import { onPane } from './pane'
@@ -94,12 +94,16 @@ async function settingsLang($: EngineInterface): Promise<Lang | null> {
   }
 }
 
+// The plugin's own option, then MODZ_LANG, then Claude Code's `language`, then the locale; English when none says.
+// The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
 async function detectLang($: EngineInterface, option: unknown): Promise<Lang> {
   if (isLang(option)) return option
+  const fromModz = langOf(await $.env.get('MODZ_LANG').catch(() => undefined))
+  if (fromModz) return fromModz
   const fromSettings = await settingsLang($)
   if (fromSettings) return fromSettings
   const locale = (await $.env.get('LC_ALL')) || (await $.env.get('LC_MESSAGES')) || (await $.env.get('LANG'))
-  return langOf(locale) ?? 'tr'
+  return langOf(locale) ?? 'en'
 }
 
 // Where the 5h window and the session's dollars stood when the session started.
@@ -204,13 +208,13 @@ function onHubSources(on: On): void {
 
 export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
-    const started = await next(e)
     setLang(await detectLang($, options.language))
+    const started = await next(e)
     await $.tool.register(PROGRESS_SPEC)
     await $.tool.register(STEP_SPEC)
     await $.command.register({
       name: 'agents-info',
-      description: 'Ajanlar panelini aç/kapat: çalışan, biten ve planlı alt ajanlar; ilerleme, maliyet, zaman çizelgesi, sessiz ajan uyarısı; mesaj, durdur ve yeni görev',
+      description: t().command,
     })
     startBeat($)
     await seedLimit($)

@@ -31,7 +31,7 @@ export type ForkAnswer = null | ModelForkResult | { read: number; write: number;
 
 // The world beneath the mod: its store, the engine's answers, and a fork that
 // replies from a script so each test decides what the cache looked like.
-export function world(on: On, forkAnswers: ForkAnswer[], opts: { store?: Map<string, unknown>; commands?: string[]; live?: { tokens?: number }; sid?: string; model?: string; bandText?: string; theme?: { value: string }; noColor?: boolean; denyTheme?: boolean; writtenTheme?: string } = {}) {
+export function world(on: On, forkAnswers: ForkAnswer[], opts: { store?: Map<string, unknown>; commands?: string[]; live?: { tokens?: number }; sid?: string; model?: string; bandText?: string; theme?: { value: string }; noColor?: boolean; denyTheme?: boolean; writtenTheme?: string; lang?: 'en' | 'tr' } = {}) {
   if (opts.store) {
     const store = opts.store
     on('store.get', ($, e) => ({ value: store.get(e.key) }))
@@ -40,7 +40,9 @@ export function world(on: On, forkAnswers: ForkAnswer[], opts: { store?: Map<str
     on('store.keys', () => ({ value: [...store.keys()] }))
   } else mock.store(on, {})
   const reads = { theme: 0, env: 0 }
-  on('env.get', ($, e) => { reads.env++; return { value: e.name === 'NO_COLOR' && opts.noColor ? '1' : undefined } })
+  // The tests read Turkish (MODZ_LANG=tr) unless one asks for English, which leaves the variable unset.
+  const env: Record<string, string | undefined> = { NO_COLOR: opts.noColor ? '1' : undefined, MODZ_LANG: opts.lang === 'en' ? undefined : 'tr' }
+  on('env.get', ($, e) => { if (e.name !== 'MODZ_LANG') reads.env++; return { value: env[e.name] } })
   on('config.list', () => {
     reads.theme++
     return { value: [{ key: 'theme', label: 'Theme', kind: 'choice', value: opts.theme?.value ?? 'dark', provider: { plugin: 'engine', tier: 'core' }, isLocked: false }] }

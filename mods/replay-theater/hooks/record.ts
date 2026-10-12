@@ -5,6 +5,7 @@
 // the call's id and loop kept so its narration can be found later, and the tool's own description kept.
 
 import { diffLines } from './diff'
+import { words } from './words'
 import type { ReplayStep } from '../types'
 
 export const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit'])
@@ -23,7 +24,7 @@ export type EditCall = {
 }
 
 export function relPath(cwd: string, path: string | undefined): string {
-  if (path === undefined || path === '') return '(bilinmeyen dosya)'
+  if (path === undefined || path === '') return words().unknownFile
   if (cwd !== '' && path.startsWith(`${cwd}/`)) return path.slice(cwd.length + 1)
 
   return path
@@ -36,18 +37,19 @@ export async function stepsFor(io: { cwd: string; before: ReadBefore }, e: EditC
   const file = relPath(io.cwd, e.file_path)
   const said = typeof e.description === 'string' && e.description.trim() !== '' ? e.description.trim() : undefined
   const base = { tool: e.tool, file, toolUseId: e.tool_use_id, agentId: e.agentId, ...(said === undefined ? {} : { said }) }
+  const w = words()
   if (e.tool === 'Edit') {
-    return [{ ...base, diff: diffLines(e.old_string, e.new_string), note: e.replace_all === true ? 'tümünü değiştir' : '' }]
+    return [{ ...base, diff: diffLines(e.old_string, e.new_string), note: e.replace_all === true ? w.replaceAll : '' }]
   }
   if (e.tool === 'MultiEdit' && Array.isArray(e.edits)) {
     const total = e.edits.length
 
-    return e.edits.map((edit, k) => ({ ...base, diff: diffLines(edit.old_string, edit.new_string), note: `düzenleme ${k + 1}/${total}` }))
+    return e.edits.map((edit, k) => ({ ...base, diff: diffLines(edit.old_string, edit.new_string), note: w.editOf(k + 1, total) }))
   }
   if (e.tool === 'Write') {
     const old = await io.before(e.file_path)
 
-    return [{ ...base, diff: diffLines(old.text, e.content), note: old.isNew ? 'yeni dosya' : 'yeniden yazım' }]
+    return [{ ...base, diff: diffLines(old.text, e.content), note: old.isNew ? w.newFile : w.rewrite }]
   }
 
   return []

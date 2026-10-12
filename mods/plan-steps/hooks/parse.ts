@@ -1,4 +1,5 @@
 import type { DocStep } from '../types'
+import { words } from './words'
 
 // A named plan file is a plan on sight; any other markdown must show plan structure.
 const PLAN_PATH = /(^|\/)(docs\/(.+\/)?plans\/[^/]+\.md|PLAN\.md|[^/]+\.plan\.md)$/i
@@ -60,7 +61,7 @@ function fromHeadings(lines: string[]): DocStep[] {
     if (heading !== null) {
       const number = Number(heading[1] ?? heading[3])
       const title = cleanTitle(heading[2] ?? heading[4] ?? '')
-      current = newStep(title === '' ? `Adım ${number}` : title, number)
+      current = newStep(title === '' ? words().stepTitle(number) : title, number)
       steps.push(current)
     } else if (/^#{1,3}\s/.test(line.trim())) {
       current = null

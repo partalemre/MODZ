@@ -5,6 +5,8 @@ import { MAX_DIFF_LINES } from './diff-svg'
 import type { Ui } from './offer'
 import { baseName, folderOf, totals, windowOf } from './pane-svg'
 import type { PaneModel } from './pane-svg'
+import { upper } from './lang'
+import { words } from './words'
 import type { ReplayDiffLine, ReplayStep } from '../types'
 
 const BAND_CHROME_ROWS = 7
@@ -58,13 +60,14 @@ function diffRow(ui: Ui, line: ReplayDiffLine, key: string) {
 
 function contextRows(ui: Ui, step: ReplayStep, isPending: boolean) {
   const { Text } = ui
+  const w = words()
   const rows = []
   if (step.said !== undefined) rows.push(<Text key="rt-said" wrap="wrap">{`› ${step.said}`}</Text>)
-  else if (isPending) rows.push(<Text key="rt-said" dimColor>{'◐ açıklanıyor'}</Text>)
+  else if (isPending) rows.push(<Text key="rt-said" dimColor>{`◐ ${w.explaining}`}</Text>)
   if (step.plan !== undefined) {
     rows.push(
       <Text key="rt-plan" wrap="truncate-end">
-        <Text color="merged">{`◆ Plan adımı ${step.plan.index}/${step.plan.total}`}</Text>
+        <Text color="merged">{`◆ ${w.planStep(step.plan.index, step.plan.total)}`}</Text>
         <Text dimColor>{` · ${step.plan.title}`}</Text>
       </Text>,
     )
@@ -81,7 +84,7 @@ function header(ui: Ui, model: PaneModel) {
   return (
     <Box key="rt-head" flexDirection="column">
       <Box flexDirection="row" columnGap={1}>
-        <Text bold>{`${sum.files} dosyada ${model.steps.length} düzenleme`}</Text>
+        <Text bold>{words().editsInFiles(model.steps.length, sum.files)}</Text>
         {(model.age ?? '') !== '' && <Text dimColor>{`· ${model.age}`}</Text>}
         <Box flexGrow={1} />
         <Text color="success">{`+${sum.add}`}</Text>
@@ -98,14 +101,15 @@ export function terminalView(ui: Ui, model: PaneModel, site: TerminalSite) {
   const shown = windowOf(model.steps.length, model.index)
   const maxDiff = site.isCompact ? Math.max(MIN_DIFF_ROWS, Math.min(MAX_DIFF_LINES, site.maxRows - BAND_CHROME_ROWS)) : MAX_DIFF_LINES
   const lines = step.diff.slice(0, maxDiff)
-  const meta = [folderOf(step.file) || 'proje kökü', step.tool, step.note].filter(Boolean).join(' · ')
+  const w = words()
+  const meta = [folderOf(step.file) || w.projectRoot, step.tool, step.note].filter(Boolean).join(' · ')
 
   return (
     <Box key="rt-pane" flexDirection="column" paddingX={1}>
       {!site.isCompact && header(ui, model)}
       {!site.isCompact && model.steps.slice(shown.start, shown.end).map((one, n) => stepRow(ui, one, { k: shown.start + n, index: model.index }))}
       <Box key="rt-eyebrow" marginTop={site.isCompact ? 0 : 1}>
-        <Text color="merged" bold>{`● DÜZENLEME ${model.index + 1} / ${model.steps.length}`}</Text>
+        <Text color="merged" bold>{`● ${upper(w.editNumber(model.index + 1, model.steps.length))}`}</Text>
       </Box>
       <Box key="rt-file" flexDirection="row" columnGap={1}>
         <Text bold>{baseName(step.file)}</Text>
@@ -114,8 +118,8 @@ export function terminalView(ui: Ui, model: PaneModel, site: TerminalSite) {
       {contextRows(ui, step, model.explain === 'pending')}
       <Box key="rt-diff" flexDirection="column">
         {lines.map((line, n) => diffRow(ui, line, `rt-d${n}`))}
-        {step.diff.length > maxDiff && <Text key="rt-more" dimColor>{`  … ${step.diff.length - maxDiff} satır daha`}</Text>}
-        {step.diff.length === 0 && <Text key="rt-empty" dimColor>{'  (satır değişikliği yok)'}</Text>}
+        {step.diff.length > maxDiff && <Text key="rt-more" dimColor>{`  ${w.moreLines(step.diff.length - maxDiff)}`}</Text>}
+        {step.diff.length === 0 && <Text key="rt-empty" dimColor>{`  (${w.noLineChanges})`}</Text>}
       </Box>
       {buttons(ui, model, site.on)}
     </Box>

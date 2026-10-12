@@ -1,6 +1,6 @@
 // The hub with the world as it really is: a removed mod's card still around, a catalog that cannot be
 // read, a mod in the marketplace whose folder is gone and one the catalog has no notes for.
-import { expect, test } from 'claude-code/testing'
+import { expect, mock, test } from 'claude-code/testing'
 
 import { MARKET_FILES } from './market-fixture'
 
@@ -9,6 +9,7 @@ const PANE = { plugin: 'modz', component: 'Pane', requestId: 'modz', viewport: {
 type Files = Record<string, string>
 
 function stubWorld(on: any, files: Files) {
+  mock.env(on, { MODZ_LANG: 'tr' })
   on('fs.stat', () => ({ value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
   on('fs.read', (_: unknown, e: { path: string }) => {
     const text = files[e.path]

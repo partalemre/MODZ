@@ -1,4 +1,5 @@
 import { fitText, textWidth, xml } from './format'
+import { upper } from './lang'
 import { meterSvg } from './meter'
 import type { Units } from './meter'
 import { FONT, MONO, paneSvg } from './theme'
@@ -42,7 +43,7 @@ const DOT_CLASS: Record<Tone, string> = { run: 'f-run', ok: 'f-ok', warn: 'f-war
 
 // The room a figure needs: its label or its value, whichever is wider, and the gaps around it.
 const needOf = (stat: Stat): number =>
-  Math.max(textWidth(stat.label.toLocaleUpperCase('tr'), STATS.labelSize + EYEBROW.tracking), textWidth(stat.value, STATS.valueSize) * BOLD) + GAP * 2
+  Math.max(textWidth(upper(stat.label), STATS.labelSize + EYEBROW.tracking), textWidth(stat.value, STATS.valueSize) * BOLD) + GAP * 2
 
 // All figures in one row when each fits its column, else two by two, else one a row: never cut.
 const columnsOf = (inner: number, stats: Stat[]): number => {
@@ -55,7 +56,7 @@ const columnsOf = (inner: number, stats: Stat[]): number => {
 type Slot = { x: number; y: number; w: number }
 
 const statSvg = (stat: Stat, { x, y, w }: Slot): string =>
-  `<text class="m" x="${x}" y="${y + STATS.label}" font-family="${FONT}" font-size="${STATS.labelSize}" font-weight="700" letter-spacing="${EYEBROW.tracking}">${xml(fitText(stat.label.toLocaleUpperCase('tr'), STATS.labelSize + EYEBROW.tracking, w))}</text>
+  `<text class="m" x="${x}" y="${y + STATS.label}" font-family="${FONT}" font-size="${STATS.labelSize}" font-weight="700" letter-spacing="${EYEBROW.tracking}">${xml(fitText(upper(stat.label), STATS.labelSize + EYEBROW.tracking, w))}</text>
 <text class="t" x="${x}" y="${y + STATS.value}" font-family="${FONT}" font-size="${STATS.valueSize}" font-weight="650" font-variant-numeric="tabular-nums">${xml(fitText(stat.value, STATS.valueSize, w))}</text>`
 
 // Four figures in one row, or two by two; a hairline stands between neighbours in a row.

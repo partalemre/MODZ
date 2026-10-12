@@ -10,7 +10,7 @@ import { holdDesktop, holdTerminal } from './hold'
 import type { HoldActions } from './hold'
 import type { HoldView } from './hold-svg'
 import { rowDesktop, rowOf, rowTerminal } from './row'
-import { AUTO_WARM, coldFor, rateText } from './words'
+import { autoWarm, coldFor, rateText } from './words'
 
 export type Prefs = { isLight: boolean; noColor: boolean }
 
@@ -22,7 +22,7 @@ export function holdView(s: State, now: number): HoldView {
     coldUsd: coldUsd(s),
     warmUsd: warmUsd(s),
     rate: rateText(s),
-    autoWarm: AUTO_WARM,
+    autoWarm: autoWarm(),
   }
 }
 

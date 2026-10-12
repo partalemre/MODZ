@@ -2,6 +2,10 @@ import { expect, test } from 'claude-code/testing'
 
 import { hubDetail, isOwnOpen } from '../hooks/hub'
 import { runSkin, start, stubEngine } from './world'
+import { setLang } from '../hooks/lang'
+
+// These tests call the word builders directly and read Turkish.
+setLang('tr')
 
 // The MODZ main panel's side of skins (DESIGN.md §9): the `hub` card and the `modz.open` request.
 

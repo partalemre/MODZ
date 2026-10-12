@@ -2,6 +2,7 @@
 // A commit is judged in the repository it ran in: a `cd other && git commit` that lands in
 // another repo is a success there, never a failure of the tree's own HEAD.
 
+import { gitWords, type Reason } from './gitwords'
 import { resolve, segments, stripGlobals } from './shell'
 import { inside, isAbsolute } from './tree'
 
@@ -14,19 +15,21 @@ const UNSURE = /[$`*?]|^~[^/]|^-$/
 const SUBSHELL_HEADS = new Set(['pushd', 'popd', 'source', '.', 'eval', 'sh', 'bash', 'zsh'])
 
 // git's own words for why a commit did not happen, said plainly.
-const REASONS: [RegExp, string][] = [
-  [/nothing to commit|nothing added to commit|no changes added to commit/i, 'değişiklik yok'],
-  [/please tell me who you are|author identity unknown|empty ident name/i, 'git kimliği ayarlı değil'],
-  [/not a git repository/i, 'git deposu değil'],
-  [/unmerged files|fix conflicts|not concluded your merge/i, 'çakışma çözülmemiş'],
-  [/gpg failed|failed to sign/i, 'imza atılamadı'],
-  [/empty commit message/i, 'commit mesajı boş'],
-  [/index\.lock/i, 'git kilidi açık (index.lock)'],
-  [/hook (failed|exited|declined)|pre-commit|commit-msg/i, 'bir git kancası durdurdu'],
+const REASONS: [RegExp, Reason][] = [
+  [/nothing to commit|nothing added to commit|no changes added to commit/i, 'nothing'],
+  [/please tell me who you are|author identity unknown|empty ident name/i, 'identity'],
+  [/not a git repository/i, 'notRepo'],
+  [/unmerged files|fix conflicts|not concluded your merge/i, 'conflicts'],
+  [/gpg failed|failed to sign/i, 'sign'],
+  [/empty commit message/i, 'emptyMessage'],
+  [/index\.lock/i, 'locked'],
+  [/hook (failed|exited|declined)|pre-commit|commit-msg/i, 'hook'],
 ]
 
 export function commitReason(text: string): string {
-  return REASONS.find(([pattern]) => pattern.test(text))?.[1] ?? ''
+  const reason = REASONS.find(([pattern]) => pattern.test(text))?.[1]
+
+  return reason === undefined ? '' : gitWords().reasons[reason]
 }
 
 function expand(token: string, vars: Record<string, string>): string {
@@ -96,9 +99,10 @@ export type CommitFacts = {
 }
 
 export function commitOutcome(f: CommitFacts): Outcome {
-  if (f.sha) return { state: 'done', label: f.place ? `commit edildi · ${f.place}` : 'commit edildi', detail: f.sha.slice(0, SHA_SHOWN) }
+  const w = gitWords()
+  if (f.sha) return { state: 'done', label: f.place ? w.committedIn(f.place) : w.committed, detail: f.sha.slice(0, SHA_SHOWN) }
   const reason = commitReason(f.text)
-  if (reason) return { state: 'failed', label: `commit olmadı: ${reason}`, detail: '' }
-  if (f.isDirKnown || f.hasFailed) return { state: 'failed', label: 'commit oluşmadı', detail: '' }
-  return { state: 'done', label: 'git commit çalıştı', detail: '' }
+  if (reason) return { state: 'failed', label: w.noCommit(reason), detail: '' }
+  if (f.isDirKnown || f.hasFailed) return { state: 'failed', label: w.noCommitMade, detail: '' }
+  return { state: 'done', label: w.commitRan, detail: '' }
 }

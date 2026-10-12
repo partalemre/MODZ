@@ -3,10 +3,11 @@ import { lineTree } from './line'
 import type { Ui } from './line'
 import { gaugeViews } from './model'
 import { lineSvg } from './svg-line'
+import { words } from './words'
 import type { HudUsage } from '../types'
 
 // The HUD's row of the band: the line (Svg on the desktop, text on the terminal) and, once the
-// context is full enough for it to pay, a small "Sıkıştır" button beside it.
+// context is full enough for it to pay, a small "Compact" button beside it.
 
 export type BandInput = {
   usage: HudUsage
@@ -47,7 +48,7 @@ export function bandRow(ui: Ui, input: BandInput) {
     <Box key="hud-pro-row" flexDirection="row" alignItems="center" columnGap={2}>
       {line}
       {showsCompact && (
-        <Button key="compact" label="Sıkıştır" hotkey={COMPACT_HOTKEY} onPress={input.compact} {...(input.isDesktop ? {} : { plain: true as const })} />
+        <Button key="compact" label={words().compact} hotkey={COMPACT_HOTKEY} onPress={input.compact} {...(input.isDesktop ? {} : { plain: true as const })} />
       )}
     </Box>
   )

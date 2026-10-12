@@ -3,8 +3,12 @@ import { expect, test } from 'claude-code/testing'
 import { classify } from '../hooks/classify'
 import { cleanArgs, parseScan } from '../hooks/measure-files'
 import { parseNumstat } from '../hooks/measure-git'
-import { trSize, viewOf } from '../hooks/view'
-import { BUILD_SCAN, RESET_NUMSTAT, RESET_STATUS, SURFACES, mountBand, mountPane, pass, stub, world } from './world'
+import { setLang } from '../hooks/lang'
+import { viewOf } from '../hooks/view'
+import { trSize } from '../hooks/words-tr'
+import { BUILD_SCAN, RESET_NUMSTAT, RESET_STATUS, SURFACES, mountBand, mountPane, pass, start, stub, world } from './world'
+
+// These tests read the Turkish card (MODZ_LANG=tr); english.test.ts reads the default one.
 
 test('risky commands are classified, the rest pass', () => {
   expect(classify('rm -rf build')).toMatchObject({ kind: 'rm', label: 'rm -rf', targets: ['build'] })
@@ -38,6 +42,7 @@ test('the files scan groups by folder; git clean keeps only dry-run flags', () =
 })
 
 test('the view: consequence headline, untracked banner, capped rows with an honest overflow', () => {
+  setLang('tr')
   const scan = parseScan(BUILD_SCAN)
   const report = { kind: 'files' as const, summary: '', count: 9, bytes: scan.bytes, groups: scan.groups, items: [], more: 0, tracked: 0, where: null, added: 0, removed: 0, note: null, isEmpty: false }
   const risk = classify('rm -rf build')!
@@ -59,6 +64,7 @@ for (const surface of SURFACES) {
   test(`Vazgeç refuses rm -rf and Claude is told why (${surface})`, async ($, on) => {
     const w = world({ answers: { files: BUILD_SCAN } })
     stub(on, w)
+    await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
     const ui = await mountPane($, surface)
@@ -76,6 +82,7 @@ for (const surface of SURFACES) {
   test(`delete runs the command after striking the rows (${surface})`, async ($, on) => {
     const w = world({ answers: { files: BUILD_SCAN } })
     stub(on, w)
+    await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
     const ui = await mountPane($, surface)
@@ -93,6 +100,7 @@ for (const surface of SURFACES) {
     const w = world({ isPlaced: false, answers: { files: BUILD_SCAN } })
     stub(on, w)
     on('ui.render', () => ({ type: 'Text', children: ['other mod row'] }))
+    await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
     const band = await mountBand($, surface)
@@ -112,6 +120,7 @@ for (const surface of SURFACES) {
   test(`git reset lists the changes it drops; plain commands are never held (${surface})`, async ($, on) => {
     const w = world({ answers: { 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })
     stub(on, w)
+    await start($, w, surface)
     await ($ as any).tool.call({ tool: 'Bash', command: 'ls -la' })
     expect(w.opened).toHaveLength(0)
 
@@ -132,6 +141,7 @@ for (const surface of SURFACES) {
   test(`a path the shell fills in at run time is held with that reason (${surface})`, async ($, on) => {
     const w = world()
     stub(on, w)
+    await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf $UNSET' })
     await pass(w, 0)
     const ui = await mountPane($, surface)
@@ -145,6 +155,7 @@ for (const surface of SURFACES) {
   test(`the list opens and closes; the pane says the folder, not who holds it (${surface})`, async ($, on) => {
     const w = world({ answers: { files: BUILD_SCAN } })
     stub(on, w)
+    await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
     const ui = await mountPane($, surface)
@@ -162,6 +173,7 @@ for (const surface of SURFACES) {
 test('a command that would change nothing runs with no card', async ($, on) => {
   const w = world()
   stub(on, w)
+  await start($, w)
   const result: any = await ($ as any).tool.call({ tool: 'Bash', command: 'D=missing; rm -rf $D' })
 
   expect(result?.deny).toBeUndefined()
@@ -172,6 +184,7 @@ test('a command that would change nothing runs with no card', async ($, on) => {
 test('fail closed: an error while holding refuses the command', async ($, on) => {
   const w = world({ cwd: '' })
   stub(on, w)
+  await start($, w)
   const result: any = await ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
 
   expect(result.deny).toMatch(/hit an error/)

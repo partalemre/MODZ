@@ -13,12 +13,15 @@ export type Opts = {
   root?: () => string
   box?: string
   theme?: string
+  // MODZ_LANG as $.env.get answers it: Turkish unless a test asks for the English default (null).
+  lang?: string | null
 }
 
 export function world(on: On, opts: Opts = {}) {
   const clock = mock.clock(on, { now: Date.parse('2026-10-02T12:00:00Z') })
   mock.store(on, {})
-  mock.env(on, { HOME: '/home/u' })
+  const lang = opts.lang === undefined ? 'tr' : opts.lang
+  mock.env(on, { HOME: '/home/u', ...(lang === null ? {} : { MODZ_LANG: lang }) })
   const files: Record<string, string> = { ...(opts.files ?? {}) }
   const asked: string[] = []
   const systems: string[] = []

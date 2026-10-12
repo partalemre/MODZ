@@ -1,116 +1,60 @@
-<h1 align="center">Claude Code Filetree</h1>
+# filetree
 
-<p align="center">
-  An IDE-style file tree for Claude Code that shows what Claude is doing and where in files
-</p>
+Shows a file tree of your project beside the chat, with what Claude is reading, editing or committing right now and every file it has touched this turn.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Claude_Code-%E2%89%A5_2.1.287-D97757?logo=claude&logoColor=fff" alt="Claude Code 2.1.287 or newer">
-  <img src="https://img.shields.io/badge/version-0.2.25-blue" alt="Version">
-  <img src="https://img.shields.io/badge/type-mod-6f42c1" alt="Claude Code mod">
-  <img src="https://img.shields.io/badge/license-MIT-green" alt="License">
-</p>
+## Install
 
-<p align="center">
-  <img src="media/filetree-shimmer.gif" alt="filetree shimmering the file Claude is editing" width="900">
-</p>
-
-> [!NOTE]
-> filetree is a Claude Code **mod** and needs **Claude Code 2.1.287+**. It shows in the right sidebar, which needs the fullscreen layout (`/tui fullscreen`) and a terminal at least 110 columns wide. Tested on Linux, macOS and Windows; mods don't load in WSL sessions of the Desktop app.
-
----
-
-## MODZ sürümü
-
-Bu kopya MODZ için Türkçeleştirilip masaüstü (Code sekmesi) için yeniden çizildi:
-
-- Üstte **ŞU AN / BİTTİ** kartı: Claude'un şu an okuduğu, düzenlediği ya da commit ettiği dosya tek cümleyle; altında dal, önde/geride sayısı, değişiklik durumu ve yalnızca geçerli renklerin açıklaması.
-- **CLAUDE'UN DOKUNDUKLARI**: bu turda dokunulan dosyalar, tür rozeti, klasör ve durum etiketi (Okunuyor, Açıldı, Düzenleniyor, Düzenlendi, Commit edildi).
-- **TÜM DOSYALAR**: tür rozetleri, Claude o dosyadayken satır tonu ve etiket, sağda tarih ya da boyut.
-- Renkler Tidemark rolleri: okuma Tide (mavi), düzenleme Kiln, commit Moss, commit edilmemiş Amber. Koyu ve açık tema.
-- Panel kendiliğinden açılmaz: `/filetree` ile açılır (masaüstünde de); açık bir panel yalnızca yeniden adlandırılır.
-- Araç çubuğu tek satır: arama, **Daralt**, **Yenile**, **Daha fazla** (boyut/tarih, gizliler, üst klasör, projeye dön, seçimi kaldır). Ağaç seçiliyken tek tuş kısayolları: `r` `c` `s` `.` `u` `p` `x`.
-- Git etkinliği, komutun gerçekten çalıştığı depoda değerlendirilir: başka bir depoya (`cd başka && git commit`) yapılan commit "commit edildi · başka" olarak görünür; git commit'i reddederse nedeni yazılır ("commit olmadı: değişiklik yok").
-- MODZ ana paneli (DESIGN.md §9): pane anahtarı `files`, başlık "Dosyalar"; özet kartı "4 dosya bu tur", "3 değişiklik commit edilmedi", turun commit'i ("commit b7d2e91 · temiz"), git dışında "son tur 1 dosya düzenlendi" ya da "temiz".
-
-Dayandığı proje: [data-goblin/claude-code-filetree](https://github.com/data-goblin/claude-code-filetree), MIT.
-
-## Installation
-
-The repo is its own plugin marketplace. Run this in the terminal:
-
-```bash
-claude plugin marketplace add data-goblin/claude-code-filetree
-claude plugin install filetree@claude-code-filetree
+```
+/plugin marketplace add partalemre/MODZ
+/plugin install filetree@modz
 ```
 
-Or inside a Claude Code session:
+Or in one step: `/plugin install filetree --marketplace partalemre/MODZ`.
 
-```text
-/plugin marketplace add data-goblin/claude-code-filetree
-/plugin install filetree@claude-code-filetree
-```
+The MODZ panel (`modz`) shows its line here: files changed this turn, uncommitted changes, or the last turn's commit.
 
-Installed it as `filetree@filetree` before the repository was renamed? Nothing to do: that install keeps loading and keeps receiving updates.
+## What you see
 
-## Features
+Open the pane with `/filetree`. It does not open by itself; once opened, it comes back when a session restarts.
 
-- Interactive file tree for the working directory where you're using Claude Code; it follows the cwd, or `/filetree <path>` pins another folder
-- Search the file tree, including folders you have not opened yet
-- Git status per file and folder in color, with exact lines changed (`+N` `-N`) on modified files and `?:N M:N D:N` file counts on folders
-- Branch, upstream and ahead/behind in the header
-- Visual indicator of Claude reads and searches (purple), writes (orange) and commits (green); collapsed folders open to show the file
+- **NOW / DONE card** at the top: the file Claude is reading, editing or committing, in one sentence, with the branch, ahead/behind counts, change status and a short colour legend.
+- **Touched by Claude:** the files touched this turn, each with a kind badge, its folder and a status label (Reading, Opened, Editing, Edited, Committed).
+- **All files:** the full tree for the working folder. The row Claude is in shimmers with a label, and the right column shows the date or the size. Reads are blue, writes orange, commits green, uncommitted changes amber.
+- **Git:** per-file status, `+N -N` line counts on modified files, and counts on folders. Commits to another repo (`cd other && git commit`) show as committed there; if git refuses a commit, the reason is shown.
+- **Toolbar:** search (it finds folders you have not opened), Collapse, Refresh, and More (size or date column, hidden files, parent folder, back to project, clear selection). With the tree focused: `r` refresh, `c` collapse, `s` size/date, `.` hidden files, `u` parent folder, `p` project, `x` clear selection, `y` copies the relative path (`Y`, the absolute one), arrow keys or `j`/`k` move, Enter opens a file or toggles a folder.
+- Click a row to select it; Ctrl-click or Shift-click opens the file in its default app.
 
-  <img src="media/filetree-read.gif" alt="Files shimmer purple while Claude reads and searches them" width="800">
+The desktop app (Code tab) draws the tree directly. The terminal needs the fullscreen layout (`/tui fullscreen`) and a window at least 110 columns wide.
 
-- Git and GitHub operations via `git` and `gh` (commit, push, pull, checkout, merge, PR and more) shown as a status at the bottom of the pane
+If a file is selected in the tree when you send a prompt, one line naming it is added to that prompt's context so "this" can mean it. Writing `@path` in a prompt reveals that file in the tree.
 
-  <img src="media/filetree-git.gif" alt="A committed file shimmers green and the footer shows the commit" width="800">
+## Commands
 
-- Selection-aware: the selected file is passed to Claude as context through a `prompt.submit` hook, and `@path` mentions in a prompt reveal that file in the tree
-
-  <img src="media/filetree-ask.gif" alt="Selecting config.yaml in the tree and asking Claude what it changed there" width="800">
-
-- File and folder sizes: the `Σ` header button swaps the date column for sizes; folders show their disk usage (`du`, or a summed listing on Windows), worked out in the background for the rows on screen and refreshed after Claude writes
-- Double-click a file to open it in its default app
-- Click to select, arrow keys to move through the tree
-- Light on large repos: outside a repo it only checks once whether one exists, and every git call is scoped to the cwd
-- Nerd Font icons with a plain Unicode fallback
-- On Omarchy, the pane takes its colors and background from the current theme and follows theme switches
-
-### Resizing the pane
-
-You can resize the pane with the mouse, or by setting custom `pane:grow` or `pane:shrink` keybindings in `keybindings.json`
-
-<p align="center">
-  <img src="media/filetree-resize.gif" alt="Dragging the filetree pane edge to resize it" width="900">
-</p>
+- `/filetree` opens the tree on the working folder and follows it.
+- `/filetree <path>` pins the tree to another folder.
 
 ## Settings
 
-All settings are in `/config` under filetree.
+| Option | Default | Meaning |
+|---|---|---|
+| `activity` | `reads and writes` | What shimmers in the tree: `reads and writes`, `writes`, `reads` or `none`. Git status and line counts always show. |
+| `glyphs` | `auto` | `auto` uses Nerd Font icons when a Nerd Font is installed (plain Unicode in the desktop app), `nerd` or `plain` forces one. |
+| `follow` | `on` | `on` scrolls the tree to the file Claude reads, writes or commits. `off` keeps the view where you put it; highlights still show. |
+| `column` | `date` | What the right column shows at session start: `date` or `size`. The header button toggles it. |
 
-- **Claude activity:** what shimmers: `reads and writes` (default), `writes`, `reads` or `none`. Git status, line counts and the git status at the bottom always show.
-- **Follow Claude:** `on` (default) scrolls the tree to what Claude reads, writes or commits; `off` keeps the view where you put it, and highlights still show.
-- **Right column:** `date` (default) or `size`; what the right column shows when a session starts. The `Σ` button in the header toggles it.
-- **Glyphs:** `auto` (default) uses Nerd Font icons when a Nerd Font is installed and your terminal started after it was installed, plain Unicode in the desktop app, and Nerd Font over SSH. `nerd` or `plain` forces one.
+## Limits
 
-## herdr
+- Folder sizes come from `du` (a summed listing on Windows), worked out in the background for the rows on screen.
+- Outside a git repository it checks once whether one exists; every git call is scoped to the working folder.
+- Clicking rows in herdr needs herdr 0.9.1 or later; on older versions the rows ignore the mouse.
+- Mods do not load in WSL sessions of the desktop app.
 
-Clicking rows needs herdr 0.9.1 or later. herdr 0.9.0 and older accept pixel mouse reporting but still send cell positions, which would put every click in the session in the wrong place, so on those versions the rows ignore the mouse and the rest of the pane and session keep working. Run `herdr update` to get row clicks.
+Uses no model tokens beyond the one context line above.
 
-## Contributing
+## Language
 
-Turn on the pre-commit hook once per clone; it runs `claude plugin validate` and the plugin tests before each commit that touches the plugin:
+The interface is English. Set `MODZ_LANG=tr` in the `env` block of `~/.claude/settings.json` for Turkish.
 
-```bash
-git config core.hooksPath .githooks
-```
+## Credits
 
-The same checks run on macOS, Windows and Linux in CI on every push that touches the plugin.
-
-## License
-
-[MIT](LICENSE)
-
-*This project is inspired by my Omarchy app [FileBlade](https://github.com/data-goblin/fileblade)*
+Adapted from [data-goblin/claude-code-filetree](https://github.com/data-goblin/claude-code-filetree), licensed MIT. The license file is in this folder, with the contributors in `ACKNOWLEDGEMENTS.md`.

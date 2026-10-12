@@ -1,14 +1,16 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { ALLOW, HEADER, QUESTION, cardTree, chipOf, moveLabel, optionsOf } from './card'
+import { HEADER, cardTree, chipOf, optionsOf } from './card'
 import { findSecrets, mask } from './detect'
 import type { Secret } from './detect'
 import { addedByFile, dryRunPaths, gitSteps, isEnvFile } from './git'
 import type { GitStep } from './git'
 import { appendText, envLines, hasEnvIgnore, parseEnv, planEntries, rewrite } from './move'
 import { fileText, isFileTool, patchedFields, pathOf, resolvePath } from './tools'
+import { setLang } from './lang'
 import { resolveLight } from './theme'
+import { words } from './words'
 import type { GuardPending } from '../types'
 
 type On = Parameters<Register>[0]
@@ -97,7 +99,7 @@ const isMovable = (found: Found): boolean => found.path !== null && found.secret
 const atOf = (found: Found, secret: Found['secrets'][number]): string => (found.path === null ? relative(secret.where) : `${relative(found.path)}:${secret.line}`)
 
 function pendingOf(found: Found): GuardPending {
-  const where = (secret: Found['secrets'][number]) => (found.path === null ? secret.where : `satır ${secret.line}`)
+  const where = (secret: Found['secrets'][number]) => (found.path === null ? secret.where : words().line(secret.line))
   const secrets = [...found.secrets].sort((a, b) => a.line - b.line)
 
   return {
@@ -115,7 +117,7 @@ async function askUser($: EngineInterface, found: Found): Promise<string> {
   await update($, pendingAtom, () => pending)
   let answer = ''
   try {
-    answer = await $.ui.ask(QUESTION, { options, header: HEADER })
+    answer = await $.ui.ask(words().question, { options, header: HEADER })
   } catch {
     $.ui.log('secret-guard: question dismissed, call cancelled', { to: 'debug' })
   }
@@ -148,7 +150,7 @@ function described(questions: unknown[], pending: GuardPending): unknown[] {
 
   return questions.map(question => {
     const asked = question as { question?: unknown; options?: unknown }
-    if (asked.question !== QUESTION || !Array.isArray(asked.options)) return question
+    if (asked.question !== words().question || !Array.isArray(asked.options)) return question
     const options = asked.options.map(option => {
       const label = (option as { label?: unknown }).label
 
@@ -173,11 +175,12 @@ async function refreshTheme($: EngineInterface): Promise<void> {
 
 function hookSession(on: On): void {
   on('session.start', async ($, e, next) => {
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     try {
       session.cwd = e.cwd
       const saved = await $.store.get(STORE_KEY)
       await update($, enabledAtom, () => saved !== false)
-      await $.command.register({ name: COMMAND, description: 'Yazma ve git add/commit öncesi gizli anahtar taramasını aç/kapat' })
+      await $.command.register({ name: COMMAND, description: words().commandLine })
     } catch {
       $.ui.log('secret-guard: could not load settings', { to: 'debug' })
     }
@@ -193,7 +196,7 @@ function hookCommand(on: On): void {
     await update($, enabledAtom, () => isOn)
     await $.store.set(STORE_KEY, isOn)
 
-    return { text: `secret-guard ${isOn ? 'açık' : 'kapalı'}` }
+    return { text: words().toggled(isOn) }
   })
 }
 
@@ -210,8 +213,8 @@ function hookCall(on: On): void {
     if (found === null) return next(e)
 
     const answer = await askUser($, found)
-    if (answer === ALLOW) return next(e)
-    if (found.secrets.length === 0 || answer !== moveLabel(found.secrets.length)) return { deny: `The user blocked this call: it would expose ${summary(found) || found.envFiles.join(', ')}. Keep secrets in .env (git-ignored) and read them from the environment.` }
+    if (answer === words().allow) return next(e)
+    if (found.secrets.length === 0 || answer !== words().move(found.secrets.length)) return { deny: `The user blocked this call: it would expose ${summary(found) || found.envFiles.join(', ')}. Keep secrets in .env (git-ignored) and read them from the environment.` }
     if (!isMovable(found)) {
       return { deny: `The user chose "Move to .env" for ${summary(found)}. Move each secret into the project's .env (git-ignored), reference it from the environment, then retry.` }
     }

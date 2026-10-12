@@ -7,6 +7,7 @@ import { CHEVRON_CLOSED, CHEVRON_OPEN, fileIcon, GIT_COLOR } from './icons'
 import type { RowSpec, Seg } from './rows'
 import { folderColor, type Palette, type Role, roleOfTone } from './theme'
 import { dirname, formatSize, type Row, stamp, underAny } from './tree'
+import { words } from './words'
 
 export type RowCtx = {
   t: FileTree
@@ -19,7 +20,7 @@ export type RowCtx = {
   unicode: boolean
   theme: Theme
   pal: Palette
-  // The pill a live row shows in place of its meta: "okunuyor", "düzenleniyor", ...
+  // The pill a live row shows in place of its meta: "reading", "editing", ...
   pillOf: (id: string, role: Role) => string
 }
 
@@ -151,7 +152,7 @@ function desktopRight(ctx: RowCtx, r: Row, role: Role | null): Seg[] {
     if (text) return [{ t: ' ' }, { t: ` ${text} `, c: pal.roles[role].fg, bg: pal.roles[role].line, b: true }]
   }
   const changes = n.kind === 'dir' ? (t.counts[n.id] ?? [0, 0, 0]).reduce((a, b) => a + b, 0) : 0
-  if (changes && !t.showSize) return [{ t: ` ${changes} değişiklik`, c: pal.roles.warn.fg, b: true }]
+  if (changes && !t.showSize) return [{ t: ` ${words().changes(changes)}`, c: pal.roles.warn.fg, b: true }]
   const loc = t.diff[n.id]
   const out: Seg[] = []
   if (loc && !t.showSize) {

@@ -12,9 +12,10 @@ import { settingsActions } from './settings-actions'
 import type { SettingsPorts } from './settings-actions'
 import { pinned } from './pin'
 import type { Drawing } from './view'
+import { say } from './words'
 
 // The settings pane's tab title, wherever it is opened from.
-export const SETTINGS_TITLE = 'Görünüm'
+export const settingsTitle = (): string => say().settingsTitle
 
 // Every element the skin draws, numbered, to point at when asking for a change.
 export async function galleryView({ view, e }: Omit<Drawing<'Pane'>, 'pass'>): Promise<RenderElement> {
@@ -23,7 +24,7 @@ export async function galleryView({ view, e }: Omit<Drawing<'Pane'>, 'pass'>): P
   if (active === null) {
     const { Text } = view.ui()
 
-    return <Text>Galeri bir skin gösterir. Önce /skin ile birini seç.</Text>
+    return <Text>{say().galleryEmpty}</Text>
   }
 
   const look = view.look(active)
@@ -48,7 +49,7 @@ export async function settingsView(host: SettingsHost, e: Frozen<RenderInput<'Pa
   const ui = host.ui()
 
   if (skin === undefined || e.surface === 'mobile' || !('Input' in ui)) {
-    return <ui.Text>Skin ayarlarını terminalde ya da masaüstü uygulamasında aç.</ui.Text>
+    return <ui.Text>{say().settingsElsewhere}</ui.Text>
   }
 
   const look = lookOf({ ui, active: { prefs, custom, skin }, surface: e.surface })

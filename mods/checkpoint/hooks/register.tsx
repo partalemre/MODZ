@@ -6,9 +6,11 @@ import type { Repo, Run } from './git'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { glyphOf, keepListed, markUndone, pendingOf, sortGlyphs } from './meta'
 import type { MetaMap } from './meta'
-import { clip, paneTree } from './pane'
+import { clip, paneTree, targetOf } from './pane'
 import { pinned } from './pin'
+import { setLang } from './lang'
 import { AUTO, themeFrom } from './tidemark'
+import { words } from './words'
 import type { CheckpointEntry, CheckpointStatus, CheckpointView, HubCard } from '../types'
 
 const PANE = 'checkpoints'
@@ -19,7 +21,7 @@ const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
 const GIT_TIMEOUT_MS = 60_000
 const PROMPT_LABEL_MAX = 100
 const EMPTY_VIEW: CheckpointView = { entries: [], status: null, isBusy: false, pending: null }
-const FAILED: CheckpointStatus = { text: 'Geri alınamadı; ayrıntı debug günlüğünde.', tone: 'error' }
+const failed = (): CheckpointStatus => ({ text: words().failed, tone: 'error' })
 
 const viewAtom = atom({ plugin: 'checkpoint', key: 'view' } as const, EMPTY_VIEW)
 const enabledAtom = atom({ plugin: 'checkpoint', key: 'isEnabled' } as const, true)
@@ -105,13 +107,13 @@ async function take($: EngineInterface, label: string): Promise<void> {
 // Step one of an undo: work out what it would change and put that before the person in the pane.
 async function ask($: EngineInterface, entry: CheckpointEntry): Promise<void> {
   if ((await read($, viewAtom)).isBusy) return
-  await setView($, { isBusy: true, pending: null, status: { text: 'Denetleniyor…', tone: 'busy' } })
-  let change: Partial<CheckpointView> = { status: FAILED }
+  await setView($, { isBusy: true, pending: null, status: { text: words().checking, tone: 'busy' } })
+  let change: Partial<CheckpointView> = { status: failed() }
   try {
     const repo = await repoOf($)
     const changes = repo === null ? null : await plan(runnerOf($), repo, entry.commit)
-    if (repo === null || changes === null) change = { status: { text: 'Burada git deposu yok.', tone: 'error' } }
-    else if (changes.restore.length + changes.remove.length === 0) change = { status: { text: 'Dosyalar zaten bu noktadaki gibi.', tone: 'info' } }
+    if (repo === null || changes === null) change = { status: { text: words().noRepo, tone: 'error' } }
+    else if (changes.restore.length + changes.remove.length === 0) change = { status: { text: words().alreadyThere, tone: 'info' } }
     else {
       const stats = await numstat(runnerOf($), repo, { tree: changes.tree, commit: entry.commit })
       const turnOf = (await read($, metaAtom))[entry.ref]?.turn ?? null
@@ -123,16 +125,16 @@ async function ask($: EngineInterface, entry: CheckpointEntry): Promise<void> {
   await setView($, { isBusy: false, ...change })
 }
 
-// Step two, on "Geri al": the plan is made again (files may have changed since), a safety snapshot first.
+// Step two, on the confirm button: the plan is made again (files may have changed since), a safety snapshot first.
 async function restore($: EngineInterface, entry: CheckpointEntry): Promise<CheckpointStatus> {
   const repo = await repoOf($)
-  if (repo === null) return { text: 'Burada git deposu yok.', tone: 'error' }
+  if (repo === null) return { text: words().noRepo, tone: 'error' }
   const run = runnerOf($)
   const changes = await plan(run, repo, entry.commit)
   const total = changes.restore.length + changes.remove.length
-  if (total === 0) return { text: 'Dosyalar zaten bu noktadaki gibi.', tone: 'info' }
+  if (total === 0) return { text: words().alreadyThere, tone: 'info' }
   const safety = await refName($)
-  const label = `geri almadan önce: ${clip(entry.label)}`
+  const label = `${words().safetyPrefix}${clip(entry.label)}`
   const commit = await snapshot(run, repo, { ref: safety, label })
   await apply(run, repo, { commit: entry.commit, plan: changes })
   const entries = await prune(run, repo)
@@ -141,18 +143,17 @@ async function restore($: EngineInterface, entry: CheckpointEntry): Promise<Chec
   await setView($, { entries })
   await writeHub($, entries)
   const number = (await read($, metaAtom))[entry.ref]?.turn
-  const where = number === undefined ? `"${clip(entry.label)}" öncesine` : `Tur ${number} öncesine`
 
   const redo = entries.find(item => item.ref === safetyRef) ?? { ref: safetyRef, commit, at: await $.clock.now(), label }
 
-  return { text: `${total} dosya ${where} döndü.`, tone: 'success', redo }
+  return { text: words().restored(total, targetOf(number, entry.label)), tone: 'success', redo }
 }
 
 async function confirm($: EngineInterface): Promise<void> {
   const view = await read($, viewAtom)
   if (view.isBusy || view.pending === null) return
-  await setView($, { isBusy: true, status: { text: 'Geri alınıyor…', tone: 'busy' } })
-  let status = FAILED
+  await setView($, { isBusy: true, status: { text: words().undoing, tone: 'busy' } })
+  let status = failed()
   try {
     status = await restore($, view.pending.entry)
   } catch (error) {
@@ -172,7 +173,7 @@ async function toggle($: EngineInterface, arg: string): Promise<void> {
   const isOn = await wantedOn($, arg)
   await update($, enabledAtom, () => isOn)
   await $.store.set(STORE_KEY, isOn)
-  $.ui.toast(`checkpoint ${isOn ? 'açık' : 'kapalı'}`)
+  $.ui.toast(words().toggled(isOn))
 }
 
 // `isFocused` for the main panel's request: an open pane comes forward instead of staying behind.
@@ -185,7 +186,7 @@ async function openPane($: EngineInterface, isFocused = false): Promise<void> {
   } catch {
     $.ui.log('checkpoint: could not list checkpoints', { to: 'debug' })
   }
-  await $.ui.open({ id: PANE, title: 'Kontrol noktaları', ...(isFocused ? { focus: true } : {}) })
+  await $.ui.open({ id: PANE, title: words().title, ...(isFocused ? { focus: true } : {}) })
 }
 
 type On = Parameters<Register>[0]
@@ -193,6 +194,7 @@ type On = Parameters<Register>[0]
 // Commands answer with no text: a transcript row would be read by the model on its next request.
 function hookCommands(on: On): void {
   on('session.start', async ($, e, next) => {
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     try {
       const saved = await $.store.get(STORE_KEY)
       await update($, enabledAtom, () => saved !== false)
@@ -200,8 +202,8 @@ function hookCommands(on: On): void {
       if (typeof meta === 'object' && meta !== null) await update($, metaAtom, () => meta as MetaMap)
       const pinned = await $.env.get('MODZ_THEME').catch(() => undefined)
       await update($, themeAtom, () => themeFrom(pinned))
-      await $.command.register({ name: TOGGLE, description: 'Her turun ilk yazımından önce sessiz anlık görüntü: aç/kapa', argumentHint: '[on|off]' })
-      await $.command.register({ name: PANE, description: 'Kontrol noktalarını listeler; bir turu geri alır' })
+      await $.command.register({ name: TOGGLE, description: words().toggleLine, argumentHint: '[on|off]' })
+      await $.command.register({ name: PANE, description: words().paneLine })
     } catch {
       $.ui.log('checkpoint: could not load settings', { to: 'debug' })
     }
@@ -220,7 +222,7 @@ function hookCommands(on: On): void {
 function hookTurns(on: On): void {
   on('prompt.submit', async ($, e, next) => {
     turn.isArmed = true
-    turn.label = clip(e.text.split('\n')[0]?.trim() || 'tur', PROMPT_LABEL_MAX)
+    turn.label = clip(e.text.split('\n')[0]?.trim() || words().promptFallback, PROMPT_LABEL_MAX)
     turn.number += 1
     turn.ref = null
     turn.files.clear()

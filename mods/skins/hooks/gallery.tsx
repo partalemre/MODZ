@@ -6,7 +6,9 @@ import type { Table } from './markdown'
 import { askBand, desktopSpinnerRow, footerRow, promptRow, spinnerRow } from './rows'
 import { groupRow, toolRow } from './row-tool'
 import { usageBand } from './row-usage'
-import { CONTEXT_LABEL } from './svg-usage'
+import { contextLabel } from './svg-usage'
+import { galleryWords } from './gallery-words'
+import { say } from './words'
 
 // Every element the skin draws, numbered, from the same builders the transcript uses, so
 // a note on #4 is a note on the real thing.
@@ -35,15 +37,17 @@ const DIFF = {
 type Section = readonly [title: string, ...items: RenderElement[]]
 
 function rowSections(look: Look): Section[] {
+  const words = galleryWords()
+
   return [
-    ['Senin istemin', promptRow(look, "hub api'ye hız sınırı ekle")],
+    [words.prompt, promptRow(look, say().samplePrompt)],
     [
-      'Araç satırları: bitti, çalışıyor, başarısız',
+      words.tools,
       toolRow(look, { call: { tool: 'Bash', input: {}, ...done }, kind: 'run', target: 'pnpm test --filter hub', meta: { ms: 2140 } }),
       toolRow(look, { call: { tool: 'Read', input: {}, ...done, isRunning: true }, kind: 'read', target: 'docs/protocols.md', meta: {} }),
       toolRow(look, { call: { tool: 'Edit', input: {}, ...done, isErrored: true }, kind: 'write', target: 'apps/hub/src/server.ts', meta: {} }),
     ],
-    ['Okuma ve aramaların katlanmış grubu', groupRow(look, [{ tool: 'Read', input: {}, ...done }, { tool: 'Read', input: {}, ...done }, { tool: 'Grep', input: {}, ...done }])],
+    [words.group, groupRow(look, [{ tool: 'Read', input: {}, ...done }, { tool: 'Read', input: {}, ...done }, { tool: 'Grep', input: {}, ...done }])],
   ]
 }
 
@@ -51,28 +55,31 @@ function rowSections(look: Look): Section[] {
 function terminalSections(look: Look, width: number): Section[] {
   const { Text } = look.ui
   const { palette } = look.skin
+  const words = galleryWords()
 
   return [
-    ['Düzenleme diff kartı', <Text color={palette.muted}>Yalnızca masaüstü; terminal Claude Code'un kendi diff'ini korur.</Text>],
-    ['Kabuk çıktı kartı', <Text color={palette.muted}>Yalnızca masaüstü.</Text>],
-    ['Kod bloğu kartı', <Text color={palette.muted}>Yalnızca masaüstü; terminal Claude Code'un kendi markdown'ını korur.</Text>],
-    ['Tablo', replyRows(look, { segments: [TABLE], maxWidth: width })],
-    ['Spinner', spinnerRow(look, { word: look.skin.spinner[0] ?? 'Working', frame: 3, elapsedMs: 12_000 })],
+    [words.diff, <Text color={palette.muted}>{words.diffNote}</Text>],
+    [words.shell, <Text color={palette.muted}>{words.shellNote}</Text>],
+    [words.code, <Text color={palette.muted}>{words.codeNote}</Text>],
+    [words.table, replyRows(look, { segments: [TABLE], maxWidth: width })],
+    [words.spinner, spinnerRow(look, { word: look.skin.spinner[0] ?? 'Working', frame: 3, elapsedMs: 12_000 })],
   ]
 }
 
 function desktopSections(look: Look, svg: SvgElement, width: number): Section[] {
+  const words = galleryWords()
+
   return [
-    ['Düzenleme diff kartı', diffCard(look, { Svg: svg, input: DIFF, shownPath: 'apps/hub/src/server.ts', columns: width })],
+    [words.diff, diffCard(look, { Svg: svg, input: DIFF, shownPath: 'apps/hub/src/server.ts', columns: width })],
     [
-      'Kabuk çıktı kartı: başarılı, başarısız',
+      words.shellStates,
       terminalCard(look, { Svg: svg, output: { stdout: 'Test Files  12 passed (12)\n     Tests  148 passed (148)', stderr: '', interrupted: false }, isErrored: false, columns: width }),
       terminalCard(look, { Svg: svg, output: { stdout: '', stderr: 'error TS2322: Type string is not assignable to number', interrupted: false }, isErrored: true, columns: width }),
     ],
-    ['Kod bloğu kartı', codeCard(look, { lang: 'ts', code: CODE, Svg: svg, columns: width })],
-    ['Tablo', replyRows(look, { segments: [TABLE], maxWidth: width, Svg: svg })],
+    [words.code, codeCard(look, { lang: 'ts', code: CODE, Svg: svg, columns: width })],
+    [words.table, replyRows(look, { segments: [TABLE], maxWidth: width, Svg: svg })],
     [
-      'Spinner: düşünüyor, araç çalışıyor, yazıyor, bekliyor',
+      words.spinnerModes,
       desktopSpinnerRow(look, { Svg: svg, mode: 'thinking', text: 'Thinking' }),
       desktopSpinnerRow(look, { Svg: svg, mode: 'tool-use', text: 'Running pnpm test' }),
       desktopSpinnerRow(look, { Svg: svg, mode: 'responding', text: 'Writing the reply' }),
@@ -82,14 +89,16 @@ function desktopSections(look: Look, svg: SvgElement, width: number): Section[] 
 }
 
 function bandSections(look: Look): Section[] {
+  const words = galleryWords()
+
   return [
     [
-      'İstem üstü bant: normal, sonra sıkıştırma önerisi',
-      usageBand(look, { meters: [{ label: CONTEXT_LABEL, percent: 42 }, { label: '5s', percent: 18 }], canCompact: true, compact: () => undefined }),
-      usageBand(look, { meters: [{ label: CONTEXT_LABEL, percent: 85 }, { label: '5s', percent: 61 }], canCompact: true, compact: () => undefined }),
+      words.band,
+      usageBand(look, { meters: [{ label: contextLabel(), percent: 42 }, { label: say().fiveHour, percent: 18 }], canCompact: true, compact: () => undefined }),
+      usageBand(look, { meters: [{ label: contextLabel(), percent: 85 }, { label: say().fiveHour, percent: 61 }], canCompact: true, compact: () => undefined }),
     ],
-    ['Soru üstü bant', askBand(look, ['Approach', 'Store'])],
-    ['Tur altbilgisi (terminal)', footerRow(look, { word: look.skin.done[0] ?? 'Done', durationMs: 41_000, stats: { tools: 6, added: 18, removed: 3 } })],
+    [words.ask, askBand(look, ['Approach', 'Store'])],
+    [words.footer, footerRow(look, { word: look.skin.done[0] ?? 'Done', durationMs: 41_000, stats: { tools: 6, added: 18, removed: 3 } })],
   ]
 }
 

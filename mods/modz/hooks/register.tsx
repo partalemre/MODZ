@@ -7,13 +7,14 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { HubCard } from '../types'
 import { linkCheck, loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
-import { cardOf, focusOf, MODS_PANE, MODS_TITLE, rowsOf } from './hub'
-import type { Presence } from './hub'
+import { cardOf, focusOf, MODS_PANE, modsTitle, presenceOf, rowsOf } from './hub'
 import { hubTree } from './hub-pane'
+import { setLang } from './kit/lang'
 import { isSame } from './kit/same'
 import { pinned } from './kit/pin'
 import { modzTree } from './pane'
 import type { Theme } from './theme'
+import { hubWords } from './words'
 
 const PANE = 'modz'
 const TITLE = 'MODZ'
@@ -68,29 +69,19 @@ async function marketOf($: EngineInterface): Promise<Market> {
 // otherwise it waits as a tab beside the hub.
 async function openPane($: EngineInterface, pane: string): Promise<void> {
   if (pane === MODS_PANE) {
-    await $.ui.open({ id: MODS_PANE, title: MODS_TITLE, focus: true })
+    await $.ui.open({ id: MODS_PANE, title: modsTitle(), focus: true })
 
     return
   }
   await $.state.set(OPEN, { pane, at: Date.now() })
 }
 
-// An empty catalog is one that could not be read: the hub says so rather than "0 mod açık".
+// An empty catalog is one that could not be read: the hub says so rather than "0 mods on".
 function metaOf(market: Market): string {
-  if (market.mods.length === 0) return 'katalog okunamadı'
-  const on = market.mods.filter(mod => mod.isEnabled !== false).length
+  if (market.mods.length === 0) return hubWords().unreadable
+  const on = market.mods.filter(mod => mod.isEnabled === true).length
 
-  return `${on} mod açık`
-}
-
-function presenceOf(market: Market): (mod: string) => Presence {
-  const listed = new Map(market.mods.map(mod => [mod.name, mod.isEnabled]))
-
-  return name => {
-    if (!listed.has(name)) return 'unlisted'
-
-    return listed.get(name) === false ? 'off' : 'listed'
-  }
+  return hubWords().modsOn(on)
 }
 
 type On = Parameters<Register>[0]
@@ -98,8 +89,10 @@ type Options = Parameters<Register>[1]
 
 function hubHooks(on: On, options: Options): void {
   on('session.start', async ($, e, next) => {
+    // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     const started = await next(e)
-    await $.command.register({ name: 'modz', description: 'MODZ ana panelini açar: ajanlar, dosyalar, plan, testler ve tüm modlar' })
+    await $.command.register({ name: 'modz', description: hubWords().command })
     if (options.openOnStart !== false) await $.ui.open({ id: PANE, title: TITLE })
 
     return started
@@ -122,7 +115,7 @@ function hubHooks(on: On, options: Options): void {
   on('command.run', { command: 'modz' }, async $ => {
     await $.ui.open({ id: PANE, title: TITLE, focus: true })
 
-    return { text: 'MODZ paneli açıldı.' }
+    return { text: hubWords().opened }
   })
 }
 

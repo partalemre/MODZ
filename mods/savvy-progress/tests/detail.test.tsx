@@ -1,10 +1,14 @@
 import { expect, test } from 'claude-code/testing'
 
 import { toolDetail } from '../hooks/format'
+import { setLang } from '../hooks/i18n'
 import { nowOf } from '../hooks/now'
 import { filesShown, touchFile } from '../hooks/touched'
 import type { AgentRun } from '../types'
 import { PANE, SECOND, SURFACES, finish, setup, spawn, svgOf, tool } from './fixtures'
+
+// The pure checks below read the Turkish words (MODZ_LANG=tr), as the mounted ones do.
+setLang('tr')
 
 // The open card answers "what is it doing": the card opens from a labelled button, and its detail
 // reads top to bottom as task, now, latest calls, files, usage, result and the controls.

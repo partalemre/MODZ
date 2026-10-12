@@ -1,6 +1,8 @@
 import { test } from 'claude-code/testing'
 
-import { BUILD_SCAN, RESET_NUMSTAT, RESET_STATUS, mountBand, mountPane, pass, stub, world } from './world'
+import { BUILD_SCAN, EN, RESET_NUMSTAT, RESET_STATUS, mountBand, mountPane, pass, start, stub, world } from './world'
+
+// The previews draw the English card, as the film shows it.
 
 // The desktop's right pane is about 400 px wide and the band over the prompt about 520 px: 8 px a column.
 const NARROW_PANE = 50
@@ -17,7 +19,7 @@ for (const theme of ['dark', 'light']) {
   const suffix = theme === 'light' ? '-light' : ''
 
   test(`preview: delete card and strike (${theme})`, async ($, on) => {
-    const w = world({ theme, answers: { files: BUILD_SCAN } })
+    const w = world({ ...EN, theme, answers: { files: BUILD_SCAN } })
     stub(on, w)
     await ($ as any).session.start({ surface: 'desktop', isInteractive: true, cwd: w.cwd })
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
@@ -33,9 +35,9 @@ for (const theme of ['dark', 'light']) {
   })
 
   test(`preview: git reset card and band fallback (${theme})`, async ($, on) => {
-    const w = world({ theme, isPlaced: false, answers: { 'cd demo-app': '/work/demo-app', 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })
+    const w = world({ ...EN, theme, isPlaced: false, answers: { 'cd demo-app': '/work/demo-app', 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })
     stub(on, w)
-    on('ui.render', () => ({ type: 'Text', props: { dimColor: true }, children: ['● hud-pro · bağlam %42 · ≈$0,38'] }))
+    on('ui.render', () => ({ type: 'Text', props: { dimColor: true }, children: ['● hud-pro · context 42% · ≈$0.38'] }))
     await ($ as any).session.start({ surface: 'desktop', isInteractive: true, cwd: w.cwd })
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'cd demo-app && git reset --hard' })
     await pass(w, 0)
@@ -61,7 +63,7 @@ for (const theme of ['dark', 'light']) {
   const suffix = theme === 'light' ? '-light' : ''
 
   test(`preview: push, migrate, unmeasured and the open list (${theme})`, async ($, on) => {
-    const w = world({ theme, answers: { files: BUILD_SCAN, ...PUSH_ANSWERS, ...MIGRATE_ANSWERS } })
+    const w = world({ ...EN, theme, answers: { files: BUILD_SCAN, ...PUSH_ANSWERS, ...MIGRATE_ANSWERS } })
     stub(on, w)
     await ($ as any).session.start({ surface: 'desktop', isInteractive: true, cwd: w.cwd })
     const cases: [string, string, number?][] = [['br-push', 'git push --force'], ['br-migrate', 'python3 manage.py migrate'], ['br-unset', 'rm -rf $OUT_DIR', NARROW_PANE]]
@@ -87,9 +89,9 @@ for (const theme of ['dark', 'light']) {
 }
 
 test('preview: terminal reset in the band', async ($, on) => {
-  const w = world({ isPlaced: false, answers: { 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })
+  const w = world({ ...EN, isPlaced: false, answers: { 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })
   stub(on, w)
-  on('ui.render', () => ({ type: 'Text', props: { dimColor: true }, children: ['● hud-pro · bağlam %42 · ≈$0,38'] }))
+  on('ui.render', () => ({ type: 'Text', props: { dimColor: true }, children: ['● hud-pro · context 42% · ≈$0.38'] }))
   const call = ($ as any).tool.call({ tool: 'Bash', command: 'git reset --hard' })
   await pass(w, 0)
   const band = await mountBand($, 'terminal')
@@ -100,8 +102,9 @@ test('preview: terminal reset in the band', async ($, on) => {
 })
 
 test('preview: terminal pane', async ($, on) => {
-  const w = world({ answers: { files: BUILD_SCAN } })
+  const w = world({ ...EN, answers: { files: BUILD_SCAN } })
   stub(on, w)
+  await start($, w, 'terminal')
   const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
   await pass(w, 0)
   const ui = await mountPane($, 'terminal')

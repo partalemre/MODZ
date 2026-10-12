@@ -1,6 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { hubOf, isOpenFor } from '../hooks/hub'
+import { setLang } from '../hooks/lang'
 import { newWorld, paneOf, setup } from './fixtures'
 
 // The MODZ main panel's side (DESIGN.md §9): the hub card this mod writes and the open requests it answers.
@@ -60,6 +61,7 @@ test('a MODZ open request for replay opens the pane, even with nothing to replay
 })
 
 test('the card and the open match are pure', () => {
+  setLang('tr')
   expect(hubOf(null)).toEqual({ detail: '', tone: 'idle' })
   const step = { tool: 'Edit', file: 'a.ts', note: '', diff: [] }
   expect(hubOf({ id: 't', steps: [step, step, { ...step, file: 'b.ts' }], explain: 'none', quote: '' })).toEqual({ detail: '3 düzenleme · 2 dosya', tone: 'ok' })

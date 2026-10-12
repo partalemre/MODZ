@@ -1,6 +1,8 @@
 import { etaMinutes, etaText, percentOf, ratioOf, spendText, stepText } from './budget'
 import { fullCardSvg, stoppedRowSvg, warnRowSvg } from './svg-rows'
 import type { SvgDoc } from './svg'
+import { upper } from './lang'
+import { words } from './words'
 import type { Budget } from '../types'
 
 // The notices of this mod in the shared MODZ family: a band row above `theirs` (never swallowed)
@@ -70,7 +72,7 @@ export function warnRow(ui: Ui, spec: { budget: Budget; nowMs: number; surface: 
   const { budget } = spec
   const eta = etaText(etaMinutes(budget, spec.nowMs))
   if (isDesktop(ui, spec.surface)) return svgOf(ui, warnRowSvg({ percent: percentOf(budget), spend: spendText(budget), eta, ratio: ratioOf(budget), room: rowRoom(spec.columns) }))
-  const text = [`Bütçe ${percentOf(budget)}`, spendText(budget), eta].filter(part => part !== '').join(' · ')
+  const text = [words().rowTitle(percentOf(budget)), spendText(budget), eta].filter(part => part !== '').join(' · ')
 
   return (
     <Box flexDirection="row" columnGap={1}>
@@ -102,9 +104,9 @@ export function fullCard(ui: Ui, spec: { budget: Budget; columns: number; surfac
     svgOf(ui, fullCardSvg({ spend: spendText(budget), percent: percentOf(budget), step: stepText(budget), width }))
   ) : (
     <Box flexDirection="column" borderStyle="round" borderColor="warning" paddingX={1}>
-      <Text color="warning" bold>{'● OTURUM BÜTÇESİ'}</Text>
-      <Text bold>{`Bütçe doldu · ${spendText(budget)} (${percentOf(budget)})`}</Text>
-      <Text dimColor>{`Mesajın bekletiliyor. Devam edersen bütçe ${stepText(budget)} artar.`}</Text>
+      <Text color="warning" bold>{`● ${upper(words().eyebrow)}`}</Text>
+      <Text bold>{words().fullLine(spendText(budget), percentOf(budget))}</Text>
+      <Text dimColor>{words().held(stepText(budget))}</Text>
     </Box>
   )
 

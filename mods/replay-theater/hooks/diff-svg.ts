@@ -2,6 +2,9 @@ import type { ReplayDiffLine } from '../types'
 import { escape, measure, MONO_EM } from './ui/svg'
 import { svgDoc } from './ui/theme'
 import type { Theme } from './ui/theme'
+import { upper } from './lang'
+import { words } from './words'
+import type { Words } from './words'
 
 export const MAX_DIFF_LINES = 12
 const CODE_SIZE = 12.5
@@ -52,29 +55,31 @@ function diffRow(line: ReplayDiffLine, y: number, inner: { width: number; maxCha
   return `${tint}${wordRect(line, y, inner.maxChars)}${sign}${code}`
 }
 
-type Swatch = { label: string; svg: (x: number, y: number) => string }
+type Swatch = { label: (w: Words) => string; svg: (x: number, y: number) => string }
 
 const SWATCHES: Swatch[] = [
-  { label: 'Silindi', svg: (x, y) => `<rect x="${x + 0.5}" y="${y + 0.5}" width="${SWATCH - 1}" height="${SWATCH - 1}" rx="2.5" fill="var(--danger-t)" stroke="var(--danger-l)"/>` },
-  { label: 'Eklendi', svg: (x, y) => `<rect x="${x + 0.5}" y="${y + 0.5}" width="${SWATCH - 1}" height="${SWATCH - 1}" rx="2.5" fill="var(--ok-t)" stroke="var(--ok-l)"/>` },
+  { label: w => w.removed, svg: (x, y) => `<rect x="${x + 0.5}" y="${y + 0.5}" width="${SWATCH - 1}" height="${SWATCH - 1}" rx="2.5" fill="var(--danger-t)" stroke="var(--danger-l)"/>` },
+  { label: w => w.added, svg: (x, y) => `<rect x="${x + 0.5}" y="${y + 0.5}" width="${SWATCH - 1}" height="${SWATCH - 1}" rx="2.5" fill="var(--ok-t)" stroke="var(--ok-l)"/>` },
   {
-    label: 'Değişen kelime',
+    label: w => w.changedWord,
     svg: (x, y) => `<rect x="${x}" y="${y}" width="${SWATCH / 2}" height="${SWATCH}" fill="var(--danger-l)"/><rect x="${x + SWATCH / 2}" y="${y}" width="${SWATCH / 2}" height="${SWATCH}" fill="var(--ok-l)"/>`,
   },
-  { label: 'Değişmedi', svg: (x, y) => `<rect x="${x + 0.5}" y="${y + 0.5}" width="${SWATCH - 1}" height="${SWATCH - 1}" rx="2.5" fill="none" stroke="var(--line2)"/>` },
+  { label: w => w.unchanged, svg: (x, y) => `<rect x="${x + 0.5}" y="${y + 0.5}" width="${SWATCH - 1}" height="${SWATCH - 1}" rx="2.5" fill="none" stroke="var(--line2)"/>` },
 ]
 
 // The swatches in one row, or two when the pane is narrow.
 function legend(width: number, top: number): { svg: string; height: number } {
   let x = 0
   let y = top
+  const w = words()
   const parts = SWATCHES.map(item => {
-    const itemWidth = SWATCH + 6 + measure(item.label, 11.5)
+    const label = item.label(w)
+    const itemWidth = SWATCH + 6 + measure(label, 11.5)
     if (x > 0 && x + itemWidth > width) {
       x = 0
       y += LEGEND_GAP
     }
-    const svg = `${item.svg(x, y)}<text x="${x + SWATCH + 6}" y="${y + 9.5}" class="lo" font-size="11.5">${item.label}</text>`
+    const svg = `${item.svg(x, y)}<text x="${x + SWATCH + 6}" y="${y + 9.5}" class="lo" font-size="11.5">${escape(label)}</text>`
     x += itemWidth + 16
 
     return svg
@@ -88,9 +93,10 @@ const charsOf = (line: ReplayDiffLine): number => (line.op === '~' ? 0 : line.t.
 // The diff as one drawing: tinted rows, the changed words on a stronger tint, then the legend. A line longer
 // than the pane widens the drawing to `contentWidth` instead of being cut; the pane scrolls it sideways.
 function noteOf(shownCount: number, hidden: number): string {
-  if (shownCount === 0) return 'Satır değişikliği yok.'
+  const w = words()
+  if (shownCount === 0) return `${upper(w.noLineChanges.slice(0, 1))}${w.noLineChanges.slice(1)}.`
 
-  return hidden > 0 ? `… ${hidden} satır daha` : ''
+  return hidden > 0 ? w.moreLines(hidden) : ''
 }
 
 export function diffSvg(model: DiffModel): DiffDrawing {

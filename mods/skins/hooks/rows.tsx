@@ -3,7 +3,9 @@ import { formatDuration } from './format'
 import { spinnerIcon } from './icons'
 import type { SpinnerMode } from './icons'
 import type { Look, SvgElement, Ui } from './look'
+import { copyRow } from './row-table'
 import type { Palette } from './skin'
+import { say } from './words'
 
 export type DesktopSpinner = { Svg: SvgElement; mode: SpinnerMode; text: string }
 
@@ -31,6 +33,7 @@ export function promptRow(look: Look, text: string, images?: ReturnType<Ui['Text
       <Box borderStyle="round" borderColor={look.skin.palette.muted} paddingX={1} flexShrink={1}>
         <Text color={look.skin.palette.fg}>{text}</Text>
       </Box>
+      {copyRow(look, 'copy-prompt', text)}
       {images ?? ''}
     </Box>
   )
@@ -84,7 +87,7 @@ export function footerRow(look: Look, { word, durationMs, stats }: Footer) {
   const { Text } = look.ui
   const { palette } = look.skin
   const facts = [
-    ...(stats === undefined || stats.tools === 0 ? [] : [`${stats.tools} araç`]),
+    ...(stats === undefined || stats.tools === 0 ? [] : [say().tools(stats.tools)]),
   ]
   const hasDiff = stats !== undefined && stats.added + stats.removed > 0
 

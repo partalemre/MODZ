@@ -5,6 +5,7 @@ import { NOW_H, filesSvg, nowSvg } from './detail-svg'
 import { shortPath } from './format'
 import { KIND_GLYPH, KIND_KEY, kindOf } from './history'
 import type { Kind } from './history'
+import { upper } from './lang'
 import { t } from './i18n'
 import { MIX_H, mixSvg } from './metrics-svg'
 import type { MixPart } from './metrics-svg'
@@ -23,7 +24,7 @@ const KIND_ORDER: Kind[] = ['read', 'edit', 'run', 'agent', 'other']
 
 const NOW_KEY: Record<NowView['state'], ThemeKey | undefined> = { call: undefined, thinking: 'permission', starting: 'permission', done: 'success', failed: 'error' }
 
-const capital = (s: string): string => s.charAt(0).toLocaleUpperCase('tr') + s.slice(1)
+const capital = (s: string): string => upper(s.charAt(0)) + s.slice(1)
 
 // The terminal's "now": the verb in the call's colour with its span, the call itself beneath.
 function nowText(ui: Ui, now: NowView) {

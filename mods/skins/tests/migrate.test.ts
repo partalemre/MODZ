@@ -35,7 +35,7 @@ test('on load the band migration runs once, so a band turned back on stays on', 
   const store: Record<string, unknown> = { prefs: { skin: 'dracula', band: true }, folders: { '/work': { band: true } } }
   mock.clock(on, { now: 10_000 })
   on('session.cwd', () => ({ value: '/work' }))
-  on('env.get', () => ({ value: undefined }))
+  on('env.get', ($, e) => ({ value: e.name === 'MODZ_LANG' ? 'tr' : undefined }))
   on('config.list', () => ({ value: [] }))
   on('store.get', ($, e) => ({ value: store[e.key] }))
   on('store.set', ($, e) => {

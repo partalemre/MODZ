@@ -2,19 +2,20 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, ModelUsage, Register, SessionUsage } from 'claude-code'
 
 import { bandRow } from './band'
-import { labelOf, longLabelOf, resetText, untilReset, valueText } from './format'
+import { isFull, labelOf, longLabelOf, resetText, untilReset, valueText } from './format'
 import { addSample, isHistory } from './history'
 import { EMPTY_HUB, HUB_PANE, hubOf, isOwnOpen } from './hub'
+import { setLang } from './lang'
 import { gaugeViews } from './model'
 import { paneTree } from './pane'
 import { isSame } from './same'
 import { pinned } from './pin'
+import { words } from './words'
 import type { HudTurn, HudUsage } from '../types'
 
 type Measured = Pick<SessionUsage, 'context' | 'rateLimits' | 'cost'>
 
 const PANE = 'hud-pro'
-const PANE_TITLE = 'Kullanım'
 const HIDDEN_KEY = 'hud-pro.hidden'
 const HISTORY_KEY = 'hud-pro.history'
 // Reset countdowns move by the minute, so the idle line redraws once a minute.
@@ -84,9 +85,9 @@ async function noticeHigh($: EngineInterface, fresh: HudUsage): Promise<void> {
     const id = `${gauge.id}:${gauge.resetsAt}`
     if (noticed.has(id)) continue
     noticed.add(id)
-    const value = valueText(gauge.percent)
     const reset = untilReset(gauge.resetsAt, nowMs)
-    const head = value === 'dolu' ? `${longLabelOf(gauge.id)} limiti doldu` : `${longLabelOf(gauge.id)} limiti ${value} dolu`
+    const label = longLabelOf(gauge.id)
+    const head = isFull(gauge.percent) ? words().limitFull(label) : words().limitAt(label, valueText(gauge.percent))
     $.ui.toast(reset === '' ? head : `${head} · ${resetText(reset)}`)
   }
 }
@@ -96,12 +97,12 @@ async function toggle($: EngineInterface): Promise<{ text: string }> {
   const isHidden = await read($, hiddenAtom)
   await $.store.set(HIDDEN_KEY, isHidden)
 
-  return { text: isHidden ? 'HUD gizlendi.' : 'HUD gösteriliyor.' }
+  return { text: isHidden ? words().hidden : words().shown }
 }
 
 // Opens the pane, or brings it forward when it is open already; never closes it.
 async function openPane($: EngineInterface): Promise<void> {
-  await $.ui.open({ id: PANE, title: PANE_TITLE, focus: true, closeOnEscape: true })
+  await $.ui.open({ id: PANE, title: words().paneTitle, focus: true, closeOnEscape: true })
 }
 
 async function runCommand($: EngineInterface, args: string): Promise<{ text?: string }> {
@@ -118,7 +119,7 @@ function compactNow($: EngineInterface): void {
   $.clock.after(1, () =>
     $.command
       .run({ command: 'compact' })
-      .catch((error: unknown) => $.ui.toast(`Sıkıştırma başarısız: ${error instanceof Error ? error.message : String(error)}`))
+      .catch((error: unknown) => $.ui.toast(words().compactFailed(error instanceof Error ? error.message : String(error))))
       .finally(() => update($, compactingAtom, () => false)),
   )
 }
@@ -143,13 +144,15 @@ async function setup($: EngineInterface): Promise<void> {
   const saved = await $.store.get(HISTORY_KEY)
   if (isHistory(saved)) await update($, historyAtom, () => saved)
   $.clock.every(REFRESH_MS, () => void redrawIfMoved($))
-  await $.command.register({ name: 'hud', description: 'HUD satırını aç/kapat; "/hud full" limit ayrıntılarını açar' })
+  await $.command.register({ name: 'hud', description: words().commandDescription })
 }
 
 type On = Parameters<Register>[0]
 
 function onUsage(on: On) {
   on('session.start', async ($, e, next) => {
+    // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
+    setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     await setup($).catch(() => $.ui.log('hud-pro: start failed', { to: 'debug' }))
 
     return next(e)
@@ -202,7 +205,7 @@ function onRender(on: On) {
     try {
       return await runCommand($, e.args)
     } catch {
-      return { text: 'HUD komutu çalışmadı.' }
+      return { text: words().commandFailed }
     }
   })
 

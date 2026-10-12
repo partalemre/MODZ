@@ -1,33 +1,36 @@
 // What a manifest does not say: each mod's group, the surfaces it draws on and, for a mod built on
-// another project, where it came from. A mod missing here lands in "Diğer" with both surfaces.
-export type Group = 'Görünüm' | 'Koruma' | 'Ölçüm' | 'Akış' | 'Diğer'
+// another project, where it came from. A mod missing here lands in "other" with both surfaces.
+// Groups and surfaces are ids; words.ts names them in the interface language.
+import type { Lang } from './kit/lang'
 
-export type Surface = 'masaüstü' | 'terminal'
+export type Group = 'look' | 'safety' | 'meter' | 'flow' | 'other'
 
-// `summary` is the catalog's one Turkish line (≤50 characters, so a narrow pane shows it whole); manifests keep their own (often English) description.
-type Meta = { group: Group; surfaces?: Surface[]; upstream?: string; summary?: string }
+export type Surface = 'desktop' | 'terminal'
 
-export const GROUPS: Group[] = ['Görünüm', 'Koruma', 'Ölçüm', 'Akış', 'Diğer']
-export const BOTH: Surface[] = ['masaüstü', 'terminal']
+// `summary` is the catalog's one line per language (≤50 characters, so a narrow pane shows it whole); manifests keep their own description.
+type Meta = { group: Group; surfaces?: Surface[]; upstream?: string; summary?: Record<Lang, string> }
+
+export const GROUPS: Group[] = ['look', 'safety', 'meter', 'flow', 'other']
+export const BOTH: Surface[] = ['desktop', 'terminal']
 
 export const META: Record<string, Meta> = {
-  skins: { group: 'Görünüm', summary: "Transkripti temalarla çizer; /skin ile değişir" },
-  filetree: { group: 'Görünüm', summary: "Claude'un dokunduğu dosyalar ve git durumu" },
-  'replay-theater': { group: 'Görünüm', upstream: 'anthropics/claude-code-playground', summary: "Son turun düzenlemelerini adım adım oynatır" },
-  'terminal-browser': { group: 'Görünüm', surfaces: ['terminal'], summary: "Terminalde çalışan tarayıcı" },
-  modz: { group: 'Görünüm', summary: "Bu panel: ana sayfa ve tüm modların kataloğu" },
-  'blast-radius': { group: 'Koruma', upstream: 'anthropics/claude-code-playground', summary: "Riskli komutları tutar, neyi sileceğini gösterir" },
-  'secret-guard': { group: 'Koruma', summary: "Anahtarları diske ya da git'e düşmeden yakalar" },
-  checkpoint: { group: 'Koruma', summary: "Her turdan önce sessiz git anlık görüntüsü" },
-  'session-budget': { group: 'Koruma', summary: "Oturum bütçesi: %80'de uyarır, %100'de sorar" },
-  'cache-tax': { group: 'Koruma', upstream: 'karanb192/cache-tax', summary: "Molada önbelleği sıcak tutar, bedeli gösterir" },
-  'hud-pro': { group: 'Ölçüm', summary: "Tek satır: 5 saat, 7 gün, bağlam ve maliyet" },
-  'test-badge': { group: 'Ölçüm', summary: "Kaynak değişince test ve lint çalıştırır" },
-  'savvy-progress': { group: 'Ölçüm', summary: "Görev bandı ve Ajanlar paneli: ilerleme, maliyet" },
-  'savvy-flow': { group: 'Akış', summary: "Planlayan model ve beş katmanlı işçi ajan akışı" },
-  'plan-steps': { group: 'Akış', summary: "Planın adımları ve işin nerede olduğu" },
-  'reflect-mod': { group: 'Akış', summary: "Düzeltmelerini CLAUDE.md kuralına çevirir" },
-  'done-ping': { group: 'Akış', summary: "Uzun tur bitince ya da Claude beklerken bildirim" },
+  skins: { group: 'look', summary: { en: 'Themes the transcript; /skin switches it', tr: "Transkripti temalarla çizer; /skin ile değişir" } },
+  filetree: { group: 'look', summary: { en: 'Files Claude touches and their git status', tr: "Claude'un dokunduğu dosyalar ve git durumu" } },
+  'replay-theater': { group: 'look', upstream: 'anthropics/claude-code-playground', summary: { en: "Replays the last turn's edits step by step", tr: "Son turun düzenlemelerini adım adım oynatır" } },
+  'terminal-browser': { group: 'look', surfaces: ['terminal'], summary: { en: 'A browser that runs in the terminal', tr: "Terminalde çalışan tarayıcı" } },
+  modz: { group: 'look', summary: { en: 'This pane: the hub and a catalog of every mod', tr: "Bu panel: ana sayfa ve tüm modların kataloğu" } },
+  'blast-radius': { group: 'safety', upstream: 'anthropics/claude-code-playground', summary: { en: "Holds risky commands, shows what they'd delete", tr: "Riskli komutları tutar, neyi sileceğini gösterir" } },
+  'secret-guard': { group: 'safety', summary: { en: 'Catches keys before they reach disk or git', tr: "Anahtarları diske ya da git'e düşmeden yakalar" } },
+  checkpoint: { group: 'safety', summary: { en: 'A quiet git snapshot before every turn', tr: "Her turdan önce sessiz git anlık görüntüsü" } },
+  'session-budget': { group: 'safety', summary: { en: 'Session budget: warns at 80%, asks at 100%', tr: "Oturum bütçesi: %80'de uyarır, %100'de sorar" } },
+  'cache-tax': { group: 'safety', upstream: 'karanb192/cache-tax', summary: { en: 'Keeps the cache warm on breaks, shows the cost', tr: "Molada önbelleği sıcak tutar, bedeli gösterir" } },
+  'hud-pro': { group: 'meter', summary: { en: 'One line: 5h, 7d, context and cost', tr: "Tek satır: 5 saat, 7 gün, bağlam ve maliyet" } },
+  'test-badge': { group: 'meter', summary: { en: 'Runs tests and lint when source changes', tr: "Kaynak değişince test ve lint çalıştırır" } },
+  'savvy-progress': { group: 'meter', summary: { en: 'Task band and Agents pane: progress, cost', tr: "Görev bandı ve Ajanlar paneli: ilerleme, maliyet" } },
+  'savvy-flow': { group: 'flow', summary: { en: 'A planning model and five tiers of worker agents', tr: "Planlayan model ve beş katmanlı işçi ajan akışı" } },
+  'plan-steps': { group: 'flow', summary: { en: "The plan's steps and where the work is", tr: "Planın adımları ve işin nerede olduğu" } },
+  'reflect-mod': { group: 'flow', summary: { en: 'Turns your corrections into CLAUDE.md rules', tr: "Düzeltmelerini CLAUDE.md kuralına çevirir" } },
+  'done-ping': { group: 'flow', summary: { en: 'A ping when a long turn ends or Claude waits', tr: "Uzun tur bitince ya da Claude beklerken bildirim" } },
 }
 
 const GITHUB = /github\.com\/([\w.-]+)(?:\/([\w.-]+))?/

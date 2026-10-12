@@ -2,14 +2,9 @@ import { confirmCard } from './confirm'
 import type { CardModel, Ui } from './confirm'
 import { desktopCard, headlineOf } from './svg-card'
 import type { GuardOption, GuardPending } from '../types'
+import { words } from './words'
 
-export const ALLOW = 'Bir kez izin ver'
-export const CANCEL = 'Vazgeç'
 export const HEADER = 'secret-guard'
-export const QUESTION = 'Nasıl devam edilsin?'
-
-// The safe fix comes first: the dialog's first answer is the one Enter takes.
-export const moveLabel = (count: number): string => (count === 1 ? "Anahtarı .env'e taşı" : "Anahtarları .env'e taşı")
 
 const DETECTOR_CHIPS: [RegExp, string][] = [
   [/^Anthropic/, 'Anthropic'],
@@ -18,31 +13,32 @@ const DETECTOR_CHIPS: [RegExp, string][] = [
   [/^AWS/, 'AWS'],
   [/^GitHub/, 'GitHub'],
   [/^Supabase/, 'Supabase'],
-  [/^private key/, 'Özel anahtar'],
 ]
+const PRIVATE_KEY = /^private key/
 
 /** The chip a finding wears: the detector, or the variable name a generic match was assigned to. */
 export function chipOf(label: string): string {
+  if (PRIVATE_KEY.test(label)) return words().privateKey
+
   return DETECTOR_CHIPS.find(([pattern]) => pattern.test(label))?.[1] ?? label.replace(/ value$/, '')
 }
 
-/** The dialog's answers, each with the line that says what it does. */
+/** The dialog's answers, each with the line that says what it does. The safe fix comes first: Enter takes it. */
 export function optionsOf(found: { secretCount: number; isMovable: boolean }): GuardOption[] {
-  const allow = { label: ALLOW, description: 'Bu çağrı olduğu gibi çalışır; anahtar açıkta kalır.' }
-  const cancel = { label: CANCEL, description: 'Çağrı engellenir; Claude\'a nedeni söylenir.' }
+  const said = words()
+  const allow = { label: said.allow, description: said.allowLine }
+  const cancel = { label: said.cancel, description: said.cancelLine }
   if (found.secretCount === 0) return [cancel, allow]
-  const move = found.isMovable
-    ? 'Önerilen. Değerler .env\'e yazılır, .env git dışında tutulur; kod onları ortamdan okur.'
-    : 'Önerilen. Çağrı durur; Claude anahtarları .env\'e taşıyıp yeniden dener.'
 
-  return [{ label: moveLabel(found.secretCount), description: move }, allow, cancel]
+  return [{ label: said.move(found.secretCount), description: said.moveLine(found.isMovable) }, allow, cancel]
 }
 
 // An env file staged for git is no secret value but is shown among them. Alone, its path stands where a
-// location would; beside secrets it takes the value column (`git'e ekleniyor`), as on the desktop card.
+// location would; beside secrets it takes the value column (`being added to git`), as on the desktop card.
 function rowsOf(pending: GuardPending): string[][] {
   const isAlone = pending.secrets.length === 0
-  const env = pending.envFiles.map(path => (isAlone ? ['ortam dosyası', '', path] : [path, "git'e ekleniyor", '']))
+  const said = words()
+  const env = pending.envFiles.map(path => (isAlone ? [said.envFile, '', path] : [path, said.toGit, '']))
   const secrets = pending.secrets.map(secret => [secret.label, secret.masked, secret.where])
 
   return [...env, ...secrets]

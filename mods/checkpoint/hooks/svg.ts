@@ -1,3 +1,4 @@
+import { upper } from './lang'
 import { themeCss } from './tidemark'
 import type { Mode, Neutral, Role } from './tidemark'
 
@@ -49,7 +50,8 @@ function charEm(ch: string): number {
 
   return WIDE_CHAR.test(ch) ? WIDE_EM : PLAIN_EM
 }
-export const upper = (text: string): string => text.toLocaleUpperCase('tr')
+// Capitals in the person's language: Turkish keeps its dotted İ.
+export { upper }
 
 export function measure(text: string, font: Font): number {
   const chars = [...text]

@@ -8,6 +8,8 @@ import type { Look } from './look'
 import { footerRow, promptRow } from './rows'
 import { tableRows } from './row-table'
 import { groupRow, toolRow } from './row-tool'
+import { upper } from './lang'
+import { say } from './words'
 
 export type PaneUi = Pick<ElementTable<'terminal' | 'desktop'>, 'Box' | 'Text' | 'Markdown' | 'Button' | 'Input' | 'Select'>
 
@@ -35,16 +37,17 @@ export function swatchesOf(skins: readonly { name: string; palette: Readonly<Rec
   return Object.fromEntries(skins.map(skin => [skin.name, SWATCH_SLOTS.map(slot => skin.palette[slot])]))
 }
 
-const SAMPLE: Table = {
+// Built when drawn, so the table speaks the language set at session.start.
+const sample = (): Table => ({
   kind: 'table',
-  header: ['Yol', 'Sınır', 'Pencere'],
+  header: say().sampleHeader,
   align: ['left', 'right', 'left'],
   rows: [
-    ['/chat', '60', '1 dk'],
-    ['/upload', '10', '1 dk'],
-    ['/search', '120', '1 dk'],
+    ['/chat', '60', say().minute],
+    ['/upload', '10', say().minute],
+    ['/search', '120', say().minute],
   ],
-}
+})
 
 const done = { isRunning: false, isErrored: false, isInterrupted: false }
 
@@ -55,7 +58,7 @@ function preview(look: Look, width: number) {
 
   return (
     <Box flexDirection="column" borderStyle="round" borderColor={look.skin.palette.muted} paddingX={1}>
-      {promptRow(look, "hub api'ye hız sınırı ekle")}
+      {promptRow(look, say().samplePrompt)}
       {toolRow(look, { call: { tool: 'Bash', input: {}, ...done }, kind: 'run', target: 'pnpm test', meta: { ms: 2140 } })}
       {toolRow(look, {
         call: { tool: 'Edit', input: {}, ...done },
@@ -68,7 +71,7 @@ function preview(look: Look, width: number) {
         { tool: 'Read', input: {}, ...done },
         { tool: 'Grep', input: {}, ...done },
       ])}
-      {tableRows(look, SAMPLE, { maxWidth: Math.max(20, width - 4) })}
+      {tableRows(look, sample(), { maxWidth: Math.max(20, width - 4) })}
       {footerRow(look, { word, durationMs: 41_000, stats: { tools: 6, added: 18, removed: 3 } })}
     </Box>
   )
@@ -85,21 +88,12 @@ function section(look: Look, head: { title: string; hint?: string }, body: Rende
   return (
     <Box key={`section-${head.title}`} flexDirection="column">
       <Box flexDirection="row" columnGap={2}>
-        <Text color={look.skin.palette.muted} bold>{head.title.toLocaleUpperCase('tr')}</Text>
+        <Text color={look.skin.palette.muted} bold>{upper(head.title)}</Text>
         {head.hint === undefined ? null : <Text color={look.skin.palette.muted}>{head.hint}</Text>}
       </Box>
       {body}
     </Box>
   )
-}
-
-// What each toggle reads as in the pane; /skin keeps the English words.
-const TOGGLE_LABELS: Readonly<Record<ToggleWord, string>> = {
-  rail: 'Yanıt çizgisi',
-  tables: 'Tablo kartları',
-  shimmer: 'Parıltı',
-  band: 'Kullanım bandı',
-  clip: 'Uzun çıktıyı kırp',
 }
 
 type Parts = { look: Look; ui: PaneUi; model: SettingsModel; actions: SettingsActions }
@@ -129,7 +123,7 @@ function skinButtons(parts: Parts) {
   return (
     <Box flexDirection="row" flexWrap="wrap" columnGap={2} rowGap={1}>
       {parts.model.names.map((name, i) => skinButton(parts, name, i))}
-      <Button key="skin-off" label={isOff ? 'Kapalı ✓' : 'Kapalı'} hotkey="0" {...(isOff ? { variant: 'secondary' as const } : { plain: true as const, dimColor: true })} onPress={() => parts.actions.pick(OFF)} />
+      <Button key="skin-off" label={isOff ? `${say().off} ✓` : say().off} hotkey="0" {...(isOff ? { variant: 'secondary' as const } : { plain: true as const, dimColor: true })} onPress={() => parts.actions.pick(OFF)} />
     </Box>
   )
 }
@@ -138,8 +132,10 @@ function skinButtons(parts: Parts) {
 function optionButtons({ look, ui, actions }: Parts) {
   const { Box, Button } = ui
   const { prefs } = look
+  // What each toggle reads as in the pane; /skin keeps the English words.
+  const labels: Readonly<Record<ToggleWord, string>> = say().toggles
   const toggle = (word: ToggleWord, hotkey: string, on: boolean) => (
-    <Button key={`toggle-${word}`} label={`${on ? '●' : '○'} ${TOGGLE_LABELS[word]}`} hotkey={hotkey} plain dimColor={!on} onPress={() => actions.toggle(word)} />
+    <Button key={`toggle-${word}`} label={`${on ? '●' : '○'} ${labels[word]}`} hotkey={hotkey} plain dimColor={!on} onPress={() => actions.toggle(word)} />
   )
 
   return (
@@ -149,7 +145,7 @@ function optionButtons({ look, ui, actions }: Parts) {
       {toggle('shimmer', 's', prefs.shimmer)}
       {toggle('band', 'b', prefs.band)}
       {toggle('clip', 'c', prefs.clipOutput)}
-      <Button key="icons" label={`İkonlar: ${prefs.icons}`} hotkey="i" plain onPress={() => actions.icons()} />
+      <Button key="icons" label={say().icons(prefs.icons)} hotkey="i" plain onPress={() => actions.icons()} />
     </Box>
   )
 }
@@ -175,7 +171,7 @@ function colorControls({ look, ui, model, actions }: Parts) {
       <Box flexDirection="row" flexWrap="wrap" columnGap={2} rowGap={1} marginTop={1}>
         <Select
           key="slot"
-          label="Renk"
+          label={say().color}
           value={model.editing}
           options={SLOTS.map(slot => ({ value: slot, label: slot }))}
           onSelect={(value: string) => actions.edit(value as SkinSlot)}
@@ -185,7 +181,7 @@ function colorControls({ look, ui, model, actions }: Parts) {
           label={palette[model.editing]}
           placeholder="#rrggbb"
           value=""
-          submitLabel="boya"
+          submitLabel={say().paint}
           onSubmit={(value: string) => actions.paint(value.trim())}
         />
       </Box>
@@ -201,15 +197,16 @@ export function settingsPane(parts: Parts) {
 
   return (
     <Box flexDirection="column" rowGap={1}>
-      {section(look, { title: 'Tema', hint: `${count} skin` }, skinButtons(parts))}
+      {section(look, { title: say().theme, hint: say().skins(count) }, skinButtons(parts))}
       {preview(look, model.width)}
-      {section(look, { title: 'Seçenekler' }, optionButtons(parts))}
-      {section(look, { title: 'Renkler', hint: 'bir yuva seç, hex yaz' }, colorControls(parts))}
+      {section(look, { title: say().options }, optionButtons(parts))}
+      {section(look, { title: say().colors, hint: say().colorsHint }, colorControls(parts))}
       <Box flexDirection="row" flexWrap="wrap" columnGap={2} alignItems="center">
         <Text color={palette.muted}>
-          Ya da Claude'a sor: <Text color={palette.fg}>“gün batımı gibi hissettiren bir skin yap”</Text>
+          {say().askClaude}
+          <Text color={palette.fg}>{say().askExample}</Text>
         </Text>
-        <Button key="gallery" label="Galeriyi aç" hotkey="g" plain onPress={() => actions.gallery()} />
+        <Button key="gallery" label={say().openGallery} hotkey="g" plain onPress={() => actions.gallery()} />
       </Box>
     </Box>
   )

@@ -1,7 +1,9 @@
 import type { Step } from './match'
 import { baseName } from './parse'
 import type { StepTrack } from '../types'
+import { upper } from './lang'
 import { escape, fit, measure, wrap } from './ui/svg'
+import { words } from './words'
 
 // What the step under way shows beneath its title on the desktop: its checks and finished agents on one
 // meta line, the files it touched (newest first, each with its type badge), and the agents still running.
@@ -29,7 +31,8 @@ export const DETAIL_CSS = '.badge{font-size:9.5px;font-weight:700}'
 
 export function deskDetails(step: Step, track: StepTrack | undefined): DeskDetails {
   const done = track?.agents.filter(agent => !agent.isRunning).length ?? 0
-  const meta = [step.checksTotal > 0 ? `${step.checksDone}/${step.checksTotal} madde` : '', done > 0 ? `${done} ajan bitti` : '']
+  const say = words()
+  const meta = [step.checksTotal > 0 ? say.checks(step.checksDone, step.checksTotal) : '', done > 0 ? say.agentsDone(done) : '']
   const running = (track?.agents ?? []).filter(agent => agent.isRunning).map(agent => agent.description)
 
   return { meta: meta.filter(Boolean).join(' · '), files: [...(track?.files ?? [])].reverse(), running: running.slice(0, AGENTS_SHOWN) }
@@ -45,7 +48,7 @@ function fileBadge(x: number, y: number, path: string): string {
   const dot = name.lastIndexOf('.')
   const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : ''
   const role = BADGE_ROLE[ext]
-  const label = escape((ext === '' ? '·' : ext.slice(0, 3)).toLocaleUpperCase('tr'))
+  const label = escape(upper(ext === '' ? '·' : ext.slice(0, 3)))
   const box = role === undefined
     ? `<rect x="${x}" y="${y}" width="${BADGE.w}" height="${BADGE.h}" rx="4" fill="var(--inset)" stroke="var(--line)"/>`
     : `<rect x="${x}" y="${y}" width="${BADGE.w}" height="${BADGE.h}" rx="4" fill="var(--${role}-t)"/>`
@@ -74,13 +77,13 @@ function filesBlock(files: string[], frame: Frame): Block {
   const rows = files.slice(0, FILES_SHOWN).map((path, n) => fileRow(path, { ...frame, top: frame.top + n * FILE_ROW }))
   const shown = Math.min(files.length, FILES_SHOWN)
   const rest = files.length - shown
-  const more = rest > 0 ? `<text x="${frame.x + BADGE.w + BADGE.gap}" y="${frame.top + shown * FILE_ROW + 11}" class="micro lo">+${rest} dosya daha</text>` : ''
+  const more = rest > 0 ? `<text x="${frame.x + BADGE.w + BADGE.gap}" y="${frame.top + shown * FILE_ROW + 11}" class="micro lo">${words().moreFiles(rest)}</text>` : ''
 
   return { svg: rows.join('') + more, height: shown * FILE_ROW + (rest > 0 ? LINE : 0) }
 }
 
 function agentBlock(agent: string, frame: Frame): Block {
-  const texts = wrap(`${agent} · çalışıyor`, { width: frame.width - AGENT_INDENT, size: META_SIZE, maxLines: LINES_MAX })
+  const texts = wrap(`${agent} · ${words().running}`, { width: frame.width - AGENT_INDENT, size: META_SIZE, maxLines: LINES_MAX })
   const dot = `<circle cx="${frame.x + 4}" cy="${frame.top + 9}" r="3.5" class="f-run breathe"/>`
 
   return { svg: dot + lines(texts, { x: frame.x + AGENT_INDENT, top: frame.top, cls: 'label mid' }), height: texts.length * LINE }

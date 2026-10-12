@@ -5,6 +5,8 @@ import { groupsOf } from './summary'
 import { svgWidth } from './svg'
 import type { Theme } from './tidemark'
 import { chipRow, rerunRow, textPane, unplacedOf } from './view-text'
+import type { CheckName } from './view-text'
+import { words } from './words'
 import type { CheckOutcome, Failure, SuiteFilter, TestBadge } from '../types'
 
 // The resolved element table of the surface that draws the tree.
@@ -49,7 +51,7 @@ function groupTree(ui: Ui, view: PaneView, group: { file: string | null; failure
         return (
           <Box key={`tb-row-${index}`} flexDirection="row" alignItems="center" columnGap={1} paddingLeft={4}>
             {picture(ui, rowSvg(frame, failure), `tb-svg-${index}`)}
-            {failure.file !== null && <Button key={`tb-open-${index}`} plain dimColor label="Aç" onPress={() => view.onOpen(failure)} />}
+            {failure.file !== null && <Button key={`tb-open-${index}`} plain dimColor label={words().open} onPress={() => view.onOpen(failure)} />}
           </Box>
         )
       })}
@@ -57,7 +59,7 @@ function groupTree(ui: Ui, view: PaneView, group: { file: string | null; failure
   )
 }
 
-function tailTree(ui: Ui, view: PaneView, spec: { name: string; outcome: CheckOutcome | null }) {
+function tailTree(ui: Ui, view: PaneView, spec: { name: CheckName; outcome: CheckOutcome | null }) {
   const { Box, Text } = ui
   const unplaced = unplacedOf(spec)
   if (unplaced === null) return null
@@ -81,7 +83,7 @@ function bodyTree(ui: Ui, view: PaneView) {
     <Box flexDirection="column" rowGap={1}>
       {chipRow(ui, view)}
       {groupsOf(badge, view.filter).map(group => groupTree(ui, view, group))}
-      {view.filter === 'all' && tailTree(ui, view, { name: 'testler', outcome: badge.tests })}
+      {view.filter === 'all' && tailTree(ui, view, { name: 'tests', outcome: badge.tests })}
       {view.filter === 'all' && tailTree(ui, view, { name: 'lint', outcome: badge.lint })}
     </Box>
   )

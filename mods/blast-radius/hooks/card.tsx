@@ -1,9 +1,11 @@
 // The confirm card, drawn the same in the pane and in the band: Svg parts on desktop,
-// the same words as text on the terminal. The safe answer (Vazgeç) holds the focus.
+// the same words as text on the terminal. The safe answer (Keep my work) holds the focus.
 
-import { EYEBROW, headerSvg, bannerSvg, listSvg } from './svg-card'
+import { upper } from './lang'
+import { headerSvg, bannerSvg, listSvg } from './svg-card'
 import { palette, role, TERMINAL_KEY } from './theme'
 import type { Row, View } from './view'
+import { words } from './words'
 
 export type Ui = Record<string, any>
 
@@ -26,8 +28,6 @@ const MIN_WIDTH = 300
 const MAX_WIDTH = 720
 const BAND_ROWS = 3
 const TERMINAL_BAR = 10
-// The pane's title already names the mod; the band has no title, so it says who is holding.
-const HOLDER = 'Blast Radius bekletiyor'
 const STATUS_KEY: Record<string, keyof typeof TERMINAL_KEY> = { A: 'ok', M: 'warn', D: 'danger', R: 'read', C: 'read', U: 'danger' }
 
 export const svgWidth = (columns: number): number => Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, (columns - CARD_CHROME) * PX_PER_COLUMN))
@@ -36,7 +36,7 @@ export const svgWidth = (columns: number): number => Math.max(MIN_WIDTH, Math.mi
 function bandRows(rows: Row[]): Row[] {
   if (rows.length <= BAND_ROWS + 1) return rows
   const last = rows[rows.length - 1]
-  const more = last?.kind === 'more' ? last.name : `+${rows.length - BAND_ROWS} satır daha`
+  const more = last?.kind === 'more' ? last.name : words().moreRows(rows.length - BAND_ROWS)
 
   return [...rows.slice(0, BAND_ROWS), { kind: 'more', name: more, tag: '', count: '', size: '', share: null, icon: 'file' }]
 }
@@ -44,7 +44,7 @@ function bandRows(rows: Row[]): Row[] {
 function toggleOf(ui: Ui, props: CardProps) {
   const { Box, Button } = ui
   if (props.place === 'band' || props.view.toggleCount <= 0 || props.phase === 'striking') return null
-  const label = props.isExpanded ? 'Daha az göster' : 'Daha fazla göster'
+  const label = props.isExpanded ? words().showLess : words().showMore
 
   return (
     <Box key="toggle">
@@ -55,8 +55,9 @@ function toggleOf(ui: Ui, props: CardProps) {
 
 function actions(ui: Ui, props: CardProps, lo: string | undefined) {
   const { Box, Button, Text } = ui
+  const said = words()
   if (props.phase === 'striking') {
-    const doing = props.view.icon === 'trash' ? 'Siliniyor…' : 'Çalıştırılıyor…'
+    const doing = said.doing(props.view.icon === 'trash')
 
     return <Text key="doing" color={TERMINAL_KEY.danger}>{doing}</Text>
   }
@@ -64,8 +65,8 @@ function actions(ui: Ui, props: CardProps, lo: string | undefined) {
   return (
     <Box key="actions" flexDirection="row" flexWrap="wrap" gap={1} alignItems="center">
       <Button key="run" label={props.view.action.label} hotkey={props.view.action.hotkey} variant="secondary" onPress={props.onRun} />
-      <Button key="cancel" label="Vazgeç" hotkey="v" variant="secondary" autoFocus onPress={props.onCancel} />
-      {props.place === 'pane' ? null : <Box key="holder" marginLeft={1}><Text {...(lo === undefined ? { dimColor: true } : { color: lo })}>{HOLDER}</Text></Box>}
+      <Button key="cancel" label={said.cancel.label} hotkey={said.cancel.hotkey} variant="secondary" autoFocus onPress={props.onCancel} />
+      {props.place === 'pane' ? null : <Box key="holder" marginLeft={1}><Text {...(lo === undefined ? { dimColor: true } : { color: lo })}>{said.holder}</Text></Box>}
     </Box>
   )
 }
@@ -83,7 +84,7 @@ export function desktopCard(ui: Ui, props: CardProps) {
 
   return (
     <Box flexDirection="column" borderStyle="single" borderColor={role('danger', props.isLight).line} backgroundColor={neutral.card} paddingX={2} paddingY={1} gap={1}>
-      <Svg key="head" source={head.source} alt={`${view.command} · ${view.payload}${view.tail}`} width={width} height={head.height} />
+      <Svg key="head" source={head.source} alt={[view.command, `${view.payload}${view.tail}`].filter(Boolean).join(' · ')} width={width} height={head.height} />
       {banner === null ? null : <Svg key="banner" source={banner.source} alt={view.banner?.text ?? ''} width={width} height={banner.height} />}
       {rows.length === 0 ? null : <Svg key="list" source={list.source} alt={alt} width={width} height={list.height} isInteractive={props.phase === 'striking' ? true : undefined} />}
       {toggleOf(ui, props)}
@@ -155,16 +156,16 @@ export function terminalCard(ui: Ui, props: CardProps) {
   return (
     <Box flexDirection="column" paddingX={1} {...frame}>
       <Box flexDirection="row" justifyContent="space-between" gap={2}>
-        <Text bold color={TERMINAL_KEY.danger}>{`● ${EYEBROW.toLocaleUpperCase('tr')}`}</Text>
+        <Text bold color={TERMINAL_KEY.danger}>{`● ${upper(words().eyebrow)}`}</Text>
         {view.context === '' ? null : <Text dimColor wrap="truncate-start">{view.context}</Text>}
       </Box>
       <Text wrap="truncate-end">
         <Text bold>{view.command}</Text>
-        <Text dimColor> · </Text>
-        <Text bold {...(view.isPayloadEmpty ? { dimColor: true } : { color: TERMINAL_KEY.danger })}>{view.payload}</Text>
+        {view.payload === '' ? null : <Text dimColor> · </Text>}
+        {view.payload === '' ? null : <Text bold {...(view.isPayloadEmpty ? { dimColor: true } : { color: TERMINAL_KEY.danger })}>{view.payload}</Text>}
         {view.tail}
       </Text>
-      {view.fullCommand === null ? null : <Text dimColor wrap="truncate-end">{`tam komut: ${view.fullCommand}`}</Text>}
+      {view.fullCommand === null ? null : <Text dimColor wrap="truncate-end">{words().fullCommand(view.fullCommand)}</Text>}
       {view.banner === null ? null : <Text color={TERMINAL_KEY[view.banner.tone]}>{`! ${view.banner.text}`}</Text>}
       <Box flexDirection="column" marginTop={1}>{rows.map((row, i) => terminalRow(ui, row, { index: i, isStruck: props.phase === 'striking' }))}</Box>
       {toggleOf(ui, props)}

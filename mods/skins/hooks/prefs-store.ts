@@ -6,6 +6,7 @@ import { parseFolders, prefsFor, withFolder, withoutFolder } from './folders'
 import { HUB_PANE, hubDetail } from './hub'
 import { forTheme } from './light'
 import type { Active } from './look'
+import { say } from './words'
 import { BAND_OFF_KEY, bandOffWrites } from './migrate'
 
 // The engine's reach, bound in register.tsx: the engine follows `$` only into functions of
@@ -116,7 +117,7 @@ export async function runFolderCommand(host: PrefsHost, word: string): Promise<s
       await host.storeSet('folders', withFolder(folders, folder, prefs))
       await host.setPinned(true)
 
-      return 'bu klasör kendi görünümünü korur'
+      return say().pin
     case 'unpin': {
       const fallback = parsePrefs(await host.storeGet('prefs'), names)
       await host.storeSet('folders', withoutFolder(folders, folder))
@@ -124,11 +125,11 @@ export async function runFolderCommand(host: PrefsHost, word: string): Promise<s
       await host.setPrefs(fallback)
       await syncHub(host)
 
-      return `bu klasör varsayılanı izler: ${fallback.skin}`
+      return say().unpin(fallback.skin)
     }
     default:
       await host.storeSet('prefs', prefs)
 
-      return `varsayılan görünüm: ${prefs.skin}`
+      return say().share(prefs.skin)
   }
 }

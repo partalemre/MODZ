@@ -1,5 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
+import { setLang } from '../hooks/lang'
 import { ancestorsOf, formatSize, replaceChildren, toNodes } from '../hooks/tree'
 
 type World = {
@@ -25,8 +26,9 @@ type Ran = string[][]
 const opens: unknown[] = []
 const envs: Record<string, string>[] = []
 
+// These tests read the Turkish interface; english.test.tsx covers the English default.
 function world(on: any, w: World, ran: Ran) {
-  mock.env(on, w.env)
+  mock.env(on, { MODZ_LANG: 'tr', ...w.env })
   const clock = mock.clock(on, { now: 1_800_000_000_000 })
   mock.store(on)
   on('session.start', (_$: any, e: any) => ({ cwd: e.cwd }))
@@ -730,6 +732,7 @@ test('without an Omarchy theme the pane keeps the terminal background and nothin
 })
 
 test('formatSize: bytes, binary units, one decimal under 100, ? for unknown', async () => {
+  setLang('tr')
   expect(formatSize(0)).toBe('0 B')
   expect(formatSize(1023)).toBe('1023 B')
   expect(formatSize(1536)).toBe('1,5 K')

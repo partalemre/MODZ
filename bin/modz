@@ -42,17 +42,18 @@ import json, os, sys
 root = sys.argv[1]
 path = os.path.join(root, ".claude-plugin", "marketplace.json")
 market = json.load(open(path))
-plugins = []
-for name in sorted(os.listdir(os.path.join(root, "mods"))):
-    manifest = os.path.join(root, "mods", name, ".claude-plugin", "plugin.json")
-    if not os.path.isfile(manifest):
-        continue
-    d = json.load(open(manifest))
-    plugins.append({"name": d["name"], "source": f"./mods/{name}", "description": d.get("description", "")})
-market["plugins"] = plugins
+local = {n for n in os.listdir(os.path.join(root, "mods")) if os.path.isfile(os.path.join(root, "mods", n, ".claude-plugin", "plugin.json"))}
+# Curated entries stay as written (order, wording, remote sources such as transceiver); a removed mod leaves,
+# a new one joins at the end with its plugin.json description.
+kept = [p for p in market["plugins"] if not isinstance(p["source"], str) or p["name"] in local]
+known = {p["name"] for p in kept}
+for name in sorted(local - known):
+    d = json.load(open(os.path.join(root, "mods", name, ".claude-plugin", "plugin.json")))
+    kept.append({"name": d["name"], "source": f"./mods/{name}", "description": d.get("description", "")})
+market["plugins"] = kept
 json.dump(market, open(path, "w"), indent=2, ensure_ascii=False)
 open(path, "a").write("\n")
-print(f"marketplace.json: {len(plugins)} mod")
+print(f"marketplace.json: {len(kept)} mod")
 PY
 }
 

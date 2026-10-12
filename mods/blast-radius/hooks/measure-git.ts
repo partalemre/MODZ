@@ -4,6 +4,7 @@
 import { emptyReport, nothingReport, lines, plural, LIST_MAX } from './report'
 import type { Item, Report, Run } from './report'
 import type { GitRisk, Risk } from './classify'
+import { words } from './words'
 
 type MigrateRisk = Extract<Risk, { kind: 'migrate' }>
 
@@ -35,7 +36,7 @@ function changeItem(row: string, stats: Map<string, { added: number; removed: nu
 export async function measureChanges(run: Run, risk: GitRisk, cwd: string): Promise<Report> {
   const status = await run(['git', 'status', '--porcelain'], { cwd, timeoutMs: TIMEOUT_MS })
   if (status.exitCode !== 0) {
-    return emptyReport('changes', `${risk.label} (not a git repo here?)`, `git status çalışmadı: ${status.stderr.trim().slice(0, 160)}`)
+    return emptyReport('changes', `${risk.label} (not a git repo here?)`, words().notes.statusFailed(status.stderr.trim().slice(0, 160)))
   }
   const rows = lines(status.stdout).filter(l => l.length > 3 && !l.startsWith('??'))
   const isReset = risk.kind === 'git-reset'
@@ -75,13 +76,13 @@ export async function measurePush(run: Run, risk: GitRisk, cwd: string): Promise
   const { ref, source } = await pushTarget(run, risk.args, cwd)
   const known = await run(['git', 'rev-parse', '--verify', '--quiet', ref], { cwd, timeoutMs: SHORT_TIMEOUT_MS })
   if (known.exitCode !== 0) {
-    return { ...emptyReport('commits', `force-push to ${ref}`, `${ref} yerelde yok; hangi commit'lerin düşeceği bilinemiyor. Önce git fetch çalıştır.`), where: ref }
+    return { ...emptyReport('commits', `force-push to ${ref}`, words().notes.refMissing(ref)), where: ref }
   }
   const log = await run(['git', 'log', '--oneline', '--no-decorate', `${source}..${ref}`], { cwd, timeoutMs: TIMEOUT_MS })
   const dropped = lines(log.stdout)
   const items = dropped.slice(0, LIST_MAX).map(line => ({ name: line.replace(/^\S+\s*/, ''), tag: line.split(' ')[0] ?? '', meta: '', weight: 0 }))
   const summary = dropped.length === 0 ? `force-push to ${ref}: drops no commits` : `force-push to ${ref}: drops ${plural(dropped.length, 'commit', 'commits')}`
-  const note = dropped.length === 0 ? `${ref} üzerinde düşecek commit yok (son fetch'e göre).` : null
+  const note = dropped.length === 0 ? words().notes.noDroppedCommits(ref) : null
 
   return { ...emptyReport('commits', summary, note), count: dropped.length, items, more: Math.max(0, dropped.length - LIST_MAX), where: ref }
 }
@@ -98,7 +99,7 @@ const MIGRATION_LISTERS: Record<string, Lister> = {
 export async function measureMigrations(run: Run, risk: MigrateRisk, cwd: string): Promise<Report> {
   const lister = MIGRATION_LISTERS[risk.tool]
   if (lister === undefined) {
-    return emptyReport('migrations', 'run migrations', 'Bu araç için bekleyen migration\'lar listelenemiyor.')
+    return emptyReport('migrations', 'run migrations', words().notes.cannotListMigrations)
   }
   let ran
   try {
@@ -107,7 +108,7 @@ export async function measureMigrations(run: Run, risk: MigrateRisk, cwd: string
     ran = { exitCode: -1, stdout: '', stderr: String(error) }
   }
   if (ran.exitCode !== 0) {
-    return emptyReport('migrations', `run ${risk.label}`, `Bekleyen migration'lar listelenemedi (${lister.argv.join(' ')} başarısız).`)
+    return emptyReport('migrations', `run ${risk.label}`, words().notes.migrationsFailed(lister.argv.join(' ')))
   }
   const pending = ran.stdout.split('\n').filter(lister.isPending).map(lister.strip)
   const items = pending.slice(0, LIST_MAX).map(name => ({ name, tag: '', meta: '', weight: 0 }))

@@ -18,7 +18,8 @@ export async function userMessageView({ view, e, pass }: Drawing<'UserMessage'>)
     return pass(e)
   }
 
-  const look = view.look(active)
+  // Outside the terminal the outline's text cannot be selected, so it carries a Copy button.
+  const look = view.look(active, e.surface !== 'terminal')
   const hasImages = await view.hasImages()
 
   // Claude Code draws the images; the text is already in the outline above them.

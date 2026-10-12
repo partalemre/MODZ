@@ -39,13 +39,14 @@ export type World = {
 /**
  * `deny` refuses a spawn of the named agent types; `files` are folders of agent files by path,
  * each `{ name: text }`; `undelivered` refuses every send with that reason; `refuse` names tools
- * whose calls a permission hook refuses.
+ * whose calls a permission hook refuses. The tests read Turkish (MODZ_LANG=tr); `lang: 'en'` leaves it unset.
  */
 export type SetupOptions = {
   deny?: Record<string, string>
   files?: Record<string, Record<string, string>>
   undelivered?: string
   refuse?: string[]
+  lang?: 'en' | 'tr'
 }
 
 // Folders are found by the end of their path, so a relative `.claude/agents` matches wherever the test runs.
@@ -64,7 +65,7 @@ export async function setup($: any, on: any, opts: SetupOptions = {}) {
   const clock = mock.clock(on)
   let spawned = 0
   let created = 0
-  on('env.get', () => ({ value: undefined }))
+  mock.env(on, opts.lang === 'en' ? {} : { MODZ_LANG: 'tr' })
   on('settings.read', () => ({ value: {} }))
   on('command.register', () => ({ value: undefined }))
   on('tool.register', () => ({ value: undefined }))

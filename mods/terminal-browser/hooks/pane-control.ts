@@ -3,10 +3,9 @@ import { startBridge } from './bridge-launch'
 import type { Host } from './host'
 import { PANE, START_URL, state } from './session'
 import { normalizeUrl } from './urls'
+import { word } from './words'
 
-const PANE_TITLE = 'Tarayıcı'
 const PANE_ROWS = 24
-const TERMINAL_ONLY = 'terminal-browser yalnızca terminalde çalışır'
 
 function targetUrl(raw: string | null): string {
   if (raw) return normalizeUrl(raw)
@@ -15,7 +14,7 @@ function targetUrl(raw: string | null): string {
 }
 
 export async function openBrowser(host: Host, raw: string | null): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  if (state.isOffTerminal) return { ok: false, error: TERMINAL_ONLY }
+  if (state.isOffTerminal) return { ok: false, error: word('terminalOnly') }
   if (state.port === null) {
     const started = await startBridge(host)
     if (!started.ok) return started
@@ -24,7 +23,7 @@ export async function openBrowser(host: Host, raw: string | null): Promise<{ ok:
   state.pendingUrl = url
   state.requestedUrl = url
   state.open = true
-  await host.open({ id: PANE, title: PANE_TITLE, focus: true, rows: PANE_ROWS })
+  await host.open({ id: PANE, title: word('paneTitle'), focus: true, rows: PANE_ROWS })
   host.redraw()
   if (state.region) {
     state.pendingUrl = null

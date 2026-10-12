@@ -6,6 +6,7 @@ import { diffSvg } from './svg-diff'
 import type { DiffInput } from './svg-diff'
 import { cardWidth } from './svg-kit'
 import { tableSvg } from './svg-table'
+import { say } from './words'
 import { terminalSvg } from './svg-terminal'
 import type { ShellOutput } from './svg-terminal'
 
@@ -27,7 +28,7 @@ function cardWithCopy(look: Look, { Svg, built, key, text }: Copyable) {
         ''
       ) : (
         <Box position="absolute" top={1} right={3}>
-          <Button key={key} label="Kopyala" plain dimColor onPress={() => copy(text)} />
+          <Button key={key} label={say().copy} plain dimColor onPress={() => copy(text)} />
         </Box>
       )}
     </Box>

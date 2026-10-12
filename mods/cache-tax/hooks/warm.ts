@@ -5,6 +5,7 @@ import type { ModelForkResult } from 'claude-code'
 import { PING_AFTER_MS, PING_PROMPT, TTL_MS, disarm, isCold, pingUsd, priceOf } from './core'
 import type { State } from './core'
 import { fmtTok, fmtUsd } from './fmt'
+import { bandWords } from './ui-words'
 import { statusText } from './words'
 
 const KEY_DEADLINE = 'deadline'
@@ -90,11 +91,11 @@ export async function arm(io: Io, s: State) {
 type ForkReply = ModelForkResult | null
 
 function failureText(reply: ForkReply): string | null {
-  if (reply === null) return 'motor pingi göndermedi: ya anlık görüntü soğuktu ya da API çağrısı başarısız oldu'
+  if (reply === null) return bandWords().noPing
   if (reply.isAnswered !== false) return null
-  if (reply.reason === 'nothing-to-fork') return 'ısıtılacak konuşma henüz yok'
-  if (reply.reason === 'api-error') return `API çağrısı başarısız${reply.status === null ? '' : ` (${reply.status})`}`
-  return reply.reason === 'aborted' ? 'ping yarıda kesildi' : 'ping metin döndürmedi'
+  if (reply.reason === 'nothing-to-fork') return bandWords().nothingToFork
+  if (reply.reason === 'api-error') return bandWords().apiError(reply.status === null ? '' : ` (${reply.status})`)
+  return reply.reason === 'aborted' ? bandWords().aborted : bandWords().noText
 }
 
 async function ping(io: Io, s: State) {
@@ -109,7 +110,7 @@ async function ping(io: Io, s: State) {
   try {
     reply = await io.fork(PING_PROMPT)
   } catch (err) {
-    return stop(io, s, `ping başarısız: ${err instanceof Error ? err.message : String(err)}`)
+    return stop(io, s, bandWords().pingFailed(err instanceof Error ? err.message : String(err)))
   }
   const failure = failureText(reply)
   if (failure !== null || reply === null || reply.isAnswered === false) return stop(io, s, failure)
@@ -119,8 +120,7 @@ async function ping(io: Io, s: State) {
   const usd = price ? pingUsd(u, price) : null
   s.last = { at: now, read: u.cache_read_input_tokens, write: u.cache_creation_input_tokens, usd, warm }
   if (!warm) {
-    return stop(io, s, `ping ${fmtTok(u.cache_read_input_tokens)} token okudu, ${fmtTok(u.cache_creation_input_tokens)} ` +
-      `token yazdı (${fmtUsd(usd)}); önbellek zaten gitmişti`)
+    return stop(io, s, bandWords().gone({ read: fmtTok(u.cache_read_input_tokens), wrote: fmtTok(u.cache_creation_input_tokens), usd: fmtUsd(usd) }))
   }
   s.lastRequestAt = now
   await arm(io, s)

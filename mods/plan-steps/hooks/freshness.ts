@@ -1,5 +1,6 @@
 import type { Plan } from './match'
 import { formatDuration } from './progress'
+import { words } from './words'
 
 // How alive the plan in view is. A plan nobody has started, or one nothing has touched for half an
 // hour, is not the work under way: the status line leaves it out and the pane says so quietly.
@@ -21,8 +22,8 @@ export const isShown = (state: PlanState): boolean => state === 'live' || state 
 
 // The quiet note a plan that is not under way carries: "başlamadı", "bekliyor · 45dk önce".
 export function stateNote(state: PlanState, at: { now: number; touchedAt: number }): string {
-  if (state === 'unstarted') return 'başlamadı'
-  if (state === 'stale') return `bekliyor · ${formatDuration(at.now - at.touchedAt)} önce`
+  if (state === 'unstarted') return words().notStarted
+  if (state === 'stale') return words().waitingSince(formatDuration(at.now - at.touchedAt))
 
   return ''
 }

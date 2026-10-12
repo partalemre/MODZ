@@ -1,4 +1,6 @@
-// Turkish by default; `auto` follows Claude Code's `language` setting, then the locale.
+// English by default. The plugin's `language` option wins, then MODZ_LANG (the MODZ-wide switch), then
+// Claude Code's `language` setting, then the locale; register.tsx walks that order at session.start.
+import { setLang as setKitLang } from './lang'
 import { en } from './lang-en'
 import { ru } from './lang-ru'
 import { tr } from './lang-tr'
@@ -9,12 +11,14 @@ export type { Lang, Strings } from './strings'
 const STRINGS: Record<Lang, Strings> = { tr, en, ru }
 
 // Module scope is fine here: session.start sets it again on every (re)load.
-let lang: Lang = 'tr'
+let lang: Lang = 'en'
 
 export const t = (): Strings => STRINGS[lang]
 
+// The kit's language follows, so its `upper` capitalises the way the words are written.
 export const setLang = (next: Lang): void => {
   lang = next
+  setKitLang(next)
 }
 
 export const langOf = (value: unknown): Lang | null => {

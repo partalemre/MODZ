@@ -20,9 +20,9 @@ export const toneOf = (view: JobView | null): HubTone => {
   return view.failed ? 'warn' : 'ok'
 }
 
-/** "Görevler 3/4 · 2 ajan" while agents run, the band's label alone otherwise, "" with no job. */
+/** "Görevler 3/4 · 2 ajan" ("Tasks 3/4 · 2 running") while agents run, the band's label alone otherwise, "" with no job. */
 export const hubDetailOf = (view: JobView | null, running: number): string => {
   if (!view) return ''
-  const crew = running > 0 ? ` · ${t().crew(running)}` : ''
+  const crew = running > 0 ? ` · ${t().hubCrew(running)}` : ''
   return clip(`${view.label}${crew}`, DETAIL_MAX)
 }

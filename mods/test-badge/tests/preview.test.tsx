@@ -30,7 +30,7 @@ type Run = { test: string; lint: string; code: number; hold?: Promise<void> }
 
 async function setup($: any, on: any, spec: { theme: string; run: Run; isIdle?: boolean }) {
   const clock = mock.clock(on)
-  mock.env(on, { MODZ_THEME: spec.theme })
+  mock.env(on, { MODZ_THEME: spec.theme, MODZ_LANG: 'tr' })
   for (const name of ['store.get', 'store.set', 'command.register', 'ui.log', 'ui.status', 'ui.toast', 'ui.open']) on(name, () => ({ value: undefined }))
   on('session.start', () => ({ cwd: '/w' }))
   on('session.cwd', () => ({ value: '/w' }))

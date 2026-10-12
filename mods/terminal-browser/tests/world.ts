@@ -67,8 +67,10 @@ export function stubUi(on: any, world: World) {
   on('ui.blit', () => ({ value: {} }))
 }
 
-export async function start($: any, on: any, spec: { world: World; surface: 'terminal' | 'desktop' }) {
+// The Turkish tests run with MODZ_LANG=tr; an English test passes `lang: 'en'` and leaves the variable unset.
+export async function start($: any, on: any, spec: { world: World; surface: 'terminal' | 'desktop'; lang?: 'en' | 'tr' }) {
   const clock = mock.clock(on)
+  mock.env(on, spec.lang === 'en' ? {} : { MODZ_LANG: 'tr' })
   on('session.surfaces', () => ({ value: [spec.surface] }))
   on('session.start', () => ({ cwd: '/work' }))
   on('command.register', (_: unknown, e: { name: string }) => {

@@ -1,27 +1,49 @@
 # hud-pro
 
-Bandın en altında, prompt'a bitişik tek sakin satır; kullanım bilgisinin tek yeri (DESIGN.md §6). Sıfır token: yalnızca motorun kendi ölçümlerini okur (`session.usage`, `session.measure`).
+Puts one quiet line above the prompt with your 5-hour and 7-day limits, the context window and the session cost.
+
+## Install
 
 ```
-5s ━━┊─── %32 ↻ 2sa 10dk   7g ━━━━┊─ %91 ↻ 3g 22sa   bağlam ━━──── %41   ≈$1,23
+/plugin marketplace add partalemre/MODZ
+/plugin install hud-pro@modz
 ```
 
-- **Masaüstü:** tek Svg satır, her limit ve oturum maliyeti için sakin bir hap: etiket (`5 saat`), ince ölçer ve tempo çentiği (pencere eşit harcansaydı nerede olurdu), değer, `↻` ve sıfırlanmaya kalan süre. Üstüne gelince ayrıntı ipucu çıkar; dar bantta önce 7 günün sıfırlanması düşer, sonra ölçerler kısalır, etiketler kısalır (`5s`), ölçerler, 5 saatin sıfırlanması ve en son maliyet düşer.
-- **Kritik pencere (≥ %95):** hap Flare zemine geçer (satırın tek vurgusu), sıfırlanma Flare renkte ve en dar bantta bile kalır: "5s %99 ↻ 1sa 20dk". %100'de değer `dolu` olur, asla %100'ü aşmaz. Değerler tabular rakamlı ve sabit genişlikte yuvada durur; ilk hap bandın baştaki noktasıyla aynı hizadan başlar. Renk nötr; tempodan 10 puan öndeyse Amber, %95'ten itibaren Flare. Bağlam (tempo yok) %70'ten Amber.
-- **Bağlam ≥ %70:** yanında küçük **Sıkıştır** düğmesi (`s`); Claude Code'un kendi `/compact`'ını kendi dispatch'inde çalıştırır, tur sürerken ve sıkıştırma bitene kadar gizlidir.
-- **Terminal:** aynı bilgi tek metin satırında; geniş bantta `━━┊───` ölçerler, daraldıkça önce çubuklar, sonra sıfırlanma ve maliyet düşer.
-- `theirs`'in altında durur (`next(e)` çağırır, hiçbir şeyi yutmaz); soru penceresi açıkken çekilir.
-- Bir limit %90'ı geçince pencere başına tek kısa bildirim, sıfırlanmayla: "5 saat limiti %92 dolu · ↻ 1sa 20dk".
-- **MODZ kartı:** `hud-pro.hub` = `5s %44 · 7g %17`; 5 saatlik pencere %80'den Amber (`warn`), %95'ten Flare (`bad`). Yalnızca metin ya da ton değişince yazılır.
+Or in one step: `/plugin install hud-pro --marketplace partalemre/MODZ`.
 
-## Komutlar
-- `/hud` satırı açar/kapatır (oturumlar arası hatırlanır).
-- `/hud full` "Kullanım" paneli (MODZ ana panelindeki `usage` satırı da açar): 5 saat, 7 gün, bağlam ve oturum maliyeti için stat kutuları (Display değer + tempo çentikli ince ölçer + son 96 okumanın sparkline'ı); terminalde metin sparkline'lı satırlar; altında son turun token'ları.
+The MODZ panel (`modz`) shows its line here, for example `5h 44% · 7d 17%`. The tone turns amber when the 5-hour window passes 80% and red from 95%.
 
-## Sınırlar (dürüst)
-- Hız limitleri yalnızca abonelikte gelir; API anahtarıyla satır bağlam ve maliyeti gösterir.
-- Maliyet motorun oturum defteridir, `≈` ile gösterilir. Tempo yalnızca süresi bilinen pencerelerde (5s, 7g) çizilir.
-- Boştaki satır dakikada bir yenilenir; başka hiçbir şey çalışmaz.
+## What you see
 
-## Geliştirme
-`claude plugin validate .`, `claude plugin test .` (iki yüzeyde 18 davranış testi + `tests/preview.test.tsx` görsel durumları). Renkler `hooks/theme.ts`'te (Tidemark token'ları), Svg yapı taşları `hooks/svg.ts`'te.
+```
+5h ━━┊─── 32% ↻ 2h 10m   7d ━━━━┊─ 91% ↻ 3d 22h   context ━━──── 41%   ≈$1.23
+```
+
+- **Desktop:** one picture line with a pill for each limit and for the session cost: a label (`5-hour`), a thin meter with a pace tick (where you would be if the window were spent evenly), the value, and the time left until it resets. Hovering shows details. In a narrow band the 7-day reset drops first, then the meters shorten, then the labels, and last the meters, the 5-hour reset and the cost.
+- **Terminal:** the same information as one line of text. A wide band shows `━━┊───` meters; as it narrows, the bars go first, then the resets and the cost.
+- **Colour:** neutral by default. A window 10 points ahead of its pace turns amber, and from 95% red, with its reset kept even in the narrowest band. At 100% the value reads `full`. Context turns amber from 70%.
+- **Compact:** when context is at 70% or more and Claude is idle, a small **Compact** button (`s`) appears. It runs Claude Code's own `/compact`.
+- **Toast:** when a plan limit passes 90%, one short toast per window says so, with when it resets.
+
+The line sits beneath other mods' rows without swallowing them, and steps aside while a survey is open.
+
+## Commands
+
+- `/hud` hides or shows the line (remembered across sessions).
+- `/hud full` opens a Usage pane: stat tiles for the 5-hour window, 7-day window, context and session cost, each with a pace marker and a sparkline of the last 96 readings, plus the last turn's token counts (input, output, cache, requests).
+
+## Settings
+
+There are no plugin options.
+
+## Limits
+
+- Rate limits are reported only on a subscription. With an API key the line shows context and cost.
+- The cost is the engine's own session total, shown with `≈`. Pace is drawn only for windows with a known length (5-hour and 7-day).
+- An idle line refreshes once a minute; nothing else runs.
+
+Uses no model tokens: it only reads the usage figures Claude Code already measures.
+
+## Language
+
+The interface is English. Set `MODZ_LANG=tr` in the `env` block of `~/.claude/settings.json` for Turkish.

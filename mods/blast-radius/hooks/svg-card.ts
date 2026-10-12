@@ -4,6 +4,8 @@
 import { svgStyle } from './theme'
 import { escape, fit, fitMiddle, icon, measure, svgOpen, tile } from './svg-kit'
 import type { Banner, Row, View } from './view'
+import { upper } from './lang'
+import { words } from './words'
 
 const TILE = 38
 const HEAD_X = 52
@@ -34,8 +36,6 @@ const FULL_STEP = 18
 const HEAD_BOTTOM = 6
 const HEAD_MIN = 46
 const GLUE = ' · '
-// DESIGN.md §3: every card opens with an eyebrow in its role colour.
-export const EYEBROW = 'Komut bekletildi'
 
 type Line = { y: number; markup: string }
 
@@ -55,6 +55,8 @@ function headlineLines(view: View, room: number): Line[] {
   const spec = { size: CMD_SIZE, isMono: true, isBold: true }
   const said = measure(view.payload, { size: HEAD_SIZE, isBold: true }) + measure(view.tail, { size: HEAD_SIZE })
   const glue = `<tspan font-size="${HEAD_SIZE}" style="fill:var(--lo)">${GLUE}</tspan>`
+  // English says what it does in the banner, so the headline is the command alone.
+  if (view.payload === '' && view.tail === '') return [{ y: FIRST_BASELINE, markup: commandRun(fitMiddle(view.command, room, spec)) }]
   if (measure(view.command, spec) + measure(GLUE, { size: HEAD_SIZE }) + said <= room) {
     return [{ y: FIRST_BASELINE, markup: commandRun(view.command) + glue + payloadRun(view, room) }]
   }
@@ -65,9 +67,9 @@ function headlineLines(view: View, room: number): Line[] {
   ]
 }
 
-/** `● KOMUT BEKLETİLDİ` in Flare, and where it would run (`demo-app içinde`) on the right while it fits. */
+/** `● HELD · BLAST RADIUS` in Flare (DESIGN.md §3: every card opens with an eyebrow in its role colour), and the meta on the right while it fits. */
 function eyebrowLine(view: View, room: number): string {
-  const label = EYEBROW.toLocaleUpperCase('tr')
+  const label = upper(words().eyebrow)
   const labelW = measure(label, { size: EYEBROW_SIZE, isBold: true }) + [...label].length * EYEBROW_TRACKING
   const metaRoom = room - EYEBROW_TEXT_X - labelW - META_GAP
   const meta = view.context === '' || metaRoom < HEAD_X ? '' : fit(view.context, metaRoom, { size: META_SIZE })

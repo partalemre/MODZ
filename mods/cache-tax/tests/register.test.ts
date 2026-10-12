@@ -1,5 +1,6 @@
 import { describe, expect, mock, test, tier } from 'claude-code/testing'
 
+import { setLang } from '../hooks/lang'
 import { fmtDuration, freshState, parseDuration, resetForClear, seedFromResume } from '../hooks/register'
 import { HOUR, MIN, START, prompt, run, session, turn, usage, warm, world } from './world'
 
@@ -11,10 +12,20 @@ describe('parse and format', () => {
     expect(parseDuration('90m')).toBe(90 * MIN)
     expect(parseDuration('2h30m')).toBe(150 * MIN)
     expect(parseDuration('soon')).toBe(null)
+    setLang('tr')
     expect(fmtDuration(150 * MIN)).toBe('2 sa 30 dk')
     expect(fmtDuration(7 * MIN)).toBe('7 dk')
     expect(fmtDuration(3 * HOUR)).toBe('3 sa')
     expect(fmtDuration((15 * 24 + 9) * 60 * MIN)).toBe('15 gün 9 sa')
+  })
+
+  test('durations in English', async () => {
+    setLang('en')
+    expect(fmtDuration(150 * MIN)).toBe('2h 30m')
+    expect(fmtDuration(7 * MIN)).toBe('7m')
+    expect(fmtDuration(3 * HOUR)).toBe('3h')
+    expect(fmtDuration((15 * 24 + 9) * 60 * MIN)).toBe('15d 9h')
+    setLang('tr')
   })
 })
 

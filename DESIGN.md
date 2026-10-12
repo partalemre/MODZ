@@ -13,7 +13,8 @@ Hedef: videodaki kalite, ama kopya değil — özgün çizim, aynı zenginlik.
 3. **Sıfır token varsayılan.** `$.model` yalnızca özelliğin özü gerektiriyorsa (reflect), en ucuz model, olay başına ≤1.
 4. **Sakin davranış.** Kendiliğinden açılan tek panel MODZ ana panelidir (§9); başka hiçbir mod paneli kendi açılmaz,
    odak çalmaz, rutin olay için toast atmaz. Komutu kullanıcı adına çalıştırmak (`$.command.run`) yasak: transkripte balon düşer.
-5. **Türkçe arayüz.** Kısa, cümle düzeni; komut adları İngilizce. Büyük harf etiketlerde `toLocaleUpperCase('tr')`.
+5. **İki dil.** Arayüz varsayılan İngilizce, `MODZ_LANG=tr` ile Türkçe (`kit/lang.ts`: `pick`, `upper`). Kısa, cümle düzeni;
+   komut adları İngilizce. Büyük harfli etiketler `upper()` ile: Türkçede İ korunur, İngilizcede hiç çıkmaz.
 
 ## 2. Renk (hex, iki tema)
 Svg içinde iki palet `<style>` + `@media (prefers-color-scheme: …)` ile; Box/Text hex'i kit'teki `palette(isLight)`

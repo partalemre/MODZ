@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MODZ: 17 mods for Claude Code</title>
+<meta name="description" content="17 mods for Claude Code. One panel. See every move Claude makes: agents, files, plans, tests and risky commands, live, beside the chat.">
+<meta property="og:title" content="MODZ: 17 mods for Claude Code">
+<meta property="og:description" content="17 mods for Claude Code. One panel.">
+<meta property="og:image" content="https://partalemre.github.io/MODZ/img/poster.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="img/icon.svg" type="image/svg+xml">
+<link rel="alternate" type="text/plain" href="llms.txt" title="Install guide for AI agents">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sheet: #121110; --glow: rgba(229, 138, 95, .07); --card: #1a1917; --line: #2a2925;
+    --ink: #f0eee8; --mid: #c2beb4; --lo: #8e8a80; --kiln: #e58a5f;
+    --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --sheet: #f7f6f3; --glow: rgba(169, 74, 38, .06); --card: #ffffff; --line: #e4e0d6;
+      --ink: #1c1b19; --mid: #4f4b44; --lo: #6f6a62; --kiln: #a94a26; color-scheme: light;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--sheet); color: var(--mid); font: 400 17px/1.6 var(--sans);
+    background-image: radial-gradient(1100px 520px at 50% -120px, var(--glow), transparent 70%);
+    background-repeat: no-repeat;
+  }
+  a { color: var(--ink); text-underline-offset: 3px; text-decoration-color: var(--lo); }
+  a:hover { text-decoration-color: var(--ink); }
+  :focus-visible { outline: 2px solid var(--kiln); outline-offset: 3px; border-radius: 6px; }
+  .skip { position: absolute; left: -999px; top: 8px; background: var(--card); color: var(--ink); padding: 8px 12px; }
+  .skip:focus { left: 16px; }
+  main { max-width: 1120px; margin: 0 auto; padding: 0 20px 96px; }
+
+  .hero { min-height: min(92vh, 860px); display: grid; grid-template-columns: minmax(0, 1fr); align-content: center; text-align: center; gap: 28px; padding: 64px 0 40px; }
+  .hero .mark { width: min(560px, 86vw); margin: 0 auto; color: var(--ink); display: block; }
+  .kicker { font: 500 12px/1 var(--mono); letter-spacing: .22em; color: var(--lo); margin: 0; }
+  .lede { font: 700 clamp(26px, 4.2vw, 40px)/1.15 var(--sans); letter-spacing: -.025em; color: var(--ink); margin: 0; }
+  .lede .quiet { color: var(--lo); }
+  .lede .warm { color: var(--kiln); }
+
+  .cmd {
+    display: inline-flex; align-items: center; gap: 14px; margin: 0 auto; max-width: 100%;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 14px 20px;
+    font: 400 clamp(14px, 1.9vw, 18px)/1.3 var(--mono); color: var(--ink);
+  }
+  .cmd code { white-space: nowrap; overflow-x: auto; min-width: 0; }
+  .cmd .chev { color: var(--kiln); }
+  .cmd button {
+    font: 500 13px/1 var(--sans); color: var(--ink); background: transparent; border: 1px solid var(--line);
+    border-radius: 8px; padding: 9px 12px; min-height: 36px; cursor: pointer;
+  }
+  .cmd button:hover { border-color: var(--lo); }
+  .then { font-size: 15px; color: var(--lo); margin: 0; }
+  .then code { font-family: var(--mono); color: var(--mid); }
+
+  .film { margin: 24px auto 0; max-width: 960px; }
+  .film video { width: 100%; display: block; border-radius: 14px; border: 1px solid var(--line); background: #000; aspect-ratio: 16 / 9; }
+
+  .scene { padding: 120px 0 0; text-align: center; }
+  .scene .eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .24em; color: var(--lo); margin: 0 0 18px; text-transform: uppercase; }
+  .scene h2 { font: 800 clamp(34px, 6vw, 64px)/1.04 var(--sans); letter-spacing: -.035em; color: var(--ink); margin: 0; }
+  .scene .sub { font-size: clamp(17px, 2vw, 21px); color: var(--mid); margin: 18px auto 0; max-width: 40ch; }
+  .scene figure { margin: 44px auto 0; max-width: 1000px; }
+  .scene img { width: 100%; height: auto; display: block; border-radius: 14px; }
+  .scene figcaption { font-size: 15px; color: var(--lo); margin: 18px auto 0; max-width: 62ch; }
+
+  .mods { padding: 128px 0 0; }
+  .mods h2, .agents h2, .end h2 { font: 800 clamp(28px, 4vw, 40px)/1.1 var(--sans); letter-spacing: -.03em; color: var(--ink); margin: 0 0 8px; }
+  .mods > p { margin: 0 0 36px; color: var(--lo); }
+  .groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 36px 48px; }
+  .groups h3 { font: 500 12px/1 var(--mono); letter-spacing: .24em; color: var(--lo); text-transform: uppercase; margin: 0 0 12px; }
+  .groups dl { margin: 0; }
+  .groups dt { font: 500 15px/1.4 var(--mono); color: var(--ink); margin-top: 14px; }
+  .groups dd { margin: 2px 0 0; font-size: 15px; line-height: 1.5; }
+
+  .agents { padding: 120px 0 0; max-width: 760px; }
+  .agents ol { padding-left: 22px; margin: 18px 0 0; }
+  .agents li { margin: 10px 0; }
+  code.inline { font: 400 .9em var(--mono); color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+
+  .end { padding: 140px 0 0; text-align: center; display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
+  .end h2 { margin: 0; }
+  footer { border-top: 1px solid var(--line); margin-top: 120px; padding: 28px 0 0; font-size: 14px; color: var(--lo); display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between; }
+
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .cmd { display: flex; flex-direction: column; align-items: stretch; padding: 14px; }
+    .cmd code { font-size: 13px; }
+    .scene { padding-top: 88px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+  .top { max-width: 1120px; margin: 0 auto; padding: 18px 20px 0; display: flex; justify-content: space-between; align-items: center; font: 500 13px/1 var(--mono); letter-spacing: .12em; }
+  .top a { text-decoration: none; color: var(--lo); padding: 12px 4px; }
+  .top a:hover { color: var(--ink); }
+  .top .name { color: var(--ink); }
+  .install { width: min(720px, 100%); margin: 0 auto; background: var(--card); border: 1px solid var(--line); border-radius: 14px; text-align: left; overflow: hidden; }
+  .tabs { display: flex; border-bottom: 1px solid var(--line); }
+  .tabs button { flex: 1; font: 500 14px/1 var(--sans); color: var(--lo); background: transparent; border: 0; border-bottom: 2px solid transparent; padding: 15px 10px 13px; min-height: 46px; cursor: pointer; }
+  .tabs button:hover { color: var(--ink); }
+  .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--kiln); }
+  .panel { padding: 18px 18px 16px 20px; }
+  .panel[hidden] { display: none; }
+  .row { display: flex; gap: 14px; align-items: flex-start; }
+  .row pre { flex: 1; min-width: 0; margin: 0; overflow-x: auto; font: 400 15px/1.75 var(--mono); color: var(--ink); }
+  .row pre .chev, .row pre .c { color: var(--kiln); }
+  .row pre .c { color: var(--lo); }
+  .copy { font: 500 13px/1 var(--sans); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 0 14px; min-height: 44px; cursor: pointer; flex: none; }
+  .copy:hover { border-color: var(--lo); }
+  .panel .note { margin: 12px 0 0; font-size: 14px; color: var(--lo); }
+  .panel .note code { font-family: var(--mono); color: var(--mid); }
+  .facts { margin: 0; font-size: 14px; color: var(--lo); }
+  .facts span + span::before { content: "·"; margin: 0 10px; }
+  .film p { margin: 12px 0 0; text-align: center; font-size: 14px; color: var(--lo); }
+  .groups dt button { font: inherit; color: inherit; background: none; border: 0; padding: 4px 0; cursor: copy; display: inline-flex; gap: 10px; align-items: baseline; }
+  .groups dt button .at { color: var(--lo); opacity: 0; transition: opacity .15s; }
+  .groups dt button:hover .at, .groups dt button:focus-visible .at, .groups dt button.done .at { opacity: 1; }
+  .settings { margin: 22px 0 0; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; font: 400 14px/1.7 var(--mono); color: var(--ink); overflow-x: auto; }
+  @media (max-width: 640px) {
+    .tabs button { font-size: 13px; padding-inline: 4px; }
+    .row { flex-direction: column; align-items: stretch; }
+    .row pre { font-size: 13px; }
+    .facts span { display: block; }
+    .facts span + span::before { content: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { .groups dt button .at { transition: none; } }
+</style>
+</head>
+<body>
+<a class="skip" href="#install">Skip to install</a>
+<nav class="top" aria-label="Site">
+  <a class="name" href="#">MODZ</a>
+  <span><a href="#mods">Mods</a> <a href="llms.txt">llms.txt</a> <a href="https://github.com/partalemre/MODZ">GitHub</a></span>
+</nav>
+<main>
+  <header class="hero">
+    <p class="kicker">MODS FOR CLAUDE CODE</p>
+    <svg class="mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 295.6" role="img" aria-label="MODZ"><style>
+.run .la{animation:st .5s steps(1) infinite}.run .lb{animation:st .5s steps(1) infinite -.25s}
+.run .bd{animation:bob .5s steps(1) infinite -.125s}
+.run g{transform-box:fill-box}
+@keyframes st{50%{transform:translateY(-1px)}}@keyframes bob{50%{transform:translateY(1px)}}
+.c-fable.run{animation:float 1s ease-in-out infinite}
+.c-fable.run .la,.c-fable.run .lb,.c-fable.run .bd{animation:none}
+.c-fable.run .ant{animation:blink 1s steps(1) infinite}
+.c-fable.run .star{animation:blink .5s steps(1) infinite -.25s}
+@keyframes float{50%{transform:translateY(-2px)}}@keyframes blink{50%{opacity:.15}}
+.c-heavy.run .it{animation:scan 1s steps(1) infinite}
+.c-heavy.run .gl{animation:blink 1s steps(1) infinite -.5s}
+@keyframes scan{25%{transform:translate(-1px,1px)}50%{transform:translate(-2px,2px)}75%{transform:translate(-1px,1px)}}
+.c-careful.run .it{transform-origin:100% 100%;animation:twist .5s ease-in-out infinite}
+@keyframes twist{50%{transform:rotate(-35deg)}}
+.c-medium.run .pan{transform-origin:0 50%;animation:tilt 1s ease-in-out infinite}
+.c-medium.run .egg{animation:flip 1s ease-in-out infinite}
+@keyframes tilt{20%,40%{transform:rotate(-12deg)}}@keyframes flip{30%{transform:translateY(-5px) scaleY(-1)}60%{transform:translateY(0)}}
+.c-light.run .la{animation-duration:.25s}.c-light.run .lb{animation-duration:.25s;animation-delay:-.125s}
+.c-light.run .flag{transform-origin:0 50%;animation:wave .25s steps(1) infinite}
+@keyframes wave{50%{transform:skewY(-12deg) scaleX(.85)}}
+.c-explore.run .it{transform-origin:50% 100%;animation:fence .5s ease-in-out infinite}
+@keyframes fence{50%{transform:rotate(25deg)}}
+@media (prefers-reduced-motion: reduce){.run,.run g{animation:none!important}}
+</style><style>.px{animation:px .32s cubic-bezier(.2,.8,.2,1) both}@keyframes px{from{opacity:0;transform:translateY(-14px)}}.crew{animation:crew .6s 1.1s cubic-bezier(.2,.8,.2,1) both}@keyframes crew{from{opacity:0;transform:translateX(-24px)}}@media (prefers-reduced-motion: reduce){.px,.crew{animation:none}}</style><rect x="62" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:0ms"/><rect x="166" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:36ms"/><rect x="62" y="36" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:28ms"/><rect x="88" y="36" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:37ms"/><rect x="140" y="36" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:55ms"/><rect x="166" y="36" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:64ms"/><rect x="62" y="62" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:56ms"/><rect x="114" y="62" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:74ms"/><rect x="166" y="62" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:92ms"/><rect x="62" y="88" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:84ms"/><rect x="114" y="88" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:102ms"/><rect x="166" y="88" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:120ms"/><rect x="62" y="114" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:112ms"/><rect x="166" y="114" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:148ms"/><rect x="62" y="140" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:140ms"/><rect x="166" y="140" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:176ms"/><rect x="62" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:168ms"/><rect x="166" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:204ms"/><rect x="258" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:205ms"/><rect x="284" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:214ms"/><rect x="310" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:223ms"/><rect x="232" y="36" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:224ms"/><rect x="336" y="36" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:260ms"/><rect x="232" y="62" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:252ms"/><rect x="336" y="62" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:288ms"/><rect x="232" y="88" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:280ms"/><rect x="336" y="88" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:316ms"/><rect x="232" y="114" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:308ms"/><rect x="336" y="114" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:344ms"/><rect x="232" y="140" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:336ms"/><rect x="336" y="140" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:372ms"/><rect x="258" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:373ms"/><rect x="284" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:382ms"/><rect x="310" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:391ms"/><rect x="402" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:392ms"/><rect x="428" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:401ms"/><rect x="454" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:410ms"/><rect x="480" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:419ms"/><rect x="402" y="36" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:420ms"/><rect x="506" y="36" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:456ms"/><rect x="402" y="62" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:448ms"/><rect x="506" y="62" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:484ms"/><rect x="402" y="88" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:476ms"/><rect x="506" y="88" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:512ms"/><rect x="402" y="114" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:504ms"/><rect x="506" y="114" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:540ms"/><rect x="402" y="140" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:532ms"/><rect x="506" y="140" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:568ms"/><rect x="402" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:560ms"/><rect x="428" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:569ms"/><rect x="454" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:578ms"/><rect x="480" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:587ms"/><rect x="572" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:588ms"/><rect x="598" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:597ms"/><rect x="624" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:606ms"/><rect x="650" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:615ms"/><rect x="676" y="10" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:624ms"/><rect x="676" y="36" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:652ms"/><rect x="650" y="62" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:671ms"/><rect x="624" y="88" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:690ms"/><rect x="598" y="114" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:709ms"/><rect x="572" y="140" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:728ms"/><rect x="572" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:756ms"/><rect x="598" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:765ms"/><rect x="624" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:774ms"/><rect x="650" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:783ms"/><rect x="676" y="166" width="22" height="22" rx="3" fill="currentColor" class="px" style="animation-delay:792ms"/><g class="crew"><g transform="translate(117,226) scale(2.2)" opacity="1" shape-rendering="crispEdges"><g class="c-heavy run"><g class="bd"><rect x="7" y="10" width="16" height="12" fill="#E07A9A"/><rect x="3" y="14" width="4" height="4" fill="#E07A9A"/><rect x="9" y="12" width="2" height="2" fill="#1F1E1D"/><rect x="19" y="12" width="2" height="2" fill="#1F1E1D"/><rect x="12" y="3" width="1" height="1" fill="#7A4A26"/><rect x="13" y="3" width="1" height="1" fill="#7A4A26"/><rect x="14" y="3" width="1" height="1" fill="#7A4A26"/><rect x="15" y="3" width="1" height="1" fill="#7A4A26"/><rect x="16" y="3" width="1" height="1" fill="#7A4A26"/><rect x="17" y="3" width="1" height="1" fill="#7A4A26"/><rect x="10" y="4" width="1" height="1" fill="#7A4A26"/><rect x="11" y="4" width="1" height="1" fill="#7A4A26"/><rect x="12" y="4" width="1" height="1" fill="#A0703F"/><rect x="13" y="4" width="1" height="1" fill="#7A4A26"/><rect x="14" y="4" width="1" height="1" fill="#7A4A26"/><rect x="15" y="4" width="1" height="1" fill="#A0703F"/><rect x="16" y="4" width="1" height="1" fill="#7A4A26"/><rect x="17" y="4" width="1" height="1" fill="#7A4A26"/><rect x="18" y="4" width="1" height="1" fill="#7A4A26"/><rect x="19" y="4" width="1" height="1" fill="#7A4A26"/><rect x="9" y="5" width="1" height="1" fill="#7A4A26"/><rect x="10" y="5" width="1" height="1" fill="#7A4A26"/><rect x="11" y="5" width="1" height="1" fill="#7A4A26"/><rect x="12" y="5" width="1" height="1" fill="#7A4A26"/><rect x="13" y="5" width="1" height="1" fill="#7A4A26"/><rect x="14" y="5" width="1" height="1" fill="#7A4A26"/><rect x="15" y="5" width="1" height="1" fill="#7A4A26"/><rect x="16" y="5" width="1" height="1" fill="#7A4A26"/><rect x="17" y="5" width="1" height="1" fill="#7A4A26"/><rect x="18" y="5" width="1" height="1" fill="#7A4A26"/><rect x="19" y="5" width="1" height="1" fill="#7A4A26"/><rect x="20" y="5" width="1" height="1" fill="#7A4A26"/><rect x="8" y="6" width="1" height="1" fill="#7A4A26"/><rect x="9" y="6" width="1" height="1" fill="#A0703F"/><rect x="10" y="6" width="1" height="1" fill="#7A4A26"/><rect x="11" y="6" width="1" height="1" fill="#7A4A26"/><rect x="12" y="6" width="1" height="1" fill="#A0703F"/><rect x="13" y="6" width="1" height="1" fill="#7A4A26"/><rect x="14" y="6" width="1" height="1" fill="#7A4A26"/><rect x="15" y="6" width="1" height="1" fill="#A0703F"/><rect x="16" y="6" width="1" height="1" fill="#7A4A26"/><rect x="17" y="6" width="1" height="1" fill="#7A4A26"/><rect x="18" y="6" width="1" height="1" fill="#A0703F"/><rect x="19" y="6" width="1" height="1" fill="#7A4A26"/><rect x="20" y="6" width="1" height="1" fill="#7A4A26"/><rect x="21" y="6" width="1" height="1" fill="#7A4A26"/><rect x="7" y="7" width="1" height="1" fill="#7A4A26"/><rect x="8" y="7" width="1" height="1" fill="#7A4A26"/><rect x="9" y="7" width="1" height="1" fill="#7A4A26"/><rect x="10" y="7" width="1" height="1" fill="#7A4A26"/><rect x="11" y="7" width="1" height="1" fill="#7A4A26"/><rect x="12" y="7" width="1" height="1" fill="#7A4A26"/><rect x="13" y="7" width="1" height="1" fill="#7A4A26"/><rect x="14" y="7" width="1" height="1" fill="#7A4A26"/><rect x="15" y="7" width="1" height="1" fill="#7A4A26"/><rect x="16" y="7" width="1" height="1" fill="#7A4A26"/><rect x="17" y="7" width="1" height="1" fill="#7A4A26"/><rect x="18" y="7" width="1" height="1" fill="#7A4A26"/><rect x="19" y="7" width="1" height="1" fill="#7A4A26"/><rect x="20" y="7" width="1" height="1" fill="#7A4A26"/><rect x="21" y="7" width="1" height="1" fill="#7A4A26"/><rect x="22" y="7" width="1" height="1" fill="#7A4A26"/><rect x="6" y="8" width="1" height="1" fill="#5A3519"/><rect x="7" y="8" width="1" height="1" fill="#5A3519"/><rect x="8" y="8" width="1" height="1" fill="#5A3519"/><rect x="9" y="8" width="1" height="1" fill="#5A3519"/><rect x="10" y="8" width="1" height="1" fill="#5A3519"/><rect x="11" y="8" width="1" height="1" fill="#5A3519"/><rect x="12" y="8" width="1" height="1" fill="#5A3519"/><rect x="13" y="8" width="1" height="1" fill="#5A3519"/><rect x="14" y="8" width="1" height="1" fill="#5A3519"/><rect x="15" y="8" width="1" height="1" fill="#5A3519"/><rect x="16" y="8" width="1" height="1" fill="#5A3519"/><rect x="17" y="8" width="1" height="1" fill="#5A3519"/><rect x="18" y="8" width="1" height="1" fill="#5A3519"/><rect x="19" y="8" width="1" height="1" fill="#5A3519"/><rect x="20" y="8" width="1" height="1" fill="#5A3519"/><rect x="21" y="8" width="1" height="1" fill="#5A3519"/><rect x="22" y="8" width="1" height="1" fill="#5A3519"/><rect x="23" y="8" width="1" height="1" fill="#5A3519"/><rect x="6" y="9" width="18" height="1" fill="#D85A30"/><g class="it"><rect x="23" y="10" width="4" height="4" fill="#E07A9A"/><rect x="24" y="1" width="1" height="1" fill="#3A3A3C"/><rect x="25" y="1" width="1" height="1" fill="#3A3A3C"/><rect x="26" y="1" width="1" height="1" fill="#3A3A3C"/><rect x="23" y="2" width="1" height="1" fill="#3A3A3C"/><rect x="27" y="2" width="1" height="1" fill="#3A3A3C"/><rect x="23" y="3" width="1" height="1" fill="#3A3A3C"/><rect x="27" y="3" width="1" height="1" fill="#3A3A3C"/><rect x="23" y="4" width="1" height="1" fill="#3A3A3C"/><rect x="27" y="4" width="1" height="1" fill="#3A3A3C"/><rect x="24" y="5" width="1" height="1" fill="#3A3A3C"/><rect x="25" y="5" width="1" height="1" fill="#3A3A3C"/><rect x="26" y="5" width="1" height="1" fill="#3A3A3C"/><rect x="24" y="2" width="3" height="3" fill="rgba(169,214,245,.7)"/><rect x="25" y="6" width="1" height="4" fill="#7A4A26"/></g><g class="gl"><rect x="24" y="2" width="1" height="1" fill="#fff"/></g></g><g class="la"><rect x="7" y="22" width="2" height="4" fill="#E07A9A"/><rect x="17" y="22" width="2" height="4" fill="#E07A9A"/></g><g class="lb"><rect x="11" y="22" width="2" height="4" fill="#E07A9A"/><rect x="21" y="22" width="2" height="4" fill="#E07A9A"/></g></g></g><g transform="translate(209,226) scale(2.2)" opacity="1" shape-rendering="crispEdges"><g class="c-careful run"><g class="bd"><rect x="7" y="10" width="16" height="12" fill="#D97757"/><rect x="3" y="14" width="4" height="4" fill="#D97757"/><rect x="23" y="14" width="4" height="4" fill="#D97757"/><rect x="9" y="12" width="2" height="2" fill="#1F1E1D"/><rect x="19" y="12" width="2" height="2" fill="#1F1E1D"/><rect x="11" y="4" width="1" height="1" fill="#F5C542"/><rect x="12" y="4" width="1" height="1" fill="#F5C542"/><rect x="13" y="4" width="1" height="1" fill="#F5C542"/><rect x="14" y="4" width="1" height="1" fill="#F5C542"/><rect x="15" y="4" width="1" height="1" fill="#F5C542"/><rect x="16" y="4" width="1" height="1" fill="#F5C542"/><rect x="17" y="4" width="1" height="1" fill="#F5C542"/><rect x="18" y="4" width="1" height="1" fill="#F5C542"/><rect x="9" y="5" width="1" height="1" fill="#F5C542"/><rect x="10" y="5" width="1" height="1" fill="#F5C542"/><rect x="11" y="5" width="1" height="1" fill="#F5C542"/><rect x="12" y="5" width="1" height="1" fill="#F5C542"/><rect x="13" y="5" width="1" height="1" fill="#F5C542"/><rect x="14" y="5" width="1" height="1" fill="#FBE08A"/><rect x="15" y="5" width="1" height="1" fill="#FBE08A"/><rect x="16" y="5" width="1" height="1" fill="#F5C542"/><rect x="17" y="5" width="1" height="1" fill="#F5C542"/><rect x="18" y="5" width="1" height="1" fill="#F5C542"/><rect x="19" y="5" width="1" height="1" fill="#F5C542"/><rect x="20" y="5" width="1" height="1" fill="#F5C542"/><rect x="8" y="6" width="1" height="1" fill="#F5C542"/><rect x="9" y="6" width="1" height="1" fill="#F5C542"/><rect x="10" y="6" width="1" height="1" fill="#F5C542"/><rect x="11" y="6" width="1" height="1" fill="#F5C542"/><rect x="12" y="6" width="1" height="1" fill="#F5C542"/><rect x="13" y="6" width="1" height="1" fill="#F5C542"/><rect x="14" y="6" width="1" height="1" fill="#FBE08A"/><rect x="15" y="6" width="1" height="1" fill="#FBE08A"/><rect x="16" y="6" width="1" height="1" fill="#F5C542"/><rect x="17" y="6" width="1" height="1" fill="#F5C542"/><rect x="18" y="6" width="1" height="1" fill="#F5C542"/><rect x="19" y="6" width="1" height="1" fill="#F5C542"/><rect x="20" y="6" width="1" height="1" fill="#F5C542"/><rect x="21" y="6" width="1" height="1" fill="#F5C542"/><rect x="8" y="7" width="1" height="1" fill="#F5C542"/><rect x="9" y="7" width="1" height="1" fill="#F5C542"/><rect x="10" y="7" width="1" height="1" fill="#F5C542"/><rect x="11" y="7" width="1" height="1" fill="#F5C542"/><rect x="12" y="7" width="1" height="1" fill="#F5C542"/><rect x="13" y="7" width="1" height="1" fill="#F5C542"/><rect x="14" y="7" width="1" height="1" fill="#FBE08A"/><rect x="15" y="7" width="1" height="1" fill="#FBE08A"/><rect x="16" y="7" width="1" height="1" fill="#F5C542"/><rect x="17" y="7" width="1" height="1" fill="#F5C542"/><rect x="18" y="7" width="1" height="1" fill="#F5C542"/><rect x="19" y="7" width="1" height="1" fill="#F5C542"/><rect x="20" y="7" width="1" height="1" fill="#F5C542"/><rect x="21" y="7" width="1" height="1" fill="#F5C542"/><rect x="7" y="8" width="1" height="1" fill="#F5C542"/><rect x="8" y="8" width="1" height="1" fill="#F5C542"/><rect x="9" y="8" width="1" height="1" fill="#F5C542"/><rect x="10" y="8" width="1" height="1" fill="#F5C542"/><rect x="11" y="8" width="1" height="1" fill="#F5C542"/><rect x="12" y="8" width="1" height="1" fill="#F5C542"/><rect x="13" y="8" width="1" height="1" fill="#F5C542"/><rect x="14" y="8" width="1" height="1" fill="#FBE08A"/><rect x="15" y="8" width="1" height="1" fill="#FBE08A"/><rect x="16" y="8" width="1" height="1" fill="#F5C542"/><rect x="17" y="8" width="1" height="1" fill="#F5C542"/><rect x="18" y="8" width="1" height="1" fill="#F5C542"/><rect x="19" y="8" width="1" height="1" fill="#F5C542"/><rect x="20" y="8" width="1" height="1" fill="#F5C542"/><rect x="21" y="8" width="1" height="1" fill="#F5C542"/><rect x="22" y="8" width="1" height="1" fill="#F5C542"/><rect x="6" y="9" width="1" height="1" fill="#C99A1E"/><rect x="7" y="9" width="1" height="1" fill="#C99A1E"/><rect x="8" y="9" width="1" height="1" fill="#C99A1E"/><rect x="9" y="9" width="1" height="1" fill="#C99A1E"/><rect x="10" y="9" width="1" height="1" fill="#C99A1E"/><rect x="11" y="9" width="1" height="1" fill="#C99A1E"/><rect x="12" y="9" width="1" height="1" fill="#C99A1E"/><rect x="13" y="9" width="1" height="1" fill="#C99A1E"/><rect x="14" y="9" width="1" height="1" fill="#C99A1E"/><rect x="15" y="9" width="1" height="1" fill="#C99A1E"/><rect x="16" y="9" width="1" height="1" fill="#C99A1E"/><rect x="17" y="9" width="1" height="1" fill="#C99A1E"/><rect x="18" y="9" width="1" height="1" fill="#C99A1E"/><rect x="19" y="9" width="1" height="1" fill="#C99A1E"/><rect x="20" y="9" width="1" height="1" fill="#C99A1E"/><rect x="21" y="9" width="1" height="1" fill="#C99A1E"/><rect x="22" y="9" width="1" height="1" fill="#C99A1E"/><rect x="23" y="9" width="1" height="1" fill="#C99A1E"/><rect x="13" y="5" width="4" height="2" fill="#BA7517"/><g class="it"><rect x="1" y="10" width="1" height="1" fill="#8E929A"/><rect x="3" y="10" width="1" height="1" fill="#8E929A"/><rect x="0" y="11" width="1" height="1" fill="#8E929A"/><rect x="1" y="11" width="1" height="1" fill="#8E929A"/><rect x="2" y="11" width="1" height="1" fill="#8E929A"/><rect x="1" y="12" width="1" height="1" fill="#8E929A"/><rect x="1" y="13" width="1" height="1" fill="#8E929A"/></g></g><g class="la"><rect x="7" y="22" width="2" height="4" fill="#D97757"/><rect x="17" y="22" width="2" height="4" fill="#D97757"/></g><g class="lb"><rect x="11" y="22" width="2" height="4" fill="#D97757"/><rect x="21" y="22" width="2" height="4" fill="#D97757"/></g></g></g><g transform="translate(301,226) scale(2.2)" opacity="1" shape-rendering="crispEdges"><g class="c-light run"><g class="bd"><rect x="7" y="10" width="16" height="12" fill="#6BB26F"/><rect x="3" y="14" width="4" height="4" fill="#6BB26F"/><rect x="23" y="10" width="4" height="4" fill="#6BB26F"/><rect x="9" y="12" width="2" height="2" fill="#1F1E1D"/><rect x="19" y="12" width="2" height="2" fill="#1F1E1D"/><rect x="10" y="5" width="1" height="1" fill="#1D9E75"/><rect x="11" y="5" width="1" height="1" fill="#1D9E75"/><rect x="12" y="5" width="1" height="1" fill="#1D9E75"/><rect x="13" y="5" width="1" height="1" fill="#1D9E75"/><rect x="14" y="5" width="1" height="1" fill="#1D9E75"/><rect x="15" y="5" width="1" height="1" fill="#1D9E75"/><rect x="16" y="5" width="1" height="1" fill="#1D9E75"/><rect x="17" y="5" width="1" height="1" fill="#1D9E75"/><rect x="18" y="5" width="1" height="1" fill="#1D9E75"/><rect x="19" y="5" width="1" height="1" fill="#1D9E75"/><rect x="8" y="6" width="1" height="1" fill="#1D9E75"/><rect x="9" y="6" width="1" height="1" fill="#1D9E75"/><rect x="10" y="6" width="1" height="1" fill="#1D9E75"/><rect x="11" y="6" width="1" height="1" fill="#1D9E75"/><rect x="12" y="6" width="1" height="1" fill="#1D9E75"/><rect x="13" y="6" width="1" height="1" fill="#1D9E75"/><rect x="14" y="6" width="1" height="1" fill="#F8F6F1"/><rect x="15" y="6" width="1" height="1" fill="#F8F6F1"/><rect x="16" y="6" width="1" height="1" fill="#1D9E75"/><rect x="17" y="6" width="1" height="1" fill="#1D9E75"/><rect x="18" y="6" width="1" height="1" fill="#1D9E75"/><rect x="19" y="6" width="1" height="1" fill="#1D9E75"/><rect x="20" y="6" width="1" height="1" fill="#1D9E75"/><rect x="21" y="6" width="1" height="1" fill="#1D9E75"/><rect x="7" y="7" width="1" height="1" fill="#1D9E75"/><rect x="8" y="7" width="1" height="1" fill="#1D9E75"/><rect x="9" y="7" width="1" height="1" fill="#1D9E75"/><rect x="10" y="7" width="1" height="1" fill="#1D9E75"/><rect x="11" y="7" width="1" height="1" fill="#1D9E75"/><rect x="12" y="7" width="1" height="1" fill="#1D9E75"/><rect x="13" y="7" width="1" height="1" fill="#1D9E75"/><rect x="14" y="7" width="1" height="1" fill="#F8F6F1"/><rect x="15" y="7" width="1" height="1" fill="#F8F6F1"/><rect x="16" y="7" width="1" height="1" fill="#1D9E75"/><rect x="17" y="7" width="1" height="1" fill="#1D9E75"/><rect x="18" y="7" width="1" height="1" fill="#1D9E75"/><rect x="19" y="7" width="1" height="1" fill="#1D9E75"/><rect x="20" y="7" width="1" height="1" fill="#1D9E75"/><rect x="21" y="7" width="1" height="1" fill="#1D9E75"/><rect x="22" y="7" width="1" height="1" fill="#1D9E75"/><rect x="7" y="8" width="1" height="1" fill="#1D9E75"/><rect x="8" y="8" width="1" height="1" fill="#1D9E75"/><rect x="9" y="8" width="1" height="1" fill="#1D9E75"/><rect x="10" y="8" width="1" height="1" fill="#1D9E75"/><rect x="11" y="8" width="1" height="1" fill="#1D9E75"/><rect x="12" y="8" width="1" height="1" fill="#1D9E75"/><rect x="13" y="8" width="1" height="1" fill="#1D9E75"/><rect x="14" y="8" width="1" height="1" fill="#F8F6F1"/><rect x="15" y="8" width="1" height="1" fill="#F8F6F1"/><rect x="16" y="8" width="1" height="1" fill="#1D9E75"/><rect x="17" y="8" width="1" height="1" fill="#1D9E75"/><rect x="18" y="8" width="1" height="1" fill="#1D9E75"/><rect x="19" y="8" width="1" height="1" fill="#1D9E75"/><rect x="20" y="8" width="1" height="1" fill="#1D9E75"/><rect x="21" y="8" width="1" height="1" fill="#1D9E75"/><rect x="22" y="8" width="1" height="1" fill="#1D9E75"/><rect x="7" y="9" width="1" height="1" fill="#1D9E75"/><rect x="8" y="9" width="1" height="1" fill="#1D9E75"/><rect x="9" y="9" width="1" height="1" fill="#1D9E75"/><rect x="10" y="9" width="1" height="1" fill="#1D9E75"/><rect x="11" y="9" width="1" height="1" fill="#1D9E75"/><rect x="12" y="9" width="1" height="1" fill="#1D9E75"/><rect x="13" y="9" width="1" height="1" fill="#1D9E75"/><rect x="14" y="9" width="1" height="1" fill="#F8F6F1"/><rect x="15" y="9" width="1" height="1" fill="#F8F6F1"/><rect x="16" y="9" width="1" height="1" fill="#1D9E75"/><rect x="17" y="9" width="1" height="1" fill="#1D9E75"/><rect x="18" y="9" width="1" height="1" fill="#1D9E75"/><rect x="19" y="9" width="1" height="1" fill="#1D9E75"/><rect x="20" y="9" width="1" height="1" fill="#1D9E75"/><rect x="21" y="9" width="1" height="1" fill="#1D9E75"/><rect x="22" y="9" width="1" height="1" fill="#1D9E75"/><rect x="7" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="8" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="9" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="10" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="11" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="12" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="13" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="14" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="15" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="16" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="17" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="18" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="19" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="20" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="21" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="22" y="10" width="1" height="1" fill="#1F1E1D"/><rect x="23" y="10" width="1" height="1" fill="#1D9E75"/><rect x="25" y="1" width="1" height="9" fill="#8E929A"/><g class="flag"><rect x="26" y="1" width="1" height="1" fill="#F8F6F1"/><rect x="27" y="1" width="1" height="1" fill="#1F1E1D"/><rect x="28" y="1" width="1" height="1" fill="#F8F6F1"/><rect x="29" y="1" width="1" height="1" fill="#1F1E1D"/><rect x="26" y="2" width="1" height="1" fill="#1F1E1D"/><rect x="27" y="2" width="1" height="1" fill="#F8F6F1"/><rect x="28" y="2" width="1" height="1" fill="#1F1E1D"/><rect x="29" y="2" width="1" height="1" fill="#F8F6F1"/><rect x="26" y="3" width="1" height="1" fill="#F8F6F1"/><rect x="27" y="3" width="1" height="1" fill="#1F1E1D"/><rect x="28" y="3" width="1" height="1" fill="#F8F6F1"/><rect x="29" y="3" width="1" height="1" fill="#1F1E1D"/></g></g><g class="la"><rect x="7" y="22" width="2" height="4" fill="#6BB26F"/><rect x="17" y="22" width="2" height="4" fill="#6BB26F"/></g><g class="lb"><rect x="11" y="22" width="2" height="4" fill="#6BB26F"/><rect x="21" y="22" width="2" height="4" fill="#6BB26F"/></g></g></g><g transform="translate(393,226) scale(2.2)" opacity="1" shape-rendering="crispEdges"><g class="c-medium run"><g class="bd"><rect x="7" y="10" width="16" height="12" fill="#4FA3C7"/><rect x="3" y="14" width="4" height="4" fill="#4FA3C7"/><rect x="9" y="12" width="2" height="2" fill="#1F1E1D"/><rect x="19" y="12" width="2" height="2" fill="#1F1E1D"/><rect x="14" y="0" width="1" height="1" fill="#F7F6F2"/><rect x="15" y="0" width="1" height="1" fill="#F7F6F2"/><rect x="16" y="0" width="1" height="1" fill="#F7F6F2"/><rect x="13" y="1" width="1" height="1" fill="#F7F6F2"/><rect x="14" y="1" width="1" height="1" fill="#F7F6F2"/><rect x="15" y="1" width="1" height="1" fill="#F7F6F2"/><rect x="16" y="1" width="1" height="1" fill="#F7F6F2"/><rect x="17" y="1" width="1" height="1" fill="#F7F6F2"/><rect x="7" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="8" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="9" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="10" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="11" y="2" width="1" height="1" fill="#D2D1C8"/><rect x="12" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="13" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="14" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="15" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="16" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="17" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="18" y="2" width="1" height="1" fill="#D2D1C8"/><rect x="19" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="20" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="21" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="22" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="23" y="2" width="1" height="1" fill="#F4F3EE"/><rect x="6" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="7" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="8" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="9" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="10" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="11" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="12" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="13" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="14" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="15" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="16" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="17" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="18" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="19" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="20" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="21" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="22" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="23" y="3" width="1" height="1" fill="#F4F3EE"/><rect x="6" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="7" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="8" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="9" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="10" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="11" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="12" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="13" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="14" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="15" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="16" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="17" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="18" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="19" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="20" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="21" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="22" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="23" y="4" width="1" height="1" fill="#F4F3EE"/><rect x="6" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="7" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="8" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="9" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="10" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="11" y="5" width="1" height="1" fill="#D2D1C8"/><rect x="12" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="13" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="14" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="15" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="16" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="17" y="5" width="1" height="1" fill="#D2D1C8"/><rect x="18" y="5" width="1" height="1" fill="#D2D1C8"/><rect x="19" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="20" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="21" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="22" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="23" y="5" width="1" height="1" fill="#F4F3EE"/><rect x="7" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="8" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="9" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="10" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="11" y="6" width="1" height="1" fill="#D2D1C8"/><rect x="12" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="13" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="14" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="15" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="16" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="17" y="6" width="1" height="1" fill="#D2D1C8"/><rect x="18" y="6" width="1" height="1" fill="#D2D1C8"/><rect x="19" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="20" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="21" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="22" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="23" y="6" width="1" height="1" fill="#F4F3EE"/><rect x="7" y="7" width="1" height="1" fill="#B45F43"/><rect x="8" y="7" width="1" height="1" fill="#B45F43"/><rect x="9" y="7" width="1" height="1" fill="#B45F43"/><rect x="10" y="7" width="1" height="1" fill="#378ADD"/><rect x="11" y="7" width="1" height="1" fill="#378ADD"/><rect x="12" y="7" width="1" height="1" fill="#378ADD"/><rect x="13" y="7" width="1" height="1" fill="#378ADD"/><rect x="14" y="7" width="1" height="1" fill="#378ADD"/><rect x="15" y="7" width="1" height="1" fill="#378ADD"/><rect x="16" y="7" width="1" height="1" fill="#378ADD"/><rect x="17" y="7" width="1" height="1" fill="#378ADD"/><rect x="18" y="7" width="1" height="1" fill="#378ADD"/><rect x="19" y="7" width="1" height="1" fill="#378ADD"/><rect x="20" y="7" width="1" height="1" fill="#378ADD"/><rect x="21" y="7" width="1" height="1" fill="#378ADD"/><rect x="22" y="7" width="1" height="1" fill="#378ADD"/><rect x="7" y="8" width="1" height="1" fill="#B45F43"/><rect x="8" y="8" width="1" height="1" fill="#B45F43"/><rect x="9" y="8" width="1" height="1" fill="#B45F43"/><rect x="10" y="8" width="1" height="1" fill="#378ADD"/><rect x="11" y="8" width="1" height="1" fill="#378ADD"/><rect x="12" y="8" width="1" height="1" fill="#378ADD"/><rect x="13" y="8" width="1" height="1" fill="#378ADD"/><rect x="14" y="8" width="1" height="1" fill="#378ADD"/><rect x="15" y="8" width="1" height="1" fill="#378ADD"/><rect x="16" y="8" width="1" height="1" fill="#378ADD"/><rect x="17" y="8" width="1" height="1" fill="#378ADD"/><rect x="18" y="8" width="1" height="1" fill="#378ADD"/><rect x="19" y="8" width="1" height="1" fill="#378ADD"/><rect x="20" y="8" width="1" height="1" fill="#378ADD"/><rect x="21" y="8" width="1" height="1" fill="#378ADD"/><rect x="22" y="8" width="1" height="1" fill="#378ADD"/><rect x="7" y="9" width="1" height="1" fill="#B45F43"/><rect x="8" y="9" width="1" height="1" fill="#B45F43"/><rect x="9" y="9" width="1" height="1" fill="#B45F43"/><rect x="10" y="9" width="1" height="1" fill="#378ADD"/><rect x="11" y="9" width="1" height="1" fill="#378ADD"/><rect x="12" y="9" width="1" height="1" fill="#378ADD"/><rect x="13" y="9" width="1" height="1" fill="#378ADD"/><rect x="14" y="9" width="1" height="1" fill="#378ADD"/><rect x="15" y="9" width="1" height="1" fill="#378ADD"/><rect x="16" y="9" width="1" height="1" fill="#378ADD"/><rect x="17" y="9" width="1" height="1" fill="#378ADD"/><rect x="18" y="9" width="1" height="1" fill="#378ADD"/><rect x="19" y="9" width="1" height="1" fill="#378ADD"/><rect x="20" y="9" width="1" height="1" fill="#378ADD"/><rect x="21" y="9" width="1" height="1" fill="#378ADD"/><rect x="22" y="9" width="1" height="1" fill="#378ADD"/><g class="pan"><rect x="23" y="10" width="4" height="4" fill="#4FA3C7"/><rect x="22" y="8" width="7" height="2" fill="#4A4A48"/><rect x="26" y="10" width="1" height="1" fill="#4A4A48"/></g><g class="egg"><rect x="24" y="7" width="3" height="1" fill="#F5B731"/></g></g><g class="la"><rect x="7" y="22" width="2" height="4" fill="#4FA3C7"/><rect x="17" y="22" width="2" height="4" fill="#4FA3C7"/></g><g class="lb"><rect x="11" y="22" width="2" height="4" fill="#4FA3C7"/><rect x="21" y="22" width="2" height="4" fill="#4FA3C7"/></g></g></g><g transform="translate(485,226) scale(2.2)" opacity="1" shape-rendering="crispEdges"><g class="c-explore run"><g class="bd"><rect x="7" y="10" width="16" height="12" fill="#7C93B8"/><rect x="3" y="14" width="4" height="4" fill="#7C93B8"/><rect x="23" y="14" width="4" height="4" fill="#7C93B8"/><rect x="9" y="12" width="2" height="2" fill="#1F1E1D"/><rect x="19" y="12" width="2" height="2" fill="#1F1E1D"/><rect x="6" y="3" width="1" height="1" fill="#55514C"/><rect x="7" y="3" width="1" height="1" fill="#55514C"/><rect x="22" y="3" width="1" height="1" fill="#55514C"/><rect x="23" y="3" width="1" height="1" fill="#55514C"/><rect x="6" y="4" width="1" height="1" fill="#55514C"/><rect x="7" y="4" width="1" height="1" fill="#55514C"/><rect x="8" y="4" width="1" height="1" fill="#55514C"/><rect x="13" y="4" width="1" height="1" fill="#55514C"/><rect x="14" y="4" width="1" height="1" fill="#55514C"/><rect x="15" y="4" width="1" height="1" fill="#55514C"/><rect x="16" y="4" width="1" height="1" fill="#55514C"/><rect x="21" y="4" width="1" height="1" fill="#55514C"/><rect x="22" y="4" width="1" height="1" fill="#55514C"/><rect x="23" y="4" width="1" height="1" fill="#55514C"/><rect x="7" y="5" width="1" height="1" fill="#55514C"/><rect x="8" y="5" width="1" height="1" fill="#55514C"/><rect x="9" y="5" width="1" height="1" fill="#55514C"/><rect x="10" y="5" width="1" height="1" fill="#55514C"/><rect x="11" y="5" width="1" height="1" fill="#55514C"/><rect x="12" y="5" width="1" height="1" fill="#55514C"/><rect x="13" y="5" width="1" height="1" fill="#55514C"/><rect x="14" y="5" width="1" height="1" fill="#F8F6F1"/><rect x="15" y="5" width="1" height="1" fill="#F8F6F1"/><rect x="16" y="5" width="1" height="1" fill="#55514C"/><rect x="17" y="5" width="1" height="1" fill="#55514C"/><rect x="18" y="5" width="1" height="1" fill="#55514C"/><rect x="19" y="5" width="1" height="1" fill="#55514C"/><rect x="20" y="5" width="1" height="1" fill="#55514C"/><rect x="21" y="5" width="1" height="1" fill="#55514C"/><rect x="22" y="5" width="1" height="1" fill="#55514C"/><rect x="7" y="6" width="1" height="1" fill="#55514C"/><rect x="8" y="6" width="1" height="1" fill="#55514C"/><rect x="9" y="6" width="1" height="1" fill="#55514C"/><rect x="10" y="6" width="1" height="1" fill="#55514C"/><rect x="11" y="6" width="1" height="1" fill="#55514C"/><rect x="12" y="6" width="1" height="1" fill="#55514C"/><rect x="13" y="6" width="1" height="1" fill="#55514C"/><rect x="14" y="6" width="1" height="1" fill="#55514C"/><rect x="15" y="6" width="1" height="1" fill="#55514C"/><rect x="16" y="6" width="1" height="1" fill="#55514C"/><rect x="17" y="6" width="1" height="1" fill="#55514C"/><rect x="18" y="6" width="1" height="1" fill="#55514C"/><rect x="19" y="6" width="1" height="1" fill="#55514C"/><rect x="20" y="6" width="1" height="1" fill="#55514C"/><rect x="21" y="6" width="1" height="1" fill="#55514C"/><rect x="22" y="6" width="1" height="1" fill="#55514C"/><rect x="6" y="7" width="1" height="1" fill="#F5C542"/><rect x="7" y="7" width="1" height="1" fill="#F5C542"/><rect x="8" y="7" width="1" height="1" fill="#F5C542"/><rect x="9" y="7" width="1" height="1" fill="#F5C542"/><rect x="10" y="7" width="1" height="1" fill="#F5C542"/><rect x="11" y="7" width="1" height="1" fill="#F5C542"/><rect x="12" y="7" width="1" height="1" fill="#F5C542"/><rect x="13" y="7" width="1" height="1" fill="#F5C542"/><rect x="14" y="7" width="1" height="1" fill="#F5C542"/><rect x="15" y="7" width="1" height="1" fill="#F5C542"/><rect x="16" y="7" width="1" height="1" fill="#F5C542"/><rect x="17" y="7" width="1" height="1" fill="#F5C542"/><rect x="18" y="7" width="1" height="1" fill="#F5C542"/><rect x="19" y="7" width="1" height="1" fill="#F5C542"/><rect x="20" y="7" width="1" height="1" fill="#F5C542"/><rect x="21" y="7" width="1" height="1" fill="#F5C542"/><rect x="22" y="7" width="1" height="1" fill="#F5C542"/><rect x="23" y="7" width="1" height="1" fill="#F5C542"/><rect x="7" y="11" width="11" height="1" fill="#1F1E1D"/><rect x="18" y="11" width="4" height="3" fill="#1F1E1D"/><g class="it"><rect x="27" y="6" width="1" height="9" fill="#C9CCD2"/><rect x="26" y="15" width="3" height="1" fill="#7A4A26"/></g></g><g class="la"><rect x="7" y="22" width="2" height="4" fill="#7C93B8"/><rect x="17" y="22" width="2" height="4" fill="#7C93B8"/></g><g class="lb"><rect x="11" y="22" width="2" height="4" fill="#7C93B8"/><rect x="21" y="22" width="2" height="4" fill="#7C93B8"/></g></g></g><g transform="translate(577,226) scale(2.2)" opacity="1" shape-rendering="crispEdges"><g class="c-fable run"><g class="bd"><rect x="7" y="10" width="16" height="12" fill="#B07CC6"/><rect x="3" y="14" width="4" height="4" fill="#B07CC6"/><rect x="23" y="14" width="4" height="4" fill="#B07CC6"/><rect x="9" y="12" width="2" height="2" fill="#1F1E1D"/><rect x="19" y="12" width="2" height="2" fill="#1F1E1D"/><rect x="6" y="7" width="18" height="1" fill="#E6E8EE"/><rect x="5" y="8" width="1" height="14" fill="#E6E8EE"/><rect x="24" y="8" width="1" height="14" fill="#E6E8EE"/><rect x="6" y="22" width="18" height="1" fill="#C9CCD2"/><rect x="6" y="8" width="18" height="14" fill="rgba(169,214,245,.32)"/><rect x="8" y="9" width="2" height="1" fill="#fff"/><rect x="8" y="10" width="1" height="2" fill="#fff"/><rect x="14" y="4" width="2" height="3" fill="#C9CCD2"/><rect x="13" y="18" width="4" height="2" fill="#7F77DD"/><g class="ant"><rect x="14" y="2" width="2" height="2" fill="#7F77DD"/></g><g class="star"><rect x="27" y="3" width="1" height="3" fill="#F5C542"/><rect x="26" y="4" width="3" height="1" fill="#F5C542"/></g></g><g class="la"><rect x="7" y="22" width="2" height="4" fill="#B07CC6"/><rect x="17" y="22" width="2" height="4" fill="#B07CC6"/></g><g class="lb"><rect x="11" y="22" width="2" height="4" fill="#B07CC6"/><rect x="21" y="22" width="2" height="4" fill="#B07CC6"/></g></g></g></g></svg>
+    <h1 class="lede">See every <span class="warm">move</span> Claude makes.</h1>
+    <div id="install" class="install">
+      <div class="tabs" role="tablist" aria-label="How to install">
+        <button type="button" role="tab" id="t-code" aria-controls="p-code" aria-selected="true">In Claude Code</button>
+        <button type="button" role="tab" id="t-term" aria-controls="p-term" aria-selected="false" tabindex="-1">Terminal</button>
+        <button type="button" role="tab" id="t-agent" aria-controls="p-agent" aria-selected="false" tabindex="-1">Ask your agent</button>
+      </div>
+      <div class="panel" role="tabpanel" id="p-code" aria-labelledby="t-code">
+        <div class="row">
+<pre><span class="chev" aria-hidden="true">› </span>/plugin marketplace add partalemre/MODZ
+<span class="chev" aria-hidden="true">› </span>/plugin install modz@modz</pre>
+          <button type="button" class="copy" data-copy="/plugin marketplace add partalemre/MODZ&#10;/plugin install modz@modz">Copy</button>
+        </div>
+        <p class="note">Then add any mod by name: <code>/plugin install savvy-progress@modz</code>. <a href="#mods">See the mods</a>.</p>
+      </div>
+      <div class="panel" role="tabpanel" id="p-term" aria-labelledby="t-term" hidden>
+        <div class="row">
+<pre><span class="c"># every mod, in one go</span>
+claude plugin marketplace add partalemre/MODZ
+for m in modz savvy-progress savvy-flow filetree \
+  plan-steps transceiver blast-radius secret-guard \
+  checkpoint test-badge replay-theater session-budget \
+  cache-tax hud-pro done-ping reflect-mod skins \
+  terminal-browser; do
+  claude plugin install "$m@modz"
+done</pre>
+          <button type="button" class="copy" data-copy="claude plugin marketplace add partalemre/MODZ&#10;for m in modz savvy-progress savvy-flow filetree plan-steps transceiver blast-radius secret-guard checkpoint test-badge replay-theater session-budget cache-tax hud-pro done-ping reflect-mod skins terminal-browser; do&#10;  claude plugin install &quot;$m@modz&quot;&#10;done">Copy</button>
+        </div>
+        <p class="note">Start a new session afterwards. The panel opens on the right.</p>
+      </div>
+      <div class="panel" role="tabpanel" id="p-agent" aria-labelledby="t-agent" hidden>
+        <div class="row">
+<pre style="white-space:pre-wrap">Install MODZ for me. Follow https://partalemre.github.io/MODZ/llms.txt and ask me which mods I want.</pre>
+          <button type="button" class="copy" data-copy="Install MODZ for me. Follow https://partalemre.github.io/MODZ/llms.txt and ask me which mods I want.">Copy</button>
+        </div>
+        <p class="note">Paste it into Claude Code or any coding agent. Every step it runs is safe to repeat.</p>
+      </div>
+    </div>
+    <p class="facts"><span>Claude Code 2.1.295 or later</span><span>Desktop app and terminal</span><span>MIT, free</span></p>
+  </header>
+
+  <section class="film" aria-label="The film">
+    <video controls preload="none" poster="img/poster.jpg" playsinline>
+      <source src="modz-film.mp4" type="video/mp4">
+      <a href="modz-film.mp4">Download the film</a>
+    </video>
+    <p>The film · 50 seconds, no sound needed</p>
+  </section>
+
+  <section class="scene" aria-labelledby="s-panel">
+    <h2 id="s-panel">One panel. Every mod, live.</h2>
+    <p class="sub">It opens beside the chat. One honest line per mod, one click to its pane.</p>
+    <figure>
+      <img src="img/panel.jpg" width="1400" height="764" loading="lazy" alt="The MODZ panel beside a Claude Code session, listing Agents, Files, Plan, Tests, Checkpoints and Usage, each with an Open button">
+    </figure>
+  </section>
+
+  <section class="scene" aria-labelledby="s-agents">
+    <h2 id="s-agents">Every agent gets a face.</h2>
+    <p class="sub">Progress, cost and time for each one, as it happens.</p>
+    <figure>
+      <img src="img/agents.jpg" width="1400" height="948" loading="lazy" alt="The Agents pane: three subagents shown as pixel crabs named Nori, Mako and Pip, each with its task, current step, progress bar, cost and time">
+    </figure>
+  </section>
+
+  <section class="scene" aria-labelledby="s-hold">
+    <h2 id="s-hold">Risky commands wait for your OK.</h2>
+    <p class="sub">You see what would be lost before anything is.</p>
+    <figure>
+      <img src="img/hold.jpg" width="1400" height="1008" loading="lazy" alt="A held git reset --hard origin/main. The card says it would throw away 14 files and 312 uncommitted lines, lists them, and offers Run anyway and Keep my work">
+      <figcaption>rm -rf, git reset --hard, git clean, force pushes and migrations are held. The safe choice has the focus.</figcaption>
+    </figure>
+  </section>
+
+  <section class="scene" aria-labelledby="s-team">
+    <p class="eyebrow">Transceiver</p>
+    <h2 id="s-team">Your team, inside Claude.</h2>
+    <p class="sub">Chat with teammates. Let your agents ask theirs. Zero tokens.</p>
+    <figure>
+      <img src="img/team.jpg" width="1400" height="692" loading="lazy" alt="Two Claude Code windows, Maya's and Leo's, in the same project room. Leo's agent asked for a diff and Maya's machine answered at zero tokens in 0.4 seconds">
+      <figcaption>Only repo collaborators can ask. Secrets never leave your machine. Rooms are private claude.ai artifacts, with no server of their own.</figcaption>
+    </figure>
+  </section>
+
+  <section id="mods" class="mods" aria-labelledby="s-mods">
+    <h2 id="s-mods">The mods</h2>
+    <p>Install the panel, then any of these. Click a name to copy its install command. Most use no model tokens at all.</p>
+    <div class="groups">
+      <div>
+        <h3>Work</h3>
+        <dl>
+          <dt><button type="button" data-copy="/plugin install modz@modz" aria-label="Copy the install command for modz">modz<span class="at" aria-hidden="true">copy install</span></button></dt><dd>The panel: one live line per mod, one click to each pane.</dd>
+          <dt><button type="button" data-copy="/plugin install savvy-progress@modz" aria-label="Copy the install command for savvy-progress">savvy-progress<span class="at" aria-hidden="true">copy install</span></button></dt><dd>The Agents pane and progress band: each subagent's progress, cost and time.</dd>
+          <dt><button type="button" data-copy="/plugin install savvy-flow@modz" aria-label="Copy the install command for savvy-flow">savvy-flow<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Orchestrated delivery: the session model plans, tiered worker agents build.</dd>
+          <dt><button type="button" data-copy="/plugin install filetree@modz" aria-label="Copy the install command for filetree">filetree<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Files Claude touched this turn, what it is doing now, git status.</dd>
+          <dt><button type="button" data-copy="/plugin install plan-steps@modz" aria-label="Copy the install command for plan-steps">plan-steps<span class="at" aria-hidden="true">copy install</span></button></dt><dd>The plan's steps as Claude works through them.</dd>
+          <dt><button type="button" data-copy="/plugin install transceiver@modz" aria-label="Copy the install command for transceiver">transceiver<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Team chat, and zero-token agent questions between teammates.</dd>
+        </dl>
+      </div>
+      <div>
+        <h3>Safety</h3>
+        <dl>
+          <dt><button type="button" data-copy="/plugin install blast-radius@modz" aria-label="Copy the install command for blast-radius">blast-radius<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Holds destructive shell commands and shows what they would change.</dd>
+          <dt><button type="button" data-copy="/plugin install secret-guard@modz" aria-label="Copy the install command for secret-guard">secret-guard<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Stops keys and tokens in writes, edits, git add and commits.</dd>
+          <dt><button type="button" data-copy="/plugin install checkpoint@modz" aria-label="Copy the install command for checkpoint">checkpoint<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A silent git snapshot before each turn's first write. Undo a turn.</dd>
+          <dt><button type="button" data-copy="/plugin install test-badge@modz" aria-label="Copy the install command for test-badge">test-badge<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Runs tests and lint after edits and shows the result.</dd>
+          <dt><button type="button" data-copy="/plugin install replay-theater@modz" aria-label="Copy the install command for replay-theater">replay-theater<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Replays the last turn's edits step by step.</dd>
+        </dl>
+      </div>
+      <div>
+        <h3>Meter</h3>
+        <dl>
+          <dt><button type="button" data-copy="/plugin install session-budget@modz" aria-label="Copy the install command for session-budget">session-budget<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A spend budget per session, with a stop at 100%.</dd>
+          <dt><button type="button" data-copy="/plugin install cache-tax@modz" aria-label="Copy the install command for cache-tax">cache-tax<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Keeps the prompt cache warm through breaks and prices a cold send.</dd>
+          <dt><button type="button" data-copy="/plugin install hud-pro@modz" aria-label="Copy the install command for hud-pro">hud-pro<span class="at" aria-hidden="true">copy install</span></button></dt><dd>One line: the 5-hour and 7-day limits, context and cost.</dd>
+        </dl>
+      </div>
+      <div>
+        <h3>Comfort</h3>
+        <dl>
+          <dt><button type="button" data-copy="/plugin install done-ping@modz" aria-label="Copy the install command for done-ping">done-ping<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A notification when a long turn ends or Claude waits on you.</dd>
+          <dt><button type="button" data-copy="/plugin install reflect-mod@modz" aria-label="Copy the install command for reflect-mod">reflect-mod<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Saves corrections worth keeping to your CLAUDE.md.</dd>
+          <dt><button type="button" data-copy="/plugin install skins@modz" aria-label="Copy the install command for skins">skins<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Themes for the transcript, switched live with /skin.</dd>
+          <dt><button type="button" data-copy="/plugin install terminal-browser@modz" aria-label="Copy the install command for terminal-browser">terminal-browser<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A browser inside the terminal that the agent can drive.</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section class="agents" aria-labelledby="s-ai">
+    <h2 id="s-ai">Installing with an AI agent</h2>
+    <p>Ask your agent to "install MODZ". It can follow <a href="llms.txt">llms.txt</a>, which holds these steps:</p>
+    <ol>
+      <li>Check that <code class="inline">claude --version</code> is 2.1.295 or later. If not, ask the person to update.</li>
+      <li>Run <code class="inline">claude plugin marketplace add partalemre/MODZ</code>.</li>
+      <li>Run <code class="inline">claude plugin install modz@modz</code>, then <code class="inline">claude plugin install &lt;name&gt;@modz</code> for each mod the person wants.</li>
+      <li>Merge optional settings into the <code class="inline">env</code> block of <code class="inline">~/.claude/settings.json</code>, keeping what is there.</li>
+      <li>Check that <code class="inline">claude plugin list</code> shows each mod enabled, then ask the person to start a new session.</li>
+    </ol>
+    <pre class="settings">{ "env": {
+  "MODZ_LANG": "tr",            <span style="color:var(--lo)">// optional: Turkish interface</span>
+  "CLAUDE_CODE_ARTIFACT": "1"   <span style="color:var(--lo)">// transceiver inside an SDK host or IDE</span>
+} }</pre>
+  </section>
+
+  <section class="end" aria-labelledby="s-end">
+    <picture><source media="(prefers-color-scheme: light)" srcset="img/hero-light.svg"><img src="img/hero-dark.svg" alt="" width="380" style="width:min(380px,70vw);height:auto;margin:0 auto;display:block"></picture>
+    <h2 id="s-end">17 mods for Claude Code. <span style="color: var(--lo)">One panel.</span></h2>
+    <div class="cmd" role="group" aria-label="Install command">
+      <code><span class="chev" aria-hidden="true">›</span> /plugin marketplace add partalemre/MODZ</code>
+      <button type="button" class="copy" data-copy="/plugin marketplace add partalemre/MODZ">Copy</button>
+    </div>
+  </section>
+
+  <footer>
+    <span>MIT. Some mods adapt open-source projects under their own licenses.</span>
+    <span><a href="https://github.com/partalemre/MODZ">GitHub</a> · <a href="https://github.com/partalemre/transceiver">Transceiver</a> · <a href="llms.txt">llms.txt</a></span>
+  </footer>
+</main>
+<p class="sr-status" aria-live="polite" style="position:absolute;left:-9999px"></p>
+<script>
+  const status = document.querySelector('.sr-status')
+  for (const button of document.querySelectorAll('[data-copy]')) {
+    const label = button.querySelector('.at') ?? button
+    const idle = label.textContent
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(button.dataset.copy)
+        label.textContent = 'copied'
+        button.classList.add('done')
+        status.textContent = 'Copied: ' + button.dataset.copy
+      } catch {
+        label.textContent = 'select and copy'
+      }
+      setTimeout(() => { label.textContent = idle; button.classList.remove('done') }, 1600)
+    })
+  }
+  const tabs = [...document.querySelectorAll('[role="tab"]')]
+  const show = (tab) => {
+    for (const each of tabs) {
+      const isOn = each === tab
+      each.setAttribute('aria-selected', String(isOn))
+      each.tabIndex = isOn ? 0 : -1
+      document.getElementById(each.getAttribute('aria-controls')).hidden = !isOn
+    }
+    tab.focus()
+  }
+  for (const tab of tabs) {
+    tab.addEventListener('click', () => show(tab))
+    tab.addEventListener('keydown', (event) => {
+      const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key]
+      if (step) show(tabs[(tabs.indexOf(tab) + step + tabs.length) % tabs.length])
+    })
+  }
+</script>
+</body>
+</html>

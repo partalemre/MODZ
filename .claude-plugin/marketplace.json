@@ -1,93 +1,106 @@
 {
   "name": "modz",
   "owner": {
-    "name": "partalle"
+    "name": "Faik Emre Partal",
+    "url": "https://github.com/partalemre"
+  },
+  "metadata": {
+    "description": "17 mods for Claude Code. One panel.",
+    "version": "1.0.0"
   },
   "plugins": [
     {
-      "name": "blast-radius",
-      "source": "./mods/blast-radius",
-      "description": "Holds risky shell commands (rm -rf, git reset --hard, git clean, force push, migrations) and shows what they would change, with a delete button and Vazgeç (Turkish UI, Svg card on desktop)."
-    },
-    {
-      "name": "cache-tax",
-      "source": "./mods/cache-tax",
-      "description": "A Claude Code mod that keeps the one-hour prompt cache warm during breaks and holds a cold send on a card with its estimated rewrite cost. Warming uses model requests and costs tokens. Requires Claude Code 2.1.287+."
-    },
-    {
-      "name": "checkpoint",
-      "source": "./mods/checkpoint",
-      "description": "Silent git snapshot before each turn's first file write; /checkpoints lists turns and undoes one after a confirm"
-    },
-    {
-      "name": "done-ping",
-      "source": "./mods/done-ping",
-      "description": "A notification when a long turn finishes or Claude waits on you (permission or a question): the desktop app's own notification where it can, else a macOS banner with project, what happened and a short detail"
-    },
-    {
-      "name": "filetree",
-      "source": "./mods/filetree",
-      "description": "Claude'un dokunduğu dosyaları gösteren dosya ağacı: şu an ne yaptığı, bu turda dokunduğu dosyalar ve git durumu"
-    },
-    {
-      "name": "hud-pro",
-      "source": "./mods/hud-pro",
-      "description": "One quiet line at the bottom of the band, terminal and desktop: 5h limit with reset, 7d, context and session ≈cost; /hud full shows details"
-    },
-    {
       "name": "modz",
       "source": "./mods/modz",
-      "description": "MODZ ana paneli: oturum açılınca sağda açılır; ajanlar, dosyalar, plan, testler, kontrol noktaları, tekrar, kullanım, görünüm ve tüm modlar tek tıkla"
-    },
-    {
-      "name": "plan-steps",
-      "source": "./mods/plan-steps",
-      "description": "Plan varsa adımlarını gösterir: görev listesi, onaylı plan ya da plan dosyası; /steps paneli ve sessiz bir durum satırı"
-    },
-    {
-      "name": "reflect-mod",
-      "source": "./mods/reflect-mod",
-      "description": "claude-reflect as a Claude Code mod: a cheap trigger-word prefilter (Turkish and English) and one model check find reusable corrections; a card above the prompt saves them to the chosen CLAUDE.md"
-    },
-    {
-      "name": "replay-theater",
-      "source": "./mods/replay-theater",
-      "description": "Replay Theater: son turdaki dosya düzenlemelerini adım adım izle; her adımın ne yaptığı ve hangi plan adımına ait olduğu, renkli diff."
-    },
-    {
-      "name": "savvy-flow",
-      "source": "./mods/savvy-flow",
-      "description": "Orchestrated delivery flow: the session model plans, owns design and reviews; five tiered worker subagents implement. Pairs with the savvy-progress mod for a live progress bar and agents panel."
+      "description": "The MODZ panel. Opens beside the chat with a live line from every installed mod, one click to each mod's own pane."
     },
     {
       "name": "savvy-progress",
       "source": "./mods/savvy-progress",
-      "description": "Prompt üstü ilerleme bandı ve tek Ajanlar paneli (/agents-info): her ajan kendi yengeciyle bir kart (durum, ilerleme yüzdesi, maliyet, süre; mesaj ve durdur), zaman çizelgesi, sessiz ajan uyarısı ve Yeni görev. İlerleme yalnızca gözlenenden türetilir."
+      "description": "Every agent gets a face: progress, cost and time for each subagent, live, in the Agents pane and a band above the prompt."
+    },
+    {
+      "name": "savvy-flow",
+      "source": "./mods/savvy-flow",
+      "description": "Orchestrated delivery: the session model plans and reviews, five tiered worker agents implement. Pairs with savvy-progress."
+    },
+    {
+      "name": "filetree",
+      "source": "./mods/filetree",
+      "description": "A file tree of what Claude touches: what it is doing now, the files touched this turn and their git status."
+    },
+    {
+      "name": "plan-steps",
+      "source": "./mods/plan-steps",
+      "description": "The plan's steps as Claude works through them, from the task list, an approved plan or a plan file."
+    },
+    {
+      "name": "transceiver",
+      "source": {
+        "source": "github",
+        "repo": "partalemre/transceiver"
+      },
+      "description": "Your team, inside Claude. Chat with teammates and let your agents ask theirs about the repo, at zero tokens."
+    },
+    {
+      "name": "blast-radius",
+      "source": "./mods/blast-radius",
+      "description": "Risky commands wait for your OK. rm -rf, git reset --hard, force pushes and migrations are held with exactly what they would change."
     },
     {
       "name": "secret-guard",
       "source": "./mods/secret-guard",
-      "description": "Stops secrets before they land: scans Write/Edit and git add/commit for keys and tokens, blocks git add of .env; a card with masked values, then Anahtarları .env'e taşı, Bir kez izin ver or Vazgeç"
+      "description": "Stops keys and tokens before they land: scans writes, edits, git add and commit, and blocks committing .env."
     },
     {
-      "name": "session-budget",
-      "source": "./mods/session-budget",
-      "description": "A per-session spend budget (% of the 5h limit or $): notice at 80%, Continue anyway / Stop at 100% on a new prompt"
-    },
-    {
-      "name": "skins",
-      "source": "./mods/skins",
-      "description": "Skins for Claude Code's transcript: themed tool rows, reply gutters and spinner words. /skin swaps them live."
-    },
-    {
-      "name": "terminal-browser",
-      "source": "./mods/terminal-browser",
-      "description": "Claude Code içinde, terminalde çalışan bir tarayıcı: siteleri ve HTML belgelerini önizle, ajanın yerleşik tarayıcıyı yönetsin. Yalnızca terminal; masaüstünde hiçbir şey çizmez."
+      "name": "checkpoint",
+      "source": "./mods/checkpoint",
+      "description": "A silent git snapshot before each turn's first write. /checkpoints lists the turns and undoes one."
     },
     {
       "name": "test-badge",
       "source": "./mods/test-badge",
-      "description": "After a turn that edited source files, runs the project's tests and lint in the background and shows a one-line badge (testler 41/42 · lint 2 hata · 4sn önce) with a details pane listing each failure by suite and file:line"
+      "description": "After a turn that edited source, runs tests and lint in the background and shows the result as a badge."
+    },
+    {
+      "name": "replay-theater",
+      "source": "./mods/replay-theater",
+      "description": "Replays the last turn's edits step by step, each tied to its plan step, with a coloured diff."
+    },
+    {
+      "name": "session-budget",
+      "source": "./mods/session-budget",
+      "description": "A spend budget per session, as a share of the 5-hour limit or in dollars: a notice at 80%, a stop at 100%."
+    },
+    {
+      "name": "cache-tax",
+      "source": "./mods/cache-tax",
+      "description": "Keeps the one-hour prompt cache warm through breaks and shows what a cold send would cost. Warming uses tokens."
+    },
+    {
+      "name": "hud-pro",
+      "source": "./mods/hud-pro",
+      "description": "One quiet line above the prompt: the 5-hour limit and its reset, 7-day use, context and session cost."
+    },
+    {
+      "name": "done-ping",
+      "source": "./mods/done-ping",
+      "description": "A notification when a long turn finishes or Claude is waiting on you."
+    },
+    {
+      "name": "reflect-mod",
+      "source": "./mods/reflect-mod",
+      "description": "Spots corrections in your prompts worth keeping and saves them to the CLAUDE.md you choose."
+    },
+    {
+      "name": "skins",
+      "source": "./mods/skins",
+      "description": "Themes for the transcript: tool rows, reply gutters and spinner words. /skin switches them live."
+    },
+    {
+      "name": "terminal-browser",
+      "source": "./mods/terminal-browser",
+      "description": "A browser inside the terminal: preview sites and HTML files and let the agent drive it. Terminal only."
     }
   ]
 }

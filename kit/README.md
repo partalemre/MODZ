@@ -116,6 +116,35 @@ Mods that do not vendor the kit carry a byte-identical `hooks/pin.ts` (and `hook
 | `pinned(e, tree)` | `return pinned(e, paneTree(ui, view))`, every render hook that draws a Button, Input or Select |
 | `isSame(a, b)` | `if (isSame(cards[from], card)) return` (structural, for plain state values) |
 
+## judge.ts
+
+One-shot classification: one of a few labels for a text, or `undefined` when no judgment could be made (the caller
+keeps its deterministic default; a judge never throws, blocks or retries). The mod injects the engine's calls. Default
+backend: `$.model.complete` with `haiku` on the person's own account, effort low, a 32-token reply, bounded by
+`JUDGE_MODEL_TIMEOUT_MS`. TypeSafe Jev (`POST https://api.typesafe.ai/v1/systemone`, a `choice` question, model
+`jev-latest`) only when `MODZ_JUDGE=jev` and `TYPESAFE_API_KEY` are both set and the mod passes `fetch`, `sleep` and
+`redact`; the text and instructions pass through `redact` first, and the request races `sleep(JUDGE_HTTP_TIMEOUT_MS)`
+since `$.http.fetch` takes no timeout. Jev asked for but not usable: the model answers, `isFallback: true`. One call per
+judgment. `$.env.get` takes only literal names, so the mod reads the two variables itself.
+
+```ts
+const env = { backend: await $.env.get('MODZ_JUDGE'), typesafeKey: await $.env.get('TYPESAFE_API_KEY') }
+const io = { complete: r => $.model.complete(r), fetch: (u, i) => $.http.fetch(u, i), sleep: ms => $.clock.sleep(ms), redact, env }
+const verdict = (await judge(io, { text, labels: ['allow', 'ask'], instructions: 'Is this command safe here?' }))?.label ?? 'ask'
+```
+
+| Export | Example |
+|---|---|
+| `judge(io, question)` | `await judge(io, { text, labels: ['low', 'high'] })` → `{ label: 'low', source: 'model', isFallback: false }` |
+| `JudgeIo`, `JudgeEnv` | `{ complete, env, fetch?, sleep?, redact? }`: Jev needs all of `fetch`, `sleep`, `redact` |
+| `JudgeQuestion`, `JudgeAnswer` | `{ text, labels, instructions? }` → `{ label, source: 'model' \| 'jev', isFallback }` |
+| `JUDGE_MODEL`, `JUDGE_MODEL_TIMEOUT_MS`, `JUDGE_HTTP_TIMEOUT_MS` | `'haiku'`, 8000, 5000 |
+| `JEV_URL`, `JEV_MODEL`, `JEV_BACKEND` | the TypeSafe endpoint, `'jev-latest'`, the `MODZ_JUDGE` value `'jev'` |
+
+Fewer than two labels, a repeated or blank label, a reply naming no label (case and a trailing stop are forgiven), a
+failed or aborted call, a non-2xx or non-JSON Jev reply, or a timeout: `undefined`. Tested in
+`tools/kit-gallery/tests/judge.test.ts`.
+
 ## Visual QA
 
 `tools/kit-gallery` draws every component; `bin/preview tools/kit-gallery <out>` (and `--theme light`)

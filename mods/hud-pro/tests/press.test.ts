@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { BAND, USAGE, start, stubSession } from './stubs'
+import { BAND, USAGE, compactions, start, stubSession } from './stubs'
 
 // A desktop clicks the tree it last painted. Every redraw keeps each button's press handle, so a click
 // on an earlier tree still lands.
@@ -16,13 +16,7 @@ function handlesOf(node: any, out: Record<string, number> = {}): Record<string, 
 }
 
 test('a band redraw keeps every button’s press handle', async ($, on) => {
-  let compacted = 0
   const clock = stubSession(on, { ...USAGE, context: { window: 200_000, tokens: 168_000, percent: 84 } })
-  on('command.run', (_: any, e: any) => {
-    if (e.command === 'compact') compacted += 1
-
-    return {}
-  })
   await start($, 'desktop')
   const band = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const before = handlesOf(await band.drawn())
@@ -32,5 +26,5 @@ test('a band redraw keeps every button’s press handle', async ($, on) => {
   expect(handlesOf(await band.drawn())).toEqual(before)
   await band.press({ key: 'compact' })
   await clock.advance(1)
-  expect(compacted).toBe(1)
+  expect(compactions.count).toBe(1)
 })

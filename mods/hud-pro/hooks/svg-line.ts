@@ -11,7 +11,8 @@ import { words } from './words'
 // an image, so the band shows through around it. As the band narrows it drops detail, never
 // overflows: the 7-day reset goes first, then the meters shorten, the labels shorten, the meters go,
 // then the 5-hour reset and last the cost. A critical window (≥95 %) keeps its reset to the end and
-// sits on a Flare tint: the one accent of the line.
+// sits on a Flare tint: the one accent of the line. A near estimate ("~full 15:40", "~3 turns")
+// follows its value in every layout but the narrowest.
 
 const HEIGHT = 26
 // Every pill is the same height and padding; the meter the same thickness in each.
@@ -31,16 +32,17 @@ const BOLD_WEIGHT = 600
 // Values sit right-aligned in a slot at least this wide, so "%5" and "%44" take the same room.
 const VALUE_SLOT = '%00'
 
-type Layout = { isLong: boolean; meter: number; resets: Resets; hasCost: boolean }
+type Layout = { isLong: boolean; meter: number; resets: Resets; hasCost: boolean; hasAlert: boolean }
 
 const LAYOUTS: readonly Layout[] = [
-  { isLong: true, meter: METER.long, resets: 'all', hasCost: true },
-  { isLong: true, meter: METER.long, resets: 'five', hasCost: true },
-  { isLong: true, meter: METER.short, resets: 'five', hasCost: true },
-  { isLong: false, meter: METER.short, resets: 'five', hasCost: true },
-  { isLong: false, meter: 0, resets: 'five', hasCost: true },
-  { isLong: false, meter: 0, resets: 'critical', hasCost: true },
-  { isLong: false, meter: 0, resets: 'critical', hasCost: false },
+  { isLong: true, meter: METER.long, resets: 'all', hasCost: true, hasAlert: true },
+  { isLong: true, meter: METER.long, resets: 'five', hasCost: true, hasAlert: true },
+  { isLong: true, meter: METER.short, resets: 'five', hasCost: true, hasAlert: true },
+  { isLong: false, meter: METER.short, resets: 'five', hasCost: true, hasAlert: true },
+  { isLong: false, meter: 0, resets: 'five', hasCost: true, hasAlert: true },
+  { isLong: false, meter: 0, resets: 'critical', hasCost: true, hasAlert: true },
+  { isLong: false, meter: 0, resets: 'critical', hasCost: false, hasAlert: true },
+  { isLong: false, meter: 0, resets: 'critical', hasCost: false, hasAlert: false },
 ]
 
 export type LineSpec = { gauges: readonly GaugeView[]; costUsd: number | null; maxWidth: number }
@@ -75,9 +77,11 @@ function gaugePill(gauge: GaugeView, layout: Layout): Pill {
   const value = text({ value: valueText(gauge.percent), cls: `${fillOf(gauge.tone)} tab`, size: VALUE_SIZE, weight: 650, slot: VALUE_SLOT })
   const resetCls = isHot ? 'f-danger tab' : 'f-lo tab'
   const reset = hasReset(gauge, layout.resets) ? [text({ value: resetText(gauge.reset), cls: resetCls, size: LABEL_SIZE })] : []
+  const alert = layout.hasAlert && gauge.alert !== '' ? [text({ value: gauge.alert, cls: 'f-mid tab', size: LABEL_SIZE })] : []
   const frame = gauge.tone === 'neutral' ? 's-line' : `s-${gauge.tone}-l`
+  const meters = layout.meter > 0 ? [meterPiece(gauge, layout.meter)] : []
 
-  return { pieces: [label, ...(layout.meter > 0 ? [meterPiece(gauge, layout.meter)] : []), value, ...reset], frame, fill: isHot ? 'f-danger-t' : 'f-card' }
+  return { pieces: [label, ...meters, value, ...alert, ...reset], frame, fill: isHot ? 'f-danger-t' : 'f-card' }
 }
 
 function costPill(usd: number): Pill {
@@ -124,7 +128,9 @@ function pillsFor(spec: LineSpec, layout: Layout): Pill[] {
 }
 
 function altOf(spec: LineSpec): string {
-  const gauges = spec.gauges.map(gauge => [`${gauge.long} ${valueText(gauge.percent)}`, ...(gauge.reset === '' ? [] : [words().resetsAfter(gauge.reset)])].join(', '))
+  const gauges = spec.gauges.map(gauge =>
+    [`${gauge.long} ${valueText(gauge.percent)}`, ...(gauge.alert === '' ? [] : [gauge.alert]), ...(gauge.reset === '' ? [] : [words().resetsAfter(gauge.reset)])].join(', '),
+  )
 
   return [...gauges, ...(spec.costUsd === null ? [] : [words().sessionAt(costText(spec.costUsd))])].join(' · ')
 }

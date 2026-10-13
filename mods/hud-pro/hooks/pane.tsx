@@ -1,18 +1,24 @@
 import type { RenderElement } from 'claude-code'
 
-import { AHEAD_POINTS, cachePercent, compact, CONTEXT, costText, percentText, resetText, valueText } from './format'
+import { AHEAD_POINTS, cachePercent, compact, CONTEXT, costText, percentText, resetText, sparkText, valueText } from './format'
 import { costSeries, seriesOf } from './history'
+import { contextCard } from './context-card'
+import type { CardView } from './context-card'
+import { HomeButton } from './home'
 import { barTree, toneText } from './line'
 import type { Ui } from './line'
 import { gaugeViews } from './model'
-import type { GaugeView } from './model'
+import type { Forecasts, GaugeView } from './model'
 import { tilesSvg } from './svg-tiles'
 import type { Tile } from './svg-tiles'
 import { words } from './words'
 import type { HudContext, HudSample, HudTurn, HudUsage } from '../types'
 
 // `/hud full`: stat tiles with rings and sparklines on the desktop, rows with text sparklines
-// on the terminal; the turn's tokens under both.
+// on the terminal; then the context card, and the turn's tokens under both.
+
+// What the context card reads beyond the pane's own figures.
+export type CardData = Pick<CardView, 'view' | 'turns' | 'lastCompact' | 'isCompacting' | 'compact'>
 
 export type PaneView = {
   usage: HudUsage | null
@@ -20,6 +26,8 @@ export type PaneView = {
   turn: HudTurn | null
   columns: number
   nowMs: number
+  forecasts: Forecasts
+  card: CardData
   svg?: (props: { source: string; alt: string; width: number; height: number }) => RenderElement
 }
 
@@ -28,8 +36,6 @@ const BAR_MAX = 24
 const BAR_MIN = 8
 const ROW_CHROME = 48
 const LABEL_WIDTH = 7
-const SPARK_CELLS = 16
-const SPARK = '▁▂▃▄▅▆▇█'
 const COST_HEADROOM = 1.15
 
 function rangeText(series: readonly number[]): string {
@@ -45,6 +51,7 @@ function freeText(context: HudContext): string {
 }
 
 function noteOf(gauge: GaugeView, context: HudContext | null): { note: string; noteTone: Tile['noteTone'] } {
+  if (gauge.id !== CONTEXT && gauge.forecast !== '') return { note: gauge.forecast, noteTone: gauge.tone }
   if (gauge.pace !== null) {
     const ahead = Math.round(gauge.percent - gauge.pace)
     if (ahead >= AHEAD_POINTS) return { note: words().ahead(ahead), noteTone: gauge.tone }
@@ -105,20 +112,13 @@ function turnText(turn: HudTurn): string {
   return words().turn({ input: compact(turn.input), output: compact(turn.output), cache: percentText(cachePercent(turn)), requests: turn.requests })
 }
 
-export function sparkText(series: readonly number[], max: number): string {
-  if (series.length < 2 || max <= 0) return ''
-
-  return series
-    .slice(-SPARK_CELLS)
-    .map(value => SPARK[Math.max(0, Math.min(SPARK.length - 1, Math.round((value / max) * (SPARK.length - 1))))])
-    .join('')
-}
-
 function terminalRow(ui: Ui, gauge: GaugeView, view: PaneView) {
   const { Box, Text } = ui
   const width = Math.max(BAR_MIN, Math.min(BAR_MAX, view.columns - ROW_CHROME))
   const series = seriesOf(view.history, gauge.id)
-  const extras = [gauge.reset === '' ? '' : words().resetsIn(gauge.reset), rangeText(series)].filter(part => part !== '')
+  // An estimate takes the range's place, so the row keeps its length.
+  const forecast = gauge.id === CONTEXT ? '' : gauge.forecast
+  const extras = [forecast, gauge.reset === '' ? '' : words().resetsIn(gauge.reset), forecast === '' ? rangeText(series) : ''].filter(part => part !== '')
 
   return (
     <Box key={`gauge-${gauge.id}`} flexDirection="row" columnGap={1}>
@@ -131,27 +131,49 @@ function terminalRow(ui: Ui, gauge: GaugeView, view: PaneView) {
   )
 }
 
-function body(ui: Ui, view: PaneView, usage: HudUsage) {
-  const { Box, Text } = ui
-  const gauges = gaugeViews(usage, view.nowMs)
-  if (view.svg === undefined) {
-    return (
-      <Box flexDirection="column">
-        <Box flexDirection="row" justifyContent="space-between">
-          <Text bold>{words().limits}</Text>
-          <Text dimColor>{summaryText(view)}</Text>
-        </Box>
-        <Box flexDirection="column" marginTop={1}>
-          {gauges.map(gauge => terminalRow(ui, gauge, view))}
-        </Box>
-      </Box>
-    )
+function cardOf(view: PaneView, gauges: readonly GaugeView[], width?: number): CardView {
+  const forecast = gauges.find(gauge => gauge.id === CONTEXT)?.forecast ?? ''
+
+  return {
+    ...view.card,
+    forecast,
+    context: view.usage?.context ?? null,
+    columns: view.columns,
+    ...(width === undefined || view.svg === undefined ? {} : { width, svg: view.svg }),
   }
+}
+
+function terminalBody(ui: Ui, view: PaneView, gauges: readonly GaugeView[]) {
+  const { Box, Text } = ui
+
+  return (
+    <Box flexDirection="column">
+      <Box flexDirection="row" justifyContent="space-between">
+        <Text bold>{words().limits}</Text>
+        <Text dimColor>{summaryText(view)}</Text>
+      </Box>
+      <Box flexDirection="column" marginTop={1}>
+        {gauges.map(gauge => terminalRow(ui, gauge, view))}
+      </Box>
+      {contextCard(ui, cardOf(view, gauges))}
+    </Box>
+  )
+}
+
+function body(ui: Ui, view: PaneView, usage: HudUsage) {
+  const { Box } = ui
+  const gauges = gaugeViews(usage, view.nowMs, view.forecasts)
+  if (view.svg === undefined) return terminalBody(ui, view, gauges)
   const tiles = [...gauges.map(gauge => gaugeTile(gauge, view)), ...(usage.costUsd === null ? [] : [costTile(usage.costUsd, view)])]
   const drawn = tilesSvg({ title: words().limits, meta: summaryText(view), tiles, maxWidth: view.columns * PX_PER_COLUMN })
   const Svg = view.svg
 
-  return <Svg source={drawn.source} alt={drawn.alt} width={drawn.width} height={drawn.height} />
+  return (
+    <Box flexDirection="column">
+      <Svg source={drawn.source} alt={drawn.alt} width={drawn.width} height={drawn.height} />
+      {contextCard(ui, cardOf(view, gauges, drawn.width))}
+    </Box>
+  )
 }
 
 export function paneTree(ui: Ui, view: PaneView) {
@@ -169,6 +191,18 @@ export function paneTree(ui: Ui, view: PaneView) {
           <Text dimColor>{turnText(view.turn)}</Text>
         </Box>
       )}
+    </Box>
+  )
+}
+
+// While the MODZ hub runs, the pane opens with its way back to it.
+export function withHome(ui: Ui, spec: { tree: RenderElement; goHome: () => void }) {
+  const { Box } = ui
+
+  return (
+    <Box flexDirection="column">
+      {HomeButton(ui, spec.goHome)}
+      {spec.tree}
     </Box>
   )
 }

@@ -1,4 +1,5 @@
-import type { CheckOutcome, HubTone, TestBadge } from '../types'
+import type { CheckOutcome, CiWatch, HubCard, HubTone, TestBadge } from '../types'
+import { ciLine, ciTone } from './ci-text'
 import { words } from './words'
 
 // The MODZ main panel's side of this mod (DESIGN.md §9): the one-line card it collects ("41/42 geçti · lint 2 hata"),
@@ -43,6 +44,31 @@ export function hubOf(badge: TestBadge): HubShown {
   const detail = parts.filter(part => part !== '').join(' · ')
 
   return { detail: detail === '' ? words().lintClean : detail, tone: toneOf(badge) }
+}
+
+// The card holds ≤40 characters: the local checks and CI side by side when both fit, else CI alone,
+// the newer news; the tone is the worse of the two.
+const DETAIL_MAX = 40
+const SEP = ' · '
+const TONE_RANK: Record<HubTone, number> = { idle: 0, ok: 1, live: 2, warn: 3, bad: 4 }
+
+export function hubWith(badge: TestBadge, ci: CiWatch | null): HubShown {
+  const local = hubOf(badge)
+  const line = ci === null ? '' : ciLine(ci)
+  if (ci === null || line === '') return local
+  const both = local.detail === '' ? line : `${local.detail}${SEP}${line}`
+  const tone = TONE_RANK[ciTone(ci)] > TONE_RANK[local.tone] ? ciTone(ci) : local.tone
+
+  return { detail: both.length <= DETAIL_MAX ? both : line, tone }
+}
+
+// The card to write, or null while the standing one already shows the same: it is written only on a change.
+export function hubCardOf(spec: { badge: TestBadge; ci: CiWatch | null; standing: HubCard | undefined; at: number }): HubCard | null {
+  const shown = hubWith(spec.badge, spec.ci)
+  const { standing } = spec
+  if (standing !== undefined && standing.detail === shown.detail && standing.tone === shown.tone) return null
+
+  return { pane: HUB_PANE, ...shown, at: spec.at }
 }
 
 export function isOpenFor(value: unknown, pane: string): boolean {

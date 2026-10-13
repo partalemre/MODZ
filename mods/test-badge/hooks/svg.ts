@@ -193,7 +193,8 @@ export function pill(spec: PillSpec): Drawn {
 }
 
 // The card opener: a 6px role notch, the tracked uppercase label, a hairline, and meta on the right.
-export function eyebrow(spec: { x: number; y: number; width: number; label: string; role: Role; meta?: string; isLive?: boolean }): string {
+// `lo` is the idle eyebrow: nothing going on, nothing to act on.
+export function eyebrow(spec: { x: number; y: number; width: number; label: string; role: Role | 'lo'; meta?: string; isLive?: boolean }): string {
   const label = upper(spec.label)
   const labelEnd = spec.x + 13 + measure(label, EYEBROW_FONT)
   const meta = spec.meta ?? ''

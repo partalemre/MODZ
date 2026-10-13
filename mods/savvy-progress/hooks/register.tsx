@@ -8,12 +8,12 @@ import { onBand } from './band'
 import { onDispatch } from './dispatch'
 import { onEvents } from './events'
 import { PHASES } from './flow'
-import { deriveJob } from './job'
-import { hubDetailOf, toneOf } from './hub'
+import { hubCardOf } from './hub'
 import { isLang, langOf, setLang, t } from './i18n'
 import type { Lang } from './i18n'
 import { readingOf, trackLimit } from './limit'
 import { onPane } from './pane'
+import { onPresence } from './presence'
 import { reconcile } from './roster'
 import { isSame } from './same'
 import { HUB_PANE } from './state'
@@ -28,6 +28,7 @@ const job = atom({ plugin: 'savvy-progress', key: 'job' } as const, null)
 const tasks = atom({ plugin: 'savvy-progress', key: 'tasks' } as const, [])
 const types = atom({ plugin: 'savvy-progress', key: 'types' } as const, BUILTIN_TYPES)
 const hub = atom({ plugin: 'savvy-progress', key: 'hub' } as const, { pane: HUB_PANE, detail: '', tone: 'idle', at: 0 })
+const chats = atom({ plugin: 'savvy-progress', key: 'chats' } as const, [])
 
 type On = Parameters<Register>[0]
 
@@ -170,11 +171,10 @@ function startBeat($: EngineInterface): void {
 
 // The MODZ hub's card for this mod (DESIGN.md §9): written when its words or tone moved, or always
 // when `isForced` (once per session start, so the card stands from the hub's first look).
+// presence.ts writes it too, after the other chats' beat.
 async function syncHub($: EngineInterface, isForced = false): Promise<void> {
-  const list = await read($, agents)
-  const view = deriveJob({ flow: await read($, flow), agents: list, job: await read($, job), tasks: await read($, tasks) })
-  const detail = hubDetailOf(view, list.filter(isRunning).length)
-  const tone = toneOf(view)
+  const sources = { flow: await read($, flow), agents: await read($, agents), job: await read($, job), tasks: await read($, tasks) }
+  const { detail, tone } = hubCardOf({ ...sources, chats: await read($, chats) })
   const prev = await read($, hub)
   if (!isForced && prev.detail === detail && prev.tone === tone) return
   const at = await $.clock.now()
@@ -226,7 +226,8 @@ export const register: Register = (on, options) => {
   onEvents(on)
   onPane(on)
   onDispatch(on)
-  onBand(on)
+  onBand(on, { isCrabInBand: options.crabInBand === true })
+  onPresence(on)
   onHubSources(on)
   onTranscript(on)
 }

@@ -1,4 +1,6 @@
+import type { CrabMood } from '../types'
 import { crab } from './crabs'
+import { HOME_LOOK } from './mood-svg'
 import { fitText, textWidth, xml } from './format'
 import { meterSvg } from './meter'
 import type { JobView } from './job'
@@ -54,7 +56,13 @@ const planOf = (view: JobView, maxW: number): Plan => {
   return { title, titleW: Math.min(room, Math.ceil(textWidth(title, TITLE_SIZE) * BOLD)), meterW: fits ? meterW : 0, pillW, pctW }
 }
 
-export const bandSvg = (view: JobView, maxW: number): BandDrawing => {
+// The row's crab: the job's own, or with `crabInBand` on and the session idle, the home crab's face.
+const bandCrab = (x: number, view: JobView, mood?: CrabMood): string =>
+  mood
+    ? crab(x, CRAB.y, { costume: 'other', look: HOME_LOOK, mood, scale: CRAB.scale })
+    : crab(x, CRAB.y, { costume: 'other', isWalking: view.isWorking, scale: CRAB.scale })
+
+export const bandSvg = (view: JobView, maxW: number, mood?: CrabMood): BandDrawing => {
   const plan = planOf(view, maxW)
   const pillX = TITLE_X + plan.titleW + GAP
   const meterX = pillX + plan.pillW + GAP
@@ -66,7 +74,7 @@ export const bandSvg = (view: JobView, maxW: number): BandDrawing => {
     pillSvg({ label: view.label, role: pillRole(view), x: pillX, w: plan.pillW }),
     plan.meterW ? meterSvg(view, { x: meterX, y: (BAND_H - METER.h) / 2, w: plan.meterW, h: METER.h }) : '',
     `<text class="t" x="${pctX}" y="${BASELINE}" font-family="${MONO}" font-size="${PERCENT_SIZE}" font-weight="650">${xml(percentText(view))}</text>`,
-    crab(crabX, CRAB.y, { costume: 'other', isWalking: view.isWorking, scale: CRAB.scale }),
+    bandCrab(crabX, view, mood),
   ]
   return { source: paneSvg(width, BAND_H, body.join('\n')), width }
 }

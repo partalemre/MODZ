@@ -103,4 +103,16 @@ export const ru: Strings = {
   endedCount: n => `завершено: ${n}`,
   plannedCount: n => `в плане: ${n}`,
   notDelivered: reason => `Не доставлено: ${reason}`,
+  chats: {
+    title: 'Другие чаты',
+    waiting: span => (span ? `ждёт ${span}` : 'ждёт'),
+    states: { working: 'работает', idle: 'свободен' },
+    untitled: 'Новый чат',
+    more: n => `+${n} ещё`,
+    hubWaits: n => `чатов ждёт: ${n}`,
+  },
+  crab: {
+    moods: { sleeping: 'спит', working: 'работает', happy: 'доволен', worried: 'волнуется' },
+    level: n => `Ур ${n}`,
+  },
 }

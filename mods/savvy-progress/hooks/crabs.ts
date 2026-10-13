@@ -1,3 +1,4 @@
+import type { CrabMood } from '../types'
 import { lookAt } from './identity'
 import type { Eyes, Look } from './identity'
 import { colorOf } from './tiers'
@@ -28,15 +29,16 @@ const eyesOf = (f: Fill, kind: Eyes): void => {
   else f([isWide ? 20 : 19, y, 2, h], INK)
 }
 
-// `front` lifts a claw and `cls` lets it travel with the prop it holds.
-type Arm = { front?: number; cls?: string }
+// `front` lifts a claw and `cls` lets it travel with the prop it holds; `face` stands in for the eyes.
+type Arm = { front?: number; cls?: string; face?: Box[] }
 
 const crabBody = (f: Fill, arm: Arm, look: Look): void => {
   const c = look.shell
   f([7, 10, 16, 12], c)
   f([3, 14, 4, 4], c)
   f([23, 14 + (arm.front ?? 0), 4, 4], c, arm.cls)
-  eyesOf(f, look.eyes)
+  if (arm.face) arm.face.forEach(box => f(box, INK))
+  else eyesOf(f, look.eyes)
   f([7, 22, 2, 4], c, 'la')
   f([17, 22, 2, 4], c, 'la')
   f([11, 22, 2, 4], c, 'lb')
@@ -119,11 +121,29 @@ const COSTUMES: Record<string, (f: Fill, t: string, look: Look) => void> = {
   other: (f, _t, look) => crabBody(f, {}, look),
 }
 
+// The home crab's faces: shut while it sleeps, arched with a claw up when happy, lowered with a
+// sweat drop when worried; working keeps its own eyes. Only the Agents pane's own crab has moods.
+const FACES: Record<CrabMood, Box[] | undefined> = {
+  sleeping: [[9, 13, 2, 1], [19, 13, 2, 1]],
+  working: undefined,
+  happy: [[9, 12, 2, 1], [8, 13, 1, 1], [11, 13, 1, 1], [19, 12, 2, 1], [18, 13, 1, 1], [21, 13, 1, 1]],
+  worried: [[9, 13, 2, 2], [19, 13, 2, 2]],
+}
+const SWEAT = '#7FB6E8'
+const HAPPY_CLAW = -4
+
+const moodBody = (f: Fill, look: Look, mood: CrabMood): void => {
+  crabBody(f, { front: mood === 'happy' ? HAPPY_CLAW : undefined, face: FACES[mood] }, look)
+  if (mood !== 'worried') return
+  f([4, 8, 1, 1], SWEAT)
+  f([3, 9, 3, 2], SWEAT)
+}
+
 const CRAB_SCALE = 1.1
 
 // Body and props nest inside `bd` so a prop rides the bob and adds its own motion;
 // legs stay outside it and step on their own.
-export type CrabOptions = { costume: string; look?: Look; isDim?: boolean; isWalking?: boolean; scale?: number }
+export type CrabOptions = { costume: string; look?: Look; isDim?: boolean; isWalking?: boolean; scale?: number; mood?: CrabMood }
 
 export const crab = (x: number, y: number, opts: CrabOptions): string => {
   const groups = new Map<string, string[]>([['bd', []]])
@@ -133,7 +153,9 @@ export const crab = (x: number, y: number, opts: CrabOptions): string => {
   }
   const look = opts.look ?? lookAt(0)
   const draw = COSTUMES[opts.costume] ?? ((g: Fill, _t: string, l: Look) => crabBody(g, {}, l))
-  draw(f, colorOf(opts.costume), look)
+  const mood = opts.mood
+  if (mood) moodBody(f, look, mood)
+  else draw(f, colorOf(opts.costume), look)
   const group = (cls: string) => `<g class="${cls}">${(groups.get(cls) ?? []).join('')}</g>`
   const props = [...groups.keys()].filter(k => k !== 'bd' && k !== 'la' && k !== 'lb')
   const body = `<g class="bd">${(groups.get('bd') ?? []).join('')}${props.map(group).join('')}</g>`

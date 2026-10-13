@@ -34,6 +34,8 @@ export type World = {
   spawns: Record<string, unknown>[]
   /** What `$.agent.list()` answers; a test may change it. */
   roster: Record<string, unknown>[]
+  /** The plugin's store, shared as every session on the machine shares it; a test may write the others' keys. */
+  store: Map<string, unknown>
 }
 
 /**
@@ -47,9 +49,22 @@ export type SetupOptions = {
   undelivered?: string
   refuse?: string[]
   lang?: 'en' | 'tr'
+  /** What the store holds when the session starts: other sessions' heartbeats, the crab's count. */
+  store?: Record<string, unknown>
+  /** The session's id (`S1` when not given). */
+  sid?: string
+  /** `tool.check` answers `ask` for these tools: a permission dialog would open. */
+  ask?: string[]
 }
 
 // Folders are found by the end of their path, so a relative `.claude/agents` matches wherever the test runs.
+function storeHooks(on: any, store: Map<string, unknown>) {
+  on('store.get', (_: any, e: any) => ({ value: store.get(e.key) }))
+  on('store.set', (_: any, e: any) => (store.set(e.key, e.value), { value: undefined }))
+  on('store.delete', (_: any, e: any) => (store.delete(e.key), { value: undefined }))
+  on('store.keys', () => ({ value: [...store.keys()] }))
+}
+
 function fsHooks(on: any, files: Record<string, Record<string, string>>) {
   const entry = (name: string) => ({ name, kind: 'file', size: 1, mtimeMs: 1, isLink: false })
   const folder = (path: string) => Object.entries(files).find(([dir]) => path.endsWith(dir))?.[1]
@@ -61,7 +76,8 @@ function fsHooks(on: any, files: Record<string, Record<string, string>>) {
 }
 
 export async function setup($: any, on: any, opts: SetupOptions = {}) {
-  const world: World = { opened: [], closed: [], panes: [], toasts: [], sent: [], calls: [], spawns: [], roster: [] }
+  const store = new Map<string, unknown>(Object.entries(opts.store ?? {}))
+  const world: World = { opened: [], closed: [], panes: [], toasts: [], sent: [], calls: [], spawns: [], roster: [], store }
   const clock = mock.clock(on)
   let spawned = 0
   let created = 0
@@ -93,6 +109,12 @@ export async function setup($: any, on: any, opts: SetupOptions = {}) {
   on('agent.list', () => ({ value: world.roster }))
   on('agent.offer', () => ({ isOffered: true }))
   fsHooks(on, opts.files ?? {})
+  storeHooks(on, store)
+  on('session.id', () => ({ value: opts.sid ?? 'S1' }))
+  on('session.repo', () => ({ value: null }))
+  on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
+  on('session.end', (_: any, e: any) => ({ sessionId: e.sessionId }))
+  if (opts.ask) on('tool.check', (_: any, e: any) => ({ decision: opts.ask?.includes(e.tool) ? 'ask' : 'allow' }))
   on('turn.step', async function* (_: any, e: any) {
     return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: { ...USAGE, model: e.model } }
   })
@@ -121,6 +143,12 @@ export const measure = ($: any, percentUsed: number, usd: number, resetsAt = 'r1
   $.session.measure({ context: {}, rateLimits: [{ kind: 'five_hour', percentUsed, resetsAt }], cost: { usd }, changed: ['rateLimits', 'cost'] })
 
 export const tool = ($: any, input: Record<string, unknown>) => $.tool.call(input)
+
+/** The main loop's turn: it starts on the person's text, and ends the way `reason` says. */
+export const mainStart = ($: any, text: string, turnId = 'main-1') => $.turn.start({ text, turnId })
+
+export const mainEnd = ($: any, reason = 'answer', turnId = 'main-1') =>
+  $.turn.complete({ answer: 'ok', durationMs: 1, isAborted: reason === 'aborted', turnId, reason })
 
 export const prompt = ($: any, text: string, kind = 'composer') => $.prompt.submit({ text, wait: false, origin: { kind } })
 

@@ -1,5 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
+import { HEARTBEAT_MS } from '../hooks/chats'
 import { isOwnOpen } from '../hooks/hub'
 import { SECOND, finish, setup, spawn, tool } from './fixtures'
 
@@ -74,6 +75,27 @@ test("the hub's open request opens the Ajanlar pane, and only for its own key", 
   // Open, never toggle: a second request leaves it open.
   expect(world.opened).toEqual(['savvy-agents', 'savvy-agents'])
   expect(world.closed).toEqual([])
+})
+
+const waitingElsewhere = (at: number) => ({ project: 'shop', title: 'Fix checkout', state: 'waiting', since: 0, at })
+
+test('a chat waiting elsewhere adds itself to the card, and only while it waits', WITH_HUB, async ($, on) => {
+  const { world, clock } = await setup($, on, { store: { 'sessions/S2': waitingElsewhere(0) } })
+  expect(await card($)).toMatchObject({ detail: '1 sohbet bekliyor', tone: 'idle' })
+  world.store.set('sessions/S2', { ...waitingElsewhere(HEARTBEAT_MS), state: 'working' })
+  await clock.advance(HEARTBEAT_MS)
+  expect((await card($)).detail).toBe('')
+})
+
+test('beside a job the waiting chats keep their words and the card stays within 40 characters', WITH_HUB, async ($, on) => {
+  await setup($, on, { store: { 'sessions/S2': waitingElsewhere(0), 'sessions/S3': waitingElsewhere(0) } })
+  await tool($, { tool: 'mcp__savvy-progress__progress', title: 'Launch kit', tasks: TASKS, phase: 'delegate' })
+  await spawn($, 'Task 3')
+  await spawn($, 'Task 4')
+  await tool($, { tool: 'mcp__savvy-progress__progress', done: 2 })
+  const { detail } = await card($)
+  expect(detail).toBe('Görevler 2/4 · 2 sohbet bekliyor')
+  expect(detail.length).toBeLessThanOrEqual(40)
 })
 
 test('only a request naming "agents" is ours', () => {

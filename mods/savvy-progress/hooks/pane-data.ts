@@ -1,4 +1,4 @@
-import type { AgentRun, AgentType, Flow, Job, LimitTrack, Panel, TrackedTask } from '../types'
+import type { AgentRun, AgentType, Flow, HomeCrab, Job, LimitTrack, OtherChat, Panel, TrackedTask } from '../types'
 import { isRunning, totals } from './agents'
 import type { Totals } from './agents'
 import type { Planned } from './flow'
@@ -12,6 +12,8 @@ import type { Attention } from './insight'
 import { deriveJob, percentText } from './job'
 import type { JobView } from './job'
 import { shareNumber, shareOf } from './limit'
+import { levelOf } from './mood'
+import type { HomeMark } from './mood-svg'
 
 // Everything the panel draws from, built once per draw from the state pane.tsx reads, and the
 // header card's words.
@@ -28,6 +30,9 @@ export type PaneData = {
   limit: LimitTrack | null
   attention: Attention | null
   types: AgentType[]
+  home: HomeMark
+  /** The other sessions on this machine, waiting first. */
+  chats: OtherChat[]
 }
 
 // With no job of its own (none yet, or dismissed), the header describes the crew as a whole.
@@ -44,16 +49,26 @@ export type PaneState = {
   panel: Panel
   limit: LimitTrack | null
   types: AgentType[]
+  crab: HomeCrab
+  chats: OtherChat[]
 }
+
+// The home crab walks only while no agent's crab does: one motion on the pane at a time.
+const homeOf = (crab: HomeCrab, running: AgentRun[]): HomeMark => ({
+  mood: crab.mood,
+  level: t().crab.level(levelOf(crab.turns)),
+  isMoving: running.length === 0,
+})
 
 export function paneDataOf(state: PaneState): PaneData {
   const { list } = state
   const at = Math.max(state.now, ...list.map(a => a.startedAt), 0)
   const view = deriveJob({ flow: state.flow, agents: list, job: state.job, tasks: state.tasks }) ?? crewView(list)
   const ended = (a: AgentRun) => a.endedAt ?? a.startedAt
+  const running = list.filter(isRunning).reverse()
   return {
     list,
-    running: list.filter(isRunning).reverse(),
+    running,
     finished: list.filter(a => !isRunning(a)).sort((a, b) => ended(b) - ended(a)),
     planned: plannedOf(state.flow, list),
     sum: totals(list, at),
@@ -63,6 +78,8 @@ export function paneDataOf(state: PaneState): PaneData {
     limit: state.limit,
     attention: attentionOf(list, at),
     types: state.types,
+    home: homeOf(state.crab, running),
+    chats: state.chats,
   }
 }
 
@@ -100,6 +117,7 @@ export function headerOf(d: PaneData): HeaderData {
       { label: s.time, value: fmtTime(d.sum.time) },
       { label: s.limitTile, value: share === null ? '—' : `≈${s.pct(shareNumber(share))}` },
     ],
+    home: d.home,
   }
 }
 

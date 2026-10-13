@@ -2,6 +2,8 @@ import { fitText, textWidth, xml } from './format'
 import { upper } from './lang'
 import { meterSvg } from './meter'
 import type { Units } from './meter'
+import { LEVEL_PILL, homeCrab, levelPill, levelWidth } from './mood-svg'
+import type { HomeMark } from './mood-svg'
 import { FONT, MONO, paneSvg } from './theme'
 
 // The panel's header as one card: what the crew is doing in a headline, the job's percent beside
@@ -19,6 +21,11 @@ const STATS = { top: 104, label: 10, value: 31, valueSize: 15, labelSize: 9.5, r
 const BOLD = 1.06
 const DOT_R = 3.5
 const GAP = 12
+// The home crab stands left of the eyebrow and the headline; the words move over by its room.
+const HOME = { y: 11, scale: 1.5, room: 58 } as const
+const PILL_GAP = 8
+// The level pill sits a little under the eyebrow's cap height, centred on its letters.
+const PILL_DROP = 4
 
 export type Tone = 'run' | 'ok' | 'warn' | 'idle'
 
@@ -32,6 +39,7 @@ export type HeaderData = {
   tone: Tone
   meter: Units | null
   stats: Stat[]
+  home?: HomeMark
 }
 
 export type Drawing = { source: string; height: number }
@@ -74,19 +82,32 @@ const statsSvg = (stats: Stat[], inner: number): { body: string; height: number 
   return { body: parts.join('\n'), height: STATS.top + (rows - 1) * STATS.pitch + STATS.rule + PAD }
 }
 
+// The crab and its level beside the eyebrow: the drawing, the eyebrow's end, and the room both take.
+const homeParts = (data: HeaderData, eyebrowEnd: number): { body: string; room: number } => {
+  if (!data.home) return { body: '', room: 0 }
+  const crab = homeCrab(PAD, HOME.y, { home: data.home, scale: HOME.scale })
+  const pill = levelPill(data.home.level, eyebrowEnd + PILL_GAP, EYEBROW.y - LEVEL_PILL.h + PILL_DROP)
+  return { body: crab + pill, room: PILL_GAP + levelWidth(data.home.level) }
+}
+
 export const headerSvg = (W: number, data: HeaderData): Drawing => {
   const inner = W - PAD * 2
+  const left = PAD + (data.home ? HOME.room : 0)
+  const eyebrowX = left + DOT_R * 2 + 6
+  const eyebrowEnd = eyebrowX + textWidth(data.eyebrow, EYEBROW.size + EYEBROW.tracking)
+  const home = homeParts(data, eyebrowEnd)
   const percentW = Math.ceil(data.percent.length * PERCENT.size * MONO_EM)
-  const counts = fitText(data.counts, EYEBROW.size + 1.5, inner - textWidth(data.eyebrow, EYEBROW.size + EYEBROW.tracking) - 24)
-  const headline = fitText(data.headline, HEADLINE.size * 1.06, inner - percentW - GAP)
+  const counts = fitText(data.counts, EYEBROW.size + 1.5, W - PAD - eyebrowEnd - home.room - 24)
+  const headline = fitText(data.headline, HEADLINE.size * 1.06, W - PAD - left - percentW - GAP)
   const stats = statsSvg(data.stats, inner)
-  const dot = `<circle class="${DOT_CLASS[data.tone]}" cx="${PAD + DOT_R}" cy="${EYEBROW.y - DOT_R}" r="${DOT_R}"/>`
+  const dot = `<circle class="${DOT_CLASS[data.tone]}" cx="${left + DOT_R}" cy="${EYEBROW.y - DOT_R}" r="${DOT_R}"/>`
   const body = [
     `<rect class="tile ln" x="0.5" y="0.5" width="${W - 1}" height="${stats.height - 1}" rx="${RADIUS}" stroke-width="1"/>`,
+    home.body,
     dot,
-    `<text class="m" x="${PAD + DOT_R * 2 + 6}" y="${EYEBROW.y}" font-family="${FONT}" font-size="${EYEBROW.size}" font-weight="700" letter-spacing="${EYEBROW.tracking}">${xml(data.eyebrow)}</text>`,
+    `<text class="m" x="${eyebrowX}" y="${EYEBROW.y}" font-family="${FONT}" font-size="${EYEBROW.size}" font-weight="700" letter-spacing="${EYEBROW.tracking}">${xml(data.eyebrow)}</text>`,
     `<text class="s" x="${W - PAD}" y="${EYEBROW.y}" text-anchor="end" font-family="${FONT}" font-size="${EYEBROW.size + 1.5}" font-variant-numeric="tabular-nums">${xml(counts)}</text>`,
-    `<text class="t" x="${PAD}" y="${HEADLINE.y}" font-family="${FONT}" font-size="${HEADLINE.size}" font-weight="620">${xml(headline)}</text>`,
+    `<text class="t" x="${left}" y="${HEADLINE.y}" font-family="${FONT}" font-size="${HEADLINE.size}" font-weight="620">${xml(headline)}</text>`,
     `<text class="${data.percent === UNKNOWN ? 'm' : PERCENT_CLASS[data.tone]}" x="${W - PAD}" y="${PERCENT.y}" text-anchor="end" font-family="${MONO}" font-size="${PERCENT.size}" font-weight="650">${xml(data.percent)}</text>`,
     meterSvg(data.meter ?? { units: 0, done: 0, failed: 0, active: 0 }, { x: PAD, y: METER.y, w: inner, h: METER.h }),
     `<line class="ln" x1="${PAD}" x2="${W - PAD}" y1="${DIVIDER_Y}" y2="${DIVIDER_Y}" stroke-width="1"/>`,

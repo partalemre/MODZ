@@ -41,6 +41,7 @@ Start a new session. The MODZ panel opens on the right with a line from every mo
 
 - **Where it draws.** The Claude desktop app's Code tab draws everything. The terminal draws the same panels as text.
 - **Requirements.** Claude Code 2.1.295 or later, tested on 2.1.295 and 2.1.296. `terminal-browser` draws in the terminal only. Outside the desktop app, `done-ping` falls back to a macOS banner.
+- **Updates.** Automatic and free. The first session after you install turns on Claude Code's own auto-update for the `modz` marketplace, so every mod you installed, `transceiver` from its own repo included, updates itself in the background a few minutes into a session and loads fresh at the next start. No model call, no command to run. If you already chose under `/plugin` > Marketplaces, that choice stays; to turn it off, choose **Disable auto-update** there.
 - **Language.** The interface is in English. Set `MODZ_LANG=tr` for Turkish.
 - **Transceiver** needs a claude.ai login. If Claude Code runs inside another app (an IDE, `claude -p`, an SDK host), also set `CLAUDE_CODE_ARTIFACT=1`.
 
@@ -117,7 +118,7 @@ Read from the code, not from a promise. "Store" is the mod's own file in `~/.cla
 
 | Mod | Reads | Writes | Runs | Network | Model |
 |---|---|---|---|---|---|
-| `modz` | marketplace, settings | store | | | |
+| `modz` | marketplace, settings | store; once, `autoUpdate` for its marketplace in user settings | | | |
 | `savvy-progress` | transcript | store | | | agents you start |
 | `savvy-flow` | | | | | its worker agents |
 | `filetree` | project files | | `git`, `open` | | |
@@ -177,6 +178,7 @@ To remove a mod: `claude plugin uninstall <name>@modz`. To remove everything: al
 
 - **Unit checks.** `bin/modz check [name]` validates each mod and runs its tests, on both the terminal engine and the desktop app's engine.
 - **End to end.** `bin/modz desk` starts a real session, speaks the desktop app's own protocol to it, and clicks through every panel. Run both before opening a pull request.
+- **Releases.** No mod sets `version`: Claude Code then versions each one by its commit, so every push to `main` reaches every user. Keep it that way; a pinned `version` stops updates until someone bumps it.
 - **Types.** Claude Code writes its API types into `.claude-plugin/types/` beside a mod it hot-reloads. Each mod's `tsconfig.json` extends them, so `tsc -p mods/<name>` type-checks that mod.
 - **Kit gallery.** `tools/kit-gallery` draws every kit component; its tests check contrast in both themes.
 - **Design rules.** [DESIGN.md](DESIGN.md) (in Turkish) covers colour, type, components and the rules every mod follows.

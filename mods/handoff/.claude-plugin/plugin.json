@@ -1,6 +1,5 @@
 {
   "name": "handoff",
-  "version": "0.1.0",
   "description": "Before the context window fills, writes a handoff note and hands it once to your next fresh chat in this repo",
   "author": {
     "name": "Faik Emre Partal"

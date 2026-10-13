@@ -1,6 +1,5 @@
 {
   "name": "done-ping",
-  "version": "0.3.0",
   "description": "A notification when a long turn finishes or Claude waits on you (permission or a question): the desktop app's own notification where it can, else a macOS banner with project, what happened and a short detail",
   "author": {
     "name": "Faik Emre Partal"

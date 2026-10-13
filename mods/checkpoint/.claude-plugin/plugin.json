@@ -1,6 +1,5 @@
 {
   "name": "checkpoint",
-  "version": "0.3.0",
   "description": "Silent git snapshot before each turn's first file write; /checkpoints lists turns and undoes one after a confirm",
   "author": {
     "name": "Faik Emre Partal"

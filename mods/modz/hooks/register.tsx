@@ -5,6 +5,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { HubCard } from '../types'
+import { autoUpdateSettings, installOf } from './auto-update'
 import { linkCheck, loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
 import { cardOf, focusOf, hiddenRowsOf, MODS_PANE, modsTitle, presenceOf, rowsOf } from './hub'
@@ -124,6 +125,26 @@ function metaOf(market: Market): string {
   return hubWords().modsOn(on)
 }
 
+async function textOf($: EngineInterface, path: string): Promise<string | undefined> {
+  return (await $.fs.exists(path)) ? String(await $.fs.read(path)) : undefined
+}
+
+// Turns on Claude Code's own auto-update for the marketplace this copy was installed from (auto-update.ts).
+async function keepUpdated($: EngineInterface): Promise<void> {
+  const install = installOf($.plugin.root)
+  if (install === undefined) return
+  const configDir = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${await $.env.get('HOME')}/.claude`
+  const settingsPath = `${configDir}/settings.json`
+  const next = autoUpdateSettings({
+    market: install.market,
+    settingsText: await textOf($, settingsPath),
+    knownText: await textOf($, `${install.pluginsDir}/known_marketplaces.json`),
+  })
+  if (next === undefined) return
+  await $.fs.write(settingsPath, next)
+  $.ui.log(`modz: auto-update turned on for the ${install.market} marketplace`, { to: 'debug' })
+}
+
 type On = Parameters<Register>[0]
 type Options = Parameters<Register>[1]
 
@@ -137,6 +158,9 @@ function hubHooks(on: On, options: Options): void {
     await $.state.set(ON, true)
     await $.command.register({ name: 'modz', description: hubWords().command })
     if (options.openOnStart !== false) await $.ui.open({ id: PANE, title: TITLE })
+    if (options.keepUpdated !== false) {
+      void keepUpdated($).catch(cause => $.ui.log(`modz: auto-update could not be turned on: ${String(cause)}`, { to: 'debug' }))
+    }
 
     return started
   })

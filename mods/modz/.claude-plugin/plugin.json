@@ -1,6 +1,5 @@
 {
   "name": "modz",
-  "version": "0.5.0",
   "description": "The MODZ hub: opens on the right when a session starts; agents, files, plan, tests, checkpoints, replay, usage, look and every mod, one click away",
   "author": {
     "name": "Faik Emre Partal"
@@ -11,6 +10,12 @@
       "type": "boolean",
       "title": "Open at session start",
       "description": "Open the MODZ hub on the right every time a session starts",
+      "default": true
+    },
+    "keepUpdated": {
+      "type": "boolean",
+      "title": "Keep mods up to date",
+      "description": "Turn on Claude Code's own auto-update for the MODZ marketplace once, so every mod you installed (transceiver included) updates itself. A choice you already made under /plugin is kept.",
       "default": true
     }
   }

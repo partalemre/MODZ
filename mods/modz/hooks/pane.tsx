@@ -40,7 +40,7 @@ function terminalRow(ui: Ui, mod: ModInfo) {
       <Box flexDirection="row" columnGap={1}>
         <Text color={state.color}>{state.glyph}</Text>
         <Text bold dimColor={mod.isEnabled === false}>{mod.name}</Text>
-        <Text dimColor>{`v${mod.version}`}</Text>
+        {mod.version === null ? null : <Text dimColor>{`v${mod.version}`}</Text>}
         {state.word === '' ? null : <Text color={state.color}>{state.word}</Text>}
         <Box flexGrow={1} />
         <Text dimColor wrap="truncate">{placeLine(mod)}</Text>

@@ -1,6 +1,5 @@
 {
   "name": "reflect-mod",
-  "version": "3.5.0",
   "description": "claude-reflect as a Claude Code mod: a cheap trigger-word prefilter (Turkish and English) and one model check find reusable corrections; a card above the prompt saves them to the chosen CLAUDE.md; /mine finds friction that repeats across past chats and proposes rules, hooks, skills or mods",
   "types": "./types/index.d.ts",
   "author": {

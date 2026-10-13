@@ -1,6 +1,5 @@
 {
   "name": "session-budget",
-  "version": "0.3.0",
   "description": "A per-session spend budget (% of the 5h limit or $): notice at 80%, Continue anyway / Stop at 100% on a new prompt",
   "author": { "name": "Faik Emre Partal" },
   "types": "./types/index.d.ts"

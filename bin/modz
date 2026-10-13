@@ -14,7 +14,7 @@ LOCAL_ONLY=" done-ping terminal-browser filetree "
 usage() {
   cat <<USAGE
 modz <command>
-  list                 list the mods (version + description)
+  list                 list the mods (version, when pinned, + description)
   new <name> [desc]    make a mod from templates/blank and add it to the marketplace
   check [name]         validate + test on the CLI and the desktop engine (all mods without a name)
   desk                 end to end on the desktop engine: hub rows, panes, the band and presses
@@ -32,7 +32,7 @@ mod_names() { find "$MODS" -mindepth 2 -maxdepth 3 -path '*/.claude-plugin/plugi
 
 cmd_list() {
   for m in $(mod_names); do
-    python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));print("%-14s v%-8s %s" % (d["name"], d.get("version","?"), d.get("description","")))' "$MODS/$m/.claude-plugin/plugin.json"
+    python3 -c 'import json,sys;d=json.load(open(sys.argv[1]));print("%-14s v%-8s %s" % (d["name"], d.get("version","-"), d.get("description","")))' "$MODS/$m/.claude-plugin/plugin.json"
   done
 }
 
@@ -101,6 +101,11 @@ cmd_check() {
   [[ -z "${1:-}" ]] && targets=($(mod_names))
   desktop="$(desktop_engine)"
   local failed=0
+  # A pinned version freezes every user's copy until it is bumped; without one, each commit updates them.
+  if grep -l '"version"' "$MODS"/*/.claude-plugin/plugin.json 2>/dev/null; then
+    echo "✘ the files above pin a version; remove it so auto-update follows each commit"
+    failed=1
+  fi
   for m in "${targets[@]}"; do
     echo "== $m"
     check_with claude "$MODS/$m" cli || failed=1

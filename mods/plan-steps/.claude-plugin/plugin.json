@@ -1,6 +1,5 @@
 {
   "name": "plan-steps",
-  "version": "0.4.0",
   "description": "Shows the plan's steps when there is one (task list, approved plan or plan file): the /steps pane and a quiet status line; keeps an open plan across /clear and compaction, and asks before an answer leaves steps open",
   "author": {
     "name": "Faik Emre Partal"

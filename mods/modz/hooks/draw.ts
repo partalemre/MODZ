@@ -127,11 +127,12 @@ function monogramTile(mod: ModInfo): string {
 export function rowSvg(spec: { width: number; theme: Theme; mod: ModInfo }): Drawing {
   const { mod, width } = spec
   const mark = stateMark(mod, width)
-  const versionText = `v${mod.version}`
-  const versionWidth = monoMeasure(versionText, 10.5) + PILL_PAD * 2
+  // A mod that tracks commits has no version to show, so its row has no pill.
+  const versionText = mod.version === null ? '' : `v${mod.version}`
+  const versionWidth = versionText === '' ? 0 : monoMeasure(versionText, 10.5) + PILL_PAD * 2
   const nameRoom = width - TEXT_X - mark.width - versionWidth - GAP * 2
   const name = fit(mod.name, nameRoom, { size: 14, weight: 600 })
-  const version = pill({ right: TEXT_X + measure(name, 14, 600) + GAP, y: 9, text: versionText, role: null, isMono: true, isLeft: true })
+  const version = versionText === '' ? { svg: '' } : pill({ right: TEXT_X + measure(name, 14, 600) + GAP, y: 9, text: versionText, role: null, isMono: true, isLeft: true })
   const lineRoom = width - TEXT_X - 4
   const body = [
     monogramTile(mod),
@@ -141,7 +142,7 @@ export function rowSvg(spec: { width: number; theme: Theme; mod: ModInfo }): Dra
     `<text x="${TEXT_X}" y="41" class="lb ${mod.isHealthy ? 'mid' : 'fg-danger'}">${esc(fit(mod.description, lineRoom, { size: 12 }))}</text>`,
     `<text x="${TEXT_X}" y="58" class="mi lo">${esc(fit(placeLine(mod), lineRoom, { size: 10.5 }))}</text>`,
   ].join('')
-  const alt = `${mod.name} v${mod.version} · ${placeLine(mod)} · ${stateLabel(mod)} · ${mod.description}`
+  const alt = `${[mod.name, versionText].filter(Boolean).join(' ')} · ${placeLine(mod)} · ${stateLabel(mod)} · ${mod.description}`
 
   return { source: svgDoc({ width, height: ROW, theme: spec.theme, body }), alt, height: ROW }
 }

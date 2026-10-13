@@ -1,6 +1,5 @@
 {
   "name": "test-badge",
-  "version": "0.4.0",
   "description": "After a turn that edited source files, runs the project's tests and lint in the background and shows a one-line badge (tests 41/42 · lint 2 errors · 4s ago) with a details pane listing each failure by suite and file:line; also watches the open PR's GitHub CI through gh",
   "author": {
     "name": "Faik Emre Partal"

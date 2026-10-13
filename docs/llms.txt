@@ -12,8 +12,9 @@ Every step is safe to repeat.
 4. Optional, in the `env` object of `~/.claude/settings.json` (merge with existing keys, never overwrite the file):
    - `"MODZ_LANG": "tr"`: Turkish interface (the default is English).
    - `"CLAUDE_CODE_ARTIFACT": "1"`: needed for transceiver when Claude Code is driven by an SDK host (an IDE, `claude -p`, T3 Code). The desktop app and the plain terminal do not need it.
-5. Verify: `claude plugin list` lists each `<name>@modz` as enabled.
-6. Tell the person to start a new session (or run `/reload-plugins`). The MODZ panel opens on the right.
+5. Updates are automatic: the panel's first session turns on Claude Code's auto-update for the `modz` marketplace (unless the person already chose under `/plugin` > Marketplaces). Do not edit `extraKnownMarketplaces` yourself.
+6. Verify: `claude plugin list` lists each `<name>@modz` as enabled.
+7. Tell the person to start a new session (or run `/reload-plugins`). The MODZ panel opens on the right.
 
 Inside Claude Code the same steps are slash commands: `/plugin marketplace add partalemre/MODZ`, then `/plugin install <name>@modz`.
 

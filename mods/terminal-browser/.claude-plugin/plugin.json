@@ -1,6 +1,5 @@
 {
   "name": "terminal-browser",
-  "version": "0.1.0",
   "description": "A browser that runs in the terminal, inside Claude Code: preview sites and HTML documents, and let the agent drive the built-in browser. Terminal only; it draws nothing on the desktop.",
   "author": {
     "name": "zenbu-labs"

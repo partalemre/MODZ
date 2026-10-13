@@ -33,6 +33,8 @@ function estimateOf(gauge: HudGauge, nowMs: number, forecasts: Forecasts): Estim
 
     return { forecast: words().turnsLeft(turns), alert: turns <= TURNS_WARN ? words().turnsShort(turns) : '' }
   }
+  // An hour's burn says little about a week: only the 5-hour window gets a fill time.
+  if (gauge.id !== FIVE_HOUR) return NO_ESTIMATE
   const fullAt = fullAtOf({ points: pointsOf(forecasts.history, gauge.id), percent: gauge.percent, resetsAt: gauge.resetsAt, nowMs })
   if (fullAt === null) return NO_ESTIMATE
   const time = clockText(fullAt, nowMs)

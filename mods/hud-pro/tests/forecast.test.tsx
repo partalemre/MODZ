@@ -3,6 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { contextView } from '../hooks/breakdown'
 import { clockText, fullAtOf, turnsLeftOf } from '../hooks/forecast'
 import { setLang } from '../hooks/lang'
+import { gaugeViews } from '../hooks/model'
 import { BAND, BREAKDOWN, ENGLISH, MS_PER_HOUR, PANE, USAGE, breakdowns, compactions, start, stubSession, withBreakdown } from './stubs'
 
 // The two estimates (a window's fill time, the context's turns left), the context card's breakdown
@@ -14,6 +15,15 @@ const RESET = new Date(3 * MS_PER_HOUR).toISOString()
 
 const points = (values: readonly number[], stepMinutes = 5) => values.map((value, index) => ({ t: index * stepMinutes * MINUTE_MS, value }))
 const at = (minutes: number) => minutes * MINUTE_MS
+
+test('only the 5-hour window gets a fill time: an hour says little about a week', () => {
+  const reset = new Date(90 * MS_PER_HOUR).toISOString()
+  const gauges = ['five_hour', 'seven_day'].map(id => ({ id, label: id, percent: 55, resetsAt: reset }))
+  const history = [40, 45, 50, 55].map((value, index) => ({ t: at(index * 5), percents: { five_hour: value, seven_day: value } }))
+  const views = gaugeViews({ gauges, costUsd: null, context: null }, at(15), { history, turnsLeft: null })
+  expect(views[0]?.forecast).not.toBe('')
+  expect(views[1]?.forecast).toBe('')
+})
 
 test('a window rising a point a minute fills 100 % at that rate, from now', () => {
   const fullAt = fullAtOf({ points: points([40, 45, 50, 55]), percent: 55, resetsAt: RESET, nowMs: at(15) })

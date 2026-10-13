@@ -63,6 +63,8 @@ export async function setup($: any, on: any, world: World) {
   mock.env(on, world.env ?? { MODZ_LANG: 'tr' })
   stubHost(on, world)
   on('process.run', async (_: any, e: any) => {
+    // The CI watch's probe (git, gh) is not a check run; this folder is no git repo, so it stops there.
+    if (e.argv[0] === 'git' || e.argv[0] === 'gh') return result('', 128)
     world.runs.push(e.argv)
     if (e.argv[0] !== 'nice') {
       if (!world.canOpen) throw new Error('not found')

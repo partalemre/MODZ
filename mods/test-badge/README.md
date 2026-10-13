@@ -11,7 +11,7 @@ Runs your project's tests and lint in the background after Claude edits source f
 
 Or in one step: `/plugin install test-badge --marketplace partalemre/MODZ`.
 
-The MODZ panel (`modz`) shows its line here: the last run's result.
+The MODZ panel (`modz`) shows its line here: the last run's result, and the watched PR's CI.
 
 ## What you see
 
@@ -33,6 +33,18 @@ The pane's eyebrow is red only for failed tests, amber for lint errors alone or 
 - Five seconds after the turn ends; quick turns in a row give one run.
 - One run at a time; a run requested during one waits and runs once afterwards.
 - Each command runs under `nice -n 10` with a 120-second timeout, in the session's working directory, with `CI=1` (so vitest and jest do not start watch mode) and `FORCE_COLOR=0`. Tests run first, then lint.
+
+## CI watch
+
+It also follows your pull request's CI on GitHub, through your own `gh` CLI:
+
+- **When it starts:** after a Bash call ran `gh pr create` (the PR is read from its output), after a `git push`, and when the session opens on a branch with an open PR (also on `/test-badge on`). Only in a git repo, with `gh` installed and signed in; otherwise it does nothing and says nothing.
+- **How it polls:** `gh pr checks <n> --json name,state,bucket,link` and `gh pr view <n> --json state,title,reviews,comments` (reviews and comments are counted, never read) once a minute, every three minutes after ten polls. It stops when every check is done, the PR is merged or closed, no check reported after five polls, or after 90 minutes. After a push it waits to see a check running before it counts a finish, so the last commit's result is not taken for the new one.
+- **Tests pane:** a CI section with the PR number and title, a summary such as `CI 3/4 · 1 failing · 2 new reviews or comments`, each check with its state (running, passed, failed, skipped) and a **Logs** link, and **Open PR**.
+- **MODZ panel:** the line reads like `CI 3/4 · 1 failing`, beside the test result when both fit in 40 characters.
+- **When CI finishes** (only a finish it saw happen, not one already over when the watch began): one notification through your terminal's notification channel (`CI failed: lint · #12`, `CI passed · #12 · 4/4`). A red finish also leaves a card above the prompt: **Ask Claude to fix** (`f`) sends Claude the failing checks with their links, **Open PR** opens it, **Dismiss** closes the card. Nothing is sent until you press.
+
+A cancelled check counts as failed. `/test-badge off` stops the watch too.
 
 ## Detection (first match in the project root)
 
@@ -64,7 +76,7 @@ Counts are read from jest, vitest, pytest, cargo, mocha, node:test, bun, phpunit
 | `lintCommand` | empty | Overrides the detected lint command, run the same way. |
 | `openCommand` | empty | How a failure row opens its file, for example `cursor -g {file}:{line}` (no shell). Empty means VS Code's `code -g`, then the OS opener. If none starts, `file:line` is copied to the clipboard. |
 
-Uses no model tokens: it runs your own commands and reads their output.
+Uses no model tokens: it runs your own commands (and `gh`) and reads their output. The only prompt it sends is the one you press **Ask Claude to fix** for.
 
 ## Language
 

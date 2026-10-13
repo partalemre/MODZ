@@ -3,6 +3,7 @@ import { chipsOf, durationText, eyebrowRole, groupsOf, headlineOf, runMeta, suit
 import type { Tone } from './summary'
 import { upper } from './svg'
 import { THEME_KEY } from './tidemark'
+import { ciPart } from './ci-view'
 import type { PaneView } from './view'
 import { words } from './words'
 import type { CheckOutcome, Failure } from '../types'
@@ -138,6 +139,8 @@ function emptyText(ui: Ui, view: PaneView) {
       </Box>
       <Text> </Text>
       {rerunRow(ui, view)}
+      {view.ci !== null && <Text> </Text>}
+      {ciPart(ui, view)}
     </Box>
   )
 }
@@ -167,6 +170,8 @@ export function textPane(ui: Ui, view: PaneView) {
       {isFailing(badge) && view.filter === 'all' && tailText(ui, { name: 'lint', outcome: badge.lint })}
       <Text> </Text>
       {rerunRow(ui, view)}
+      {view.ci !== null && <Text> </Text>}
+      {ciPart(ui, view)}
     </Box>
   )
 }

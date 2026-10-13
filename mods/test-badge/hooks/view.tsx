@@ -1,3 +1,4 @@
+import { ciPart } from './ci-view'
 import { failuresOf, isFailing } from './parse'
 import { emptySvg, fileHeadSvg, headerSvg, rowSvg, skeletonSvg, tailHeadSvg } from './pane-svg'
 import type { Drawing } from './pane-svg'
@@ -7,7 +8,7 @@ import type { Theme } from './tidemark'
 import { chipRow, rerunRow, textPane, unplacedOf } from './view-text'
 import type { CheckName } from './view-text'
 import { words } from './words'
-import type { CheckOutcome, Failure, SuiteFilter, TestBadge } from '../types'
+import type { CheckOutcome, CiWatch, Failure, SuiteFilter, TestBadge } from '../types'
 
 // The resolved element table of the surface that draws the tree.
 type Ui = Record<string, any>
@@ -22,6 +23,8 @@ export type PaneView = {
   onOpen: (failure: Failure) => void
   onRerun: () => void
   onFilter: (filter: SuiteFilter) => void
+  // The CI watch's last state, or null while no PR is watched.
+  ci: CiWatch | null
 }
 
 // Room the "Aç" button and the row indent take beside a failure row, in columns.
@@ -101,6 +104,7 @@ export function paneTree(ui: Ui, view: PaneView) {
       {picture(ui, header, 'tb-header')}
       {!isEmpty && bodyTree(ui, view)}
       {rerunRow(ui, view)}
+      {ciPart(ui, view)}
     </Box>
   )
 }

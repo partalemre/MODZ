@@ -46,6 +46,15 @@ export const THEME_KEY: Record<Role, string> = {
   tide: 'suggestion', kiln: 'claude', iris: 'permission', moss: 'success', amber: 'warning', flare: 'error', orchid: 'merged',
 }
 
+// A Box's fill and its role's border, in hex: known only while the theme is pinned, so an `auto` card
+// draws in the surface's own colors.
+export function cardColors(theme: Theme, role: Role): { card: string; line: string } | null {
+  if (theme.mode === 'auto') return null
+  const palette = theme.isLight ? LIGHT : DARK
+
+  return { card: palette.card, line: palette[role].line }
+}
+
 export function themeFrom(value: unknown): Theme {
   const name = typeof value === 'string' ? value.trim().toLowerCase() : ''
   if (name === 'light') return { mode: 'light', isLight: true }

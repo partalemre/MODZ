@@ -1,7 +1,7 @@
 import type { Step } from './match'
 import { baseName } from './parse'
 import type { StepTrack } from '../types'
-import { upper } from './lang'
+import { upper } from './kit/lang'
 import { escape, fit, measure, wrap } from './ui/svg'
 import { words } from './words'
 

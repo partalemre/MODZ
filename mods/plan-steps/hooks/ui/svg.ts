@@ -1,4 +1,4 @@
-import { upper } from '../lang'
+import { upper } from '../kit/lang'
 
 // Text measuring and fitting for hand-laid Svg, close enough to lay out without a renderer.
 

@@ -35,6 +35,11 @@ const hubRef = { plugin: 'handoff', key: 'hub' } as const
 const homeRef = { plugin: 'handoff', key: 'home' } as const
 const hubOnRef = { plugin: 'modz', key: 'isOn' } as const
 const tasksRef = { plugin: 'plan-steps', key: 'tasks' } as const
+// Louder notices share the band's notice slot (DESIGN.md §6): while one shows, the handoff card waits.
+const cacheTaxNotice = { plugin: 'cache-tax', key: 'notice' } as const
+const knowNotice = { plugin: 'you-should-know', key: 'notice' } as const
+const reflectNotice = { plugin: 'reflect', key: 'notice' } as const
+const budgetNotice = { plugin: 'session-budget', key: 'notice' } as const
 
 type Cells = { [K in ValueKey]: { get: () => Promise<Values[K]>; set: (value: Values[K]) => Promise<unknown> } }
 
@@ -162,6 +167,17 @@ function hookCommands(on: On, settings: Settings): void {
   }).catch(($, e, next) => next(e))
 }
 
+async function hasLouderNotice($: EngineInterface): Promise<boolean> {
+  const others: { value?: unknown }[] = [
+    await $.state.get(cacheTaxNotice as never),
+    await $.state.get(knowNotice as never),
+    await $.state.get(reflectNotice as never),
+    await $.state.get(budgetNotice as never),
+  ]
+
+  return others.some(other => other.value !== undefined && other.value !== null)
+}
+
 // A press runs its action in the background; a failure only goes to the debug log.
 const pressed = (io: Io, run: () => Promise<unknown>) => () => void run().catch(error => io.log(`press failed (${reasonOf(error)})`))
 
@@ -169,6 +185,7 @@ function hookBand(on: On, settings: Settings): void {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const theirs = await next(e)
     if (isBandQuiet({ isWorking: e.props.isWorking, hasSurvey: e.props.hasSurvey })) return theirs
+    if (await hasLouderNotice($)) return theirs
     const io = ioOf($)
     const percent = await io.get('percent')
     const kind = cardOf({ percent, threshold: settings.threshold, snoozeUntil: await io.get('snoozeUntil'), stage: await io.get('stage') })

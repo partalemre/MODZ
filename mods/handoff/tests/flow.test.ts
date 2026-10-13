@@ -168,3 +168,23 @@ test('open plan steps come from plan-steps where it runs', { plugins: [plan] }, 
   expect(text).toContain('## Open plan steps\n- [ ] Ship')
   expect(text).not.toContain('Build')
 })
+
+const reflect = {
+  name: 'reflect',
+  register(on: any) {
+    on('session.start', async ($: any, e: any, next: any) => {
+      await $.state.set({ plugin: 'reflect', key: 'notice' }, { id: 'r1' })
+
+      return next(e)
+    })
+  },
+}
+
+test('a louder notice keeps the slot: the handoff card waits', { plugins: [reflect] }, async ($: any, on: any) => {
+  stub(on, newWorld())
+  await start($, 'terminal')
+  await measure($, 82)
+  const band = await $.ui.mount(bandOf('terminal'))
+  expect(buttonsOf(await band.drawn())).toEqual([])
+  expect(await band.find({ text: 'theirs' })).toBeDefined()
+})

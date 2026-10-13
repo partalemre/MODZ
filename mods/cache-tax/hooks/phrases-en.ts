@@ -1,7 +1,7 @@
 // Every line the mod says, in English. The words come here already formatted; words.ts decides which.
 // Command names and their arguments stay as typed.
 
-export type Guard = { ago: string; tokens: string; rate: string; usd: string; warm: string | null }
+export type Guard = { lead: string; tokens: string; rate: string; usd: string; warm: string | null }
 export type Times = { span: string; every: string }
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`
@@ -9,9 +9,12 @@ const plural = (n: number, one: string, many: string): string => `${n} ${n === 1
 export const EN = {
   rateUnknown: 'the cache write price',
   guard: (g: Guard): string =>
-    `The cache went cold ${g.ago} ago. This send rewrites up to ${g.tokens} tokens at ${g.rate} = ${g.usd}` +
+    `${g.lead} This send rewrites up to ${g.tokens} tokens at ${g.rate} = ${g.usd}` +
     (g.warm === null ? '' : ` (a warm turn would be ${g.warm})`) + '.',
+  coldLead: (ago: string): string => `The cache went cold ${ago} ago.`,
+  switchLead: (from: string, to: string): string => `Model changed (${from} → ${to}): the cache will be rewritten.`,
   dropHeld: (usd: string): string => `cache-tax: your message is on hold, choose on the card (cold cache, up to ${usd}).`,
+  dropSwitched: (usd: string): string => `cache-tax: your message is on hold, choose on the card (model changed, up to ${usd}).`,
   drop: (guard: string, auto: string): string =>
     `cache-tax: ${guard} Send again to pay; keepwarm then keeps the cache warm for ${auto}. ` +
     'Or start over with /clear and a note.',

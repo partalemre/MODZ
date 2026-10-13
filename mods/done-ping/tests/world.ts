@@ -15,12 +15,17 @@ export type Spy = {
   files: Set<string>
   // The turn's test command fails.
   isTestFailing?: boolean
+  // The clips $.audio.play was asked for, and the debug lines the mod wrote.
+  plays: string[]
+  logs: string[]
+  // $.audio.play rejects, as on a host with no player.
+  isPlayFailing?: boolean
   // MODZ_LANG as $.env.get answers it: Turkish unless a test asks for the English default (null).
   lang?: string | null
 }
 
 export function spyOf(over: Partial<Spy> = {}): Spy {
-  return { runs: [], calls: [], clock: null, exitCode: 0, front: 'com.apple.Safari', host: undefined, surface: 'terminal', push: null, files: new Set(), ...over }
+  return { runs: [], calls: [], clock: null, exitCode: 0, front: 'com.apple.Safari', host: undefined, surface: 'terminal', push: null, files: new Set(), plays: [], logs: [], ...over }
 }
 
 const ok = (stdout: string, exitCode = 0) => ({ value: { exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
@@ -48,7 +53,13 @@ export async function setup($: any, on: any, spy: Spy) {
   on('store.get', () => ({ value: undefined }))
   on('store.set', () => ({ value: undefined }))
   on('command.register', () => ({ value: undefined }))
-  on('ui.log', () => ({ value: undefined }))
+  on('ui.log', (_: any, e: any) => (spy.logs.push(e.text), { value: undefined }))
+  on('audio.play', (_: any, e: any) => {
+    if (spy.isPlayFailing === true) throw new Error('no player on this host')
+    spy.plays.push(e.clip.asset)
+
+    return { value: undefined }
+  })
   on('ui.render', () => ({ type: 'Text', props: {}, children: ['engine'] }))
   on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
   on('turn.complete', (_: any, e: any) => ({ text: e.answer }))

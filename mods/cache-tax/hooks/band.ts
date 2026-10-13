@@ -3,25 +3,35 @@
 
 import type { Elements, RenderElement } from 'claude-code'
 
-import { coldUsd, isCold, warmUsd } from './core'
+import { coldUsd, heldModel, isHoldShown, warmUsd } from './core'
 import type { State } from './core'
 import { fmtDuration, fmtInt } from './fmt'
 import { holdDesktop, holdTerminal } from './hold'
 import type { HoldActions } from './hold'
 import type { HoldView } from './hold-svg'
+import { modelName } from './model-switch'
 import { rowDesktop, rowOf, rowTerminal } from './row'
+import { bandWords } from './ui-words'
 import { autoWarm, coldFor, rateText } from './words'
 
 export type Prefs = { isLight: boolean; noColor: boolean }
 
+/** Why the card is up, longest first: the model switch it was held for, or how long ago the clock ran out. */
+function reasonOf(s: State, now: number): string[] {
+  const switched = s.held?.switch
+  if (switched) return bandWords().switched(modelName(switched.from), modelName(switched.to))
+  return [bandWords().wentCold(fmtDuration(coldFor(s, now)))]
+}
+
 export function holdView(s: State, now: number): HoldView {
+  const model = heldModel(s)
   return {
     held: s.held?.text ?? '',
-    coldFor: fmtDuration(coldFor(s, now)),
+    reason: reasonOf(s, now),
     tokens: fmtInt(s.ctx),
-    coldUsd: coldUsd(s),
-    warmUsd: warmUsd(s),
-    rate: rateText(s),
+    coldUsd: coldUsd(s, model),
+    warmUsd: warmUsd(s, model),
+    rate: rateText(s, model),
     autoWarm: autoWarm(),
   }
 }
@@ -31,7 +41,7 @@ export type Drawing = { surface: 'desktop'; ui: Elements['desktop'] } | { surfac
 export type Band = { s: State; prefs: Prefs; actions: HoldActions; columns: number; now: number }
 
 function holdCard(d: Drawing, b: Band): RenderElement | null {
-  if (!b.s.held || !isCold(b.s, b.now)) return null
+  if (!isHoldShown(b.s, b.now)) return null
   const options = { view: holdView(b.s, b.now), actions: b.actions, ...b.prefs, columns: b.columns }
   return d.surface === 'desktop' ? holdDesktop(d.ui, options) : holdTerminal(d.ui, options)
 }

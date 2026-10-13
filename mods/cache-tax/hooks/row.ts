@@ -3,7 +3,7 @@
 
 import type { Elements, RenderElement } from 'claude-code'
 
-import { BIG_TOKENS, SOON_MS, coldUsd, isCold, untilCold } from './core'
+import { BIG_TOKENS, SOON_MS, coldUsd, isCold, isHoldShown, untilCold } from './core'
 import type { State } from './core'
 import { cube } from './cube'
 import { fmtDuration, fmtUsd } from './fmt'
@@ -30,7 +30,7 @@ function keepwarmRow(s: State, now: number): Row | null {
 
 /** What the row says now, or null when it has nothing worth a line. */
 export function rowOf(s: State, now: number): Row | null {
-  if (s.held && isCold(s, now)) return null
+  if (isHoldShown(s, now)) return null
   if (s.deadline || s.stopped) return keepwarmRow(s, now)
   if (s.ctx < BIG_TOKENS) return null
   if (isCold(s, now)) {
@@ -43,7 +43,7 @@ export function rowOf(s: State, now: number): Row | null {
 
 /** A key that changes whenever the drawn card or row would: the band is redrawn only then. */
 export function bandKey(s: State, now: number): string {
-  const hold = s.held && isCold(s, now) ? fmtDuration(coldFor(s, now)) : ''
+  const hold = isHoldShown(s, now) ? `${s.held?.switch?.to ?? ''}:${fmtDuration(coldFor(s, now))}` : ''
   return `${hold}|${JSON.stringify(rowOf(s, now))}`
 }
 

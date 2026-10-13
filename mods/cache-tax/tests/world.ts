@@ -1,5 +1,6 @@
 // The world beneath the mod, shared by the test files.
 import { mock } from 'claude-code/testing'
+import type { Engine } from 'claude-code/testing'
 import type { CommandRunInput, ConfigSetInput, ModelForkResult, On, PromptSubmitInput, RenderPropsOf, SessionStartInput, TurnCompleteInput, TurnUsage } from 'claude-code'
 
 
@@ -23,6 +24,13 @@ export const turn = (over: Partial<AnsweredTurn> = {}): TurnCompleteInput => ({
 export const run = (command: 'keepwarm' | 'cache-tax', args: string): CommandRunInput => ({
   command, args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 },
 })
+
+/** One request of the main loop (or a subagent's) on `model`, run to its end. */
+export async function step($: Engine, model: string, agentId?: string) {
+  const stream = $.turn.step({ turnId: 'step', index: 0, model, messageCount: 1, agentId })
+  let chunk = await stream.next()
+  while (chunk.done !== true) chunk = await stream.next()
+}
 
 export const prompt = (text: string): PromptSubmitInput => ({ text, wait: false, origin: { kind: 'composer' } })
 export const themeChange = (value: string): ConfigSetInput => ({ key: 'theme', value, previous: 'dark', provider: { plugin: 'engine', tier: 'core' }, origin: { kind: 'composer' } })
@@ -57,7 +65,12 @@ export function world(on: On, forkAnswers: ForkAnswer[], opts: { store?: Map<str
   const ran: string[] = []
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   on('session.id', () => ({ value: opts.sid ?? 'S1' }))
-  on('session.model', () => ({ value: opts.model ?? 'claude-fable-5-1' }))
+  // The model `/model` shows now; a test switches it by writing here.
+  const current = { model: opts.model ?? 'claude-fable-5-1' }
+  on('session.model', () => ({ value: current.model }))
+  on('turn.step', async function* ($, e) {
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: usage({ model: e.model }) }
+  })
   on('session.usage', () => ({ value: { startedAt: START, context: { window: 1000000, tokens: opts.live?.tokens }, rateLimits: [] } }))
   on('command.register', ($, e) => ({ value: { command: e.name } }))
   on('command.list', () => ({ value: (opts.commands ?? []).map(name => ({ name, description: '', source: 'plugin' as const })) }))
@@ -79,7 +92,7 @@ export function world(on: On, forkAnswers: ForkAnswer[], opts: { store?: Map<str
     const value: ModelForkResult = { isAnswered: true, text: 'warm', usage: { input_tokens: a.input ?? 2, output_tokens: a.out ?? 1, cache_read_input_tokens: a.read, cache_creation_input_tokens: a.write } }
     return { value }
   })
-  return { forks, status, logs, entered, origins, fills, ran, reads }
+  return { forks, status, logs, entered, origins, fills, ran, reads, current }
 }
 
 export const warm: ForkAnswer = { read: 200000, write: 0 }

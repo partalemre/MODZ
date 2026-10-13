@@ -1,10 +1,12 @@
-import type { EngineInterface, On, PromptSubmitInput, PromptSubmitResult, Register, TurnCompleteInput } from 'claude-code'
+import type { EngineInterface, On, Register, TurnCompleteInput } from 'claude-code'
 
 import { composeBand } from './band'
 import { pinned } from './pin'
 import type { Prefs } from './band'
-import { AUTO_WARM_MS, BIG_TOKENS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, freshState, isCold, isFullMiss, parseDuration, priceOf, resetForClear } from './core'
+import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, freshState, isFullMiss, parseDuration, priceOf, resetForClear } from './core'
 import type { State } from './core'
+import { NAME, onPrompt } from './guard'
+import type { GuardIo } from './guard'
 import type { HoldActions } from './hold'
 import { bandKey } from './row'
 import { seedFromResume } from './session'
@@ -12,7 +14,7 @@ import { isLightTheme } from './theme'
 import { KEY_ALWAYS, KEY_GUARD, arm, deadlineKey, everyKey, prune, startWindow, stop, stopForGood, updateStatus } from './warm'
 import type { Io } from './warm'
 import { setLang } from './lang'
-import { alwaysText, armedText, cardText, commands, dropText, paidText, say, statusText, warnText } from './words'
+import { alwaysText, armedText, cardText, commands, paidText, say, statusText } from './words'
 
 export { fmtDuration } from './fmt'
 export { freshState, parseDuration, resetForClear } from './core'
@@ -20,9 +22,7 @@ export type { State } from './core'
 export { seedFromResume } from './session'
 export type { ResumeFields } from './session'
 
-const NAME = 'cache-tax'
-
-/** keepwarm's reach, bound here: only this file holds `$`. */
+/** keepwarm's and the guard's reach, bound here: only this file holds `$`. */
 function io($: EngineInterface): Io {
   return {
     now: () => $.clock.now(),
@@ -33,6 +33,15 @@ function io($: EngineInterface): Io {
     del: key => $.store.delete(key),
     redraw: () => $.ui.invalidate('ui.render'),
     status: text => $.ui.status(text),
+  }
+}
+
+function guardIo($: EngineInterface): GuardIo {
+  return {
+    now: () => $.clock.now(),
+    model: () => $.session.model(),
+    log: text => $.ui.log(text),
+    redraw: () => $.ui.invalidate('ui.render'),
   }
 }
 
@@ -134,35 +143,6 @@ async function onCacheTax($: EngineInterface, s: State, args: string): Promise<s
   return s.guard === 'refuse' ? say().guardMode.refuse : say().guardMode.warn
 }
 
-type Submit = { e: PromptSubmitInput; next: (e: PromptSubmitInput) => Promise<PromptSubmitResult> }
-
-// The message that pays. Of a typed prompt only its first character is read, and its text kept while it waits.
-async function onPrompt($: EngineInterface, s: State, { e, next }: Submit): Promise<PromptSubmitResult> {
-  if (e.origin.kind === 'plugin') {
-    // The card's own resend: the person pressed pay, so its cold write is scored.
-    if (e.origin.name === NAME && e.text === s.resend) {
-      s.resend = null
-      s.coldWritePending = true
-    }
-    return next(e)
-  }
-  if (typeof e.text !== 'string' || e.text.trimStart().startsWith('/')) return next(e)
-  const now = await $.clock.now()
-  if (!isCold(s, now) || s.ctx < BIG_TOKENS) return next(e)
-  if (s.guard === 'warn' || s.ackedAt === s.lastRequestAt) {
-    if (s.guard === 'warn') $.ui.log(warnText(s, now))
-    s.ackedAt = 0
-    s.coldWritePending = true
-    if (s.held && s.hasBand) $.ui.invalidate('ui.render')
-    s.held = null
-    return next(e)
-  }
-  s.ackedAt = s.lastRequestAt
-  s.held = { text: e.text, at: now }
-  if (s.hasBand) $.ui.invalidate('ui.render')
-  return { drop: dropText(s, now) }
-}
-
 async function onTurnComplete($: EngineInterface, s: State, e: TurnCompleteInput) {
   const now = await $.clock.now()
   // A sleeping host may deliver this turn before the expired window's timer.
@@ -259,10 +239,14 @@ function wireSession(on: On, c: Ctx) {
 function wireTurns(on: On, s: State) {
   on('command.run', { command: 'keepwarm' }, async ($, e) => ({ text: await onKeepwarm($, s, String(e.args ?? '')) }))
   on('command.run', { command: NAME }, async ($, e) => ({ text: await onCacheTax($, s, String(e.args ?? '')) }))
-  on('prompt.submit', ($, e, next) => onPrompt($, s, { e, next }))
+  on('prompt.submit', ($, e, next) => onPrompt(guardIo($), s, { e, next }))
 
   on('turn.step', async function* ($, e, next) {
-    if (!e.agentId) s.lastRequestAt = await $.clock.now()
+    if (!e.agentId) {
+      s.lastRequestAt = await $.clock.now()
+      // The request writes the cache under its model; a send on another one finds it empty.
+      s.cacheModel = e.model
+    }
     yield* next(e)
   })
 

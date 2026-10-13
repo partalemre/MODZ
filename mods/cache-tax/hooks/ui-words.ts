@@ -9,6 +9,8 @@ const EN = {
   eyebrow: 'Cache tax',
   headline: 'Your message is on hold',
   wentCold: (ago: string): string => `The cache went cold ${ago} ago.`,
+  switched: (from: string, to: string): string[] =>
+    [`Model changed (${from} → ${to}): the cache will be rewritten.`, `Model changed: ${from} → ${to}.`],
   sendNow: 'Send now',
   warmTurn: 'A warm turn',
   warmCaptions: (times: number | null): string[] =>
@@ -42,6 +44,8 @@ const TR: typeof EN = {
   eyebrow: 'Önbellek vergisi',
   headline: 'Mesajın bekletiliyor',
   wentCold: (ago: string): string => `Önbellek ${ago} önce soğudu.`,
+  switched: (from: string, to: string): string[] =>
+    [`Model değişti (${from} → ${to}): önbellek yeniden yazılacak.`, `Model değişti: ${from} → ${to}.`],
   sendNow: 'Şimdi gönder',
   warmTurn: 'Sıcak bir tur',
   warmCaptions: (times: number | null): string[] =>

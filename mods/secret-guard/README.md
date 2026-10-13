@@ -43,9 +43,23 @@ The question is "How do you want to go on?", the safe fix first, each answer wit
 
 The desktop app draws the card as a picture; the terminal draws the same words as text. The card follows Claude Code's `theme` setting, or `MODZ_THEME=light|dark` in the `env` block of `~/.claude/settings.json`.
 
+## Secrets you paste into a prompt
+
+A key, token or private key you paste into a prompt never reaches the model. The prompt goes out with `⟦secret:1⟧` in its place (the same value always gets the same number), and the system prompt gets one short note telling Claude that each placeholder is a real secret it uses verbatim and never asks for.
+
+- **Bash**: right before a command runs, each placeholder is replaced with the real value. Any echo of a value in a tool's output is turned back into its placeholder before Claude reads it.
+- **Files**: a placeholder is never replaced inside a file. A write that holds one shows the card (the placeholder itself, not the value's first characters); **Move keys to .env** writes the real value to `.env` and the file reads it from the environment. **Allow once**, or a write to a `.env` file, keeps the placeholder as written, and Claude is told so.
+- A quiet line under the prompt says `1 secret kept out of the chat`; no toast.
+- The values live only in the mod's memory for this session: never in `$.store`, `$.state`, a file or a log. `/clear` forgets them; so does a reload of the mod, after which a command that still names a placeholder is stopped with the reason.
+
+## Recording mode
+
+`/rec` turns recording mode on or off for this session (off by default). While it is on, the line under the prompt says `REC`, and the transcript's prompts, replies, tool calls and tool results draw with keys, `NAME=value` env values and e-mail addresses masked (`●●●●Jk`: at most the last two characters). It only changes what is drawn: the transcript and what Claude reads stay as they were. It builds on whatever the rows below it drew, so it works with skins.
+
 ## Commands
 
-- `/secret-guard` turns the scan on or off (remembered).
+- `/secret-guard` turns the scan on or off (remembered). Off, pasted secrets also stay in the prompt as typed.
+- `/rec` turns recording mode on or off (this session only).
 
 ## Settings
 
@@ -56,9 +70,12 @@ There are no plugin options.
 - It fails open: if the scan itself crashes, the call goes through and a debug line is logged, because a mod error must never block a turn.
 - Only the text a call adds is scanned (`Edit`'s new string, not the old one).
 - Shell commands other than `git add` and `git commit` (for example `echo KEY=... > config.js`) are not scanned.
+- A placeholder is replaced in Bash commands only, as raw text: Claude quotes it as it would the value (a `$` inside double quotes would still expand). Other tools get the placeholder.
+- The screen still draws a tool's own output record as it came (for example a command that prints the real value); recording mode masks it, and Claude only reads the placeholder.
+- Recording mode masks what it can see in one string: a key split across differently colored pieces of a row may stay visible.
 - `git add` is dry-run from the session's working directory or `git -C dir`; a `cd` earlier in the same command is not followed.
 
-Uses no model tokens: it is plain pattern matching.
+Uses no model tokens: it is plain pattern matching. While the session holds a placeholder, the system prompt carries a three-sentence note (~100 input tokens, counted from its words).
 
 ## Language
 

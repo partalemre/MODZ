@@ -27,6 +27,12 @@ export type Words = {
   moreRows: (count: number) => string
   commandLine: string
   toggled: (isOn: boolean) => string
+  // The status line under the prompt: how many pasted secrets the model only knows as placeholders.
+  keptOut: (count: number) => string
+  // The status line's mark while recording mode masks the screen.
+  rec: string
+  recCommandLine: string
+  recToggled: (isOn: boolean) => string
 }
 
 const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`
@@ -56,6 +62,10 @@ const EN: Words = {
   moreRows: count => `+ ${count} more`,
   commandLine: 'Turn the secret key scan before writes and git add/commit on or off',
   toggled: isOn => `secret-guard ${isOn ? 'on' : 'off'}`,
+  keptOut: count => `${plural(count, 'secret', 'secrets')} kept out of the chat`,
+  rec: 'REC',
+  recCommandLine: 'Recording mode: mask keys, env values and e-mail addresses on screen',
+  recToggled: isOn => (isOn ? 'Recording mode on: keys, env values and e-mail addresses are masked on screen' : 'Recording mode off'),
 }
 
 const TR: Words = {
@@ -80,6 +90,10 @@ const TR: Words = {
   moreRows: count => `+${count} daha`,
   commandLine: 'Yazma ve git add/commit öncesi gizli anahtar taramasını aç/kapat',
   toggled: isOn => `secret-guard ${isOn ? 'açık' : 'kapalı'}`,
+  keptOut: count => `${count} sır sohbetin dışında tutuldu`,
+  rec: 'REC',
+  recCommandLine: 'Kayıt modu: anahtarları, env değerlerini ve e-posta adreslerini ekranda maskele',
+  recToggled: isOn => (isOn ? 'Kayıt modu açık: anahtarlar, env değerleri ve e-posta adresleri ekranda maskelenir' : 'Kayıt modu kapalı'),
 }
 
 export const WORDS: Readonly<Record<Lang, Words>> = { en: EN, tr: TR }

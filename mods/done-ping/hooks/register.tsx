@@ -30,6 +30,8 @@ const knowNotice = { plugin: 'you-should-know', key: 'notice' } as const
 const reflectNotice = { plugin: 'reflect', key: 'notice' } as const
 const budgetNotice = { plugin: 'session-budget', key: 'notice' } as const
 const testBadgeNotice = { plugin: 'test-badge', key: 'notice' } as const
+const handoffNotice = { plugin: 'handoff', key: 'notice' } as const
+const planNotice = { plugin: 'plan-steps', key: 'notice' } as const
 
 const enabledAtom = atom({ plugin: 'done-ping', key: 'isEnabled' } as const, true)
 const thresholdAtom = atom({ plugin: 'done-ping', key: 'thresholdSeconds' } as const, null)
@@ -138,6 +140,8 @@ async function hasLouderNotice($: EngineInterface): Promise<boolean> {
     await $.state.get(reflectNotice as never),
     await $.state.get(budgetNotice as never),
     await $.state.get(testBadgeNotice as never),
+    await $.state.get(handoffNotice as never),
+    await $.state.get(planNotice as never),
   ]
 
   return others.some(other => other.value !== undefined && other.value !== null)

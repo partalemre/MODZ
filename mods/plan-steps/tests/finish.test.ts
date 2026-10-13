@@ -112,3 +112,21 @@ test('without the setting nothing is submitted on its own', async ($: any, on: a
   await turn($, () => $.tool.call(UNDER_WAY))
   expect(seen.submitted).toEqual([])
 })
+
+const handoff = {
+  name: 'handoff',
+  register(on: any) {
+    on('session.start', async ($: any, e: any, next: any) => {
+      await $.state.set({ plugin: 'handoff', key: 'notice' }, { priority: 3, expiresAt: 0 })
+
+      return next(e)
+    })
+  },
+}
+
+test('a handoff notice keeps the slot: the PLAN card waits', { plugins: [handoff] }, async ($: any, on: any) => {
+  await world($, on)
+  await turn($, () => $.tool.call(UNDER_WAY))
+  const band = await mountBand($, 'terminal')
+  expect(await drawnText(band)).not.toContain('still open')
+})

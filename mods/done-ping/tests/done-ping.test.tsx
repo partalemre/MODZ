@@ -168,3 +168,24 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(await ui.find({ key: 'done-ping-dismiss' })).toBeUndefined()
   })
 }
+
+const planSteps = {
+  name: 'plan-steps',
+  register(on: any) {
+    on('session.start', async ($: any, e: any, next: any) => {
+      await $.state.set({ plugin: 'plan-steps', key: 'notice' }, { at: 1 })
+
+      return next(e)
+    })
+  },
+}
+
+test('a plan-steps notice keeps the slot: the fallback row waits', { plugins: [planSteps] }, async ($, on) => {
+  const spy = spyOf({ exitCode: 1, surface: 'terminal' })
+  await setup($, on, spy)
+
+  await turn($, spy, 75_000)
+  const ui = await $.ui.mount(bandOf('terminal') as any)
+  expect(await ui.find({ key: 'done-ping-dismiss' })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: 'engine' })).toBeDefined()
+})

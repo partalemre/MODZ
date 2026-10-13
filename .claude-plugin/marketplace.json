@@ -101,6 +101,11 @@
       "name": "terminal-browser",
       "source": "./mods/terminal-browser",
       "description": "A browser inside the terminal: preview sites and HTML files and let the agent drive it. Terminal only."
+    },
+    {
+      "name": "handoff",
+      "source": "./mods/handoff",
+      "description": "Before the context window fills, writes a handoff note and hands it once to your next fresh chat in this repo"
     }
   ]
 }

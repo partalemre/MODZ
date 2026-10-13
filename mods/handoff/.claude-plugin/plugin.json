@@ -1,0 +1,23 @@
+{
+  "name": "handoff",
+  "version": "0.1.0",
+  "description": "Before the context window fills, writes a handoff note and hands it once to your next fresh chat in this repo",
+  "author": {
+    "name": "Faik Emre Partal"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "threshold": {
+      "type": "number",
+      "title": "Threshold (%)",
+      "description": "Offer a handoff once the context window is at least this full (50 to 99)",
+      "default": 80
+    },
+    "summarize": {
+      "type": "boolean",
+      "title": "Summarize with Haiku",
+      "description": "Add a short 'where we are / next step' summary to each note: one Haiku call per handoff. Off: the note is built from the session alone, no tokens",
+      "default": true
+    }
+  }
+}

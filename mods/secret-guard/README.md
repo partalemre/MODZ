@@ -20,7 +20,9 @@ It runs before every `Write`, `Edit`, `MultiEdit` and `NotebookEdit`, and before
 - Any `*KEY`, `*SECRET`, `*TOKEN` or `*PASSWORD` assignment whose value looks random (at least 12 characters, Shannon entropy of 3.5 or more, and a digit or 24 or more characters). Placeholders (`your-...`, `xxx`, `example`, `${...}`, `process.env...`, member access such as `config.secretKey`) are ignored.
 - `git add` of `.env`, `.env.local`, `.env.production` and the like, named directly or picked up by `git add .`. Templates such as `.env.example` are fine. `git commit` scans the added lines of the staged diff (plus the unstaged diff for `-a`) and any staged `.env*` names. Files staged by `git add` are scanned, up to 1 MB each and 300 files.
 
-Not flagged: writing to a `.env*` file itself (that is where secrets belong), setting keys with a dot such as `done-ping.thresholdSeconds`, and fake key-like values in test files (`*.test.ts`, `*.spec.js`, `tests/`, `fixtures/`, `__mocks__/`).
+When nobody can answer the question (a subagent's call, or a `-p` run with nothing drawing), the call is denied with the reason and nothing is moved.
+
+Not flagged: writing to a `.env*` file itself (that is where secrets belong), setting keys with a dot such as `done-ping.thresholdSeconds`, and fake key-like values in test files (`*.test.ts`, `*.spec.js`, `tests/`, `fixtures/`, `__mocks__/`): generic assignments, and key shapes whose value says it is fake (`test`, `fake`, `dummy`, `mock`, `sample`, `example`, `fixture`).
 
 ## What you see
 
@@ -35,7 +37,7 @@ This write has 2 secret keys
 
 The question is "How do you want to go on?", the safe fix first, each answer with a line saying what it does:
 
-- **Move keys to .env** (recommended) appends `NAME=value` to the project's `.env` (reusing an entry that holds the same value, renaming a taken name), adds `.env` to `.gitignore` in a git repo, and rewrites the write so the code reads the environment: `process.env.NAME` (JS/TS), `os.environ["NAME"]` (Python), `Platform.environment['NAME']` (Dart), `os.Getenv("NAME")` (Go), `ENV["NAME"]` (Ruby), `getenv('NAME')` (PHP), `${NAME}` elsewhere. Claude is told what moved. For git commands and private keys the call is denied with an instruction for Claude to move the secrets itself.
+- **Move keys to .env** (recommended) appends `NAME=value` to the `.env` at the root of the git repository that holds the file (a worktree's own root, never the session's folder when they differ; outside any repository, the session's folder), reusing an entry that holds the same value and renaming a taken name, adds `.env` to that repository's `.gitignore`, and rewrites the write so the code reads the environment: `process.env.NAME` (JS/TS), `os.environ["NAME"]` (Python), `Platform.environment['NAME']` (Dart), `os.Getenv("NAME")` (Go), `ENV["NAME"]` (Ruby), `getenv('NAME')` (PHP), `${NAME}` elsewhere. Claude is told what moved. For git commands, private keys and test files the call is denied with an instruction for Claude to move the secrets itself.
 - **Allow once** runs this one call unchanged.
 - **Cancel**, dismissing the question, or typing under Other denies the call with a clear reason.
 

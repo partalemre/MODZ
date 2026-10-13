@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import { HEADER, cardTree, chipOf, optionsOf } from './card'
-import { findSecrets, mask } from './detect'
+import { findSecrets, isTestPath, mask } from './detect'
 import type { Secret } from './detect'
 import { addedByFile, dryRunPaths, gitSteps, isEnvFile } from './git'
 import type { GitStep } from './git'
@@ -93,8 +93,9 @@ function sourceOf(found: Found): GuardPending['source'] {
   return gitSteps(found.command).some(step => step.kind === 'commit') ? 'commit' : 'add'
 }
 
-// Moving to .env rewrites the call itself only for a file write with no private key.
-const isMovable = (found: Found): boolean => found.path !== null && found.secrets.every(secret => secret.isMovable)
+// Moving to .env rewrites the call itself only for a file write with no private key. A test file's keys are
+// fixtures more often than not: Claude is asked to deal with them instead of the guard moving them unseen.
+const isMovable = (found: Found): boolean => found.path !== null && !isTestPath(found.path) && found.secrets.every(secret => secret.isMovable)
 
 const atOf = (found: Found, secret: Found['secrets'][number]): string => (found.path === null ? relative(secret.where) : `${relative(found.path)}:${secret.line}`)
 
@@ -126,19 +127,43 @@ async function askUser($: EngineInterface, found: Found): Promise<string> {
   return answer
 }
 
+const dirOf = (path: string): string => path.slice(0, path.lastIndexOf('/')) || '/'
+
+// The .env goes to the root of the repository holding the file (a worktree's own root, whose `.git` is a file),
+// never the session's root when they differ. Outside any repository: the session's folder if the file is in it.
+async function envRootOf($: EngineInterface, path: string): Promise<{ root: string; isRepo: boolean }> {
+  const start = dirOf(resolvePath(session.cwd, path))
+  for (let dir = start; ; dir = dirOf(dir)) {
+    if (await $.fs.exists(`${dir}/.git`)) return { root: dir, isRepo: true }
+    if (dir === '/') break
+  }
+  const isInSession = session.cwd !== '' && `${start}/`.startsWith(`${session.cwd}/`)
+
+  return { root: isInSession ? session.cwd : start, isRepo: false }
+}
+
 async function writeEnv($: EngineInterface, found: Found) {
-  const envPath = `${session.cwd}/.env`
+  const { root, isRepo } = await envRootOf($, found.path ?? session.cwd)
+  const envPath = `${root}/.env`
   const existing = (await $.fs.exists(envPath)) ? await $.fs.read(envPath) : ''
   const entries = planEntries(found.secrets, parseEnv(existing))
   await $.fs.write(envPath, appendText(existing, envLines(entries)))
-  if (await $.fs.exists(`${session.cwd}/.git`)) {
-    const ignorePath = `${session.cwd}/.gitignore`
+  if (isRepo) {
+    const ignorePath = `${root}/.gitignore`
     const ignore = (await $.fs.exists(ignorePath)) ? await $.fs.read(ignorePath) : ''
     if (!hasEnvIgnore(ignore)) await $.fs.write(ignorePath, appendText(ignore, '.env\n'))
   }
 
-  return entries
+  return { entries, envPath }
 }
+
+// A subagent's call, or a session nothing draws (a -p run): nobody can answer the card, so nothing is moved.
+async function isUnattended($: EngineInterface, e: { agentId?: string }): Promise<boolean> {
+  return e.agentId !== undefined || (await $.session.surfaces()).length === 0
+}
+
+const unattendedDeny = (found: Found): string =>
+  `secret-guard blocked this call: it would expose ${summary(found) || found.envFiles.join(', ')}, and nobody can answer its question here, so nothing was moved. Keep secrets in .env (git-ignored) and read them from the environment, or leave this change to the main conversation.`
 
 function summary(found: Found): string {
   return found.secrets.map(secret => `${secret.label} ${mask(secret.value)} (${secret.where})`).join(', ')
@@ -211,6 +236,7 @@ function hookCall(on: On): void {
       $.ui.log('secret-guard: scan failed, call passed through', { to: 'debug' })
     }
     if (found === null) return next(e)
+    if (await isUnattended($, e)) return { deny: unattendedDeny(found) }
 
     const answer = await askUser($, found)
     if (answer === words().allow) return next(e)
@@ -218,10 +244,10 @@ function hookCall(on: On): void {
     if (!isMovable(found)) {
       return { deny: `The user chose "Move to .env" for ${summary(found)}. Move each secret into the project's .env (git-ignored), reference it from the environment, then retry.` }
     }
-    const entries = await writeEnv($, found)
+    const { entries, envPath } = await writeEnv($, found)
     const path = found.path ?? ''
     const ran = await next({ ...e, ...patchedFields(input, text => rewrite(text, { path, entries })) } as typeof e)
-    const note = `secret-guard moved ${entries.length} secret(s) from ${path} into .env as ${entries.map(entry => entry.name).join(', ')}; the file now reads them from the environment. Make sure the program loads .env.`
+    const note = `secret-guard moved ${entries.length} secret(s) from ${path} into ${envPath} as ${entries.map(entry => entry.name).join(', ')}; the file now reads them from the environment. Make sure the program loads .env.`
 
     return ran.deny === undefined ? { ...ran, context: [...(ran.context ?? []), note] } : ran
   })

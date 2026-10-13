@@ -1,7 +1,7 @@
 // The engine beneath secret-guard in tests: files, git answers, the dialog answered with `choice`.
 
 // `env` is what `$.env.get` answers: MODZ_LANG=tr for the Turkish tests, unset for the English ones.
-export type Setup = { choice: string; env: Record<string, string>; asked: string[]; files: Record<string, string>; ran: any[]; git: Record<string, string>; cards: string[][]; trees: any[]; dialogs: any[]; theme: string; surface: 'terminal' | 'desktop'; columns?: number }
+export type Setup = { choice: string; env: Record<string, string>; asked: string[]; files: Record<string, string>; ran: any[]; git: Record<string, string>; cards: string[][]; trees: any[]; dialogs: any[]; theme: string; surface: 'terminal' | 'desktop'; columns?: number; surfaces?: string[] }
 
 // The card as the person reads it: one string per line, indents included.
 export function textOf(node: any): string {
@@ -39,6 +39,8 @@ export function stub($: any, on: any, setup: Setup) {
 
     return { type: 'engine', ref: 1 }
   })
+  // What draws the session: the test's surface, or none for a -p run.
+  on('session.surfaces', () => ({ value: setup.surfaces ?? [setup.surface] }))
   on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'enum', value: setup.theme }] }))
   on('env.get', (_: any, e: any) => ({ value: setup.env[e.name] }))
   on('store.get', () => ({ value: undefined }))

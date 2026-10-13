@@ -1,6 +1,9 @@
 import { expect, test } from 'claude-code/testing'
 
-import { IDEAS, mine, mineWorld, paneSite, paneWords, wordsOf } from './ideas-world'
+import { FOLDER, IDEAS, mine, mineWorld, paneSite, paneWords, wordsOf } from './ideas-world'
+import { CHAT_A, CHAT_B } from './fixtures/chats'
+import { TAIL_BYTES } from '../hooks/transcripts'
+import { world } from './world'
 import { BAND, start } from './world'
 
 // `/mine` end to end: one model call, the Ideas pane's states on both surfaces, a rule saved through
@@ -124,4 +127,24 @@ test('a blocked model leaves the local candidates; Try again runs one more call'
   await w.clock.settle()
   expect(w.mined).toHaveLength(2)
   expect((await wordsOf(pane)).texts).toContain('Could not turn these into ideas; here is what repeats.')
+})
+
+test('a chat over 4 MiB is read from its end with tail, its torn first row dropped; a failing tail only skips it', async ($, on) => {
+  const big = { name: 'big.jsonl', size: 5 * 1024 * 1024, mtimeMs: 9 }
+  const w = world(on, {
+    ideas: IDEAS, lang: null,
+    files: { [`${FOLDER}/a.jsonl`]: CHAT_A },
+    dirs: { [FOLDER]: [{ name: 'a.jsonl', mtimeMs: 1 }, big, { name: 'gone.jsonl', size: 6 * 1024 * 1024, mtimeMs: 8 }] },
+    tails: { [`${FOLDER}/big.jsonl`]: `"half a row"}}\n${CHAT_B}` },
+  })
+  await start($)
+  await mine($, w)
+  expect(w.ran).toEqual([
+    ['tail', '-c', String(TAIL_BYTES), '--', `${FOLDER}/big.jsonl`],
+    ['tail', '-c', String(TAIL_BYTES), '--', `${FOLDER}/gone.jsonl`],
+  ])
+  expect(w.mined).toHaveLength(1)
+  expect(w.mined[0]).toContain('"sample":"npm test"')
+  const { alts } = await paneWords($, 'desktop')
+  expect(alts.join(' ')).toContain('2 chats read · 1 from the end · 1 unreadable')
 })

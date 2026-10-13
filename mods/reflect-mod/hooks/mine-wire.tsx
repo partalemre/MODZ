@@ -34,15 +34,24 @@ export const MINE_COMMAND = 'mine'
 const HOME = { plugin: 'reflect-mod', key: 'home' } as const
 const MINE_TIMEOUT_MS = 30000
 const MINE_MAX_TOKENS = 900
+const TAIL_TIMEOUT_MS = 10000
 /** How long a copied idea's button says "Copied". */
 const COPIED_MS = 3000
-const NO_SCAN = { read: 0, skipped: 0, hasFolder: true }
+const NO_SCAN = { read: 0, partial: 0, skipped: 0, hasFolder: true }
 const READING: IdeasView = { status: 'reading', ideas: [], candidates: [], failure: null, scan: NO_SCAN }
 
 // The module's own: a reload starts it over, and a run cut short by one only leaves the pane as it was.
 let isMining = false
 
-const disk = ($: EngineInterface): Disk => ({ exists: path => $.fs.exists(path), list: path => $.fs.list(path), read: path => $.fs.read(path) })
+/** `tail` reads a large chat's end without a shell; the engine's own read stops at 4 MiB. */
+async function tailOf($: EngineInterface, path: string, bytes: number): Promise<string | undefined> {
+  const r = await $.process.run(['tail', '-c', String(bytes), '--', path], { timeoutMs: TAIL_TIMEOUT_MS })
+  return r.exitCode === 0 ? r.stdout : undefined
+}
+
+const disk = ($: EngineInterface): Disk => ({
+  exists: path => $.fs.exists(path), list: path => $.fs.list(path), read: path => $.fs.read(path), tail: (path, bytes) => tailOf($, path, bytes),
+})
 
 const setView = ($: EngineInterface, view: IdeasView) => update($, ideas, () => view)
 
@@ -62,11 +71,17 @@ async function refreshBand($: EngineInterface, root: string) {
   await update($, pending, () => waiting)
 }
 
+/** A chat counts when it holds anything to learn from; a scripted run with none does not take a chat's place. */
+function hasFriction(text: string): boolean {
+  const s = signalsOf(text)
+  return s.prompts.length + s.holds.length + s.failures.length > 0
+}
+
 async function readChats($: EngineInterface) {
   const home = (await $.env.get('HOME')) ?? ''
   const configDir = await $.env.get('CLAUDE_CONFIG_DIR').catch(() => undefined)
   const folder = await findFolder(disk($), { base: projectsBase({ home, configDir }), root: await $.session.root() })
-  return readRecent(disk($), { folder, currentId: await $.session.id() })
+  return readRecent(disk($), { folder, currentId: await $.session.id(), isTalk: hasFriction })
 }
 
 /** The one model call per `/mine`; undefined when it did not answer or its answer does not parse. */
@@ -78,7 +93,7 @@ async function askModel($: EngineInterface, deps: MineDeps, candidates: Candidat
 
 async function mine($: EngineInterface, deps: MineDeps) {
   const recent = await readChats($)
-  const scan = { read: recent.chats.length, skipped: recent.skipped, hasFolder: recent.hasFolder }
+  const scan = { read: recent.chats.length, partial: recent.partial, skipped: recent.skipped, hasFolder: recent.hasFolder }
   const candidates = candidatesOf(recent.chats.map(chat => signalsOf(chat.text))).slice(0, TOP_CANDIDATES)
   if (candidates.length === 0) return setView($, { status: 'done', ideas: [], candidates, failure: null, scan })
   await setView($, { status: 'thinking', ideas: [], candidates, failure: null, scan })

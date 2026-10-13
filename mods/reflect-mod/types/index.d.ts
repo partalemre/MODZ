@@ -46,8 +46,11 @@ export type Idea = {
   offer?: 'waiting' | 'known'
 }
 
-/** What `/mine` read: chats read, chats skipped for size, and whether the project has a transcript folder. */
-export type Scan = { read: number; skipped: number; hasFolder: boolean }
+/**
+ * What `/mine` read: chats read (`partial` of them only from their end, being large), chats that could not be
+ * read, and whether the project has a transcript folder.
+ */
+export type Scan = { read: number; partial: number; skipped: number; hasFolder: boolean }
 
 /**
  * The Ideas pane: reading, asking the model, or done. `failure` 'model': the answer was unusable, so the local

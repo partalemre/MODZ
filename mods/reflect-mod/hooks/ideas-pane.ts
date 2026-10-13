@@ -39,7 +39,8 @@ const tag = (ink: Ink, label: string): RenderElement => (ink.isDesktop
 
 function headOf(view: IdeasView): { headline: string; meta: string } {
   const says = mineWords()
-  const meta = [says.read(view.scan.read), ...(view.scan.skipped > 0 ? [says.tooLarge(view.scan.skipped)] : [])].join(' · ')
+  const { read, partial, skipped } = view.scan
+  const meta = [says.read(read), ...(partial > 0 ? [says.partial(partial)] : []), ...(skipped > 0 ? [says.unread(skipped)] : [])].join(' · ')
   if (view.status === 'reading') return { headline: says.reading(MAX_CHATS), meta: '' }
   if (view.status === 'thinking') return { headline: says.thinking, meta }
   if (view.failure === 'read') return { headline: says.unreadable, meta: '' }
@@ -56,7 +57,7 @@ function head(ink: Ink, view: IdeasView, columns: number): RenderElement {
   if (ink.isDesktop && ink.ui.Svg) {
     const width = Math.max(MIN_WIDTH, columns * PX_PER_COLUMN)
     const art = headSvg(width, { eyebrow, headline, meta, isLoading }, ink.p)
-    return ink.ui.Svg({ source: art.source, alt: `${eyebrow}: ${headline}`, width, height: art.height })
+    return ink.ui.Svg({ source: art.source, alt: [`${eyebrow}: ${headline}`, ...(meta ? [meta] : [])].join(', '), width, height: art.height })
   }
   const { Box, Text } = ink.ui
   return Box({ flexDirection: 'column', children: [

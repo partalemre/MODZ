@@ -43,7 +43,7 @@ Typing `remember: <rule>` skips the check and goes straight to the card.
 - If the model's answer is unusable, the pane shows what repeats, with **Try again**. With nothing repeating it says "No repeating friction found in the last 20 chats".
 - When the MODZ hub is on, the pane starts with **← MODZ**.
 
-What is read: the chat files under `~/.claude/projects/<project folder>/` (or under `CLAUDE_CONFIG_DIR`), the newest 20 except the running one. A file over 4 MiB is skipped (the pane says how many), and at most the first million characters of each file are scanned.
+What is read: the chat files under `~/.claude/projects/<project folder>/` (or under `CLAUDE_CONFIG_DIR`), the newest 20 except the running one. Runs with nothing in them to learn from (scripted `claude -p` runs, agents) do not count toward the 20, and at most 60 files are opened to find them. A file over 4 MiB, which the engine will not read at once, is read from its last 1,000,000 bytes by running `tail -c 1000000 -- <file>` (no shell); its torn first line is dropped, and it is skipped only if `tail` fails. The pane says how many chats were read from the end and how many could not be read. At most a million characters of each file are scanned.
 
 ## How it decides
 

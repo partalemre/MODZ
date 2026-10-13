@@ -3,16 +3,17 @@ import { expect, test } from 'claude-code/testing'
 import { MAX_IDEAS, MAX_INPUT_CHARS, ideasPrompt, parseIdeas } from '../hooks/ideas'
 import { candidatesOf } from '../hooks/mine'
 import { signalsOf } from '../hooks/signals'
-import { MAX_CHATS, MAX_FILE_BYTES, MAX_SCAN_CHARS, MAX_SLUG, findFolder, projectSlug, projectsBase, readRecent } from '../hooks/transcripts'
+import { MAX_CHATS, MAX_FILE_BYTES, MAX_LOOKED, MAX_SCAN_CHARS, MAX_SLUG, TAIL_BYTES, findFolder, projectSlug, projectsBase, readRecent, wholeLines } from '../hooks/transcripts'
 import type { Disk, DiskEntry } from '../hooks/transcripts'
 import type { Candidate } from '../types'
 import { CHAT_A, CHAT_B, CHAT_C } from './fixtures/chats'
 
 // `/mine`'s pure parts: where the chats are, what is read of them, what repeats, and the model's answer.
 
-/** A file system of folders and texts; `reads` records every file read. */
+/** A file system of folders and texts; `reads` and `tails` record every whole read and every tail read. */
 function fakeDisk(dirs: Record<string, DiskEntry[]>, texts: Record<string, string> = {}) {
   const reads: string[] = []
+  const tails: Array<{ path: string; bytes: number }> = []
   const disk: Disk = {
     exists: async path => path in dirs || path in texts,
     list: async path => dirs[path] ?? [],
@@ -21,8 +22,12 @@ function fakeDisk(dirs: Record<string, DiskEntry[]>, texts: Record<string, strin
       if (!(path in texts)) throw new Error('ENOENT')
       return texts[path] ?? ''
     },
+    tail: async (path, bytes) => {
+      tails.push({ path, bytes })
+      return texts[path]
+    },
   }
-  return { disk, reads }
+  return { disk, reads, tails }
 }
 
 const file = (name: string, mtimeMs: number, size = 10): DiskEntry => ({ name, kind: 'file', size, mtimeMs })
@@ -43,7 +48,7 @@ test('the project slug is the path with every non-alphanumeric character as a da
   expect(await findFolder(disk, { base, root: '/other' })).toBeUndefined()
 })
 
-test('reads are bounded: the newest 20 chats, the running one left out, big files skipped, each scan cut', async () => {
+test('reads are bounded: the newest 20 chats, the running one left out, big files read from their end, each scan cut', async () => {
   const dir = '/p'
   const entries = [
     ...Array.from({ length: MAX_CHATS + 5 }, (_, i) => file(`s${i}.jsonl`, i)),
@@ -53,16 +58,43 @@ test('reads are bounded: the newest 20 chats, the running one left out, big file
     { name: 'sub', kind: 'dir' as const, size: 0, mtimeMs: 997 },
   ]
   const texts = Object.fromEntries(entries.map(e => [`${dir}/${e.name}`, 'x'.repeat(e.name === 's24.jsonl' ? MAX_SCAN_CHARS + 50 : 5)]))
-  const { disk, reads } = fakeDisk({ [dir]: entries }, texts)
+  texts['/p/huge.jsonl'] = 'rn row"}\n{"type":"user"}\n'
+  const { disk, reads, tails } = fakeDisk({ [dir]: entries }, texts)
   const recent = await readRecent(disk, { folder: dir, currentId: 'now' })
 
   expect(reads).not.toContain('/p/now.jsonl')
   expect(reads).not.toContain('/p/huge.jsonl')
   expect(reads).toHaveLength(MAX_CHATS - 1)
-  expect(recent.skipped).toBe(1)
-  expect(recent.chats.map(c => c.id)[0]).toBe('s24')
-  expect(recent.chats[0]?.text.length).toBe(MAX_SCAN_CHARS)
-  expect(await readRecent(disk, { folder: undefined, currentId: 'now' })).toEqual({ chats: [], skipped: 0, hasFolder: false })
+  expect(tails).toEqual([{ path: '/p/huge.jsonl', bytes: TAIL_BYTES }])
+  expect(recent.chats[0]).toEqual({ id: 'huge', text: '{"type":"user"}\n' })
+  expect({ partial: recent.partial, skipped: recent.skipped }).toEqual({ partial: 1, skipped: 0 })
+  expect(recent.chats.find(c => c.id === 's24')?.text.length).toBe(MAX_SCAN_CHARS)
+  expect(await readRecent(disk, { folder: undefined, currentId: 'now' })).toEqual({ chats: [], partial: 0, skipped: 0, hasFolder: false })
+
+  delete texts['/p/huge.jsonl']
+  expect((await readRecent(disk, { folder: dir, currentId: 'now' })).skipped).toBe(1)
+})
+
+test('runs nobody typed in do not take a chat\'s place, and at most MAX_LOOKED files are opened', async () => {
+  const dir = '/p'
+  const entries = Array.from({ length: MAX_LOOKED + 20 }, (_, i) => file(`s${i}.jsonl`, -i))
+  // Every third file is a conversation; the rest are scripted runs.
+  const texts = Object.fromEntries(entries.map((e, i) => [`${dir}/${e.name}`, i % 3 === 0 ? 'talk' : 'script']))
+  const { disk, reads } = fakeDisk({ [dir]: entries }, texts)
+  const recent = await readRecent(disk, { folder: dir, currentId: 'now', isTalk: text => text === 'talk' })
+  expect(recent.chats).toHaveLength(MAX_CHATS)
+  expect(recent.chats.every(c => c.text === 'talk')).toBe(true)
+  expect(reads.length).toBeLessThanOrEqual(MAX_LOOKED)
+
+  const sparse = Object.fromEntries(entries.map(e => [`${dir}/${e.name}`, 'script']))
+  const few = fakeDisk({ [dir]: entries }, sparse)
+  expect((await readRecent(few.disk, { folder: dir, currentId: 'now', isTalk: text => text === 'talk' })).chats).toEqual([])
+  expect(few.reads).toHaveLength(MAX_LOOKED)
+})
+
+test('a tail starts mid-row, so everything before its first line break is dropped', () => {
+  expect(wholeLines('torn"}\n{"a":1}\n{"b":2}')).toBe('{"a":1}\n{"b":2}')
+  expect(wholeLines('no line break at all')).toBe('')
 })
 
 test('a chat reads down to typed prompts, held calls and failed commands; engine rows and a torn line are passed over', () => {

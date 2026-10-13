@@ -21,6 +21,8 @@ export type Opts = {
   ideas?: string | 'error' | 'throw'
   /** Whether `$.ui.copy` reaches a clipboard. */
   canCopy?: boolean
+  /** What `tail -c <n> -- <path>` prints, by path; absent, it fails. */
+  tails?: Record<string, string>
 }
 
 export function world(on: On, opts: Opts = {}) {
@@ -58,6 +60,13 @@ export function world(on: On, opts: Opts = {}) {
     name: d.name, kind: d.kind ?? 'file', size: d.size ?? (files[`${e.path}/${d.name}`] ?? '').length, mtimeMs: d.mtimeMs ?? 0, isLink: false,
   }))))
   on('session.id', async () => ok('now'))
+  const ran: string[][] = []
+  on('process.run', async ($, e) => {
+    ran.push([...e.argv])
+    const out = opts.tails?.[e.argv.at(-1) ?? '']
+    const isTail = e.argv[0] === 'tail' && e.argv[1] === '-c' && e.argv[3] === '--'
+    return ok({ exitCode: isTail && out !== undefined ? 0 : 1, stdout: out ?? '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false })
+  })
   on('ui.open', async ($, e) => {
     opened.push(e.id)
     return ok({ isPlaced: true })
@@ -84,7 +93,7 @@ export function world(on: On, opts: Opts = {}) {
   on('session.start', async () => ({ cwd: '/repo' }) as never)
   on('prompt.submit', async ($, e) => ({ text: e.text }))
   on('prompt.compose', async () => ({ sections: [] }))
-  return { clock, files, asked, systems, filled, mined, opened, clipboard }
+  return { clock, files, asked, systems, filled, mined, opened, clipboard, ran }
 }
 
 export const start = ($: Engine) => $.session.start({ source: 'startup', cwd: '/repo', surface: 'terminal', isInteractive: true } as never)

@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { Draft, Panel } from '../types'
 import { BUILTIN_TYPES, DEFAULT_TYPE, TASK_TITLE_MAX, blankDraft, chosenOf } from './agent-types'
-import { addRun } from './agents'
+import { addRun, askedAgain } from './agents'
 import { draftTree } from './dispatch'
 import { HomeButton } from './home'
 import type { DraftView } from './dispatch'
@@ -43,12 +43,20 @@ const PX_PER_COL = 8
 const MIN_COLS = 24
 const DEFAULT_COLS = 40
 
-// Talking to a running agent, and stopping it through the engine's own TaskStop tool (the normal
-// permission chain applies).
-async function sendTo($: EngineInterface, agentId: string, text: string): Promise<void> {
+// Asking an agent more from its card (a finished one picks up again), and stopping it through the
+// engine's own TaskStop tool (the normal permission chain applies). A delivered question joins the
+// card's conversation; only a refusal needs a toast, since the card itself shows the question.
+async function sendTo($: EngineInterface, id: string, text: string): Promise<void> {
   const message = text.trim()
   if (!message) return
-  $.ui.toast(deliveryText(await $.session.send({ to: { agentId }, text: message })))
+  const run = (await read($, agents)).find(a => a.id === id)
+  const sent = await $.session.send({ to: { agentId: run?.agentId ?? id }, text: message })
+  if (!sent.isDelivered) {
+    $.ui.toast(deliveryText(sent))
+    return
+  }
+  const at = await $.clock.now()
+  await update($, agents, list => list.map(a => (a.id === id ? askedAgain(a, message, at) : a)))
 }
 
 async function requestStop($: StopNoun, agentId: string): Promise<boolean> {
@@ -100,8 +108,9 @@ async function startTask($: EngineInterface, type: string, text: string): Promis
     const id = started.agentId
     // Our own spawn hook does not see a spawn this plugin made: the card is added here, at once.
     const at = await $.clock.now()
-    const spawn = { id: id ?? `task-${at}`, agentId: id, type, description, brief: prompt, model: started.model, at }
-    const list = await update($, agents, prev => (prev.some(a => a.agentId !== undefined && a.agentId === id) ? prev : addRun(prev, spawn)))
+    const spawn = { id: id ?? `task-${at}`, agentId: id, type, description, brief: prompt, model: started.model, isAsked: true, at }
+    const isKnown = (a: { agentId?: string }) => a.agentId !== undefined && a.agentId === id
+    const list = await update($, agents, prev => (prev.some(isKnown) ? prev.map(a => (isKnown(a) ? { ...a, isAsked: true } : a)) : addRun(prev, spawn)))
     await update($, panel, prev => ({ ...prev, selected: spawn.id, draft: { ...draftOf(prev.draft), isOpen: false, notice: undefined } }))
     const run = list.find(a => a.id === spawn.id)
     $.ui.toast(t().launched(run ? lookOf(run).name : type))

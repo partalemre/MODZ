@@ -47,7 +47,7 @@ for (const surface of SURFACES) {
     for (const part of ['Pip', 'Mako', 'Nori', 'heavy', 'medium', 'light', 'Opus 5.5', 'çalışıyor', 'bitti']) expect(seen).toContain(part)
   })
 
-  test(`${surface}: an open running card sends a message to that agent and says it arrived`, async ($, on) => {
+  test(`${surface}: an open running card sends a message to that agent and adds it to the conversation`, async ($, on) => {
     const { world } = await setup($, on)
     await threeRunning($)
     const ui = await mount($)
@@ -57,7 +57,8 @@ for (const surface of SURFACES) {
     expect(world.sent).toHaveLength(1)
     expect(world.sent[0]?.text).toBe('look at the footer too')
     expect(String(world.sent[0]?.to)).toContain('a3')
-    expect(world.toasts).toContain('Mesaj iletildi')
+    expect(world.toasts).toEqual([])
+    expect(await words(ui)).toContain('Sen\nlook at the footer too')
   })
 
   test(`${surface}: an empty message is not sent; an undelivered one says why`, async ($, on) => {
@@ -82,7 +83,7 @@ for (const surface of SURFACES) {
     expect(world.toasts).toContain('Durdurma istendi')
   })
 
-  test(`${surface}: a refused stop says so; a finished card has no message or stop`, async ($, on) => {
+  test(`${surface}: a refused stop says so; a finished card has no stop but takes a follow-up`, async ($, on) => {
     const { world } = await setup($, on, { refuse: ['TaskStop'] })
     await threeRunning($)
     await finish($, 'a1')
@@ -92,7 +93,7 @@ for (const surface of SURFACES) {
     expect(world.toasts).toContain('Durdurma reddedildi')
     await ui.press({ key: 'open-a1' })
     expect(await ui.find({ key: 'stop-a1' })).toBeUndefined()
-    expect(await ui.find({ key: 'send-a1' })).toBeUndefined()
+    expect((await ui.find({ key: 'send-a1' }))?.props?.placeholder).toBe("Pip'e devam sorusu sor, Enter gönderir")
   })
 
   test(`${surface}: an agent unheard for 2 minutes turns its pill Amber and takes the attention line`, async ($, on) => {

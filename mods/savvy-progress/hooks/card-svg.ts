@@ -54,7 +54,8 @@ const eyebrowWidth = (s: string): number => textWidth(s, EYEBROW.size + EYEBROW.
 const whoSvg = (head: CardHead, room: number): string => {
   const tier = ` · ${head.tierWord}`
   const used = textWidth(head.name, WHO.size) * BOLD + textWidth(tier, WHO.size)
-  const model = fitText(` · ${head.model}`, WHO.size, Math.max(0, room - used))
+  // A model the engine has not named yet is left out until its first request names it.
+  const model = head.model ? fitText(` · ${head.model}`, WHO.size, Math.max(0, room - used)) : ''
   const span = (cls: string, text: string) => `<tspan class="${cls}">${xml(text)}</tspan>`
   const name = `<tspan class="t" font-weight="${WHO.nameWeight}">${xml(head.name)}</tspan>`
   const words = name + span(`w-${head.tier}`, tier) + (model === '…' ? '' : span('m', model))

@@ -182,6 +182,20 @@ test('preview: panel with a finished agent open on its result', async ($, on) =>
   await dumpPane($, 'panel-result-open', ['open-a1'])
 })
 
+test('preview: panel with a question asked from the form: its answer and a follow-up on its way', async ($, on) => {
+  const { clock, world } = await setup($, on)
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await ui.press({ key: 'new-task' })
+  await ui.input({ key: 'dispatch-task', text: 'Summarise what this repository ships' })
+  world.roster.push({ id: 'a1', type: 'general-purpose', description: 'Summarise what this repository ships', status: 'running' })
+  await clock.advance(2 * SECOND)
+  await $.turn.complete({ answer: 'Seventeen mods for Claude Code, a hub that opens them, and a site that lists them.', durationMs: 1, isAborted: false, turnId: 'turn-a1', agentId: 'a1', reason: 'answer' })
+  const field = (await ui.findAll({ type: 'Input' })).find((input: any) => String(input.props.key).startsWith('send-'))
+  await ui.input({ key: String(field?.props?.key), text: 'Which of them run on the desktop?' })
+  await ui.unmount()
+  await dumpPane($, 'panel-asked-conversation')
+})
+
 test('preview: panel with a quiet agent: amber pill and the attention line', async ($, on) => {
   const { clock } = await setup($, on)
   await threeRunning($)

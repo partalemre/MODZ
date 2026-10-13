@@ -132,7 +132,6 @@ export function historyTree(ui: Ui, a: AgentRun, ctx: RowContext) {
       <Text bold>{`${s.history} · ${s.tools(list.length)}`}</Text>
       {mixTree(ui, mixOf(list), ctx)}
       <Box flexDirection="column">
-        {list.length === 0 && <Text dimColor>{s.noCalls}</Text>}
         {hidden > 0 && <Text dimColor>{s.earlier(hidden)}</Text>}
         {shown.map((e, i) => eventTree(ui, e, { ...ctx, isLive, index: hidden + i }))}
       </Box>

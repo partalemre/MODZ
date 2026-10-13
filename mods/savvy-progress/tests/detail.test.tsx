@@ -10,8 +10,8 @@ import { PANE, SECOND, SURFACES, finish, setup, spawn, svgOf, tool } from './fix
 // The pure checks below read the Turkish words (MODZ_LANG=tr), as the mounted ones do.
 setLang('tr')
 
-// The open card answers "what is it doing": the card opens from a labelled button, and its detail
-// reads top to bottom as task, now, latest calls, files, usage, result and the controls.
+// The open card opens from a labelled button and reads top to bottom as a conversation (the task
+// and its answer), the controls, then the work: now, latest calls, files and usage.
 
 const LONG_BRIEF = `Rebuild the landing page hero. ${'Keep the copy short and the layout calm. '.repeat(12)}End of brief.`
 
@@ -40,12 +40,12 @@ for (const surface of SURFACES) {
     expect(closed?.props?.label).toBe(surface === 'terminal' ? '▸ Build the landing page' : 'Detay ▾')
     await ui.press({ key: 'open-a1' })
     expect((await ui.find({ key: 'open-a1' }))?.props?.label).toBe(surface === 'terminal' ? '▾ Build the landing page' : 'Gizle ▴')
-    expect(await text(ui)).toContain('Şu an')
+    expect(await text(ui)).toContain('Pip yanıtlıyor…')
     await ui.press({ key: 'open-a1' })
-    expect(await text(ui)).not.toContain('Şu an')
+    expect(await text(ui)).not.toContain('Pip yanıtlıyor…')
   })
 
-  test(`${surface}: the detail reads task, now, history, files, usage, then result`, async ($, on) => {
+  test(`${surface}: the detail reads task and answer, then now, history, files and usage`, async ($, on) => {
     const { clock } = await setup($, on)
     await spawn($, 'Build the landing page')
     await tool($, { tool: 'Read', file_path: '/w/site/src/hero.tsx', agentId: 'a1' })
@@ -55,7 +55,7 @@ for (const surface of SURFACES) {
     const ui = await mount($)
     await ui.press({ key: 'open-a1' })
     const all = await text(ui)
-    const order = ['Görev', 'Son adım', 'İş geçmişi · 2 araç', 'Dokunduğu dosyalar · 1', 'Sonuç'].map(word => all.indexOf(word))
+    const order = ['Görev', 'Pip\nok', 'Son adım', 'İş geçmişi · 2 araç', 'Dokunduğu dosyalar · 1'].map(word => all.indexOf(word))
     expect(order.every(at => at >= 0)).toBe(true)
     expect([...order].sort((x, y) => x - y)).toEqual(order)
     expect(all).toContain('12 sn önce')

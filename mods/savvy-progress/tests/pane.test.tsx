@@ -84,7 +84,7 @@ for (const surface of SURFACES) {
     expect((await ui.find({ key: 'compact' }))?.props?.label).toBe('Genişlet')
   })
 
-  test(`${surface}: pressing an agent opens its task, work history and result; again closes it`, async ($, on) => {
+  test(`${surface}: pressing an agent opens its task, its answer and work history; again closes it`, async ($, on) => {
     const { clock } = await setup($, on)
     await threeRunning($)
     await clock.advance(3 * SECOND)
@@ -104,7 +104,7 @@ for (const surface of SURFACES) {
     expect(open).toContain(' src/hero.tsx')
     expect(open).toContain(' src/a.ts')
     expect(open).toContain('3 sn önce')
-    expect(open).toContain('Sonuç')
+    expect(open).toContain('Nori\nok')
 
     await ui.press({ key: 'open-a3' })
     expect(await text(ui)).not.toContain('İş geçmişi')
@@ -134,7 +134,7 @@ for (const surface of SURFACES) {
     expect(await words()).toContain('5 saat ≈%2,0')
   })
 
-  test(`${surface}: an open finished row shows its work mix and a cheerful result card`, async ($, on) => {
+  test(`${surface}: an open finished row shows its work mix and its answer`, async ($, on) => {
     await setup($, on)
     await threeRunning($)
     await tool($, { tool: 'Read', file_path: '/w/site/src/a.ts', agentId: 'a3' })
@@ -144,7 +144,7 @@ for (const surface of SURFACES) {
     const open = await text(pane)
     expect(open).toContain('düzenleme 1')
     expect(open).toContain('okuma 1')
-    expect(open).toContain('(ᵔᴗᵔ) bitirdim')
+    expect(open).toContain('Nori\nok')
     if (surface === 'desktop') expect(await svgOf(pane)).toContain('okuma 1 · düzenleme 1')
   })
 

@@ -3,7 +3,7 @@
 
 import { pick } from './lang'
 import type { Report } from './report'
-import type { Banner, View } from './view'
+import type { Banner, Choice, View } from './view'
 import { EN } from './words-en'
 import { TR } from './words-tr'
 
@@ -30,6 +30,32 @@ export type Words = {
   banner: (report: Report) => Banner | null
   action: (report: Report) => View['action']
   notes: Notes
+  edit: EditWords
+  house: HouseWords
+}
+
+// The caution card for a command one of the person's house rules asks about.
+export type HouseWords = {
+  // "House rule: <the rule>", the card's banner.
+  banner: (rule: string) => string
+  // Said in place of a rule when the judge could not name which one.
+  anyRule: string
+  action: Choice
+}
+
+// The caution card for a file another chat edited within the last half hour.
+export type EditWords = {
+  eyebrow: string
+  headline: (name: string, minutes: number) => string
+  // The other chat's project folder, or '' when it is not known.
+  context: (project: string) => string
+  banner: string
+  action: Choice
+  cancel: Choice
+  // Said once the person skipped the edit.
+  skipped: string
+  // The deny reason when Skip was pressed, read by Claude.
+  cancelWhy: string
 }
 
 // Lines for the person when something could not be measured.

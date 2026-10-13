@@ -47,7 +47,7 @@ export function fitMiddle(text: string, width: number, spec: { size: number; isM
   return `${chars.slice(0, head).join('')}…${chars.slice(chars.length - tail).join('')}`
 }
 
-export type IconName = 'trash' | 'shield' | 'folder' | 'file' | 'rewind' | 'branch' | 'push' | 'database' | 'commit' | 'key' | 'check'
+export type IconName = 'trash' | 'shield' | 'folder' | 'file' | 'rewind' | 'branch' | 'push' | 'database' | 'commit' | 'key' | 'check' | 'pencil'
 
 const ICONS: Record<IconName, string> = {
   trash: '<path d="M4.5 6.8h15"/><path d="M9.6 6.8V5.1c0-.6.5-1.1 1.1-1.1h2.6c.6 0 1.1.5 1.1 1.1v1.7"/><path d="M6.4 6.8l.85 11.5c.08 1.1 1 1.9 2.1 1.9h5.3c1.1 0 2-.8 2.1-1.9l.85-11.5"/><path d="M10.3 10.8v5.4M13.7 10.8v5.4"/>',
@@ -61,6 +61,7 @@ const ICONS: Record<IconName, string> = {
   commit: '<circle cx="12" cy="12" r="3.2"/><path d="M3.5 12h5.3M15.2 12h5.3"/>',
   key: '<circle cx="8.2" cy="15.6" r="3.9"/><path d="M11 12.8l8-8"/><path d="M16.1 7.7l2.4 2.4"/><path d="M13.7 10.1l1.8 1.8"/>',
   check: '<path d="M5.5 12.5l4.2 4.2 8.8-9.2"/>',
+  pencil: '<path d="M5 19l.9-3.9L15.6 5.4c.8-.8 2-.8 2.8 0l.2.2c.8.8.8 2 0 2.8l-9.7 9.7z"/><path d="M13.9 7.1l3 3"/><path d="M12.5 19.6h6.5"/>',
 }
 
 const STROKE = 1.75

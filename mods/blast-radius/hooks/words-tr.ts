@@ -3,7 +3,13 @@
 import { formatSize } from './report'
 import type { Report } from './report'
 import type { Banner, View } from './view'
-import type { Notes, Words } from './words'
+import type { EditWords, HouseWords, Notes, Words } from './words'
+
+const house: HouseWords = {
+  banner: rule => `Ev kuralı: ${rule}`,
+  anyRule: 'ev kuralları',
+  action: { label: 'Yine de çalıştır', hotkey: 'c' },
+}
 
 export const trSize = (bytes: number): string => formatSize(bytes, ',')
 
@@ -57,6 +63,17 @@ const notes: Notes = {
   missingFolder: dir => `${dir} klasörü bulunamadı, bu yüzden ne değişeceği ölçülemedi.`,
 }
 
+const edit: EditWords = {
+  eyebrow: 'Düzenleme bekletildi',
+  headline: (name, minutes) => `Başka bir sohbet ${name} dosyasını ${minutes < 1 ? 'az önce' : `${minutes} dk önce`} düzenledi`,
+  context: project => (project === '' ? 'Seni bekliyor' : `${project} · Seni bekliyor`),
+  banner: 'Şimdi düzenlemek o sohbetin değişikliğinin üstüne yazabilir.',
+  action: { label: 'Yine de düzenle', hotkey: 'y' },
+  cancel: { label: 'Bu düzenlemeyi atla', hotkey: 'a' },
+  skipped: 'Atlandı. Dosyaya dokunulmadı.',
+  cancelWhy: 'the user pressed Bu düzenlemeyi atla (skip this edit)',
+}
+
 export const TR: Words = {
   eyebrow: 'Komut bekletildi',
   holder: 'Blast Radius bekletiyor',
@@ -77,4 +94,6 @@ export const TR: Words = {
   banner,
   action,
   notes,
+  edit,
+  house,
 }

@@ -1,5 +1,6 @@
 // The confirm card, drawn the same in the pane and in the band: Svg parts on desktop,
 // the same words as text on the terminal. The safe answer (Keep my work) holds the focus.
+// A danger card has a single Flare frame; a caution card a round Amber one (DESIGN.md §4).
 
 import { upper } from './lang'
 import { headerSvg, bannerSvg, listSvg } from './svg-card'
@@ -28,6 +29,7 @@ const MIN_WIDTH = 300
 const MAX_WIDTH = 720
 const BAND_ROWS = 3
 const TERMINAL_BAR = 10
+const FRAME: Record<View['tone'], string> = { danger: 'single', warn: 'round' }
 const STATUS_KEY: Record<string, keyof typeof TERMINAL_KEY> = { A: 'ok', M: 'warn', D: 'danger', R: 'read', C: 'read', U: 'danger' }
 
 export const svgWidth = (columns: number): number => Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, (columns - CARD_CHROME) * PX_PER_COLUMN))
@@ -65,7 +67,7 @@ function actions(ui: Ui, props: CardProps, lo: string | undefined) {
   return (
     <Box key="actions" flexDirection="row" flexWrap="wrap" gap={1} alignItems="center">
       <Button key="run" label={props.view.action.label} hotkey={props.view.action.hotkey} variant="secondary" onPress={props.onRun} />
-      <Button key="cancel" label={said.cancel.label} hotkey={said.cancel.hotkey} variant="secondary" autoFocus onPress={props.onCancel} />
+      <Button key="cancel" label={props.view.cancel.label} hotkey={props.view.cancel.hotkey} variant="secondary" autoFocus onPress={props.onCancel} />
       {props.place === 'pane' ? null : <Box key="holder" marginLeft={1}><Text {...(lo === undefined ? { dimColor: true } : { color: lo })}>{said.holder}</Text></Box>}
     </Box>
   )
@@ -80,11 +82,12 @@ export function desktopCard(ui: Ui, props: CardProps) {
   const head = headerSvg(view, width)
   const banner = view.banner === null ? null : bannerSvg(view.banner, width)
   const list = listSvg(rows, width, props.phase === 'striking')
+  const headAlt = view.headline ?? [view.command, `${view.payload}${view.tail}`].filter(Boolean).join(' · ')
   const alt = rows.map(row => [row.name, row.count, row.size].filter(Boolean).join(' ')).join('; ')
 
   return (
-    <Box flexDirection="column" borderStyle="single" borderColor={role('danger', props.isLight).line} backgroundColor={neutral.card} paddingX={2} paddingY={1} gap={1}>
-      <Svg key="head" source={head.source} alt={[view.command, `${view.payload}${view.tail}`].filter(Boolean).join(' · ')} width={width} height={head.height} />
+    <Box flexDirection="column" borderStyle={FRAME[view.tone]} borderColor={role(view.tone, props.isLight).line} backgroundColor={neutral.card} paddingX={2} paddingY={1} gap={1}>
+      <Svg key="head" source={head.source} alt={headAlt} width={width} height={head.height} />
       {banner === null ? null : <Svg key="banner" source={banner.source} alt={view.banner?.text ?? ''} width={width} height={banner.height} />}
       {rows.length === 0 ? null : <Svg key="list" source={list.source} alt={alt} width={width} height={list.height} isInteractive={props.phase === 'striking' ? true : undefined} />}
       {toggleOf(ui, props)}
@@ -147,24 +150,35 @@ function terminalRow(ui: Ui, row: Row, place: { index: number; isStruck: boolean
   )
 }
 
+/** The command and what it does, or the card's own sentence when it holds something else. */
+function headlineText(ui: Ui, view: View) {
+  const { Text } = ui
+  if (view.headline !== null) return <Text bold wrap="wrap">{view.headline}</Text>
+
+  return (
+    <Text wrap="truncate-end">
+      <Text bold>{view.command}</Text>
+      {view.payload === '' ? null : <Text dimColor> · </Text>}
+      {view.payload === '' ? null : <Text bold {...(view.isPayloadEmpty ? { dimColor: true } : { color: TERMINAL_KEY.danger })}>{view.payload}</Text>}
+      {view.tail}
+    </Text>
+  )
+}
+
 export function terminalCard(ui: Ui, props: CardProps) {
   const { Box, Text } = ui
   const { view } = props
   const rows = props.place === 'band' ? bandRows(view.rows) : view.rows
-  const frame = props.place === 'band' ? { borderStyle: 'single', borderColor: TERMINAL_KEY.danger } : {}
+  const tone = TERMINAL_KEY[view.tone]
+  const frame = props.place === 'band' ? { borderStyle: FRAME[view.tone], borderColor: tone } : {}
 
   return (
     <Box flexDirection="column" paddingX={1} {...frame}>
       <Box flexDirection="row" justifyContent="space-between" gap={2}>
-        <Text bold color={TERMINAL_KEY.danger}>{`● ${upper(words().eyebrow)}`}</Text>
+        <Text bold color={tone}>{`● ${upper(view.eyebrow)}`}</Text>
         {view.context === '' ? null : <Text dimColor wrap="truncate-start">{view.context}</Text>}
       </Box>
-      <Text wrap="truncate-end">
-        <Text bold>{view.command}</Text>
-        {view.payload === '' ? null : <Text dimColor> · </Text>}
-        {view.payload === '' ? null : <Text bold {...(view.isPayloadEmpty ? { dimColor: true } : { color: TERMINAL_KEY.danger })}>{view.payload}</Text>}
-        {view.tail}
-      </Text>
+      {headlineText(ui, view)}
       {view.fullCommand === null ? null : <Text dimColor wrap="truncate-end">{words().fullCommand(view.fullCommand)}</Text>}
       {view.banner === null ? null : <Text color={TERMINAL_KEY[view.banner.tone]}>{`! ${view.banner.text}`}</Text>}
       <Box flexDirection="column" marginTop={1}>{rows.map((row, i) => terminalRow(ui, row, { index: i, isStruck: props.phase === 'striking' }))}</Box>

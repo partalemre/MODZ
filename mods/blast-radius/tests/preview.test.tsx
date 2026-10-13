@@ -1,6 +1,6 @@
 import { test } from 'claude-code/testing'
 
-import { BUILD_SCAN, EN, RESET_NUMSTAT, RESET_STATUS, mountBand, mountPane, pass, start, stub, world } from './world'
+import { BUILD_SCAN, EN, MINUTE, NOW, RESET_NUMSTAT, RESET_STATUS, mountBand, mountPane, pass, start, stub, world } from './world'
 
 // The previews draw the English card, as the film shows it.
 
@@ -97,6 +97,61 @@ test('preview: terminal reset in the band', async ($, on) => {
   const band = await mountBand($, 'terminal')
   await show('br-terminal-band', band)
   await band.press({ key: 'cancel' })
+  await pass(w)
+  await call
+})
+
+// Another chat (billing-api) edited client.ts 12 minutes ago; the file has 50 uncommitted lines.
+const CLIENT = '/work/demo-app/src/api/client.ts'
+const CLASH = {
+  store: { 'edits/chat-b': { sessionId: 'chat-b', project: 'billing-api', edits: { [CLIENT]: NOW - 12 * MINUTE } } },
+  answers: { [`git diff --numstat -- ${CLIENT}`]: '38\t12\tsrc/api/client.ts\n' },
+}
+const EDIT = { tool: 'Edit', file_path: CLIENT, old_string: 'a', new_string: 'b' }
+
+for (const theme of ['dark', 'light']) {
+  const suffix = theme === 'light' ? '-light' : ''
+
+  test(`preview: another chat's edit (${theme})`, async ($, on) => {
+    const w = world({ ...EN, ...CLASH, theme })
+    stub(on, w)
+    await start($, w)
+    const call = ($ as any).tool.call(EDIT)
+    await pass(w, 0)
+    await showOnce(`br-collision-w400${suffix}`, await mountPane($, 'desktop', NARROW_PANE))
+    const ui = await mountPane($, 'desktop')
+    await show(`br-collision${suffix}`, ui)
+    await ui.press({ key: 'cancel' })
+    await pass(w)
+    await call
+  })
+}
+
+for (const surface of ['terminal', 'desktop']) {
+  test(`preview: another chat's edit in the band (${surface})`, async ($, on) => {
+    const w = world({ ...EN, ...CLASH, isPlaced: false })
+    stub(on, w)
+    on('ui.render', () => ({ type: 'Text', props: { dimColor: true }, children: ['● hud-pro · context 42% · ≈$0.38'] }))
+    await start($, w, surface)
+    const call = ($ as any).tool.call(EDIT)
+    await pass(w, 0)
+    const band = await mountBand($, surface)
+    await show(`br-collision-band-${surface}`, band)
+    await band.press({ key: 'cancel' })
+    await pass(w)
+    await call
+  })
+}
+
+test('preview: another chat\'s edit in the terminal pane', async ($, on) => {
+  const w = world({ ...EN, ...CLASH })
+  stub(on, w)
+  await start($, w, 'terminal')
+  const call = ($ as any).tool.call(EDIT)
+  await pass(w, 0)
+  const ui = await mountPane($, 'terminal')
+  await show('br-collision-terminal', ui)
+  await ui.press({ key: 'cancel' })
   await pass(w)
   await call
 })

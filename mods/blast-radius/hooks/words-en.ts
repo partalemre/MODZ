@@ -4,7 +4,7 @@
 import { formatSize, plural } from './report'
 import type { Report } from './report'
 import type { Banner } from './view'
-import type { Notes, Words } from './words'
+import type { EditWords, Notes, Words } from './words'
 
 const enSize = (bytes: number): string => formatSize(bytes, '.')
 
@@ -52,6 +52,17 @@ const notes: Notes = {
   missingFolder: dir => `The folder ${dir} wasn't found, so what would change couldn't be measured.`,
 }
 
+const edit: EditWords = {
+  eyebrow: 'Held · Blast Radius',
+  headline: (name, minutes) => `Another chat edited ${name} ${minutes < 1 ? 'just now' : `${minutes} min ago`}`,
+  context: project => (project === '' ? 'Waiting for you' : `${project} · Waiting for you`),
+  banner: 'Editing it now could write over what that chat changed.',
+  action: { label: 'Edit anyway', hotkey: 'e' },
+  cancel: { label: 'Skip this edit', hotkey: 's' },
+  skipped: 'Skipped. The file was left as it was.',
+  cancelWhy: 'the user pressed Skip this edit',
+}
+
 export const EN: Words = {
   eyebrow: 'Held · Blast Radius',
   holder: 'Held by Blast Radius',
@@ -72,4 +83,5 @@ export const EN: Words = {
   banner,
   action: () => ({ label: 'Run anyway', hotkey: 'r' }),
   notes,
+  edit,
 }

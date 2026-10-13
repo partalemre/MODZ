@@ -16,15 +16,30 @@ export type World = {
   ran: unknown[]
   toasts: string[]
   clock: MockClock | null
+  // This chat's id and project, and the surfaces drawing it (none in a -p run).
+  sessionId: string
+  root: string
+  surfaces: string[]
+  // The plugin's store, as it stands.
+  store: Record<string, unknown>
+  // Paths that land elsewhere (a symlink), as `$.fs.stat` resolves them.
+  links: Record<string, string>
+  // A tool other than Bash that answers with an error.
+  isToolError: boolean
+  // Debug log lines.
+  logs: string[]
 }
 
 export const SURFACES = ['terminal', 'desktop'] as const
 
 export function world(over: Partial<World> = {}): World {
-  return { cwd: '/work/demo-app', isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], ran: [], toasts: [], clock: null, ...over }
+  return { cwd: '/work/demo-app', isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], ran: [], toasts: [], clock: null, sessionId: 'chat-a', root: '/work/demo-app', surfaces: ['desktop'], store: {}, links: {}, isToolError: false, logs: [], ...over }
 }
 
 const SECOND = 1000
+// Where the mocked clock starts, so an edit made minutes earlier has a time of its own.
+export const NOW = Date.parse('2026-10-13T12:00:00Z')
+export const MINUTE = 60 * SECOND
 
 export const EN = { env: {} }
 
@@ -70,11 +85,40 @@ function stubUi(on: any, w: World): void {
 
     return { value: undefined }
   })
-  on('ui.log', () => ({ value: undefined }))
+  on('ui.log', (_: any, e: any) => {
+    w.logs.push(e.text)
+
+    return { value: undefined }
+  })
+}
+
+// Who this chat is, where it runs and what its paths resolve to.
+function stubSession(on: any, w: World): void {
+  on('store.get', (_: any, e: any) => ({ value: w.store[e.key] }))
+  on('store.set', (_: any, e: any) => {
+    w.store[e.key] = JSON.parse(JSON.stringify(e.value))
+
+    return { value: undefined }
+  })
+  on('store.delete', (_: any, e: any) => {
+    delete w.store[e.key]
+
+    return { value: undefined }
+  })
+  on('store.keys', () => ({ value: Object.keys(w.store) }))
+  on('session.id', () => ({ value: w.sessionId }))
+  on('session.end', (_: any, e: any) => ({ sessionId: e.sessionId }))
+  on('session.root', () => ({ value: w.root }))
+  on('session.surfaces', () => ({ value: w.surfaces }))
+  on('fs.stat', (_: any, e: any) => {
+    const path = e.path.startsWith('/') ? e.path : `${w.cwd}/${e.path}`.replace(/\/\.\//g, '/')
+
+    return { value: { kind: 'file', size: 0, mtimeMs: 0, isLink: path in w.links, realPath: w.links[path] ?? path } }
+  })
 }
 
 export function stub(on: any, w: World): void {
-  w.clock = mock.clock(on)
+  w.clock = mock.clock(on, { now: NOW })
   on('session.start', () => ({ cwd: w.cwd }))
   on('session.cwd', () => {
     if (w.cwd === '') throw new Error('no session folder')
@@ -83,6 +127,7 @@ export function stub(on: any, w: World): void {
   })
   on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'enum', value: w.theme }] }))
   on('env.get', (_: any, e: any) => ({ value: w.env[e.name] }))
+  stubSession(on, w)
   stubUi(on, w)
   on('process.run', async (_: any, e: any) => {
     if (e.argv[0] === 'sleep') {
@@ -96,7 +141,7 @@ export function stub(on: any, w: World): void {
   on('tool.call', (_: any, e: any) => {
     w.ran.push(e)
 
-    return { result: 'ran' }
+    return e.tool !== 'Bash' && w.isToolError ? { isError: true, result: 'failed', text: 'failed' } : { result: 'ran' }
   })
 }
 

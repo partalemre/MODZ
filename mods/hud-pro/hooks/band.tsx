@@ -2,6 +2,7 @@ import { CONTEXT, CONTEXT_WARN } from './format'
 import { lineTree } from './line'
 import type { Ui } from './line'
 import { gaugeViews } from './model'
+import type { Forecasts } from './model'
 import { lineSvg } from './svg-line'
 import { words } from './words'
 import type { HudUsage } from '../types'
@@ -13,6 +14,7 @@ export type BandInput = {
   usage: HudUsage
   columns: number
   nowMs: number
+  forecasts: Forecasts
   isDesktop: boolean
   // False while a turn runs or a compaction is under way: the button hides then.
   canCompact: boolean
@@ -27,7 +29,7 @@ export const COMPACT_HOTKEY = 's'
 function desktopLine(ui: Ui, input: BandInput, reserve: number) {
   const { Svg } = ui
   const drawn = lineSvg({
-    gauges: gaugeViews(input.usage, input.nowMs),
+    gauges: gaugeViews(input.usage, input.nowMs, input.forecasts),
     costUsd: input.usage.costUsd,
     maxWidth: input.columns * PX_PER_COLUMN - reserve,
   })
@@ -41,7 +43,7 @@ export function bandRow(ui: Ui, input: BandInput) {
   const showsCompact = input.canCompact && context !== undefined && context.percent >= CONTEXT_WARN
   const line = input.isDesktop
     ? desktopLine(ui, input, showsCompact ? BUTTON_PX : 0)
-    : lineTree(ui, { gauges: gaugeViews(input.usage, input.nowMs), costUsd: input.usage.costUsd, columns: input.columns })
+    : lineTree(ui, { gauges: gaugeViews(input.usage, input.nowMs, input.forecasts), costUsd: input.usage.costUsd, columns: input.columns })
   if (line === null && !showsCompact) return null
 
   return (

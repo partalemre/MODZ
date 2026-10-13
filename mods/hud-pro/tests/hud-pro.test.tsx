@@ -3,7 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { costText, filledCells, paceOf, toneOf, untilReset } from '../hooks/format'
 import { hubOf, isOwnOpen } from '../hooks/hub'
 import { setLang } from '../hooks/lang'
-import { BAND, MS_PER_HOUR, PANE, USAGE, opens, start, stubSession, toasts } from './stubs'
+import { BAND, MS_PER_HOUR, PANE, USAGE, compactions, opens, start, stubSession, toasts } from './stubs'
 
 const SURFACES = ['terminal', 'desktop'] as const
 
@@ -136,23 +136,17 @@ for (const surface of SURFACES) {
     expect(await hidden.find({ type: 'Text', text: 'theirs' })).toBeDefined()
   })
 
-  test(`from 70% context a Sıkıştır button runs /compact once, hidden while it runs and while working (${surface})`, async ($, on) => {
-    let compacted = 0
+  test(`from 70% context a Sıkıştır button compacts once, hidden while it runs and while working (${surface})`, async ($, on) => {
     const clock = stubSession(on, { ...USAGE, context: { window: 200_000, tokens: 168_000, percent: 84 } })
-    on('command.run', (_: any, e: any) => {
-      if (e.command === 'compact') compacted += 1
-
-      return {}
-    })
     await start($, surface)
 
     const band = await $.ui.mount({ ...BAND, surface })
     expect((await band.find({ key: 'compact' }))?.props?.label).toBe('Sıkıştır')
     await band.press({ key: 'compact' })
-    expect(compacted).toBe(0)
+    expect(compactions.count).toBe(0)
     expect(await band.find({ key: 'compact' })).toBeUndefined()
     await clock.advance(1)
-    expect(compacted).toBe(1)
+    expect(compactions.count).toBe(1)
     expect(await band.find({ key: 'compact' })).toBeDefined()
     await band.unmount()
 

@@ -1,6 +1,6 @@
 import { test } from 'claude-code/testing'
 
-import { BAND, MS_PER_HOUR, PANE, USAGE, start, stubSession } from './stubs'
+import { BAND, MS_PER_HOUR, PANE, USAGE, start, stubSession, withBreakdown } from './stubs'
 
 /** The test runner's console: bin/preview reads the trees it prints. */
 declare const console: { log: (text: string) => void }
@@ -55,9 +55,69 @@ for (const state of STATES) {
   })
 }
 
-test('preview hud-full', async ($, on) => {
-  const clock = stubSession(on, usage(32, 38, 41))
+// The context at the end of each turn, read back through the stub's usage.
+async function endTurns($: any, live: any, tokens: readonly number[]) {
+  for (const [index, count] of tokens.entries()) {
+    live.context = { ...live.context, tokens: count, percent: Math.round((count / live.context.window) * 100) }
+    await $.turn.complete({ answer: 'ok', durationMs: 1, isAborted: false, turnId: `c${index}`, reason: 'answer' } as any)
+  }
+}
+
+const TURN_TOKENS = [52_000, 61_000, 64_000, 70_000, 78_000, 81_000, 90_000, 96_000, 104_000, 112_000, 118_000, 126_000]
+const NEAR_TOKENS = [150_000, 158_000, 166_000, 174_000]
+
+async function logPane($: any, label: string) {
+  const wide = await $.ui.mount({ ...PANE, requestId: 'hud-pro', surface: 'desktop', props: { ...PANE.props, bodyColumns: PANE_WIDE } })
+  await log(`${label}-600`, wide)
+  await wide.unmount()
+  const narrow = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, bodyColumns: PANE_NARROW } })
+  await log(`${label}-400`, narrow)
+  await narrow.unmount()
+  const terminal = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await log(`${label}-terminal`, terminal)
+
+  return terminal
+}
+
+// A 5-hour window filling within the hour and a context five turns from full: both estimates on the line.
+test('preview line-forecast', async ($, on) => {
+  const live: any = { ...usage(40, 30, 75), context: { window: 200_000, tokens: 150_000, percent: 75 } }
+  const clock = stubSession(on, live)
   await start($, 'desktop')
+  for (const five of [40, 46, 52, 58]) {
+    await clock.advance(5 * 60_000)
+    await $.session.measure({ ...live, rateLimits: limits(five, 30), changed: ['rateLimits'] } as any)
+  }
+  await endTurns($, live, NEAR_TOKENS)
+  await $.session.measure({ ...live, rateLimits: limits(58, 30), changed: ['context'] } as any)
+  await log('line-forecast', await $.ui.mount({ ...BAND, surface: 'desktop' }))
+  await log('line-forecast-520', await $.ui.mount({ ...BAND, requestId: 'band-n', surface: 'desktop', props: { ...BAND.props, bodyColumns: BAND_NARROW } }))
+  await log('line-forecast-terminal', await $.ui.mount({ ...BAND, requestId: 'band-t', surface: 'terminal' }))
+})
+
+// The context card before any breakdown or turn: the estimate line and the button alone.
+test('preview hud-context-empty', async ($, on) => {
+  stubSession(on, usage(32, 38, 41))
+  await start($, 'desktop')
+  await logPane($, 'hud-context-empty')
+})
+
+// After "Compact now": the card says what it came to.
+test('preview hud-compacted', async ($, on) => {
+  const clock = stubSession(on, withBreakdown(usage(32, 38, 19)))
+  await start($, 'desktop')
+  const terminal = await logPane($, 'hud-before-compact')
+  await terminal.press({ key: 'compact-now' })
+  await clock.advance(1)
+  await terminal.unmount()
+  await logPane($, 'hud-compacted')
+})
+
+test('preview hud-full', async ($, on) => {
+  const live: any = withBreakdown(usage(32, 38, 41))
+  const clock = stubSession(on, live)
+  await start($, 'desktop')
+  await endTurns($, live, TURN_TOKENS)
   const steps = [8, 12, 15, 19, 22, 26, 31, 35, 44, 52, 58, 64]
   for (const [index, five] of steps.entries()) {
     await $.session.measure({ ...usage(five, 30 + index, 20 + index * 4), cost: { usd: 0.1 * (index + 1) ** 1.3 }, changed: ['rateLimits'] } as any)
@@ -66,11 +126,5 @@ test('preview hud-full', async ($, on) => {
   await $.turn.start({ text: 'go', turnId: 't1' } as any)
   for await (const _ of $.turn.step({ turnId: 't1', index: 0, model: 'claude-test' } as any)) void _
   await $.command.run({ command: 'hud', args: 'full' } as any)
-  const wide = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, bodyColumns: PANE_WIDE } })
-  await log('hud-full-600', wide)
-  await wide.unmount()
-  const narrow = await $.ui.mount({ ...PANE, surface: 'desktop', props: { ...PANE.props, bodyColumns: PANE_NARROW } })
-  await log('hud-full-400', narrow)
-  await narrow.unmount()
-  await log('hud-full-terminal', await $.ui.mount({ ...PANE, surface: 'terminal' }))
+  await logPane($, 'hud-full')
 })

@@ -1,27 +1,28 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, ModelUsage, Register, SessionUsage } from 'claude-code'
+import type { EngineInterface, Register } from 'claude-code'
 
 import { bandRow } from './band'
-import { isFull, labelOf, longLabelOf, resetText, untilReset, valueText } from './format'
+import type { ContextView } from './breakdown'
+import { compactedOf, forecastsFrom, freshBreakdown, keepBreakdown, keepLast, reasonOf } from './context'
+import { addTurn } from './forecast'
 import { addSample, isHistory } from './history'
-import { HomeButton } from './home'
 import { EMPTY_HUB, HUB_PANE, hubOf, isOwnOpen } from './hub'
 import { setLang } from './lang'
 import { gaugeViews } from './model'
-import { paneTree } from './pane'
+import type { Forecasts } from './model'
+import { paneTree, withHome } from './pane'
+import type { CardData } from './pane'
 import { isSame } from './same'
 import { pinned } from './pin'
+import { addUsage, newNotices, toUsage } from './usage'
 import { words } from './words'
 import type { HudTurn, HudUsage } from '../types'
-
-type Measured = Pick<SessionUsage, 'context' | 'rateLimits' | 'cost'>
 
 const PANE = 'hud-pro'
 const HIDDEN_KEY = 'hud-pro.hidden'
 const HISTORY_KEY = 'hud-pro.history'
 // Reset countdowns move by the minute, so the idle line redraws once a minute.
 const REFRESH_MS = 60_000
-const NOTICE_PERCENT = 90
 const EMPTY_TURN: HudTurn = { requests: 0, input: 0, output: 0, cacheRead: 0 }
 
 const usageAtom = atom({ plugin: 'hud-pro', key: 'usage' } as const, null)
@@ -30,36 +31,13 @@ const lastTurnAtom = atom({ plugin: 'hud-pro', key: 'lastTurn' } as const, null)
 const hiddenAtom = atom({ plugin: 'hud-pro', key: 'isHidden' } as const, false)
 const historyAtom = atom({ plugin: 'hud-pro', key: 'history' } as const, [])
 const compactingAtom = atom({ plugin: 'hud-pro', key: 'isCompacting' } as const, false)
+const contextTurnsAtom = atom({ plugin: 'hud-pro', key: 'contextTurns' } as const, [])
+const lastCompactAtom = atom({ plugin: 'hud-pro', key: 'lastCompact' } as const, null)
 const hubAtom = atom({ plugin: 'hud-pro', key: 'hub' } as const, EMPTY_HUB)
 
 const noticed = new Set<string>()
-// What the minute clock last moved on screen: the gauges' countdowns and pace marks.
+// What the minute clock last moved on screen: the gauges' countdowns, pace marks and estimates.
 let shownGauges: unknown = null
-
-function toUsage(measured: Measured): HudUsage {
-  const gauges = measured.rateLimits.map(limit => ({
-    id: limit.kind,
-    label: labelOf(limit.kind),
-    percent: limit.percentUsed,
-    resetsAt: limit.resetsAt ?? null,
-  }))
-  const { percent, tokens, window } = measured.context
-  if (percent !== undefined) gauges.push({ id: 'context', label: labelOf('context'), percent, resetsAt: null })
-  const context = tokens === undefined ? null : { tokens, window }
-
-  return { gauges, costUsd: measured.cost?.usd ?? null, context }
-}
-
-function addUsage(turn: HudTurn, usage: ModelUsage): HudTurn {
-  const inputSide = usage.input_tokens + usage.cache_read_input_tokens + usage.cache_creation_input_tokens
-
-  return {
-    requests: turn.requests + 1,
-    input: turn.input + inputSide,
-    output: turn.output + usage.output_tokens,
-    cacheRead: turn.cacheRead + usage.cache_read_input_tokens,
-  }
-}
 
 async function record($: EngineInterface, fresh: HudUsage): Promise<void> {
   const nowMs = await $.clock.now()
@@ -79,18 +57,43 @@ async function writeHub($: EngineInterface, usage: HudUsage, isFirst = false): P
   await update($, hubAtom, () => ({ pane: HUB_PANE, ...fresh, at }))
 }
 
-// One short notice per plan window once it passes 90%, with when it resets.
 async function noticeHigh($: EngineInterface, fresh: HudUsage): Promise<void> {
+  for (const text of newNotices(fresh, { nowMs: await $.clock.now(), noticed })) $.ui.toast(text)
+}
+
+async function forecastsOf($: EngineInterface, usage: HudUsage | null): Promise<Forecasts> {
+  return forecastsFrom({ history: await read($, historyAtom), turns: await read($, contextTurnsAtom), usage })
+}
+
+// The window by category while the pane draws: the local estimate, read again once it is stale.
+async function breakdownView($: EngineInterface): Promise<ContextView | null> {
   const nowMs = await $.clock.now()
-  for (const gauge of fresh.gauges.filter(entry => entry.id !== 'context' && entry.percent >= NOTICE_PERCENT)) {
-    const id = `${gauge.id}:${gauge.resetsAt}`
-    if (noticed.has(id)) continue
-    noticed.add(id)
-    const reset = untilReset(gauge.resetsAt, nowMs)
-    const label = longLabelOf(gauge.id)
-    const head = isFull(gauge.percent) ? words().limitFull(label) : words().limitAt(label, valueText(gauge.percent))
-    $.ui.toast(reset === '' ? head : `${head} · ${resetText(reset)}`)
+  const fresh = freshBreakdown(nowMs)
+  if (fresh !== undefined) return fresh
+  try {
+    return keepBreakdown(nowMs, (await $.session.usage({ breakdown: 'summary' })).context.breakdown)
+  } catch {
+    $.ui.log('hud-pro: context breakdown failed', { to: 'debug' })
+
+    return keepLast(nowMs)
   }
+}
+
+// Compacts as /compact does, through the engine's own call. A press's own work is abandoned when the
+// press ends, so a timer starts it in a dispatch of its own that lasts until it ends; the buttons
+// hide until then. A refusal (a turn running) says why in one toast.
+function compactNow($: EngineInterface): void {
+  void update($, compactingAtom, () => true)
+  $.clock.after(1, () =>
+    $.session
+      .compact()
+      .then(async result => {
+        const done = compactedOf(result, await $.clock.now())
+        if (done !== null) await update($, lastCompactAtom, () => done)
+      })
+      .catch((error: unknown) => $.ui.toast(words().compactFailed(reasonOf(error))))
+      .finally(() => update($, compactingAtom, () => false)),
+  )
 }
 
 async function toggle($: EngineInterface): Promise<{ text: string }> {
@@ -113,23 +116,11 @@ async function runCommand($: EngineInterface, args: string): Promise<{ text?: st
   return {}
 }
 
-// Runs Claude Code's own /compact. A press's own work is abandoned when the press ends, so a timer
-// starts it in a dispatch of its own that lasts until it ends; the button hides until then.
-function compactNow($: EngineInterface): void {
-  void update($, compactingAtom, () => true)
-  $.clock.after(1, () =>
-    $.command
-      .run({ command: 'compact' })
-      .catch((error: unknown) => $.ui.toast(words().compactFailed(error instanceof Error ? error.message : String(error))))
-      .finally(() => update($, compactingAtom, () => false)),
-  )
-}
-
-// The minute clock moves only the gauges' countdowns and pace marks; a minute that moves none of
-// them redraws nothing, since every redraw also hands out new press handles.
+// The minute clock moves only the gauges' countdowns, pace marks and estimates; a minute that moves
+// none of them redraws nothing, since every redraw also hands out new press handles.
 async function redrawIfMoved($: EngineInterface): Promise<void> {
   const usage = await read($, usageAtom)
-  const gauges = usage === null ? null : gaugeViews(usage, await $.clock.now())
+  const gauges = usage === null ? null : gaugeViews(usage, await $.clock.now(), await forecastsOf($, usage))
   if (isSame(gauges, shownGauges)) return
   shownGauges = gauges
   $.ui.invalidate('ui.render')
@@ -138,7 +129,7 @@ async function redrawIfMoved($: EngineInterface): Promise<void> {
 async function setup($: EngineInterface): Promise<void> {
   const current = toUsage(await $.session.usage())
   await update($, usageAtom, () => current)
-  shownGauges = gaugeViews(current, await $.clock.now())
+  shownGauges = gaugeViews(current, await $.clock.now(), await forecastsOf($, current))
   await writeHub($, current, true)
   await update($, hiddenAtom, () => false)
   if ((await $.store.get(HIDDEN_KEY)) === true) await update($, hiddenAtom, () => true)
@@ -172,13 +163,24 @@ function onUsage(on: On) {
 
     return next(e)
   })
+}
 
+function onTurns(on: On) {
   on('turn.start', async ($, e, next) => {
     const finished = await read($, turnAtom)
     if (finished.requests > 0) await update($, lastTurnAtom, () => finished)
     await update($, turnAtom, () => EMPTY_TURN)
 
     return next(e)
+  })
+
+  // The context's fill as each main-loop turn ends, for the "~N turns" forecast.
+  on('turn.complete', async ($, e, next) => {
+    const done = await next(e)
+    const tokens = e.agentId === undefined ? (await $.session.usage()).context.tokens : undefined
+    if (tokens !== undefined) await update($, contextTurnsAtom, turns => addTurn(turns, tokens))
+
+    return done
   })
 
   on('turn.step', async function* ($, e, next) {
@@ -211,6 +213,16 @@ async function goHome($: EngineInterface): Promise<void> {
   }
 }
 
+async function cardData($: EngineInterface): Promise<CardData> {
+  return {
+    view: await breakdownView($),
+    turns: await read($, contextTurnsAtom),
+    lastCompact: await read($, lastCompactAtom),
+    isCompacting: await read($, compactingAtom),
+    compact: () => compactNow($),
+  }
+}
+
 function onRender(on: On) {
   on('command.run', { command: 'hud' }, async ($, e) => {
     try {
@@ -224,23 +236,20 @@ function onRender(on: On) {
     const turn = await read($, turnAtom)
     const ui = $.ui.resolve(e)
     const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
-    const { Box } = ui
-
+    const usage = await read($, usageAtom)
     const tree = paneTree(ui, {
-      usage: await read($, usageAtom),
+      usage,
       history: await read($, historyAtom),
       turn: turn.requests > 0 ? turn : await read($, lastTurnAtom),
       columns: e.props.bodyColumns,
       nowMs: await $.clock.now(),
+      card: await cardData($),
+      // The breakdown read first, so the forecast counts up to the compaction point it names.
+      forecasts: await forecastsOf($, usage),
       ...(e.surface !== 'terminal' && 'Svg' in ui ? { svg: ui.Svg } : {}),
     })
 
-    return pinned(e, isHubOn ? (
-      <Box flexDirection="column">
-        {HomeButton(ui, () => void goHome($))}
-        {tree}
-      </Box>
-    ) : tree)
+    return pinned(e, isHubOn ? withHome(ui, { tree, goHome: () => void goHome($) }) : tree)
   })
 }
 
@@ -256,6 +265,7 @@ function onBand(on: On) {
         usage,
         columns: e.props.bodyColumns,
         nowMs: await $.clock.now(),
+        forecasts: await forecastsOf($, usage),
         isDesktop: e.surface !== 'terminal' && 'Svg' in ui,
         canCompact: !e.props.isWorking && !(await read($, compactingAtom)),
         compact: () => compactNow($),
@@ -279,6 +289,7 @@ function onBand(on: On) {
 
 export const register: Register = on => {
   onUsage(on)
+  onTurns(on)
   onOpen(on)
   onRender(on)
   onBand(on)

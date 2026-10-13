@@ -28,6 +28,9 @@ export type HudSample = {
   cost?: number
 }
 
+// What the last "Compact now" press came to: the context's size before and after, when the engine recorded them.
+export type HudCompacted = { before: number | null; after: number | null; at: number }
+
 // The MODZ main panel's card for this mod (DESIGN.md §9).
 export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
 export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
@@ -41,6 +44,9 @@ declare module 'claude-code' {
       isHidden: boolean
       history: HudSample[]
       isCompacting: boolean
+      // The context's tokens at the end of each main-loop turn, newest last: the "~N turns" forecast.
+      contextTurns: number[]
+      lastCompact: HudCompacted | null
       hub: HubCard
       home: { at: number }
     }

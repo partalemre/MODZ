@@ -9,7 +9,10 @@ import type { ChatState, CrabMood } from '../types'
 
 /** Other chats on this machine: the card of those waiting on the person and the folded list of the rest. */
 export type ChatWords = {
+  /** The folded list of the chats that are not waiting. */
   title: string
+  /** The card of the chats waiting on the person. */
+  waitingTitle: string
   /** "waiting 3 min": how long a chat has waited; `span` is empty under a minute. */
   waiting: (span: string) => string
   /** Working or idle, in the folded list. */

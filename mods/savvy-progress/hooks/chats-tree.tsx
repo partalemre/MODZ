@@ -39,12 +39,12 @@ export function waitingTree(ui: Ui, chats: OtherChat[], layout: Layout) {
   const rest = waiting.length - rows.length
   const more = rest > 0 ? s.more(rest) : ''
   if (layout.isDesktop) {
-    const card = chatsCardSvg(layout.W, { title: s.title, rows, more })
+    const card = chatsCardSvg(layout.W, { title: s.waitingTitle, rows, more })
     return <Svg key="chats-waiting" source={card.source} alt={card.alt} width={layout.W} height={card.height} />
   }
   return (
     <Box key="chats-waiting" flexDirection="column">
-      <Text bold color="warning">{`● ${upper(s.title)}`}</Text>
+      <Text bold color="warning">{`● ${upper(s.waitingTitle)}`}</Text>
       {rows.map((row, i) => (
         <Text key={`wait-${i}`} wrap="truncate-end"><Text bold>{row.project}</Text><Text dimColor>{` · ${row.title}  `}</Text><Text color="warning">{row.wait}</Text></Text>
       ))}

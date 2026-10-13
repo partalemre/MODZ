@@ -105,6 +105,7 @@ export const en: Strings = {
   notDelivered: reason => `Not delivered: ${reason}`,
   chats: {
     title: 'Other chats',
+    waitingTitle: 'Waiting on you',
     waiting: span => (span ? `waiting ${span}` : 'waiting'),
     states: { working: 'working', idle: 'idle' },
     untitled: 'New chat',

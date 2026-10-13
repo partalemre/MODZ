@@ -105,6 +105,7 @@ export const ru: Strings = {
   notDelivered: reason => `Не доставлено: ${reason}`,
   chats: {
     title: 'Другие чаты',
+    waitingTitle: 'Ждут тебя',
     waiting: span => (span ? `ждёт ${span}` : 'ждёт'),
     states: { working: 'работает', idle: 'свободен' },
     untitled: 'Новый чат',

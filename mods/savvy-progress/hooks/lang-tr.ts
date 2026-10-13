@@ -122,6 +122,7 @@ export const tr: Strings = {
   notDelivered: reason => `İletilemedi: ${reason}`,
   chats: {
     title: 'Diğer sohbetler',
+    waitingTitle: 'Seni bekliyor',
     waiting: span => (span ? `${span} bekliyor` : 'bekliyor'),
     states: { working: 'çalışıyor', idle: 'boşta' },
     untitled: 'Yeni sohbet',

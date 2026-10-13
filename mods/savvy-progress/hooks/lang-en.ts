@@ -103,4 +103,16 @@ export const en: Strings = {
   endedCount: n => `${n} done`,
   plannedCount: n => `${n} planned`,
   notDelivered: reason => `Not delivered: ${reason}`,
+  chats: {
+    title: 'Other chats',
+    waiting: span => (span ? `waiting ${span}` : 'waiting'),
+    states: { working: 'working', idle: 'idle' },
+    untitled: 'New chat',
+    more: n => `+${n} more`,
+    hubWaits: n => (n === 1 ? '1 chat waits' : `${n} chats wait`),
+  },
+  crab: {
+    moods: { sleeping: 'napping', working: 'working', happy: 'happy', worried: 'worried' },
+    level: n => `Lv ${n}`,
+  },
 }

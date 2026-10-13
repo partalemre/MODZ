@@ -1,11 +1,14 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, ThemeKey } from 'claude-code'
 
+import type { CrabMood } from '../types'
 import { bandSvg, BAND_H } from './band-svg'
 import { isOwnOpen } from './hub'
 import { t } from './i18n'
 import type { JobView } from './job'
 import { deriveJob, percentText } from './job'
+import { isIdleMood, restingCrab } from './mood'
+import { FACES } from './mood-svg'
 import { pinned } from './pin'
 import { PANE } from './state'
 
@@ -15,6 +18,7 @@ const flow = atom({ plugin: 'savvy-progress', key: 'flow' } as const, null)
 const job = atom({ plugin: 'savvy-progress', key: 'job' } as const, null)
 const tasks = atom({ plugin: 'savvy-progress', key: 'tasks' } as const, [])
 const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
+const crab = atom({ plugin: 'savvy-progress', key: 'crab' } as const, restingCrab(0))
 
 type On = Parameters<Register>[0]
 type Ui = Record<string, any>
@@ -78,11 +82,12 @@ function buttons(ui: Ui, $: EngineInterface, view: JobView) {
   ]
 }
 
-type BandInput = { view: JobView; cols: number }
+/** `mood` is the home crab's while it sits in the row: only with `crabInBand` on and the session idle. */
+type BandInput = { view: JobView; cols: number; mood?: CrabMood }
 
-function desktopBand(ui: Ui, $: EngineInterface, { view, cols }: BandInput) {
+function desktopBand(ui: Ui, $: EngineInterface, { view, cols, mood }: BandInput) {
   const { Box, Svg } = ui
-  const drawing = bandSvg(view, (cols || DEFAULT_COLS) * PX_PER_COL - BUTTONS_PX)
+  const drawing = bandSvg(view, (cols || DEFAULT_COLS) * PX_PER_COL - BUTTONS_PX, mood)
   return (
     <Box key="savvy-band" flexDirection="row" alignItems="center" columnGap={1}>
       <Svg source={drawing.source} alt={`${view.title}: ${view.label}, ${percentText(view)}`} width={drawing.width} height={BAND_H} />
@@ -124,9 +129,10 @@ const termPlan = (view: JobView, cols: number): { titleW: number; meterW: number
   return meterW >= TERM.meterMin ? { titleW, meterW } : { titleW: Math.max(TERM.titleMin, avail + 1), meterW: 0 }
 }
 
-function terminalBand(ui: Ui, $: EngineInterface, { view, cols }: BandInput) {
+function terminalBand(ui: Ui, $: EngineInterface, { view, cols, mood }: BandInput) {
   const { Box, Text } = ui
-  const plan = termPlan(view, cols || DEFAULT_COLS)
+  const face = mood ? FACES[mood] : ''
+  const plan = termPlan(view, (cols || DEFAULT_COLS) - (face ? face.length + 1 : 0))
   return (
     <Box key="savvy-band" flexDirection="row" columnGap={1}>
       <Box width={plan.titleW + TERM.dot} flexShrink={0}>
@@ -136,6 +142,7 @@ function terminalBand(ui: Ui, $: EngineInterface, { view, cols }: BandInput) {
       <Text color={pillKey(view)}>{view.label}</Text>
       {plan.meterW > 0 && meterText(ui, termCells(view, plan.meterW))}
       <Text bold>{percentText(view)}</Text>
+      {face !== '' && <Text dimColor>{face}</Text>}
       {buttons(ui, $, view)}
     </Box>
   )
@@ -161,7 +168,16 @@ function onOpen(on: On): void {
 
 // The band contract: the engine's and other plugins' rows are drawn first and kept;
 // progress stacks above them, and a survey gets the band to itself.
-export function onBand(on: On): void {
+// The home crab's mood for the row, or none: it sits there only when asked for and while idle.
+async function bandMood($: EngineInterface, isCrabInBand: boolean): Promise<CrabMood | undefined> {
+  if (!isCrabInBand) return undefined
+  const { mood } = await read($, crab)
+  return isIdleMood(mood) ? mood : undefined
+}
+
+export type BandOptions = { isCrabInBand: boolean }
+
+export function onBand(on: On, opts: BandOptions): void {
   onOpen(on)
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -172,7 +188,8 @@ export function onBand(on: On): void {
     const table = $.ui.resolve(e)
     const ui = table as Ui
     const { Box } = ui
-    const mine = e.surface !== 'terminal' && 'Svg' in ui ? desktopBand(ui, $, { view, cols: e.props.bodyColumns }) : terminalBand(ui, $, { view, cols: e.props.bodyColumns })
+    const input = { view, cols: e.props.bodyColumns, mood: await bandMood($, opts.isCrabInBand) }
+    const mine = e.surface !== 'terminal' && 'Svg' in ui ? desktopBand(ui, $, input) : terminalBand(ui, $, input)
     return (
       <Box flexDirection="column">
         {pinned(e, mine)}

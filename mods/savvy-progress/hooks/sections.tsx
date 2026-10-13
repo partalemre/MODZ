@@ -9,6 +9,8 @@ import { t } from './i18n'
 import { upper } from './lang'
 import { lookAt, lookOf } from './identity'
 import { stuckOf } from './insight'
+import { FACES, HOME_LOOK } from './mood-svg'
+import type { HomeMark } from './mood-svg'
 import { COMPACT_H, HERO_CRAB, compactSvg, heroCrabSvg } from './pane-svg'
 import { headerOf, summaryOf, totalsLineOf } from './pane-data'
 import type { PaneData } from './pane-data'
@@ -36,6 +38,8 @@ export type PaneHandlers = {
   onCompact: () => void
   onDone: () => void
   onTimeline: () => void
+  /** Opens or folds the quiet list of other chats. */
+  onChats: () => void
   onNewTask: () => void
   onCancelTask: () => void
   onPickType: (name: string) => void
@@ -52,18 +56,22 @@ const TERM_NAME = 6
 const TERM_CLOCK = 2
 const TIMELINE_MIN_AGENTS = 2
 
+/** The home crab in words: "Pip, napping, Lv 2" for a drawing's alt text. */
+const homeAlt = (home: HomeMark): string => `${HOME_LOOK.name}, ${t().crab.moods[home.mood]}, ${home.level}`
+
 export function headTree(ui: Ui, d: PaneData, layout: Layout) {
   const { Box, Text, Svg } = ui
   const data = headerOf(d)
   const line = totalsLineOf(data)
   if (layout.isDesktop) {
     const head = headerSvg(layout.W, data)
-    return <Svg key="head" source={head.source} alt={[data.headline, data.percent, data.counts, line].filter(Boolean).join(', ')} width={layout.W} height={head.height} />
+    const alt = [data.headline, data.percent, data.counts, line, homeAlt(d.home)].filter(Boolean).join(', ')
+    return <Svg key="head" source={head.source} alt={alt} width={layout.W} height={head.height} />
   }
   return (
     <Box flexDirection="column">
-      <Text wrap="truncate-end"><Text bold>{data.headline}</Text><Text bold dimColor={data.tone === 'idle'}>{`  ${data.percent}`}</Text></Text>
-      {data.counts !== '' && <Text dimColor>{data.counts}</Text>}
+      <Text wrap="truncate-end"><Text dimColor>{`${FACES[d.home.mood]} `}</Text><Text bold>{data.headline}</Text><Text bold dimColor={data.tone === 'idle'}>{`  ${data.percent}`}</Text></Text>
+      <Text dimColor>{[d.home.level, data.counts].filter(Boolean).join(' · ')}</Text>
       <Text dimColor>{line}</Text>
     </Box>
   )
@@ -204,15 +212,18 @@ export function compactTree(ui: Ui, d: PaneData, layout: Layout) {
   )
 }
 
-/** Nothing launched yet: a resting crab, an eyebrow, one sentence and one action (DESIGN.md §4). */
-export function emptyTree(ui: Ui, layout: Layout, on: PaneHandlers) {
+/** Nothing launched yet: the home crab, an eyebrow, one sentence and one action (DESIGN.md §4). */
+export function emptyTree(ui: Ui, view: PaneView) {
   const { Box, Button, Svg, Text } = ui
+  const { layout, on } = view
+  const home = view.d.home
   const s = t()
-  const crab = layout.isDesktop && <Svg key="crab" source={heroCrabSvg()} alt={lookAt(0).name} width={HERO_CRAB.w} height={HERO_CRAB.h} />
+  const crab = layout.isDesktop && <Svg key="crab" source={heroCrabSvg(home)} alt={homeAlt(home)} width={HERO_CRAB.w} height={HERO_CRAB.h} />
   return (
     <Box key="empty" flexDirection="row" columnGap={2} alignItems="center">
       {crab}
       <Box flexDirection="column" rowGap={1} flexShrink={1}>
+        {!layout.isDesktop && <Text dimColor>{`${FACES[home.mood]} · ${home.level}`}</Text>}
         <Text bold color="permission">{`● ${upper(s.emptyTitle)}`}</Text>
         <Text dimColor>{s.empty}</Text>
         <Box flexDirection="row"><Button key="new-task" variant="primary" label={`＋ ${s.newTask}`} onPress={on.onNewTask} /></Box>

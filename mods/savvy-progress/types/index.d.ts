@@ -136,6 +136,8 @@ export type Panel = {
   briefOpen?: string
   isTimelineHidden?: boolean
   draft?: Draft
+  /** The quiet list of other chats (working or idle) is folded until the person opens it. */
+  isChatsOpen?: boolean
 }
 
 /** An agent type the panel can start: a built-in, one the engine offered, or an agents/*.md file. */
@@ -145,6 +147,44 @@ export type AgentType = {
   /** `built-in`, `plugin`, `project`, `user` or the settings source the engine named. */
   source: string
 }
+
+/** What a chat is doing: a turn runs, it waits on the person (a permission ask, a question), or neither. */
+export type ChatState = 'working' | 'waiting' | 'idle'
+
+/** What each session tells the others on this machine, under `sessions/<sessionId>` in this plugin's store. */
+export type Heartbeat = {
+  project: string
+  title: string
+  state: ChatState
+  /** When `state` last changed. */
+  since: number
+  /** When it was written; an old one means the session is gone. */
+  at: number
+}
+
+/** This session's own side: what it tells the others and what it last wrote. */
+export type SelfChat = {
+  id: string
+  project: string
+  title: string
+  isWorking: boolean
+  /** The tool calls waiting on the person: permission asks and open questions. */
+  asks: string[]
+  since: number
+  /** The heartbeat last written, less its time: a beat that says the same is not written early. */
+  sent?: Omit<Heartbeat, 'at'>
+  /** The id whose session.end came: no beat is written for it again. */
+  endedId?: string
+}
+
+/** Another session on this machine, as the panel draws it; `minutes` is how long it has been in `state`. */
+export type OtherChat = { id: string; project: string; title: string; state: ChatState; minutes: number }
+
+/** The home crab's mood: no turn yet or rested, a turn runs, the last one answered, or it errored or was stopped. */
+export type CrabMood = 'sleeping' | 'working' | 'happy' | 'worried'
+
+/** The Agents pane's own crab: its mood, every completed turn on this machine, and when the last one ended. */
+export type HomeCrab = { mood: CrabMood; turns: number; endedAt: number }
 
 /** The MODZ hub's tone for this mod's card (DESIGN.md §9): lo · Iris · Moss · Amber · Flare. */
 export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
@@ -166,6 +206,9 @@ declare module 'claude-code' {
       types: AgentType[]
       // The person pressed "← MODZ" in the Agents pane; the hub hears it and comes forward.
       home: { at: number }
+      self: SelfChat | null
+      chats: OtherChat[]
+      crab: HomeCrab
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
     modz: { open: { pane: string; at: number }; isOn: boolean }

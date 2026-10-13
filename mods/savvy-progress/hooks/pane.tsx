@@ -4,12 +4,14 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Draft, Panel } from '../types'
 import { BUILTIN_TYPES, DEFAULT_TYPE, TASK_TITLE_MAX, blankDraft, chosenOf } from './agent-types'
 import { addRun, askedAgain } from './agents'
+import { quietTree, waitingTree } from './chats-tree'
 import { draftTree } from './dispatch'
 import { HomeButton } from './home'
 import type { DraftView } from './dispatch'
 import { clip } from './format'
 import { t } from './i18n'
 import { lookOf } from './identity'
+import { restingCrab } from './mood'
 import { paneDataOf } from './pane-data'
 import type { PaneData } from './pane-data'
 import { FRAME_COLS, FRAME_PX, agentRow, plannedRow } from './rows'
@@ -33,6 +35,8 @@ const panel = atom({ plugin: 'savvy-progress', key: 'panel' } as const, { isComp
 const tasks = atom({ plugin: 'savvy-progress', key: 'tasks' } as const, [])
 const limit = atom({ plugin: 'savvy-progress', key: 'limit' } as const, null)
 const types = atom({ plugin: 'savvy-progress', key: 'types' } as const, BUILTIN_TYPES)
+const crab = atom({ plugin: 'savvy-progress', key: 'crab' } as const, restingCrab(0))
+const chats = atom({ plugin: 'savvy-progress', key: 'chats' } as const, [])
 
 type On = Parameters<Register>[0]
 
@@ -85,6 +89,8 @@ async function paneData($: EngineInterface): Promise<PaneData> {
     panel: await read($, panel),
     limit: await read($, limit),
     types: await read($, types),
+    crab: await read($, crab),
+    chats: await read($, chats),
   })
 }
 
@@ -138,6 +144,7 @@ function handlersOf($: EngineInterface, d: PaneData): PaneHandlers {
     onCompact: flip(prev => ({ ...prev, isCompact: !prev.isCompact })),
     onDone: flip(prev => ({ ...prev, isDoneCollapsed: !prev.isDoneCollapsed })),
     onTimeline: flip(prev => ({ ...prev, isTimelineHidden: prev.isTimelineHidden !== true })),
+    onChats: flip(prev => ({ ...prev, isChatsOpen: prev.isChatsOpen !== true })),
     ...draftHandlers($, { draft: d.panel.draft, types: d.types }),
   }
 }
@@ -160,13 +167,27 @@ function listTree(ui: Ui, view: PaneView) {
   )
 }
 
+// Who else on this machine waits on the person comes first; the quiet rest folds at the foot.
+function withChats(ui: Ui, view: PaneView) {
+  const { Box } = ui
+  const { d, layout, on } = view
+  const quiet = quietTree(ui, { chats: d.chats, layout, isOpen: d.panel.isChatsOpen === true, onToggle: on.onChats })
+  return (
+    <Box flexDirection="column" rowGap={1}>
+      {waitingTree(ui, d.chats, layout)}
+      {paneTree(ui, view)}
+      {quiet}
+    </Box>
+  )
+}
+
 function paneTree(ui: Ui, view: PaneView) {
   const { Box } = ui
   const { d, layout, on } = view
   const isDrafting = d.panel.draft?.isOpen === true
   const form = isDrafting && draftTree(ui, { draft: d.panel.draft, types: d.types, layout }, on)
   if (d.list.length === 0 && d.planned.length === 0) {
-    return <Box flexDirection="column" rowGap={2}>{isDrafting ? form : emptyTree(ui, layout, on)}</Box>
+    return <Box flexDirection="column" rowGap={2}>{isDrafting ? form : emptyTree(ui, view)}</Box>
   }
   return (
     <Box flexDirection="column" rowGap={1}>
@@ -204,7 +225,7 @@ export function onPane(on: On): void {
     const d = await paneData($)
     const layout = layoutOf(isDesktop, Math.max(MIN_COLS, e.props.bodyColumns || DEFAULT_COLS))
     const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
-    const body = paneTree(ui, { d, layout, on: handlersOf($, d) })
+    const body = withChats(ui, { d, layout, on: handlersOf($, d) })
     if (!isHubOn) return pinned(e, body)
     const { Box } = ui
     return pinned(e, <Box flexDirection="column" rowGap={1}>{HomeButton(ui, () => void goHome($))}{body}</Box>)

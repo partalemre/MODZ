@@ -41,5 +41,7 @@ declare module 'claude-code' {
     'replay-theater': { hub: HubCard; home: ModzHome }
     'hud-pro': { hub: HubCard; home: ModzHome }
     skins: { hub: HubCard; home: ModzHome }
+    'effort-router': { hub: HubCard; home: ModzHome }
+    handoff: { hub: HubCard; home: ModzHome }
   }
 }

@@ -25,6 +25,8 @@ export const META: Record<string, Meta> = {
   'session-budget': { group: 'safety', summary: { en: 'Session budget: warns at 80%, asks at 100%', tr: "Oturum bütçesi: %80'de uyarır, %100'de sorar" } },
   'cache-tax': { group: 'safety', upstream: 'karanb192/cache-tax', summary: { en: 'Keeps the cache warm on breaks, shows the cost', tr: "Molada önbelleği sıcak tutar, bedeli gösterir" } },
   'hud-pro': { group: 'meter', summary: { en: 'One line: 5h, 7d, context and cost', tr: "Tek satır: 5 saat, 7 gün, bağlam ve maliyet" } },
+  'effort-router': { group: 'meter', summary: { en: "Each turn's effort; can lower it for light asks", tr: "Her turun eforu; hafif işte düşürebilir" } },
+  handoff: { group: 'flow', summary: { en: 'A handoff note before the context fills', tr: "Bağlam dolmadan bir devir notu" } },
   'test-badge': { group: 'meter', summary: { en: 'Runs tests and lint when source changes', tr: "Kaynak değişince test ve lint çalıştırır" } },
   'savvy-progress': { group: 'meter', summary: { en: 'Task band and Agents pane: progress, cost', tr: "Görev bandı ve Ajanlar paneli: ilerleme, maliyet" } },
   'savvy-flow': { group: 'flow', summary: { en: 'A planning model and five tiers of worker agents', tr: "Planlayan model ve beş katmanlı işçi ajan akışı" } },

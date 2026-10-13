@@ -1,8 +1,9 @@
 import type { TouchRole, TurnLog } from '../types'
 import type { Host } from './host'
 import { HUB_PANE, hubOf, isSameCard } from './hub'
+import { type Attributed, merge, NO_COST } from './readcost'
 
-export const NO_TURN: TurnLog = { isRunning: false, hasRun: false, touches: [], sha: '', committed: 0 }
+export const NO_TURN: TurnLog = { isRunning: false, hasRun: false, touches: [], sha: '', committed: 0, costs: {} }
 const TOUCH_RANK: Record<TouchRole, number> = { read: 0, edit: 1, commit: 2 }
 const TOUCH_LIMIT = 200
 
@@ -38,4 +39,15 @@ export async function noteTouches(h: Host, ids: string[], role: TouchRole): Prom
 export async function noteCommit(h: Host, fields: { sha?: string; committed?: number }): Promise<void> {
   await h.setTurn(cur => ({ ...NO_TURN, ...cur, hasRun: true, ...fields }))
   await syncHub(h)
+}
+
+// What reads put into context: by file for this turn, summed for the session.
+export async function noteCosts(h: Host, list: readonly Attributed[]): Promise<void> {
+  if (list.length === 0) return
+  await h.setTurn(cur => {
+    const costs = { ...cur.costs }
+    for (const { file, cost } of list) costs[file] = merge(costs[file], cost)
+    return { ...NO_TURN, ...cur, costs }
+  })
+  await h.setReadTotal(cur => list.reduce((acc, { cost }) => merge(acc, cost), cur ?? NO_COST))
 }

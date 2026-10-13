@@ -2,8 +2,9 @@ import type { ElementTable } from 'claude-code'
 
 import type { FileTree } from '../types'
 import { actionsOf } from './actions'
-import { type GitRow, heroCard, type LegendItem, sectionLine, touchedCard } from './cards'
+import { type CostRow, type GitRow, heroCard, type LegendItem, sectionLine, touchedCard } from './cards'
 import { activityChip, footer } from './chrome'
+import { costText, turnCost } from './costtext'
 import type { Host } from './host'
 import { heroOf, touchedRows } from './now'
 import type { RowsProps } from './rows'
@@ -36,6 +37,14 @@ function gitRowOf(t: FileTree): GitRow | null {
   return { branch: t.branch.head, upstream: t.branch.upstream, ahead: t.branch.ahead, behind: t.branch.behind, changed, add, del }
 }
 
+// Shown once the session has read: this turn's count, and the session's when earlier turns read too.
+function costRowOf(s: Scene): CostRow | null {
+  const total = s.readTotal
+  if (!total || total.reads === 0) return null
+  const turn = turnCost(s.turn)
+  return { turn: turn ? costText(turn) : null, session: total.reads > (turn?.reads ?? 0) ? costText(total) : null }
+}
+
 // Only the colors the view shows right now get a legend entry.
 function legendOf(s: Scene, git: GitRow | null): LegendItem[] {
   const tones = s.t.flashOn ? Object.values(s.t.flashTones).map(roleOfTone) : []
@@ -53,7 +62,7 @@ function cardsOf(s: Scene, w: number) {
   const { t, look } = s
   const input = heroInput(s)
   const git = gitRowOf(t)
-  const hero = heroCard(heroOf(input), { git, legend: legendOf(s, git) }, { look, w })
+  const hero = heroCard(heroOf(input), { git, cost: costRowOf(s), legend: legendOf(s, git) }, { look, w })
   const touchedList = touchedRows(input)
   const touched = touchedList.length ? touchedCard(touchedList, look, w) : null
   const section = sectionLine({ left: words().allFiles, right: upper((t.top ? t.top : t.root).split('/').pop() ?? '') }, { look, w })

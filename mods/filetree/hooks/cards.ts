@@ -26,6 +26,9 @@ import { words } from './words'
 export type Drawn = { source: string; width: number; height: number; alt: string }
 export type GitRow = { branch: string; upstream: string; ahead: number; behind: number; changed: number; add: number; del: number }
 export type LegendItem = { role: Role; label: string }
+// What reads put into context, written out (costtext.ts): this turn's, null with none, and the session's when
+// earlier turns read too.
+export type CostRow = { turn: string | null; session: string | null }
 
 const PAD = 16
 const GAP = 12
@@ -34,6 +37,8 @@ const SUB = 13
 const ROW = 13
 const LINE = 24
 const TOP_BLOCK = 66
+// Where a line's text starts after its 15px icon.
+const ICON_INDENT = 22
 
 const frame = (w: number, h: number): string =>
   `<rect x=".5" y=".5" width="${w - 1}" height="${h - 1}" rx="12" class="card"/>`
@@ -82,13 +87,30 @@ function gitLine(git: GitRow, y: number, w: number): string {
     : [{ text: said.cleanNoChanges, cls: 'mid' }]
   const statusW = status.reduce((s, p) => s + measure(p.text, ROW, p.isBold), 0)
   const moves = `${git.ahead ? ` ↑${git.ahead}` : ''}${git.behind ? ` ↓${git.behind}` : ''}`
-  const nameRoom = w - 2 * PAD - 22 - statusW - measure(moves, ROW, true) - GAP
+  const nameRoom = w - 2 * PAD - ICON_INDENT - statusW - measure(moves, ROW, true) - GAP
   const name = fitMiddle(git.branch, Math.max(40, nameRoom), { size: ROW, isBold: true })
   const upRoom = nameRoom - measure(name, ROW, true) - 10
   const upstream = git.upstream && upRoom > 40 ? `<tspan dx="8" font-size="12" class="lo">${escape(fitMiddle(git.upstream, upRoom, { size: 12 }))}</tspan>` : ''
-  const branch = `<text x="${PAD + 22}" y="${y}" font-size="${ROW}"><tspan font-weight="650" class="hi">${escape(name)}</tspan>${git.ahead ? `<tspan font-weight="650" class="f-ok"> ↑${git.ahead}</tspan>` : ''}${git.behind ? `<tspan font-weight="650" class="f-warn"> ↓${git.behind}</tspan>` : ''}${upstream}</text>`
+  const branch = `<text x="${PAD + ICON_INDENT}" y="${y}" font-size="${ROW}"><tspan font-weight="650" class="hi">${escape(name)}</tspan>${git.ahead ? `<tspan font-weight="650" class="f-ok"> ↑${git.ahead}</tspan>` : ''}${git.behind ? `<tspan font-weight="650" class="f-warn"> ↓${git.behind}</tspan>` : ''}${upstream}</text>`
   const right = `<text x="${w - PAD}" y="${y}" text-anchor="end" font-size="${ROW}">${spans(status, statusW + 4, ROW)}</text>`
   return `${icon('branch', { x: PAD, y: y - 12, size: 15 }, 'read')}${branch}${right}`
+}
+
+// The session's count gives way first when the line is short of room.
+function costLine(cost: CostRow, y: number, w: number): string {
+  const said = words()
+  const [lead = '', tail = ''] = said.costTurn
+  const left: Part[] = cost.turn
+    ? [{ text: lead, cls: 'mid' }, { text: cost.turn, cls: 'hi', isBold: true, isNum: true }, { text: tail, cls: 'mid' }]
+    : [{ text: said.costNone, cls: 'lo' }]
+  const leftW = left.reduce((s, p) => s + measure(p.text, ROW, p.isBold), 0)
+  const room = w - 2 * PAD - ICON_INDENT
+  const right = cost.session ? said.costSession(cost.session) : ''
+  const rightW = right ? measure(right, 12) + GAP : 0
+  const isRightShown = right !== '' && leftW + rightW <= room
+  const head = `<text x="${PAD + ICON_INDENT}" y="${y}" font-size="${ROW}">${spans(left, room - (isRightShown ? rightW : 0), ROW)}</text>`
+  const tailText = isRightShown ? `<text x="${w - PAD}" y="${y}" text-anchor="end" font-size="12" class="lo">${escape(right)}</text>` : ''
+  return `${icon('eye', { x: PAD, y: y - 12, size: 15 }, 'read')}${head}${tailText}`
 }
 
 function legendLine(items: LegendItem[], y: number): string {
@@ -105,7 +127,7 @@ function legendLine(items: LegendItem[], y: number): string {
 
 export type Canvas = { look: Look; w: number }
 
-export function heroCard(hero: Hero, { git, legend }: { git: GitRow | null; legend: LegendItem[] }, { look, w }: Canvas): Drawn {
+export function heroCard(hero: Hero, { git, cost, legend }: { git: GitRow | null; cost: CostRow | null; legend: LegendItem[] }, { look, w }: Canvas): Drawn {
   const textX = PAD + ICON_BOX + GAP
   const textW = w - textX - PAD
   const top = [
@@ -116,15 +138,19 @@ export function heroCard(hero: Hero, { git, legend }: { git: GitRow | null; lege
   ]
   const rows: string[] = []
   let y = TOP_BLOCK + PAD
-  if (git || legend.length) rows.push(`<line x1="${PAD}" x2="${w - PAD}" y1="${y + 0.5}" y2="${y + 0.5}" class="rule"/>`)
+  if (git || cost || legend.length) rows.push(`<line x1="${PAD}" x2="${w - PAD}" y1="${y + 0.5}" y2="${y + 0.5}" class="rule"/>`)
   if (git) rows.push(gitLine(git, (y += LINE), w))
+  if (cost) rows.push(costLine(cost, (y += LINE), w))
   if (legend.length) rows.push(legendLine(legend, (y += LINE)))
   const h = rows.length ? y + PAD - 2 : TOP_BLOCK + PAD
-  const alt = `${hero.eyebrow}: ${hero.title.lead}${hero.title.name}${hero.title.tail}. ${hero.sub.map(p => p.text).join('')}`
+  const [lead = '', tail = ''] = words().costTurn
+  const costAlt = cost?.turn ? ` · ${lead}${cost.turn}${tail}` : ''
+  const alt = `${hero.eyebrow}: ${hero.title.lead}${hero.title.name}${hero.title.tail}. ${hero.sub.map(p => p.text).join('')}${costAlt}`
   return { source: svgDoc({ width: w, height: h }, look, frame(w, h) + top.join('') + rows.join('')), width: w, height: h, alt }
 }
 
-export type TouchedRow = { name: string; dir: string; badge: BadgeKind; pill: { text: string; role: Role }; diff?: [number, number] }
+// `cost` is what the file's reads put into context this turn, written out ("≈1,157").
+export type TouchedRow = { name: string; dir: string; badge: BadgeKind; pill: { text: string; role: Role }; diff?: [number, number]; cost?: string }
 
 const ROW_H = 30
 const HEAD_H = 40
@@ -134,8 +160,10 @@ function touchedRow(r: TouchedRow, y: number, w: number): string {
   const pillW = pillWidth(r.pill.text)
   const diff = r.diff ? `${r.diff[0] ? `+${r.diff[0]}` : ''}${r.diff[0] && r.diff[1] ? ' ' : ''}${r.diff[1] ? `−${r.diff[1]}` : ''}` : ''
   const diffW = diff ? measure(diff, 12) + GAP : 0
+  const unit = r.cost ? ` ${words().tokUnit}` : ''
+  const costW = r.cost ? measure(`${r.cost}${unit}`, 12) + GAP : 0
   const nameX = PAD + 38
-  const room = w - nameX - PAD - pillW - diffW - GAP
+  const room = w - nameX - PAD - pillW - diffW - costW - GAP
   const name = fitMiddle(r.name, Math.max(48, room * 0.7), { size: ROW, isBold: true })
   const dirRoom = room - measure(name, ROW, true) - 8
   const dir = r.dir && dirRoom > 24 ? fitMiddle(r.dir, dirRoom, { size: 12 }) : ''
@@ -149,6 +177,10 @@ function touchedRow(r: TouchedRow, y: number, w: number): string {
     const plus = add ? `<tspan class="f-ok">+${add}</tspan>` : ''
     const minus = del ? `<tspan class="f-danger">${add ? ' ' : ''}−${del}</tspan>` : ''
     parts.push(`<text x="${w - PAD - pillW - GAP}" y="${y + 19.5}" text-anchor="end" font-size="12" class="num">${plus}${minus}</text>`)
+  }
+  if (r.cost) {
+    const tokens = `<tspan class="num mid">${escape(r.cost)}</tspan><tspan class="lo">${escape(unit)}</tspan>`
+    parts.push(`<text x="${w - PAD - pillW - diffW - GAP}" y="${y + 19.5}" text-anchor="end" font-size="12">${tokens}</text>`)
   }
   return parts.join('')
 }
@@ -165,7 +197,7 @@ export function touchedCard(rows: TouchedRow[], look: Look, w: number): Drawn {
   const moreLine = more > 0 ? `<text x="${PAD}" y="${listH + 14}" font-size="12" class="lo">${escape(said.moreFiles(more))}</text>` : ''
   const h = listH + (more > 0 ? 22 : 0) + 10
   const head = eyebrowText(title, { x: PAD, y: PAD + 10 }, 'lo')
-  const alt = `${title}: ${rows.map(r => `${r.name} ${r.pill.text}`).join(', ') || said.noneYet}`
+  const alt = `${title}: ${rows.map(r => `${r.name} ${r.pill.text}${r.cost ? ` ${r.cost} ${said.tokUnit}` : ''}`).join(', ') || said.noneYet}`
   return { source: svgDoc({ width: w, height: h }, look, frame(w, h) + head + body + moreLine), width: w, height: h, alt }
 }
 

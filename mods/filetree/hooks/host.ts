@@ -1,6 +1,7 @@
 import type { EngineInterface, Timer } from 'claude-code'
 
-import type { Activity, FileTree, HubCard, Look, Theme, TurnLog } from '../types'
+import type { Activity, FileTree, HubCard, Look, ReadCost, Theme, TurnLog } from '../types'
+import type { ApiMessage } from './readcost'
 
 type Engine = EngineInterface
 
@@ -12,6 +13,8 @@ export type StateHost = {
   setActivities(fn: (list: Activity[]) => Activity[]): Promise<void>
   turn(): Promise<TurnLog>
   setTurn(fn: (cur: TurnLog) => TurnLog): Promise<void>
+  readTotal(): Promise<ReadCost | undefined>
+  setReadTotal(fn: (cur: ReadCost | undefined) => ReadCost): Promise<void>
   hubCard(): Promise<HubCard | undefined>
   setHubCard(card: HubCard): Promise<void>
   look(): Promise<Look | undefined>
@@ -34,6 +37,8 @@ export type IoHost = {
   every(ms: number, fn: () => void): Timer
   cwd(): Promise<string>
   sessionId(): Promise<string>
+  // The loop's transcript as the API reads it: the main conversation, or a subagent's by its id.
+  messages(agentId: string | undefined): Promise<readonly ApiMessage[]>
   tmpdir(): Promise<string | undefined>
   osEnv(): Promise<string | undefined>
   homeEnv(): Promise<string | undefined>

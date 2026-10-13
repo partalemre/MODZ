@@ -3,6 +3,7 @@
 
 import type { FileNode, FileTree, Theme } from '../types'
 import { badgeOf } from './badges'
+import { TONES } from './git'
 import { CHEVRON_CLOSED, CHEVRON_OPEN, fileIcon, GIT_COLOR } from './icons'
 import type { RowSpec, Seg } from './rows'
 import { folderColor, type Palette, type Role, roleOfTone } from './theme'
@@ -22,6 +23,8 @@ export type RowCtx = {
   pal: Palette
   // The pill a live row shows in place of its meta: "reading", "editing", ...
   pillOf: (id: string, role: Role) => string
+  // What the file's reads put into context this turn ("≈1.2k tok"), or "".
+  costOf: (id: string) => string
 }
 
 const ADD_COLOR = '#98c379'
@@ -101,11 +104,12 @@ export function terminalRow(ctx: RowCtx, r: Row): RowSpec {
   const colors = terminalColors(theme, n, { color: gitColor, isIgnored })
   const loc = t.diff[n.id]
   const meta = metaOf(ctx, r)
+  const cost = ctx.costOf(n.id)
   const locText = loc ? `${loc[0] ? ` +${loc[0]}` : ''}${loc[1] ? ` -${loc[1]}` : ''}` : ''
   const dirCounts = n.kind === 'dir' ? countSegs(t.counts[n.id], theme) : []
   const badge = badgeText(ctx, { status, isIgnored, hasCounts: dirCounts.length > 0 })
   const countsText = dirCounts.map(c => c.t).join('')
-  const cols = Math.max(4, ctx.width - r.depth * 2 - 6 - (meta ? meta.length + 1 : 0) - locText.length - badge.length - countsText.length)
+  const cols = Math.max(4, ctx.width - r.depth * 2 - 6 - (meta ? meta.length + 1 : 0) - (cost ? cost.length + 1 : 0) - locText.length - badge.length - countsText.length)
   const caret = caretOf(r, unicode)
   const glyph = glyphOf(ctx, r)
   const lit = isBright || isDim
@@ -116,6 +120,7 @@ export function terminalRow(ctx: RowCtx, r: Row): RowSpec {
     lit ? { t: fit(n.name, cols), sh: tone, dim: isDim, b: isBright } : { t: fit(n.name, cols), c: colors.name, b: n.id === t.selected, s: status === 'D' && n.kind !== 'dir' },
   ]
   const right: Seg[] = []
+  if (cost) right.push({ t: ` ${cost}`, c: TONES.blue?.solid ?? theme.accent })
   if (meta) right.push({ t: ` ${meta}`, c: theme.muted })
   if (loc && loc[0] > 0) right.push({ t: ` +${loc[0]}`, c: ADD_COLOR })
   if (loc && loc[1] > 0) right.push({ t: ` -${loc[1]}`, c: DEL_COLOR })
@@ -159,6 +164,8 @@ function desktopRight(ctx: RowCtx, r: Row, role: Role | null): Seg[] {
     if (loc[0] > 0) out.push({ t: ` +${loc[0]}`, c: pal.roles.ok.fg })
     if (loc[1] > 0) out.push({ t: ` −${loc[1]}`, c: pal.roles.danger.fg })
   }
+  const cost = ctx.costOf(n.id)
+  if (cost) out.push({ t: ` ${cost}`, c: pal.roles.read.fg })
   const meta = metaOf(ctx, r)
   if (meta) out.push({ t: ` ${meta}`, c: pal.lo })
   return out

@@ -3,6 +3,7 @@ import type { ElementTable } from 'claude-code'
 import type { FileTree, Theme } from '../types'
 import { actionsOf } from './actions'
 import { activityChip, footer } from './chrome'
+import { costText, turnCost } from './costtext'
 import { BRANCH_ROW } from './flash'
 import { BRANCH_ICON, TONES } from './git'
 import type { Host } from './host'
@@ -36,6 +37,8 @@ const MIN_BODY = 5
 // The hover tint: the selection color faded this far toward the panel.
 const FAINT_BASE = 0x26
 const FAINT_SHARE = 0.3
+// The now line names the session's read count beside the turn's from this many columns.
+const SESSION_COST_COLS = 70
 
 function faint(hex: string): string {
   const v = parseInt(hex.slice(1), 16)
@@ -124,14 +127,31 @@ function headRow(ui: Ui, at: { t: FileTree; theme: Theme; unicode: boolean; act:
   )
 }
 
-function nowLine(ui: Ui, s: Scene) {
+// What reads put into context: this turn's, and the session's when earlier turns read too and the line has room.
+function costLabel(s: Scene, width: number): string {
+  const turn = turnCost(s.turn)
+  const total = s.readTotal
+  const said = words()
+  const parts = [
+    turn ? `${costText(turn)} ${said.tokUnit}` : '',
+    total && total.reads > (turn?.reads ?? 0) && width >= SESSION_COST_COLS ? said.costSession(costText(total, true)) : '',
+  ]
+  return parts.filter(Boolean).join(' · ')
+}
+
+function nowLine(ui: Ui, s: Scene, width: number) {
   const { Box, Text } = ui
   const hero = heroOf(heroInput(s))
+  const cost = costLabel(s, width)
   return (
     <Box flexDirection="row" height={1} overflow="hidden">
-      <Text bold color={TERMINAL_ROLE[hero.role]}>{`● ${hero.eyebrow}  `}</Text>
-      <Text wrap="truncate-end">{heroText(hero)}</Text>
-      <Text dimColor wrap="truncate-end">{` · ${subText(hero)}`}</Text>
+      <Box flexDirection="row" flexShrink={1} overflow="hidden">
+        <Text bold color={TERMINAL_ROLE[hero.role]}>{`● ${hero.eyebrow}  `}</Text>
+        <Text wrap="truncate-end">{heroText(hero)}</Text>
+        <Text dimColor wrap="truncate-end">{` · ${subText(hero)}`}</Text>
+      </Box>
+      <Box flexGrow={1} />
+      {cost ? <Text color={TERMINAL_ROLE.read}>{` ${cost}`}</Text> : null}
     </Box>
   )
 }
@@ -158,7 +178,7 @@ export function drawTerminal(host: Host, ui: Ui, frame: { s: Scene; room: Room; 
       {headRow(ui, { t, theme, unicode, act: actionsOf(host, t) })}
       {terminalBranch(ui, s, unicode)}
       {!t.top && <Text color={theme.muted}>{unicode ? '± ' : '\u{e702} '}{words().noRepo}</Text>}
-      {s.turn.hasRun && nowLine(ui, s)}
+      {s.turn.hasRun && nowLine(ui, s, room.width)}
       {searchRow(host, ui, { t, label: '/ ', clear: unicode ? '×' : '\u{f0156}' })}
       <Client key="rows" module="./rows.tsx" props={rows} />
       <Box flexGrow={1} />

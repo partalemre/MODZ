@@ -17,12 +17,22 @@ The MODZ panel (`modz`) shows its line here: files changed this turn, uncommitte
 
 Open the pane with `/filetree`. It does not open by itself; once opened, it comes back when a session restarts.
 
-- **NOW / DONE card** at the top: the file Claude is reading, editing or committing, in one sentence, with the branch, ahead/behind counts, change status and a short colour legend.
-- **Touched by Claude:** the files touched this turn, each with a kind badge, its folder and a status label (Reading, Opened, Editing, Edited, Committed).
-- **All files:** the full tree for the working folder. The row Claude is in shimmers with a label, and the right column shows the date or the size. Reads are blue, writes orange, commits green, uncommitted changes amber.
+- **NOW / DONE card** at the top: the file Claude is reading, editing or committing, in one sentence, with the branch, ahead/behind counts, change status, the tokens this turn's reads put into context (and the session's, once an earlier turn read too) and a short colour legend.
+- **Touched by Claude:** the files touched this turn, each with a kind badge, its folder, the tokens its reads put into context and a status label (Reading, Opened, Editing, Edited, Committed).
+- **All files:** the full tree for the working folder. The row Claude is in shimmers with a label, and the right column shows the date or the size, after a file's read tokens this turn in blue (`≈1.5k tok`). Reads are blue, writes orange, commits green, uncommitted changes amber.
 - **Git:** per-file status, `+N -N` line counts on modified files, and counts on folders. Commits to another repo (`cd other && git commit`) show as committed there; if git refuses a commit, the reason is shown.
 - **Toolbar:** search (it finds folders you have not opened), Collapse, Refresh, and More (size or date column, hidden files, parent folder, back to project, clear selection). With the tree focused: `r` refresh, `c` collapse, `s` size/date, `.` hidden files, `u` parent folder, `p` project, `x` clear selection, `y` copies the relative path (`Y`, the absolute one), arrow keys or `j`/`k` move, Enter opens a file or toggles a folder.
 - Click a row to select it; Ctrl-click or Shift-click opens the file in its default app.
+
+### Read tokens
+
+Each Read Claude makes (a subagent's too, counted toward the file) is measured from the sizes the API reports: every model request carries its whole prompt (input, cache read and cache write tokens), so the next request in the same loop, less the previous one and its answer, is what that step's results added.
+
+- `13,321`: the read was the only thing its step added, so the number is the API's own.
+- `≈1,481`: the step added more than this read (other results, a reminder the engine attached, or the model's thinking), so the measured growth is shared by text length.
+- `~740`: no request followed the read (the turn was stopped, or the context was compacted in between), so it is a guess from the text's length at the rate this session's measured steps showed.
+
+The turn total sums the files; the session total sums the turns. In the terminal the now line carries the turn's total and each tree row its file's.
 
 The desktop app (Code tab) draws the tree directly. The terminal needs the fullscreen layout (`/tui fullscreen`) and a window at least 110 columns wide.
 
@@ -48,6 +58,7 @@ If a file is selected in the tree when you send a prompt, one line naming it is 
 - Outside a git repository it checks once whether one exists; every git call is scoped to the working folder.
 - Clicking rows in herdr needs herdr 0.9.1 or later; on older versions the rows ignore the mouse.
 - Mods do not load in WSL sessions of the desktop app.
+- Read tokens count the Read tool only; files read through Bash (`cat`, `rg`) light up in the tree but carry no count. A turn's counts reset when the next turn starts.
 
 Uses no model tokens beyond the one context line above.
 

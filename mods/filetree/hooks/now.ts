@@ -3,6 +3,7 @@
 import type { Touch, TouchRole, TurnLog } from '../types'
 import { badgeOf } from './badges'
 import type { TouchedRow } from './cards'
+import { costText } from './costtext'
 import type { IconName } from './svg'
 import type { Role } from './theme'
 import { words } from './words'
@@ -138,12 +139,14 @@ export function touchedRows(input: NowInput): TouchedRow[] {
   return turn.touches.map(t => {
     const isLive = turn.isRunning && input.live.has(t.id)
     const diff = t.role === 'read' ? undefined : input.diff[t.id]
+    const cost = turn.costs?.[t.id]
     return {
       name: baseName(t.id),
       dir: relDir(t.id, root),
       badge: badgeOf(baseName(t.id)),
       pill: { text: (isLive ? w.pillLive : w.pillDone)[t.role], role: ROLE[t.role] },
       ...(diff && (diff[0] || diff[1]) ? { diff } : {}),
+      ...(cost ? { cost: costText(cost) } : {}),
     }
   })
 }

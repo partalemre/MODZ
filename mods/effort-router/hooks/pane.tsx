@@ -153,7 +153,7 @@ export function paneTree(look: PaneLook, o: { view: PaneView; onMode: (mode: Eff
   const width = cardInnerWidth(look.columns)
   const { mode } = o.view
   const said = words()
-  const header = { icon: 'gauge' as const, eyebrow: said.eyebrow, meta: said.modeName[mode], headline: headlineOf(o.view.turns), sub: said.modeLine[mode], width }
+  const header = { icon: 'bolt' as const, eyebrow: said.eyebrow, meta: said.modeName[mode], headline: headlineOf(o.view.turns), sub: said.modeLine[mode], width }
 
   return Card(draw, {
     role: 'read',

@@ -11,7 +11,7 @@ const row = (turnId: string, sent: unknown) => ({ turnId, at: 0, snippet: '', cl
 test('the card names its own row and counts the effort of the last five turns', { plugins: [spy] }, async ($: any, on: any) => {
   stub(on, worldOf())
   await begin($)
-  expect(await stateOf($, 'hub')).toMatchObject({ pane: 'effort', detail: '', tone: 'idle', title: 'Effort', icon: 'gauge', section: 'meter' })
+  expect(await stateOf($, 'hub')).toMatchObject({ pane: 'effort', detail: '', tone: 'idle', title: 'Effort', icon: 'bolt', section: 'meter' })
 
   const efforts = ['low', 'high', 'low', 'high', 'high', 'medium']
   for (const [i, effort] of efforts.entries()) await turn($, { text: `Prompt ${i}`, turnId: `t${i}`, effort })

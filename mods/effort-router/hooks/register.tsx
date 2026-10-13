@@ -56,7 +56,7 @@ function judgeIoOf($: EngineInterface): JudgeIo {
 async function writeHub($: EngineInterface): Promise<void> {
   const said = words()
   const shown = hubOf(await read($, turnsAtom), await read($, modeAtom))
-  const card = { pane: PANE, ...shown, title: said.title, hint: said.hint, icon: 'gauge', section: 'meter' as const }
+  const card = { pane: PANE, ...shown, title: said.title, hint: said.hint, icon: 'bolt', section: 'meter' as const }
   const { value } = await $.state.get(HUB)
   if (value !== undefined && isSame({ ...value, at: 0 }, { ...card, at: 0 })) return
   const written: HubCard = { ...card, at: await $.clock.now() }

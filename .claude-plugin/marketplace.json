@@ -101,6 +101,11 @@
       "name": "terminal-browser",
       "source": "./mods/terminal-browser",
       "description": "A browser inside the terminal: preview sites and HTML files and let the agent drive it. Terminal only."
+    },
+    {
+      "name": "effort-router",
+      "source": "./mods/effort-router",
+      "description": "Shows each turn's effective effort and model; can route a light prompt to low effort"
     }
   ]
 }

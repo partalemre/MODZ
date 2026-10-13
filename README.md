@@ -88,7 +88,7 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 | | `secret-guard` | Stops keys and tokens in writes, edits, `git add` and commits |
 | | `checkpoint` | A silent git snapshot before each turn's first write; undo a turn |
 | | `test-badge` | Runs tests and lint after edits and shows the result |
-| | `replay-theater` | Replays the last turn's edits step by step |
+| | `replay-theater` | Replays the last turn's edits step by step, and earlier turns and past sessions |
 | **Meter** | `session-budget` | A spend budget per session, with a stop at 100% |
 | | `cache-tax` | Keeps the prompt cache warm through breaks and prices a cold send |
 | | `hud-pro` | One line with the 5-hour and 7-day limits, context and cost |

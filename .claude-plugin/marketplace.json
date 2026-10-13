@@ -65,7 +65,7 @@
     {
       "name": "replay-theater",
       "source": "./mods/replay-theater",
-      "description": "Replays the last turn's edits step by step, each tied to its plan step, with a coloured diff."
+      "description": "Replays the last turn's edits step by step, each tied to its plan step, with a coloured diff; earlier turns and past sessions too."
     },
     {
       "name": "session-budget",

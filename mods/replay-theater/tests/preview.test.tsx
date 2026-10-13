@@ -1,6 +1,6 @@
 import { test } from 'claude-code/testing'
 
-import { bandOf, newWorld, paneOf, said, setup } from './fixtures'
+import { bandOf, newWorld, paneOf, replayCommand, said, settle, setup, startWithArchive } from './fixtures'
 
 /** The test runner's console: bin/preview reads the trees it prints. */
 declare const console: { log: (text: string) => void }
@@ -61,6 +61,22 @@ for (const [size, columns] of Object.entries(WIDTHS)) {
       await clock.advance(200)
       await opening
       console.log(`@@TREE@@${size}-empty-${theme}@@` + JSON.stringify(await (await $.ui.mount(paneAt('desktop', columns))).drawn()))
+    })
+
+    test(`preview ${size} ${theme}: past sessions, a session's turns and a past turn`, async ($: any, on: any) => {
+      const world = { ...newWorld(), theme }
+      const clock = await startWithArchive($, on, world)
+      await replayCommand($, clock, 'sessions')
+      const pane = await $.ui.mount(paneAt('desktop', columns))
+      console.log(`@@TREE@@${size}-sessions-${theme}@@` + JSON.stringify(await pane.drawn()))
+      await pane.press({ key: 'rt-session-s-old-open' })
+      await settle(clock)
+      console.log(`@@TREE@@${size}-turns-${theme}@@` + JSON.stringify(await pane.drawn()))
+      await pane.press({ key: 'rt-turn-1-open' })
+      await settle(clock)
+      console.log(`@@TREE@@${size}-past-step1-${theme}@@` + JSON.stringify(await pane.drawn()))
+      const term = await $.ui.mount(paneAt('terminal', columns))
+      console.log(`@@TREE@@${size}-past-terminal-${theme}@@` + JSON.stringify(await term.drawn()))
     })
   }
 }

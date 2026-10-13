@@ -31,7 +31,7 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 - secret-guard: stops keys and tokens in writes, edits, git add and commit; blocks committing .env
 - checkpoint: silent git snapshot before each turn's first write; /checkpoints undoes a turn
 - test-badge: runs tests and lint after edits and shows a badge
-- replay-theater: replays the last turn's edits step by step
+- replay-theater: replays the last turn's edits step by step, and earlier turns and past sessions
 - session-budget: per-session spend budget; notice at 80%, stop at 100%
 - cache-tax: keeps the one-hour prompt cache warm through breaks (uses tokens when on); prices a cold send
 - hud-pro: one line with the 5-hour and 7-day limits, context and session cost

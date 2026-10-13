@@ -1,7 +1,7 @@
 // With no MODZ_LANG the replay speaks English, the film's words, and nothing Turkish-only shows.
 import { expect, test } from 'claude-code/testing'
 
-import { SURFACES, bandOf, newWorld, paneOf, said, setup, svgText, texts } from './fixtures'
+import { SURFACES, bandOf, newWorld, paneOf, replayCommand, said, settle, setup, startWithArchive, svgText, texts } from './fixtures'
 import type { World } from './fixtures'
 
 const OPEN_WAIT_MS = 200
@@ -115,4 +115,33 @@ test('with no room and nothing to replay, /replay says so in English', async ($:
   const opening = $.command.run({ command: 'replay', args: '' })
   await clock.advance(OPEN_WAIT_MS)
   expect(await opening).toMatchObject({ text: 'Replay: no edits yet.' })
+})
+
+test('the session list and a past turn speak English', async ($: any, on: any) => {
+  const world = englishWorld()
+  const clock = await startWithArchive($, on, world)
+  await replayCommand($, clock, 'sessions')
+  const pane = await $.ui.mount(paneOf('terminal'))
+  const sessions = await everything(pane)
+
+  expect(sessions).toContain('● PAST SESSIONS')
+  expect(sessions).toContain('This project · 4 sessions')
+  expect(sessions).toContain('This session · Oct 13')
+  expect(sessions).toContain('3 turns · 5 edits')
+  expect(sessions).toContain('1 turn · no edits')
+  expect((await pane.find({ key: 'rt-this-session' }))?.props?.label).toBe('This session')
+  await pane.press({ key: 'rt-session-s-old-open' })
+  await settle(clock)
+  expect(await everything(pane)).toContain('● TURNS WITH EDITS')
+  expect((await pane.find({ key: 'rt-turn-2-open' }))?.props?.label).toBe('Watch')
+  await pane.press({ key: 'rt-turn-2-open' })
+  await settle(clock)
+  expect(await everything(pane)).toContain('project root · Write · new file')
+  await pane.press({ key: 'rt-next' })
+  await pane.press({ key: 'rt-next' })
+  const turn = await everything(pane)
+  expect(turn).toContain('Turn 2')
+  expect(turn).toContain('whole file; earlier text not in transcript')
+  expect((await pane.find({ key: 'rt-turns' }))?.props?.label).toBe('Turns')
+  expect(turn).not.toMatch(TURKISH_ONLY)
 })

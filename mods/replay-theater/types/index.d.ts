@@ -30,7 +30,44 @@ export type Replay = {
   ask?: string
   // When the turn ended (ms), for "3 dk önce": the replay stays after turns without edits.
   at?: number
+  // A turn read back from a transcript: which session and which of its turns.
+  origin?: ReplayOrigin
 }
+
+export type ReplayOrigin = { session: string; turn: number; title: string }
+
+// One session of this project, as the session list shows it.
+export type ReplaySession = {
+  id: string
+  // The transcript's last change (ms).
+  at: number
+  // The person's first prompt, one short line; '' until read or when it had none.
+  title: string
+  // Prompts and recorded edits in it; null until its transcript has been read.
+  turns: number | null
+  edits: number | null
+  isCurrent: boolean
+  // Only the newest part of a very large transcript was read.
+  isCut: boolean
+  // Its transcript could not be read; tried again on the next listing.
+  isUnreadable?: boolean
+}
+
+// One turn of a session that edited files.
+export type ReplayTurnRow = { n: number; ask: string; at: number; edits: number; files: number }
+
+export type ReplayLoad = 'loading' | 'ready' | 'unavailable'
+
+// `older`: sessions past the newest ones listed.
+export type ReplaySessions = { status: ReplayLoad; rows: ReplaySession[]; older: number }
+
+export type ReplayTurns = { session: string; status: ReplayLoad; title: string; isCurrent: boolean; isCut: boolean; prompts: number; rows: ReplayTurnRow[] }
+
+// What the pane shows: a replay (the live last turn or one read back), a session's turns, or the sessions.
+export type ReplayBrowse = { mode: 'replay' | 'turns' | 'sessions'; source: 'live' | 'past'; shown: number }
+
+// A session's list line kept across sessions in `$.store`, valid while its transcript's size and time match.
+export type ReplaySummary = { size: number; mtimeMs: number; title: string; turns: number; edits: number; isCut: boolean }
 
 export type ReplayPlanStatus = 'pending' | 'in_progress' | 'completed'
 
@@ -54,6 +91,11 @@ declare module 'claude-code' {
       isOffered: boolean
       view: ReplayView
       plan: ReplayPlanItem[]
+      browse: ReplayBrowse
+      sessions: ReplaySessions
+      turns: ReplayTurns | null
+      // A turn read back from a transcript; the live last turn stays in `replay`.
+      past: Replay | null
       hub: HubCard
       home: { at: number }
     }

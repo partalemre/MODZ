@@ -67,13 +67,21 @@ function emptyView(ui: Ui, spec: { surface: string; width: number; theme: Theme;
   const { Box, Text, Button, Svg } = ui
   const w = words()
   const close = <Button key="rt-close" plain hotkey="c" label={w.close} onPress={spec.on.onClose} />
+  const sessions = <Button key="rt-sessions" variant="secondary" hotkey="s" label={w.pastSessions} onPress={spec.on.onSessions} />
+  const actions = (
+    <Box flexDirection="row" columnGap={2}>
+      {sessions}
+      <Box flexGrow={1} />
+      {close}
+    </Box>
+  )
   if (spec.surface === 'terminal' || !('Svg' in ui)) {
     return (
       <Box key="rt-empty" flexDirection="column" gap={1} paddingX={1}>
         <Text color="merged" bold>{`● ${upper(w.title)}`}</Text>
         <Text bold>{w.emptyLead}</Text>
         <Text dimColor>{w.emptyRest}</Text>
-        <Box flexDirection="row">{close}</Box>
+        {actions}
       </Box>
     )
   }
@@ -82,13 +90,15 @@ function emptyView(ui: Ui, spec: { surface: string; width: number; theme: Theme;
   return (
     <Box key="rt-empty" flexDirection="column" gap={1} paddingX={1} paddingY={1}>
       <Svg key="rt-empty-svg" source={drawn.source} alt={emptyText()} width={spec.width} height={drawn.height} />
-      <Box flexDirection="row">{close}</Box>
+      {actions}
     </Box>
   )
 }
 
+export const paneWidth = (columns: number): number => widthFor(columns - PANE_GUTTER_COLUMNS, { min: 280, max: 720 })
+
 export function replayView(ui: Ui, model: Omit<PaneModel, 'width'>, site: PaneSite & { on: PaneHandlers }) {
-  const width = widthFor(site.columns - PANE_GUTTER_COLUMNS, { min: 280, max: 720 })
+  const width = paneWidth(site.columns)
   if (model.steps.length === 0) return emptyView(ui, { surface: site.surface, width, theme: model.theme, on: site.on })
   const index = Math.max(0, Math.min(model.index, model.steps.length - 1))
   const full = { ...model, index, width }

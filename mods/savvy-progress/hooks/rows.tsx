@@ -45,6 +45,8 @@ export const FRAME_PX = 34
 export const FRAME_COLS = 4
 // The gap between the card's parts, and a native button's padding around its label.
 const GAP_PX = 8
+// Narrower than this beside the meta, the now line takes a row of its own rather than shrink to "ba…".
+const LINE_MIN_PX = 120
 const BUTTON_PAD_PX = 28
 const TERM_BAR_MAX = 24
 // Room the percent and the cost beside the bar take on the terminal: "~%100" and "≈$12.34".
@@ -91,8 +93,12 @@ const nowLine = (a: AgentRun, isOpen: boolean): string => {
   return activityOf(a)
 }
 
-// A failed run's bar ends in a cross, not in a percent that would read as "done".
-const barLabel = (a: AgentRun, progress: Progress): string => (a.status === 'failed' ? '✗' : progressLabel(progress))
+// A failed run's bar ends in a cross, not in a percent that would read as "done"; a guess made
+// before its first tool call would be no more than the starting sliver, so it says nothing yet.
+const barLabel = (a: AgentRun, progress: Progress): string => {
+  if (a.status === 'failed') return '✗'
+  return progress.isEstimate && !a.toolCount ? '' : progressLabel(progress)
+}
 
 // An estimate fills with a lighter rule, so it never reads as a measured one.
 const termBar = (p: Progress, width: number): string => {
@@ -137,7 +143,7 @@ function termSummary(ui: Ui, a: AgentRun, ctx: RowContext) {
           <Text bold>{lookOf(a).name}</Text>
           <Text dimColor>{' · '}</Text>
           <Text color={keyOf(tierOf(a))}>{tierWordOf(a)}</Text>
-          <Text dimColor>{` · ${modelLine(a)} · ${t().tools(a.toolCount || 0)}`}</Text>
+          <Text dimColor>{` · ${[modelLine(a), t().tools(a.toolCount || 0)].filter(Boolean).join(' · ')}`}</Text>
         </Text>
         <Text dimColor>{clockOf(a, ctx.at)}</Text>
       </Box>
@@ -178,21 +184,36 @@ function deskHead(ui: Ui, a: AgentRun, ctx: RowContext) {
 /** The card's disclosure: "Detay ▾" opens it, "Gizle ▴" closes it. */
 export const toggleLabel = (isOpen: boolean): string => (isOpen ? `${t().hide} ▴` : `${t().details} ▾`)
 
-// The now line, the meta and the disclosure in one row; the line gives way, never the button.
+// The now line, the meta and the disclosure in one row; the line gives way, never the button. A
+// card too narrow for a readable line sets it above the meta instead.
 function deskFoot(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box, Button, Text } = ui
   const isOpen = ctx.selected === a.id
   const meta = `${t().tools(a.toolCount || 0)} · ${clockOf(a, ctx.at)} · ≈${fmtCost(a.costUsd)}`
   const toggle = toggleLabel(isOpen)
   const room = ctx.inner - textWidth(meta, BODY_PX) - textWidth(toggle, BODY_PX) - BUTTON_PAD_PX - GAP_PX * 2
-  const line = fitText(nowLine(a, isOpen), BODY_PX, room)
+  const isStacked = room < LINE_MIN_PX
+  const line = (
+    <Box flexShrink={1} flexGrow={1}>
+      <Text wrap="truncate-end" dimColor={a.status !== 'running'}>{fitText(nowLine(a, isOpen), BODY_PX, isStacked ? ctx.inner : room)}</Text>
+    </Box>
+  )
+  const tail = [
+    <Box key="meta" flexShrink={0}><Text dimColor>{meta}</Text></Box>,
+    <Button key={`open-${a.id}`} plain dimColor={!isOpen} label={toggle} hover={{ color: 'permission' }} onPress={() => ctx.onToggle(a.id)} />,
+  ]
+  if (isStacked) {
+    return (
+      <Box flexDirection="column">
+        {line}
+        <Box flexDirection="row" justifyContent="flex-end" alignItems="center" columnGap={1}>{tail}</Box>
+      </Box>
+    )
+  }
   return (
     <Box flexDirection="row" justifyContent="space-between" alignItems="center" columnGap={1}>
-      <Box flexShrink={1} flexGrow={1}>
-        <Text wrap="truncate-end" dimColor={a.status !== 'running'}>{line}</Text>
-      </Box>
-      <Box flexShrink={0}><Text dimColor>{meta}</Text></Box>
-      <Button key={`open-${a.id}`} plain dimColor={!isOpen} label={toggle} hover={{ color: 'permission' }} onPress={() => ctx.onToggle(a.id)} />
+      {line}
+      {tail}
     </Box>
   )
 }
@@ -206,7 +227,7 @@ function deskCard(ui: Ui, a: AgentRun, ctx: RowContext) {
   return (
     <Box key={a.id} flexDirection="column" borderStyle="round" borderDimColor={!isOpen} hover={{ borderDimColor: false }} paddingX={CARD_PAD_X} paddingY={1}>
       {deskHead(ui, a, ctx)}
-      <Svg key="bar" source={progressBarSvg(ctx.inner, a, { progress, label })} alt={label} width={ctx.inner} height={BAR_H} />
+      <Svg key="bar" source={progressBarSvg(ctx.inner, a, { progress, label })} alt={label || t().starting} width={ctx.inner} height={BAR_H} />
       {deskFoot(ui, a, ctx)}
       {isOpen && detailTree(ui, a, ctx)}
     </Box>

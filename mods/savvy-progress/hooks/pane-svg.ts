@@ -40,10 +40,14 @@ export const activityOf = (a: AgentRun): string => {
   return steps ? `${steps}  ${tool}` : tool
 }
 
+// A spawn may not name its model yet (none, or `inherit`): the line waits for the first model
+// request rather than show "—" or the alias.
+const UNNAMED = ['', 'inherit']
+
 export const modelLine = (a: AgentRun): string => {
-  const parts = [a.effort ? `${modelName(a.model)} · ${a.effort}` : modelName(a.model)]
-  if (a.round > 1) parts.push(`${t().round} ${a.round}`)
-  return parts.join(' · ')
+  const round = a.round > 1 ? `${t().round} ${a.round}` : ''
+  const model = UNNAMED.includes(a.model) ? '' : modelName(a.model)
+  return [model, a.effort ?? '', round].filter(Boolean).join(' · ')
 }
 
 export const clockOf = (a: AgentRun, at: number): string => {

@@ -42,8 +42,6 @@ export type Strings = {
   dismiss: string
   brief: string
   history: string
-  result: string
-  noCalls: string
   message: string
   send: string
   stop: string
@@ -56,7 +54,6 @@ export type Strings = {
   limit: string
   limitTile: string
   kinds: Kinds
-  cheerDone: string
   cheerFailed: string
   /** Section toggles and the card's disclosure. */
   show: string
@@ -119,6 +116,10 @@ export type Strings = {
   stopWho: (name: string) => string
   /** The message field's hint names its agent: "Nori'ye yaz, Enter gönderir". */
   messageTo: (name: string) => string
+  /** The card as a conversation: the person's side, the agent at work, and a question after its answer. */
+  you: string
+  answering: (name: string) => string
+  followUp: (name: string) => string
   launched: (name: string) => string
   denied: (reason: string) => string
   // The decimal mark numbers are written with: "1,68" in Turkish and Russian, "1.68" in English.

@@ -1,4 +1,4 @@
-import type { AgentRun } from '../types'
+import type { AgentRun, ThreadTurn } from '../types'
 import { clip, norm, toolDetail, toolName, toolTarget } from './format'
 import { nextLook } from './identity'
 import { costOf, tokensOf, windowOf } from './pricing'
@@ -10,6 +10,8 @@ import { applyTaskTool } from './tasks'
 
 const BRIEF_MAX = 800
 const ANSWER_MAX = 1500
+// The conversation keeps its latest turns; the task it was handed stays above them as `brief`.
+const THREAD_MAX = 12
 
 export type Spawn = {
   id: string
@@ -21,6 +23,7 @@ export type Spawn = {
   model: string
   effort?: string
   brief?: string
+  isAsked?: boolean
   at: number
 }
 
@@ -36,6 +39,7 @@ export function addRun(list: AgentRun[], spawn: Spawn): AgentRun[] {
     model: spawn.model,
     effort: spawn.effort,
     brief: spawn.brief?.trim() ? clip(spawn.brief.trim(), BRIEF_MAX) : undefined,
+    isAsked: spawn.isAsked,
     status: 'running',
     startedAt: spawn.at,
     contextTokens: 0,
@@ -50,6 +54,11 @@ export function addRun(list: AgentRun[], spawn: Spawn): AgentRun[] {
   }
   return [...list.filter(a => a.id !== run.id), run].slice(-MAX_RUNS)
 }
+
+const withTurn = (a: AgentRun, turn: ThreadTurn): AgentRun => ({ ...a, thread: [...(a.thread ?? []), turn].slice(-THREAD_MAX) })
+
+/** A follow-up the person sent from the card: it waits under the conversation for the next answer. */
+export const askedAgain = (a: AgentRun, text: string, at: number): AgentRun => withTurn(a, { from: 'you', text: clip(text.trim(), BRIEF_MAX), at })
 
 export const patchRun = (list: AgentRun[], agentId: string, fn: (a: AgentRun) => AgentRun): AgentRun[] =>
   list.map(a => (a.agentId === agentId ? fn(a) : a))
@@ -78,12 +87,14 @@ export const endRun = (a: AgentRun, facts: EndFacts): AgentRun => {
   // A run whose steps went unseen still gets the turn's own sum.
   const usage = a.steps === 0 ? facts.usage : undefined
   const model = usage?.model || a.model
+  const answer = facts.answer?.trim() ? clip(facts.answer.trim(), ANSWER_MAX) : undefined
+  const told = isAnswered && answer ? withTurn(a, { from: 'agent', text: answer, at: facts.at }) : a
   return {
-    ...a,
+    ...told,
     status: isAnswered ? 'done' : 'failed',
     endReason: isAnswered ? undefined : facts.reason,
     endedAt: facts.at,
-    answer: facts.answer?.trim() ? clip(facts.answer.trim(), ANSWER_MAX) : a.answer,
+    answer: answer ?? a.answer,
     ...(usage ? { model, tokens: tokensOf(usage), costUsd: costOf(model, usage) } : {}),
   }
 }

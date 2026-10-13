@@ -37,6 +37,13 @@ export type ToolEvent = {
   isError?: boolean
 }
 
+/** One line of an agent's conversation: a question the person sent from its card, or an answer. */
+export type ThreadTurn = {
+  from: 'you' | 'agent'
+  text: string
+  at: number
+}
+
 /** A file an agent read or changed: how often each, and when it last touched it. */
 export type TouchedFile = {
   path: string
@@ -82,6 +89,10 @@ export type AgentRun = {
   brief?: string
   /** Its final report once it answered, cut short. */
   answer?: string
+  /** Started from the panel's form: its task is the person's own question. */
+  isAsked?: boolean
+  /** Each answer and each follow-up sent from its card, oldest first; the task comes before them. */
+  thread?: ThreadTurn[]
   /** Its latest tool calls, oldest first. */
   history?: ToolEvent[]
   /** The files its calls read or changed, the latest last. */

@@ -156,6 +156,60 @@ test('preview: another chat\'s edit in the terminal pane', async ($, on) => {
   await call
 })
 
+// A house rule the judge says to ask about: no network calls to *.internal.
+const HOUSE = {
+  files: { '/work/demo-app/.claude/house-rules.md': '- never touch the production database\n- no network calls to *.internal\n' },
+  reply: 'ask 2',
+}
+const CURL = { tool: 'Bash', command: 'curl -s https://billing.internal/v1/charges?limit=50' }
+
+for (const theme of ['dark', 'light']) {
+  const suffix = theme === 'light' ? '-light' : ''
+
+  test(`preview: a house rule asks (${theme})`, async ($, on) => {
+    const w = world({ ...EN, ...HOUSE, theme })
+    stub(on, w)
+    await start($, w)
+    const call = ($ as any).tool.call(CURL)
+    await pass(w, 0)
+    await showOnce(`br-house-w400${suffix}`, await mountPane($, 'desktop', NARROW_PANE))
+    const ui = await mountPane($, 'desktop')
+    await show(`br-house${suffix}`, ui)
+    await ui.press({ key: 'cancel' })
+    await pass(w)
+    await call
+  })
+}
+
+for (const surface of ['terminal', 'desktop']) {
+  test(`preview: a house rule asks in the band (${surface})`, async ($, on) => {
+    const w = world({ ...EN, ...HOUSE, isPlaced: false })
+    stub(on, w)
+    on('ui.render', () => ({ type: 'Text', props: { dimColor: true }, children: ['● hud-pro · context 42% · ≈$0.38'] }))
+    await start($, w, surface)
+    const call = ($ as any).tool.call(CURL)
+    await pass(w, 0)
+    const band = await mountBand($, surface)
+    await show(`br-house-band-${surface}`, band)
+    await band.press({ key: 'cancel' })
+    await pass(w)
+    await call
+  })
+}
+
+test('preview: a house rule asks in the terminal pane', async ($, on) => {
+  const w = world({ ...EN, ...HOUSE })
+  stub(on, w)
+  await start($, w, 'terminal')
+  const call = ($ as any).tool.call(CURL)
+  await pass(w, 0)
+  const ui = await mountPane($, 'terminal')
+  await show('br-house-terminal', ui)
+  await ui.press({ key: 'cancel' })
+  await pass(w)
+  await call
+})
+
 test('preview: terminal pane', async ($, on) => {
   const w = world({ ...EN, answers: { files: BUILD_SCAN } })
   stub(on, w)

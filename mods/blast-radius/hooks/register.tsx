@@ -6,7 +6,8 @@
 // tool.call (Bash): if the command is risky, work out its blast radius, open a
 // pane with Run anyway and Keep my work, and hold the call until one is pressed.
 // A command that would change nothing (no such file, no changes) runs with no card.
-// Edits another chat just made are guarded in collide.ts.
+// Any other command is weighed against the person's house rules, when they wrote
+// some (house.ts). Edits another chat just made are guarded in collide.ts.
 // ui.render (Pane): draws the card. If the surface won't place the pane (a
 // narrow terminal), the same card is drawn in the AbovePrompt band, above the
 // other mods' rows.
@@ -25,6 +26,7 @@ import type { Risk } from './classify'
 import { editHooks } from './collide'
 import { PANE_ID, SLEEP_TIMEOUT_MS, closeHeld, current, hold, take } from './hold'
 import type { Decision, Held, HoldIo } from './hold'
+import { houseHooks, resetHouse } from './house'
 import { setLang } from './lang'
 import { measure, missingFolder } from './measure'
 import type { Report, Run } from './report'
@@ -142,6 +144,7 @@ type On = Parameters<Register>[0]
 function holdHooks(on: On): void {
   on('session.start', async ($, e, next) => {
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
+    resetHouse()
     try {
       await refreshTheme($)
     } catch {
@@ -211,6 +214,7 @@ function drawHooks(on: On): void {
 
 export const register: Register = on => {
   holdHooks(on)
+  houseHooks(on)
   editHooks(on)
   drawHooks(on)
 }

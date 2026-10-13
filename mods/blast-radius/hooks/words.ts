@@ -31,6 +31,16 @@ export type Words = {
   action: (report: Report) => View['action']
   notes: Notes
   edit: EditWords
+  house: HouseWords
+}
+
+// The caution card for a command one of the person's house rules asks about.
+export type HouseWords = {
+  // "House rule: <the rule>", the card's banner.
+  banner: (rule: string) => string
+  // Said in place of a rule when the judge could not name which one.
+  anyRule: string
+  action: Choice
 }
 
 // The caution card for a file another chat edited within the last half hour.

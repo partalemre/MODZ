@@ -1,6 +1,6 @@
 # blast-radius
 
-Holds a risky shell command before it runs and shows you what it would change, so you decide whether it goes ahead. It also holds an edit to a file another chat on this machine changed in the last half hour.
+Holds a risky shell command before it runs and shows you what it would change, so you decide whether it goes ahead. It also holds an edit to a file another chat on this machine changed in the last half hour, and, when you write house rules, a command that may break one.
 
 ## Install
 
@@ -34,6 +34,27 @@ Every other command runs as normal. The card follows `cd dir &&`, `pushd`/`popd`
 
 On the desktop app the card is drawn as a picture; in the terminal it is text. In a terminal too narrow for a side pane (under about 144 columns) the card moves into the band above the prompt. Focus the band first (click it, or ctrl+x then tab); letters never answer from the prompt, so a stray keystroke can't delete anything.
 
+## House rules
+
+Write the rules you want Claude to keep in `.claude/house-rules.md` at the project root, one per line or list item, in plain words:
+
+```md
+- never touch the production database
+- no network calls to *.internal
+```
+
+Headings, `<!-- comments -->` and blank lines are not rules. With the file there, each Bash command that the table above doesn't hold and that isn't a plain read is put to a judge with your rules as its instructions. Plain reads never are: `ls`, `cat`, `head`, `tail`, `wc`, `pwd`, `echo`, `grep`, `rg`, `which`, `stat`, `file`, `tree`, `du`, `df`, `date`, `whoami`, `git status`, `git diff`, `git log`, `git show` and `git blame`, alone or joined by pipes, `&&` or `;`, with no redirect, `$(...)` or `--output`. The judge answers one of three ways:
+
+- **allow**: the command runs.
+- **ask**: the command is held on an amber card that says which rule ("House rule: no network calls to *.internal"; "house rules" when the judge can't name one). **Keep my work** (`k`) has the focus; **Run anyway** (`r`) runs it. With nobody there to answer (`claude -p`, the SDK) the command is refused.
+- **block**: the command is refused, and Claude reads which rule it breaks.
+
+The verdict for each exact command is kept for the session, and dropped when the rules change. If the judge can't answer (no model, a timeout, a reply it can't read), the command runs and a line goes to the debug log: a judge that failed never stops your work. Up to eight rules, the judge names the rule it matched; with more it answers by kind alone. Rules past 4,000 characters are not sent.
+
+**Token cost:** at most one `haiku` call (effort low, a reply of at most 32 tokens) per Bash command that is neither held by the table nor a plain read, on your own account, and only while `.claude/house-rules.md` exists; a repeated command costs nothing. Without the file this costs nothing.
+
+**TypeSafe Jev (opt-in):** set `MODZ_JUDGE=jev` and `TYPESAFE_API_KEY` in the `env` block of `~/.claude/settings.json` and the judge asks TypeSafe Jev instead of the model. The command and your rules are then sent to `api.typesafe.ai`, after `KEY=value` assignments with secret-looking names, `--token`/`--password` values, URL passwords, bearer tokens and long key-like strings are masked. Without both variables nothing is sent there.
+
 ## Another chat's edit
 
 When two chats work in the same files, the second one can write over what the first just changed. Each edit that lands (Write, Edit, NotebookEdit, and MultiEdit where the build has it) is noted by the file's real path, so a symlink and its target count as one file. If Claude is about to edit a file that another chat on this machine edited in the last 30 minutes, the edit is held on an amber card:
@@ -60,7 +81,7 @@ The notes live in the plugin's own store under `~/.claude`, one entry per chat, 
 - Needs `bash`, `git`, `find` and `du` on your `PATH`.
 - This is a safety net, not a permission system. Use [permission rules](https://code.claude.com/docs/en/settings) for a hard block.
 
-Uses no model tokens. It has no settings.
+Without `.claude/house-rules.md` it uses no model tokens. It has no settings beyond the two Jev variables above.
 
 ## Language
 

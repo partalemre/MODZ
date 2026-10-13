@@ -3,7 +3,13 @@
 import { formatSize } from './report'
 import type { Report } from './report'
 import type { Banner, View } from './view'
-import type { EditWords, Notes, Words } from './words'
+import type { EditWords, HouseWords, Notes, Words } from './words'
+
+const house: HouseWords = {
+  banner: rule => `Ev kuralı: ${rule}`,
+  anyRule: 'ev kuralları',
+  action: { label: 'Yine de çalıştır', hotkey: 'c' },
+}
 
 export const trSize = (bytes: number): string => formatSize(bytes, ',')
 
@@ -89,4 +95,5 @@ export const TR: Words = {
   action,
   notes,
   edit,
+  house,
 }

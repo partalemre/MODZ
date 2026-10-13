@@ -4,7 +4,7 @@
 import { formatSize, plural } from './report'
 import type { Report } from './report'
 import type { Banner } from './view'
-import type { EditWords, Notes, Words } from './words'
+import type { EditWords, HouseWords, Notes, Words } from './words'
 
 const enSize = (bytes: number): string => formatSize(bytes, '.')
 
@@ -63,6 +63,12 @@ const edit: EditWords = {
   cancelWhy: 'the user pressed Skip this edit',
 }
 
+const house: HouseWords = {
+  banner: rule => `House rule: ${rule}`,
+  anyRule: 'house rules',
+  action: { label: 'Run anyway', hotkey: 'r' },
+}
+
 export const EN: Words = {
   eyebrow: 'Held · Blast Radius',
   holder: 'Held by Blast Radius',
@@ -84,4 +90,5 @@ export const EN: Words = {
   action: () => ({ label: 'Run anyway', hotkey: 'r' }),
   notes,
   edit,
+  house,
 }

@@ -28,12 +28,20 @@ export type World = {
   isToolError: boolean
   // Debug log lines.
   logs: string[]
+  // Files `$.fs.read` finds (the house rules), by absolute path.
+  files: Record<string, string>
+  // What the judge's model answers ('throw': the call is refused), and every request it got.
+  reply: string
+  asked: any[]
+  // What Jev answers, and every request sent to it.
+  jevChoice: string
+  fetched: any[]
 }
 
 export const SURFACES = ['terminal', 'desktop'] as const
 
 export function world(over: Partial<World> = {}): World {
-  return { cwd: '/work/demo-app', isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], ran: [], toasts: [], clock: null, sessionId: 'chat-a', root: '/work/demo-app', surfaces: ['desktop'], store: {}, links: {}, isToolError: false, logs: [], ...over }
+  return { cwd: '/work/demo-app', isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], ran: [], toasts: [], clock: null, sessionId: 'chat-a', root: '/work/demo-app', surfaces: ['desktop'], store: {}, links: {}, isToolError: false, logs: [], files: {}, reply: 'allow', asked: [], jevChoice: 'allow', fetched: [], ...over }
 }
 
 const SECOND = 1000
@@ -92,6 +100,29 @@ function stubUi(on: any, w: World): void {
   })
 }
 
+const USAGE = { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 }
+
+// The house rules on disk, and the judge behind them: the model, or Jev over http.
+function stubJudge(on: any, w: World): void {
+  on('fs.read', (_: any, e: any) => {
+    if (!(e.path in w.files)) throw new Error(`ENOENT: ${e.path}`)
+
+    return { value: w.files[e.path] }
+  })
+  on('model.complete', (_: any, e: any) => {
+    w.asked.push(e)
+    if (w.reply === 'throw') throw new Error('model refused')
+
+    return { value: { isAnswered: true, text: w.reply, usage: USAGE } }
+  })
+  on('http.fetch', (_: any, e: any) => {
+    w.fetched.push(e)
+    const text = JSON.stringify({ model: 'jev-1', answers: { label: { type: 'choice', choice: w.jevChoice } } })
+
+    return { value: { status: 200, ok: true, headers: {}, text } }
+  })
+}
+
 // Who this chat is, where it runs and what its paths resolve to.
 function stubSession(on: any, w: World): void {
   on('store.get', (_: any, e: any) => ({ value: w.store[e.key] }))
@@ -128,6 +159,7 @@ export function stub(on: any, w: World): void {
   on('config.list', () => ({ value: [{ key: 'theme', label: 'Theme', kind: 'enum', value: w.theme }] }))
   on('env.get', (_: any, e: any) => ({ value: w.env[e.name] }))
   stubSession(on, w)
+  stubJudge(on, w)
   stubUi(on, w)
   on('process.run', async (_: any, e: any) => {
     if (e.argv[0] === 'sleep') {

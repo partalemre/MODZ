@@ -1,4 +1,5 @@
-import type { Activity, FileTree, Look, Theme, TurnLog } from '../types'
+import type { Activity, FileTree, Look, ReadCost, Theme, TurnLog } from '../types'
+import { rowCost } from './costtext'
 import { BRANCH_ROW } from './flash'
 import { ACTIVITY_TTL_MS } from './gitjobs'
 import type { Host } from './host'
@@ -18,6 +19,8 @@ export type Scene = {
   bright: Set<string>
   dimmed: Set<string>
   turn: TurnLog
+  // Every read's tokens this session.
+  readTotal: ReadCost | undefined
   look: Look
   isCommitting: boolean
 }
@@ -35,6 +38,7 @@ export async function sceneOf(h: Host, isDesktop: boolean): Promise<Scene> {
   const t = await h.tree()
   const now = await h.now()
   const live = (await h.activities()).filter(a => now - a.at < (a.state === 'running' ? RUNNING_MAX_MS : ACTIVITY_TTL_MS))
+  const readTotal = await h.readTotal()
   const stored = isDesktop ? await h.look() : undefined
   if (isDesktop && !stored) void refreshLook(h)
   return {
@@ -45,6 +49,7 @@ export async function sceneOf(h: Host, isDesktop: boolean): Promise<Scene> {
     bright: new Set(t.flashOn ? t.flash : []),
     dimmed: new Set(t.flashOn ? t.flashDim : []),
     turn: await h.turn(),
+    readTotal,
     look: stored ?? { isLight: false, isAuto: true },
     isCommitting: live.some(a => a.kind === 'git commit' && a.state === 'running'),
   }
@@ -72,7 +77,8 @@ export function rowCtx(s: Scene, width: number, unicode: boolean): RowCtx {
     return live.has(id) ? (pills[role] ?? '') : ''
   }
   const { t } = s
-  return { t, bright: s.bright, dimmed: s.dimmed, ignored: new Set(t.ignored), untracked: new Set(t.untrackedDirs), width, now: s.now, unicode, theme: s.theme, pal: paletteOf(s.look.isLight), pillOf }
+  const costOf = (id: string): string => rowCost(s.turn, id)
+  return { t, bright: s.bright, dimmed: s.dimmed, ignored: new Set(t.ignored), untracked: new Set(t.untrackedDirs), width, now: s.now, unicode, theme: s.theme, pal: paletteOf(s.look.isLight), pillOf, costOf }
 }
 
 // Follows Claude's latest file and pins lit rows above it; a scroll the person made wins.

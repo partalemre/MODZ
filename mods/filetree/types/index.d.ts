@@ -63,12 +63,23 @@ export type Touch = {
   at: number
 }
 
+// How sure a read's token count is: measured by the API alone, a measured step shared by text length, or guessed.
+export type CostKind = 'exact' | 'share' | 'guess'
+
+export type ReadCost = {
+  tokens: number
+  kind: CostKind
+  reads: number
+}
+
 export type TurnLog = {
   isRunning: boolean
   hasRun: boolean
   touches: Touch[]
   sha: string
   committed: number
+  // What Claude's reads (a subagent's too) put into context this turn, by file.
+  costs: Record<string, ReadCost>
 }
 
 export type Look = {
@@ -96,6 +107,8 @@ declare module 'claude-code' {
       theme: Theme
       activity: Activity[]
       turn: TurnLog
+      // Every read's tokens this session.
+      reads: ReadCost
       look: Look
       hub: HubCard
       // The person pressed "← MODZ" in the Files pane; the hub hears it and comes forward.

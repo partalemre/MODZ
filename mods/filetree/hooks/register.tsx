@@ -10,6 +10,7 @@ import { onRows, type RowsMessage, scrollBy } from './keys'
 import { refreshLook } from './look'
 import { followCwd, openFromHub, sync } from './pane'
 import { promptContext } from './prompt'
+import { loopDone, noteRead, stepDone, takeReads } from './readstep'
 import { settleBackground, touched } from './scan'
 import { sceneOf } from './scene'
 import { mem } from './session'
@@ -25,6 +26,7 @@ const TREE = { plugin: 'filetree', key: 'tree' } as const
 const THEME = { plugin: 'filetree', key: 'theme' } as const
 const ACTIVITY = { plugin: 'filetree', key: 'activity' } as const
 const TURN = { plugin: 'filetree', key: 'turn' } as const
+const READS = { plugin: 'filetree', key: 'reads' } as const
 const LOOK = { plugin: 'filetree', key: 'look' } as const
 const HUB = { plugin: 'filetree', key: 'hub' } as const
 const PANE = 'filetree'
@@ -49,6 +51,10 @@ function stateOf($: EngineInterface): StateHost {
     turn: async () => ({ ...NO_TURN, ...(await $.state.get(TURN)).value }),
     setTurn: async fn => {
       await update($, TURN, cur => fn({ ...NO_TURN, ...cur }))
+    },
+    readTotal: async () => (await $.state.get(READS)).value,
+    setReadTotal: async fn => {
+      await update($, READS, cur => fn(cur))
     },
     hubCard: async () => (await $.state.get(HUB)).value,
     setHubCard: async card => {
@@ -84,6 +90,10 @@ function ioOf($: EngineInterface): IoHost {
     every: (ms, fn) => $.clock.every(ms, fn),
     cwd: () => $.session.cwd(),
     sessionId: () => $.session.id(),
+    messages: async agentId => {
+      const found = await $.session.messages(agentId ? { agentId, as: 'api' } : { as: 'api' })
+      return Array.isArray(found) ? found : []
+    },
     tmpdir: () => $.env.get('TMPDIR'),
     osEnv: () => $.env.get('OS'),
     homeEnv: () => $.env.get('HOME'),
@@ -153,9 +163,19 @@ function onTools(on: On): void {
   })
   on('tool.call', { tool: 'Read' }, async ($, e, next) => {
     const result = await next(e)
-    if (result.deny || result.isError || e.tool !== 'Read' || !mem.showReads) return result
-    void touched(hostOf($), [posix(e.file_path)], { tone: 'purple', isShown: true })
+    if (result.deny || result.isError || e.tool !== 'Read') return result
+    noteRead({ id: e.tool_use_id ?? '', file: e.file_path, text: result.text ?? '', agentId: e.agentId })
+    if (mem.showReads) void touched(hostOf($), [posix(e.file_path)], { tone: 'purple', isShown: true })
     return result
+  })
+  // Each model request's size measures what the step before it read (readcost.ts); the request itself passes untouched.
+  on('turn.step', async function* ($, e, next) {
+    const reads = takeReads(e.agentId)
+    const step = yield* next(e)
+    void stepDone(hostOf($), { turnId: e.turnId, agentId: e.agentId, reads, usage: step.usage })
+    return step
+  }).catch(async function* ($, e, next) {
+    return yield* next(e)
   })
 }
 
@@ -169,6 +189,7 @@ function onTurns(on: On): void {
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
     const host = hostOf($)
+    await loopDone(host, e.agentId)
     if (!e.agentId) await host.setTurn(cur => ({ ...NO_TURN, ...cur, isRunning: false }))
     if (!e.agentId) await syncHub(host)
     return result

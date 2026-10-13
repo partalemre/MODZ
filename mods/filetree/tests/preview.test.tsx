@@ -10,6 +10,8 @@ type Files = Record<string, [string, 'file' | 'dir', number?][]>
 type Git = { status: string; numstat: string; heads: string[]; committed: string }
 const NOW = 1_800_000_000_000
 const DAY = 86_400_000
+// The model requests' sizes and transcript a read-cost preview lines up, and the ids its reads got.
+const steps = { prompts: [] as number[], messages: [] as unknown[], ids: {} as Record<string, string> }
 
 function world(on: any, opts: { root: string; dirs: Files; git: Git | null; theme: string }) {
   const { root, dirs, git, theme } = opts
@@ -51,9 +53,18 @@ function world(on: any, opts: { root: string; dirs: Files; git: Git | null; them
     if (verb === 'diff-tree') return ok(git.committed)
     return ok('')
   })
-  on('tool.call', () => ({ result: { stdout: '', stderr: '' } }))
+  on('tool.call', (_$: any, e: any) => {
+    steps.ids[e.file_path ?? ''] = e.tool_use_id
+    return { result: { stdout: '', stderr: '' } }
+  })
   on('turn.start', (_$: any, e: any) => ({ turnId: e.turnId }))
   on('turn.complete', (_$: any, e: any) => ({ text: e.answer }))
+  on('turn.step', async function* (_$: any, e: any) {
+    const prompt = steps.prompts.shift() ?? 0
+    const usage = { input_tokens: 2, cache_read_input_tokens: prompt - 2, cache_creation_input_tokens: 0, output_tokens: 50, model: 'claude-test' }
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'tool_use', usage }
+  })
+  on('session.messages', () => ({ value: steps.messages }))
 }
 
 // Narrow is the desktop's right panel at ≈400 px, wide ≈600 px (bin/preview --width 400 / 600, 8 px a column).
@@ -145,6 +156,47 @@ for (const theme of ['dark', 'light'] as const) for (const [size, cols] of SIZES
     await ($ as any).turn.complete(done('t2'))
     await snap(ui, `${size}-${theme}-5-nongit-done`)
     expect(JSON.stringify(await ui.drawn())).toContain('düzenledi')
+    await ui.unmount()
+  })
+}
+
+// One request after reads: the transcript holds their results (`chars` of text each), then the request runs.
+async function readStep($: any, at: { turnId: string; index: number; reads: [string, number][] }) {
+  const ids = at.reads.map(([path]) => steps.ids[path] ?? '')
+  steps.messages = [
+    { role: 'assistant', content: ids.map(id => ({ type: 'tool_use', id, name: 'Read', input: {} })) },
+    { role: 'user', content: at.reads.map(([, chars], i) => ({ type: 'tool_result', tool_use_id: ids[i], content: 'x'.repeat(chars) })) },
+  ]
+  for await (const _ of $.turn.step({ turnId: at.turnId, index: at.index, model: 'claude-test', messageCount: 1 })) void _
+}
+
+for (const theme of ['dark', 'light'] as const) for (const [size, cols] of SIZES) {
+  test(`preview ${theme} ${size}: what each read put into context`, { timeoutMs: 30_000 }, async ($, on) => {
+    const w = weather()
+    world(on, { ...w, theme })
+    await $.session.start({ cwd: w.root, surface: 'desktop', isInteractive: true })
+    const ui = await $.ui.mount({ plugin: 'filetree', surface: 'desktop', component: 'Pane', requestId: 'filetree', props: paneProps(cols) })
+    const path = (rel: string) => `${w.root}/${rel}`
+    // An earlier turn read package.json: 862 tokens, measured.
+    steps.prompts = [18_000, 18_912, 19_000, 32_371, 34_642]
+    await ($ as any).turn.start(turn('t0'))
+    await readStep($, { turnId: 't0', index: 0, reads: [] })
+    await $.tool.call({ tool: 'Read', file_path: path('package.json') } as any)
+    await readStep($, { turnId: 't0', index: 1, reads: [[path('package.json'), 400]] })
+    await ($ as any).turn.complete(done('t0'))
+    // This turn: client.js alone (13,321, measured), then two tests side by side sharing 2,221.
+    await ($ as any).turn.start(turn('t1'))
+    await readStep($, { turnId: 't1', index: 0, reads: [] })
+    await $.tool.call({ tool: 'Read', file_path: path('src/api/client.js') } as any)
+    await readStep($, { turnId: 't1', index: 1, reads: [[path('src/api/client.js'), 9_000]] })
+    for (const rel of ['tests/client.test.js', 'docs/setup.md']) await $.tool.call({ tool: 'Read', file_path: path(rel) } as any)
+    await readStep($, { turnId: 't1', index: 2, reads: [[path('tests/client.test.js'), 600], [path('docs/setup.md'), 300]] })
+    w.git.status = '## main...origin/main\0 M src/api/client.js\0'
+    w.git.numstat = '3\t1\tsrc/api/client.js\0'
+    await $.tool.call({ tool: 'Edit', file_path: path('src/api/client.js'), old_string: 'a', new_string: 'b' } as any)
+    await ($ as any).turn.complete(done('t1'))
+    await snap(ui, `${size}-${theme}-7-read-costs`)
+    expect(JSON.stringify(await ui.drawn())).toContain('13.321')
     await ui.unmount()
   })
 }

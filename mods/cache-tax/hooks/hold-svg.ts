@@ -1,4 +1,4 @@
-// The hold card's two drawings: the header (cube tile, eyebrow, headline, how long ago) and the
+// The hold card's two drawings: the header (cube tile, eyebrow, headline, why it is cold) and the
 // inset comparison of sending now against a warm turn, as prices over proportional bars.
 
 import { cube } from './cube'
@@ -10,7 +10,8 @@ import { bandWords } from './ui-words'
 
 export type HoldView = {
   held: string
-  coldFor: string
+  /** The line under the headline, longest first: why this send is cold. */
+  reason: string[]
   tokens: string
   coldUsd: number | null
   warmUsd: number | null
@@ -41,12 +42,13 @@ const HY = { eyebrow: 16, headline: 38, body: 59 }
 export function headerSvg(width: number, view: HoldView, p: Palette): string {
   const kiln = p.role.edit
   const room = width - TEXT_X
+  const reason = view.reason.find(said => measure(said, BODY) <= room) ?? fit(view.reason.at(-1) ?? '', room, BODY)
   const body = [
     tile({ x: 0, y: TILE_Y, size: TILE }, kiln.tint),
     cube({ x: (TILE - CUBE) / 2, y: TILE_Y + (TILE - CUBE) / 2, size: CUBE }, { lid: kiln.fg, outline: p.hi }),
     eyebrow({ x: TEXT_X, y: HY.eyebrow, fill: kiln.fg }, bandWords().eyebrow),
     text({ ...HEADLINE, x: TEXT_X, y: HY.headline, fill: p.hi, text: fit(bandWords().headline, room, HEADLINE) }),
-    text({ ...BODY, x: TEXT_X, y: HY.body, fill: p.mid, text: fit(bandWords().wentCold(view.coldFor), room, BODY) }),
+    text({ ...BODY, x: TEXT_X, y: HY.body, fill: p.mid, text: reason }),
   ]
   return doc({ width, height: HEADER_H }, body.join(''))
 }

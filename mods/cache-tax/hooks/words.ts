@@ -3,8 +3,10 @@
 
 import type { CommandSpec } from 'claude-code'
 
-import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, TTL_MS, breakEvenPings, coldUsd, isCold, priceOf, warmUsd } from './core'
+import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, TTL_MS, breakEvenPings, coldUsd, heldModel, isCold, priceOf, warmUsd } from './core'
 import type { State } from './core'
+import { modelName } from './model-switch'
+import type { ModelSwitch } from './model-switch'
 import { decimal, fmtDuration, fmtInt, fmtTok, fmtUsd } from './fmt'
 import { pick } from './lang'
 import { EN } from './phrases-en'
@@ -18,24 +20,30 @@ export const autoWarm = (): string => fmtDuration(AUTO_WARM_MS)
 /** How long ago the cache went cold. */
 export const coldFor = (s: State, now: number): number => now - s.lastRequestAt - TTL_MS
 
-export function rateText(s: State): string {
-  const price = priceOf(s.lastModel)
+export function rateText(s: State, model = s.lastModel): string {
+  const price = priceOf(model)
   return price ? `$${decimal(price[1])}/MTok` : say().rateUnknown
 }
 
-export function guardText(s: State, now: number): string {
-  const warm = warmUsd(s)
-  const ago = fmtDuration(coldFor(s, now))
-  return say().guard({ ago, tokens: fmtInt(s.ctx), rate: rateText(s), usd: fmtUsd(coldUsd(s)), warm: warm == null ? null : fmtUsd(warm) })
+/** Why the send is cold, and the model it is priced at: the one a switch sends it to. */
+export type Cause = { now: number; switched: ModelSwitch | null }
+
+export function guardText(s: State, { now, switched }: Cause): string {
+  const model = switched?.to ?? s.lastModel
+  const warm = warmUsd(s, model)
+  const lead = switched ? say().switchLead(modelName(switched.from), modelName(switched.to)) : say().coldLead(fmtDuration(coldFor(s, now)))
+  return say().guard({ lead, tokens: fmtInt(s.ctx), rate: rateText(s, model), usd: fmtUsd(coldUsd(s, model)), warm: warm == null ? null : fmtUsd(warm) })
 }
 
-/** The drop reason. With the band the card says the rest, so the host's line stays short. */
+/** The drop reason for the held send. With the band the card says the rest, so the host's line stays short. */
 export function dropText(s: State, now: number): string {
-  if (s.hasBand) return say().dropHeld(fmtUsd(coldUsd(s)))
-  return say().drop(guardText(s, now), autoWarm())
+  const switched = s.held?.switch ?? null
+  const usd = fmtUsd(coldUsd(s, heldModel(s)))
+  if (s.hasBand) return switched ? say().dropSwitched(usd) : say().dropHeld(usd)
+  return say().drop(guardText(s, { now, switched }), autoWarm())
 }
 
-export const warnText = (s: State, now: number): string => say().warn(guardText(s, now), autoWarm())
+export const warnText = (s: State, cause: Cause): string => say().warn(guardText(s, cause), autoWarm())
 
 export const paidText = (tokens: number, usd: number | null): string =>
   say().paid({ tokens: fmtTok(tokens), usd: fmtUsd(usd), auto: autoWarm() })

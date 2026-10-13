@@ -5,9 +5,12 @@ import type { Guard, Phrases, Times } from './phrases-en'
 export const TR: Phrases = {
   rateUnknown: 'önbellek yazma fiyatı',
   guard: (g: Guard): string =>
-    `önbellek ${g.ago} önce soğudu. Bu gönderim en fazla ${g.tokens} token'ı ${g.rate} fiyatla yeniden yazar = ${g.usd}` +
+    `${g.lead} Bu gönderim en fazla ${g.tokens} token'ı ${g.rate} fiyatla yeniden yazar = ${g.usd}` +
     (g.warm === null ? '' : ` (sıcak bir tur ${g.warm} olurdu)`) + '.',
+  coldLead: (ago: string): string => `önbellek ${ago} önce soğudu.`,
+  switchLead: (from: string, to: string): string => `model değişti (${from} → ${to}): önbellek yeniden yazılacak.`,
   dropHeld: (usd: string): string => `cache-tax: mesajın bekletiliyor, kartta seç (soğuk önbellek, en fazla ${usd}).`,
+  dropSwitched: (usd: string): string => `cache-tax: mesajın bekletiliyor, kartta seç (model değişti, en fazla ${usd}).`,
   drop: (guard: string, auto: string): string =>
     `cache-tax: ${guard} Ödemek için yeniden gönder; keepwarm sonra önbelleği ${auto} tutar. ` +
     'Ya da /clear ile bir notla baştan başla.',

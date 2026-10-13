@@ -4,11 +4,13 @@ import type { EngineInterface, On, Register } from 'claude-code'
 import type { JustSaved, Learning } from '../types'
 import { cardDesktop, cardText, savedDesktop, savedText } from './card'
 import type { CardActions, Scope } from './card'
-import { decide, isHere, items, record } from './learn'
+import { claudePaths, decide, isHere, items, record, waitingHere } from './learn'
 import type { Io } from './learn'
 import { SYSTEM, checkPrompt, parseVerdict } from './policy'
 import { MAX_PROMPT, cleanRule, hasTrigger, isTrivial, looksSecret, remembered, withRule } from './rules'
 import { setLang } from './lang'
+import { MINE_COMMAND, wireMine } from './mine-wire'
+import { mineWords } from './mine-words'
 import { pinned } from './pin'
 import { words } from './words'
 import { isLightTheme } from './theme'
@@ -52,8 +54,7 @@ function io($: EngineInterface): Io {
 }
 
 async function fileFor($: EngineInterface, scope: Scope, root: string): Promise<string> {
-  if (scope === 'global') return `${(await $.env.get('HOME')) ?? ''}/.claude/CLAUDE.md`
-  return `${root}/CLAUDE.md`
+  return claudePaths((await $.env.get('HOME')) ?? '', root)[scope]
 }
 
 /** The paths as the card shows them: the project's by its folder name, the global one from home. */
@@ -63,9 +64,7 @@ function shownPaths(root: string): Record<Scope, string> {
 
 async function refreshBand($: EngineInterface) {
   const root = await $.session.root()
-  const mine = (await items(io($)))
-    .filter(l => l.status === 'pending' && isHere(l, root))
-    .sort((a, b) => b.count - a.count || b.lastAt - a.lastAt)
+  const mine = waitingHere(await items(io($)), root)
   await update($, pending, () => mine)
 }
 
@@ -174,6 +173,7 @@ function wireSession(on: On) {
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     await $.command.register({ name: 'reflect-queue', description: words().queueHelp })
     await $.command.register({ name: 'reflect-pause', description: words().pauseHelp })
+    await $.command.register({ name: MINE_COMMAND, description: mineWords().mineHelp })
     await readTheme($)
     await refreshBand($)
     return next(e)
@@ -276,4 +276,5 @@ export const register: Register = (on, options) => {
   wirePrompts(on)
   wireCommands(on)
   wireBand(on)
+  wireMine(on, { look: () => ({ isLight, model }) })
 }

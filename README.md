@@ -10,9 +10,9 @@
 <p align="center">See every move Claude makes: agents, files, plans, tests and risky commands, live, beside the chat.</p>
 
 <p align="center">
-  <a href="https://partalemre.github.io/MODZ/"><img src="docs/img/poster.jpg" width="720" alt="The MODZ film, 54 seconds"></a>
+  <a href="https://partalemre.github.io/MODZ/"><img src="docs/img/film-preview.webp" width="760" alt="16 seconds of the MODZ film: the camera dives through the wordmark into Claude Code, tool calls stream into the MODZ panel, and the Agents row opens into the Agents pane"></a>
   <br>
-  <sub><a href="https://partalemre.github.io/MODZ/">Watch the film</a> · 54 seconds</sub>
+  <sub><a href="https://partalemre.github.io/MODZ/">Watch the whole film</a> · 54 seconds, with sound · <a href="https://github.com/partalemre/MODZ/releases/latest">download it</a></sub>
 </p>
 
 ## Install

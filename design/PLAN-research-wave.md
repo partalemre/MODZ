@@ -46,3 +46,20 @@ bir eylem: metin hazırlanır, gönderim kişinin onayıyla.
 `claude plugin validate` + `claude plugin test` yeşil, iki yüzeyde (terminal + desktop) UI testi, `preview.test.tsx`'te
 her yeni durum, EN + TR sözcükler, dosya ≤300 / fonksiyon ≤40 satır, kit kopyası `bin/kit-sync` ile, sürüm minor artışı,
 mod README'si güncel, hub `detail` ≤40 karakter ve ölçülmüş gerçek.
+
+## Durum (2026-10-13 akşam)
+16 satırın 15'i uygulandı, testli ve iki motorda yeşil; #16'nın erişim tablosu README'de. Uygulamada plandan sapmalar:
+- done-ping'in var olan `sound` ayarı korunur; ses paketi `soundPack` adıyla gelir.
+- Model değişimi uyarısı (`PreModelSwitch` yalnızca kabuk kancası) cache-tax'ta `turn.step` modeliyle yapılır.
+- hud-pro'nun eski "Sıkıştır" düğmesi `$.command.run` kullanıyordu; ikisi de `$.session.compact()` oldu.
+- Dolma saati yalnızca 5 saatlik pencere için: bir saatin hızı bir haftayı anlatmaz.
+- reflect `/mine`, 4 MiB'tan büyük sohbetlerin son 1 MB'ını `tail` ile okur.
+- secret-guard: `.env` hedefi dosyanın kendi git kökü; alt ajanda otomatik taşıma yok (gözlenen hata).
+Bilinen sınırlar her modun README'sinde (ör. ekranda gösterilen Bash çıktısı yer tutucu yerine gerçek değeri taşır).
+
+## Dağıtım taslağı (gönderim kişinin onayıyla)
+- **hesreallyhim/awesome-claude-code** → "Plugins" bölümü:
+  `[MODZ](https://github.com/partalemre/MODZ) — 19 Claude Code mods and one panel: agents, files, plan, tests, CI,
+  risky commands, context and limits, live beside the chat. Each mod states what it reads, writes, runs and spends.`
+- **karanb192/awesome-claude-code-mods** → katalog girdisi: marketplace `partalemre/MODZ`, erişim README tablosundan.
+- **anthropics/claude-plugins-official** → başvuru kuralları okunduktan sonra, tek tek modlar yerine marketplace.

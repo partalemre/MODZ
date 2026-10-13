@@ -28,12 +28,14 @@ const cacheTaxNotice = { plugin: 'cache-tax', key: 'notice' } as const
 const knowNotice = { plugin: 'you-should-know', key: 'notice' } as const
 const budgetNotice = { plugin: 'session-budget', key: 'notice' } as const
 const reflectNotice = { plugin: 'reflect', key: 'notice' } as const
+const handoffNotice = { plugin: 'handoff', key: 'notice' } as const
 
 async function isOutranked($: EngineInterface): Promise<boolean> {
   const nowMs = await $.clock.now()
   const others: { value?: unknown }[] = [
     await $.state.get(cacheTaxNotice as never), await $.state.get(knowNotice as never),
     await $.state.get(budgetNotice as never), await $.state.get(reflectNotice as never),
+    await $.state.get(handoffNotice as never),
   ]
 
   return others.some(other => isLive(other.value, nowMs))

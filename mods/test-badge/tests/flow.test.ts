@@ -84,6 +84,14 @@ for (const surface of SURFACES) {
     expect(await band.find({ key: 'tb-details' })).toBeUndefined()
   })
 
+  test(`${surface}: the shared notice gives way to a handoff card`, async ($: any, on: any) => {
+    const world = newWorld()
+    on('state.get', { plugin: 'handoff' }, () => ({ value: { value: { priority: 3, expiresAt: 0 }, version: 1 } }))
+    await editAndRun($, await setup($, on, world))
+    const band = await $.ui.mount(bandOf(surface))
+    expect(await band.find({ key: 'tb-details' })).toBeUndefined()
+  })
+
   test(`${surface}: a failure row opens the file at its line; with no opener it copies file:line`, async ($: any, on: any) => {
     const world = newWorld()
     await editAndRun($, await setup($, on, world))

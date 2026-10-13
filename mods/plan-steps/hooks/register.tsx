@@ -1,46 +1,38 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Register } from 'claude-code'
 
-import { HomeButton } from './home'
-import { pinned } from './pin'
 import { isShown, planState, STALE_MS } from './freshness'
-import { HUB_PANE, hubOf, isOpenFor } from './hub'
+import { withoutRestored } from './carry'
+import { wireCarry } from './carry-hooks'
+import { wireFinish } from './finish-hooks'
+import { HUB_PANE, hubOf } from './hub'
 import type { HubShown } from './hub'
 import { resolvePlan } from './match'
 import type { Plan } from './match'
-import { planPane } from './pane'
+import { wirePane } from './pane-hook'
 import { baseName } from './parse'
 import { addAgent, addFile, currentIndex, observe, progressOf, settleAgents } from './progress'
 import { approvedDoc, fileDoc, isReplacing, mayHoldPlan, statusText } from './plan'
 import { createdId, createTask, fromTodos, updateTask } from './tasks'
 import type { HubCard, PlanDoc, PlanTask, StepTrack } from '../types'
-import { themeOf } from './ui/theme'
-import type { Theme } from './ui/theme'
-import { setLang } from './lang'
+import { setLang } from './kit/lang'
 import { words } from './words'
 
-const PANE = 'plan-steps'
-const PANE_TITLE = 'Plan'
-const TICK_MS = 30_000
-const DEFAULT_ROWS = 24
-const DEFAULT_COLUMNS = 48
+// The engine reads each module's use of the mod's values from that module's own source.
+const docAtom = atom({ plugin: 'plan-steps', key: 'doc' } as const, null)
+const tasksAtom = atom({ plugin: 'plan-steps', key: 'tasks' } as const, [])
+const tracksAtom = atom({ plugin: 'plan-steps', key: 'tracks' } as const, {})
+
 const EDIT_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit']
 const FILE_TOOLS = ['Read', ...EDIT_TOOLS]
-// The "← MODZ" button's row.
-const HOME_ROWS = 1
 const LIVE_AGENT = ['async_launched', 'teammate_spawned']
-
-const tasksAtom = atom({ plugin: 'plan-steps', key: 'tasks' } as const, [])
-const docAtom = atom({ plugin: 'plan-steps', key: 'doc' } as const, null)
-const tracksAtom = atom({ plugin: 'plan-steps', key: 'tracks' } as const, {})
-const tickAtom = atom({ plugin: 'plan-steps', key: 'tick' } as const, 0)
 const hubRef = { plugin: 'plan-steps', key: 'hub' } as const
 
 type Timer = { cancel: () => void }
 
 // Session-local facts. `isSettled`: a finished plan's status line was cleared. `touchedAt`: the last
 // time the plan or the step under way moved; `quiet` re-checks the status line once that goes stale.
-const flags = { cwd: '', isSettled: false, ticker: null as Timer | null, theme: 'auto' as Theme, touchedAt: 0, quiet: null as Timer | null }
+const flags = { cwd: '', isSettled: false, touchedAt: 0, quiet: null as Timer | null }
 
 type Ran = { deny?: unknown; isError?: unknown; result?: unknown }
 type Call = { tool: string; tool_use_id: string; agentId?: string } & Record<string, unknown>
@@ -55,15 +47,6 @@ function relative(path: string): string {
 
 async function currentPlan($: EngineInterface): Promise<Plan | null> {
   return resolvePlan(await read($, tasksAtom), await read($, docAtom))
-}
-
-// Asks the hub to come forward; the hub hears this mod's own `home` value. A failure only shows in the debug log.
-async function goHome($: EngineInterface): Promise<void> {
-  try {
-    await $.state.set({ plugin: 'plan-steps', key: 'home' }, { at: await $.clock.now() })
-  } catch (error) {
-    $.ui.log(`plan-steps: home failed (${String(error)})`, { to: 'debug' })
-  }
 }
 
 // The MODZ main panel's card (DESIGN.md §9), written only when what it shows changes.
@@ -147,7 +130,7 @@ async function afterTasks($: EngineInterface, call: Call, ran: Ran): Promise<voi
   if (call.tool === 'TodoWrite' && call.agentId === undefined) await setTasks($, () => fromTodos(call.todos))
   if (call.tool === 'TaskCreate') {
     const subject = String(call.subject ?? '')
-    await setTasks($, tasks => createTask(tasks, { id: createdId(ran.result, tasks), subject }))
+    await setTasks($, tasks => createTask(withoutRestored(tasks), { id: createdId(ran.result, withoutRestored(tasks)), subject }))
   }
   if (call.tool === 'TaskUpdate') await setTasks($, tasks => updateTask(tasks, { taskId: call.taskId, subject: call.subject, status: call.status }))
 }
@@ -178,15 +161,6 @@ async function onToolCall<R extends Ran>($: EngineInterface, call: Call, run: ()
   return ran
 }
 
-// The drawing follows Claude Code's theme setting; `auto` leaves it to the system's appearance.
-async function refreshTheme($: EngineInterface): Promise<void> {
-  try {
-    flags.theme = themeOf((await $.config.list()).find(row => row.key === 'theme')?.value)
-  } catch (error) {
-    $.ui.log(`plan-steps: theme not readable (${error instanceof Error ? error.message : 'unknown'})`, { to: 'debug' })
-  }
-}
-
 async function reset($: EngineInterface): Promise<void> {
   await update($, tasksAtom, () => [])
   await update($, docAtom, () => null)
@@ -198,28 +172,11 @@ async function reset($: EngineInterface): Promise<void> {
   await writeHub($, hubOf(null, 'none'))
 }
 
-// The same pane whoever asks: /steps or the MODZ main panel; an open pane comes forward.
-async function openPane($: EngineInterface): Promise<void> {
-  await refreshTheme($)
-  await $.ui.open({ id: PANE, title: PANE_TITLE, focus: true })
-  startTicker($)
-}
-
-function startTicker($: EngineInterface): void {
-  flags.ticker ??= $.clock.every(TICK_MS, () => void update($, tickAtom, tick => tick + 1))
-}
-
-function stopTicker(): void {
-  flags.ticker?.cancel()
-  flags.ticker = null
-}
-
 function lifecycle(on: On): void {
   on('session.start', async ($, e, next) => {
     // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     flags.cwd = e.cwd.replace(/\/$/, '')
-    await refreshTheme($)
     const plan = await currentPlan($)
     const state = planState(plan, { now: await $.clock.now(), touchedAt: flags.touchedAt })
     await writeHub($, hubOf(plan === null ? null : progressOf(plan), state))
@@ -234,29 +191,6 @@ function lifecycle(on: On): void {
 
   on('session.end', async ($, e, next) => {
     if (e.reason === 'clear') await reset($)
-
-    return next(e)
-  }).catch(($, e, next) => next(e))
-}
-
-// /steps or the MODZ main panel opens the pane, nothing else does.
-function paneOpening(on: On): void {
-  on('command.run', { command: 'steps' }, async $ => {
-    await openPane($)
-
-    return {}
-  })
-
-  // The MODZ main panel asks by pane key; this only opens, so a pane already open just comes forward.
-  on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
-    const done = await next(e)
-    if (isOpenFor(e.value, HUB_PANE)) await openPane($)
-
-    return done
-  }).catch(($, e, next) => next(e))
-
-  on('ui.close', { id: PANE }, ($, e, next) => {
-    stopTicker()
 
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -281,28 +215,20 @@ function tracking(on: On): void {
 
     return next(e)
   }).catch(($, e, next) => next(e))
+
+  // A plan brought back from disk (carry-hooks.ts) is the plan again: its steps, line and hub card.
+  on('state.set', { plugin: 'plan-steps', key: 'carried' }, async ($, e, next) => {
+    const done = await next(e)
+    if (e.value !== null) await sync($)
+
+    return done
+  }).catch(($, e, next) => next(e))
 }
 
-export const register: Register = on => {
+export const register: Register = (on, options) => {
   lifecycle(on)
-  paneOpening(on)
   tracking(on)
-
-  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    await read($, tickAtom)
-    const view = { plan: await currentPlan($), tracks: await read($, tracksAtom), now: await $.clock.now(), theme: flags.theme, touchedAt: flags.touchedAt }
-    const layout = { columns: e.props.bodyColumns || DEFAULT_COLUMNS, rows: e.props.scroll?.bodyRows || e.viewport?.rows || DEFAULT_ROWS, surface: e.surface }
-
-    const ui = $.ui.resolve(e)
-    const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
-    if (!isHubOn) return pinned(e, planPane(ui, view, layout))
-    const { Box } = ui
-
-    return pinned(e, (
-      <Box flexDirection="column">
-        {HomeButton(ui, () => void goHome($))}
-        {planPane(ui, view, { ...layout, rows: layout.rows - HOME_ROWS })}
-      </Box>
-    ))
-  })
+  wireCarry(on)
+  wireFinish(on, { touchedAt: () => flags.touchedAt, isStrict: options.holdFinish === true })
+  wirePane(on, { touchedAt: () => flags.touchedAt })
 }

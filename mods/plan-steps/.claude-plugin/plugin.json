@@ -1,9 +1,17 @@
 {
   "name": "plan-steps",
-  "version": "0.3.0",
-  "description": "Shows the plan's steps when there is one (task list, approved plan or plan file): the /steps pane and a quiet status line",
+  "version": "0.4.0",
+  "description": "Shows the plan's steps when there is one (task list, approved plan or plan file): the /steps pane and a quiet status line; keeps an open plan across /clear and compaction, and asks before an answer leaves steps open",
   "author": {
     "name": "Faik Emre Partal"
   },
-  "types": "./types/index.d.ts"
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "holdFinish": {
+      "type": "boolean",
+      "title": "Hold the finish",
+      "description": "When an answer leaves plan steps open, ask Claude to go on by itself (at most twice per plan) before showing the card",
+      "default": false
+    }
+  }
 }

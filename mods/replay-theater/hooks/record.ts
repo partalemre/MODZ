@@ -8,7 +8,7 @@ import { diffLines } from './diff'
 import { words } from './words'
 import type { ReplayStep } from '../types'
 
-export const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit'])
+export const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 
 export type EditCall = {
   tool: string
@@ -18,6 +18,9 @@ export type EditCall = {
   replace_all?: boolean
   content?: unknown
   edits?: { old_string?: unknown; new_string?: unknown }[]
+  notebook_path?: string
+  new_source?: unknown
+  edit_mode?: unknown
   description?: unknown
   tool_use_id?: string
   agentId?: string
@@ -30,11 +33,28 @@ export function relPath(cwd: string, path: string | undefined): string {
   return path
 }
 
-export type ReadBefore = (path: string | undefined) => Promise<{ text: string; isNew: boolean }>
+// A file's text before a Write; `isKnown: false` when nothing holds it (a transcript that kept no earlier text).
+export type Before = { text: string; isNew: boolean; isKnown?: boolean }
+export type ReadBefore = (path: string | undefined) => Promise<Before>
+
+function writeNote(old: Before): string {
+  const w = words()
+  if (old.isKnown === false) return w.beforeUnknown
+
+  return old.isNew ? w.newFile : w.rewrite
+}
+
+// A notebook call holds the cell's new source only: an insert is all new, a replace or delete keeps no old text.
+function notebookNote(mode: unknown): string {
+  const w = words()
+  if (mode === 'insert') return w.newCell
+
+  return mode === 'delete' ? w.cellDeleted : w.cellReplaced
+}
 
 // The steps one edit call makes, read before it runs (a Write's old text is on disk only until then).
 export async function stepsFor(io: { cwd: string; before: ReadBefore }, e: EditCall): Promise<ReplayStep[]> {
-  const file = relPath(io.cwd, e.file_path)
+  const file = relPath(io.cwd, e.tool === 'NotebookEdit' ? e.notebook_path : e.file_path)
   const said = typeof e.description === 'string' && e.description.trim() !== '' ? e.description.trim() : undefined
   const base = { tool: e.tool, file, toolUseId: e.tool_use_id, agentId: e.agentId, ...(said === undefined ? {} : { said }) }
   const w = words()
@@ -49,7 +69,10 @@ export async function stepsFor(io: { cwd: string; before: ReadBefore }, e: EditC
   if (e.tool === 'Write') {
     const old = await io.before(e.file_path)
 
-    return [{ ...base, diff: diffLines(old.text, e.content), note: old.isNew ? w.newFile : w.rewrite }]
+    return [{ ...base, diff: diffLines(old.text, e.content), note: writeNote(old) }]
+  }
+  if (e.tool === 'NotebookEdit') {
+    return [{ ...base, diff: e.edit_mode === 'delete' ? [] : diffLines('', e.new_source), note: notebookNote(e.edit_mode) }]
   }
 
   return []

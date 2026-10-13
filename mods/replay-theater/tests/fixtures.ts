@@ -1,5 +1,7 @@
 import { mock } from 'claude-code/testing'
 
+import { archiveWorld, BIG_ID, DIR, NOW_ID, TEXTS } from './transcripts'
+
 export const SURFACES = ['terminal', 'desktop'] as const
 export type Surface = (typeof SURFACES)[number]
 
@@ -31,13 +33,37 @@ export type World = {
   isDenying: boolean
   // What `$.env.get` answers: Turkish unless a test clears it for the English default.
   env: Record<string, string>
+  // Folder listings, what `dd` streams for a file, every command spawned, and the plugin store.
+  dirs: Record<string, { name: string; kind: string; size: number; mtimeMs: number; isLink: boolean }[]>
+  streamed: Record<string, string>
+  spawned: string[][]
+  store: Record<string, unknown>
+  reads: string[]
 }
 
 export const newWorld = (): World => ({
   files: { '/w/README.md': 'Call greet(name) to say hi.\n', '/w/src/greet.js': 'export function greet(name) {\n  return `Hi ${name}`\n}\n' },
   ids: [], messages: () => [], modelCalls: [], reply: '1: Selam dosyasını oluşturur.', theme: 'dark', opened: [], closed: [], isPlaced: true, isDenying: false,
   env: { MODZ_LANG: 'tr' },
+  dirs: {}, streamed: {}, spawned: [], store: {}, reads: [],
 })
+
+// The pieces a spawned `dd if=<path> ...` writes: the file's text cut in two mid-line, as a pipe may.
+async function* ddOf(world: World, e: any) {
+  world.spawned.push([...e.argv])
+  const path = String(e.argv.find((arg: string) => arg.startsWith('if=')) ?? '').slice('if='.length)
+  const text = world.streamed[path]
+  if (text === undefined) {
+    yield { stream: 'stderr', text: 'dd: no such file' }
+
+    return { value: { code: 1, signal: null } }
+  }
+  const half = Math.floor(text.length / 2)
+  yield { stream: 'stdout', text: text.slice(0, half) }
+  yield { stream: 'stdout', text: text.slice(half) }
+
+  return { value: { code: 0, signal: null } }
+}
 
 function answerTool(world: World, e: any) {
   world.ids.push(e.tool_use_id)
@@ -59,9 +85,18 @@ function answerModel(world: World, e: any) {
 function engineIo(on: any, world: World) {
   on('fs.exists', (_: any, e: any) => ({ value: world.files[e.path] !== undefined }))
   on('fs.read', (_: any, e: any) => {
+    world.reads.push(e.path)
     const text = world.files[e.path]
 
     return text === undefined ? Promise.reject(new Error('ENOENT')) : { value: text }
+  })
+  on('fs.list', (_: any, e: any) => {
+    const entries = world.dirs[e.path]
+
+    return entries === undefined ? Promise.reject(new Error(`ENOENT ${e.path}`)) : { value: entries }
+  })
+  on('process.spawn', async function* (_: any, e: any) {
+    return yield* ddOf(world, e)
   })
   on('tool.call', (_: any, e: any) => answerTool(world, e))
   on('session.messages', () => ({ value: world.messages(world.ids) }))
@@ -72,7 +107,14 @@ function engineIo(on: any, world: World) {
 export async function setup($: any, on: any, world: World) {
   const clock = mock.clock(on)
   mock.env(on, world.env)
-  for (const name of ['store.get', 'store.set', 'command.register', 'ui.log']) on(name, () => ({ value: undefined }))
+  for (const name of ['command.register', 'ui.log']) on(name, () => ({ value: undefined }))
+  on('store.get', (_: any, e: any) => ({ value: world.store[e.key] }))
+  on('store.set', (_: any, e: any) => {
+    world.store[e.key] = JSON.parse(JSON.stringify(e.value))
+
+    return { value: undefined }
+  })
+  on('classic.SessionStart', () => ({}))
   on('session.start', () => ({ cwd: '/w' }))
   on('session.cwd', () => ({ value: '/w' }))
   on('ui.open', (_: any, e: any) => {
@@ -127,3 +169,36 @@ export async function texts(site: any): Promise<string[]> {
 
 export const svgText = async (site: any): Promise<string> =>
   (await site.findAll({ type: 'Svg' })).map((found: any) => String(found.props?.source ?? '')).join('\n')
+
+const REPLAY_WAIT_MS = 200
+const SETTLE_TICKS = 20
+
+function withArchive(world: World): World {
+  const archive = archiveWorld()
+  Object.assign(world.dirs, archive.dirs)
+  Object.assign(world.files, archive.files)
+  world.streamed[`${DIR}/${BIG_ID}.jsonl`] = TEXTS.big
+
+  return world
+}
+
+// The session starts with its transcript's path, as the engine's classic start gives it.
+export async function startWithArchive($: any, on: any, world: World) {
+  const clock = await setup($, on, withArchive(world))
+  await $.classic.SessionStart({ source: 'startup', transcript_path: `${DIR}/${NOW_ID}.jsonl` })
+
+  return clock
+}
+
+// Reading runs in the background: a few clock ticks let it finish.
+export async function settle(clock: any): Promise<void> {
+  for (let tick = 0; tick < SETTLE_TICKS; tick++) await clock.advance(1)
+}
+
+export async function replayCommand($: any, clock: any, args: string): Promise<void> {
+  const opening = $.command.run({ command: 'replay', args })
+  await clock.advance(REPLAY_WAIT_MS)
+  await opening
+  await settle(clock)
+}
+

@@ -15,3 +15,14 @@ export function ageText(at: number | undefined, now: number): string {
 
   return hours < DAY_HOURS ? w.hoursAgo(hours) : w.daysAgo(Math.floor(hours / DAY_HOURS))
 }
+
+const twoDigits = (n: number): string => String(n).padStart(2, '0')
+
+// When a session was last written, in local time: "Oct 12, 14:05"; '' when unknown.
+export function dateText(at: number): string {
+  if (!Number.isFinite(at) || at <= 0) return ''
+  const day = new Date(at)
+  const w = words()
+
+  return w.date(w.months[day.getMonth()] ?? '', day.getDate(), `${twoDigits(day.getHours())}:${twoDigits(day.getMinutes())}`)
+}

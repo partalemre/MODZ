@@ -8,101 +8,51 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { ageText } from './age'
+import { bringReplay, handlersOf, openList, openReplay } from './actions'
+import { stdoutOf, whereOf } from './archive'
+import type { ArchiveIo } from './archive'
 import { shortLine } from './explain'
 import { explainReplay, why } from './explainer'
-import { HUB_PANE, hubOf, isOpenFor } from './hub'
+import type { ExplainIo } from './explainer'
 import { withHome } from './home'
+import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { setLang } from './lang'
 import { offerCard } from './offer'
-import { replayView } from './pane'
+import { LIST_PAGE, PANE_ROWS_MAX } from './pane-io'
+import type { PaneIo } from './pane-io'
+import { pinned } from './pin'
 import { currentStep, planAfter, PLAN_TOOLS } from './plan'
 import { EDIT_TOOLS, isAnswered, stepsFor } from './record'
-import { pinned } from './pin'
 import type { EditCall } from './record'
+import { bodyView } from './screen'
+import type { Site, Snapshot } from './screen'
 import { themeOf } from './ui/theme'
 import { words } from './words'
 import type { HubCard, ReplayStep } from '../types'
-import type { ExplainIo } from './explainer'
 
-export const PANE_ID = 'replay-theater'
-
-export const pendingAtom = atom({ plugin: 'replay-theater', key: 'pending' } as const, [])
-export const replayAtom = atom({ plugin: 'replay-theater', key: 'replay' } as const, null)
-export const indexAtom = atom({ plugin: 'replay-theater', key: 'index' } as const, 0)
-export const offeredAtom = atom({ plugin: 'replay-theater', key: 'isOffered' } as const, false)
-export const viewAtom = atom({ plugin: 'replay-theater', key: 'view' } as const, { isOpen: false, inBand: false, theme: 'auto' })
-export const planAtom = atom({ plugin: 'replay-theater', key: 'plan' } as const, [])
-
-const BAND_RELEASE_MS = 200
-const PANE_COLUMNS = 64
-const PANE_ROWS_MAX = 30
-const PANE_ROWS_BASE = 12
-const LIST_ROWS_MAX = 8
-const DIFF_ROWS_MAX = 13
-const EMPTY_ROWS = 8
+const pendingAtom = atom({ plugin: 'replay-theater', key: 'pending' } as const, [])
+const replayAtom = atom({ plugin: 'replay-theater', key: 'replay' } as const, null)
+const indexAtom = atom({ plugin: 'replay-theater', key: 'index' } as const, 0)
+const offeredAtom = atom({ plugin: 'replay-theater', key: 'isOffered' } as const, false)
+const viewAtom = atom({ plugin: 'replay-theater', key: 'view' } as const, { isOpen: false, inBand: false, theme: 'auto' })
+const planAtom = atom({ plugin: 'replay-theater', key: 'plan' } as const, [])
+const browseAtom = atom({ plugin: 'replay-theater', key: 'browse' } as const, { mode: 'replay', source: 'live', shown: LIST_PAGE })
+const sessionsAtom = atom({ plugin: 'replay-theater', key: 'sessions' } as const, { status: 'loading', rows: [], older: 0 })
+const turnsAtom = atom({ plugin: 'replay-theater', key: 'turns' } as const, null)
+const pastAtom = atom({ plugin: 'replay-theater', key: 'past' } as const, null)
+const PANE_ID = 'replay-theater'
 const HUB = { plugin: 'replay-theater', key: 'hub' } as const
 const HOME = { plugin: 'replay-theater', key: 'home' } as const
+const KEPT_KEY = 'sessions'
+const PANE_COLUMNS = 64
 
 type On = Parameters<Register>[0]
 type Call = EditCall & Record<string, unknown>
 
-// The session's folder, for relative paths; set when the session starts.
-const flags = { cwd: '', ask: '' }
-
-async function refreshTheme($: EngineInterface): Promise<void> {
-  try {
-    const rows = await $.config.list()
-    const theme = themeOf(rows.find(row => row.key === 'theme')?.value)
-    await update($, viewAtom, view => ({ ...view, theme }))
-  } catch (error) {
-    $.ui.log(`replay-theater: theme not readable (${why(error)})`, { to: 'debug' })
-  }
-}
-
-function paneRows(steps: ReplayStep[]): number {
-  const longest = Math.max(0, ...steps.map(step => step.diff.length))
-
-  return Math.min(PANE_ROWS_MAX, PANE_ROWS_BASE + Math.min(steps.length, LIST_ROWS_MAX) + Math.min(longest, DIFF_ROWS_MAX))
-}
-
-// The pane opens with nothing to replay too: it says so there, not in the transcript.
-async function openReplay($: EngineInterface): Promise<{ hasEdits: boolean; isPlaced: boolean }> {
-  const replay = await read($, replayAtom)
-  const steps = replay?.steps ?? []
-  const hasEdits = steps.length > 0
-  if (hasEdits) {
-    await update($, indexAtom, () => 0)
-    await update($, offeredAtom, () => false)
-  }
-  await update($, viewAtom, view => ({ ...view, isOpen: true, inBand: false }))
-  // The pane takes the keys only while nothing else holds them: the band's button held them, so wait a beat.
-  await $.clock.sleep(BAND_RELEASE_MS)
-  const rows = hasEdits ? paneRows(steps) : EMPTY_ROWS
-  const placed = await $.ui.open({ id: PANE_ID, title: words().title, focus: true, closeOnEscape: true, rows, columns: PANE_COLUMNS })
-  const isPlaced = placed.isPlaced !== false
-  // The band shows a replay when the pane has no room; an empty one has nothing to show there.
-  if (!isPlaced) await update($, viewAtom, view => ({ ...view, isOpen: hasEdits, inBand: hasEdits }))
-  if (hasEdits && replay !== null) void explainReplay(explainIo($), replay.id)
-
-  return { hasEdits, isPlaced }
-}
-
-// The main panel's card (DESIGN.md §9), written only when what it shows changes so the panel does not redraw for nothing.
-async function writeHub($: EngineInterface): Promise<void> {
-  const shown = hubOf(await read($, replayAtom))
-  const { value } = await $.state.get(HUB)
-  if (value !== undefined && value.detail === shown.detail && value.tone === shown.tone) return
-  const card: HubCard = { pane: HUB_PANE, ...shown, at: await $.clock.now() }
-  await $.state.set(HUB, card)
-}
-
-// The main panel's open request: an open pane only comes forward, keeping its place in the replay.
-async function bringReplay($: EngineInterface): Promise<void> {
-  const view = await read($, viewAtom)
-  if (view.isOpen && !view.inBand) await $.ui.open({ id: PANE_ID, title: words().title, focus: true })
-  else await openReplay($)
-}
+// The session's folder, for relative paths, and its transcript, whose folder holds this project's sessions;
+// both set when the session starts. `kept`: the sessions read last, while their transcripts do not change.
+const flags = { cwd: '', ask: '', transcript: '' }
+const kept: ArchiveIo['kept'] = new Map()
 
 // The engine calls explaining needs, as closures: only this module holds `$`.
 function explainIo($: EngineInterface): ExplainIo {
@@ -115,6 +65,66 @@ function explainIo($: EngineInterface): ExplainIo {
   }
 }
 
+function archiveIo($: EngineInterface): ArchiveIo {
+  return { list: dir => $.fs.list(dir), read: path => $.fs.read(path), pieces: argv => stdoutOf($.process.spawn({ argv })), log: line => $.ui.log(line, { to: 'debug' }), kept }
+}
+
+// The pane's actions over this session's values and the engine, as closures.
+function paneIo($: EngineInterface): PaneIo {
+  const title = words().title
+
+  return {
+    browse: { get: () => read($, browseAtom), set: change => update($, browseAtom, change) },
+    view: { get: () => read($, viewAtom), set: change => update($, viewAtom, change) },
+    index: { get: () => read($, indexAtom), set: change => update($, indexAtom, change) },
+    offered: { get: () => read($, offeredAtom), set: change => update($, offeredAtom, change) },
+    replay: { get: () => read($, replayAtom), set: change => update($, replayAtom, change) },
+    past: { get: () => read($, pastAtom), set: change => update($, pastAtom, change) },
+    turns: { get: () => read($, turnsAtom), set: change => update($, turnsAtom, change) },
+    sessions: { get: () => read($, sessionsAtom), set: change => update($, sessionsAtom, change) },
+    kept: { get: () => $.store.get(KEPT_KEY), set: value => $.store.set(KEPT_KEY, value) },
+    open: async rows => {
+      const size = rows === undefined ? {} : { closeOnEscape: true as const, rows, columns: PANE_COLUMNS }
+
+      return (await $.ui.open({ id: PANE_ID, title, focus: true, ...size })).isPlaced !== false
+    },
+    close: () => $.ui.close({ id: PANE_ID }),
+    sleep: ms => $.clock.sleep(ms),
+    explain: id => void explainReplay(explainIo($), id),
+    archive: archiveIo($),
+    where: () => whereOf(flags.transcript, flags.cwd),
+  }
+}
+
+// What the pane draws, from every value it shows, with its presses.
+async function drawn($: EngineInterface, ui: Record<string, any>, site: Site) {
+  const snap: Snapshot = {
+    browse: await read($, browseAtom), view: await read($, viewAtom), replay: await read($, replayAtom), past: await read($, pastAtom),
+    index: await read($, indexAtom), sessions: await read($, sessionsAtom), turns: await read($, turnsAtom), now: await $.clock.now(),
+  }
+
+  return bodyView(ui, snap, { site, on: handlersOf(paneIo($), snap.browse) })
+}
+
+async function refreshTheme($: EngineInterface): Promise<void> {
+  try {
+    const rows = await $.config.list()
+    const theme = themeOf(rows.find(row => row.key === 'theme')?.value)
+    await update($, viewAtom, view => ({ ...view, theme }))
+  } catch (error) {
+    $.ui.log(`replay-theater: theme not readable (${why(error)})`, { to: 'debug' })
+  }
+}
+
+// The main panel's card (DESIGN.md §9), written only when what it shows changes so the panel does not redraw for nothing.
+async function writeHub($: EngineInterface): Promise<void> {
+  const shown = hubOf(await read($, replayAtom))
+  const { value } = await $.state.get(HUB)
+  if (value !== undefined && value.detail === shown.detail && value.tone === shown.tone) return
+  const card: HubCard = { pane: HUB_PANE, ...shown, at: await $.clock.now() }
+  await $.state.set(HUB, card)
+}
+
 async function readBefore($: EngineInterface, path: string | undefined): Promise<{ text: string; isNew: boolean }> {
   try {
     if (path !== undefined && (await $.fs.exists(path))) return { text: await $.fs.read(path), isNew: false }
@@ -123,17 +133,6 @@ async function readBefore($: EngineInterface, path: string | undefined): Promise
   }
 
   return { text: '', isNew: true }
-}
-
-async function closeReplay($: EngineInterface): Promise<void> {
-  const view = await read($, viewAtom)
-  await update($, viewAtom, current => ({ ...current, isOpen: false, inBand: false }))
-  if (!view.inBand) await $.ui.close({ id: PANE_ID })
-}
-
-async function step($: EngineInterface, delta: number): Promise<void> {
-  const total = (await read($, replayAtom))?.steps.length ?? 0
-  await update($, indexAtom, index => Math.max(0, Math.min(index + delta, total - 1)))
 }
 
 // An edit is read before it runs and kept only once it was answered; recording never stops the call.
@@ -167,7 +166,7 @@ function hookSession(on: On): void {
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     const r = await next(e)
     flags.cwd = e.cwd.replace(/\/$/, '')
-    await $.command.register({ name: 'replay', description: words().command })
+    await $.command.register({ name: 'replay', description: words().command, argumentHint: '[turns|sessions]' })
     await refreshTheme($)
     await writeHub($)
 
@@ -180,21 +179,37 @@ function hookSession(on: On): void {
     return next(e)
   }).catch(($, e, next) => next(e))
 
-  on('command.run', { command: 'replay' }, async $ => {
-    const opened = await openReplay($)
+  on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
+    const done = await next(e)
+    if (isOpenFor(e.value, HUB_PANE)) await bringReplay(paneIo($))
+
+    return done
+  }).catch(($, e, next) => next(e))
+}
+
+// `/replay` opens the last turn; `/replay turns` this session's turns, `/replay sessions` the project's sessions.
+function hookCommand(on: On): void {
+  // The transcript's path comes with the classic start, and again after /clear, a resume or a fork.
+  on('classic.SessionStart', async ($, e, next) => {
+    flags.transcript = typeof e.transcript_path === 'string' ? e.transcript_path : ''
+
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('command.run', { command: 'replay' }, async ($, e) => {
+    const list = String(e.args ?? '').trim().toLowerCase()
+    if (list === 'turns' || list === 'sessions') {
+      await openList(paneIo($), { mode: list })
+
+      return {}
+    }
+    const opened = await openReplay(paneIo($))
     const count = (await read($, replayAtom))?.steps.length ?? 0
     if (opened.hasEdits) return { text: words().commandCount(count) }
 
     // Only a terminal too narrow for the pane hears it as text.
     return opened.isPlaced ? {} : { text: words().commandEmpty }
   })
-
-  on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
-    const done = await next(e)
-    if (isOpenFor(e.value, HUB_PANE)) await bringReplay($)
-
-    return done
-  }).catch(($, e, next) => next(e))
 }
 
 function hookRecording(on: On): void {
@@ -242,15 +257,14 @@ function hookBand(on: On): void {
     const replay = await read($, replayAtom)
     const ui = $.ui.resolve(e)
     const { Box } = ui
-    if (view.isOpen && view.inBand && replay !== null) {
-      const model = { steps: replay.steps, index: await read($, indexAtom), explain: replay.explain, theme: view.theme }
-      const site = { surface: e.surface, columns: e.props.bodyColumns, inBand: true, maxRows: e.props.maxRows, on: handlers($) }
+    if (view.isOpen && view.inBand) {
+      const body = await drawn($, ui, { surface: e.surface, columns: e.props.bodyColumns, inBand: true, maxRows: e.props.maxRows })
 
-      return pinned(e, <Box flexDirection="column">{replayView(ui, model, site)}{theirs}</Box>)
+      return pinned(e, <Box flexDirection="column">{body}{theirs}</Box>)
     }
     if (!(await read($, offeredAtom)) || e.props.isWorking || view.isOpen || replay === null) return theirs
     const offer = { steps: replay.steps, quote: replay.quote, theme: view.theme, columns: e.props.bodyColumns, surface: e.surface }
-    const actions = { onOpen: () => void openReplay($), onDismiss: () => void update($, offeredAtom, () => false) }
+    const actions = { onOpen: () => void openReplay(paneIo($)), onDismiss: () => void update($, offeredAtom, () => false) }
 
     return pinned(e, <Box flexDirection="column">{offerCard(ui, offer, actions)}{theirs}</Box>)
   })
@@ -258,18 +272,13 @@ function hookBand(on: On): void {
 
 function hookPane(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE_ID }, async ($, e) => {
-    const replay = await read($, replayAtom)
-    const view = await read($, viewAtom)
-    const context = { ask: replay?.ask ?? '', age: ageText(replay?.at, await $.clock.now()) }
-    const model = { steps: replay?.steps ?? [], index: await read($, indexAtom), explain: replay?.explain ?? 'none', theme: view.theme, ...context }
-    const site = { surface: e.surface, columns: e.props.bodyColumns, inBand: false, maxRows: e.props.scroll?.bodyRows ?? PANE_ROWS_MAX, on: handlers($) }
-
+    const site = { surface: e.surface, columns: e.props.bodyColumns, inBand: false, maxRows: e.props.scroll?.bodyRows ?? PANE_ROWS_MAX }
     const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
     // Written when pressed, never while drawing; a failure only goes to the debug log.
     const goHome = () => void $.clock.now().then(at => $.state.set(HOME, { at })).catch(() => $.ui.log('replay-theater: could not go back to MODZ', { to: 'debug' }))
     const ui = $.ui.resolve(e)
 
-    return pinned(e, withHome(ui, replayView(ui, model, site), isHubOn ? goHome : null))
+    return pinned(e, withHome(ui, await drawn($, ui, site), isHubOn ? goHome : null))
   })
 
   // The person closed the pane (Escape, the close mark): keep the view in step.
@@ -280,12 +289,9 @@ function hookPane(on: On): void {
   }).catch(($, e, next) => next(e))
 }
 
-function handlers($: EngineInterface) {
-  return { onPrev: () => void step($, -1), onNext: () => void step($, 1), onClose: () => void closeReplay($) }
-}
-
 export const register: Register = on => {
   hookSession(on)
+  hookCommand(on)
   hookRecording(on)
   hookBand(on)
   hookPane(on)

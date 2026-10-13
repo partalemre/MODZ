@@ -1,5 +1,6 @@
 import type { SessionMessage } from 'claude-code'
 
+import { EDIT_TOOLS } from './record'
 import { words } from './words'
 import type { ReplayStep } from '../types'
 
@@ -8,7 +9,6 @@ export const MAX_MODEL_STEPS = 20
 const NOTE_MAX = 90
 const DIFF_PER_STEP = 600
 const TOKENS_PER_STEP = 40
-const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit'])
 
 // One plain line from Claude's prose: the first sentence, markdown dropped, cut to fit a row.
 export function shortLine(text: string): string {

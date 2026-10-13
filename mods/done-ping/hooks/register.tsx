@@ -6,7 +6,8 @@ import { configFrom, donePing, editedPath, isTestCommand, parseSeconds, permissi
 import type { Ping, PingConfig, TestsSeen } from './ping'
 import { AUTO, themeFrom } from './tidemark'
 import { ring } from './ring'
-import type { RingIo } from './ring'
+import type { RingIo, Rung } from './ring'
+import { packAsset } from './pack'
 import { pinned } from './pin'
 import { setLang } from './lang'
 import { words } from './words'
@@ -63,15 +64,28 @@ function ioOf($: EngineInterface): RingIo {
   }
 }
 
-// The app's notification or a macOS banner; where neither can show, the shared notice line says it.
-async function deliver($: EngineInterface, ping: Ping, spec: { config: PingConfig; isForced: boolean }): Promise<void> {
+// The pack's clip for this ping; where the surface has no player it plays nothing, said in the debug log alone.
+async function playPack($: EngineInterface, ping: Ping, config: PingConfig): Promise<void> {
+  const asset = packAsset(config.soundPack, ping.kind)
+  if (asset === null) return
   try {
-    const rung = await ring(ioOf($), { ping, ...spec })
-    if (rung === 'failed') await showNotice($, ping)
+    await $.audio.play({ asset })
+  } catch (error) {
+    $.ui.log(`done-ping: sound did not play (${error instanceof Error ? error.message : 'unknown'})`, { to: 'debug' })
+  }
+}
+
+// The app's notification or a macOS banner; where neither can show, the shared notice line says it.
+// The pack sounds with whatever showed, and stays quiet with it while you are looking.
+async function deliver($: EngineInterface, ping: Ping, spec: { config: PingConfig; isForced: boolean }): Promise<void> {
+  let rung: Rung = 'failed'
+  try {
+    rung = await ring(ioOf($), { ping, ...spec })
   } catch (error) {
     $.ui.log(`done-ping: ping failed (${error instanceof Error ? error.message : 'unknown'})`, { to: 'debug' })
-    await showNotice($, ping)
   }
+  if (rung === 'failed') await showNotice($, ping)
+  if (rung !== 'quiet') await playPack($, ping, spec.config)
 }
 
 // Rung after the hook's own dispatch so the notification never delays the turn.

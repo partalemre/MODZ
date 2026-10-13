@@ -96,7 +96,9 @@ Her hook `next(e)` çağırır ve kendi satırını `theirs` ile birleştirir; a
 `e.props.hasSurvey` doluyken (soru penceresi açık) yalnızca `next(e)` döner.
 Sıra (yukarıdan aşağı):
 1. **Karar kartları** (yerleşmezse): blast-radius bant yedeği, cache-tax bekletme kartı → `theirs`'in **üstü**.
-2. **Bildirimler** (aynı anda tek): reflect, replay teklifi, test-badge, session-budget, done-ping yedeği → üstü.
+2. **Bildirimler** (aynı anda tek, yüksekten alçağa): reflect, session-budget, handoff, test-badge (CI dahil),
+   plan-steps bitiş kartı, done-ping yedeği → üstü. Her mod kendinden yüksekteki modların `{ key: 'notice' }`
+   değerini okur; biri doluyken kendi kartını çizmez. Yeni bildirim modu bu listeye kendi yerinden girer.
 3. **İlerleme**: savvy-progress (yalnızca tur sürerken) → üstü.
 4. **Durum satırları**: cache-tax durum satırı, hud-pro (en altta, prompt'a bitişik) → `theirs`'in **altı**.
 Kullanım bilgisi tek yerde: hud-pro. skins'in kullanım bandı varsayılan kapalı (`/skin` ayarından açılır).
@@ -113,6 +115,16 @@ Dosya ≤300 satır, fonksiyon ≤40 satır, ≤3 parametre, sihirli sayı yok, 
 `claude plugin validate` + `claude plugin test` yeşil. Görsel değişiklikte `bin/preview <mod>` ile PNG'ye bak:
 `tests/preview.test.tsx` her durum için `console.log('@@TREE@@<etiket>@@' + JSON.stringify(await ui.drawn()))` yazar.
 Asıl (upstream) modlarda: kaynak belirt (README "Dayandığı proje"), LICENSE'ı koru, davranışı bozma.
+
+Motorun doğrulayıcısının koyduğu, türlerde yazmayan kurallar (2.1.295–296):
+- `$` başka dosyadan içe aktarılan bir fonksiyona geçirilemez. Motor çağrıları kancanın dosyasında kalır; öbür dosyalara
+  `$` üstüne kurulmuş düz fonksiyonlar (bir `io` nesnesi) verilir.
+- `$.state.get/set` referansının `plugin` ve `key` alanı dize sabiti olmalı (o dosyada ya da o dosyanın bir `const`'unda);
+  atom'lar da onları kullanan her dosyada ayrı tanımlanır.
+- Bir zamanlayıcıdan, bir basıştan ya da başka bir `state.set` kancasının içinden yapılan yazım, modun kendi `state.set`
+  kancalarını tetiklemez: hub kartı gibi türetilen değeri yazan yer kendisi günceller.
+- Ortak hakem (`kit/judge.ts`): sınıflandırma gereken yerde tek çağrı, haiku, kısa zaman aşımı; başarısızlıkta kişinin
+  akışını bozmayan varsayılan. Jev yalnızca `MODZ_JUDGE=jev` ile, giden metin maskelenmiş.
 
 ## 9. MODZ ana paneli ve mod veri yolu
 Oturum açılınca sağda **tek** panel açık gelir: `modz` modunun "MODZ" paneli. Her özellik oradan bir tıkla açılır.
@@ -158,8 +170,11 @@ type HubCard = { pane: string; detail: string; tone: HubTone; at: number
 | checkpoints | checkpoint | Kontrol noktaları |
 | replay | replay-theater | Tekrar |
 | usage | hud-pro | Kullanım |
+| effort | effort-router | Efor |
+| handoff | handoff | Devir |
 | skins | skins | Görünüm |
 | modz-mods | modz | Modlar (modz'un ikinci paneli) |
+| reflect-ideas | reflect-mod | Fikirler (hub satırı yok; `/mine` açar) |
 
 `detail` tek satır, ≤40 karakter, Türkçe, ölçülmüş gerçek ("2 ajan çalışıyor", "41/42 geçti", "3/9 adım"); bilinmiyorsa
 boş dize. Panel başlıkları tabloda yazıldığı gibidir; iki sekme aynı adı taşımaz.

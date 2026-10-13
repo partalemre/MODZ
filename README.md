@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<h3 align="center">17 mods for Claude Code. One panel.</h3>
+<h3 align="center">19 mods for Claude Code. One panel.</h3>
 
 <p align="center">See every move Claude makes: agents, files, plans, tests and risky commands, live, beside the chat.</p>
 
@@ -29,8 +29,8 @@ Or install all of them at once from a terminal:
 
 ```sh
 claude plugin marketplace add partalemre/MODZ
-for m in modz savvy-progress savvy-flow filetree plan-steps transceiver blast-radius secret-guard checkpoint \
-         test-badge replay-theater session-budget cache-tax hud-pro done-ping reflect-mod skins terminal-browser; do
+for m in modz savvy-progress savvy-flow filetree plan-steps handoff transceiver blast-radius secret-guard checkpoint \
+         test-badge replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins terminal-browser; do
   claude plugin install "$m@modz"
 done
 ```
@@ -79,25 +79,66 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 | | Mod | What it does |
 |---|---|---|
 | **Panel** | `modz` | The panel itself: one live line per mod and one click to each pane |
-| **Work** | `savvy-progress` | Agents pane and progress band: each subagent's progress, cost and time |
+| **Work** | `savvy-progress` | Agents pane and progress band: each subagent's progress, cost and time; other chats waiting on you; a home crab that levels up |
 | | `savvy-flow` | Orchestrated delivery: the session model plans, tiered worker agents build |
 | | `filetree` | Files Claude touched this turn, what it is doing now, git status |
-| | `plan-steps` | The plan's steps as Claude works through them |
+| | `plan-steps` | The plan's steps as Claude works through them; the plan comes back after `/clear` and compaction, and a turn that ends with steps open offers to go on |
+| | `handoff` | Before the context fills, writes a handoff note and hands it once to your next fresh chat |
 | | `transceiver` | Team chat and zero-token agent questions between teammates (beta) |
-| **Safety** | `blast-radius` | Holds destructive shell commands and shows what they would change |
-| | `secret-guard` | Stops keys and tokens in writes, edits, `git add` and commits |
+| **Safety** | `blast-radius` | Holds destructive shell commands and shows what they would change; holds an edit to a file another chat just changed; checks other commands against your `.claude/house-rules.md` |
+| | `secret-guard` | Stops keys and tokens in writes, edits, `git add` and commits; keeps pasted keys out of the chat as placeholders; `/rec` masks keys, env values and e-mail addresses on screen |
 | | `checkpoint` | A silent git snapshot before each turn's first write; undo a turn |
-| | `test-badge` | Runs tests and lint after edits and shows the result |
+| | `test-badge` | Runs tests and lint after edits and shows the result; watches your PR's GitHub CI |
 | | `replay-theater` | Replays the last turn's edits step by step, and earlier turns and past sessions |
 | **Meter** | `session-budget` | A spend budget per session, with a stop at 100% |
-| | `cache-tax` | Keeps the prompt cache warm through breaks and prices a cold send |
-| | `hud-pro` | One line with the 5-hour and 7-day limits, context and cost |
-| **Comfort** | `done-ping` | A notification when a long turn ends or Claude waits on you |
-| | `reflect-mod` | Saves corrections worth keeping to your CLAUDE.md |
+| | `cache-tax` | Keeps the prompt cache warm through breaks and prices a cold send, a model change included |
+| | `hud-pro` | One line with the 5-hour and 7-day limits, context and cost; when the 5-hour window fills; what fills the context and how many turns are left |
+| | `effort-router` | Shows each turn's effort and model; can send light prompts at low effort |
+| **Comfort** | `done-ping` | A notification when a long turn ends or Claude waits on you, with optional sound packs |
+| | `reflect-mod` | Saves corrections worth keeping to your CLAUDE.md; `/mine` turns friction that repeats across past chats into ideas |
 | | `skins` | Themes for the transcript, switched live with `/skin` |
 | | `terminal-browser` | A browser inside the terminal that the agent can drive |
 
-Most mods use no model tokens. Three can: `reflect-mod` makes one small check per correction it finds; `cache-tax` warming sends a request when you turn it on; Transceiver's free-form `ask` uses a small model on the other side, at most ten a day per room.
+Most mods use no model tokens. These can, each with the cheapest model and never more than one call per event:
+
+- `reflect-mod`: one small check per correction it finds, and one per `/mine`.
+- `cache-tax`: warming sends a request, only when you turn it on.
+- `handoff`: one summary per handoff note (`summarize`, on by default; the note is written without it too).
+- `effort-router`: one check per prompt, only in `auto` mode.
+- `blast-radius`: one check per command it judges, only when `.claude/house-rules.md` exists.
+- `replay-theater`: one call when a step has no description of its own.
+- Transceiver's free-form `ask`: a small model on the other side, at most ten a day per room.
+
+`plan-steps` (while it brings a plan back) and `secret-guard` (while placeholders exist) add a short section to the system prompt.
+
+### What each mod can touch
+
+Read from the code, not from a promise. "Store" is the mod's own file in `~/.claude`; every mod also keeps session state in memory.
+
+| Mod | Reads | Writes | Runs | Network | Model |
+|---|---|---|---|---|---|
+| `modz` | marketplace, settings | store | | | |
+| `savvy-progress` | transcript | store | | | agents you start |
+| `savvy-flow` | | | | | its worker agents |
+| `filetree` | project files | | `git`, `open` | | |
+| `plan-steps` | task list, plan file | store | | | |
+| `transceiver` | repo, git | its room | `git` | claude.ai | free-form `ask` |
+| `handoff` | transcript, plan | `.claude/handoff/*.md`, store | `git status`, `rm` (own notes) | | optional |
+| `blast-radius` | `.claude/house-rules.md` | store | `git`, a read-only look at what a held command would touch | Jev, opt-in | with house rules |
+| `secret-guard` | written files | `.env`, `.gitignore` (on your press) | `git` | | |
+| `checkpoint` | | store, git refs | `git` | | |
+| `test-badge` | project files | store | your test and lint commands, `git`, `gh` | GitHub, through `gh` | |
+| `replay-theater` | transcripts | store | | | rarely |
+| `session-budget` | | store | | | |
+| `cache-tax` | | store | | | when warming |
+| `hud-pro` | context breakdown | store | | | |
+| `effort-router` | prompts | store | | Jev, opt-in | `auto` only |
+| `done-ping` | | store | `osascript`, `terminal-notifier`, `afplay` | | |
+| `reflect-mod` | transcripts, CLAUDE.md | CLAUDE.md (on your press), store | `tail` | | yes |
+| `skins` | settings | store | | | |
+| `terminal-browser` | web pages | | a browser | yes | |
+
+Jev is TypeSafe's classifier: set `MODZ_JUDGE=jev` and `TYPESAFE_API_KEY` to use it instead of your own model account. What it is sent is masked first.
 
 ## Make it yours
 
@@ -121,7 +162,7 @@ If a person asks you to install MODZ, do exactly this. Every step is safe to rep
 
 1. Check the version: `claude --version` must print 2.1.295 or later. If it is older, ask the person to update Claude Code first.
 2. Add the marketplace: `claude plugin marketplace add partalemre/MODZ`.
-3. Install the panel: `claude plugin install modz@modz`. Then install each mod the person wants, by the names in the table above, as `claude plugin install <name>@modz`. If they did not choose, install all eighteen with the loop under [Install](#install).
+3. Install the panel: `claude plugin install modz@modz`. Then install each mod the person wants, by the names in the table above, as `claude plugin install <name>@modz`. If they did not choose, install all twenty with the loop under [Install](#install).
 4. Optional settings: put them in the `env` block of `~/.claude/settings.json`, merging with what is already there and never overwriting it:
    - `"MODZ_LANG": "tr"` for a Turkish interface.
    - `"CLAUDE_CODE_ARTIFACT": "1"` if Transceiver is installed and this Claude Code is driven by an SDK host.

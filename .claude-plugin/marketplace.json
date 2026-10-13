@@ -5,8 +5,8 @@
     "url": "https://github.com/partalemre"
   },
   "metadata": {
-    "description": "17 mods for Claude Code. One panel.",
-    "version": "1.1.0"
+    "description": "19 mods for Claude Code. One panel.",
+    "version": "1.2.0"
   },
   "plugins": [
     {
@@ -17,7 +17,7 @@
     {
       "name": "savvy-progress",
       "source": "./mods/savvy-progress",
-      "description": "Every agent gets a face: progress, cost and time for each subagent, live, in the Agents pane and a band above the prompt."
+      "description": "Every agent gets a face: progress, cost and time for each subagent, live, in the Agents pane and a band above the prompt. Other chats waiting on you show at the top."
     },
     {
       "name": "savvy-flow",
@@ -32,7 +32,7 @@
     {
       "name": "plan-steps",
       "source": "./mods/plan-steps",
-      "description": "The plan's steps as Claude works through them, from the task list, an approved plan or a plan file."
+      "description": "The plan's steps as Claude works through them, from the task list, an approved plan or a plan file. The plan comes back after /clear and compaction."
     },
     {
       "name": "transceiver",
@@ -45,12 +45,12 @@
     {
       "name": "blast-radius",
       "source": "./mods/blast-radius",
-      "description": "Risky commands wait for your OK. rm -rf, git reset --hard, force pushes and migrations are held with exactly what they would change."
+      "description": "Risky commands wait for your OK. rm -rf, git reset --hard, force pushes and migrations are held with exactly what they would change; so is an edit to a file another chat just changed."
     },
     {
       "name": "secret-guard",
       "source": "./mods/secret-guard",
-      "description": "Stops keys and tokens before they land: scans writes, edits, git add and commit, and blocks committing .env."
+      "description": "Stops keys and tokens before they land: scans writes, edits, git add and commit, and blocks committing .env. Pasted keys reach the model as placeholders; /rec masks the screen."
     },
     {
       "name": "checkpoint",
@@ -60,7 +60,7 @@
     {
       "name": "test-badge",
       "source": "./mods/test-badge",
-      "description": "After a turn that edited source, runs tests and lint in the background and shows the result as a badge."
+      "description": "After a turn that edited source, runs tests and lint in the background and shows the result as a badge. Watches your PR's GitHub CI too."
     },
     {
       "name": "replay-theater",
@@ -75,22 +75,22 @@
     {
       "name": "cache-tax",
       "source": "./mods/cache-tax",
-      "description": "Keeps the one-hour prompt cache warm through breaks and shows what a cold send would cost. Warming uses tokens."
+      "description": "Keeps the one-hour prompt cache warm through breaks and shows what a cold send would cost, after a break or a model change. Warming uses tokens."
     },
     {
       "name": "hud-pro",
       "source": "./mods/hud-pro",
-      "description": "One quiet line above the prompt: the 5-hour limit and its reset, 7-day use, context and session cost."
+      "description": "One quiet line above the prompt: the 5-hour limit and its reset, 7-day use, context and session cost. The Usage pane shows what fills the context."
     },
     {
       "name": "done-ping",
       "source": "./mods/done-ping",
-      "description": "A notification when a long turn finishes or Claude is waiting on you."
+      "description": "A notification when a long turn finishes or Claude is waiting on you, with optional sound packs."
     },
     {
       "name": "reflect-mod",
       "source": "./mods/reflect-mod",
-      "description": "Spots corrections in your prompts worth keeping and saves them to the CLAUDE.md you choose."
+      "description": "Spots corrections in your prompts worth keeping and saves them to the CLAUDE.md you choose. /mine turns friction that repeats across past chats into ideas."
     },
     {
       "name": "skins",
@@ -105,12 +105,12 @@
     {
       "name": "effort-router",
       "source": "./mods/effort-router",
-      "description": "Shows each turn's effective effort and model; can route a light prompt to low effort"
+      "description": "Shows each turn's effort and model. In auto mode, light prompts go at low effort."
     },
     {
       "name": "handoff",
       "source": "./mods/handoff",
-      "description": "Before the context window fills, writes a handoff note and hands it once to your next fresh chat in this repo"
+      "description": "Before the context fills, writes a handoff note and hands it once to your next fresh chat in this repo."
     }
   ]
 }

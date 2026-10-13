@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MODZ: 17 mods for Claude Code</title>
-<meta name="description" content="17 mods for Claude Code. One panel. See every move Claude makes: agents, files, plans, tests and risky commands, live, beside the chat.">
-<meta property="og:title" content="MODZ: 17 mods for Claude Code">
-<meta property="og:description" content="17 mods for Claude Code. One panel.">
+<title>MODZ: 19 mods for Claude Code</title>
+<meta name="description" content="19 mods for Claude Code. One panel. See every move Claude makes: agents, files, plans, tests and risky commands, live, beside the chat.">
+<meta property="og:title" content="MODZ: 19 mods for Claude Code">
+<meta property="og:description" content="19 mods for Claude Code. One panel.">
 <meta property="og:image" content="https://partalemre.github.io/MODZ/img/poster.jpg?v=3">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="img/icon.svg" type="image/svg+xml">
@@ -190,13 +190,13 @@
 <pre><span class="c"># every mod, in one go</span>
 claude plugin marketplace add partalemre/MODZ
 for m in modz savvy-progress savvy-flow filetree \
-  plan-steps transceiver blast-radius secret-guard \
-  checkpoint test-badge replay-theater session-budget \
-  cache-tax hud-pro done-ping reflect-mod skins \
-  terminal-browser; do
+  plan-steps handoff transceiver blast-radius \
+  secret-guard checkpoint test-badge replay-theater \
+  session-budget cache-tax hud-pro effort-router \
+  done-ping reflect-mod skins terminal-browser; do
   claude plugin install "$m@modz"
 done</pre>
-          <button type="button" class="copy" data-copy="claude plugin marketplace add partalemre/MODZ&#10;for m in modz savvy-progress savvy-flow filetree plan-steps transceiver blast-radius secret-guard checkpoint test-badge replay-theater session-budget cache-tax hud-pro done-ping reflect-mod skins terminal-browser; do&#10;  claude plugin install &quot;$m@modz&quot;&#10;done">Copy</button>
+          <button type="button" class="copy" data-copy="claude plugin marketplace add partalemre/MODZ&#10;for m in modz savvy-progress savvy-flow filetree plan-steps handoff transceiver blast-radius secret-guard checkpoint test-badge replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins terminal-browser; do&#10;  claude plugin install &quot;$m@modz&quot;&#10;done">Copy</button>
         </div>
         <p class="note">Start a new session afterwards. The panel opens on the right.</p>
       </div>
@@ -266,6 +266,7 @@ done</pre>
           <dt><button type="button" data-copy="/plugin install savvy-flow@modz" aria-label="Copy the install command for savvy-flow">savvy-flow<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Orchestrated delivery: the session model plans, tiered worker agents build.</dd>
           <dt><button type="button" data-copy="/plugin install filetree@modz" aria-label="Copy the install command for filetree">filetree<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Files Claude touched this turn, what it is doing now, git status.</dd>
           <dt><button type="button" data-copy="/plugin install plan-steps@modz" aria-label="Copy the install command for plan-steps">plan-steps<span class="at" aria-hidden="true">copy install</span></button></dt><dd>The plan's steps as Claude works through them.</dd>
+          <dt><button type="button" data-copy="/plugin install handoff@modz" aria-label="Copy the install command for handoff">handoff<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A handoff note before the context fills, handed to your next fresh chat.</dd>
           <dt><button type="button" data-copy="/plugin install transceiver@modz" aria-label="Copy the install command for transceiver">transceiver<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Team chat, and zero-token agent questions between teammates. Beta.</dd>
         </dl>
       </div>
@@ -285,6 +286,7 @@ done</pre>
           <dt><button type="button" data-copy="/plugin install session-budget@modz" aria-label="Copy the install command for session-budget">session-budget<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A spend budget per session, with a stop at 100%.</dd>
           <dt><button type="button" data-copy="/plugin install cache-tax@modz" aria-label="Copy the install command for cache-tax">cache-tax<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Keeps the prompt cache warm through breaks and prices a cold send.</dd>
           <dt><button type="button" data-copy="/plugin install hud-pro@modz" aria-label="Copy the install command for hud-pro">hud-pro<span class="at" aria-hidden="true">copy install</span></button></dt><dd>One line: the 5-hour and 7-day limits, context and cost.</dd>
+          <dt><button type="button" data-copy="/plugin install effort-router@modz" aria-label="Copy the install command for effort-router">effort-router<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Each turn's effort and model; light prompts can go at low effort.</dd>
         </dl>
       </div>
       <div>
@@ -325,7 +327,7 @@ done</pre>
 
   <section class="end" aria-labelledby="s-end">
     <picture><source media="(prefers-color-scheme: light)" srcset="img/hero-light.svg"><img src="img/hero-dark.svg" alt="" width="380" style="width:min(380px,70vw);height:auto;margin:0 auto;display:block"></picture>
-    <h2 id="s-end">17 mods for Claude Code. <span style="color: var(--lo)">One panel.</span></h2>
+    <h2 id="s-end">19 mods for Claude Code. <span style="color: var(--lo)">One panel.</span></h2>
     <div class="cmd" role="group" aria-label="Install command">
       <code><span class="chev" aria-hidden="true">›</span> /plugin marketplace add partalemre/MODZ</code>
       <button type="button" class="copy" data-copy="/plugin marketplace add partalemre/MODZ">Copy</button>

@@ -1,6 +1,6 @@
 {
   "name": "modz",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "The MODZ hub: opens on the right when a session starts; agents, files, plan, tests, checkpoints, replay, usage, look and every mod, one click away",
   "author": {
     "name": "Faik Emre Partal"

@@ -65,3 +65,20 @@ export function cardTree(ui: Ui, pending: GuardPending, spec: { width: number; i
 
   return confirmCard(ui, cardModel(pending), spec.width)
 }
+
+// The guard's own question gets a line under each answer saying what it does.
+export function described(questions: unknown[], pending: GuardPending): unknown[] {
+  const lineOf = new Map(pending.options.map(option => [option.label, option.description]))
+
+  return questions.map(question => {
+    const asked = question as { question?: unknown; options?: unknown }
+    if (asked.question !== words().question || !Array.isArray(asked.options)) return question
+    const options = asked.options.map(option => {
+      const label = (option as { label?: unknown }).label
+
+      return typeof label === 'string' && lineOf.has(label) ? { ...(option as object), description: lineOf.get(label) } : option
+    })
+
+    return { ...asked, options }
+  })
+}

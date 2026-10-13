@@ -58,3 +58,24 @@ test('preview: terminal commit with an env file', async ($, on) => {
   await ($ as any).tool.call({ tool: 'Bash', command: 'git commit -m "payment"' })
   show('sg-terminal-commit', setup.trees[0])
 })
+
+// Recording mode over a Bash result a skin drew beneath it: every key, env value and e-mail address masked.
+const MAIL = ['ada.lovelace', 'example.org'].join('@')
+const RESULT_LINES = [`ANTHROPIC_API_KEY=${ANT}`, 'DATABASE_URL=postgres://app:hunter22@db.internal/app', `GITHUB_TOKEN=${GH}`, `git config user.email ${MAIL}`]
+const resultTree = {
+  type: 'Box', props: { flexDirection: 'column' }, children: [
+    { type: 'Text', props: { bold: true }, children: ['Bash(cat .env.local && git config user.email)'] },
+    { type: 'Box', props: { flexDirection: 'column', paddingLeft: 2 }, children: RESULT_LINES.map(line => ({ type: 'Text', props: { dimColor: true }, children: [line] })) },
+  ],
+}
+
+for (const [surface, theme] of (['terminal', 'desktop'] as const).flatMap(surface => ['dark', 'light'].map(theme => [surface, theme] as const))) {
+  test(`preview: a masked tool result in recording mode (${surface}, ${theme})`, async ($, on) => {
+    const setup = { ...english('Cancel', surface), theme, drawn: resultTree }
+    await start($, on, setup)
+    await ($ as any).command.run({ command: 'rec', args: '' })
+    const output = { stdout: RESULT_LINES.join('\n'), stderr: '', interrupted: false, isImage: false }
+    const ui = await $.ui.mount({ plugin: 'secret-guard', component: 'ToolResult', requestId: 'toolu_1', surface, viewport: { columns: 100, rows: 40 }, props: { tool_use_id: 'toolu_1', tool: 'Bash', isErrored: false, output } })
+    show(`sg-rec-${surface}${theme === 'light' ? '-light' : ''}`, await ui.drawn())
+  })
+}

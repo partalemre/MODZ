@@ -3,12 +3,13 @@ import type { RenderElement } from 'claude-code'
 import { AHEAD_POINTS, cachePercent, compact, CONTEXT, costText, percentText, resetText, sparkText, valueText } from './format'
 import { costSeries, seriesOf } from './history'
 import { contextCard } from './context-card'
-import type { CardView } from './context-card'
+import type { CardView, PaneSvg } from './context-card'
 import { HomeButton } from './home'
 import { barTree, toneText } from './line'
 import type { Ui } from './line'
 import { gaugeViews } from './model'
 import type { Forecasts, GaugeView } from './model'
+import { motion } from './pane-motion'
 import { tilesSvg } from './svg-tiles'
 import type { Tile } from './svg-tiles'
 import { words } from './words'
@@ -28,7 +29,9 @@ export type PaneView = {
   nowMs: number
   forecasts: Forecasts
   card: CardData
-  svg?: (props: { source: string; alt: string; width: number; height: number }) => RenderElement
+  // A turn is running: the meters shine.
+  isLive: boolean
+  svg?: PaneSvg
 }
 
 const PX_PER_COLUMN = 6.4
@@ -76,7 +79,8 @@ function gaugeTile(gauge: GaugeView, view: PaneView): Tile {
     value: valueText(gauge.percent),
     ...noteOf(gauge, context),
     tone: gauge.tone,
-    arc: { percent: gauge.percent, pace: gauge.pace },
+    // The pace tick at whole points, as its note reads it: the clock moves it every few seconds otherwise.
+    arc: { percent: gauge.percent, pace: gauge.pace === null ? null : Math.round(gauge.pace) },
     series,
     seriesMax: 100,
     caption: rangeText(series) || words().oneReading,
@@ -100,6 +104,15 @@ function costTile(usd: number, view: PaneView): Tile {
     seriesMax: Math.max(...series, usd) * COST_HEADROOM,
     caption: series.length < 2 ? words().thisSession : `${words().thisSession} · ${words().readings(series.length)}`,
   }
+}
+
+// What a tile shows without the clock: a reset's countdown, the pace tick and a pace note move with time alone,
+// and redraw the tiles without the sweep a real change gets.
+function stillTile(tile: Tile, gauge: GaugeView | undefined) {
+  const isCountdown = gauge !== undefined && gauge.reset !== ''
+  const isPaceNote = gauge !== undefined && gauge.pace !== null && tile.note !== gauge.forecast
+
+  return { ...tile, meta: isCountdown ? '' : tile.meta, note: isPaceNote ? '' : tile.note, arc: tile.arc?.percent ?? null }
 }
 
 function summaryText(view: PaneView): string {
@@ -136,6 +149,7 @@ function cardOf(view: PaneView, gauges: readonly GaugeView[], width?: number): C
 
   return {
     ...view.card,
+    isLive: view.isLive,
     forecast,
     context: view.usage?.context ?? null,
     columns: view.columns,
@@ -165,12 +179,14 @@ function body(ui: Ui, view: PaneView, usage: HudUsage) {
   const gauges = gaugeViews(usage, view.nowMs, view.forecasts)
   if (view.svg === undefined) return terminalBody(ui, view, gauges)
   const tiles = [...gauges.map(gauge => gaugeTile(gauge, view)), ...(usage.costUsd === null ? [] : [costTile(usage.costUsd, view)])]
-  const drawn = tilesSvg({ title: words().limits, meta: summaryText(view), tiles, maxWidth: view.columns * PX_PER_COLUMN })
+  const spec = { title: words().limits, meta: summaryText(view), tiles, maxWidth: view.columns * PX_PER_COLUMN }
+  const drawn = tilesSvg({ ...spec, isLive: view.isLive })
+  const shows = { ...spec, tiles: tiles.map((tile, index) => stillTile(tile, gauges[index])) }
   const Svg = view.svg
 
   return (
     <Box flexDirection="column">
-      <Svg source={drawn.source} alt={drawn.alt} width={drawn.width} height={drawn.height} />
+      <Svg key="hud-tiles" {...motion.pic('hud-tiles', drawn, { shows })} />
       {contextCard(ui, cardOf(view, gauges, drawn.width))}
     </Box>
   )

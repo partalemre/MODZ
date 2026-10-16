@@ -1,14 +1,16 @@
 import type { ContextView, Segment } from './breakdown'
 import { compact } from './format'
+import { shine } from './kit/motion'
 import { escape, eyebrow, measure, sparkline, svgDoc } from './svg'
 import type { SvgDoc } from './svg'
 import { words } from './words'
 
 // The context card on the desktop: eyebrow and the estimate, one segmented bar of the window by
 // category in a single accent (Tide, stepped by opacity; the free space is the bare track), a legend
-// that wraps, then the last turns' fill as a sparkline beside the "~N turns left" estimate.
+// that wraps, then the last turns' fill as a sparkline beside the "~N turns left" estimate. While a
+// turn runs, a light runs along the window's used part.
 
-export type ContextCardSpec = { view: ContextView | null; turns: readonly number[]; forecast: string; meta: string; width: number }
+export type ContextCardSpec = { view: ContextView | null; turns: readonly number[]; forecast: string; meta: string; width: number; isLive?: boolean }
 
 const PAD = 14
 const RADIUS = 10
@@ -33,7 +35,14 @@ function paintOf(segment: Segment, rank: number, isSwatch = false): string {
   return `class="f-read" fill-opacity="${opacity}"`
 }
 
-function barSvg(view: ContextView, width: number): string {
+function liveLight(view: ContextView, width: number): string {
+  const used = (view.usedTokens / view.total) * width
+
+  return used > 0 ? shine({ id: 'ctx-live', x: PAD, y: BAR.y, width: used, height: BAR.h }) : ''
+}
+
+function barSvg(view: ContextView, spec: { width: number; isLive: boolean }): string {
+  const { width } = spec
   let x = PAD
   const parts = view.segments.map((segment, rank) => {
     const share = (segment.tokens / view.total) * width
@@ -44,7 +53,9 @@ function barSvg(view: ContextView, width: number): string {
   })
   const clip = `<clipPath id="ctx-bar"><rect x="${PAD}" y="${BAR.y}" width="${width}" height="${BAR.h}" rx="${BAR.h / 2}"/></clipPath>`
 
-  return `${clip}<g clip-path="url(#ctx-bar)"><rect class="f-track" x="${PAD}" y="${BAR.y}" width="${width}" height="${BAR.h}"/>${parts.join('')}</g>`
+  const light = spec.isLive ? liveLight(view, width) : ''
+
+  return `${clip}<g clip-path="url(#ctx-bar)"><rect class="f-track" x="${PAD}" y="${BAR.y}" width="${width}" height="${BAR.h}"/>${parts.join('')}</g>${light}`
 }
 
 // One legend entry: swatch, label, tokens; the entries wrap to new rows within the card.
@@ -95,7 +106,7 @@ export function contextSvg(spec: ContextCardSpec): SvgDoc {
   const middle =
     spec.view === null || legend === null
       ? `<text class="f-lo" x="${PAD}" y="${BAR.y + BAR.h}" font-size="${NOTE_SIZE}">${escape(words().noBreakdown)}</text>`
-      : barSvg(spec.view, inner) + legend.body
+      : barSvg(spec.view, { width: inner, isLive: spec.isLive === true }) + legend.body
   const footTop = legend === null ? BAR.y + EMPTY_H : LEGEND.top + (legend.rows - 1) * LEGEND.row + LEGEND.row
   const hasFoot = spec.turns.length > 1 || spec.forecast !== ''
   const height = (hasFoot ? footTop + FOOT_H : footTop) + BOTTOM_PAD - LEGEND.row / 2

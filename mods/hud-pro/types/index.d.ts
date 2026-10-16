@@ -44,6 +44,8 @@ declare module 'claude-code' {
       isHidden: boolean
       history: HudSample[]
       isCompacting: boolean
+      // A main-loop turn is running: the pane's meters shine.
+      isLive: boolean
       // The context's tokens at the end of each main-loop turn, newest last: the "~N turns" forecast.
       contextTurns: number[]
       lastCompact: HudCompacted | null

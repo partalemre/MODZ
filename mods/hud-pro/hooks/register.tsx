@@ -11,6 +11,7 @@ import { gaugeViews } from './model'
 import type { Forecasts } from './model'
 import { paneTree, withHome } from './pane'
 import type { CardData } from './pane'
+import { motion } from './pane-motion'
 import { isSame } from './same'
 import { pinned } from './pin'
 import { isOffStage, shownOf } from './stage'
@@ -34,6 +35,7 @@ const compactingAtom = atom({ plugin: 'hud-pro', key: 'isCompacting' } as const,
 const contextTurnsAtom = atom({ plugin: 'hud-pro', key: 'contextTurns' } as const, [])
 const lastCompactAtom = atom({ plugin: 'hud-pro', key: 'lastCompact' } as const, null)
 const hubAtom = atom({ plugin: 'hud-pro', key: 'hub' } as const, EMPTY_HUB)
+const liveAtom = atom({ plugin: 'hud-pro', key: 'isLive' } as const, false)
 
 const noticed = new Set<string>()
 // What the minute clock last moved on screen: the gauges' countdowns, pace marks and estimates.
@@ -117,6 +119,7 @@ async function reportShown($: EngineInterface): Promise<void> {
 
 // Opens the pane, or brings it forward when it is open already; never closes it.
 async function openPane($: EngineInterface): Promise<void> {
+  motion.reset()
   const opened = await $.ui.open({ id: PANE, title: words().paneTitle, focus: true, closeOnEscape: true })
   if (opened.isPlaced) await reportShown($)
 }
@@ -236,6 +239,7 @@ function onRender(on: On) {
       columns: e.props.bodyColumns,
       nowMs: await $.clock.now(),
       card: await cardData($),
+      isLive: await read($, liveAtom),
       // The breakdown read first, so the forecast counts up to the compaction point it names.
       forecasts: await forecastsOf($, usage),
       ...(e.surface !== 'terminal' && 'Svg' in ui ? { svg: ui.Svg } : {}),

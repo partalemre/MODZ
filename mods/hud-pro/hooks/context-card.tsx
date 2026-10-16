@@ -3,6 +3,7 @@ import type { RenderElement } from 'claude-code'
 import type { ContextView, Segment } from './breakdown'
 import { compact, sparkText } from './format'
 import type { Ui } from './line'
+import { motion } from './pane-motion'
 import { contextSvg } from './svg-context'
 import { TERMINAL_KEY } from './theme'
 import { words } from './words'
@@ -19,12 +20,17 @@ export type CardView = {
   context: HudContext | null
   lastCompact: HudCompacted | null
   isCompacting: boolean
+  // A turn is running: the bar's used part shines.
+  isLive: boolean
   compact: () => void
   columns: number
   // The desktop's width for the card in px, and its Svg element; absent on the terminal.
   width?: number
-  svg?: (props: { source: string; alt: string; width: number; height: number }) => RenderElement
+  svg?: PaneSvg
 }
+
+// The desktop's Svg element, its drawings interactive frames in motion (kit/moving.ts).
+export type PaneSvg = (props: { source: string; alt: string; width: number; height: number; isInteractive?: boolean }) => RenderElement
 
 const BAR_MIN = 16
 const BAR_MAX = 48
@@ -133,9 +139,11 @@ function terminalCard(ui: Ui, card: CardView) {
 function bodyOf(ui: Ui, card: CardView) {
   const Svg = card.svg
   if (Svg === undefined || card.width === undefined) return terminalCard(ui, card)
-  const drawn = contextSvg({ view: card.view, turns: card.turns, forecast: card.forecast, meta: metaOf(card), width: card.width })
+  const spec = { view: card.view, turns: card.turns, forecast: card.forecast, meta: metaOf(card), width: card.width }
+  const drawn = contextSvg({ ...spec, isLive: card.isLive })
 
-  return <Svg source={drawn.source} alt={drawn.alt} width={drawn.width} height={drawn.height} />
+  // A turn starting or ending lights the bar or puts it out: no change of what the card shows.
+  return <Svg key="hud-context" {...motion.pic('hud-context', drawn, { shows: spec })} />
 }
 
 export function contextCard(ui: Ui, card: CardView) {

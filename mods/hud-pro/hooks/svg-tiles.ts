@@ -1,4 +1,5 @@
-import { escape, eyebrow, meter, sparkline, svgDoc } from './svg'
+import { shine } from './kit/motion'
+import { escape, eyebrow, filledOf, meter, sparkline, svgDoc } from './svg'
 import type { SvgDoc } from './svg'
 import { fillOf } from './theme'
 import type { Tone } from './theme'
@@ -6,7 +7,7 @@ import { words } from './words'
 
 // `/hud full` on the desktop: a header, then one stat tile per limit and one for the session's
 // cost. Each tile: eyebrow + meta, the Display value, a slim meter with its pace tick, a note on
-// pace, and a sparkline of its history.
+// pace, and a sparkline of its history. While a turn runs, a light runs along each meter's fill.
 
 export type Tile = {
   eyebrow: string
@@ -21,7 +22,10 @@ export type Tile = {
   caption: string
 }
 
-export type TilesSpec = { title: string; meta: string; tiles: readonly Tile[]; maxWidth: number }
+export type TilesSpec = { title: string; meta: string; tiles: readonly Tile[]; maxWidth: number; isLive?: boolean }
+
+// One tile's place in the grid, and whether its meter is live.
+type TileBox = { x: number; y: number; width: number; index: number; isLive: boolean }
 
 const TILE = { minW: 176, maxW: 260, h: 172, gap: 12, pad: 14, radius: 10 } as const
 const BAR = { top: 42, height: 6 } as const
@@ -40,14 +44,17 @@ function columnsFor(count: number, maxWidth: number): { cols: number; tileW: num
 const textAt = (spec: { x: number; y: number; cls: string; size: number; value: string; weight?: number; anchor?: 'end' }): string =>
   `<text class="${spec.cls}" x="${spec.x}" y="${spec.y}" font-size="${spec.size}" font-weight="${spec.weight ?? 500}"${spec.anchor === undefined ? '' : ` text-anchor="${spec.anchor}"`}>${escape(spec.value)}</text>`
 
-function valueAndMeter(tile: Tile, spec: { x: number; y: number; width: number }): string {
+function valueAndMeter(tile: Tile, spec: TileBox): string {
   const value = textAt({ x: spec.x, y: spec.y + 28, cls: `${fillOf(tile.tone)} num`, size: 24, value: tile.value, weight: 650 })
   if (tile.arc === null) return value
+  const bar = { x: spec.x, y: spec.y + BAR.top, width: spec.width, height: BAR.height, percent: tile.arc.percent }
+  const filled = filledOf(bar)
+  const light = spec.isLive && filled > 0 ? shine({ id: `hud-tile-${spec.index}`, x: bar.x, y: bar.y, width: filled, height: bar.height }) : ''
 
-  return value + meter({ x: spec.x, y: spec.y + BAR.top, width: spec.width, height: BAR.height, percent: tile.arc.percent, tone: tile.tone, pace: tile.arc.pace })
+  return value + meter({ ...bar, tone: tile.tone, pace: tile.arc.pace }) + light
 }
 
-function tileSvg(tile: Tile, box: { x: number; y: number; width: number }): string {
+function tileSvg(tile: Tile, box: TileBox): string {
   const { x, y, width } = box
   const inner = x + TILE.pad
   const right = x + width - TILE.pad
@@ -60,7 +67,7 @@ function tileSvg(tile: Tile, box: { x: number; y: number; width: number }): stri
     `<rect class="${fill} ${frame}" x="${x + 0.5}" y="${y + 0.5}" width="${width - 1}" height="${TILE.h - 1}" rx="${TILE.radius}"/>`,
     eyebrow(tile.eyebrow, { x: inner, y: y + TILE.pad + 9, cls: tile.tone === 'neutral' ? 'f-lo' : `f-${tile.tone}` }),
     textAt({ x: right, y: y + TILE.pad + 9, cls: 'f-lo num', size: 10.5, value: tile.meta, anchor: 'end' }),
-    valueAndMeter(tile, { x: inner, y: y + 30, width: right - inner }),
+    valueAndMeter(tile, { ...box, x: inner, y: y + 30, width: right - inner }),
     textAt({ x: inner, y: y + 94, cls: fillOf(tile.noteTone, 'lo'), size: 11, value: tile.note }),
     sparkline({ x: inner, y: sparkTop, width: right - inner, height: SPARK_H, values: tile.series, max: tile.seriesMax, tone: tile.tone }),
     `<rect class="f-line" x="${inner}" y="${sparkTop + SPARK_H}" width="${right - inner}" height="1"/>`,
@@ -84,7 +91,7 @@ export function tilesSvg(spec: TilesSpec): SvgDoc {
     const x = (index % cols) * (tileW + TILE.gap)
     const y = HEADER_H + Math.floor(index / cols) * (TILE.h + TILE.gap)
 
-    return tileSvg(tile, { x, y, width: tileW })
+    return tileSvg(tile, { x, y, width: tileW, index, isLive: spec.isLive === true })
   })
   const alt = [spec.title, ...spec.tiles.map(tile => `${tile.eyebrow} ${tile.value} · ${tile.note} · ${tile.caption}`)].join('; ')
 

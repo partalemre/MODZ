@@ -17,6 +17,8 @@ import { wordmark, wordmarkHeight } from './wordmark'
 import { hubWords } from './words'
 
 const HEAD = 132
+// The band the focus button takes under the head's text: a native button and its one-cell inset from the foot.
+const ACTION_BAND = 40
 const HEAD_PAD = 16
 const MARK_Y = 16
 const SECTION = 24
@@ -34,25 +36,26 @@ const RADIUS = 12
 
 const HUB_CSS = MOTION_CSS
 
-// `buttonRoom`: the width the focus button takes over the card's bottom-right corner, 0 when there is none.
-type HeadSpec = { width: number; theme: Theme; focus: Focus | null; meta: string; buttonRoom: number; cue: Cue }
+// `hasAction`: the focus button sits in the card's bottom-right corner, on a band of its own under the text, so
+// the title and its line keep the card's whole width.
+type HeadSpec = { width: number; theme: Theme; focus: Focus | null; meta: string; hasAction: boolean; cue: Cue }
 
 const doc = (spec: { width: number; height: number; theme: Theme; body: string }) => svgDoc({ ...spec, css: HUB_CSS })
 
 // A glow of the leading role in the card's corner, and while work is live a light running along its foot.
-function headLight(spec: { width: number; role: RoleName; isLive: boolean; isFresh: boolean }): string {
-  const { width, role } = spec
+function headLight(spec: { width: number; height: number; role: RoleName; isLive: boolean; isFresh: boolean }): string {
+  const { width, height, role } = spec
   const defs = [
     `<radialGradient id="hd-glow" cx="1" cy="0" r="1"><stop offset="0" style="stop-color:var(--${role});stop-opacity:.26"/><stop offset="1" style="stop-color:var(--${role});stop-opacity:0"/></radialGradient>`,
     `<linearGradient id="hd-beam" x1="0" x2="1"><stop offset="0" style="stop-color:var(--${role});stop-opacity:0"/><stop offset=".5" style="stop-color:var(--${role});stop-opacity:.9"/><stop offset="1" style="stop-color:var(--${role});stop-opacity:0"/></linearGradient>`,
     `<linearGradient id="hd-sheen" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".10"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>`,
-    `<clipPath id="hd-card"><rect x="0" y="0" width="${width}" height="${HEAD}" rx="${RADIUS}"/></clipPath>`,
+    `<clipPath id="hd-card"><rect x="0" y="0" width="${width}" height="${height}" rx="${RADIUS}"/></clipPath>`,
   ].join('')
-  const track = `<rect x="${HEAD_PAD}" y="${HEAD - 3}" width="${width - HEAD_PAD * 2}" height="1.5" rx=".75" class="track"/>`
-  const beam = spec.isLive ? `<rect x="${HEAD_PAD}" y="${HEAD - 3}" width="${(width - HEAD_PAD * 2) * 0.4}" height="1.5" fill="url(#hd-beam)" class="m-shine"/>` : ''
-  const sheen = spec.isFresh ? `<rect x="0" y="0" width="${width * 0.6}" height="${HEAD}" fill="url(#hd-sheen)" class="m-sweep"/>` : ''
+  const track = `<rect x="${HEAD_PAD}" y="${height - 3}" width="${width - HEAD_PAD * 2}" height="1.5" rx=".75" class="track"/>`
+  const beam = spec.isLive ? `<rect x="${HEAD_PAD}" y="${height - 3}" width="${(width - HEAD_PAD * 2) * 0.4}" height="1.5" fill="url(#hd-beam)" class="m-shine"/>` : ''
+  const sheen = spec.isFresh ? `<rect x="0" y="0" width="${width * 0.6}" height="${height}" fill="url(#hd-sheen)" class="m-sweep"/>` : ''
 
-  return `<defs>${defs}</defs><g clip-path="url(#hd-card)"><rect x="0" y="0" width="${width}" height="${HEAD}" fill="url(#hd-glow)" class="m-fade"/>${sheen}${spec.isLive ? `${track}${beam}` : ''}</g>`
+  return `<defs>${defs}</defs><g clip-path="url(#hd-card)"><rect x="0" y="0" width="${width}" height="${height}" fill="url(#hd-glow)" class="m-fade"/>${sheen}${spec.isLive ? `${track}${beam}` : ''}</g>`
 }
 
 // The head is the one card on the hub: the pixel mark and the mods on, then the most pressing thing now, or a
@@ -61,7 +64,7 @@ export function hubHeadSvg(spec: HeadSpec): Drawing {
   const { width, focus, cue } = spec
   const role = focus === null ? null : ROLE_OF_TONE[focus.tone]
   const inner = width - HEAD_PAD * 2
-  const beside = inner - spec.buttonRoom
+  const height = spec.hasAction ? HEAD + ACTION_BAND : HEAD
   const words = hubWords()
   const card = focus?.row.card ?? null
   const title = focus === null ? words.idleTitle : (card?.detail ?? '')
@@ -69,14 +72,14 @@ export function hubHeadSvg(spec: HeadSpec): Drawing {
   const frame = role === null ? 'card line' : `card ln-${role}`
   const label = focus === null ? null : `${words.now} · ${focus.row.entry.title}`
   const isLive = focus !== null && focus.tone === 'live'
-  const light = role === null ? '' : headLight({ width, role, isLive, isFresh: cue.phase === 'change' })
+  const light = role === null ? '' : headLight({ width, height, role, isLive, isFresh: cue.phase === 'change' })
   const text = [
     label === null ? '' : `<g transform="translate(${HEAD_PAD} 0)">${eyebrow({ y: 70, width: inner, label, role: role ?? 'edit', meta: '' })}</g>`,
-    `<text x="${HEAD_PAD}" y="${label === null ? 82 : 96}" class="hl hi">${esc(fit(title, beside, { size: 17, weight: 620 }))}</text>`,
-    `<text x="${HEAD_PAD}" y="${label === null ? 104 : 116}" class="lb lo">${esc(fit(line, beside, { size: 12 }))}</text>`,
+    `<text x="${HEAD_PAD}" y="${label === null ? 82 : 96}" class="hl hi">${esc(fit(title, inner, { size: 17, weight: 620 }))}</text>`,
+    `<text x="${HEAD_PAD}" y="${label === null ? 104 : 116}" class="lb lo">${esc(fit(line, inner, { size: 12 }))}</text>`,
   ].join('')
   const body = [
-    `<rect x="0.5" y="0.5" width="${width - 1}" height="${HEAD - 1}" rx="${RADIUS}" class="${frame}" style="stroke-width:1"/>`,
+    `<rect x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="${RADIUS}" class="${frame}" style="stroke-width:1"/>`,
     light,
     wordmark({ x: HEAD_PAD, y: MARK_Y, cue }),
     entering(pill({ right: width - HEAD_PAD, y: MARK_Y + (wordmarkHeight() - PILL_HEIGHT) / 2, text: spec.meta, role: null }).svg, { ...cue, order: cue.order + 1 }, 'fade'),
@@ -84,7 +87,7 @@ export function hubHeadSvg(spec: HeadSpec): Drawing {
   ].join('')
   const alt = `${focus === null ? `MODZ: ${words.idleTitle}. ${words.idleLine}` : `${words.now}, ${focus.row.entry.title}: ${title}`} (${spec.meta})`
 
-  return { source: doc({ width, height: HEAD, theme: spec.theme, body }), alt, height: HEAD }
+  return { source: doc({ width, height, theme: spec.theme, body }), alt, height }
 }
 
 // A group's eyebrow: a section's name, or "Hidden" while the person customizes the hub; its rule draws in.

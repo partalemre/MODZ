@@ -219,6 +219,23 @@ test('on the desktop each row is one surface: its button sits over the drawing\'
   const over = inside.find(element => element.type === 'Box' && element.props?.position === 'absolute')
   expect(drawing?.props?.isInteractive).toBe(true)
   expect(beneath(over).some(element => element.props?.key === 'open-transceiver')).toBe(true)
+  // A row is not a whole number of cells tall: the button spans it and centres, never pinned a cell from its top.
+  expect(over?.props).toMatchObject({ top: 0, bottom: 0, alignItems: 'center' })
   expect(String(drawing?.props?.source)).toContain('m-ripple')
   expect(String(drawing?.props?.source)).not.toMatch(/class="[^"]*breathe/)
+})
+
+test('on the desktop the head gives its focus button a band of its own, in an even bottom-right corner', { plugins: [transceiverReporter] }, async ($: any, on: any) => {
+  stubWorld(on)
+  await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const idleHead = beneath(await ui.find({ type: 'Box', key: 'head-card' })).find(element => element.type === 'Svg')
+  await $.command.run({ command: 'say', args: JSON.stringify(card('transceiver', { tone: 'live', detail: '2 okunmamış' })) })
+  const inside = beneath(await ui.find({ type: 'Box', key: 'head-card' }))
+  const head = inside.find(element => element.type === 'Svg')
+  const over = inside.find(element => element.type === 'Box' && element.props?.position === 'absolute')
+
+  expect(beneath(over).some(element => element.props?.key === 'open-focus')).toBe(true)
+  expect(over?.props).toMatchObject({ bottom: 1, right: 2 })
+  expect(head?.props?.height).toBeGreaterThan(idleHead?.props?.height)
 })

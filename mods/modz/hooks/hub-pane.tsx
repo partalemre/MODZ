@@ -45,11 +45,11 @@ const WIDTH_MAX = 640
 // Room the native buttons take over a row's right edge: one "Open", or "Up" and "Hide" while customizing.
 const BUTTON_ROOM = 64
 const EDIT_BUTTON_ROOM = 136
-// The focus button's room in the head: its label's width and the button's own padding and inset.
-const FOCUS_CHROME = 48
-const FOCUS_CHAR_PX = 7
 // Where an overlaid button sits, in layout cells from the drawing's right and bottom edges.
 const INSET = 1
+// The head's focus button from the card's right edge: a desktop column is about half a row, so two columns
+// match the one-row inset from its foot and the corner reads even.
+const HEAD_INSET_X = 2
 // The head's mark and its text enter first; the sections and rows follow.
 const HEAD_STEPS = 4
 
@@ -73,8 +73,7 @@ function focusButton(ui: Ui, view: HubView) {
 
 const focusLabel = (focus: Focus) => hubWords().openPane(focus.row.entry.title)
 
-const focusRoom = (view: HubView) =>
-  view.focus === null || view.isEditing ? 0 : focusLabel(view.focus).length * FOCUS_CHAR_PX + FOCUS_CHROME
+const hasFocusButton = (view: HubView) => view.focus !== null && !view.isEditing
 
 // A row's buttons: "Open" (the terminal shows its digit), or while customizing "Up" (not on a section's
 // first row) and "Hide"; a hidden row offers "Show".
@@ -136,9 +135,10 @@ function rowShows(row: HubRow, look: { width: number; theme: Theme; buttonRoom: 
 }
 
 // A drawing with native controls laid over its right edge; the box hugs the drawing so the edge is its own.
+// A row's controls span its full height and centre on it: a row is not a whole number of cells tall.
 function overlaid(ui: Ui, opts: { key: string; drawing: unknown; controls: unknown; at: 'middle' | 'bottom' }) {
   const { Box } = ui
-  const place = opts.at === 'bottom' ? { bottom: INSET, right: INSET } : { top: INSET, right: INSET }
+  const place = opts.at === 'bottom' ? { bottom: INSET, right: HEAD_INSET_X } : { top: 0, bottom: 0, right: INSET, alignItems: 'center' }
 
   return (
     <Box key={opts.key} alignSelf="flex-start">
@@ -155,7 +155,7 @@ function desktopTree(ui: Ui, view: HubView) {
     <Svg key={key} source={drawing.source} alt={drawing.alt} width={drawnWidth} height={drawing.height} isInteractive />
   )
   const buttonRoom = view.isEditing ? EDIT_BUTTON_ROOM : BUTTON_ROOM
-  const headRoom = focusRoom(view)
+  const hasAction = hasFocusButton(view)
   // Each drawing's place in the opening cascade, top to bottom: the head's own pieces take the first few.
   let order = HEAD_STEPS
   const kept = (key: string, what: unknown, build: (cue: Cue) => Drawing) => {
@@ -164,8 +164,8 @@ function desktopTree(ui: Ui, view: HubView) {
     return view.stable.draw(key, what, phase => build({ phase, order: at }))
   }
   const focus = view.focus === null ? null : { pane: view.focus.row.entry.pane, tone: view.focus.tone, detail: view.focus.row.card?.detail }
-  const head = view.stable.draw('head', { width, theme: view.theme, focus, meta: view.meta, headRoom }, phase =>
-    hubHeadSvg({ width, theme: view.theme, focus: view.focus, meta: view.meta, buttonRoom: headRoom, cue: { phase, order: 0 } }))
+  const head = view.stable.draw('head', { width, theme: view.theme, focus, meta: view.meta, hasAction }, phase =>
+    hubHeadSvg({ width, theme: view.theme, focus: view.focus, meta: view.meta, hasAction, cue: { phase, order: 0 } }))
 
   return (
     <Box flexDirection="column" rowGap={1}>

@@ -1,3 +1,5 @@
+import { paneMotion } from './kit/moving'
+import type { MoveOpts } from './kit/moving'
 import type { MetaMap } from './meta'
 import { diffstatSvg, headSvg, rowFits, rowSvg } from './pane-svg'
 import type { Drawing, Frame, RowSpec } from './pane-svg'
@@ -60,10 +62,13 @@ export function titleOf(entry: CheckpointEntry, meta: MetaMap): { title: string;
 export const headerMeta = (view: CheckpointView, now: number): string =>
   view.entries[0] === undefined ? '' : words().headerMeta(view.entries.length, ago(now - view.entries[0].at))
 
-function picture(ui: Ui, drawing: Drawing, key: string) {
+// The pane's drawings on the desktop (kit/moving.ts): reset as the pane opens, so they cascade in each time.
+export const motion = paneMotion()
+
+function picture(ui: Ui, drawing: Drawing, key: string, opts?: MoveOpts) {
   const { Svg } = ui
 
-  return <Svg key={key} source={drawing.source} alt={drawing.alt} width={drawing.width} height={drawing.height} />
+  return <Svg key={key} {...motion.pic(key, drawing, opts)} />
 }
 
 function confirmCard(ui: Ui, pending: PendingUndo, opts: PaneOpts) {
@@ -93,6 +98,13 @@ function rowSpecs(view: CheckpointView, opts: PaneOpts): RowSpec[] {
   }))
 }
 
+// A row moves with its checkpoint, not its place, and its age ticking on is no change to sweep.
+function rowPicture(ui: Ui, row: { frame: Frame; spec: RowSpec; isStacked: boolean; ref: string }) {
+  const { when, ...shows } = row.spec
+
+  return picture(ui, rowSvg(row.frame, { ...row.spec, isStacked: row.isStacked }), `cp-svg-${row.ref}`, { isRow: true, shows: { ...shows, isStacked: row.isStacked, frame: row.frame, isAged: when !== '' } })
+}
+
 // Every row stacks its facts under the label once one row has no room beside its title, so the rows stay alike.
 function timeline(ui: Ui, view: CheckpointView, opts: PaneOpts) {
   const { Box, Button } = ui
@@ -104,7 +116,7 @@ function timeline(ui: Ui, view: CheckpointView, opts: PaneOpts) {
     <Box flexDirection="column">
       {view.entries.map((entry, index) => (
         <Box key={`cp-row-${index}`} flexDirection="row" alignItems="flex-start" columnGap={1}>
-          {picture(ui, rowSvg(frame, { ...(specs[index] as RowSpec), isStacked }), `cp-svg-${index}`)}
+          {rowPicture(ui, { frame, spec: specs[index] as RowSpec, isStacked, ref: entry.ref })}
           <Button key={`cp-undo-${index}`} plain dimColor label={words().undo} onPress={() => opts.actions.onUndo(entry)} />
         </Box>
       ))}
@@ -148,7 +160,7 @@ export function paneTree(ui: Ui, view: CheckpointView, opts: PaneOpts) {
 
   return (
     <Box flexDirection="column" rowGap={1}>
-      {picture(ui, head, 'cp-head')}
+      {picture(ui, head, 'cp-head', { shows: { lead, turns, count, frame } })}
       {statusRow(ui, view, opts.actions)}
       {view.pending !== null && confirmCard(ui, view.pending, opts)}
       {view.pending === null && count > 0 && timeline(ui, view, opts)}

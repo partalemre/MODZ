@@ -6,7 +6,7 @@ import type { Repo, Run } from './git'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { glyphOf, keepListed, markUndone, pendingOf, sortGlyphs } from './meta'
 import type { MetaMap } from './meta'
-import { clip, paneTree, targetOf } from './pane'
+import { clip, motion, paneTree, targetOf } from './pane'
 import { withHome } from './home'
 import { pinned } from './pin'
 import { shownOf } from './stage'
@@ -190,6 +190,7 @@ async function openPane($: EngineInterface, isFocused = false): Promise<void> {
   } catch {
     $.ui.log('checkpoint: could not list checkpoints', { to: 'debug' })
   }
+  motion.reset()
   const opened = await $.ui.open({ id: PANE, title: words().title, ...(isFocused ? { focus: true } : {}) })
   try {
     const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true

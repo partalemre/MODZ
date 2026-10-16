@@ -84,7 +84,7 @@ After `/clear` or in a new session the plan also comes back to the pane, the sta
 
 The mod watches tool calls and reads no model output.
 
-- **Task list:** `TodoWrite`, or `TaskCreate` and `TaskUpdate`, with each item's pending, in-progress or completed status. A subagent's own `TodoWrite` is ignored.
+- **Task list:** `TodoWrite`, or `TaskCreate` and `TaskUpdate`, with each item's pending, in-progress or completed status. A subagent's own `TodoWrite` is ignored. On the desktop app's Code tab Claude keeps the list with the app's own tool (`update_plan`) instead; that list counts the same way, and the app's wrap-up checks it off.
 - **Approved plan:** the plan text that `ExitPlanMode` returns once you approve it.
 - **Plan file:** a markdown file Claude reads or writes. `docs/**/plans/*.md`, `PLAN.md` and `*.plan.md` always count. Any other `.md` counts only if it has `### Task N:` or `## Step N` headings or at least 3 checkboxes, and it never replaces a named plan file or an approved plan. When the file is edited it is parsed again, so ticked boxes show up.
 

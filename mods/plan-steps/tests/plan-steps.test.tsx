@@ -286,3 +286,19 @@ test('a MODZ open request for plan opens the pane, one for another pane does not
   await $.command.run({ command: 'modz-open', args: 'plan' })
   expect(opened).toEqual(['plan-steps'])
 })
+
+test('the desktop task list (update_plan, wrap_up) is the plan, as TodoWrite is', async ($: any, on: any) => {
+  await setup($, on)
+  const items = (statuses: Status[]) => ['Bak', 'Düzelt', 'Test et'].map((content, index) => ({ content, status: statuses[index] }))
+  await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', items: items(['in_progress', 'pending', 'pending']), scope: 'first_task' })
+  expect(lastStatus()).toBe('plan 0/3 · Bak')
+
+  await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', advance: true })
+  expect(lastStatus()).toBe('plan 1/3 · Düzelt')
+
+  await $.tool.call({ tool: 'mcp__ccd_turn__update_plan', done: [2], start: 3 })
+  expect(lastStatus()).toBe('plan 2/3 · Test et')
+
+  await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up', recap: 'Bitti.' })
+  expect(lastStatus()).toBe('plan 3/3 · tamam')
+})

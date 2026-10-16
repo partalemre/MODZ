@@ -3,7 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { matchTasks, resolvePlan, similarity } from '../hooks/match'
 import { cleanTitle, isPlanPath, parsePlan } from '../hooks/parse'
 import { fileDoc, isReplacing } from '../hooks/plan'
-import { createTask, createdId, fromTodos, updateTask } from '../hooks/tasks'
+import { createTask, createdId, fromDeskPlan, fromTodos, updateTask } from '../hooks/tasks'
 import { setLang } from '../hooks/kit/lang'
 
 setLang('tr')
@@ -128,4 +128,12 @@ test('a plan doc leads when the task list speaks for it, otherwise the task list
   expect(resolvePlan([{ id: '9', subject: 'Unrelated chore', status: 'pending' }], doc)?.source).toBe('görev listesi')
   expect(resolvePlan([], doc)?.steps.map(step => step.status)).toEqual(['completed', 'in_progress', 'pending'])
   expect(resolvePlan([], null)).toBeNull()
+})
+
+test('the desktop task list replaces, advances and checks off steps by number', () => {
+  const list = fromDeskPlan([], { items: [{ content: 'A', status: 'in_progress' }, { content: 'B', status: 'pending' }, { content: 'C', status: 'pending' }] })
+  expect(fromDeskPlan(list, { advance: true }).map(task => task.status)).toEqual(['completed', 'in_progress', 'pending'])
+  expect(fromDeskPlan(list, { done: [1, 2], start: 3 }).map(task => task.status)).toEqual(['completed', 'completed', 'in_progress'])
+  expect(fromDeskPlan(list, { start: 3 }).map(task => task.status)).toEqual(['pending', 'pending', 'in_progress'])
+  expect(fromDeskPlan(list, { advance: 'yes' })).toEqual(list)
 })

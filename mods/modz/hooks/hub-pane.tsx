@@ -1,5 +1,6 @@
 // The MODZ hub pane: the head card, then each section's rows with an "Open" button that asks the
-// owning mod to open its pane. "Customize" turns the buttons into Up and Hide, and lists the hidden rows
+// owning mod to open its pane. On the desktop the buttons sit over the right edge of the drawing they belong to
+// (a drawing cannot be pressed), so a row is one surface: its hover and its button share one edge. "Customize" turns the buttons into Up and Hide, and lists the hidden rows
 // with Show. The catalog ("Mods") is a pane of its own (register.tsx).
 import type { Drawing } from './draw'
 import type { Cue } from './kit/motion'
@@ -41,11 +42,16 @@ export type HubView = {
 const PX_PER_COLUMN = 8
 const WIDTH_MIN = 280
 const WIDTH_MAX = 640
-// Room the native buttons take beside a row's drawing: one "Open", or "Up" and "Hide" while customizing.
+// Room the native buttons take over a row's right edge: one "Open", or "Up" and "Hide" while customizing.
 const BUTTON_ROOM = 64
-// The head's pixel mark and its text enter first; the sections and rows follow.
-const HEAD_STEPS = 4
 const EDIT_BUTTON_ROOM = 136
+// The focus button's room in the head: its label's width and the button's own padding and inset.
+const FOCUS_CHROME = 48
+const FOCUS_CHAR_PX = 7
+// Where an overlaid button sits, in layout cells from the drawing's right and bottom edges.
+const INSET = 1
+// The head's mark and its text enter first; the sections and rows follow.
+const HEAD_STEPS = 4
 
 export const hubWidth = (columns: number): number => Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, columns * PX_PER_COLUMN - PX_PER_COLUMN))
 
@@ -60,10 +66,15 @@ function focusButton(ui: Ui, view: HubView) {
 
   return (
     <Box key="focus" flexDirection="row">
-      <Button key="open-focus" label={hubWords().openPane(focus.row.entry.title)} variant="primary" onPress={() => view.actions.onOpen(pane)} />
+      <Button key="open-focus" label={focusLabel(focus)} variant="primary" onPress={() => view.actions.onOpen(pane)} />
     </Box>
   )
 }
+
+const focusLabel = (focus: Focus) => hubWords().openPane(focus.row.entry.title)
+
+const focusRoom = (view: HubView) =>
+  view.focus === null || view.isEditing ? 0 : focusLabel(view.focus).length * FOCUS_CHAR_PX + FOCUS_CHROME
 
 // A row's buttons: "Open" (the terminal shows its digit), or while customizing "Up" (not on a section's
 // first row) and "Hide"; a hidden row offers "Show".
@@ -118,10 +129,23 @@ function groupsOf(view: HubView): Group[] {
 }
 
 // What a row's drawing shows: its words and tone, not when its card was written.
-function rowShows(row: HubRow, look: { width: number; theme: Theme }) {
+function rowShows(row: HubRow, look: { width: number; theme: Theme; buttonRoom: number }) {
   const card = row.card === null ? null : { detail: row.card.detail, tone: row.card.tone }
 
   return { ...look, entry: row.entry, card }
+}
+
+// A drawing with native controls laid over its right edge; the box hugs the drawing so the edge is its own.
+function overlaid(ui: Ui, opts: { key: string; drawing: unknown; controls: unknown; at: 'middle' | 'bottom' }) {
+  const { Box } = ui
+  const place = opts.at === 'bottom' ? { bottom: INSET, right: INSET } : { top: INSET, right: INSET }
+
+  return (
+    <Box key={opts.key} alignSelf="flex-start">
+      {opts.drawing}
+      {opts.controls === null ? null : <Box position="absolute" {...place} flexDirection="row" columnGap={1}>{opts.controls}</Box>}
+    </Box>
+  )
 }
 
 function desktopTree(ui: Ui, view: HubView) {
@@ -130,7 +154,8 @@ function desktopTree(ui: Ui, view: HubView) {
   const draw = (drawing: Drawing, key: string, drawnWidth: number) => (
     <Svg key={key} source={drawing.source} alt={drawing.alt} width={drawnWidth} height={drawing.height} isInteractive />
   )
-  const rowWidth = width - (view.isEditing ? EDIT_BUTTON_ROOM : BUTTON_ROOM)
+  const buttonRoom = view.isEditing ? EDIT_BUTTON_ROOM : BUTTON_ROOM
+  const headRoom = focusRoom(view)
   // Each drawing's place in the opening cascade, top to bottom: the head's own pieces take the first few.
   let order = HEAD_STEPS
   const kept = (key: string, what: unknown, build: (cue: Cue) => Drawing) => {
@@ -139,25 +164,24 @@ function desktopTree(ui: Ui, view: HubView) {
     return view.stable.draw(key, what, phase => build({ phase, order: at }))
   }
   const focus = view.focus === null ? null : { pane: view.focus.row.entry.pane, tone: view.focus.tone, detail: view.focus.row.card?.detail }
-  const head = view.stable.draw('head', { width, theme: view.theme, focus, meta: view.meta }, phase =>
-    hubHeadSvg({ width, theme: view.theme, focus: view.focus, meta: view.meta, cue: { phase, order: 0 } }))
+  const head = view.stable.draw('head', { width, theme: view.theme, focus, meta: view.meta, headRoom }, phase =>
+    hubHeadSvg({ width, theme: view.theme, focus: view.focus, meta: view.meta, buttonRoom: headRoom, cue: { phase, order: 0 } }))
 
   return (
     <Box flexDirection="column" rowGap={1}>
-      {draw(head, 'head', width)}
-      {focusButton(ui, view)}
+      {overlaid(ui, { key: 'head-card', drawing: draw(head, 'head', width), controls: focusButton(ui, view), at: 'bottom' })}
       {groupsOf(view).map(group => {
         const panes = group.isHiddenGroup ? null : group.rows.map(row => row.entry.pane)
 
         return (
           <Box key={`section-${group.key}`} flexDirection="column">
             {draw(kept(`eyebrow-${group.key}`, { width, theme: view.theme, label: group.label }, cue => sectionSvg({ width, theme: view.theme, label: group.label, cue })), `eyebrow-${group.key}`, width)}
-            {group.rows.map(row => (
-              <Box key={`row-${row.entry.pane}`} flexDirection="row" alignItems="center" columnGap={1}>
-                {draw(kept(`row-${row.entry.pane}`, rowShows(row, { width: rowWidth, theme: view.theme }), cue => hubRowSvg({ width: rowWidth, theme: view.theme, row, cue })), `svg-${row.entry.pane}`, rowWidth)}
-                {rowButtons(ui, view, { row, panes })}
-              </Box>
-            ))}
+            {group.rows.map(row => {
+              const shows = rowShows(row, { width, theme: view.theme, buttonRoom })
+              const drawing = draw(kept(`row-${row.entry.pane}`, shows, cue => hubRowSvg({ width, theme: view.theme, row, buttonRoom, cue })), `svg-${row.entry.pane}`, width)
+
+              return overlaid(ui, { key: `row-${row.entry.pane}`, drawing, controls: rowButtons(ui, view, { row, panes }), at: 'middle' })
+            })}
           </Box>
         )
       })}

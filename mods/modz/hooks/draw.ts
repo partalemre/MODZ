@@ -26,6 +26,7 @@ const ROW = 66
 const TILE = 36
 const TEXT_X = TILE + 12
 const PILL = 18
+export const PILL_HEIGHT = PILL
 const PILL_PAD = 8
 const GAP = 6
 const NOTCH = 6

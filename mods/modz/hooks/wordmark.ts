@@ -1,45 +1,49 @@
-// The film's pixel "MODZ" (tools/site/hero.ts), small enough to head the hub. Entering, its squares drop in
-// letter by letter, row by row, as the film's title does; settled, it is a still mark.
+// The MODZ mark that heads the hub: a Kiln tile holding the film's pixel "M" (tools/site/hero.ts), then the name
+// set in type. Entering, the pixels drop in row by row, as the film's title does, and the name fades up after
+// them; settled, it is a still mark.
 import { delayOf, entering, isEntering } from './kit/motion'
 import type { Cue } from './kit/motion'
 
-const LETTERS: Record<string, string[]> = {
-  M: ['X...X', 'XX.XX', 'X.X.X', 'X.X.X', 'X...X', 'X...X', 'X...X'],
-  O: ['.XXX.', 'X...X', 'X...X', 'X...X', 'X...X', 'X...X', '.XXX.'],
-  D: ['XXXX.', 'X...X', 'X...X', 'X...X', 'X...X', 'X...X', 'XXXX.'],
-  Z: ['XXXXX', '....X', '...X.', '..X..', '.X...', 'X....', 'XXXXX'],
+const M = ['X...X', 'XX.XX', 'X.X.X', 'X...X', 'X...X']
+const NAME = 'MODZ'
+const TILE = 30
+const TILE_RADIUS = 9
+const PITCH = 3.6
+const CELL = 3
+const NAME_GAP = 10
+const NAME_SIZE = 15
+const NAME_TRACKING = 1.8
+// Each pixel's own wait inside the cascade: a row after the row above, a column after the one before it.
+const ROW_MS = 40
+const COLUMN_MS = 12
+
+export type WordmarkSpec = { x: number; y: number; cue: Cue }
+
+export const wordmarkHeight = (): number => TILE
+
+function pixels(spec: WordmarkSpec, isMoving: boolean): string {
+  const side = M[0].length * PITCH - (PITCH - CELL)
+  const left = spec.x + (TILE - side) / 2
+  const top = spec.y + (TILE - side) / 2
+
+  return M.flatMap((row, r) =>
+    [...row].map((c, col) => {
+      if (c !== 'X') return ''
+      const motion = isMoving ? ` class="m-px" style="${delayOf(spec.cue, r * ROW_MS + col * COLUMN_MS)}"` : ''
+
+      return `<rect x="${(left + col * PITCH).toFixed(2)}" y="${(top + r * PITCH).toFixed(2)}" width="${CELL}" height="${CELL}" rx=".6"${motion}/>`
+    }),
+  ).join('')
 }
-const WORD = 'MODZ'
-const COLUMNS = 5
-const ROWS = 7
-// Each square's own wait inside the cascade: a letter after the one before it, a row after the row above.
-const LETTER_MS = 90
-const ROW_MS = 22
-const COLUMN_MS = 8
-
-export type WordmarkSpec = { x: number; y: number; pitch: number; cue: Cue }
-
-const letterWidth = (pitch: number) => COLUMNS * pitch - pitch * 0.15
-
-export const wordmarkWidth = (pitch: number): number => WORD.length * letterWidth(pitch) + (WORD.length - 1) * pitch * 1.6
-
-export const wordmarkHeight = (pitch: number): number => ROWS * pitch
 
 export function wordmark(spec: WordmarkSpec): string {
-  const { pitch, cue } = spec
-  const cell = pitch * 0.85
-  const isMoving = isEntering(cue)
-  const squares = [...WORD].flatMap((ch, i) =>
-    (LETTERS[ch] ?? []).flatMap((row, r) =>
-      [...row].map((c, col) => {
-        if (c !== 'X') return ''
-        const x = spec.x + i * (letterWidth(pitch) + pitch * 1.6) + col * pitch
-        const motion = isMoving ? ` class="m-px" style="${delayOf(cue, i * LETTER_MS + r * ROW_MS + col * COLUMN_MS)}"` : ''
+  const isMoving = isEntering(spec.cue)
+  const tile = `<rect x="${spec.x + 0.5}" y="${spec.y + 0.5}" width="${TILE - 1}" height="${TILE - 1}" rx="${TILE_RADIUS}" class="bg-edit ln-edit"/>`
+  const name = `<text x="${spec.x + TILE + NAME_GAP}" y="${spec.y + TILE / 2 + NAME_SIZE * 0.36}" class="hi" ` +
+    `style="font-size:${NAME_SIZE}px;font-weight:700;letter-spacing:${NAME_TRACKING}px">${NAME}</text>`
 
-        return `<rect x="${x.toFixed(2)}" y="${(spec.y + r * pitch).toFixed(2)}" width="${cell.toFixed(2)}" height="${cell.toFixed(2)}" rx="${(cell * 0.18).toFixed(2)}"${motion}/>`
-      }),
-    ),
-  )
-
-  return entering(`<g class="mark">${squares.join('')}</g>`, { ...cue, order: 0 }, 'fade')
+  return [
+    entering(`${tile}<g class="fg-edit">${pixels(spec, isMoving)}</g>`, { ...spec.cue, order: 0 }, 'fade'),
+    entering(name, { ...spec.cue, order: 1 }),
+  ].join('')
 }

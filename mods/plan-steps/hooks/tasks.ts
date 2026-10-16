@@ -43,3 +43,41 @@ export function createdId(result: unknown, tasks: PlanTask[]): string {
 
   return String(tasks.length + 1)
 }
+
+// The desktop Code tab keeps its own task list (mcp__ccd_turn__update_plan) in place of TodoWrite: the whole
+// list with `items`, else `advance` (finish the step under way, start the next) or 1-based `done`/`start`.
+type DeskPlan = { items?: unknown; advance?: unknown; done?: unknown; start?: unknown }
+
+function steps(value: unknown): Set<number> {
+  return new Set(Array.isArray(value) ? value.filter(Number.isInteger).map(n => (n as number) - 1) : [])
+}
+
+function advanced(tasks: PlanTask[]): PlanTask[] {
+  const current = tasks.findIndex(task => task.status === 'in_progress')
+  const next = tasks.findIndex((task, index) => index > current && task.status === 'pending')
+
+  return tasks.map((task, index) => {
+    if (index === current) return { ...task, status: 'completed' }
+
+    return index === next ? { ...task, status: 'in_progress' } : task
+  })
+}
+
+export function fromDeskPlan(tasks: PlanTask[], plan: DeskPlan): PlanTask[] {
+  if (Array.isArray(plan.items)) return fromTodos(plan.items)
+  if (plan.advance === true) return advanced(tasks)
+  const done = steps(plan.done)
+  const start = Number.isInteger(plan.start) ? (plan.start as number) - 1 : -1
+
+  return tasks.map((task, index) => {
+    if (done.has(index)) return { ...task, status: 'completed' }
+    if (index === start) return { ...task, status: 'in_progress' }
+
+    return start !== -1 && task.status === 'in_progress' ? { ...task, status: 'pending' } : task
+  })
+}
+
+// The desktop's wrap-up checks the whole list off.
+export function finished(tasks: PlanTask[]): PlanTask[] {
+  return tasks.map(task => ({ ...task, status: 'completed' }))
+}

@@ -7,6 +7,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { HubCard } from '../types'
 import { autoUpdateSettings, installOf } from './auto-update'
+import type { Drawing } from './draw'
 import { linkCheck, loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
 import { cardOf, focusOf, hiddenRowsOf, MODS_PANE, modsTitle, presenceOf, rowsOf } from './hub'
@@ -18,7 +19,7 @@ import { setLang } from './kit/lang'
 import { HUB_PANE, paneOf } from './kit/stage'
 import { isSame } from './kit/same'
 import { pinned } from './kit/pin'
-import { stableDrawings } from './stable'
+import { stableDrawings } from './kit/stable'
 import { modzTree } from './pane'
 import type { Theme } from './theme'
 import { hubWords } from './words'
@@ -87,8 +88,8 @@ async function marketOf($: EngineInterface): Promise<Market> {
 }
 
 // The hub's and the catalog's drawings, kept per what they show (stable.ts); forgotten when the pane opens again.
-const hubDrawings = stableDrawings()
-const catalogDrawings = stableDrawings()
+const hubDrawings = stableDrawings<Drawing>()
+const catalogDrawings = stableDrawings<Drawing>()
 
 // A pane that will not close is logged, never thrown: the one being shown is already up.
 const closeQuietly = ($: EngineInterface, id: string) =>

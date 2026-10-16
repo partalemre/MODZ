@@ -6,8 +6,8 @@ import { eyebrowWidth } from './kit/svg-text'
 import { textWidth } from './kit/svg-metrics'
 import { monogram } from './meta'
 import type { Group } from './meta'
-import { entering, HOVER_CSS, MOTION_CSS } from './motion'
-import type { Cue } from './motion'
+import { entering, MOTION_CSS } from './kit/motion'
+import type { Cue } from './kit/motion'
 import { svgDoc } from './theme'
 import type { RoleName, Theme } from './theme'
 import { catalogWords, placeLine } from './words'
@@ -18,7 +18,7 @@ export type Drawing = { source: string; alt: string; height: number }
 const settled = (spec: { width: number; height: number; theme: Theme; body: string; cue?: Cue }) =>
   spec.cue === undefined
     ? svgDoc(spec)
-    : svgDoc({ width: spec.width, height: spec.height, theme: spec.theme, body: entering(spec.body, spec.cue), css: MOTION_CSS + HOVER_CSS })
+    : svgDoc({ width: spec.width, height: spec.height, theme: spec.theme, body: entering(spec.body, spec.cue), css: MOTION_CSS })
 
 const HEAD = 48
 const GROUP = 22

@@ -2,14 +2,14 @@
 // owning mod to open its pane. "Customize" turns the buttons into Up and Hide, and lists the hidden rows
 // with Show. The catalog ("Mods") is a pane of its own (register.tsx).
 import type { Drawing } from './draw'
-import type { Cue } from './motion'
+import type { Cue } from './kit/motion'
 import type { Focus, HubRow, Section } from './hub'
 import { ROLE_OF_TONE, SECTIONS } from './hub'
 import { hubHeadSvg, hubRowSvg, sectionSvg } from './hub-draw'
 import { GLYPH } from './kit/icons'
 import { upper } from './kit/lang'
 import type { Theme } from './theme'
-import type { Stable } from './stable'
+import type { Stable } from './kit/stable'
 import { hubWords } from './words'
 
 // The resolved element table of the surface that draws the pane.
@@ -35,7 +35,7 @@ export type HubView = {
   isEditing: boolean
   actions: HubActions
   // The drawings kept since the hub was put in the panel (stable.ts), so an unchanged one keeps its frame.
-  stable: Stable
+  stable: Stable<Drawing>
 }
 
 const PX_PER_COLUMN = 8

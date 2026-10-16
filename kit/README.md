@@ -100,6 +100,26 @@ cube, bookmark, bulb, play, pause, folder, file, branch, terminal, bell, sparkle
 | `meterGlyphs` | `meterGlyphs(0.4, 20, 0.7)` → `{ fill: '━━━━━━━╸', rest: '──────', pace: '┊', after: '─────' }` |
 | `cardInnerWidth`, `pxWidth`, `isTextSurface`, `toneKey` | `cardInnerWidth(e.props.bodyColumns)` → Svg px inside a card |
 
+## motion.ts, stable.ts and moving.ts (panes in motion)
+
+On the desktop an `isInteractive` Svg is a sandboxed frame the surface keeps while its source is byte-identical and
+rebuilds when it changes; a plain Svg is a new `<img>` on every redraw, so its loops restart. `paneMotion()` keeps
+each drawing's source per what it shows: its first draw since the pane opened cascades in (45 ms apart, top to
+bottom), a changed one sweeps once, an unchanged one keeps its frame and loops. Every source says
+`:root{color-scheme:light dark}`, else the frame is painted on an opaque white sheet. A frame swallows clicks, so a
+drawing under a press stays a plain Svg. Keep time that ticks (seconds, "2 dk önce" refreshed each tick) out of a
+moving drawing unless it really changed: every new source rebuilds the frame and sweeps.
+
+| Export | Example |
+|---|---|
+| `paneMotion()` | `const motion = paneMotion()` once per pane; `motion.reset()` right before `$.ui.open(...)` |
+| `motion.pic(key, pic, opts)` | `<Svg key="head" {...motion.pic('head', pic)} />`; `{ isRow: true }` adds the hover wash |
+| `DrawCtx.motion` | `Card({ ui, surface, isLight, motion }, …)`: kit elements move their own Svgs |
+| `rings({ cx, cy, r, className })` | under a live dot: rings going out of it, forever |
+| `shine({ id, x, y, width, height })` | over a live bar: a light running along it, clipped to the bar |
+| `entering`, `delayOf`, `motionCss`, `MOTION_CSS` | a drawing that stages its own pieces (the hub's wordmark) |
+| `stableDrawings<T>()` | `kept.draw(key, what, phase => build(phase))`: built again only when `what` changes |
+
 ## pin.ts and same.ts (presses that land)
 
 The JSX runtime gives every Button, Input and Select a fresh press handle, and the host releases a drawing's old

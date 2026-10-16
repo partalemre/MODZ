@@ -1,7 +1,7 @@
 // The film's pixel "MODZ" (tools/site/hero.ts), small enough to head the hub. Entering, its squares drop in
 // letter by letter, row by row, as the film's title does; settled, it is a still mark.
-import { delayOf, entering, isEntering } from './motion'
-import type { Cue } from './motion'
+import { delayOf, entering, isEntering } from './kit/motion'
+import type { Cue } from './kit/motion'
 
 const LETTERS: Record<string, string[]> = {
   M: ['X...X', 'XX.XX', 'X.X.X', 'X.X.X', 'X...X', 'X...X', 'X...X'],
@@ -34,7 +34,7 @@ export function wordmark(spec: WordmarkSpec): string {
       [...row].map((c, col) => {
         if (c !== 'X') return ''
         const x = spec.x + i * (letterWidth(pitch) + pitch * 1.6) + col * pitch
-        const motion = isMoving ? ` class="px" style="${delayOf(cue, i * LETTER_MS + r * ROW_MS + col * COLUMN_MS)}"` : ''
+        const motion = isMoving ? ` class="m-px" style="${delayOf(cue, i * LETTER_MS + r * ROW_MS + col * COLUMN_MS)}"` : ''
 
         return `<rect x="${x.toFixed(2)}" y="${(spec.y + r * pitch).toFixed(2)}" width="${cell.toFixed(2)}" height="${cell.toFixed(2)}" rx="${(cell * 0.18).toFixed(2)}"${motion}/>`
       }),

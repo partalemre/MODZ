@@ -3,7 +3,7 @@
 // the drawings enter again when the hub is put back in the panel.
 import { expect, test } from 'claude-code/testing'
 
-import { stableDrawings } from '../hooks/stable'
+import { stableDrawings } from '../hooks/kit/stable'
 import type { HubCard } from '../types'
 import { stubWorld } from './world'
 
@@ -51,7 +51,7 @@ test('a changed card redraws only its own row, lit once; the rest keep their fra
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   const svgs = await ui.findAll({ type: 'Svg' })
   expect(svgs.every((svg: any) => svg.props.isInteractive === true)).toBe(true)
-  expect(svgs.some((svg: any) => /class="in"/.test(svg.props.source))).toBe(true)
+  expect(svgs.some((svg: any) => /class="m-in"/.test(svg.props.source))).toBe(true)
   const before = await sources(ui)
 
   await say(card('42/42 geçti', 'ok', 2))
@@ -62,7 +62,7 @@ test('a changed card redraws only its own row, lit once; the rest keep their fra
   expect(changed).toContain(testsRow)
   expect(changed.every(alt => alt === testsRow || alt.startsWith('MODZ') || alt.startsWith('Şu an'))).toBe(true)
   expect(after[testsRow ?? '']).toMatch(/class="[^"]*sweep/)
-  expect(after[testsRow ?? '']).not.toMatch(/class="in"/)
+  expect(after[testsRow ?? '']).not.toMatch(/class="m-in"/)
 })
 
 test('live work keeps a ring going out of its dot; a quiet row has none', { plugins: [testsMod] }, async ($: any, on: any) => {

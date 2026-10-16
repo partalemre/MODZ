@@ -8,8 +8,8 @@ import { esc, eyebrow, fit, measure, pill } from './draw'
 import type { Focus, HubRow } from './hub'
 import { ROLE_OF_TONE } from './hub'
 import { ICON_GRID, icon } from './kit/icons'
-import { entering, HOVER_CSS, isEntering, MOTION_CSS } from './motion'
-import type { Cue } from './motion'
+import { entering, isEntering, MOTION_CSS } from './kit/motion'
+import type { Cue } from './kit/motion'
 import { svgDoc } from './theme'
 import type { RoleName, Theme } from './theme'
 import { wordmark, wordmarkHeight } from './wordmark'
@@ -30,7 +30,7 @@ const BADGE_GAP = 8
 const BADGE_ROOM = 24
 const RADIUS = 12
 
-const HUB_CSS = `${MOTION_CSS}${HOVER_CSS}.mark{fill:var(--hi)}`
+const HUB_CSS = `${MOTION_CSS}.mark{fill:var(--hi)}`
 
 type HeadSpec = { width: number; theme: Theme; focus: Focus | null; meta: string; cue: Cue }
 
@@ -46,10 +46,10 @@ function headLight(spec: { width: number; role: RoleName; isLive: boolean; isFre
     `<clipPath id="hd-card"><rect x="0" y="0" width="${width}" height="${HEAD}" rx="${RADIUS}"/></clipPath>`,
   ].join('')
   const track = `<rect x="${HEAD_PAD}" y="${HEAD - 3}" width="${width - HEAD_PAD * 2}" height="1.5" rx=".75" class="track"/>`
-  const beam = spec.isLive ? `<rect x="${HEAD_PAD}" y="${HEAD - 3}" width="${(width - HEAD_PAD * 2) * 0.4}" height="1.5" fill="url(#hd-beam)" class="shimmer"/>` : ''
-  const sheen = spec.isFresh ? `<rect x="0" y="0" width="${width * 0.6}" height="${HEAD}" fill="url(#hd-sheen)" class="sweep"/>` : ''
+  const beam = spec.isLive ? `<rect x="${HEAD_PAD}" y="${HEAD - 3}" width="${(width - HEAD_PAD * 2) * 0.4}" height="1.5" fill="url(#hd-beam)" class="m-shine"/>` : ''
+  const sheen = spec.isFresh ? `<rect x="0" y="0" width="${width * 0.6}" height="${HEAD}" fill="url(#hd-sheen)" class="m-sweep"/>` : ''
 
-  return `<defs>${defs}</defs><g clip-path="url(#hd-card)"><rect x="0" y="0" width="${width}" height="${HEAD}" fill="url(#hd-glow)" class="fade"/>${sheen}${spec.isLive ? `${track}${beam}` : ''}</g>`
+  return `<defs>${defs}</defs><g clip-path="url(#hd-card)"><rect x="0" y="0" width="${width}" height="${HEAD}" fill="url(#hd-glow)" class="m-fade"/>${sheen}${spec.isLive ? `${track}${beam}` : ''}</g>`
 }
 
 // The head is the one card on the hub: the pixel mark and the mods on, then the most pressing thing now, or a
@@ -88,7 +88,7 @@ export function hubHeadSvg(spec: HeadSpec): Drawing {
 export function sectionSvg(spec: { width: number; theme: Theme; label: string; cue: Cue }): Drawing {
   const label = spec.label
   const drawn = eyebrow({ y: 16, width: spec.width, label, role: null, meta: '' })
-  const body = isEntering(spec.cue) ? entering(drawn.replace('class="f-line"', 'class="f-line grow"'), spec.cue, 'fade') : drawn
+  const body = isEntering(spec.cue) ? entering(drawn.replace('class="f-line"', 'class="f-line m-grow"'), spec.cue, 'fade') : drawn
 
   return { source: doc({ width: spec.width, height: SECTION, theme: spec.theme, body }), alt: label, height: SECTION }
 }
@@ -102,7 +102,7 @@ function iconTile(row: HubRow, isLive: boolean): string {
 
   return [
     halo,
-    '<g class="tile">',
+    '<g class="m-tile">',
     `<rect x="0.5" y="${top + 0.5}" width="${TILE - 1}" height="${TILE - 1}" rx="10" class="bg-${role} ln-${role}"/>`,
     `<g transform="translate(${offset} ${top + offset}) scale(${scale})" fill="none" stroke-width="${STROKE / scale}" stroke-linecap="round" stroke-linejoin="round" class="st-${role}">${icon(row.entry.icon)}</g>`,
     '</g>',
@@ -115,7 +115,7 @@ function statusDot(card: HubCard | null, width: number): string {
   const role = ROLE_OF_TONE[card.tone]
   if (role === null) return ''
   const cx = width - DOT_R - 6
-  const ring = card.tone === 'live' ? `<circle cx="${cx}" cy="${ROW / 2}" r="${DOT_R}" class="fg-${role} ripple"/>` : ''
+  const ring = card.tone === 'live' ? `<circle cx="${cx}" cy="${ROW / 2}" r="${DOT_R}" class="fg-${role} m-ripple"/>` : ''
 
   return `${ring}<circle cx="${cx}" cy="${ROW / 2}" r="${DOT_R}" class="fg-${role}"/>`
 }
@@ -147,8 +147,8 @@ function freshLight(row: HubRow, width: number): string {
 
   return [
     `<defs><linearGradient id="${id}" x1="0" x2="1"><stop offset="0" style="stop-color:var(--${role});stop-opacity:0"/><stop offset=".5" style="stop-color:var(--${role});stop-opacity:.22"/><stop offset="1" style="stop-color:var(--${role});stop-opacity:0"/></linearGradient></defs>`,
-    `<rect x="0" y="2" width="${width}" height="${ROW - 4}" rx="10" class="bg-${role} flash"/>`,
-    `<rect x="0" y="2" width="${width * 0.5}" height="${ROW - 4}" fill="url(#${id})" class="sweep"/>`,
+    `<rect x="0" y="2" width="${width}" height="${ROW - 4}" rx="10" class="bg-${role} m-flash"/>`,
+    `<rect x="0" y="2" width="${width * 0.5}" height="${ROW - 4}" fill="url(#${id})" class="m-sweep"/>`,
   ].join('')
 }
 
@@ -158,7 +158,7 @@ export function hubRowSvg(spec: { width: number; theme: Theme; row: HubRow; cue:
   const detail = detailOf(row)
   const isLive = row.card?.tone === 'live' && row.card.detail !== ''
   const body = [
-    `<rect x="0" y="2" width="${width}" height="${ROW - 4}" rx="10" class="wash"/>`,
+    `<rect x="0" y="2" width="${width}" height="${ROW - 4}" rx="10" class="m-wash"/>`,
     spec.cue.phase === 'change' ? freshLight(row, width) : '',
     iconTile(row, isLive),
     titleOf(row, room),

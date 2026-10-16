@@ -88,9 +88,13 @@ Text ile: başlık = bold text.hi · gövde = text.mid · meta = text.lo · vurg
 ## 5. Hareket
 Kısa 120ms (hover) · durum 200ms · yol 320ms `cubic-bezier(.2,.8,.2,1)` · nefes 1.8s · parıltı 1.4s.
 Döngü yalnızca canlı işte (nabız halkası, ışık şeridi); iş bitince durur, sakin yüzey kıpırdamaz. Masaüstünde her
-Svg kendi resmidir ve kaynağı değişince animasyonu baştan oynar: giriş (kademeli kayma, piksel yazı) yalnızca panel
-açıldıktan sonraki ilk 1.2 sn çizilir, değişen satırın tek seferlik ışık süpürmesi yalnızca kartı 2.5 sn içinde
-değiştiyse (`mods/modz/hooks/motion.ts`). Değişmeyen çizim aynı kaynağı korur, yeniden oynamaz. Her Svg `<style>` sonu:
+panenin Svg'si `isInteractive` ile kendi çerçevesinde çizilir; çerçeve, kaynağı bayt bayt aynı kaldıkça korunur ve
+döngüleri kesilmez. Bu yüzden her çizimin kaynağı gösterdiği şeye göre bir kez kurulur (`kit/moving.ts`,
+`kit/stable.ts`, `kit/motion.ts`): panel açıldıktan sonraki ilk çizim kademeli girer (45 ms arayla, yukarıdan aşağı),
+gösterdiği şey değişince tek seferlik ışık süpürmesi alır, değişmeyen çizim aynı kaynağı korur. İşleyen saat ("2 dk
+önce", saniyeler) tek başına değişiklik sayılmaz: süpürmesiz çizilir ya da Svg dışında kalır. Liste satırı hover'da
+yıkanır. Her Svg `:root{color-scheme:light dark}` söyler, yoksa çerçeve opak beyaz bir sayfaya oturur. Basışın
+altındaki çizim düz Svg kalır (çerçeve tıklamayı yutar); bant (AbovePrompt) düz kalır. Her Svg `<style>` sonu:
 `@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}`.
 Terminal spinner `◐◓◑◒` ≥250ms/kare, yalnızca aktif satırda.
 

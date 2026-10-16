@@ -14,21 +14,21 @@ import type { ArchiveIo } from './archive'
 import { shortLine } from './explain'
 import { explainReplay, why } from './explainer'
 import type { ExplainIo } from './explainer'
+import { hookEdits } from './edits-hook'
 import { withHome } from './home'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { setLang } from './lang'
 import { offerCard } from './offer'
+import { motion } from './pane'
 import { LIST_PAGE, PANE_ROWS_MAX } from './pane-io'
 import type { PaneIo } from './pane-io'
 import { pinned } from './pin'
-import { currentStep, planAfter, PLAN_TOOLS } from './plan'
-import { EDIT_TOOLS, isAnswered, stepsFor } from './record'
-import type { EditCall } from './record'
+import { isOffStage, shownOf } from './stage'
 import { bodyView } from './screen'
 import type { Site, Snapshot } from './screen'
 import { themeOf } from './ui/theme'
 import { words } from './words'
-import type { HubCard, ReplayStep } from '../types'
+import type { HubCard } from '../types'
 
 const pendingAtom = atom({ plugin: 'replay-theater', key: 'pending' } as const, [])
 const replayAtom = atom({ plugin: 'replay-theater', key: 'replay' } as const, null)
@@ -47,7 +47,6 @@ const KEPT_KEY = 'sessions'
 const PANE_COLUMNS = 64
 
 type On = Parameters<Register>[0]
-type Call = EditCall & Record<string, unknown>
 
 // The session's folder, for relative paths, and its transcript, whose folder holds this project's sessions;
 // both set when the session starts. `kept`: the sessions read last, while their transcripts do not change.
@@ -69,6 +68,17 @@ function archiveIo($: EngineInterface): ArchiveIo {
   return { list: dir => $.fs.list(dir), read: path => $.fs.read(path), pieces: argv => stdoutOf($.process.spawn({ argv })), log: line => $.ui.log(line, { to: 'debug' }), kept }
 }
 
+// Every open of the pane is a person's (a press, /replay, the hub's row): placed, it tells a running hub it holds
+// the panel, so the hub and every other pane step aside (kit/stage.ts).
+async function reportShown($: EngineInterface): Promise<void> {
+  try {
+    if ((await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
+    await $.state.set({ plugin: 'replay-theater', key: 'shown' }, shownOf(HUB_PANE, await $.clock.now()))
+  } catch (error) {
+    $.ui.log(`replay-theater: shown failed (${why(error)})`, { to: 'debug' })
+  }
+}
+
 // The pane's actions over this session's values and the engine, as closures.
 function paneIo($: EngineInterface): PaneIo {
   const title = words().title
@@ -85,8 +95,11 @@ function paneIo($: EngineInterface): PaneIo {
     kept: { get: () => $.store.get(KEPT_KEY), set: value => $.store.set(KEPT_KEY, value) },
     open: async rows => {
       const size = rows === undefined ? {} : { closeOnEscape: true as const, rows, columns: PANE_COLUMNS }
+      motion.reset()
+      const isPlaced = (await $.ui.open({ id: PANE_ID, title, focus: true, ...size })).isPlaced !== false
+      if (isPlaced) await reportShown($)
 
-      return (await $.ui.open({ id: PANE_ID, title, focus: true, ...size })).isPlaced !== false
+      return isPlaced
     },
     close: () => $.ui.close({ id: PANE_ID }),
     sleep: ms => $.clock.sleep(ms),
@@ -125,41 +138,6 @@ async function writeHub($: EngineInterface): Promise<void> {
   await $.state.set(HUB, card)
 }
 
-async function readBefore($: EngineInterface, path: string | undefined): Promise<{ text: string; isNew: boolean }> {
-  try {
-    if (path !== undefined && (await $.fs.exists(path))) return { text: await $.fs.read(path), isNew: false }
-  } catch (error) {
-    $.ui.log(`replay-theater: ${path} not readable, shown as new (${why(error)})`, { to: 'debug' })
-  }
-
-  return { text: '', isNew: true }
-}
-
-// An edit is read before it runs and kept only once it was answered; recording never stops the call.
-async function recordEdit<R extends { deny?: unknown; isError?: unknown }>($: EngineInterface, e: Call, run: () => Promise<R>): Promise<R> {
-  let steps: ReplayStep[] = []
-  try {
-    steps = await stepsFor({ cwd: flags.cwd, before: path => readBefore($, path) }, e)
-  } catch (error) {
-    $.ui.log(`replay-theater: could not read an edit (${why(error)})`, { to: 'debug' })
-  }
-  const result = await run()
-  if (steps.length === 0 || !isAnswered(result)) return result
-  const plan = currentStep(await read($, planAtom)) ?? undefined
-  await update($, pendingAtom, pending => [...pending, ...steps.map(one => (plan === undefined ? one : { ...one, plan }))])
-
-  return result
-}
-
-// The task list: TodoWrite is the main loop's own; TaskCreate / TaskUpdate share one list across loops.
-async function trackPlan<R extends { deny?: unknown; isError?: unknown; result?: unknown }>($: EngineInterface, e: Call, run: () => Promise<R>): Promise<R> {
-  const result = await run()
-  if (!isAnswered(result) || (e.tool === 'TodoWrite' && e.agentId !== undefined)) return result
-  await update($, planAtom, items => planAfter(items, e, result.result))
-
-  return result
-}
-
 function hookSession(on: On): void {
   on('session.start', async ($, e, next) => {
     // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
@@ -182,6 +160,16 @@ function hookSession(on: On): void {
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
     const done = await next(e)
     if (isOpenFor(e.value, HUB_PANE)) await bringReplay(paneIo($))
+
+    return done
+  }).catch(($, e, next) => next(e))
+
+  // Another pane took the main panel: this one steps aside rather than wait as a tab. A replay shown in the band
+  // has no pane there, so it stays.
+  on('state.set', { plugin: 'modz', key: 'stage' }, async ($, e, next) => {
+    const done = await next(e)
+    const view = await read($, viewAtom)
+    if (isOffStage(e.value, HUB_PANE) && view.isOpen && !view.inBand) await $.ui.close({ id: PANE_ID })
 
     return done
   }).catch(($, e, next) => next(e))
@@ -213,13 +201,7 @@ function hookCommand(on: On): void {
 }
 
 function hookRecording(on: On): void {
-  on('tool.call', async ($, e, next) => {
-    const call = e as unknown as Call
-    if (EDIT_TOOLS.has(call.tool)) return recordEdit($, call, () => next(e))
-    if ((PLAN_TOOLS as readonly string[]).includes(call.tool)) return trackPlan($, call, () => next(e))
-
-    return next(e)
-  }).catch(($, e, next) => next(e))
+  hookEdits(on, flags)
 
   on('turn.start', async ($, e, next) => {
     if ((e as { agentId?: string }).agentId === undefined) {

@@ -1,4 +1,5 @@
 import { fitText, textWidth, xml } from './format'
+import { rings } from './kit/motion'
 import { upper } from './lang'
 import { FONT, paneSvg } from './theme'
 
@@ -24,13 +25,15 @@ export const HEAD_H = HEAD.h
 
 export type PillPart = { body: string; width: number }
 
-/** A status pill: tint fill, line edge, a dot and the word, in its role's colour. */
+/** A status pill: tint fill, line edge, a dot and the word, in its role's colour; a running one's dot sends out rings. */
 export const pillPart = (pill: Pill, x: number, y: number): PillPart => {
   const width = Math.ceil(textWidth(pill.text, PILL.size) * BOLD + PILL.padX * 2 + PILL.dot * 2 + PILL.dotGap)
   const mid = y + PILL.h / 2
+  const dot = { cx: x + PILL.padX + PILL.dot, cy: mid, r: PILL.dot, className: `f-${pill.role}` }
   const body = [
     `<rect class="b-${pill.role} l-${pill.role}" x="${x + 0.5}" y="${y + 0.5}" width="${width - 1}" height="${PILL.h - 1}" rx="${(PILL.h - 1) / 2}" stroke-width="1"/>`,
-    `<circle class="f-${pill.role}" cx="${x + PILL.padX + PILL.dot}" cy="${mid}" r="${PILL.dot}"/>`,
+    pill.role === 'run' ? rings(dot) : '',
+    `<circle class="${dot.className}" cx="${dot.cx}" cy="${dot.cy}" r="${dot.r}"/>`,
     `<text class="f-${pill.role}" x="${x + PILL.padX + PILL.dot * 2 + PILL.dotGap}" y="${mid + PILL.size * 0.35}" font-family="${FONT}" font-size="${PILL.size}" font-weight="600">${xml(pill.text)}</text>`,
   ]
   return { body: body.join(''), width }

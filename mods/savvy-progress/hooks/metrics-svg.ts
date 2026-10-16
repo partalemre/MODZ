@@ -1,6 +1,7 @@
 import type { AgentRun } from '../types'
 import type { Progress } from './estimate'
 import { textWidth, xml } from './format'
+import { shine } from './kit/motion'
 import { FONT, MONO, paneSvg } from './theme'
 import type { Kind } from './history'
 
@@ -31,7 +32,8 @@ const stripesOf = (filled: number, y: number, uid: string): string =>
 
 const FILL: Record<string, string> = { running: 'f-run', done: 'f-ok', failed: 'f-danger' }
 
-// Still, one colour per state (Iris running, Moss done, Flare failed): the crab carries the tier.
+// One colour per state (Iris running, Moss done, Flare failed), a light running along it while it runs: the crab
+// carries the tier.
 // The percent sits right after the bar's end, in a slot of one width, so every card's bar ends at
 // the same x and its percent starts there.
 export const progressBarSvg = (W: number, a: AgentRun, opts: { progress: Progress; label: string }): string => {
@@ -43,9 +45,11 @@ export const progressBarSvg = (W: number, a: AgentRun, opts: { progress: Progres
   const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`
   const bar = `<rect class="${FILL[a.status] ?? 'f-run'}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`
-  const stripes = a.status === 'running' && opts.progress.isEstimate ? stripesOf(filled, y, uid) : ''
+  const isRunning = a.status === 'running'
+  const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : ''
+  const light = isRunning ? shine({ id: `sh${uid}`, x: 0, y, width: filled, height: TRACK_H }) : ''
   const label = `<text class="${FILL[a.status] ?? 'f-run'}" x="${barW + PCT_GAP}" y="${BAR_H / 2 + PCT_SIZE * 0.34}" font-family="${MONO}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`
-  return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`)
+  return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${light}${label}`)
 }
 
 export type Chip = { text: string; ring?: { ratio: number; color: string } }

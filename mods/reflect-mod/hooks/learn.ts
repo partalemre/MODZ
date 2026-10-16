@@ -75,3 +75,11 @@ export async function decide(io: Io, d: Decision) {
   }
   await saveItems(io, list)
 }
+
+/** The rules waiting here, as the band draws them: the most repeated first, then the newest. */
+export const waitingHere = (list: Learning[], root: string): Learning[] =>
+  list.filter(l => l.status === 'pending' && isHere(l, root)).sort((a, b) => b.count - a.count || b.lastAt - a.lastAt)
+
+/** The project's and the global CLAUDE.md: a rule either one holds is never offered again. */
+export const claudePaths = (home: string, root: string): { project: string; global: string } =>
+  ({ project: `${root}/CLAUDE.md`, global: `${home}/.claude/CLAUDE.md` })

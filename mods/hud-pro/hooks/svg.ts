@@ -45,10 +45,14 @@ const clampPercent = (value: number): number => Math.max(0, Math.min(PERCENT, va
 
 export type MeterSpec = { x: number; y: number; width: number; height: number; percent: number; tone: Tone; pace: number | null }
 
+// How far a meter's fill reaches: never past full, a non-zero value at least a round dot.
+export const filledOf = (spec: Pick<MeterSpec, 'width' | 'height' | 'percent'>): number =>
+  spec.percent <= 0 ? 0 : Math.max(spec.height, (clampPercent(spec.percent) / PERCENT) * spec.width)
+
 // A slim meter: track, fill (never past full), and the pace tick standing out above and below.
 export function meter(spec: MeterSpec): string {
   const { x, y, width, height } = spec
-  const filled = spec.percent <= 0 ? 0 : Math.max(height, (clampPercent(spec.percent) / PERCENT) * width)
+  const filled = filledOf(spec)
   const parts = [
     `<rect class="f-track" x="${x}" y="${y}" width="${width}" height="${height}" rx="${height / 2}"/>`,
     filled > 0 ? `<rect class="${fillOf(spec.tone, 'mid')}" x="${x}" y="${y}" width="${filled.toFixed(1)}" height="${height}" rx="${height / 2}"/>` : '',

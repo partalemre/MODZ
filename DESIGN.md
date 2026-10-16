@@ -87,7 +87,14 @@ Text ile: başlık = bold text.hi · gövde = text.mid · meta = text.lo · vurg
 
 ## 5. Hareket
 Kısa 120ms (hover) · durum 200ms · yol 320ms `cubic-bezier(.2,.8,.2,1)` · nefes 1.8s · parıltı 1.4s.
-Yüzey başına tek döngü animasyonu; iş bitince durur. Her Svg `<style>` sonu:
+Döngü yalnızca canlı işte (nabız halkası, ışık şeridi); iş bitince durur, sakin yüzey kıpırdamaz. Masaüstünde her
+panenin Svg'si `isInteractive` ile kendi çerçevesinde çizilir; çerçeve, kaynağı bayt bayt aynı kaldıkça korunur ve
+döngüleri kesilmez. Bu yüzden her çizimin kaynağı gösterdiği şeye göre bir kez kurulur (`kit/moving.ts`,
+`kit/stable.ts`, `kit/motion.ts`): panel açıldıktan sonraki ilk çizim kademeli girer (45 ms arayla, yukarıdan aşağı),
+gösterdiği şey değişince tek seferlik ışık süpürmesi alır, değişmeyen çizim aynı kaynağı korur. İşleyen saat ("2 dk
+önce", saniyeler) tek başına değişiklik sayılmaz: süpürmesiz çizilir ya da Svg dışında kalır. Liste satırı hover'da
+yıkanır. Her Svg `:root{color-scheme:light dark}` söyler, yoksa çerçeve opak beyaz bir sayfaya oturur. Basışın
+altındaki çizim düz Svg kalır (çerçeve tıklamayı yutar); bant (AbovePrompt) düz kalır. Her Svg `<style>` sonu:
 `@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}`.
 Terminal spinner `◐◓◑◒` ≥250ms/kare, yalnızca aktif satırda.
 
@@ -96,7 +103,9 @@ Her hook `next(e)` çağırır ve kendi satırını `theirs` ile birleştirir; a
 `e.props.hasSurvey` doluyken (soru penceresi açık) yalnızca `next(e)` döner.
 Sıra (yukarıdan aşağı):
 1. **Karar kartları** (yerleşmezse): blast-radius bant yedeği, cache-tax bekletme kartı → `theirs`'in **üstü**.
-2. **Bildirimler** (aynı anda tek): reflect, replay teklifi, test-badge, session-budget, done-ping yedeği → üstü.
+2. **Bildirimler** (aynı anda tek, yüksekten alçağa): reflect, session-budget, handoff, test-badge (CI dahil),
+   plan-steps bitiş kartı, done-ping yedeği → üstü. Her mod kendinden yüksekteki modların `{ key: 'notice' }`
+   değerini okur; biri doluyken kendi kartını çizmez. Yeni bildirim modu bu listeye kendi yerinden girer.
 3. **İlerleme**: savvy-progress (yalnızca tur sürerken) → üstü.
 4. **Durum satırları**: cache-tax durum satırı, hud-pro (en altta, prompt'a bitişik) → `theirs`'in **altı**.
 Kullanım bilgisi tek yerde: hud-pro. skins'in kullanım bandı varsayılan kapalı (`/skin` ayarından açılır).
@@ -114,6 +123,16 @@ Dosya ≤300 satır, fonksiyon ≤40 satır, ≤3 parametre, sihirli sayı yok, 
 `tests/preview.test.tsx` her durum için `console.log('@@TREE@@<etiket>@@' + JSON.stringify(await ui.drawn()))` yazar.
 Asıl (upstream) modlarda: kaynak belirt (README "Dayandığı proje"), LICENSE'ı koru, davranışı bozma.
 
+Motorun doğrulayıcısının koyduğu, türlerde yazmayan kurallar (2.1.295–296):
+- `$` başka dosyadan içe aktarılan bir fonksiyona geçirilemez. Motor çağrıları kancanın dosyasında kalır; öbür dosyalara
+  `$` üstüne kurulmuş düz fonksiyonlar (bir `io` nesnesi) verilir.
+- `$.state.get/set` referansının `plugin` ve `key` alanı dize sabiti olmalı (o dosyada ya da o dosyanın bir `const`'unda);
+  atom'lar da onları kullanan her dosyada ayrı tanımlanır.
+- Bir zamanlayıcıdan, bir basıştan ya da başka bir `state.set` kancasının içinden yapılan yazım, modun kendi `state.set`
+  kancalarını tetiklemez: hub kartı gibi türetilen değeri yazan yer kendisi günceller.
+- Ortak hakem (`kit/judge.ts`): sınıflandırma gereken yerde tek çağrı, haiku, kısa zaman aşımı; başarısızlıkta kişinin
+  akışını bozmayan varsayılan. Jev yalnızca `MODZ_JUDGE=jev` ile, giden metin maskelenmiş.
+
 ## 9. MODZ ana paneli ve mod veri yolu
 Oturum açılınca sağda **tek** panel açık gelir: `modz` modunun "MODZ" paneli. Her özellik oradan bir tıkla açılır.
 Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kancalarıyla konuşur:
@@ -121,9 +140,12 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
 - **Aç isteği:** ana panel `{ plugin: 'modz', key: 'open' }` değerine `{ pane, at }` yazar. Paneli olan mod
   `on('state.set', { plugin: 'modz', key: 'open' }, …)` ile dinler, `next(e)`'den sonra `pane` kendi anahtarıysa
   kendi `$.ui.open`'ını çağırır (komut değil). Kanca `.catch(($, e, next) => next(e))` taşır.
-- **Öne getirme:** ana panel açık kalır, her satır kendi sekmesini açar. Yüzey, klavyeyi tutan paneli yerinden
-  etmez; bu yüzden sahibi `$.ui.open`'ı `focus: true` ile çağırır: oluru yüzey verir (masaüstünde istem kutusu boş
-  ve tur yokken), panel klavyeyi ve önü alır. Olmazsa panel ana panelin yanında sekme olarak bekler.
+- **Tek panel (sahne):** hub, kataloğu ve her modun paneli sağda **aynı yerde sırayla** görünür; sekme yığılmaz
+  (`kit/stage.ts`). Paneli açılan mod, açıldıktan sonra (`isPlaced`) kendi `{ plugin: '<mod>', key: 'shown' }`
+  değerine `{ pane, at }` yazar. Hub bunu duyunca kendi panellerini kapatır ve `{ plugin: 'modz', key: 'stage' }`
+  değerine o paneli yazar; açık paneli olan diğer her mod `state.set { plugin: 'modz', key: 'stage' }` kancasında
+  `isOffStage(e.value, kendiAnahtarı)` ise kendi panelini kapatır. Hub geri gelince (satırı, "← MODZ", `/modz`)
+  sahneyi `modz` yazar. Cevap vermeyen bir mod hub'ı yerinde bırakır: boş panel olmaz. Her açılış `focus: true`.
 - **Sabit basış tutamacı:** JSX her çizimde yeni tutamaç verir, host da yeniden çizimde eskileri bırakır; masaüstü
   son boyadığı ağaca tıkladığı için araya giren her çizim tıklamayı düşürürdü. Button, Input ya da Select çizen her
   `ui.render` kancası ağacını `pinned(e, ağaç)` ile döner (`kit/pin.ts`): her öğe yeri ve anahtarı için ilk aldığı
@@ -134,7 +156,7 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
 - **Eve dönüş:** hub çalıştıkça `{ plugin: 'modz', key: 'isOn' }` `true`'dur. Hub'ın açtığı her panel bunu çizerken
   okur ve açıksa ağacın başına `HomeButton` (`kit/home.tsx`, "← MODZ") koyar. Basınca mod kendi
   `{ plugin: '<mod>', key: 'home' }` değerine `{ at }` yazar; hub `state.set { key: 'home' }` ile duyar ve kendini
-  `focus: true` ile açar, kapanmışsa yeniden. Tek panel kalıp sekme şeridi çizilmese de dönüş yolu hep vardır.
+  `focus: true` ile açar, kapanmışsa yeniden, ve sahneyi `modz` yazar: mod paneli kapanır, hub aynı yerde belirir.
 - **Kişiye göre düzen:** hub'da "Düzenle" satırları yukarı taşır ya da gizler; gizlenenler "Gizli" bölümünde
   "Göster" ile bekler, "Sıfırla" hepsini geri koyar. Düzen `$.store`'da (`layout`: `{ hidden, order }`) oturumlar
   arasında kalır.
@@ -158,8 +180,11 @@ type HubCard = { pane: string; detail: string; tone: HubTone; at: number
 | checkpoints | checkpoint | Kontrol noktaları |
 | replay | replay-theater | Tekrar |
 | usage | hud-pro | Kullanım |
+| effort | effort-router | Efor |
+| handoff | handoff | Devir |
 | skins | skins | Görünüm |
 | modz-mods | modz | Modlar (modz'un ikinci paneli) |
+| reflect-ideas | reflect-mod | Fikirler (hub satırı yok; `/mine` açar) |
 
 `detail` tek satır, ≤40 karakter, Türkçe, ölçülmüş gerçek ("2 ajan çalışıyor", "41/42 geçti", "3/9 adım"); bilinmiyorsa
 boş dize. Panel başlıkları tabloda yazıldığı gibidir; iki sekme aynı adı taşımaz.

@@ -1,6 +1,6 @@
 # MODZ
 
-> 17 mods for Claude Code, and one panel that shows them all. Agents, files, plans, tests and risky commands, live, beside the chat. Claude Code plugins, installed from the `modz` marketplace at https://github.com/partalemre/MODZ.
+> 19 mods for Claude Code, and one panel that shows them all. Agents, files, plans, tests and risky commands, live, beside the chat. Claude Code plugins, installed from the `modz` marketplace at https://github.com/partalemre/MODZ.
 
 ## Install (for an AI agent acting for a person)
 
@@ -8,12 +8,13 @@ Every step is safe to repeat.
 
 1. `claude --version` must be 2.1.295 or later. If it is older, ask the person to update Claude Code; do not continue.
 2. `claude plugin marketplace add partalemre/MODZ`
-3. `claude plugin install modz@modz` (the panel). Then, for each mod the person wants: `claude plugin install <name>@modz`. If they did not choose, install all of them: modz savvy-progress savvy-flow filetree plan-steps transceiver blast-radius secret-guard checkpoint test-badge replay-theater session-budget cache-tax hud-pro done-ping reflect-mod skins terminal-browser.
+3. `claude plugin install modz@modz` (the panel). Then, for each mod the person wants: `claude plugin install <name>@modz`. If they did not choose, install all of them: modz savvy-progress savvy-flow filetree plan-steps handoff transceiver blast-radius secret-guard checkpoint test-badge replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins terminal-browser.
 4. Optional, in the `env` object of `~/.claude/settings.json` (merge with existing keys, never overwrite the file):
    - `"MODZ_LANG": "tr"`: Turkish interface (the default is English).
    - `"CLAUDE_CODE_ARTIFACT": "1"`: needed for transceiver when Claude Code is driven by an SDK host (an IDE, `claude -p`, T3 Code). The desktop app and the plain terminal do not need it.
-5. Verify: `claude plugin list` lists each `<name>@modz` as enabled.
-6. Tell the person to start a new session (or run `/reload-plugins`). The MODZ panel opens on the right.
+5. Updates are automatic: the panel's first session turns on Claude Code's auto-update for the `modz` marketplace (unless the person already chose under `/plugin` > Marketplaces). Do not edit `extraKnownMarketplaces` yourself.
+6. Verify: `claude plugin list` lists each `<name>@modz` as enabled.
+7. Tell the person to start a new session (or run `/reload-plugins`). The MODZ panel opens on the right.
 
 Inside Claude Code the same steps are slash commands: `/plugin marketplace add partalemre/MODZ`, then `/plugin install <name>@modz`.
 
@@ -22,21 +23,23 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 ## Mods
 
 - modz: the panel; one live line per mod, one click to each mod's pane
-- savvy-progress: Agents pane and progress band; each subagent's progress, cost and time
+- savvy-progress: Agents pane and progress band; each subagent's progress, cost and time; other chats on this machine waiting on you; a home crab
 - savvy-flow: orchestrated delivery; the session model plans and reviews, tiered worker agents implement
 - filetree: files Claude touched this turn, what it is doing now, git status
-- plan-steps: the plan's steps as Claude works through them
+- plan-steps: the plan's steps as Claude works through them; the plan comes back after /clear and compaction; a turn ending with open steps offers to continue
+- handoff: before the context fills, writes a handoff note to .claude/handoff/ and hands it once to the next fresh chat in the repo (one optional small model call per note)
 - transceiver (beta): team chat inside Claude Code; agents of repo collaborators ask each other status/diff/tests/log/file at zero tokens (source: https://github.com/partalemre/transceiver)
-- blast-radius: holds rm -rf, git reset --hard, git clean, force push and migrations, showing what they would change
-- secret-guard: stops keys and tokens in writes, edits, git add and commit; blocks committing .env
+- blast-radius: holds rm -rf, git reset --hard, git clean, force push and migrations, showing what they would change; holds an edit to a file another chat changed in the last 30 minutes; with .claude/house-rules.md, judges other commands against those plain-language rules (one small model call per judged command)
+- secret-guard: stops keys and tokens in writes, edits, git add and commit; blocks committing .env; pasted keys reach the model as placeholders; /rec masks keys, env values and e-mail addresses on screen
 - checkpoint: silent git snapshot before each turn's first write; /checkpoints undoes a turn
-- test-badge: runs tests and lint after edits and shows a badge
+- test-badge: runs tests and lint after edits and shows a badge; watches the open PR's GitHub CI through gh
 - replay-theater: replays the last turn's edits step by step, and earlier turns and past sessions
 - session-budget: per-session spend budget; notice at 80%, stop at 100%
-- cache-tax: keeps the one-hour prompt cache warm through breaks (uses tokens when on); prices a cold send
-- hud-pro: one line with the 5-hour and 7-day limits, context and session cost
-- done-ping: notification when a long turn ends or Claude waits on you
-- reflect-mod: saves corrections worth keeping to a CLAUDE.md (one small model check per correction)
+- cache-tax: keeps the one-hour prompt cache warm through breaks (uses tokens when on); prices a cold send, a model change included
+- hud-pro: one line with the 5-hour and 7-day limits, context and session cost; when the 5-hour window fills; a context breakdown with turns left and Compact now
+- effort-router: shows each turn's effort and model; in auto mode sends light prompts at low effort (one small model call per prompt)
+- done-ping: notification when a long turn ends or Claude waits on you; optional sound packs (soundPack)
+- reflect-mod: saves corrections worth keeping to a CLAUDE.md (one small model check per correction); /mine turns friction that repeats across past chats into rule, hook, skill or mod ideas (one small call)
 - skins: transcript themes; /skin switches live
 - terminal-browser: a browser inside the terminal the agent can drive (terminal only)
 
@@ -48,5 +51,6 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 ## Facts
 
 - Draws in the Claude desktop app's Code tab (rich) and in the terminal (text). Tested on Claude Code 2.1.295 and 2.1.296.
-- Most mods use no model tokens. Token use: reflect-mod (one small check per correction), cache-tax warming (only when turned on), transceiver free-form `ask` (small model on the other side, at most 10 a day per room).
+- Most mods use no model tokens. Token use: reflect-mod (one small check per correction, one per /mine), cache-tax warming (only when turned on), handoff (one optional summary per note), effort-router (auto mode only), blast-radius (only with .claude/house-rules.md), replay-theater (rarely), transceiver free-form `ask` (small model on the other side, at most 10 a day per room).
+- Optional Jev judge: MODZ_JUDGE=jev and TYPESAFE_API_KEY send the masked text that blast-radius and effort-router judge to TypeSafe instead of the person's own model account.
 - License: MIT; adapted mods keep their original license in their folder.

@@ -42,11 +42,15 @@ export const mono = (size: number): Measure => text => monoWidth(text, size)
 export const baseline = (top: number, height: number, size: number): number =>
   Math.round(top + height / 2 + (size * CAP_EM) / 2)
 
+// Drawn in a frame of its own (an interactive Svg), a drawing whose scheme differs from the page's is painted on an
+// opaque sheet; saying both lets the frame take the page's.
+const SCHEME = ':root{color-scheme:light dark}'
+
 export function toPic(part: Part): SvgPic {
   const { width, height } = part
   const source = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"`,
-    ` role="img" aria-label="${escapeXml(part.alt)}"><style>${svgStyle(part.body)}</style>${part.body}</svg>`,
+    ` role="img" aria-label="${escapeXml(part.alt)}"><style>${SCHEME}${svgStyle(part.body)}</style>${part.body}</svg>`,
   ].join('')
 
   return { source, width, height, alt: part.alt }

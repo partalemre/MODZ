@@ -74,6 +74,30 @@ const TR = {
   commandDetails: 'test-badge: ayrıntılar açıldı',
   commandSwitched: (isOn: boolean) => `test-badge ${isOn ? 'açık' : 'kapalı'}`,
   commandHelp: 'Düzenlemeden sonra arka planda test/lint: aç/kapa; run şimdi çalıştırır, details ayrıntıları açar',
+  // The CI watch: the pane's section, the hub card, the band card, the notification and the prompt.
+  ci: {
+    eyebrow: 'CI',
+    allPassed: (passed: number, total: number) => `CI ${passed}/${total} geçti`,
+    failing: (passed: number, total: number, failing: number) => `CI ${passed}/${total} · ${failing} başarısız`,
+    running: (passed: number, total: number, pending: number) => `CI ${passed}/${total} · ${pending} sürüyor`,
+    ended: (passed: number, total: number) => `CI ${passed}/${total} · izleme durdu`,
+    waiting: 'CI bekleniyor',
+    merged: (n: number) => `PR #${n} birleşti`,
+    closed: (n: number) => `PR #${n} kapandı`,
+    noChecks: 'Kontrol bildirilmedi',
+    states: { pending: 'sürüyor', pass: 'geçti', fail: 'başarısız', skipped: 'atlandı' },
+    newTalk: (count: number) => `${count} yeni inceleme/yorum`,
+    logs: 'Kayıt',
+    openPr: "PR'ı aç",
+    askFix: 'Claude düzeltsin',
+    dismiss: 'Kapat',
+    cardHeadline: (names: string) => `CI kaldı: ${names}`,
+    more: (count: number) => `+${count}`,
+    notifyPassed: (n: number, passed: number, total: number) => `CI geçti · #${n} · ${passed}/${total}`,
+    notifyFailed: (n: number, names: string) => `CI kaldı: ${names} · #${n}`,
+    fixPrompt: (n: number, url: string, lines: string) =>
+      `PR #${n} için CI kaldı (${url}). Kalan kontroller:\n${lines}\nNedenini bul (örneğin gh pr checks ${n} ve gh run view --log-failed ile) ve düzelt.`,
+  },
 }
 
 type Words = typeof TR
@@ -142,6 +166,29 @@ const EN: Words = {
   commandDetails: 'test-badge: details opened',
   commandSwitched: isOn => `test-badge ${isOn ? 'on' : 'off'}`,
   commandHelp: 'Tests and lint in the background after edits: on or off; run runs them now, details opens the details',
+  ci: {
+    eyebrow: 'CI',
+    allPassed: (passed, total) => `CI ${passed}/${total} passed`,
+    failing: (passed, total, failing) => `CI ${passed}/${total} · ${failing} failing`,
+    running: (passed, total, pending) => `CI ${passed}/${total} · ${pending} running`,
+    ended: (passed, total) => `CI ${passed}/${total} · stopped watching`,
+    waiting: 'CI waiting',
+    merged: n => `PR #${n} merged`,
+    closed: n => `PR #${n} closed`,
+    noChecks: 'No checks reported',
+    states: { pending: 'running', pass: 'passed', fail: 'failed', skipped: 'skipped' },
+    newTalk: count => `${count} new ${count === 1 ? 'review or comment' : 'reviews or comments'}`,
+    logs: 'Logs',
+    openPr: 'Open PR',
+    askFix: 'Ask Claude to fix',
+    dismiss: 'Dismiss',
+    cardHeadline: names => `CI failed: ${names}`,
+    more: count => `+${count}`,
+    notifyPassed: (n, passed, total) => `CI passed · #${n} · ${passed}/${total}`,
+    notifyFailed: (n, names) => `CI failed: ${names} · #${n}`,
+    fixPrompt: (n, url, lines) =>
+      `CI failed on PR #${n} (${url}). Failing checks:\n${lines}\nFind the cause (for example with gh pr checks ${n} and gh run view --log-failed) and fix it.`,
+  },
 }
 
 export const words = (): Words => pick({ en: EN, tr: TR })

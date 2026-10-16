@@ -98,8 +98,10 @@ declare module 'claude-code' {
       past: Replay | null
       hub: HubCard
       home: { at: number }
+      // The Replay pane is open: the MODZ hub puts it in its one panel and closes the rest (kit/stage.ts).
+      shown: { pane: string; at: number }
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
-    modz: { open: { pane: string; at: number }; isOn: boolean }
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
   }
 }

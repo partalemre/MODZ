@@ -12,6 +12,7 @@ import type { MeterOpts } from './svg-meters'
 import { pill } from './svg-shapes'
 import { eyebrow } from './svg-text'
 import type { PillOpts, StatTileOpts } from './svg-shapes'
+import type { PaneMotion } from './moving'
 import { LINE_KEY, palette, ROLE_KEY, ROLES } from './tokens'
 import type { Palette, Role, ThemeKey } from './tokens'
 import { planButtons } from './ui-buttons'
@@ -19,8 +20,9 @@ import type { ButtonSpec, ButtonVariant } from './ui-buttons'
 
 export type Ui = ElementTable
 
-// Where an element draws; a caller's own context with more fields passes as it is.
-export type DrawCtx = { ui: Ui; surface: RenderSurface; isLight: boolean }
+// Where an element draws; a caller's own context with more fields passes as it is. With `motion` (moving.ts), the
+// desktop draws each Svg in a kept frame that enters, sweeps on a change and keeps its loops running.
+export type DrawCtx = { ui: Ui; surface: RenderSurface; isLight: boolean; motion?: PaneMotion }
 
 // Svg px per layout cell on the desktop; card padding and border in cells (DESIGN.md §4).
 export const PX_PER_CELL = 8
@@ -42,9 +44,15 @@ const isRole = (paint: string): paint is Role => (ROLES as readonly string[]).in
 // A Svg paint name (`warn`, `danger`, a role, `mid`) as a terminal theme key; neutral → none.
 export const toneKey = (paint: string): ThemeKey | undefined => (isRole(paint) ? ROLE_KEY[paint] : undefined)
 
-function svgOf(ui: Ui, pic: { source: string; width: number; height: number; alt: string }): RenderElement | null {
+type SvgSite = { key: string; shows?: unknown }
+
+// `key` names the drawing's place in the pane, so its motion follows it from draw to draw; `shows` leaves out a
+// meta line that only ages ("12 dk önce"), so a new age alone is no change to sweep.
+function svgOf(draw: DrawCtx, site: SvgSite, pic: { source: string; width: number; height: number; alt: string }): RenderElement | null {
+  const { ui, motion } = draw
   if (!('Svg' in ui)) return null
   const { Svg } = ui
+  if (motion !== undefined) return <Svg {...motion.pic(site.key, pic, { shows: site.shows })} />
   return <Svg source={pic.source} alt={pic.alt} width={pic.width} height={pic.height} />
 }
 
@@ -65,14 +73,14 @@ export function Eyebrow(draw: DrawCtx, o: EyebrowOpts): RenderElement {
     )
   }
 
-  return svgOf(ui, eyebrow({ ...o, hasDot: true })) ?? <Box />
+  return svgOf(draw, { key: `eyebrow:${o.text}`, shows: { ...o, meta: o.meta !== undefined } }, eyebrow({ ...o, hasDot: true })) ?? <Box />
 }
 
 export function HeaderBlock(draw: DrawCtx, o: HeaderOpts): RenderElement {
   const { ui, surface } = draw
   const { Box, Text } = ui
 
-  if (!isTextSurface(ui, surface)) return svgOf(ui, headerSvg(o)) ?? <Box />
+  if (!isTextSurface(ui, surface)) return svgOf(draw, { key: `header:${o.eyebrow}`, shows: { ...o, meta: o.meta !== undefined } }, headerSvg(o)) ?? <Box />
 
   const glyph = o.icon ? `${GLYPH[o.icon]} ` : '● '
   return (
@@ -170,7 +178,7 @@ export function StatRow(draw: DrawCtx, o: StatRowOpts): RenderElement {
   const { ui, surface } = draw
   const { Box, Text } = ui
 
-  if (!isTextSurface(ui, surface)) return svgOf(ui, statRowSvg(o)) ?? <Box />
+  if (!isTextSurface(ui, surface)) return svgOf(draw, { key: `stats:${o.stats.map(stat => stat.label).join('|')}` }, statRowSvg(o)) ?? <Box />
 
   return (
     <Box flexDirection="row" gap={3} flexWrap="wrap">
@@ -214,7 +222,7 @@ export function Meter(draw: DrawCtx, o: MeterElementOpts): RenderElement {
   const { ui, surface } = draw
   const { Box, Text } = ui
 
-  if (!isTextSurface(ui, surface)) return svgOf(ui, meter(o)) ?? <Box />
+  if (!isTextSurface(ui, surface)) return svgOf(draw, { key: `meter:${o.label ?? ''}` }, meter(o)) ?? <Box />
 
   const ratio = clampRatio(o.value, o.max)
   const g = meterGlyphs(ratio, o.cells, o.pace)
@@ -235,7 +243,7 @@ export function Pill(draw: DrawCtx, o: PillOpts): RenderElement {
   const { ui, surface } = draw
   const { Box, Text } = ui
 
-  if (!isTextSurface(ui, surface)) return svgOf(ui, pill(o)) ?? <Box />
+  if (!isTextSurface(ui, surface)) return svgOf(draw, { key: `pill:${o.text}` }, pill(o)) ?? <Box />
 
   const glyph = o.icon ? `${GLYPH[o.icon]} ` : ''
   return <Text color={o.role ? ROLE_KEY[o.role] : undefined} dimColor={!o.role}>{`${glyph}${o.text}`}</Text>

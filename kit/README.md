@@ -100,6 +100,26 @@ cube, bookmark, bulb, play, pause, folder, file, branch, terminal, bell, sparkle
 | `meterGlyphs` | `meterGlyphs(0.4, 20, 0.7)` → `{ fill: '━━━━━━━╸', rest: '──────', pace: '┊', after: '─────' }` |
 | `cardInnerWidth`, `pxWidth`, `isTextSurface`, `toneKey` | `cardInnerWidth(e.props.bodyColumns)` → Svg px inside a card |
 
+## motion.ts, stable.ts and moving.ts (panes in motion)
+
+On the desktop an `isInteractive` Svg is a sandboxed frame the surface keeps while its source is byte-identical and
+rebuilds when it changes; a plain Svg is a new `<img>` on every redraw, so its loops restart. `paneMotion()` keeps
+each drawing's source per what it shows: its first draw since the pane opened cascades in (45 ms apart, top to
+bottom), a changed one sweeps once, an unchanged one keeps its frame and loops. Every source says
+`:root{color-scheme:light dark}`, else the frame is painted on an opaque white sheet. A frame swallows clicks, so a
+drawing under a press stays a plain Svg. Keep time that ticks (seconds, "2 dk önce" refreshed each tick) out of a
+moving drawing unless it really changed: every new source rebuilds the frame and sweeps.
+
+| Export | Example |
+|---|---|
+| `paneMotion()` | `const motion = paneMotion()` once per pane; `motion.reset()` right before `$.ui.open(...)` |
+| `motion.pic(key, pic, opts)` | `<Svg key="head" {...motion.pic('head', pic)} />`; `{ isRow: true }` adds the hover wash |
+| `DrawCtx.motion` | `Card({ ui, surface, isLight, motion }, …)`: kit elements move their own Svgs |
+| `rings({ cx, cy, r, className })` | under a live dot: rings going out of it, forever |
+| `shine({ id, x, y, width, height })` | over a live bar: a light running along it, clipped to the bar |
+| `entering`, `delayOf`, `motionCss`, `MOTION_CSS` | a drawing that stages its own pieces (the hub's wordmark) |
+| `stableDrawings<T>()` | `kept.draw(key, what, phase => build(phase))`: built again only when `what` changes |
+
 ## pin.ts and same.ts (presses that land)
 
 The JSX runtime gives every Button, Input and Select a fresh press handle, and the host releases a drawing's old
@@ -115,6 +135,35 @@ Mods that do not vendor the kit carry a byte-identical `hooks/pin.ts` (and `hook
 |---|---|
 | `pinned(e, tree)` | `return pinned(e, paneTree(ui, view))`, every render hook that draws a Button, Input or Select |
 | `isSame(a, b)` | `if (isSame(cards[from], card)) return` (structural, for plain state values) |
+
+## judge.ts
+
+One-shot classification: one of a few labels for a text, or `undefined` when no judgment could be made (the caller
+keeps its deterministic default; a judge never throws, blocks or retries). The mod injects the engine's calls. Default
+backend: `$.model.complete` with `haiku` on the person's own account, effort low, a 32-token reply, bounded by
+`JUDGE_MODEL_TIMEOUT_MS`. TypeSafe Jev (`POST https://api.typesafe.ai/v1/systemone`, a `choice` question, model
+`jev-latest`) only when `MODZ_JUDGE=jev` and `TYPESAFE_API_KEY` are both set and the mod passes `fetch`, `sleep` and
+`redact`; the text and instructions pass through `redact` first, and the request races `sleep(JUDGE_HTTP_TIMEOUT_MS)`
+since `$.http.fetch` takes no timeout. Jev asked for but not usable: the model answers, `isFallback: true`. One call per
+judgment. `$.env.get` takes only literal names, so the mod reads the two variables itself.
+
+```ts
+const env = { backend: await $.env.get('MODZ_JUDGE'), typesafeKey: await $.env.get('TYPESAFE_API_KEY') }
+const io = { complete: r => $.model.complete(r), fetch: (u, i) => $.http.fetch(u, i), sleep: ms => $.clock.sleep(ms), redact, env }
+const verdict = (await judge(io, { text, labels: ['allow', 'ask'], instructions: 'Is this command safe here?' }))?.label ?? 'ask'
+```
+
+| Export | Example |
+|---|---|
+| `judge(io, question)` | `await judge(io, { text, labels: ['low', 'high'] })` → `{ label: 'low', source: 'model', isFallback: false }` |
+| `JudgeIo`, `JudgeEnv` | `{ complete, env, fetch?, sleep?, redact? }`: Jev needs all of `fetch`, `sleep`, `redact` |
+| `JudgeQuestion`, `JudgeAnswer` | `{ text, labels, instructions? }` → `{ label, source: 'model' \| 'jev', isFallback }` |
+| `JUDGE_MODEL`, `JUDGE_MODEL_TIMEOUT_MS`, `JUDGE_HTTP_TIMEOUT_MS` | `'haiku'`, 8000, 5000 |
+| `JEV_URL`, `JEV_MODEL`, `JEV_BACKEND` | the TypeSafe endpoint, `'jev-latest'`, the `MODZ_JUDGE` value `'jev'` |
+
+Fewer than two labels, a repeated or blank label, a reply naming no label (case and a trailing stop are forgiven), a
+failed or aborted call, a non-2xx or non-JSON Jev reply, or a timeout: `undefined`. Tested in
+`tools/kit-gallery/tests/judge.test.ts`.
 
 ## Visual QA
 

@@ -8,7 +8,8 @@ type HasLink = (name: string) => Promise<boolean>
 
 export type ModInfo = {
   name: string
-  version: string
+  // The manifest's or the entry's version; null when neither pins one and the mod tracks commits.
+  version: string | null
   description: string
   group: Group
   surfaces: Surface[]
@@ -55,7 +56,6 @@ export function marketRoot(realPluginRoot: string): string {
   return realPluginRoot.replace(/\/mods\/[^/]+\/?$/, '')
 }
 
-const UNKNOWN_VERSION = '?'
 const SAFE_NAME = /^[\w.-]+$/
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -90,7 +90,7 @@ function infoOf(facts: Facts): ModInfo {
 
   return {
     name,
-    version: text(manifest?.version) ?? text(entry.version) ?? UNKNOWN_VERSION,
+    version: text(manifest?.version) ?? text(entry.version) ?? null,
     description: problem ?? summary ?? text(manifest?.description) ?? text(entry.description) ?? (manifest ? '' : catalogWords().unreadable),
     group: meta?.group ?? 'other',
     surfaces: meta?.surfaces ?? BOTH,

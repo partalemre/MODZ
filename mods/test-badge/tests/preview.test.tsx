@@ -1,5 +1,7 @@
 import { mock, test } from 'claude-code/testing'
 
+import { failed, newGh, passed, pending, setupCi } from './ci-world'
+
 /** The test runner's console: bin/preview reads the trees it prints. */
 declare const console: { log: (text: string) => void }
 
@@ -83,8 +85,33 @@ for (const theme of ['dark', 'light']) {
     await dumpPanes($, `pane-empty-${theme}`)
   })
 
-  test(`preview ${theme}: running band`, async ($: any, on: any) => {
+  test(`preview ${theme}: running band and details pane`, async ($: any, on: any) => {
     await setup($, on, { theme, run: { test: PASS, lint: '', code: 0, hold: new Promise<void>(() => undefined) } })
     await dump(`band-running-${theme}`, await $.ui.mount(bandOf))
+    await dumpPanes($, `pane-running-${theme}`)
   })
+}
+
+// The CI watch on PR #7: the pane's CI section while pending, red and green, and the band card a red finish leaves.
+const CI_RUNS = {
+  pending: [passed('lint'), pending('unit tests'), pending('e2e · chromium'), { ...passed('deploy preview'), bucket: 'skipping' }],
+  fail: [passed('lint'), failed('unit tests'), passed('e2e · chromium'), { ...passed('deploy preview'), bucket: 'skipping' }],
+  pass: [passed('lint'), passed('unit tests'), passed('e2e · chromium')],
+}
+
+for (const theme of ['dark', 'light']) {
+  for (const [name, checks] of Object.entries(CI_RUNS)) {
+    test(`preview ${theme}: CI ${name} in the pane${name === 'fail' ? ' and the band card' : ''}`, async ($: any, on: any) => {
+      const gh = newGh({ talk: 0 })
+      const clock = await setupCi($, on, { gh, surface: 'desktop', theme, lang: 'tr' })
+      gh.checks = checks
+      gh.talk = 2
+      await clock.advance(60_000)
+      await dumpPanes($, `pane-ci-${name}-${theme}`)
+      if (name === 'fail') {
+        await dump(`band-ci-fail-${theme}`, await $.ui.mount(bandOf))
+        await dump(`band-ci-fail-narrow-${theme}`, await $.ui.mount(narrowBand))
+      }
+    })
+  }
 }

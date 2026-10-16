@@ -2,7 +2,9 @@ import { dateText } from './age'
 import { upper } from './lang'
 import { headSvg, noteSvg, sessionFacts, sessionRowSvg, turnMeta, turnRowSvg, turnTitle } from './lists-svg'
 import type { Drawing, ListHead } from './lists-svg'
+import type { MoveOpts } from './kit/moving'
 import type { Ui } from './offer'
+import { motion } from './pane'
 import type { Theme } from './ui/theme'
 import { words } from './words'
 import type { ReplaySession, ReplaySessions, ReplayTurnRow, ReplayTurns } from '../types'
@@ -19,7 +21,8 @@ export type ListHandlers = {
   onClose: () => void
 }
 export type ListSite = { surface: string; width: number; theme: Theme; isCompact: boolean; maxRows: number; on: ListHandlers }
-type Row = { key: string; drawing: () => Drawing; text: { title: string; meta: string }; button: { label: string; onPress: () => void } | null }
+// `shows`: what the row's drawing shows leaving out an age that reads on ("2h ago").
+type Row = { key: string; drawing: () => Drawing; shows?: unknown; text: { title: string; meta: string }; button: { label: string; onPress: () => void } | null }
 type ListBody = { head: ListHead; note: { lead: string; rest: string } | null; rows: Row[]; more: number; other: { key: string; label: string; hotkey: string; onPress: () => void } }
 
 // A drawn row leaves this much room for its button.
@@ -47,7 +50,9 @@ function turnsBody(turns: ReplayTurns, view: { shown: number; now: number; site:
     const drawing = () => turnRowSvg(row, look)
     const text = { title: turnTitle(row), meta: turnMeta(row, view.now) }
 
-    return { key: `rt-turn-${row.n}`, drawing, text, button: { label: w.watchTurn, onPress: () => view.site.on.onTurn(row.n) } }
+    const { now, ...still } = look
+
+    return { key: `rt-turn-${row.n}`, drawing, shows: { row, look: still }, text, button: { label: w.watchTurn, onPress: () => view.site.on.onTurn(row.n) } }
   })
   const edits = turns.rows.reduce((sum, row) => sum + row.edits, 0)
   const facts = [turns.status === 'ready' ? w.turnsAndEdits(turns.prompts, edits) : '', turns.isCut ? w.cut : ''].filter(Boolean)
@@ -95,17 +100,21 @@ const hotkeyOf = (k: number) => (k < HOTKEYS ? { hotkey: String(k + 1) } : {})
 
 function desktopList(ui: Ui, body: ListBody, site: ListSite) {
   const { Box, Svg, Button } = ui
-  const draw = (drawing: Drawing, key: string, width: number) => <Svg key={key} source={drawing.source} alt={drawing.alt} width={width} height={drawing.height} />
+  const draw = (drawing: Drawing, key: string, opts: MoveOpts & { width?: number } = {}) => {
+    const { width = site.width, ...moves } = opts
+
+    return <Svg key={key} {...motion.pic(key, { source: drawing.source, alt: drawing.alt, width, height: drawing.height }, moves)} />
+  }
   const head = headSvg(body.head)
   const note = body.note === null ? null : noteSvg({ width: site.width, theme: site.theme, ...body.note })
 
   return (
     <Box key="rt-list" flexDirection="column" gap={1} paddingX={1} paddingY={1}>
-      {draw(head, 'rt-list-head', site.width)}
-      {note !== null && draw(note, 'rt-list-note', site.width)}
+      {draw(head, 'rt-list-head')}
+      {note !== null && draw(note, 'rt-list-note')}
       {body.rows.map((row, k) => (
         <Box key={row.key} flexDirection="row" alignItems="center" columnGap={1}>
-          {draw(row.drawing(), `${row.key}-svg`, site.width - BUTTON_ROOM)}
+          {draw(row.drawing(), `${row.key}-svg`, { width: site.width - BUTTON_ROOM, isRow: true, shows: row.shows })}
           {row.button !== null && <Button key={`${row.key}-open`} variant="secondary" label={row.button.label} onPress={row.button.onPress} {...hotkeyOf(k)} />}
         </Box>
       ))}

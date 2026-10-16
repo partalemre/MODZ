@@ -18,6 +18,16 @@ const modz = {
 
       return {}
     })
+    on('command.run', { command: 'modz-on' }, async ($: any) => {
+      await $.state.set({ plugin: 'modz', key: 'isOn' }, true)
+
+      return {}
+    })
+    on('command.run', { command: 'modz-stage' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'stage' }, { pane: e.args, at: 1 })
+
+      return {}
+    })
     on('command.run', { command: 'modz-hub' }, async ($: any) => ({ text: JSON.stringify((await $.state.get({ plugin: 'checkpoint', key: 'hub' })).value ?? null) }))
   },
 }
@@ -72,6 +82,24 @@ test('a MODZ open request for checkpoints opens the pane in front; one for anoth
 
   await $.command.run({ command: 'modz-open', args: 'checkpoints' })
   expect(world.opened).toEqual([expect.objectContaining({ id: 'checkpoints', title: 'Kontrol noktaları', focus: true })])
+})
+
+test('with the hub on the opened pane reports itself shown, and steps aside when another pane takes the panel', { plugins: [modz] }, async ($: any, on: any) => {
+  const shown: unknown[] = []
+  const closed: unknown[] = []
+  on('state.set', { plugin: 'checkpoint', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
+  on('ui.close', (_: any, e: any) => (closed.push(e.id), { value: undefined }))
+  await start($, on, worldOf({ refs: refsOf(2) }))
+  await $.command.run({ command: 'checkpoints', args: '' })
+  // The hub is off: nothing to step aside for.
+  expect(shown).toEqual([])
+  await $.command.run({ command: 'modz-on', args: '' })
+  await $.command.run({ command: 'modz-open', args: 'checkpoints' })
+  expect(shown).toEqual(['checkpoints'])
+  await $.command.run({ command: 'modz-stage', args: 'checkpoints' })
+  expect(closed).toEqual([])
+  await $.command.run({ command: 'modz-stage', args: 'replay' })
+  expect(closed).toEqual(['checkpoints'])
 })
 
 test('the card and the open match are pure', () => {

@@ -1,12 +1,14 @@
 import type { AgentRun } from '../types'
 import { elapsed } from './agents'
 import { crab } from './crabs'
+import { rings } from './kit/motion'
 import type { CrabOptions } from './crabs'
 import type { Planned } from './flow'
 import { fmtTime, modelName } from './format'
 import { t } from './i18n'
-import { lookAt } from './identity'
 import type { Look } from './identity'
+import { homeCrab, levelPill, levelWidth } from './mood-svg'
+import type { HomeMark } from './mood-svg'
 import { countTasks } from './tasks'
 import { FONT, paneSvg } from './theme'
 import { TIER_MODEL, plannedTierOf } from './tiers'
@@ -21,6 +23,8 @@ const LIVE_DOT = { x: 32, y: 4, r: 3 } as const
 export const CRAB = { w: 36, h: 32 } as const
 export const PULSE = 12
 const PULSE_CORE = 3
+// The kit's rings grow to 3.2 times their dot: from this one they stay inside the drawing's 12 px.
+const PULSE_RINGS = 1.8
 
 /** The worker's own count of its steps or its task list, when it keeps one: "3/5 · Hero copy". */
 export const stepsOf = (a: AgentRun): string => {
@@ -63,19 +67,22 @@ export const CARD_CRAB = { w: 50, h: 44, scale: 1.5 } as const
 export const cardCrabSvg = (opts: Omit<CrabOptions, 'scale'>): string =>
   paneSvg(CARD_CRAB.w, CARD_CRAB.h, crab(1, 0, { ...opts, scale: CARD_CRAB.scale }))
 
-// The empty panel's host: one resting crab, larger, standing still until there is work.
-export const HERO_CRAB = { w: 76, h: 66, scale: 2.3 } as const
+// The empty panel's host: the home crab, larger, in its mood, and its level under it.
+export const HERO_CRAB = { w: 76, h: 88, scale: 2.3, crabH: 66, pillGap: 4 } as const
+// The middle of the crab's 30-cell grid, where its level pill centres.
+const GRID_MID = 15
 
-// Two still z's over its shoulder: it is resting, not stuck.
-const SNOOZE = `<text class="m" x="62" y="16" font-family="${FONT}" font-size="11" font-weight="700">z</text><text class="m" x="69" y="8" font-family="${FONT}" font-size="8" font-weight="700">z</text>`
+export const heroCrabSvg = (home: HomeMark): string => {
+  const pillX = Math.max(0, Math.round(GRID_MID * HERO_CRAB.scale - levelWidth(home.level) / 2))
+  const pill = levelPill(home.level, pillX, HERO_CRAB.crabH + HERO_CRAB.pillGap)
+  return paneSvg(HERO_CRAB.w, HERO_CRAB.h, homeCrab(0, 2, { home, scale: HERO_CRAB.scale }) + pill)
+}
 
-export const heroCrabSvg = (): string =>
-  paneSvg(HERO_CRAB.w, HERO_CRAB.h, crab(0, 2, { costume: 'other', look: lookAt(0), scale: HERO_CRAB.scale }) + SNOOZE)
-
-// The call still open, as a still Iris dot in a faint ring: the crabs carry the panel's one motion.
+// The call still open, as an Iris dot in a faint ring, rings going out of it while the call runs.
 export const pulseSvg = (): string => {
   const c = PULSE / 2
-  return paneSvg(PULSE, PULSE, `<circle class="b-run l-run" cx="${c}" cy="${c}" r="${c - 1}" stroke-width="1"/><circle class="f-run" cx="${c}" cy="${c}" r="${PULSE_CORE}"/>`)
+  const live = rings({ cx: c, cy: c, r: PULSE_RINGS, className: 'f-run' })
+  return paneSvg(PULSE, PULSE, `<circle class="b-run l-run" cx="${c}" cy="${c}" r="${c - 1}" stroke-width="1"/>${live}<circle class="f-run" cx="${c}" cy="${c}" r="${PULSE_CORE}"/>`)
 }
 
 export const plannedLine = (p: Planned): string => {

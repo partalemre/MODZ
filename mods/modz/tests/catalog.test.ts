@@ -44,7 +44,7 @@ test('a readable manifest without version is healthy and falls back to the marke
   const { mods } = await loadCatalog(market(plugins, { a: { description: 'from manifest' }, b: {}, c: {} }))
 
   expect(byName(mods, 'a')).toMatchObject({ isHealthy: true, version: '9.9.9', description: 'from manifest' })
-  expect(byName(mods, 'b')).toMatchObject({ isHealthy: true, version: '?' })
+  expect(byName(mods, 'b')).toMatchObject({ isHealthy: true, version: null })
   expect(byName(mods, 'c')).toMatchObject({ isHealthy: true, description: 'only market' })
 })
 

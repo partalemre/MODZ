@@ -4,7 +4,7 @@ import { matchTasks, resolvePlan, similarity } from '../hooks/match'
 import { cleanTitle, isPlanPath, parsePlan } from '../hooks/parse'
 import { fileDoc, isReplacing } from '../hooks/plan'
 import { createTask, createdId, fromTodos, updateTask } from '../hooks/tasks'
-import { setLang } from '../hooks/lang'
+import { setLang } from '../hooks/kit/lang'
 
 setLang('tr')
 

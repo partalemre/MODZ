@@ -1,3 +1,4 @@
+import { shine } from './kit/motion'
 import { durationText, eyebrowRole, headlineOf, runMeta, spanOf, suiteTag } from './summary'
 import { bar, esc, eyebrow, fileBadge, fit, fitStart, highlight, icon, measure, rect, runs, svgDoc, text, wrapText } from './svg'
 import type { Ink } from './svg'
@@ -46,7 +47,8 @@ export function headerSvg(frame: Frame, spec: { badge: TestBadge; now: number })
   const top = eyebrow({ x: 0, y: 13, width: frame.width, label: words().eyebrowResults, role: eyebrowRole(badge), meta: runMeta(badge, spec.now), isLive: badge.isRunning })
   const title = runs({ x: 0, y: 42, size: HEADLINE.size, parts: [{ text: head.lead, ink: inkOf(head.tone), weight: 650 }, { text: head.rest, ink: 'hi', weight: HEADLINE.weight }] })
   let meter = ''
-  if (badge.isRunning) meter = rect({ x: 0, y: 55, w: frame.width, h: 6, rx: 3, fill: 'iris-l', className: 'shimmer' })
+  // A run still going: its track breathes and a light runs along it until it ends.
+  if (badge.isRunning) meter = rect({ x: 0, y: 55, w: frame.width, h: 6, rx: 3, fill: 'iris-l', className: 'shimmer' }) + shine({ id: 'tb-run', x: 0, y: 55, width: frame.width, height: 6 })
   else if (hasBar && tests !== null) {
     const passed = tests.passed ?? 0
     const total = tests.total ?? 0

@@ -101,3 +101,16 @@ export function untilReset(resetsAt: string | null, nowMs: number): string {
 
   return `${minutes}${unit.minute}`
 }
+
+const SPARK_CELLS = 16
+const SPARK = '▁▂▃▄▅▆▇█'
+
+// A text sparkline of the last readings, scaled to `max`; '' for fewer than two.
+export function sparkText(series: readonly number[], max: number): string {
+  if (series.length < 2 || max <= 0) return ''
+
+  return series
+    .slice(-SPARK_CELLS)
+    .map(value => SPARK[Math.max(0, Math.min(SPARK.length - 1, Math.round((value / max) * (SPARK.length - 1))))])
+    .join('')
+}

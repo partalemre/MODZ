@@ -1,6 +1,5 @@
 {
   "name": "hud-pro",
-  "version": "0.4.0",
   "description": "One quiet line at the bottom of the band, terminal and desktop: 5h limit with reset, 7d, context and session ≈cost; /hud full shows details",
   "author": {
     "name": "Faik Emre Partal",

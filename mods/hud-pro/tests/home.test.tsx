@@ -3,6 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { PANE, USAGE, start, stubSession } from './stubs'
 
 // Every pane the MODZ hub opens draws "← MODZ" first while the hub runs; pressing it writes this mod's `home`.
+// While the hub runs the pane also takes turns in its one panel (kit/stage.ts).
 
 const SURFACES = ['terminal', 'desktop'] as const
 const HOME_LABEL = '← MODZ'
@@ -14,6 +15,16 @@ const HUB_STAND_IN = {
     const heard: unknown[] = []
     on('command.run', { command: 'hub-on' }, async ($: any) => {
       await $.state.set({ plugin: 'modz', key: 'isOn' }, true)
+
+      return {}
+    })
+    on('command.run', { command: 'hub-open' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'open' }, { pane: e.args, at: 1 })
+
+      return {}
+    })
+    on('command.run', { command: 'hub-stage' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'stage' }, { pane: e.args, at: 1 })
 
       return {}
     })
@@ -56,3 +67,22 @@ for (const surface of SURFACES) {
     expect(JSON.parse(out.text ?? '')).toEqual([{ at: expect.any(Number) }])
   })
 }
+
+test('with the hub on the opened pane reports itself shown, and steps aside when another pane takes the panel', { plugins: [HUB_STAND_IN] } as any, async ($: any, on: any) => {
+  const shown: unknown[] = []
+  const closed: unknown[] = []
+  on('state.set', { plugin: 'hud-pro', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
+  on('ui.close', (_: any, e: any) => (closed.push(e.id), { value: undefined }))
+  stubSession(on, USAGE)
+  await start($, 'desktop')
+  await $.command.run({ command: 'hud', args: 'full' })
+  // The hub is off: nothing to step aside for.
+  expect(shown).toEqual([])
+  await $.command.run({ command: 'hub-on', args: '' })
+  await $.command.run({ command: 'hub-open', args: 'usage' })
+  expect(shown).toEqual(['usage'])
+  await $.command.run({ command: 'hub-stage', args: 'usage' })
+  expect(closed).toEqual([])
+  await $.command.run({ command: 'hub-stage', args: 'skins' })
+  expect(closed).toEqual(['hud-pro'])
+})

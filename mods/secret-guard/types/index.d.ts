@@ -25,6 +25,7 @@ export type GuardPending = {
 
 declare module 'claude-code' {
   interface PluginState {
-    'secret-guard': { pending: GuardPending | null; isEnabled: boolean }
+    // isRecording: recording mode masks secrets, env values and e-mail addresses on screen, for this session.
+    'secret-guard': { pending: GuardPending | null; isEnabled: boolean; isRecording: boolean }
   }
 }

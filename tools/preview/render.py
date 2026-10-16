@@ -145,7 +145,8 @@ def node(element, theme):
         value = html.escape(str(props.get("value") or props.get("placeholder") or ""))
         return f"<div style='border:1px solid {THEMES[theme]['line']};border-radius:8px;padding:6px 10px;color:{THEMES[theme]['dim']}'>{value}</div>"
     if kind == "Link":
-        return f"<a style='color:#8ab4f8'>{inner or html.escape(props.get('url', ''))}</a>"
+        text = props.get('label') or props.get('href') or props.get('url', '')
+        return f"<a style='color:#8ab4f8'>{inner or html.escape(text)}</a>"
     return f"<div data-kind='{html.escape(str(kind))}'>{inner}</div>"
 
 

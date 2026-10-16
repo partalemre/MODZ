@@ -1,3 +1,5 @@
+import { packOf } from './pack'
+import type { SoundPack } from './pack'
 import { words } from './words'
 
 // `fail`: a finished turn whose own test command failed, the one finish worth a Flare look.
@@ -14,6 +16,7 @@ export type PingConfig = {
   thresholdSeconds: number
   isPermissionPing: boolean
   sound: string
+  soundPack: SoundPack
   isQuietWhenFocused: boolean
   isAppNotification: boolean
 }
@@ -23,6 +26,7 @@ const SECONDS_PER_MINUTE = 60
 const MINUTES_PER_HOUR = 60
 const DEFAULT_THRESHOLD = 60
 const DEFAULT_SOUND = 'Glass'
+const SILENT = 'none'
 const BODY_CHARS = 80
 const EDIT_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit']
 const PATH_KEYS = ['file_path', 'notebook_path', 'path']
@@ -31,12 +35,16 @@ const TEST_COMMAND = /\b(?:(?:npm|pnpm|yarn|bun)\s+(?:run\s+)?test|vitest|jest|p
 
 export function configFrom(options: Record<string, unknown>): PingConfig {
   const threshold = Number(options.thresholdSeconds)
-  const sound = typeof options.sound === 'string' ? options.sound.trim() : DEFAULT_SOUND
+  const soundPack = packOf(options.soundPack)
+  // A pack takes the banner's own sound's place, so one ping never rings twice.
+  const banner = typeof options.sound === 'string' ? options.sound.trim() : DEFAULT_SOUND
+  const sound = soundPack === 'off' ? banner : SILENT
 
   return {
     thresholdSeconds: Number.isFinite(threshold) && threshold >= 0 ? threshold : DEFAULT_THRESHOLD,
     isPermissionPing: options.pingOnPermission !== false,
     sound,
+    soundPack,
     isQuietWhenFocused: options.quietWhenFocused !== false,
     isAppNotification: options.appNotification !== false,
   }

@@ -14,6 +14,7 @@ import { stuckOf } from './insight'
 import type { Stuck } from './insight'
 import { progressLabel } from './metrics'
 import { BAR_H, progressBarSvg } from './metrics-svg'
+import { picture } from './pane-motion'
 import { CARD_CRAB, CRAB, activityOf, cardCrabSvg, clockOf, crabSvg, modelLine, plannedLine } from './pane-svg'
 import { costumeOf, keyOf, plannedTierOf, tierOf, tierWordOf } from './tiers'
 
@@ -166,7 +167,7 @@ function termCard(ui: Ui, a: AgentRun, ctx: RowContext) {
 }
 
 function deskHead(ui: Ui, a: AgentRun, ctx: RowContext) {
-  const { Box, Svg } = ui
+  const { Box } = ui
   const look = lookOf(a)
   const stuck = stuckOf(a, ctx.at)
   const head = headOf(a, stuck)
@@ -175,8 +176,8 @@ function deskHead(ui: Ui, a: AgentRun, ctx: RowContext) {
   const crab = cardCrabSvg({ costume: costumeOf(a), look, isWalking: a.status === 'running' && !stuck })
   return (
     <Box flexDirection="row" alignItems="center" columnGap={1}>
-      <Svg key="crab" source={crab} alt={`${look.name}, ${tierWordOf(a)}`} width={CARD_CRAB.w} height={CARD_CRAB.h} />
-      <Svg key="head" source={cardHeadSvg(headW, head)} alt={`${head.title}: ${head.name} · ${head.tierWord} · ${head.model} · ${head.pill.text}`} width={headW} height={HEAD_H} />
+      {picture(ui, { key: 'crab', at: `crab-${a.id}`, pic: { source: crab, alt: `${look.name}, ${tierWordOf(a)}`, width: CARD_CRAB.w, height: CARD_CRAB.h } })}
+      {picture(ui, { key: 'head', at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head), alt: `${head.title}: ${head.name} · ${head.tierWord} · ${head.model} · ${head.pill.text}`, width: headW, height: HEAD_H } })}
     </Box>
   )
 }
@@ -218,16 +219,23 @@ function deskFoot(ui: Ui, a: AgentRun, ctx: RowContext) {
   )
 }
 
-function deskCard(ui: Ui, a: AgentRun, ctx: RowContext) {
-  const { Box, Svg } = ui
-  const isOpen = ctx.selected === a.id
+// The bar fills with the work and shines while it runs; only its run ending, or a measure taking over from the
+// estimate, sweeps it.
+function deskBar(ui: Ui, a: AgentRun, ctx: RowContext) {
   const progress = agentProgress(a)
   const label = barLabel(a, progress)
+  const pic = { source: progressBarSvg(ctx.inner, a, { progress, label }), alt: label || t().starting, width: ctx.inner, height: BAR_H }
+  return picture(ui, { key: 'bar', at: `bar-${a.id}`, pic, opts: { shows: { status: a.status, isEstimate: progress.isEstimate } } })
+}
+
+function deskCard(ui: Ui, a: AgentRun, ctx: RowContext) {
+  const { Box } = ui
+  const isOpen = ctx.selected === a.id
   // Keyed, so the pointer anywhere on the card lights its edge and its "Detay" button.
   return (
     <Box key={a.id} flexDirection="column" borderStyle="round" borderDimColor={!isOpen} hover={{ borderDimColor: false }} paddingX={CARD_PAD_X} paddingY={1}>
       {deskHead(ui, a, ctx)}
-      <Svg key="bar" source={progressBarSvg(ctx.inner, a, { progress, label })} alt={label || t().starting} width={ctx.inner} height={BAR_H} />
+      {deskBar(ui, a, ctx)}
       {deskFoot(ui, a, ctx)}
       {isOpen && detailTree(ui, a, ctx)}
     </Box>
@@ -237,11 +245,12 @@ function deskCard(ui: Ui, a: AgentRun, ctx: RowContext) {
 export const agentRow = (ui: Ui, a: AgentRun, ctx: RowContext) => (ctx.isDesktop ? deskCard(ui, a, ctx) : termCard(ui, a, ctx))
 
 export function plannedRow(ui: Ui, p: Planned, ctx: Pick<RowContext, 'isDesktop'>) {
-  const { Box, Text, Svg } = ui
+  const { Box, Text } = ui
   const tier = plannedTierOf(p.tier)
+  const crab = { source: crabSvg({ costume: tier, isDim: true }), alt: tier, width: CRAB.w, height: CRAB.h }
   return (
     <Box key={`plan-${p.n}`} flexDirection="row" columnGap={1} alignItems="center">
-      {ctx.isDesktop ? <Svg key="crab" source={crabSvg({ costume: tier, isDim: true })} alt={tier} width={CRAB.w} height={CRAB.h} /> : <Text dimColor>○</Text>}
+      {ctx.isDesktop ? picture(ui, { key: 'crab', at: `plan-crab-${p.n}`, pic: crab }) : <Text dimColor>○</Text>}
       <Box flexDirection="column" flexGrow={1}>
         <Text dimColor wrap="truncate-end">{`${p.n}. ${p.title}`}</Text>
         <Text wrap="truncate-end">

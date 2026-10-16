@@ -5,6 +5,30 @@ export type Lang = 'tr' | 'en' | 'ru'
 
 export type Kinds = Record<'read' | 'edit' | 'run' | 'agent' | 'other', string>
 
+import type { ChatState, CrabMood } from '../types'
+
+/** Other chats on this machine: the card of those waiting on the person and the folded list of the rest. */
+export type ChatWords = {
+  /** The folded list of the chats that are not waiting. */
+  title: string
+  /** The card of the chats waiting on the person. */
+  waitingTitle: string
+  /** "waiting 3 min": how long a chat has waited; `span` is empty under a minute. */
+  waiting: (span: string) => string
+  /** Working or idle, in the folded list. */
+  states: Record<Exclude<ChatState, 'waiting'>, string>
+  untitled: string
+  more: (n: number) => string
+  /** The hub card's addition: "1 chat waits". */
+  hubWaits: (n: number) => string
+}
+
+/** The home crab: a word for each mood (the drawing's alt and the terminal), and its level pill. */
+export type CrabWords = {
+  moods: Record<CrabMood, string>
+  level: (n: number) => string
+}
+
 export type Strings = {
   pane: string
   /** The /agents-info line in the slash command menu. */
@@ -122,6 +146,8 @@ export type Strings = {
   followUp: (name: string) => string
   launched: (name: string) => string
   denied: (reason: string) => string
+  chats: ChatWords
+  crab: CrabWords
   // The decimal mark numbers are written with: "1,68" in Turkish and Russian, "1.68" in English.
   decimal: string
 }

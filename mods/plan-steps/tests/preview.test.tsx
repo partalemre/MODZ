@@ -26,6 +26,8 @@ async function setup($: any, on: any, theme: string) {
   on('ui.render', () => ({ type: 'engine', ref: 1 }))
   on('fs.read', () => ({ value: '' }))
   on('tool.call', (_: any, e: any) => (e.tool === 'Agent' ? { result: { status: 'async_launched', agentId: 'ag-1', content: [] } } : { result: 'ok' }))
+  on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
+  on('turn.complete', () => ({ text: '' }))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/w' })
 
   return clock
@@ -73,5 +75,20 @@ for (const theme of ['dark', 'light']) {
     await $.tool.call({ tool: 'TodoWrite', todos: TITLES.slice(0, 5).map(content => ({ content, activeForm: content, status: 'pending' })) })
     const fresh = await $.ui.mount(paneOf('desktop', WIDTHS.narrow))
     console.log(`@@TREE@@plan-steps-unstarted-narrow-${theme}@@` + JSON.stringify(await fresh.drawn()))
+  })
+
+  // The finish card above the prompt: an answer that worked on the plan and left 6 of 9 steps open.
+  test(`preview ${theme}: finish card`, async ($: any, on: any) => {
+    const clock = await setup($, on, theme)
+    await $.turn.start({ text: 'devam', turnId: 't1' })
+    await clock.advance(MIN)
+    await $.tool.call({ tool: 'TodoWrite', todos: todos(3) })
+    await $.turn.complete({ answer: 'tamam', durationMs: MIN, isAborted: false, turnId: 't1', reason: 'answer' })
+    for (const surface of ['desktop', 'terminal'] as const) {
+      const props = { hasSurvey: false, isWorking: false, maxRows: 20, bodyColumns: 100, scroll: { offset: 0, bodyRows: 20 }, view: {} }
+      const band = await $.ui.mount({ plugin: 'plan-steps', surface, component: 'AbovePrompt', props })
+      console.log(`@@TREE@@plan-steps-finish-${surface}-${theme}@@` + JSON.stringify(await band.drawn()))
+      await band.unmount()
+    }
   })
 }

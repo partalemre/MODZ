@@ -1,10 +1,13 @@
 // MODZ: the one pane that opens by itself (DESIGN.md §9). It lists every mod's pane with the
-// mod's own live line, and asks the owning mod to open its pane when a row is pressed; the
-// catalog of every mod ("Modlar") is a second pane of this mod, a tab of its own.
+// mod's own live line, and asks the owning mod to open its pane when a row is pressed. The hub,
+// its catalog ("Modlar") and every mod's pane take turns in one panel (kit/stage.ts): whichever
+// opens last is the one shown, the rest close, so they never pile up as tabs.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { HubCard } from '../types'
+import { autoUpdateSettings, installOf } from './auto-update'
+import type { Drawing } from './draw'
 import { linkCheck, loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
 import { cardOf, focusOf, hiddenRowsOf, MODS_PANE, modsTitle, presenceOf, rowsOf } from './hub'
@@ -13,16 +16,19 @@ import type { HubActions } from './hub-pane'
 import { EMPTY_LAYOUT, layoutOf, moveUp, setHidden } from './layout'
 import type { HubLayout } from './layout'
 import { setLang } from './kit/lang'
+import { HUB_PANE, paneOf } from './kit/stage'
 import { isSame } from './kit/same'
 import { pinned } from './kit/pin'
+import { stableDrawings } from './kit/stable'
 import { modzTree } from './pane'
 import type { Theme } from './theme'
 import { hubWords } from './words'
 
-const PANE = 'modz'
+const PANE = HUB_PANE
 const TITLE = 'MODZ'
 
 const OPEN = { plugin: 'modz', key: 'open' } as const
+const STAGE = { plugin: 'modz', key: 'stage' } as const
 const cardsAtom = atom({ plugin: 'modz', key: 'cards' } as const, {} as Record<string, HubCard>)
 // The person's arrangement, mirrored from `$.store` (kept across sessions) so a change redraws the hub.
 const layoutAtom = atom({ plugin: 'modz', key: 'layout' } as const, EMPTY_LAYOUT)
@@ -81,7 +87,25 @@ async function marketOf($: EngineInterface): Promise<Market> {
   }
 }
 
-const openHub = ($: EngineInterface) => $.ui.open({ id: PANE, title: TITLE, focus: true })
+// The hub's and the catalog's drawings, kept per what they show (stable.ts); forgotten when the pane opens again.
+const hubDrawings = stableDrawings<Drawing>()
+const catalogDrawings = stableDrawings<Drawing>()
+
+// A pane that will not close is logged, never thrown: the one being shown is already up.
+const closeQuietly = ($: EngineInterface, id: string) =>
+  $.ui.close({ id }).catch(cause => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: 'debug' }))
+
+// Puts one of the hub's own panes in the panel and closes the other; every mod's open pane closes too.
+async function show($: EngineInterface, pane: typeof PANE | typeof MODS_PANE): Promise<void> {
+  const title = pane === PANE ? TITLE : modsTitle()
+  const drawings = pane === PANE ? hubDrawings : catalogDrawings
+  drawings.reset()
+  await $.ui.open({ id: pane, title, focus: true })
+  await $.state.set(STAGE, { pane, at: Date.now() })
+  await closeQuietly($, pane === PANE ? MODS_PANE : PANE)
+}
+
+const openHub = ($: EngineInterface) => show($, PANE)
 
 async function saveLayout($: EngineInterface, change: (layout: HubLayout) => HubLayout): Promise<void> {
   const next = change(await read($, layoutAtom))
@@ -90,9 +114,10 @@ async function saveLayout($: EngineInterface, change: (layout: HubLayout) => Hub
 }
 
 // Each press of the hub, written where it is kept; a failed write is logged, never thrown into the drawing.
+// The press waits for the work, so the panel has swapped by the time it settles.
 function actionsOf($: EngineInterface): HubActions {
   const run = (what: string, work: () => Promise<unknown>) =>
-    void work().catch(cause => $.ui.log(`modz: ${what} failed: ${String(cause)}`, { to: 'debug' }))
+    work().catch(cause => $.ui.log(`modz: ${what} failed: ${String(cause)}`, { to: 'debug' }))
 
   return {
     onOpen: pane => run(`opening ${pane}`, () => openPane($, pane)),
@@ -103,17 +128,30 @@ function actionsOf($: EngineInterface): HubActions {
   }
 }
 
-// A pane press opens a tab and leaves the hub open where it is: the catalog is this mod's own
-// pane; any other is its mod's to open, asked through `modz.open`. Each opens with `focus`: the
-// surface gives that pane the keyboard, and so the front, while the composer is empty and idle;
-// otherwise it waits as a tab beside the hub.
+// A row press puts that pane in the panel: the catalog is this mod's own pane; any other is its
+// mod's to open, asked through `modz.open`. The hub steps aside once the mod says its pane is
+// shown, so a mod that does not answer leaves the hub where it is rather than an empty panel.
 async function openPane($: EngineInterface, pane: string): Promise<void> {
   if (pane === MODS_PANE) {
-    await $.ui.open({ id: MODS_PANE, title: modsTitle(), focus: true })
+    await show($, MODS_PANE)
 
     return
   }
+  answered = null
   await $.state.set(OPEN, { pane, at: Date.now() })
+  // The mod answered inside this write, where the engine hands the hub's own hook no event (`.catch`, re-entry).
+  if (answered !== null) await stepAside($, answered)
+}
+
+// The pane a mod said it opened while the hub's own write was still running; read once that write settles.
+let answered: string | null = null
+
+// A mod's pane holds the panel: the hub's panes close and every other mod's pane follows (kit/stage.ts).
+async function stepAside($: EngineInterface, pane: string): Promise<void> {
+  answered = null
+  await $.state.set(STAGE, { pane, at: Date.now() })
+  await closeQuietly($, PANE)
+  await closeQuietly($, MODS_PANE)
 }
 
 // An empty catalog is one that could not be read: the hub says so rather than "0 mods on".
@@ -122,6 +160,26 @@ function metaOf(market: Market): string {
   const on = market.mods.filter(mod => mod.isEnabled === true).length
 
   return hubWords().modsOn(on)
+}
+
+async function textOf($: EngineInterface, path: string): Promise<string | undefined> {
+  return (await $.fs.exists(path)) ? String(await $.fs.read(path)) : undefined
+}
+
+// Turns on Claude Code's own auto-update for the marketplace this copy was installed from (auto-update.ts).
+async function keepUpdated($: EngineInterface): Promise<void> {
+  const install = installOf($.plugin.root)
+  if (install === undefined) return
+  const configDir = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${await $.env.get('HOME')}/.claude`
+  const settingsPath = `${configDir}/settings.json`
+  const next = autoUpdateSettings({
+    market: install.market,
+    settingsText: await textOf($, settingsPath),
+    knownText: await textOf($, `${install.pluginsDir}/known_marketplaces.json`),
+  })
+  if (next === undefined) return
+  await $.fs.write(settingsPath, next)
+  $.ui.log(`modz: auto-update turned on for the ${install.market} marketplace`, { to: 'debug' })
 }
 
 type On = Parameters<Register>[0]
@@ -136,7 +194,13 @@ function hubHooks(on: On, options: Options): void {
     await update($, layoutAtom, () => saved)
     await $.state.set(ON, true)
     await $.command.register({ name: 'modz', description: hubWords().command })
-    if (options.openOnStart !== false) await $.ui.open({ id: PANE, title: TITLE })
+    if (options.openOnStart !== false) {
+      hubDrawings.reset()
+      await $.ui.open({ id: PANE, title: TITLE })
+    }
+    if (options.keepUpdated !== false) {
+      void keepUpdated($).catch(cause => $.ui.log(`modz: auto-update could not be turned on: ${String(cause)}`, { to: 'debug' }))
+    }
 
     return started
   })
@@ -156,13 +220,33 @@ function hubHooks(on: On, options: Options): void {
   }).catch(($, e, next) => next(e))
 
   // A mod's "MODZ" button: the hub comes forward, and opens again if it was closed. Any mod may ask.
+  // The hub comes back once the mod's write has settled: inside it, the mod's own hooks hear nothing (re-entry),
+  // so its pane would miss the stage and stay behind as a tab.
   on('state.set', { key: 'home' }, async ($, e, next) => {
     const done = await next(e)
     const from: string = e.plugin
-    if (from !== 'modz') await openHub($)
+    if (from !== 'modz') {
+      $.clock.after(0, () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: 'debug' })))
+    }
 
     return done
   }).catch(($, e, next) => next(e))
+
+  // A mod's pane is open: it takes the panel. Said inside the hub's own open request, the engine runs only the
+  // `.catch` (re-entry, where `$` is closed), which notes the pane for `openPane` to act on once its write settles.
+  on('state.set', { key: 'shown' }, async ($, e, next) => {
+    const done = await next(e)
+    const from: string = e.plugin
+    const pane = paneOf(e.value)
+    if (from !== 'modz' && pane !== null) await stepAside($, pane)
+
+    return done
+  }).catch(($, e, next) => {
+    const from: string = e.plugin
+    if (next.error.kind === 're-entry' && from !== 'modz') answered = paneOf(e.value) ?? answered
+
+    return next(e)
+  })
 
   on('command.run', { command: 'modz' }, async $ => {
     await openHub($)
@@ -182,7 +266,7 @@ function paneHooks(on: On): void {
     const rows = rowsOf(cards, presence, layout)
     const view = { rows, hidden: hiddenRowsOf(cards, presence, layout), focus: focusOf(rows), meta: metaOf(market), isEditing }
 
-    return pinned(e, hubTree(ui, { ...view, surface: e.surface, columns, theme, actions: actionsOf($) }))
+    return pinned(e, hubTree(ui, { ...view, surface: e.surface, columns, theme, actions: actionsOf($), stable: hubDrawings }))
   })
 
   on('ui.render', { component: 'Pane', requestId: MODS_PANE }, async ($, e) => {
@@ -191,7 +275,7 @@ function paneHooks(on: On): void {
 
     const onHome = () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not be opened: ${String(cause)}`, { to: 'debug' }))
 
-    return pinned(e, modzTree(ui, { market: await marketOf($), surface: e.surface, columns, theme: await themeNow($), onHome }))
+    return pinned(e, modzTree(ui, { market: await marketOf($), surface: e.surface, columns, theme: await themeNow($), onHome, stable: catalogDrawings }))
   })
 }
 

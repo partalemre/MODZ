@@ -9,10 +9,18 @@ import { words } from './words'
 export type RowKind = 'folder' | 'file' | 'item' | 'more'
 export type Row = { kind: RowKind; name: string; tag: string; count: string; size: string; share: number | null; icon: IconName }
 export type Banner = { tone: 'danger' | 'read' | 'warn'; text: string }
+export type Choice = { label: string; hotkey: string }
+
+// Flare for what can't be undone; Amber for a caution (another chat's edit, a house rule).
+export type CardTone = 'danger' | 'warn'
 
 export type View = {
+  tone: CardTone
+  eyebrow: string
   icon: IconName
   command: string
+  // A sentence in place of the command line, for a card that holds something other than a command.
+  headline: string | null
   payload: string
   isPayloadEmpty: boolean
   tail: string
@@ -22,7 +30,9 @@ export type View = {
   rows: Row[]
   // Rows the toggle would add (collapsed) or take away (expanded); 0 hides it.
   toggleCount: number
-  action: { label: string; hotkey: string }
+  action: Choice
+  // The safe answer; it holds the focus.
+  cancel: Choice
 }
 
 const FILES_COLLAPSED = 6
@@ -91,8 +101,11 @@ export function viewOf(held: { command: string; risk: Risk; report: Report; cwd:
   const said = words()
 
   return {
+    tone: 'danger',
+    eyebrow: said.eyebrow,
     icon: ICON_OF[risk.kind],
     command,
+    headline: null,
     ...said.headline(report),
     isPayloadEmpty: report.count === 0,
     context: said.context({ where: report.where, folder: held.cwd === '' ? '' : baseName(held.cwd) }),
@@ -101,5 +114,6 @@ export function viewOf(held: { command: string; risk: Risk; report: Report; cwd:
     rows: list.rows,
     toggleCount: collapsed.listed - collapsed.shown,
     action: said.action(report),
+    cancel: said.cancel,
   }
 }

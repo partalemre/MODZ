@@ -5,7 +5,6 @@ import { svgStyle } from './theme'
 import { escape, fit, fitMiddle, icon, measure, svgOpen, tile } from './svg-kit'
 import type { Banner, Row, View } from './view'
 import { upper } from './lang'
-import { words } from './words'
 
 const TILE = 38
 const HEAD_X = 52
@@ -36,6 +35,8 @@ const FULL_STEP = 18
 const HEAD_BOTTOM = 6
 const HEAD_MIN = 46
 const GLUE = ' · '
+// `measure` reads regular weight; a bold headline runs about this much wider.
+const BOLD_GAIN = 1.06
 
 type Line = { y: number; markup: string }
 
@@ -52,6 +53,12 @@ function payloadRun(view: View, room: number): string {
 // The headline on one line when it fits; in a narrow pane the command takes a line of its own
 // and what it does goes under it, so neither is cut.
 function headlineLines(view: View, room: number): Line[] {
+  if (view.headline !== null) {
+    return wrapTwo(view.headline, room / BOLD_GAIN, HEAD_SIZE).map((text, i) => ({
+      y: FIRST_BASELINE + i * LINE_STEP,
+      markup: `<tspan font-size="${HEAD_SIZE}" font-weight="700" style="fill:var(--hi)">${escape(text)}</tspan>`,
+    }))
+  }
   const spec = { size: CMD_SIZE, isMono: true, isBold: true }
   const said = measure(view.payload, { size: HEAD_SIZE, isBold: true }) + measure(view.tail, { size: HEAD_SIZE })
   const glue = `<tspan font-size="${HEAD_SIZE}" style="fill:var(--lo)">${GLUE}</tspan>`
@@ -67,17 +74,18 @@ function headlineLines(view: View, room: number): Line[] {
   ]
 }
 
-/** `● HELD · BLAST RADIUS` in Flare (DESIGN.md §3: every card opens with an eyebrow in its role colour), and the meta on the right while it fits. */
+/** `● HELD · BLAST RADIUS` in the card's role colour (DESIGN.md §3: every card opens with one), and the meta on the right while it fits. */
 function eyebrowLine(view: View, room: number): string {
-  const label = upper(words().eyebrow)
+  const label = upper(view.eyebrow)
+  const paint = `var(--${view.tone})`
   const labelW = measure(label, { size: EYEBROW_SIZE, isBold: true }) + [...label].length * EYEBROW_TRACKING
   const metaRoom = room - EYEBROW_TEXT_X - labelW - META_GAP
   const meta = view.context === '' || metaRoom < HEAD_X ? '' : fit(view.context, metaRoom, { size: META_SIZE })
   const y = EYEBROW_BASELINE
 
   return [
-    `<circle cx="${HEAD_X + EYEBROW_DOT}" cy="${y - 3.5}" r="${EYEBROW_DOT}" style="fill:var(--danger)"/>`,
-    `<text x="${HEAD_X + EYEBROW_TEXT_X}" y="${y}" font-size="${EYEBROW_SIZE}" font-weight="700" letter-spacing="${EYEBROW_TRACKING}" style="fill:var(--danger)">${escape(label)}</text>`,
+    `<circle cx="${HEAD_X + EYEBROW_DOT}" cy="${y - 3.5}" r="${EYEBROW_DOT}" style="fill:${paint}"/>`,
+    `<text x="${HEAD_X + EYEBROW_TEXT_X}" y="${y}" font-size="${EYEBROW_SIZE}" font-weight="700" letter-spacing="${EYEBROW_TRACKING}" style="fill:${paint}">${escape(label)}</text>`,
     meta === '' ? '' : `<text x="${HEAD_X + room}" y="${y}" text-anchor="end" font-size="${META_SIZE - 1}" style="fill:var(--lo)">${escape(meta)}</text>`,
   ].join('')
 }
@@ -95,7 +103,7 @@ export function headerSvg(view: View, width: number): { source: string; height: 
     source: [
       svgOpen(width, height),
       svgStyle(),
-      tile(view.icon, { x: 0, y: 2, size: TILE, role: 'danger' }),
+      tile(view.icon, { x: 0, y: 2, size: TILE, role: view.tone }),
       eyebrowLine(view, room),
       ...lines.map(line => `<text x="${HEAD_X}" y="${line.y}">${line.markup}</text>`),
       full,

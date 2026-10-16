@@ -17,10 +17,12 @@ export async function cwdOf(h: Host): Promise<string> {
   return posix(await h.cwd())
 }
 
-// Calm: the pane opens when the person asks; on its own the mod only retitles an open pane.
+// Calm: the pane opens when the person asks; on its own the mod only retitles an open pane,
+// so only an asked-for open takes the MODZ panel.
 export async function showPane(h: Host, isAsked: boolean): Promise<void> {
-  if (isAsked) await h.openPane(true)
-  else if (!mem.noDock && (await h.isPaneOpen())) await h.openPane(false)
+  if (isAsked) {
+    if ((await h.openPane(true)).isPlaced) await h.reportShown()
+  } else if (!mem.noDock && (await h.isPaneOpen())) await h.openPane(false)
 }
 
 export async function inApp(h: Host): Promise<boolean> {

@@ -29,6 +29,12 @@ Where a ping goes, in order:
 
 One waiting ping is sent per 15-second burst, and any two pings are at least 10 seconds apart.
 
+## Sound packs
+
+Off by default. Set `soundPack` to `chime`, `soft` or `retro` and each ping also plays one of the mod's own short sounds (under 1.2 seconds): one for a finished turn, another for Claude waiting on you. A pack replaces the banner's own sound, so a ping never rings twice, and it stays quiet whenever the banner does (while you are looking at the session). Where the host has no player (a Linux or Windows terminal) nothing plays and nothing is shown; the debug log says why.
+
+The sounds are synthesized from plain sine and triangle tones by `tools/sounds/make.py` in this repository, with no samples from anywhere else. They are this repository's own work under its MIT licence. Run `python3 -I tools/sounds/make.py` to make them again; the output is the same every time.
+
 ## Commands
 
 - `/done-ping` turns the ping on or off (remembered).
@@ -41,7 +47,8 @@ One waiting ping is sent per 15-second burst, and any two pings are at least 10 
 |---|---|---|
 | `thresholdSeconds` | `60` | A finished turn pings only when it ran at least this long. |
 | `pingOnPermission` | `true` | Also ping when Claude asks for permission or asks you a question. |
-| `sound` | `Glass` | A macOS system sound name (Glass, Hero, Ping, Purr, Submarine, Funk, Pop), a path to a sound file, or `none`. |
+| `sound` | `Glass` | The banner's sound: a macOS system sound name (Glass, Hero, Ping, Purr, Submarine, Funk, Pop), a path to a sound file, or `none`. A sound pack replaces it. |
+| `soundPack` | `off` | `chime`, `soft` or `retro` plays the mod's own sounds, one for done and one for waiting. |
 | `quietWhenFocused` | `true` | Skip the banner while the app this session runs in is the frontmost app. |
 | `appNotification` | `true` | In the desktop app, use Claude's own notification when it is available without a prompt. |
 

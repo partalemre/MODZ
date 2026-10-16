@@ -6,6 +6,7 @@ import { BUILTIN_TYPES, chosenOf, describe, mergeTypes, offered, sourceWord } fr
 import { sectionSvg, SECTION_SVG_H } from './card-svg'
 import { t } from './i18n'
 import { upper } from './lang'
+import { picture } from './pane-motion'
 import type { Ui } from './rows'
 import type { Layout, PaneHandlers } from './sections'
 
@@ -21,10 +22,10 @@ type On = Parameters<Register>[0]
 export type DraftView = { draft: Draft | undefined; types: AgentType[]; layout: Layout }
 
 function draftHead(ui: Ui, layout: Layout) {
-  const { Svg, Text } = ui
+  const { Text } = ui
   const label = t().newTask
   if (!layout.isDesktop) return <Text bold color="permission">{`● ${upper(label)}`}</Text>
-  return <Svg key="draft-head" source={sectionSvg(layout.inner, { label, dot: 'run' })} alt={label} width={layout.inner} height={SECTION_SVG_H} />
+  return picture(ui, { key: 'draft-head', at: 'draft-head', pic: { source: sectionSvg(layout.inner, { label, dot: 'run' }), alt: label, width: layout.inner, height: SECTION_SVG_H } })
 }
 
 /** The form: a type picker with what the type does, the task field, a refusal if one came, "Vazgeç". */

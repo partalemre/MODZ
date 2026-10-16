@@ -29,12 +29,35 @@ const UNITS: Readonly<Record<Lang, Units>> = {
 
 export const units = (): Units => pick(UNITS)
 
+// Short weekday names, Sunday first as Date.getDay() counts, for a fill time that is not today.
+const WEEKDAYS: Readonly<Record<Lang, readonly string[]>> = {
+  en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  tr: ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'],
+}
+
+export const weekdays = (): readonly string[] => pick(WEEKDAYS)
+
+// /context's row names in Turkish; English keeps the engine's own, and so does an unknown row.
+const CATEGORY_TR: Labels = {
+  'System prompt': 'Sistem istemi',
+  'System tools': 'Sistem araçları',
+  'MCP tools': 'MCP araçları',
+  'Custom agents': 'Özel ajanlar',
+  'Memory files': 'Bellek dosyaları',
+  Skills: 'Beceriler',
+  'Slash commands': 'Komutlar',
+  Messages: 'Mesajlar',
+}
+
+export const categoryLabel = (name: string): string => pick({ en: name, tr: CATEGORY_TR[name] ?? name })
+
 // English counts: "1 reading", "3 readings".
 const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`
 const nouns = (count: number, one: string): string => (count === 1 ? one : `${one}s`)
 
 type TurnSpec = { input: string; output: string; cache: string; requests: number }
 type FreeSpec = { tokens: string; count: number }
+type CompactedSpec = { before: string; after: string }
 
 type Words = {
   paneTitle: string
@@ -64,6 +87,21 @@ type Words = {
   limitFull: (label: string) => string
   limitAt: (label: string, value: string) => string
   compactFailed: (message: string) => string
+  contextTitle: string
+  other: string
+  freeSpace: string
+  reserve: string
+  compactNow: string
+  compacting: string
+  noBreakdown: string
+  compacted: string
+  compactedFrom: (spec: CompactedSpec) => string
+  estimate: (used: string, total: string) => string
+  fullAt: (time: string) => string
+  fullAtShort: (time: string) => string
+  turnsLeft: (count: number) => string
+  turnsShort: (count: number) => string
+  lastTurns: (count: number) => string
 }
 
 const EN: Words = {
@@ -95,6 +133,21 @@ const EN: Words = {
   limitFull: label => `${label} limit reached`,
   limitAt: (label, value) => `${label} limit ${value} used`,
   compactFailed: message => `Compact failed: ${message}`,
+  contextTitle: 'Context breakdown',
+  other: 'Other',
+  freeSpace: 'Free',
+  reserve: 'Reserve',
+  compactNow: 'Compact now',
+  compacting: 'Compacting…',
+  noBreakdown: 'No breakdown yet.',
+  compacted: 'Compacted',
+  compactedFrom: spec => `Compacted ${spec.before} → ${spec.after}`,
+  estimate: (used, total) => `~${used} / ${total}`,
+  fullAt: time => `~full at ${time}`,
+  fullAtShort: time => `~full ${time}`,
+  turnsLeft: count => `~${plural(count, 'turn', 'turns')} left`,
+  turnsShort: count => `~${plural(count, 'turn', 'turns')}`,
+  lastTurns: count => `last ${plural(count, 'turn', 'turns')}`,
 }
 
 const TR: Words = {
@@ -125,6 +178,21 @@ const TR: Words = {
   limitFull: label => `${label} limiti doldu`,
   limitAt: (label, value) => `${label} limiti ${value} dolu`,
   compactFailed: message => `Sıkıştırma başarısız: ${message}`,
+  contextTitle: 'Bağlam dökümü',
+  other: 'Diğer',
+  freeSpace: 'Boş',
+  reserve: 'Yedek pay',
+  compactNow: 'Şimdi sıkıştır',
+  compacting: 'Sıkıştırılıyor…',
+  noBreakdown: 'Henüz döküm yok.',
+  compacted: 'Sıkıştırıldı',
+  compactedFrom: spec => `Sıkıştırıldı: ${spec.before} → ${spec.after}`,
+  estimate: (used, total) => `~${used} / ${total}`,
+  fullAt: time => `~${time} civarında dolar`,
+  fullAtShort: time => `~dolar ${time}`,
+  turnsLeft: count => `~${count} tur kaldı`,
+  turnsShort: count => `~${count} tur`,
+  lastTurns: count => `son ${count} tur`,
 }
 
 const WORDS: Readonly<Record<Lang, Words>> = { en: EN, tr: TR }

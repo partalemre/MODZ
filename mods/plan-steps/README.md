@@ -1,6 +1,6 @@
 # plan-steps
 
-Shows the steps of the plan Claude is working through, and which step it is on.
+Shows the steps of the plan Claude is working through, and which step it is on. Keeps an open plan on disk so it survives `/clear`, compaction and a new session, and shows a card when an answer leaves steps open. Inspired by [planning-with-files](https://github.com/OthmanAdi/planning-with-files).
 
 ## Install
 
@@ -44,7 +44,41 @@ A status line entry `plan 3/9 · <current step>` shows while the plan is under w
 - **Not started** (every step pending): the pane says `not started`.
 - **Gone quiet** (no step change, plan edit, file edit or agent on the current step for 30 minutes): the pane says `waiting · 45m ago` in place of the time left, and the line clears until the next piece of work.
 
-`/clear` empties everything.
+`/clear` empties the pane, but an open plan comes back (see below).
+
+### When an answer leaves steps open
+
+When Claude ends a turn with an answer, the turn worked on the plan (a step changed, the plan file was edited, or a file was edited or an agent ran on the current step), and steps are still open, a card shows above the prompt:
+
+```
+╭──────────────────────────────────────────────────────╮
+│ ≡ PLAN                                     task list │
+│ 6 of 9 steps still open                              │
+│ Next: Fuzzy step-to-task matching                    │
+│                                                      │
+│ ●─●─●─○─○─○─○─○─○ 3/9                                │
+│                                                      │
+│ [Continue the plan] [Mark plan done]  Not now        │
+╰──────────────────────────────────────────────────────╯
+```
+
+- **Continue the plan** sends Claude a short prompt to go on with the next open step.
+- **Mark plan done** stops tracking this plan: no card, no carrying, and it is removed from disk.
+- **Not now** hides the card. It also goes away with the next prompt.
+
+No card for a subagent's turn, an interrupted turn, a turn that did not touch the plan, a plan nobody has started yet, or a finished plan. On the desktop app the steps are dots in one drawing; the terminal draws them as text. The card waits while another notification (cache-tax, you-should-know, reflect, session-budget, test-badge) is showing, and while a question is open.
+
+## Keeping the plan across /clear and compaction
+
+An open plan is saved on disk (the plugin's own store), one per project folder, with its steps and their status. It is removed once every step is done or you mark it done, and it is not brought back once it is older than 24 hours (the time of its last change).
+
+When the conversation no longer holds the plan, it gets one short section in the system prompt with the plan's name, how many steps are done, and the open steps:
+
+- after a compaction (`/compact` or automatic) of the main conversation,
+- after `/clear`,
+- in a new session in the same project, before anything was said.
+
+After `/clear` or in a new session the plan also comes back to the pane, the status line and the MODZ panel. The section is written once per such event and stays the same on each request after it, so the prompt cache keeps working. It is dropped when the plan is finished, marked done, or replaced by a different plan. It is never added for a finished plan. A worktree counts as its own project, so parallel worktrees keep separate plans.
 
 ## Where the plan comes from
 
@@ -62,9 +96,9 @@ If both a plan document and a task list exist, the document's steps lead and the
 
 ## Settings
 
-There are no plugin options.
+- **Hold the finish** (`holdFinish`, off by default). When an answer leaves steps open, the mod asks Claude to go on by itself instead of showing the card, at most 2 times per plan; after that the card shows as usual. This sends prompts without a press, so it is opt-in. Set it in the plugin's options (`/plugin`), or under `pluginConfigs` in `settings.json`.
 
-Uses no model tokens and adds nothing to the context. Its only timers are a 30-second tick while the pane is open and one 30-minute timer that takes a quiet plan off the status line. The only file reads are re-reads of markdown files Claude has just read or written.
+Makes no model calls. The only thing it adds to the context is the carried-plan section above: at most 600 characters (about 150 input tokens) on each request while it rides, after a compaction, a `/clear` or a new session with an open plan; nothing otherwise. With **Hold the finish** on, each automatic continue is one more turn. Its only timers are a 30-second tick while the pane is open and one 30-minute timer that takes a quiet plan off the status line. The only file reads are re-reads of markdown files Claude has just read or written; the only writes are the saved plan in the plugin's store.
 
 ## Language
 

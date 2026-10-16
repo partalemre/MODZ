@@ -1,5 +1,7 @@
 // The cache model: prices, the one-hour clock, the session's state and the number formats.
 
+import type { ModelSwitch } from './model-switch'
+
 export const MIN_MS = 60 * 1000
 export const HOUR_MS = 60 * MIN_MS
 export const TTL_MS = HOUR_MS
@@ -28,8 +30,8 @@ export type Price = [number, number, number]
 export type PingRecord = { at: number; read: number; write: number; usd: number | null; warm: boolean }
 export type Miss = { at: number; tokens: number; usd: number | null }
 export type GuardMode = 'refuse' | 'warn'
-/** A prompt the guard dropped, waiting on the hold card. */
-export type Held = { text: string; at: number }
+/** A prompt the guard dropped, waiting on the hold card; `switch` when a model change, not the clock, made it cold. */
+export type Held = { text: string; at: number; switch: ModelSwitch | null }
 
 export type State = {
   hasBand: boolean
@@ -40,6 +42,8 @@ export type State = {
   always: boolean
   lastRequestAt: number
   lastModel: string | null
+  /** The model of the main loop's last request: the one the cache now belongs to. */
+  cacheModel: string | null
   ctx: number
   compacted: boolean
   guard: GuardMode
@@ -56,7 +60,7 @@ export type State = {
 export function freshState(): State {
   return {
     hasBand: false, hasStatus: false, sid: '', deadline: 0, every: PING_AFTER_MS, always: false, lastRequestAt: 0,
-    lastModel: null, ctx: 0, compacted: false, guard: 'refuse', ackedAt: 0, coldWritePending: false, misses: [],
+    lastModel: null, cacheModel: null, ctx: 0, compacted: false, guard: 'refuse', ackedAt: 0, coldWritePending: false, misses: [],
     pending: null, last: null, stopped: null, held: null, resend: null,
   }
 }
@@ -67,13 +71,13 @@ export function priceOf(model: string | null): Price | null {
   return null
 }
 
-export function coldUsd(s: State): number | null {
-  const price = priceOf(s.lastModel)
+export function coldUsd(s: State, model = s.lastModel): number | null {
+  const price = priceOf(model)
   return price ? s.ctx * price[1] / 1e6 : null
 }
 
-export function warmUsd(s: State): number | null {
-  const price = priceOf(s.lastModel)
+export function warmUsd(s: State, model = s.lastModel): number | null {
+  const price = priceOf(model)
   return price ? s.ctx * price[0] / 1e6 : null
 }
 
@@ -94,6 +98,12 @@ export function breakEvenPings(s: State): number | null {
 export function isCold(s: State, now: number): boolean {
   return s.lastRequestAt > 0 && !s.compacted && now - s.lastRequestAt >= TTL_MS
 }
+
+/** A held send's card is up while its cause lasts: the clock's cold, or the model switch it was held for. */
+export const isHoldShown = (s: State, now: number): boolean => s.held !== null && (s.held.switch !== null || isCold(s, now))
+
+/** The model a held send is priced at: the one it would be sent to. */
+export const heldModel = (s: State): string | null => s.held?.switch?.to ?? s.lastModel
 
 /** Time left before a warm cache goes cold; null while nothing is known or it already is. */
 export function untilCold(s: State, now: number): number | null {
@@ -122,6 +132,7 @@ export function disarm(s: State) {
 export function resetForClear(s: State) {
   s.ctx = 0
   s.lastRequestAt = 0
+  s.cacheModel = null
   s.compacted = false
   s.ackedAt = 0
   s.coldWritePending = false

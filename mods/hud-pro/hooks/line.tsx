@@ -6,13 +6,14 @@ import type { Tone } from './theme'
 
 // The terminal's HUD: the same line as text. Thin meters with a pace tick (┊) on a wide band,
 // then the bars go, then the resets and the cost; a critical window keeps its reset to the end.
+// A near estimate ("~full 15:40", "~3 turns") follows its value until the narrowest band.
 
 // The resolved element table of the surface that draws the line; Box and Text exist on both.
 export type Ui = Record<string, any>
 
 export type LineInput = { gauges: readonly GaugeView[]; costUsd: number | null; columns: number }
 
-type Layout = { barWidth: number; resets: Resets; hasCost: boolean }
+type Layout = { barWidth: number; resets: Resets; hasCost: boolean; hasAlert: boolean }
 
 const BAR = '━'
 const TRACK = '─'
@@ -20,9 +21,9 @@ const TICK = '┊'
 const GROUP_GAP = 3
 const WIDE_COLUMNS = 96
 const MEDIUM_COLUMNS = 52
-const WIDE: Layout = { barWidth: 6, resets: 'all', hasCost: true }
-const MEDIUM: Layout = { barWidth: 0, resets: 'five', hasCost: true }
-const NARROW: Layout = { barWidth: 0, resets: 'critical', hasCost: false }
+const WIDE: Layout = { barWidth: 6, resets: 'all', hasCost: true, hasAlert: true }
+const MEDIUM: Layout = { barWidth: 0, resets: 'five', hasCost: true, hasAlert: true }
+const NARROW: Layout = { barWidth: 0, resets: 'critical', hasCost: false, hasAlert: false }
 
 function layoutFor(columns: number): Layout {
   if (columns >= WIDE_COLUMNS) return WIDE
@@ -63,6 +64,7 @@ function gaugeTree(ui: Ui, gauge: GaugeView, layout: Layout) {
       <Text dimColor>{gauge.short}</Text>
       {layout.barWidth > 0 && barTree(ui, { gauge, width: layout.barWidth })}
       {toneText(ui, { text: valueText(gauge.percent), tone: gauge.tone })}
+      {layout.hasAlert && gauge.alert !== '' && <Text>{gauge.alert}</Text>}
       {showsReset && toneText(ui, { text: resetText(gauge.reset), tone: resetTone })}
     </Box>
   )
@@ -71,7 +73,9 @@ function gaugeTree(ui: Ui, gauge: GaugeView, layout: Layout) {
 // One quiet line: every plan window, context fill and session cost. Null when there is nothing to show.
 export function lineTree(ui: Ui, input: LineInput) {
   const { Box, Text } = ui
-  const layout = layoutFor(input.columns)
+  // The estimates take room of their own, so the bars give way to them sooner.
+  const alertColumns = input.gauges.reduce((sum, gauge) => sum + (gauge.alert === '' ? 0 : gauge.alert.length + 1), 0)
+  const layout = layoutFor(input.columns - alertColumns)
   const hasCost = layout.hasCost && input.costUsd !== null
   if (input.gauges.length === 0 && !hasCost) return null
 

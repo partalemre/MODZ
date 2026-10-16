@@ -43,6 +43,8 @@ const DOTTED_NAME = /^[A-Za-z][A-Za-z0-9]*(?:[-.][A-Za-z][A-Za-z0-9]*)+$/
 const TEST_PATH = /(^|\/)(tests?|__tests__|fixtures?|__mocks__)\/|\.(test|spec)\.[cm]?[jt]sx?$/
 // Test files hold fake values on purpose; only real key shapes are reported there.
 const LENIENT_IN_TESTS = new Set(['generic', 'private-key'])
+// A key-shaped value in a test file that says it is fake (`sk-test-...`, `ghp_fake...`) is a fixture.
+const FAKE_VALUE = /test|fake|dummy|mock|sample|example|fixture/i
 
 export function isTestPath(path: string): boolean {
   return TEST_PATH.test(path)
@@ -122,7 +124,7 @@ export function findSecrets(text: string, path = ''): Secret[] {
   const seen = new Set<string>()
 
   return all.filter(secret => {
-    if (isTest && LENIENT_IN_TESTS.has(secret.kind)) return false
+    if (isTest && (LENIENT_IN_TESTS.has(secret.kind) || FAKE_VALUE.test(secret.value))) return false
     if (seen.has(secret.value)) return false
     seen.add(secret.value)
 

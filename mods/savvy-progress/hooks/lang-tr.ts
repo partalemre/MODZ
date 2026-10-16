@@ -120,4 +120,17 @@ export const tr: Strings = {
   endedCount: n => `${n} bitti`,
   plannedCount: n => `${n} planlı`,
   notDelivered: reason => `İletilemedi: ${reason}`,
+  chats: {
+    title: 'Diğer sohbetler',
+    waitingTitle: 'Seni bekliyor',
+    waiting: span => (span ? `${span} bekliyor` : 'bekliyor'),
+    states: { working: 'çalışıyor', idle: 'boşta' },
+    untitled: 'Yeni sohbet',
+    more: n => `+${n} daha`,
+    hubWaits: n => `${n} sohbet bekliyor`,
+  },
+  crab: {
+    moods: { sleeping: 'uyuyor', working: 'çalışıyor', happy: 'mutlu', worried: 'endişeli' },
+    level: n => `Sv ${n}`,
+  },
 }

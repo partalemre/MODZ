@@ -6,7 +6,8 @@ import { configFrom, donePing, editedPath, isTestCommand, parseSeconds, permissi
 import type { Ping, PingConfig, TestsSeen } from './ping'
 import { AUTO, themeFrom } from './tidemark'
 import { ring } from './ring'
-import type { RingIo } from './ring'
+import type { RingIo, Rung } from './ring'
+import { packAsset } from './pack'
 import { pinned } from './pin'
 import { setLang } from './lang'
 import { words } from './words'
@@ -29,6 +30,8 @@ const knowNotice = { plugin: 'you-should-know', key: 'notice' } as const
 const reflectNotice = { plugin: 'reflect', key: 'notice' } as const
 const budgetNotice = { plugin: 'session-budget', key: 'notice' } as const
 const testBadgeNotice = { plugin: 'test-badge', key: 'notice' } as const
+const handoffNotice = { plugin: 'handoff', key: 'notice' } as const
+const planNotice = { plugin: 'plan-steps', key: 'notice' } as const
 
 const enabledAtom = atom({ plugin: 'done-ping', key: 'isEnabled' } as const, true)
 const thresholdAtom = atom({ plugin: 'done-ping', key: 'thresholdSeconds' } as const, null)
@@ -63,15 +66,28 @@ function ioOf($: EngineInterface): RingIo {
   }
 }
 
-// The app's notification or a macOS banner; where neither can show, the shared notice line says it.
-async function deliver($: EngineInterface, ping: Ping, spec: { config: PingConfig; isForced: boolean }): Promise<void> {
+// The pack's clip for this ping; where the surface has no player it plays nothing, said in the debug log alone.
+async function playPack($: EngineInterface, ping: Ping, config: PingConfig): Promise<void> {
+  const asset = packAsset(config.soundPack, ping.kind)
+  if (asset === null) return
   try {
-    const rung = await ring(ioOf($), { ping, ...spec })
-    if (rung === 'failed') await showNotice($, ping)
+    await $.audio.play({ asset })
+  } catch (error) {
+    $.ui.log(`done-ping: sound did not play (${error instanceof Error ? error.message : 'unknown'})`, { to: 'debug' })
+  }
+}
+
+// The app's notification or a macOS banner; where neither can show, the shared notice line says it.
+// The pack sounds with whatever showed, and stays quiet with it while you are looking.
+async function deliver($: EngineInterface, ping: Ping, spec: { config: PingConfig; isForced: boolean }): Promise<void> {
+  let rung: Rung = 'failed'
+  try {
+    rung = await ring(ioOf($), { ping, ...spec })
   } catch (error) {
     $.ui.log(`done-ping: ping failed (${error instanceof Error ? error.message : 'unknown'})`, { to: 'debug' })
-    await showNotice($, ping)
   }
+  if (rung === 'failed') await showNotice($, ping)
+  if (rung !== 'quiet') await playPack($, ping, spec.config)
 }
 
 // Rung after the hook's own dispatch so the notification never delays the turn.
@@ -124,6 +140,8 @@ async function hasLouderNotice($: EngineInterface): Promise<boolean> {
     await $.state.get(reflectNotice as never),
     await $.state.get(budgetNotice as never),
     await $.state.get(testBadgeNotice as never),
+    await $.state.get(handoffNotice as never),
+    await $.state.get(planNotice as never),
   ]
 
   return others.some(other => other.value !== undefined && other.value !== null)

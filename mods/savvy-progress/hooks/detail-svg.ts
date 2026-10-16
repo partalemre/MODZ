@@ -7,8 +7,8 @@ import { extOf } from './touched'
 import { FONT, MONO, paneSvg } from './theme'
 
 // The open card's drawings on the desktop: the "now" card (an icon box in the call's colour, the
-// verb as its eyebrow, the tool and its whole target) and the list of files it touched, each with
-// a type badge and how often it read or changed it.
+// verb as its eyebrow, the tool and its whole target; its ticking span is native text above it)
+// and the list of files it touched, each with a type badge and how often it read or changed it.
 
 type Role = 'read' | 'edit' | 'run' | 'ok' | 'warn' | 'danger' | 'plan'
 
@@ -39,7 +39,7 @@ const iconAt = (icon: Icon, opts: { x: number; y: number; cls: string; scale?: n
   `<g class="${opts.cls}" transform="translate(${opts.x} ${opts.y}) scale(${opts.scale ?? 1})" fill="none" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round">${ICON[icon]}</g>`
 
 // Baselines: the eyebrow's at 24 px, the call's at 40 px, a 56 px card with 12 px of padding.
-const NOW = { h: 56, pad: 12, box: 32, rx: 12, boxRx: 9, eyebrow: 10.5, eyebrowY: 24, lineY: 40, tracking: 0.9, line2: 13.5, mono: 12.5, span: 11.5 } as const
+const NOW = { h: 56, pad: 12, box: 32, rx: 12, boxRx: 9, eyebrow: 10.5, eyebrowY: 24, lineY: 40, tracking: 0.9, line2: 13.5, mono: 12.5 } as const
 const BOLD = 1.06
 // A line of text sits centred on a row when its baseline is this far below the middle, in em.
 const MID_BASELINE = 0.36
@@ -69,15 +69,13 @@ export const nowSvg = (W: number, now: NowView): string => {
   const c = cls(look.role)
   const boxY = (NOW.h - NOW.box) / 2
   const x = NOW.pad + NOW.box + NOW.pad
-  const spanW = now.span ? textWidth(now.span, NOW.span) + NOW.pad : 0
-  const verb = fitText(upper(now.verb), NOW.eyebrow + NOW.tracking, W - x - NOW.pad - spanW)
+  const verb = fitText(upper(now.verb), NOW.eyebrow + NOW.tracking, W - x - NOW.pad)
   const iconOffset = (NOW.box - ICON_SIZE) / 2
   const body = [
     `<rect class="tile ${strokeOf(look.role)}" x=".5" y=".5" width="${W - 1}" height="${NOW.h - 1}" rx="${NOW.rx}" stroke-width="1"/>`,
     `<rect class="${c.tint}" x="${NOW.pad}" y="${boxY}" width="${NOW.box}" height="${NOW.box}" rx="${NOW.boxRx}"/>`,
     iconAt(look.icon, { x: NOW.pad + iconOffset, y: boxY + iconOffset, cls: c.icon }),
     `<text class="${c.fg}" x="${x}" y="${NOW.eyebrowY}" font-family="${FONT}" font-size="${NOW.eyebrow}" font-weight="700" letter-spacing="${NOW.tracking}">${xml(verb)}</text>`,
-    now.span ? `<text class="m" x="${W - NOW.pad}" y="${NOW.eyebrowY}" text-anchor="end" font-family="${FONT}" font-size="${NOW.span}" font-variant-numeric="tabular-nums">${xml(now.span)}</text>` : '',
     now.tool ? callLine(now, x, W - x - NOW.pad) : '',
   ]
   return paneSvg(W, NOW.h, body.join(''))

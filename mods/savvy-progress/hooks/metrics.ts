@@ -17,12 +17,12 @@ export const limitShareOf = (a: AgentRun, limit: LimitTrack | null): number | nu
 
 export type MetricsFacts = { limit: LimitTrack | null; at: number }
 
-export const chipsOf = (a: AgentRun, facts: MetricsFacts): Chip[] => {
+/** What it used, past its clock: its context, its tokens, its ≈$ and its ≈share of the 5h limit. */
+export const usageChipsOf = (a: AgentRun, limit: LimitTrack | null): Chip[] => {
   const s = t()
   const ctx = ctxOf(a)
-  const share = limitShareOf(a, facts.limit)
+  const share = limitShareOf(a, limit)
   const chips: Chip[] = [
-    { text: `${s.time} ${fmtTime(elapsed(a, facts.at))}` },
     { text: `${s.context} ${s.pct(ctx)}`, ring: { ratio: ctx / PERCENT, color: CONTEXT_COLOR } },
     { text: `${fmtTokens(a.tokens)} ${s.tokensWord}` },
     { text: `≈${fmtCost(a.costUsd)}` },
@@ -30,6 +30,9 @@ export const chipsOf = (a: AgentRun, facts: MetricsFacts): Chip[] => {
   if (share !== null) chips.push({ text: `${s.limit} ≈${s.pct(shareNumber(share))}`, ring: { ratio: share / PERCENT, color: LIMIT_COLOR } })
   return chips
 }
+
+export const chipsOf = (a: AgentRun, facts: MetricsFacts): Chip[] =>
+  [{ text: `${t().time} ${fmtTime(elapsed(a, facts.at))}` }, ...usageChipsOf(a, facts.limit)]
 
 export const metricsLine = (a: AgentRun, facts: MetricsFacts): string => chipsOf(a, facts).map(chip => chip.text).join(' · ')
 

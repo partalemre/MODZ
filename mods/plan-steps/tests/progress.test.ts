@@ -6,7 +6,7 @@ import { statusText } from '../hooks/plan'
 import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, observe, progressOf, windowOf } from '../hooks/progress'
 import type { Tracks } from '../hooks/progress'
 import type { StepStatus } from '../types'
-import { setLang } from '../hooks/lang'
+import { setLang } from '../hooks/kit/lang'
 
 const MIN = 60_000
 

@@ -1,7 +1,6 @@
 {
   "name": "blast-radius",
-  "version": "0.1.1",
-  "description": "Holds risky shell commands (rm -rf, git reset --hard, git clean, force push, migrations) and shows what they would change, with Run anyway and Keep my work (English UI, Turkish with MODZ_LANG=tr; Svg card on desktop).",
+  "description": "Holds risky shell commands (rm -rf, git reset --hard, git clean, force push, migrations) and shows what they would change, with Run anyway and Keep my work; holds an edit to a file another chat just changed, and checks other commands against your .claude/house-rules.md (English UI, Turkish with MODZ_LANG=tr; Svg card on desktop).",
   "author": {
     "name": "Claude Code DevRel"
   },

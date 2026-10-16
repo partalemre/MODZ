@@ -1,6 +1,5 @@
 {
   "name": "done-ping",
-  "version": "0.2.1",
   "description": "A notification when a long turn finishes or Claude waits on you (permission or a question): the desktop app's own notification where it can, else a macOS banner with project, what happened and a short detail",
   "author": {
     "name": "Faik Emre Partal"
@@ -22,8 +21,15 @@
     "sound": {
       "type": "string",
       "title": "Sound",
-      "description": "A macOS system sound by name (Glass, Hero, Ping, Purr, Submarine, Funk, Pop), a path to a sound file, or none",
+      "description": "The banner's sound: a macOS system sound by name (Glass, Hero, Ping, Purr, Submarine, Funk, Pop), a path to a sound file, or none. A sound pack replaces it",
       "default": "Glass"
+    },
+    "soundPack": {
+      "type": "string",
+      "title": "Sound pack",
+      "description": "Play the mod's own short sounds, one for a finished turn and one for waiting on you: chime, soft or retro; off keeps only the banner's sound",
+      "options": ["off", "chime", "soft", "retro"],
+      "default": "off"
     },
     "quietWhenFocused": {
       "type": "boolean",

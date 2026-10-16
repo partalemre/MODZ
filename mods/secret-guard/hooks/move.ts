@@ -1,4 +1,5 @@
 import type { Secret } from './detect'
+import { resolvePath } from './tools'
 
 export type EnvEntry = { name: string; value: string; isNew: boolean }
 
@@ -90,4 +91,30 @@ export function rewrite(text: string, spec: { path: string; entries: EnvEntry[] 
 
 export function hasEnvIgnore(gitignore: string): boolean {
   return gitignore.split('\n').some(line => /^\/?\.env(\*|\.\*)?\s*$/.test(line.trim()))
+}
+
+// A placeholder in the file is rewritten to the env read too: the same entry, spelled as its token.
+export function withTokens(entries: EnvEntry[], tokens: (string | undefined)[]): EnvEntry[] {
+  const spelled = entries.flatMap((entry, index) => {
+    const token = tokens[index]
+
+    return token === undefined ? [] : [{ ...entry, value: token }]
+  })
+
+  return [...entries, ...spelled]
+}
+
+const dirOf = (path: string): string => path.slice(0, path.lastIndexOf('/')) || '/'
+
+// The .env goes to the root of the repository holding the file (a worktree's own root, whose `.git` is a file),
+// never the session's root when they differ. Outside any repository: the session's folder if the file is in it.
+export async function envRootOf(spec: { path: string; cwd: string; exists: (path: string) => Promise<boolean> }): Promise<{ root: string; isRepo: boolean }> {
+  const start = dirOf(resolvePath(spec.cwd, spec.path))
+  for (let dir = start; ; dir = dirOf(dir)) {
+    if (await spec.exists(`${dir}/.git`)) return { root: dir, isRepo: true }
+    if (dir === '/') break
+  }
+  const isInSession = spec.cwd !== '' && `${start}/`.startsWith(`${spec.cwd}/`)
+
+  return { root: isInSession ? spec.cwd : start, isRepo: false }
 }

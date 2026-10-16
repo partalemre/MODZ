@@ -15,6 +15,8 @@ export type Hero = {
   eyebrow: string
   title: { lead: string; name: string; tail: string }
   sub: Part[]
+  // Claude is at work this very moment: the card's dot runs its rings.
+  isLive?: boolean
 }
 export type NowInput = {
   turn: TurnLog
@@ -113,19 +115,22 @@ function doneHero(input: NowInput): Hero {
   return quiet(w.done, w.untouched, w.untouchedSub)
 }
 
-export function heroOf(input: NowInput): Hero {
+function runningHero(input: NowInput): Hero {
   const { turn } = input
   const w = words()
-  if (turn.isRunning) {
-    const latest = [...turn.touches].filter(t => input.live.has(t.id)).sort((a, b) => a.at - b.at).pop()
-    if (latest) return liveHero(input, latest)
-    if (input.isCommitting) {
-      const sub = input.branch ? [{ text: w.toBranch(input.branch), cls: 'mid' }] : []
-      return { role: 'ok', icon: 'check', eyebrow: w.now, title: { lead: w.committing, name: '', tail: '' }, sub }
-    }
-    return quiet(w.now, w.thinking, tally(turn))
+  const latest = [...turn.touches].filter(t => input.live.has(t.id)).sort((a, b) => a.at - b.at).pop()
+  if (latest) return liveHero(input, latest)
+  if (input.isCommitting) {
+    const sub = input.branch ? [{ text: w.toBranch(input.branch), cls: 'mid' }] : []
+    return { role: 'ok', icon: 'check', eyebrow: w.now, title: { lead: w.committing, name: '', tail: '' }, sub }
   }
-  if (!turn.hasRun) return quiet(w.now, w.waiting, w.waitingSub)
+  return quiet(w.now, w.thinking, tally(turn))
+}
+
+export function heroOf(input: NowInput): Hero {
+  const { turn } = input
+  if (turn.isRunning) return { ...runningHero(input), isLive: true }
+  if (!turn.hasRun) return quiet(words().now, words().waiting, words().waitingSub)
   return doneHero(input)
 }
 

@@ -41,6 +41,8 @@ const BASES: EntryBase[] = [
   { pane: 'checkpoints', mod: 'checkpoint', icon: 'bookmark', role: 'ok', section: 'safety' },
   { pane: 'replay', mod: 'replay-theater', icon: 'rewind', role: 'plan', section: 'safety' },
   { pane: 'usage', mod: 'hud-pro', icon: 'gauge', role: 'warn', section: 'meter' },
+  { pane: 'effort', mod: 'effort-router', icon: 'bolt', role: 'run', section: 'meter' },
+  { pane: 'handoff', mod: 'handoff', icon: 'flag', role: 'plan', section: 'meter' },
   { pane: 'skins', mod: 'skins', icon: 'eye', role: 'edit', section: 'meter' },
   { pane: MODS_PANE, mod: 'modz', icon: 'cube', role: 'edit', section: 'meter' },
 ]

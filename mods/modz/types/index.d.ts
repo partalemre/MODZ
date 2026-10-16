@@ -20,6 +20,10 @@ export type HubCard = {
 // Written when a hub row is pressed; the mod that owns `pane` opens its own pane.
 export type ModzOpen = { pane: string; at: number }
 
+// The pane in the one panel (kit/stage.ts): written by the hub under `{ plugin: 'modz', key: 'stage' }`, and by a
+// mod under its own `{ plugin: '<mod>', key: 'shown' }` once its pane is open; every other pane then closes.
+export type ModzStage = { pane: string; at: number }
+
 // Written by a mod under `{ plugin: '<mod>', key: 'home' }` when its pane's "MODZ" button is pressed: the hub
 // comes forward (and opens again if it was closed).
 export type ModzHome = { at: number }
@@ -30,16 +34,18 @@ export type HubLayout = { hidden: string[]; order: string[] }
 declare module 'claude-code' {
   interface PluginState {
     // `isOn` is true while the hub runs: a mod's pane then draws its "← MODZ" button (kit/home.tsx).
-    modz: { open: ModzOpen; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean }
+    modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean }
     // Each listed mod's own hub line (hooks/hub.ts BASES), which the hub listens for and keeps.
-    'savvy-progress': { hub: HubCard; home: ModzHome }
-    filetree: { hub: HubCard; home: ModzHome }
-    'plan-steps': { hub: HubCard; home: ModzHome }
-    transceiver: { hub: HubCard; home: ModzHome }
-    'test-badge': { hub: HubCard; home: ModzHome }
-    checkpoint: { hub: HubCard; home: ModzHome }
-    'replay-theater': { hub: HubCard; home: ModzHome }
-    'hud-pro': { hub: HubCard; home: ModzHome }
-    skins: { hub: HubCard; home: ModzHome }
+    'savvy-progress': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    filetree: { hub: HubCard; home: ModzHome; shown: ModzStage }
+    'plan-steps': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    transceiver: { hub: HubCard; home: ModzHome; shown: ModzStage }
+    'test-badge': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    checkpoint: { hub: HubCard; home: ModzHome; shown: ModzStage }
+    'replay-theater': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    'hud-pro': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    skins: { hub: HubCard; home: ModzHome; shown: ModzStage }
+    'effort-router': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    handoff: { hub: HubCard; home: ModzHome; shown: ModzStage }
   }
 }

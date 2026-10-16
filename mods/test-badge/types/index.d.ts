@@ -57,14 +57,44 @@ export type BadgeNotice = {
   expiresAt: number
 }
 
+// A pull request's CI as `gh pr checks` reports it, bucketed: pass, fail (cancel counts here), pending, skipped.
+export type CiCheckState = 'pending' | 'pass' | 'fail' | 'skipped'
+export type CiCheck = { name: string; state: CiCheckState; link: string | null }
+
+// watching: polling · passed / failed: every check done · merged / closed: the PR left the open state ·
+// ended: the longest watch ran out with checks still going · none: no check ever reported.
+export type CiPhase = 'watching' | 'passed' | 'failed' | 'merged' | 'closed' | 'ended' | 'none'
+
+export type CiWatch = {
+  number: number
+  url: string
+  title: string
+  checks: CiCheck[]
+  phase: CiPhase
+  // Reviews plus comments, counted only: at the watch's start, and at the last poll.
+  talkAtStart: number
+  talk: number
+  // In $.clock.now() ms; checkedAt is null before the first poll answered.
+  startedAt: number
+  checkedAt: number | null
+  polls: number
+  // A push or a new PR expects a fresh run: a finish counts only once a check was seen pending, or after a grace.
+  isFreshRun: boolean
+  hasSeenPending: boolean
+}
+
+// The one-time card a red finish leaves on the band, until pressed or dismissed.
+export type CiCard = { id: number; number: number; url: string; failing: CiCheck[] }
+
 // The MODZ main panel's summary card (DESIGN.md §9): lo · Iris · Moss · Amber · Flare.
 export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
 export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
 
 declare module 'claude-code' {
   interface PluginState {
-    'test-badge': { badge: TestBadge; notice: BadgeNotice | null; isEnabled: boolean; filter: SuiteFilter; theme: BadgeTheme; hub: HubCard; home: { at: number } }
+    'test-badge': { badge: TestBadge; notice: BadgeNotice | null; isEnabled: boolean; filter: SuiteFilter; theme: BadgeTheme; hub: HubCard; home: { at: number }; shown: { pane: string; at: number }
+      ci: CiWatch | null; ciCard: CiCard | null }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
-    modz: { open: { pane: string; at: number }; isOn: boolean }
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
   }
 }

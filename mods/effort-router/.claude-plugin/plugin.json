@@ -1,0 +1,17 @@
+{
+  "name": "effort-router",
+  "description": "Shows each turn's effective effort and model; can route a light prompt to low effort",
+  "author": {
+    "name": "Faik Emre Partal"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "mode": {
+      "type": "string",
+      "title": "Mode",
+      "description": "show: only display each turn's effort (no tokens); auto: a prompt judged light goes at low effort (one haiku call per prompt); off. A pick in the Effort pane wins over this.",
+      "options": ["show", "auto", "off"],
+      "default": "show"
+    }
+  }
+}

@@ -20,6 +20,16 @@ const modz = {
 
       return {}
     })
+    on('command.run', { command: 'modz-on' }, async ($: any) => {
+      await $.state.set({ plugin: 'modz', key: 'isOn' }, true)
+
+      return {}
+    })
+    on('command.run', { command: 'modz-stage' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'stage' }, { pane: e.args, at: 1 })
+
+      return {}
+    })
     on('command.run', { command: 'modz-hub' }, async ($: any) => ({ text: JSON.stringify((await $.state.get({ plugin: 'test-badge', key: 'hub' })).value ?? null) }))
   },
 }
@@ -91,6 +101,24 @@ test('a MODZ open request for tests opens the details pane; one for another pane
 
   await $.command.run({ command: 'modz-open', args: 'tests' })
   expect(world.opened).toEqual(['test-badge'])
+})
+
+test('with the hub on the opened details pane reports itself shown, and steps aside when another pane takes the panel', { plugins: [modz] }, async ($: any, on: any) => {
+  const shown: unknown[] = []
+  const closed: unknown[] = []
+  on('state.set', { plugin: 'test-badge', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
+  on('ui.close', (_: any, e: any) => (closed.push(e.id), { value: undefined }))
+  await setup($, on, { opened: [], test: PASS, lint: '', code: 0 })
+  await $.command.run({ command: 'test-badge', args: 'details' })
+  // The hub is off: nothing to step aside for.
+  expect(shown).toEqual([])
+  await $.command.run({ command: 'modz-on', args: '' })
+  await $.command.run({ command: 'modz-open', args: 'tests' })
+  expect(shown).toEqual(['tests'])
+  await $.command.run({ command: 'modz-stage', args: 'tests' })
+  expect(closed).toEqual([])
+  await $.command.run({ command: 'modz-stage', args: 'plan' })
+  expect(closed).toEqual(['test-badge'])
 })
 
 test('a check that could not run is a warning, not a failure', () => {

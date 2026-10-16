@@ -15,6 +15,14 @@ export type Opts = {
   theme?: string
   // MODZ_LANG as $.env.get answers it: Turkish unless a test asks for the English default (null).
   lang?: string | null
+  /** Folders `$.fs.list` answers, by path; a file entry's text is in `files` unless it has its own `size`. */
+  dirs?: Record<string, Array<{ name: string; kind?: 'file' | 'dir'; size?: number; mtimeMs?: number }>>
+  /** The model's answer to `/mine`'s one call: a text, an error result, or a rejection. */
+  ideas?: string | 'error' | 'throw'
+  /** Whether `$.ui.copy` reaches a clipboard. */
+  canCopy?: boolean
+  /** What `tail -c <n> -- <path>` prints, by path; absent, it fails. */
+  tails?: Record<string, string>
 }
 
 export function world(on: On, opts: Opts = {}) {
@@ -27,6 +35,12 @@ export function world(on: On, opts: Opts = {}) {
   const systems: string[] = []
   const filled: string[] = []
   on('model.complete', async ($, e) => {
+    if (e.prompt.startsWith('<candidates>')) {
+      mined.push(e.prompt)
+      if (opts.ideas === 'throw') throw new Error('model blocked')
+      if (opts.ideas === 'error') return ok({ isAnswered: false, reason: 'api-error', status: 529, error: 'overloaded', usage: {} })
+      return ok({ isAnswered: true, text: opts.ideas ?? '{"ideas": []}', usage: {} })
+    }
     const text = /<user_message>([\s\S]*)<\/user_message>/.exec(e.prompt)?.[1] ?? ''
     asked.push(text)
     systems.push(e.system ?? '')
@@ -37,7 +51,31 @@ export function world(on: On, opts: Opts = {}) {
   })
   on('session.messages', async () => ok([{ role: 'assistant', text: 'I used npm to install it.', toolUses: [] }]))
   on('session.root', async () => ok(opts.root?.() ?? '/repo'))
-  on('fs.exists', async ($, e) => ok(e.path in files))
+  const dirs = opts.dirs ?? {}
+  const mined: string[] = []
+  const opened: string[] = []
+  const clipboard: string[] = []
+  on('fs.exists', async ($, e) => ok(e.path in files || e.path in dirs))
+  on('fs.list', async ($, e) => ok((dirs[e.path] ?? []).map(d => ({
+    name: d.name, kind: d.kind ?? 'file', size: d.size ?? (files[`${e.path}/${d.name}`] ?? '').length, mtimeMs: d.mtimeMs ?? 0, isLink: false,
+  }))))
+  on('session.id', async () => ok('now'))
+  const ran: string[][] = []
+  on('process.run', async ($, e) => {
+    ran.push([...e.argv])
+    const out = opts.tails?.[e.argv.at(-1) ?? '']
+    const isTail = e.argv[0] === 'tail' && e.argv[1] === '-c' && e.argv[3] === '--'
+    return ok({ exitCode: isTail && out !== undefined ? 0 : 1, stdout: out ?? '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false })
+  })
+  on('ui.open', async ($, e) => {
+    opened.push(e.id)
+    return ok({ isPlaced: true })
+  })
+  on('ui.copy', async ($, e) => {
+    if (opts.canCopy === false) return ok({ isCopied: false, reason: 'no clipboard' })
+    clipboard.push(e.text)
+    return ok({ isCopied: true })
+  })
   on('fs.read', async ($, e) => ok(files[e.path] ?? ''))
   on('fs.write', async ($, e) => {
     files[e.path] = e.text
@@ -55,7 +93,7 @@ export function world(on: On, opts: Opts = {}) {
   on('session.start', async () => ({ cwd: '/repo' }) as never)
   on('prompt.submit', async ($, e) => ({ text: e.text }))
   on('prompt.compose', async () => ({ sections: [] }))
-  return { clock, files, asked, systems, filled }
+  return { clock, files, asked, systems, filled, mined, opened, clipboard, ran }
 }
 
 export const start = ($: Engine) => $.session.start({ source: 'startup', cwd: '/repo', surface: 'terminal', isInteractive: true } as never)

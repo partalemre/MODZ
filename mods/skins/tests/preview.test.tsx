@@ -101,6 +101,7 @@ async function previewAll($: Engine, theme: Theme) {
   for (const [label, columns] of PANE_WIDTHS) {
     const pane = { title: 'Görünüm', isFocused: true, bodyColumns: columns, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} } as const
     await logTree(`${theme}-tidemark-settings-${label}`, await $.ui.mount({ ...SITE, component: 'Pane', requestId: 'skins-settings', props: pane }))
+    await logTree(`${theme}-tidemark-gallery-${label}`, await $.ui.mount({ ...SITE, component: 'Pane', requestId: 'skins-gallery', props: { ...pane, title: 'Galeri' } }))
   }
 
   await runSkin($, 'band on')

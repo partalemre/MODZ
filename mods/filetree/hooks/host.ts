@@ -24,6 +24,8 @@ export type StateHost = {
   // Whether the MODZ hub runs, and a request for it to come forward (the "← MODZ" button).
   isHubOn(): Promise<boolean>
   goHome(): Promise<void>
+  // The pane, opened when asked, now holds the MODZ panel: the hub and every other pane step aside (kit/stage.ts).
+  reportShown(): Promise<void>
 }
 
 // Files, commands, the clock and the session's environment.
@@ -50,7 +52,7 @@ export type IoHost = {
 export type UiHost = {
   toast(text: string): void
   // The pane by its own id: opened (focused when asked for) or retitled, and whether it is open now.
-  openPane(isFocused: boolean): Promise<unknown>
+  openPane(isFocused: boolean): Promise<{ isPlaced: boolean }>
   isPaneOpen(): Promise<boolean>
   copy: Engine['ui']['copy']
   surfaces: Engine['session']['surfaces']

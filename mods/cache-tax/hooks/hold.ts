@@ -106,7 +106,7 @@ export function holdTerminal(ui: Elements['terminal'], o: HoldOptions): RenderEl
   return Box({ key: 'cache-tax:hold', flexDirection: 'column', paddingX: 1, borderStyle: 'round', borderDimColor: true, children: [
     Text({ bold: true, color: kiln, children: [said.terminalEyebrow] }),
     Text({ bold: true, children: [said.headline] }),
-    Text({ dimColor: true, children: [said.wentCold(v.coldFor)] }),
+    Text({ dimColor: true, children: [v.reason[0] ?? ''] }),
     priceLine(ui, { label: said.sendNow, usd: fmtUsd(v.coldUsd), color: kiln, bar: textBar(1, cells) }),
     priceLine(ui, { label: said.warmTurn, usd: fmtUsd(v.warmUsd), color: undefined, bar: `${textBar(share, cells)} ${warmCaptions(v).at(-1) ?? ''}` }),
     Text({ dimColor: true, children: [`${said.tokens(v.tokens)} ${said.rewritten(v.rate)[0]}`] }),

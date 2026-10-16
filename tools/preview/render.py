@@ -63,6 +63,11 @@ def size(value):
 
 def box_style(props, theme):
     style = [f"display:{props.get('display', 'flex')}", f"flex-direction:{props.get('flexDirection', 'row')}"]
+    # Yoga lays every box out relative, so an absolute box is placed against its parent, in layout units.
+    style.append(f"position:{props.get('position', 'relative')}")
+    for key in ("top", "right", "bottom", "left"):
+        if key in props:
+            style.append(f"{key}:{props[key] * UNIT}px")
     for key, css in SPACING.items():
         if key in props:
             for name in (css if isinstance(css, tuple) else (css,)):
@@ -158,6 +163,7 @@ def page(tree, theme, width):
 
 
 # Svg colours follow prefers-color-scheme; pin it to the theme so the OS appearance cannot leak in.
+# Headless Chrome does not advance animations in these frames: reduced motion shows each drawing settled.
 SCHEME = {"dark": "0", "light": "1"}
 
 
@@ -165,7 +171,7 @@ def shoot(markup, out, width, theme="dark"):
     with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False) as handle:
         handle.write(markup)
     subprocess.run([CHROME, "--headless=new", "--no-sandbox", "--disable-gpu", "--hide-scrollbars", f"--window-size={width + 40},1400",
-                    f"--blink-settings=preferredColorScheme={SCHEME[theme]}",
+                    f"--blink-settings=preferredColorScheme={SCHEME[theme]}", "--force-prefers-reduced-motion",
                     f"--screenshot={out}", f"file://{handle.name}"], capture_output=True, timeout=60, check=False)
     trim(out)
 

@@ -13,7 +13,7 @@ import { wirePane } from './pane-hook'
 import { baseName } from './parse'
 import { addAgent, addFile, currentIndex, observe, progressOf, settleAgents } from './progress'
 import { approvedDoc, fileDoc, isReplacing, mayHoldPlan, statusText } from './plan'
-import { createdId, createTask, fromTodos, updateTask } from './tasks'
+import { createdId, createTask, finished, fromDeskPlan, fromTodos, updateTask } from './tasks'
 import type { HubCard, PlanDoc, PlanTask, StepTrack } from '../types'
 import { setLang } from './kit/lang'
 import { words } from './words'
@@ -26,6 +26,8 @@ const tracksAtom = atom({ plugin: 'plan-steps', key: 'tracks' } as const, {})
 const EDIT_TOOLS = ['Edit', 'Write', 'MultiEdit', 'NotebookEdit']
 const FILE_TOOLS = ['Read', ...EDIT_TOOLS]
 const LIVE_AGENT = ['async_launched', 'teammate_spawned']
+const DESK_PLAN = 'mcp__ccd_turn__update_plan'
+const DESK_WRAP_UP = 'mcp__ccd_turn__wrap_up'
 const hubRef = { plugin: 'plan-steps', key: 'hub' } as const
 
 type Timer = { cancel: () => void }
@@ -127,7 +129,10 @@ async function afterFile($: EngineInterface, call: Call): Promise<void> {
 
 // The task list is the main loop's own (TodoWrite); TaskCreate/TaskUpdate share one list across loops.
 async function afterTasks($: EngineInterface, call: Call, ran: Ran): Promise<void> {
-  if (call.tool === 'TodoWrite' && call.agentId === undefined) await setTasks($, () => fromTodos(call.todos))
+  const isMainLoop = call.agentId === undefined
+  if (call.tool === 'TodoWrite' && isMainLoop) await setTasks($, () => fromTodos(call.todos))
+  if (call.tool === DESK_PLAN && isMainLoop) await setTasks($, tasks => fromDeskPlan(tasks, call))
+  if (call.tool === DESK_WRAP_UP && isMainLoop && (await read($, tasksAtom)).length > 0) await setTasks($, finished)
   if (call.tool === 'TaskCreate') {
     const subject = String(call.subject ?? '')
     await setTasks($, tasks => createTask(withoutRestored(tasks), { id: createdId(ran.result, withoutRestored(tasks)), subject }))

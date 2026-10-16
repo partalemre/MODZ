@@ -201,3 +201,24 @@ test('a marketplace mod shows only once it is on or reports; nobody saying means
   const presence = presenceOf(market)
   expect([presence('filetree'), presence('checkpoint'), presence('hud-pro'), presence('transceiver')]).toEqual(['listed', 'off', 'unlisted', 'unlisted'])
 })
+
+// Every element beneath a found one, depth first.
+function beneath(element: any): any[] {
+  const children = [element?.children ?? element?.props?.children ?? []].flat(Infinity).filter((child: any) => typeof child === 'object' && child !== null)
+
+  return children.flatMap((child: any) => [child, ...beneath(child)])
+}
+
+test('on the desktop each row is one surface: its button sits over the drawing\'s right edge, and a status dot rides the tile', { plugins: [transceiverReporter] }, async ($: any, on: any) => {
+  stubWorld(on)
+  await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
+  await $.command.run({ command: 'say', args: JSON.stringify(card('transceiver', { tone: 'live', detail: '2 okunmamış' })) })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const inside = beneath(await ui.find({ type: 'Box', key: 'row-transceiver' }))
+  const drawing = inside.find(element => element.type === 'Svg')
+  const over = inside.find(element => element.type === 'Box' && element.props?.position === 'absolute')
+  expect(drawing?.props?.isInteractive).toBe(true)
+  expect(beneath(over).some(element => element.props?.key === 'open-transceiver')).toBe(true)
+  expect(String(drawing?.props?.source)).toContain('m-ripple')
+  expect(String(drawing?.props?.source)).not.toMatch(/class="[^"]*breathe/)
+})

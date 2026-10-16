@@ -1,10 +1,11 @@
-// The hub's Svg: the head card (the pixel mark, then what matters now), a section's eyebrow, and one row per
-// pane (icon tile, title, the mod's own live line or a quiet hint, a status dot). Motion is motion.ts's: the
+// The hub's Svg: the head card (the mark, then what matters now), a section's eyebrow, and one row per pane
+// (icon tile with a status dot on its corner, title, the mod's own live line or a quiet hint). Native buttons are
+// laid over the right edge of the head and of each row (hub-pane.tsx), so each drawing leaves that room free. Motion is motion.ts's: the
 // panel's drawings cascade in as it opens, a row sweeps once when what it shows changes, live work pulses, and a
 // row answers the pointer. Each is drawn for an interactive frame, built once per what it shows (stable.ts).
 import type { HubCard } from '../types'
 import type { Drawing } from './draw'
-import { esc, eyebrow, fit, measure, pill } from './draw'
+import { esc, eyebrow, fit, measure, pill, PILL_HEIGHT } from './draw'
 import type { Focus, HubRow } from './hub'
 import { ROLE_OF_TONE } from './hub'
 import { ICON_GRID, icon } from './kit/icons'
@@ -17,22 +18,24 @@ import { hubWords } from './words'
 
 const HEAD = 132
 const HEAD_PAD = 16
-const MARK_PITCH = 4
+const MARK_Y = 16
 const SECTION = 24
 const ROW = 52
 const TILE = 36
 const ICON = 18
 const TEXT_X = TILE + 12
-const DOT_R = 3.5
+const DOT_R = 4
+const DOT_RING = 2
 const STROKE = 1.75
 const BADGE_GAP = 8
 // The badge's own padding and the gap before it.
 const BADGE_ROOM = 24
 const RADIUS = 12
 
-const HUB_CSS = `${MOTION_CSS}.mark{fill:var(--hi)}`
+const HUB_CSS = MOTION_CSS
 
-type HeadSpec = { width: number; theme: Theme; focus: Focus | null; meta: string; cue: Cue }
+// `buttonRoom`: the width the focus button takes over the card's bottom-right corner, 0 when there is none.
+type HeadSpec = { width: number; theme: Theme; focus: Focus | null; meta: string; buttonRoom: number; cue: Cue }
 
 const doc = (spec: { width: number; height: number; theme: Theme; body: string }) => svgDoc({ ...spec, css: HUB_CSS })
 
@@ -58,6 +61,7 @@ export function hubHeadSvg(spec: HeadSpec): Drawing {
   const { width, focus, cue } = spec
   const role = focus === null ? null : ROLE_OF_TONE[focus.tone]
   const inner = width - HEAD_PAD * 2
+  const beside = inner - spec.buttonRoom
   const words = hubWords()
   const card = focus?.row.card ?? null
   const title = focus === null ? words.idleTitle : (card?.detail ?? '')
@@ -66,17 +70,16 @@ export function hubHeadSvg(spec: HeadSpec): Drawing {
   const label = focus === null ? null : `${words.now} · ${focus.row.entry.title}`
   const isLive = focus !== null && focus.tone === 'live'
   const light = role === null ? '' : headLight({ width, role, isLive, isFresh: cue.phase === 'change' })
-  const markY = 18
   const text = [
     label === null ? '' : `<g transform="translate(${HEAD_PAD} 0)">${eyebrow({ y: 70, width: inner, label, role: role ?? 'edit', meta: '' })}</g>`,
-    `<text x="${HEAD_PAD}" y="${label === null ? 82 : 96}" class="hl hi">${esc(fit(title, inner, { size: 17, weight: 620 }))}</text>`,
-    `<text x="${HEAD_PAD}" y="${label === null ? 104 : 116}" class="lb lo">${esc(fit(line, inner, { size: 12 }))}</text>`,
+    `<text x="${HEAD_PAD}" y="${label === null ? 82 : 96}" class="hl hi">${esc(fit(title, beside, { size: 17, weight: 620 }))}</text>`,
+    `<text x="${HEAD_PAD}" y="${label === null ? 104 : 116}" class="lb lo">${esc(fit(line, beside, { size: 12 }))}</text>`,
   ].join('')
   const body = [
     `<rect x="0.5" y="0.5" width="${width - 1}" height="${HEAD - 1}" rx="${RADIUS}" class="${frame}" style="stroke-width:1"/>`,
     light,
-    wordmark({ x: HEAD_PAD, y: markY, pitch: MARK_PITCH, cue }),
-    `<text x="${width - HEAD_PAD}" y="${markY + wordmarkHeight(MARK_PITCH) - 2}" text-anchor="end" class="lb lo">${esc(spec.meta)}</text>`,
+    wordmark({ x: HEAD_PAD, y: MARK_Y, cue }),
+    entering(pill({ right: width - HEAD_PAD, y: MARK_Y + (wordmarkHeight() - PILL_HEIGHT) / 2, text: spec.meta, role: null }).svg, { ...cue, order: cue.order + 1 }, 'fade'),
     entering(text, { ...cue, order: cue.order + 2 }),
   ].join('')
   const alt = `${focus === null ? `MODZ: ${words.idleTitle}. ${words.idleLine}` : `${words.now}, ${focus.row.entry.title}: ${title}`} (${spec.meta})`
@@ -93,31 +96,30 @@ export function sectionSvg(spec: { width: number; theme: Theme; label: string; c
   return { source: doc({ width: spec.width, height: SECTION, theme: spec.theme, body }), alt: label, height: SECTION }
 }
 
-function iconTile(row: HubRow, isLive: boolean): string {
+function iconTile(row: HubRow): string {
   const { role } = row.entry
   const top = (ROW - TILE) / 2
   const scale = ICON / ICON_GRID
   const offset = (TILE - ICON) / 2
-  const halo = isLive ? `<rect x="-2" y="${top - 2}" width="${TILE + 4}" height="${TILE + 4}" rx="11" class="ln-${role} breathe" fill="none" style="stroke-width:1.5"/>` : ''
 
   return [
-    halo,
     '<g class="m-tile">',
     `<rect x="0.5" y="${top + 0.5}" width="${TILE - 1}" height="${TILE - 1}" rx="10" class="bg-${role} ln-${role}"/>`,
     `<g transform="translate(${offset} ${top + offset}) scale(${scale})" fill="none" stroke-width="${STROKE / scale}" stroke-linecap="round" stroke-linejoin="round" class="st-${role}">${icon(row.entry.icon)}</g>`,
+    statusDot(row.card, { cx: TILE - 2, cy: top + 2 }),
     '</g>',
   ].join('')
 }
 
-// A dot on the right says the mod has something to say; live work sends rings out of it, a quiet mod has none.
-function statusDot(card: HubCard | null, width: number): string {
+// A dot on the tile's corner says the mod has something to say, ringed in the sheet so it reads as a badge; live
+// work sends rings out of it, a quiet mod has none.
+function statusDot(card: HubCard | null, at: { cx: number; cy: number }): string {
   if (card === null || card.detail === '') return ''
   const role = ROLE_OF_TONE[card.tone]
   if (role === null) return ''
-  const cx = width - DOT_R - 6
-  const ring = card.tone === 'live' ? `<circle cx="${cx}" cy="${ROW / 2}" r="${DOT_R}" class="fg-${role} m-ripple"/>` : ''
+  const ring = card.tone === 'live' ? `<circle cx="${at.cx}" cy="${at.cy}" r="${DOT_R}" class="fg-${role} m-ripple"/>` : ''
 
-  return `${ring}<circle cx="${cx}" cy="${ROW / 2}" r="${DOT_R}" class="fg-${role}"/>`
+  return `${ring}<circle cx="${at.cx}" cy="${at.cy}" r="${DOT_R}" class="fg-${role}" style="stroke:var(--sheet);stroke-width:${DOT_RING}px"/>`
 }
 
 function detailOf(row: HubRow): { text: string; ink: string } {
@@ -152,18 +154,17 @@ function freshLight(row: HubRow, width: number): string {
   ].join('')
 }
 
-export function hubRowSvg(spec: { width: number; theme: Theme; row: HubRow; cue: Cue }): Drawing {
+// `buttonRoom`: the width the row's buttons take over its right edge.
+export function hubRowSvg(spec: { width: number; theme: Theme; row: HubRow; buttonRoom: number; cue: Cue }): Drawing {
   const { width, row } = spec
-  const room = width - TEXT_X - DOT_R * 2 - 14
+  const room = width - TEXT_X - spec.buttonRoom
   const detail = detailOf(row)
-  const isLive = row.card?.tone === 'live' && row.card.detail !== ''
   const body = [
     `<rect x="0" y="2" width="${width}" height="${ROW - 4}" rx="10" class="m-wash"/>`,
     spec.cue.phase === 'change' ? freshLight(row, width) : '',
-    iconTile(row, isLive),
+    iconTile(row),
     titleOf(row, room),
     `<text x="${TEXT_X}" y="40" class="lb ${detail.ink}">${esc(fit(detail.text, room, { size: 12 }))}</text>`,
-    statusDot(row.card, width),
   ].join('')
   const alt = `${row.entry.title}${row.entry.badge === null ? '' : ` (${row.entry.badge})`}: ${detail.text}`
 

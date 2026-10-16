@@ -26,6 +26,8 @@ export type PaneData = {
   sum: Totals
   view: JobView | null
   at: number
+  /** The clock the desktop's drawings read (`drawnClockOf`). */
+  drawnAt: number
   panel: Panel
   limit: LimitTrack | null
   attention: Attention | null
@@ -60,6 +62,16 @@ const homeOf = (crab: HomeCrab, running: AgentRun[]): HomeMark => ({
   isMoving: running.length === 0,
 })
 
+// The desktop's drawings read the clock in steps, and at each start, call or end as it lands, so the once-a-second
+// tick does not rebuild their frames; the native text beside them keeps the seconds.
+const DRAWN_STEP_MS = 10_000
+
+const lastEventOf = (a: AgentRun): number =>
+  Math.max(a.startedAt, a.endedAt ?? 0, ...(a.history ?? []).map(e => Math.max(e.at, e.endAt ?? 0)))
+
+export const drawnClockOf = (list: AgentRun[], at: number): number =>
+  Math.max(Math.floor(at / DRAWN_STEP_MS) * DRAWN_STEP_MS, ...list.map(lastEventOf))
+
 export function paneDataOf(state: PaneState): PaneData {
   const { list } = state
   const at = Math.max(state.now, ...list.map(a => a.startedAt), 0)
@@ -74,6 +86,7 @@ export function paneDataOf(state: PaneState): PaneData {
     sum: totals(list, at),
     view,
     at,
+    drawnAt: drawnClockOf(list, at),
     panel: state.panel,
     limit: state.limit,
     attention: attentionOf(list, at),
@@ -120,5 +133,8 @@ export function headerOf(d: PaneData): HeaderData {
     home: d.home,
   }
 }
+
+/** The header as the desktop draws it: its time on the drawn clock. */
+export const drawnHeaderOf = (d: PaneData): HeaderData => headerOf({ ...d, sum: totals(d.list, d.drawnAt) })
 
 export const totalsLineOf = (data: HeaderData): string => data.stats.map(stat => `${stat.label} ${stat.value}`).join(' · ')

@@ -1,6 +1,7 @@
 import type { AgentRun } from '../types'
 import { elapsed } from './agents'
 import { crab } from './crabs'
+import { rings } from './kit/motion'
 import type { CrabOptions } from './crabs'
 import type { Planned } from './flow'
 import { fmtTime, modelName } from './format'
@@ -22,6 +23,8 @@ const LIVE_DOT = { x: 32, y: 4, r: 3 } as const
 export const CRAB = { w: 36, h: 32 } as const
 export const PULSE = 12
 const PULSE_CORE = 3
+// The kit's rings grow to 3.2 times their dot: from this one they stay inside the drawing's 12 px.
+const PULSE_RINGS = 1.8
 
 /** The worker's own count of its steps or its task list, when it keeps one: "3/5 · Hero copy". */
 export const stepsOf = (a: AgentRun): string => {
@@ -75,10 +78,11 @@ export const heroCrabSvg = (home: HomeMark): string => {
   return paneSvg(HERO_CRAB.w, HERO_CRAB.h, homeCrab(0, 2, { home, scale: HERO_CRAB.scale }) + pill)
 }
 
-// The call still open, as a still Iris dot in a faint ring: the crabs carry the panel's one motion.
+// The call still open, as an Iris dot in a faint ring, rings going out of it while the call runs.
 export const pulseSvg = (): string => {
   const c = PULSE / 2
-  return paneSvg(PULSE, PULSE, `<circle class="b-run l-run" cx="${c}" cy="${c}" r="${c - 1}" stroke-width="1"/><circle class="f-run" cx="${c}" cy="${c}" r="${PULSE_CORE}"/>`)
+  const live = rings({ cx: c, cy: c, r: PULSE_RINGS, className: 'f-run' })
+  return paneSvg(PULSE, PULSE, `<circle class="b-run l-run" cx="${c}" cy="${c}" r="${c - 1}" stroke-width="1"/>${live}<circle class="f-run" cx="${c}" cy="${c}" r="${PULSE_CORE}"/>`)
 }
 
 export const plannedLine = (p: Planned): string => {

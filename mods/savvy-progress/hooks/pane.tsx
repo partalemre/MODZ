@@ -157,11 +157,11 @@ function listTree(ui: Ui, view: PaneView) {
   const isDoneOpen = !d.panel.isDoneCollapsed
   return (
     <Box key="list" flexDirection="column" rowGap={1}>
-      {d.running.length > 0 && sectionHead(ui, layout, { label: `${s.running} · ${d.running.length}`, dot: 'run' })}
+      {d.running.length > 0 && sectionHead(ui, layout, { id: 'running', label: `${s.running} · ${d.running.length}`, dot: 'run' })}
       {d.running.map(a => agentRow(ui, a, ctx))}
-      {d.finished.length > 0 && sectionHead(ui, layout, { label: `${s.finished} · ${d.finished.length}`, dot: 'ok', toggle: { key: 'done', isOpen: isDoneOpen, onPress: on.onDone } })}
+      {d.finished.length > 0 && sectionHead(ui, layout, { id: 'finished', label: `${s.finished} · ${d.finished.length}`, dot: 'ok', toggle: { key: 'done', isOpen: isDoneOpen, onPress: on.onDone } })}
       {isDoneOpen && d.finished.map(a => agentRow(ui, a, ctx))}
-      {d.planned.length > 0 && sectionHead(ui, layout, { label: `${s.planned} · ${d.planned.length}`, dot: 'idle' })}
+      {d.planned.length > 0 && sectionHead(ui, layout, { id: 'planned', label: `${s.planned} · ${d.planned.length}`, dot: 'idle' })}
       {d.planned.map(p => plannedRow(ui, p, ctx))}
     </Box>
   )

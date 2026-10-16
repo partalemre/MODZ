@@ -3,8 +3,9 @@ import { conversationTree } from './conversation'
 import { filesTree, historyTree, nowTree } from './detail-work'
 import { t } from './i18n'
 import { lookOf } from './identity'
-import { chipsOf, metricsLine } from './metrics'
+import { chipsOf, metricsLine, usageChipsOf } from './metrics'
 import { chipsSvg } from './metrics-svg'
+import { picture } from './pane-motion'
 import type { RowContext, Ui } from './rows'
 
 // The open card reads from the top as a conversation (the task, its answers, the follow-ups), the
@@ -14,14 +15,16 @@ import type { RowContext, Ui } from './rows'
 // The room a card needs to set the message field and the stop button side by side.
 const SIDE_BY_SIDE_PX = 480
 
+// A running agent's clock ticks in the card's foot, as native text: its drawn chips leave it out, so they are not
+// redrawn every second.
 function metricsTree(ui: Ui, a: AgentRun, ctx: RowContext) {
-  const { Svg, Text } = ui
+  const { Text } = ui
   const facts = { limit: ctx.limit, at: ctx.at }
   const line = metricsLine(a, facts)
   if (!ctx.isDesktop) return <Text dimColor wrap="truncate-end">{line}</Text>
   const width = ctx.inner
-  const chips = chipsSvg(width, chipsOf(a, facts))
-  return <Svg key="chips" source={chips.source} alt={line} width={width} height={chips.height} />
+  const chips = chipsSvg(width, a.status === 'running' ? usageChipsOf(a, ctx.limit) : chipsOf(a, facts))
+  return picture(ui, { key: 'chips', at: `chips-${a.id}`, pic: { source: chips.source, alt: line, width, height: chips.height } })
 }
 
 // Any agent can be asked more: a finished one picks the conversation up again. Only a running one

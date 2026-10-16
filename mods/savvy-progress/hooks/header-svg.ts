@@ -1,4 +1,5 @@
 import { fitText, textWidth, xml } from './format'
+import { rings } from './kit/motion'
 import { upper } from './lang'
 import { meterSvg } from './meter'
 import type { Units } from './meter'
@@ -100,7 +101,9 @@ export const headerSvg = (W: number, data: HeaderData): Drawing => {
   const counts = fitText(data.counts, EYEBROW.size + 1.5, W - PAD - eyebrowEnd - home.room - 24)
   const headline = fitText(data.headline, HEADLINE.size * 1.06, W - PAD - left - percentW - GAP)
   const stats = statsSvg(data.stats, inner)
-  const dot = `<circle class="${DOT_CLASS[data.tone]}" cx="${left + DOT_R}" cy="${EYEBROW.y - DOT_R}" r="${DOT_R}"/>`
+  // While the crew runs, its dot sends out rings.
+  const spot = { cx: left + DOT_R, cy: EYEBROW.y - DOT_R, r: DOT_R, className: DOT_CLASS[data.tone] }
+  const dot = `${data.tone === 'run' ? rings(spot) : ''}<circle class="${spot.className}" cx="${spot.cx}" cy="${spot.cy}" r="${spot.r}"/>`
   const body = [
     `<rect class="tile ln" x="0.5" y="0.5" width="${W - 1}" height="${stats.height - 1}" rx="${RADIUS}" stroke-width="1"/>`,
     home.body,

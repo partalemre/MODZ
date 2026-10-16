@@ -10,6 +10,7 @@ import type { JobView } from './job'
 import { deriveJob, percentText } from './job'
 import { isIdleMood, restingCrab } from './mood'
 import { FACES } from './mood-svg'
+import { motion } from './pane-motion'
 import { pinned } from './pin'
 import { HUB_PANE, PANE } from './state'
 
@@ -65,6 +66,7 @@ async function reportShown($: EngineInterface, at: number): Promise<void> {
 async function openPane($: EngineInterface): Promise<void> {
   const at = await $.clock.now()
   await update($, now, () => at)
+  motion.reset()
   const opened = await $.ui.open({ id: PANE, title: t().pane, focus: true })
   if (opened.isPlaced) await reportShown($, at)
 }

@@ -12,8 +12,9 @@ import { stuckOf } from './insight'
 import { FACES, HOME_LOOK } from './mood-svg'
 import type { HomeMark } from './mood-svg'
 import { COMPACT_H, HERO_CRAB, compactSvg, heroCrabSvg } from './pane-svg'
-import { headerOf, summaryOf, totalsLineOf } from './pane-data'
+import { drawnHeaderOf, headerOf, summaryOf, totalsLineOf } from './pane-data'
 import type { PaneData } from './pane-data'
+import { picture } from './pane-motion'
 import type { Ui } from './rows'
 import { laneCells, runsOf, timelineOf } from './timeline'
 import type { Run, Timeline } from './timeline'
@@ -59,15 +60,20 @@ const TIMELINE_MIN_AGENTS = 2
 /** The home crab in words: "Pip, napping, Lv 2" for a drawing's alt text. */
 const homeAlt = (home: HomeMark): string => `${HOME_LOOK.name}, ${t().crab.moods[home.mood]}, ${home.level}`
 
+// Its totals run on with the work (a step's tokens, the clock), so they redraw the card without the sweep.
+function deskHead(ui: Ui, d: PaneData, layout: Layout) {
+  const data = drawnHeaderOf(d)
+  const { stats, ...shows } = data
+  const head = headerSvg(layout.W, data)
+  const alt = [data.headline, data.percent, data.counts, totalsLineOf(data), homeAlt(d.home)].filter(Boolean).join(', ')
+  return picture(ui, { key: 'head', at: 'head', pic: { source: head.source, alt, width: layout.W, height: head.height }, opts: { shows: { ...shows, labels: stats.map(stat => stat.label) } } })
+}
+
 export function headTree(ui: Ui, d: PaneData, layout: Layout) {
-  const { Box, Text, Svg } = ui
+  const { Box, Text } = ui
+  if (layout.isDesktop) return deskHead(ui, d, layout)
   const data = headerOf(d)
   const line = totalsLineOf(data)
-  if (layout.isDesktop) {
-    const head = headerSvg(layout.W, data)
-    const alt = [data.headline, data.percent, data.counts, line, homeAlt(d.home)].filter(Boolean).join(', ')
-    return <Svg key="head" source={head.source} alt={alt} width={layout.W} height={head.height} />
-  }
   return (
     <Box flexDirection="column">
       <Text wrap="truncate-end"><Text dimColor>{`${FACES[d.home.mood]} `}</Text><Text bold>{data.headline}</Text><Text bold dimColor={data.tone === 'idle'}>{`  ${data.percent}`}</Text></Text>
@@ -92,7 +98,7 @@ export function toolbarTree(ui: Ui, d: PaneData, on: PaneHandlers) {
 
 /** One agent that needs a look, under the header; "Bak" opens its card. */
 export function attentionTree(ui: Ui, view: PaneView) {
-  const { Box, Button, Svg, Text } = ui
+  const { Box, Button, Text } = ui
   const { layout, on } = view
   const att = view.d.attention
   if (!att) return null
@@ -108,7 +114,7 @@ export function attentionTree(ui: Ui, view: PaneView) {
   const width = layout.W - BUTTON_PX
   return (
     <Box key="attention" flexDirection="row" alignItems="center" columnGap={1}>
-      <Svg key="notice" source={noticeSvg(width, att)} alt={`${att.name} ${att.reason}: ${att.title}`} width={width} height={NOTICE_H} />
+      {picture(ui, { key: 'notice', at: 'attention', pic: { source: noticeSvg(width, att), alt: `${att.name} ${att.reason}: ${att.title}`, width, height: NOTICE_H } })}
       {look}
     </Box>
   )
@@ -116,9 +122,12 @@ export function attentionTree(ui: Ui, view: PaneView) {
 
 export type Toggle = { key: string; isOpen: boolean; onPress: () => void }
 
-/** A section's head: a drawn eyebrow on the desktop (its toggle at the right), a bold line or a ▸/▾ button on the terminal. */
-export function sectionHead(ui: Ui, layout: Layout, head: SectionHead & { toggle?: Toggle }) {
-  const { Box, Button, Svg, Text } = ui
+/**
+ * A section's head: a drawn eyebrow on the desktop (its toggle at the right), a bold line or a ▸/▾ button on the
+ * terminal. `id` names the section for good, while its label's count changes.
+ */
+export function sectionHead(ui: Ui, layout: Layout, head: SectionHead & { id: string; toggle?: Toggle }) {
+  const { Box, Button, Text } = ui
   const s = t()
   const toggle = head.toggle
   if (!layout.isDesktop) {
@@ -126,7 +135,7 @@ export function sectionHead(ui: Ui, layout: Layout, head: SectionHead & { toggle
     return <Box key={`h-${toggle.key}`} flexDirection="row"><Button key={toggle.key} plain label={`${toggle.isOpen ? '▾' : '▸'} ${head.label}`} onPress={toggle.onPress} /></Box>
   }
   const width = toggle ? layout.W - BUTTON_PX : layout.W
-  const svg = <Svg key="eyebrow" source={sectionSvg(width, head)} alt={head.label} width={width} height={SECTION_SVG_H} />
+  const svg = picture(ui, { key: 'eyebrow', at: `eyebrow-${head.id}`, pic: { source: sectionSvg(width, head), alt: head.label, width, height: SECTION_SVG_H } })
   if (!toggle) return <Box key={`h-${head.label}`} flexDirection="row">{svg}</Box>
   return (
     <Box key={`h-${toggle.key}`} flexDirection="row" alignItems="center" columnGap={1}>
@@ -169,19 +178,25 @@ function termTimeline(ui: Ui, tl: Timeline, layout: Layout) {
   )
 }
 
-/** The crew over time, once two or more agents share it; folds under its head. */
+// The lanes grow with the clock and every call: only a lane's coming, ending or going quiet sweeps it.
+function deskTimeline(ui: Ui, tl: Timeline, layout: Layout) {
+  const drawing = timelineSvg(layout.W, tl)
+  const shows = { lanes: tl.lanes.map(lane => [lane.id, lane.status, lane.isStuck]), isLive: tl.isLive }
+  return picture(ui, { key: 'timeline', at: 'timeline', pic: { ...drawing, width: layout.W }, opts: { shows } })
+}
+
+/** The crew over time, once two or more agents share it; folds under its head. The desktop reads the drawn clock. */
 export function timelineTree(ui: Ui, view: PaneView) {
-  const { Box, Svg } = ui
+  const { Box } = ui
   const { d, layout, on } = view
-  const tl = d.list.length >= TIMELINE_MIN_AGENTS ? timelineOf(d.list, d.at) : null
+  const tl = d.list.length >= TIMELINE_MIN_AGENTS ? timelineOf(d.list, layout.isDesktop ? d.drawnAt : d.at) : null
   if (!tl) return null
   const isOpen = d.panel.isTimelineHidden !== true
-  const head = sectionHead(ui, layout, { label: t().timeline, dot: tl.isLive ? 'run' : 'idle', toggle: { key: 'timeline', isOpen, onPress: on.onTimeline } })
-  const drawing = isOpen && layout.isDesktop ? timelineSvg(layout.W, tl) : null
+  const head = sectionHead(ui, layout, { id: 'timeline', label: t().timeline, dot: tl.isLive ? 'run' : 'idle', toggle: { key: 'timeline', isOpen, onPress: on.onTimeline } })
   return (
     <Box key="timeline-section" flexDirection="column" rowGap={layout.isDesktop ? 1 : 0}>
       {head}
-      {drawing && <Svg key="timeline" source={drawing.source} alt={drawing.alt} width={layout.W} height={drawing.height} />}
+      {isOpen && layout.isDesktop && deskTimeline(ui, tl, layout)}
       {isOpen && !layout.isDesktop && termTimeline(ui, tl, layout)}
     </Box>
   )
@@ -199,9 +214,9 @@ const iconsOf = (d: PaneData) => [
 
 /** The whole crew as one strip of crabs (desktop) or glyphs (terminal). */
 export function compactTree(ui: Ui, d: PaneData, layout: Layout) {
-  const { Svg, Text } = ui
+  const { Text } = ui
   if (layout.isDesktop) {
-    return <Svg key="compact-icons" source={compactSvg(layout.W, iconsOf(d))} alt={`${d.list.length} ${t().agentsCount}, ${summaryOf(d.sum)}`} width={layout.W} height={COMPACT_H} />
+    return picture(ui, { key: 'compact-icons', at: 'compact', pic: { source: compactSvg(layout.W, iconsOf(d)), alt: `${d.list.length} ${t().agentsCount}, ${summaryOf(d.sum)}`, width: layout.W, height: COMPACT_H } })
   }
   const glyphs = [...d.running, ...d.finished].map(a => <Text key={a.id} color={glyphKeyOf(a)}>{`${a.status === 'done' ? '✓' : '●'} `}</Text>)
   return (
@@ -214,11 +229,11 @@ export function compactTree(ui: Ui, d: PaneData, layout: Layout) {
 
 /** Nothing launched yet: the home crab, an eyebrow, one sentence and one action (DESIGN.md §4). */
 export function emptyTree(ui: Ui, view: PaneView) {
-  const { Box, Button, Svg, Text } = ui
+  const { Box, Button, Text } = ui
   const { layout, on } = view
   const home = view.d.home
   const s = t()
-  const crab = layout.isDesktop && <Svg key="crab" source={heroCrabSvg(home)} alt={homeAlt(home)} width={HERO_CRAB.w} height={HERO_CRAB.h} />
+  const crab = layout.isDesktop && picture(ui, { key: 'crab', at: 'hero-crab', pic: { source: heroCrabSvg(home), alt: homeAlt(home), width: HERO_CRAB.w, height: HERO_CRAB.h } })
   return (
     <Box key="empty" flexDirection="row" columnGap={2} alignItems="center">
       {crab}

@@ -3,6 +3,7 @@
 import type { RenderElement, RenderSurface } from 'claude-code'
 
 import type { EffortMode, TurnRow } from '../types'
+import { paneMotion } from './kit/moving'
 import { Card, cardInnerWidth, Eyebrow, isTextSurface } from './kit/ui'
 import type { DrawCtx, Ui } from './kit/ui'
 import { palette } from './kit/tokens'
@@ -148,8 +149,11 @@ function modePicker(draw: DrawCtx, o: { mode: EffortMode; onMode: (mode: EffortM
   )
 }
 
+// The pane's drawings on the desktop (kit/moving.ts): reset as the pane opens, so they cascade in each time.
+export const motion = paneMotion()
+
 export function paneTree(look: PaneLook, o: { view: PaneView; onMode: (mode: EffortMode) => void }): RenderElement {
-  const draw: DrawCtx = { ui: look.ui, surface: look.surface, isLight: look.isLight }
+  const draw: DrawCtx = { ui: look.ui, surface: look.surface, isLight: look.isLight, motion }
   const width = cardInnerWidth(look.columns)
   const { mode } = o.view
   const said = words()

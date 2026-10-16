@@ -13,7 +13,7 @@ import { pinned } from './kit/pin'
 import { isSame } from './kit/same'
 import { isOffStage, shownOf } from './kit/stage'
 import { resolveLight } from './kit/tokens'
-import { paneTree } from './pane'
+import { motion, paneTree } from './pane'
 import { DEFAULT_MODE, isSkipped, resolveMode, routedEffort } from './route'
 import { hubOf, startedRow, withStep, withTurn } from './turns'
 import { words } from './words'
@@ -90,6 +90,7 @@ async function reportShown($: EngineInterface): Promise<void> {
 }
 
 async function openPane($: EngineInterface, isFocused: boolean): Promise<void> {
+  motion.reset()
   const opened = await $.ui.open({ id: PANE, title: words().title, ...(isFocused ? { focus: true } : {}) })
   if (opened.isPlaced) await reportShown($)
 }

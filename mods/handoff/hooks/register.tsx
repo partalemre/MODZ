@@ -16,7 +16,7 @@ import { resolveLight } from './kit/tokens'
 import type { DrawCtx } from './kit/ui'
 import { COMMAND, PANE, settingsOf } from './limits'
 import type { Settings } from './limits'
-import { paneTree } from './pane'
+import { motion, paneTree } from './pane'
 import { loadNote } from './state'
 import { errorLine, touchedPath, withFile } from './track'
 import { words } from './words'
@@ -61,6 +61,7 @@ function cellsOf($: EngineInterface): Cells {
 // Every open of the pane is a person's (the card's button, /handoff show, the hub's row). Placed, it takes a running
 // hub's one panel, so the hub and every other pane step aside (kit/stage.ts); a failed note of that is only logged.
 async function openPane($: EngineInterface): Promise<void> {
+  motion.reset()
   const opened = await $.ui.open({ id: PANE, title: words().title, focus: true })
   try {
     if (!opened.isPlaced || (await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
@@ -230,7 +231,7 @@ function hookBand(on: On, settings: Settings): void {
 function hookPane(on: On, settings: Settings): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const io = ioOf($)
-    const draw: DrawCtx = { ui: $.ui.resolve(e), surface: e.surface, isLight: await isLightNow($) }
+    const draw: DrawCtx = { ui: $.ui.resolve(e), surface: e.surface, isLight: await isLightNow($), motion }
     const isHubOn = (await $.state.get(hubOnRef)).value === true
     const goHome = pressed(io, async () => $.state.set(homeRef, { at: await $.clock.now() }))
     const tree = paneTree(draw, {

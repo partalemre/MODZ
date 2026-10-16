@@ -1,5 +1,6 @@
 import type { RenderElement } from 'claude-code'
 
+import { paneMotion } from './kit/moving'
 import { ButtonRow, Card, Meter, cardInnerWidth } from './kit/ui'
 import type { ButtonSpec, DrawCtx } from './kit/ui'
 import { isTooOld } from './inject'
@@ -12,6 +13,10 @@ import type { HandoffNote, HandoffStage } from '../types'
 
 const PERCENT = 100
 const FENCE = '```'
+
+// The pane's drawings on the desktop (kit/moving.ts), handed to the kit through the pane's DrawCtx: reset as the
+// pane opens, so they cascade in each time. The band above the prompt draws without it.
+export const motion = paneMotion()
 
 export type PaneActions = { onWrite: () => void; onToggle: () => void; onDelete: () => void }
 

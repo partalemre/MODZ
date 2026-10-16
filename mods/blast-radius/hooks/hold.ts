@@ -6,6 +6,7 @@
 // waits on a short `$.process.run(["sleep", ...])` until a button's onPress sets the decision.
 // The engine follows `$` only within one file, so each hooks module hands in its own `HoldIo`.
 
+import { motion } from './card'
 import type { CardProps } from './card'
 import type { View } from './view'
 
@@ -94,6 +95,8 @@ export async function hold(io: HoldIo, mine: Held, options: HoldOptions): Promis
 
       return
     }
+    // Every card's pane opens anew, so its drawings cascade in each time (kit/moving.ts).
+    motion.reset()
     isPlaced = await io.open(paneRows(mine))
     if (!isPlaced) mine.where = 'band'
     io.redraw()

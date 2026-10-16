@@ -2,6 +2,8 @@
 // the same words as text on the terminal. The safe answer (Keep my work) holds the focus.
 // A danger card has a single Flare frame; a caution card a round Amber one (DESIGN.md §4).
 
+import { paneMotion } from './kit/moving'
+import type { MoveOpts, Pic } from './kit/moving'
 import { upper } from './lang'
 import { headerSvg, bannerSvg, listSvg } from './svg-card'
 import { palette, role, TERMINAL_KEY } from './theme'
@@ -73,23 +75,36 @@ function actions(ui: Ui, props: CardProps, lo: string | undefined) {
   )
 }
 
+// The pane's drawings on the desktop (kit/moving.ts): reset as the pane opens, so they cascade in each time. The
+// band above the prompt is no pane, so its drawings stay plain.
+export const motion = paneMotion()
+
+function picture(ui: Ui, props: CardProps, drawing: { key: string; pic: Pic & { isInteractive?: boolean }; opts?: MoveOpts }) {
+  const { Svg } = ui
+  const { key, pic, opts } = drawing
+
+  return props.place === 'pane' ? <Svg key={key} {...motion.pic(key, pic, opts)} /> : <Svg key={key} {...pic} />
+}
+
 export function desktopCard(ui: Ui, props: CardProps) {
-  const { Box, Svg } = ui
+  const { Box } = ui
   const width = svgWidth(props.columns)
   const { view } = props
   const neutral = palette(props.isLight)
   const rows = props.place === 'band' ? bandRows(view.rows) : view.rows
   const head = headerSvg(view, width)
   const banner = view.banner === null ? null : bannerSvg(view.banner, width)
-  const list = listSvg(rows, width, props.phase === 'striking')
+  // The strike plays its own motion as Delete runs, so the list sweeps only when its rows change (Show more).
+  const isStruck = props.phase === 'striking'
+  const list = listSvg(rows, width, isStruck)
   const headAlt = view.headline ?? [view.command, `${view.payload}${view.tail}`].filter(Boolean).join(' · ')
   const alt = rows.map(row => [row.name, row.count, row.size].filter(Boolean).join(' ')).join('; ')
 
   return (
     <Box flexDirection="column" borderStyle={FRAME[view.tone]} borderColor={role(view.tone, props.isLight).line} backgroundColor={neutral.card} paddingX={2} paddingY={1} gap={1}>
-      <Svg key="head" source={head.source} alt={headAlt} width={width} height={head.height} />
-      {banner === null ? null : <Svg key="banner" source={banner.source} alt={view.banner?.text ?? ''} width={width} height={banner.height} />}
-      {rows.length === 0 ? null : <Svg key="list" source={list.source} alt={alt} width={width} height={list.height} isInteractive={props.phase === 'striking' ? true : undefined} />}
+      {picture(ui, props, { key: 'head', pic: { source: head.source, alt: headAlt, width, height: head.height } })}
+      {banner === null ? null : picture(ui, props, { key: 'banner', pic: { source: banner.source, alt: view.banner?.text ?? '', width, height: banner.height } })}
+      {rows.length === 0 ? null : picture(ui, props, { key: 'list', pic: { source: list.source, alt, width, height: list.height, isInteractive: isStruck ? true : undefined }, opts: { shows: { rows, width } } })}
       {toggleOf(ui, props)}
       {actions(ui, props, neutral.lo)}
     </Box>

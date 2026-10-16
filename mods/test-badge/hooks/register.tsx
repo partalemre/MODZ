@@ -15,6 +15,7 @@ import { withHome } from './home'
 import { isOffStage, shownOf } from './stage'
 import { pinned } from './pin'
 import { AUTO, themeFrom } from './tidemark'
+import { motion } from './pane-pic'
 import { paneTree } from './view'
 import { setLang } from './lang'
 import { words } from './words'
@@ -168,6 +169,7 @@ async function reportShown($: EngineInterface): Promise<void> {
 // The same pane whoever asks (/test-badge details, the MODZ main panel; band-hook.tsx opens it the same way); an
 // open one comes forward.
 async function openPane($: EngineInterface): Promise<void> {
+  motion.reset()
   const opened = await $.ui.open({ id: PANE, title: words().paneTitle, focus: true })
   if (opened.isPlaced) await reportShown($)
 }

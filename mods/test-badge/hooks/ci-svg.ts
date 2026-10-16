@@ -1,5 +1,6 @@
 import { newTalkOf } from './ci-state'
 import { CHECK_ROLE, cardHeadline, ciLine, ciRole } from './ci-text'
+import { rings } from './kit/motion'
 import { ago } from './parse'
 import { eyebrow, fit, icon, line, measure, rect, svgDoc, text } from './svg'
 import type { Mode } from './tidemark'
@@ -7,8 +8,8 @@ import { words } from './words'
 import type { CiCard, CiCheck, CiWatch } from '../types'
 
 // The CI section's vector parts: its header (eyebrow, the PR's title, the one-line summary), one row per check
-// on a rail of step dots (pass Moss ✓, fail Flare ✕, running Iris ring with a breathing core, skipped a hollow
-// dash), and the band card's head (a Flare ✕ tile, eyebrow, "CI failed: lint", the PR's title).
+// on a rail of step dots (pass Moss ✓, fail Flare ✕, running Iris ring with a breathing core and rings going out,
+// skipped a hollow dash), and the band card's head (a Flare ✕ tile, eyebrow, "CI failed: lint", the PR's title).
 
 export type Drawing = { source: string; width: number; height: number; alt: string }
 type Frame = { width: number; mode: Mode }
@@ -28,6 +29,8 @@ const TILE = 36
 const TILE_ICON = 18
 const CARD_TEXT_X = 48
 const CARD_H = 60
+// The rings of a running check take their paint from a class (kit/motion.ts), said once in its drawing.
+const RING_CLASS = 'tb-ring'
 
 const prTag = (n: number): string => `${words().ci.eyebrow} · #${n}`
 
@@ -48,7 +51,8 @@ function dotOf(state: CiCheck['state']): string {
   const mid = ROW_H / 2
   const role = CHECK_ROLE[state]
   if (state === 'pending') {
-    return `<circle cx="${DOT_X}" cy="${mid}" r="${DOT_R - 0.75}" fill="none" stroke-width="1.5" style="stroke:var(--${role})"/>`
+    return `<style>.${RING_CLASS}{fill:var(--${role})}</style>${rings({ cx: DOT_X, cy: mid, r: DOT_R - 0.75, className: RING_CLASS })}`
+      + `<circle cx="${DOT_X}" cy="${mid}" r="${DOT_R - 0.75}" fill="none" stroke-width="1.5" style="stroke:var(--${role})"/>`
       + `<circle class="breathe" cx="${DOT_X}" cy="${mid}" r="1.75" style="fill:var(--${role})"/>`
   }
   if (state === 'skipped') {

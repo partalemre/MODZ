@@ -1,7 +1,7 @@
 import { ciPart } from './ci-view'
 import { failuresOf, isFailing } from './parse'
+import { picture } from './pane-pic'
 import { emptySvg, fileHeadSvg, headerSvg, rowSvg, skeletonSvg, tailHeadSvg } from './pane-svg'
-import type { Drawing } from './pane-svg'
 import { groupsOf } from './summary'
 import { svgWidth } from './svg'
 import type { Theme } from './tidemark'
@@ -33,11 +33,8 @@ const WIDTH = { min: 300, max: 880 }
 // A failure row is narrower than the pane by the button beside it; it never runs past a narrow pane.
 const ROW_WIDTH = { min: 220, max: 880, reserve: ROW_RESERVE }
 
-function picture(ui: Ui, drawing: Drawing, key: string) {
-  const { Svg } = ui
-
-  return <Svg key={key} source={drawing.source} alt={drawing.alt} width={drawing.width} height={drawing.height} />
-}
+// A failure row moves with its failure, not its place, so a fix above it leaves it still.
+const failureKey = (failure: Failure): string => `${failure.suite}:${failure.file ?? '-'}:${failure.line ?? '-'}:${failure.name}:${failure.message}`
 
 function groupTree(ui: Ui, view: PaneView, group: { file: string | null; failures: Failure[] }) {
   const { Box, Button } = ui
@@ -53,7 +50,7 @@ function groupTree(ui: Ui, view: PaneView, group: { file: string | null; failure
 
         return (
           <Box key={`tb-row-${index}`} flexDirection="row" alignItems="center" columnGap={1} paddingLeft={4}>
-            {picture(ui, rowSvg(frame, failure), `tb-svg-${index}`)}
+            {picture(ui, rowSvg(frame, failure), `tb-svg-${failureKey(failure)}`, { isRow: true })}
             {failure.file !== null && <Button key={`tb-open-${index}`} plain dimColor label={words().open} onPress={() => view.onOpen(failure)} />}
           </Box>
         )
@@ -97,11 +94,12 @@ export function paneTree(ui: Ui, view: PaneView) {
   if (!view.isRich) return textPane(ui, view)
   const frame = { width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }
   const isEmpty = view.badge.finishedAt === null && !view.badge.isRunning
+  // The header's age ("12 sn önce") ticks on; only the run it shows is a change worth a sweep.
   const header = isEmpty ? emptySvg(frame) : headerSvg(frame, { badge: view.badge, now: view.now })
 
   return (
     <Box flexDirection="column" rowGap={1}>
-      {picture(ui, header, 'tb-header')}
+      {picture(ui, header, 'tb-header', { shows: { frame, isEmpty, badge: view.badge } })}
       {!isEmpty && bodyTree(ui, view)}
       {rerunRow(ui, view)}
       {ciPart(ui, view)}

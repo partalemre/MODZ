@@ -8,6 +8,7 @@ import { HUB_PANE } from './hub'
 import { isLive } from './notice'
 import { isFailing } from './parse'
 import { EMPTY } from './limits'
+import { motion } from './pane-pic'
 import { pinned } from './pin'
 import { shownOf } from './stage'
 import { AUTO } from './tidemark'
@@ -66,6 +67,7 @@ async function askFix($: EngineInterface, card: CiCard): Promise<void> {
 // Ayrıntı opens the details pane as register.tsx's openPane does, and with the hub on tells it the pane took
 // its panel (kit/stage.ts); `$` is not handed across modules, so the open is spelled out here.
 async function openDetails($: EngineInterface): Promise<void> {
+  motion.reset()
   const opened = await $.ui.open({ id: PANE, title: words().paneTitle, focus: true })
   try {
     if (!opened.isPlaced || (await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return

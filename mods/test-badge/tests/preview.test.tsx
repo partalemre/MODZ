@@ -85,9 +85,10 @@ for (const theme of ['dark', 'light']) {
     await dumpPanes($, `pane-empty-${theme}`)
   })
 
-  test(`preview ${theme}: running band`, async ($: any, on: any) => {
+  test(`preview ${theme}: running band and details pane`, async ($: any, on: any) => {
     await setup($, on, { theme, run: { test: PASS, lint: '', code: 0, hold: new Promise<void>(() => undefined) } })
     await dump(`band-running-${theme}`, await $.ui.mount(bandOf))
+    await dumpPanes($, `pane-running-${theme}`)
   })
 }
 

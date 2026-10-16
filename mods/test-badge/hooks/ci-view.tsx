@@ -2,6 +2,7 @@ import { newTalkOf } from './ci-state'
 import { cardHeadSvg, checkRowSvg, ciHeadSvg } from './ci-svg'
 import type { Drawing } from './ci-svg'
 import { CHECK_ROLE, cardHeadline, ciLine, ciRole } from './ci-text'
+import { picture } from './pane-pic'
 import { ago } from './parse'
 import { svgWidth, upper } from './svg'
 import { THEME_KEY, cardColors } from './tidemark'
@@ -25,7 +26,8 @@ const GLYPH: Record<CiCheck['state'], string> = { pending: '◐', pass: '✓', f
 
 const look = (role: Role | 'lo') => (role === 'lo' ? { dimColor: true } : { color: THEME_KEY[role] })
 
-function picture(ui: Ui, drawing: Drawing, key: string) {
+// The band's card sits above the prompt, not in the pane, so its head stays a plain drawing.
+function plainPicture(ui: Ui, drawing: Drawing, key: string) {
   const { Svg } = ui
 
   return <Svg key={key} source={drawing.source} alt={drawing.alt} width={drawing.width} height={drawing.height} />
@@ -37,6 +39,9 @@ const logsLink = (ui: Ui, check: CiCheck, index: number) => {
   return check.link === null ? null : <Link key={`tb-ci-link-${index}`} href={check.link} label={words().ci.logs} />
 }
 
+// What the head shows leaving out its age ("12 sn önce"), which ticks on between polls.
+const headShows = (ci: CiWatch, frame: unknown) => ({ frame, number: ci.number, title: ci.title, phase: ci.phase, checks: ci.checks, talk: newTalkOf(ci), isChecked: ci.checkedAt !== null })
+
 function richSection(ui: Ui, view: CiView) {
   const { Box, Link } = ui
   const frame = { width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }
@@ -45,12 +50,12 @@ function richSection(ui: Ui, view: CiView) {
 
   return (
     <Box key="tb-ci" flexDirection="column" rowGap={1}>
-      {picture(ui, ciHeadSvg(frame, { watch: view.ci, now: view.now }), 'tb-ci-head')}
+      {picture(ui, ciHeadSvg(frame, { watch: view.ci, now: view.now }), 'tb-ci-head', { shows: headShows(view.ci, frame) })}
       {checks.length > 0 && (
         <Box key="tb-ci-checks" flexDirection="column">
           {checks.map((check, index) => (
             <Box key={`tb-ci-row-${index}`} flexDirection="row" alignItems="center" columnGap={1}>
-              {picture(ui, checkRowSvg(rowFrame, { check, isFirst: index === 0, isLast: index === checks.length - 1 }), `tb-ci-svg-${index}`)}
+              {picture(ui, checkRowSvg(rowFrame, { check, isFirst: index === 0, isLast: index === checks.length - 1 }), `tb-ci-svg-${check.name}`, { isRow: true })}
               {logsLink(ui, check, index)}
             </Box>
           ))}
@@ -120,7 +125,7 @@ export function ciCardTree(ui: Ui, view: CardView, theirs: unknown) {
   const { Box, Text } = ui
   const colors = cardColors(view.theme, 'flare')
   const frame = { width: svgWidth(view.columns, CARD_WIDTH), mode: view.theme.mode }
-  const head = view.isRich ? picture(ui, cardHeadSvg(frame, { card: view.card, title: view.title }), 'tb-ci-card-head') : (
+  const head = view.isRich ? plainPicture(ui, cardHeadSvg(frame, { card: view.card, title: view.title }), 'tb-ci-card-head') : (
     <Box key="tb-ci-card-head" flexDirection="row" columnGap={1}>
       <Text color={THEME_KEY.flare} bold>{`✕ ${upper(words().ci.eyebrow)} · #${view.card.number}`}</Text>
       <Text bold wrap="truncate">{cardHeadline(view.card)}</Text>

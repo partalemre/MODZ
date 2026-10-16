@@ -2,6 +2,7 @@ import type { Step } from './match'
 import { baseName } from './parse'
 import type { StepTrack } from '../types'
 import { upper } from './kit/lang'
+import { rings } from './kit/motion'
 import { escape, fit, measure, wrap } from './ui/svg'
 import { words } from './words'
 
@@ -21,6 +22,7 @@ const NAME_SIZE = 12
 const META_SIZE = 12
 const AGENT_INDENT = 14
 const LINES_MAX = 3
+const AGENT_DOT = { dx: 4, dy: 9, r: 3.5 }
 
 const BADGE_ROLE: Record<string, string> = {
   ts: 'amber', tsx: 'amber', js: 'amber', jsx: 'amber', mjs: 'amber', cjs: 'amber', py: 'tide', md: 'run', txt: 'run',
@@ -84,7 +86,9 @@ function filesBlock(files: string[], frame: Frame): Block {
 
 function agentBlock(agent: string, frame: Frame): Block {
   const texts = wrap(`${agent} · ${words().running}`, { width: frame.width - AGENT_INDENT, size: META_SIZE, maxLines: LINES_MAX })
-  const dot = `<circle cx="${frame.x + 4}" cy="${frame.top + 9}" r="3.5" class="f-run breathe"/>`
+  const at = { cx: frame.x + AGENT_DOT.dx, cy: frame.top + AGENT_DOT.dy, r: AGENT_DOT.r }
+  // A running agent is live work: rings go out of its dot.
+  const dot = `${rings({ ...at, className: 'f-run' })}<circle cx="${at.cx}" cy="${at.cy}" r="${at.r}" class="f-run breathe"/>`
 
   return { svg: dot + lines(texts, { x: frame.x + AGENT_INDENT, top: frame.top, cls: 'label mid' }), height: texts.length * LINE }
 }

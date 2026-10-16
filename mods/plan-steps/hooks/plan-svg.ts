@@ -3,6 +3,7 @@ import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, percentTe
 import type { Tracks, Window } from './progress'
 import { DETAIL_CSS, detailBlock, hasDetails } from './plan-detail'
 import type { Block, DeskDetails } from './plan-detail'
+import { rings } from './kit/motion'
 import { escape, eyebrow, measure, wrap } from './ui/svg'
 import { DOT_CSS, stepDot, stepRail } from './ui/steps'
 import type { DotState } from './ui/steps'
@@ -34,6 +35,8 @@ const CURRENT_SIZE = 13.5
 const BOLD_WIDEN = 1.06
 const TITLE_LINES_MAX = 5
 const DETAIL_PAD = 8
+// The live step's rings start inside its circle, so they come out of it and fade before its title.
+const RINGS_R = 6.5
 const CSS = `${DOT_CSS}${DETAIL_CSS}.row-on{fill:var(--plan-t)}.breathe{animation:br 1.8s ease-in-out infinite}@keyframes br{50%{opacity:.25}}`
 
 type Placed = { step: Step; index: number; top: number; height: number; isCurrent: boolean; title: string[]; detail: Block | null }
@@ -88,8 +91,10 @@ function rowSvg(model: PlanSvgModel, row: Placed): string {
   const titleCls = TITLE_CLASS[state]
   const size = row.isCurrent ? '' : ` font-size="${TITLE_SIZE}"`
   const cy = row.top + DOT_CY
+  const isLive = row.isCurrent && model.note === ''
   const parts = [
-    row.isCurrent ? `<circle cx="${DOT_X}" cy="${cy}" r="13.5" fill="none" stroke="var(--plan-l)" stroke-width="1.5"${model.note === '' ? ' class="breathe"' : ''}/>` : '',
+    row.isCurrent ? `<circle cx="${DOT_X}" cy="${cy}" r="13.5" fill="none" stroke="var(--plan-l)" stroke-width="1.5"${isLive ? ' class="breathe"' : ''}/>` : '',
+    isLive ? rings({ cx: DOT_X, cy, r: RINGS_R, className: 'f-plan' }) : '',
     stepDot({ cx: DOT_X, cy, n: row.index + 1, state, tone: 'moss' }),
     ...row.title.map((line, n) => `<text x="${TITLE_X}" y="${row.top + TITLE_BASE + n * LINE}" class="${titleCls}"${size}>${escape(line)}</text>`),
     right.text === '' ? '' : `<text x="${model.width - RIGHT_GAP}" y="${row.top + TITLE_BASE}" text-anchor="end" class="mono micro ${right.cls}">${right.text}</text>`,

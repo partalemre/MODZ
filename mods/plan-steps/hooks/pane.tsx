@@ -1,3 +1,4 @@
+import { paneMotion } from './kit/moving'
 import type { Plan, Step } from './match'
 import { baseName } from './parse'
 import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, percentText, progressOf, windowOf } from './progress'
@@ -188,6 +189,9 @@ function emptyPane(ui: Ui) {
   )
 }
 
+// The pane's drawing on the desktop (kit/moving.ts): reset as the pane opens, so it enters each time.
+export const motion = paneMotion()
+
 function desktopPane(ui: Ui, view: PaneView, layout: Layout) {
   const { Box, Svg } = ui
   const width = widthFor(layout.columns - GUTTER_COLUMNS, SVG_RANGE)
@@ -197,19 +201,21 @@ function desktopPane(ui: Ui, view: PaneView, layout: Layout) {
 
     return (
       <Box flexDirection="column" paddingX={1} paddingY={1}>
-        <Svg key="plan-svg" source={empty.source} alt={empty.alt} width={width} height={empty.height} />
+        <Svg key="plan-empty" {...motion.pic('plan-empty', { ...empty, width })} />
       </Box>
     )
   }
   const steps = plan.steps
   const current = steps[currentIndex(steps, view.tracks)]
   const details = current === undefined ? { meta: '', files: [], running: [] } : deskDetails(current, view.tracks[current.key])
-  const note = noteOf(view)
-  const drawing = planSvg({ plan, tracks: view.tracks, now: view.now, theme: view.theme, width, note }, details)
+  const drawing = planSvg({ plan, tracks: view.tracks, now: view.now, theme: view.theme, width, note: noteOf(view) }, details)
+  const alt = `${headline(plan)}${current === undefined ? '' : ` · ${words().now}: ${current.title}`}`
+  // The tick moves the times alone: what the plan shows leaves the clock out, so a new minute is no change to sweep.
+  const shows = { plan, tracks: view.tracks, theme: view.theme, width, state: planState(plan, { now: view.now, touchedAt: view.touchedAt }), details }
 
   return (
     <Box flexDirection="column" paddingX={1} paddingY={1}>
-      <Svg key="plan-svg" source={drawing.source} alt={`${headline(plan)}${current === undefined ? '' : ` · ${words().now}: ${current.title}`}`} width={width} height={drawing.height} />
+      <Svg key="plan-svg" {...motion.pic('plan-svg', { source: drawing.source, alt, width, height: drawing.height }, { shows })} />
     </Box>
   )
 }

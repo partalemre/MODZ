@@ -11,8 +11,9 @@ export type Pic = { source: string; width?: number; height?: number; alt: string
 
 export type MovingPic<T extends Pic> = T & { isInteractive: true }
 
-// `isRow`: the drawing is one row of a list, so hover washes it.
-export type MoveOpts = { isRow?: boolean }
+// `isRow`: the drawing is one row of a list, so hover washes it. `shows`: what it shows leaving out time that ticks
+// ("2 dk önce"); a new source with the same `shows` is redrawn without the sweep.
+export type MoveOpts = { isRow?: boolean; shows?: unknown }
 
 export type PaneMotion = {
   // The pane opened again: each drawing enters anew.
@@ -32,7 +33,7 @@ const PASS_MS = 120
 const MAX_ORDER = 12
 
 // `source` with its scheme said and, per its cue, its entrance or its sweep; the hover wash for a row.
-export function animate(source: string, spec: { cue: Cue } & MoveOpts): string {
+export function animate(source: string, spec: { cue: Cue; isRow?: boolean }): string {
   const parts = SVG.exec(source)
   if (parts === null) return source
   const [, open, inner, close] = parts
@@ -46,6 +47,7 @@ export function animate(source: string, spec: { cue: Cue } & MoveOpts): string {
 
 export function paneMotion(): PaneMotion {
   const drawings = stableDrawings<string>()
+  const shown = new Map<string, string>()
   const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 }
   const begin = () => {
     const now = Date.now()
@@ -54,14 +56,20 @@ export function paneMotion(): PaneMotion {
   }
 
   return {
-    reset: () => drawings.reset(),
+    reset: () => {
+      drawings.reset()
+      shown.clear()
+    },
     pic: (key, pic, opts = {}) => {
       begin()
       const what = `${opts.isRow === true ? 'row:' : ''}${pic.source}`
-      const source = drawings.draw(key, what, phase => {
-        const order = phase === 'enter' ? Math.min(MAX_ORDER, pass.entered++) : 0
+      const shows = opts.shows === undefined ? what : JSON.stringify(opts.shows)
+      const source = drawings.draw(key, what, built => {
+        const order = built === 'enter' ? Math.min(MAX_ORDER, pass.entered++) : 0
+        const phase = built === 'change' && shown.get(key) === shows ? 'still' : built
+        shown.set(key, shows)
 
-        return animate(pic.source, { cue: { phase, order }, ...opts })
+        return animate(pic.source, { cue: { phase, order }, isRow: opts.isRow })
       })
 
       return { ...pic, source, isInteractive: true }

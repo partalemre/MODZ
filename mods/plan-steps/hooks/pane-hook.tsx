@@ -5,7 +5,7 @@ import { HomeButton } from './home'
 import { HUB_PANE, isOpenFor } from './hub'
 import { isOffStage, shownOf } from './kit/stage'
 import { resolvePlan } from './match'
-import { planPane } from './pane'
+import { motion, planPane } from './pane'
 import { pinned } from './pin'
 import { themeOf } from './ui/theme'
 import type { Theme } from './ui/theme'
@@ -64,6 +64,7 @@ async function refreshTheme($: EngineInterface): Promise<void> {
 // The same pane whoever asks; an open pane comes forward. A 30-second tick moves its times while it is open.
 async function openPane($: EngineInterface): Promise<void> {
   await refreshTheme($)
+  motion.reset()
   const opened = await $.ui.open({ id: PANE, title: PANE_TITLE, focus: true })
   if (opened.isPlaced) await reportShown($)
   pane.ticker ??= $.clock.every(TICK_MS, () => void update($, tickAtom, tick => tick + 1))

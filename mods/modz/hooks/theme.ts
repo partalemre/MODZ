@@ -90,10 +90,16 @@ export function styleOf(): string {
   return `<style>svg{${varsOf(LIGHT)}}svg.t-dark{${dark}}@media (prefers-color-scheme: dark){svg.t-auto{${dark}}}${TYPE_CSS}${roleClasses()}${MOTION_CSS}${REDUCED}</style>`
 }
 
-export type SvgDoc = { width: number; height: number; theme: Theme; body: string }
+// `css` is a drawing's own rules beside the shared ones (the hub's motion); the reduced-motion rule still wins.
+export type SvgDoc = { width: number; height: number; theme: Theme; body: string; css?: string }
+
+// An interactive Svg is drawn in a frame of its own; a frame whose colour scheme differs from the page's is painted
+// on an opaque sheet, so the drawing says its scheme (a style in an inline svg reaches the frame's root too).
+const SCHEME: Record<Theme, string> = { light: 'light', dark: 'dark', auto: 'light dark' }
 
 export function svgDoc(doc: SvgDoc): string {
   const width = Math.round(doc.width)
+  const scheme = `:root{color-scheme:${SCHEME[doc.theme]}}`
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" class="t-${doc.theme}" width="${width}" height="${doc.height}" viewBox="0 0 ${width} ${doc.height}">${styleOf()}${doc.body}</svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="t-${doc.theme}" width="${width}" height="${doc.height}" viewBox="0 0 ${width} ${doc.height}">${styleOf()}<style>${scheme}${doc.css ?? ''}</style>${doc.body}</svg>`
 }

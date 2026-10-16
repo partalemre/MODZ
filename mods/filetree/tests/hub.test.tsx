@@ -14,6 +14,16 @@ const modz = {
 
       return {}
     })
+    on('command.run', { command: 'modz-on' }, async ($: any) => {
+      await $.state.set({ plugin: 'modz', key: 'isOn' }, true)
+
+      return {}
+    })
+    on('command.run', { command: 'modz-stage' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'stage' }, { pane: e.args, at: 1 })
+
+      return {}
+    })
     on('command.run', { command: 'modz-hub' }, async ($: any) => ({ text: JSON.stringify((await $.state.get({ plugin: 'filetree', key: 'hub' })).value ?? null) }))
   },
 }
@@ -88,6 +98,29 @@ test('modz.open with pane "files" opens the pane titled Dosyalar; another pane k
   await $.command.run({ command: 'modz-open', args: 'files' })
   await clock.settle()
   expect(opens.slice(before).some(o => o.id === 'filetree' && o.title === 'Dosyalar' && o.focus === true)).toBe(true)
+})
+
+test('with the hub on an opened Files pane reports itself shown, and steps aside when another pane takes the panel', { timeoutMs: 20_000, plugins: [modz] } as any, async ($: any, on: any) => {
+  const root = '/Users/k/MODZ'
+  const clock = world(on, { root, files: ['a.ts'], status: '## main\0', heads: { [root]: ['1111111aaaa'] } })
+  const shown: unknown[] = []
+  const closed: unknown[] = []
+  on('state.set', { plugin: 'filetree', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
+  on('ui.close', (_: any, e: any) => (closed.push(e.id), { value: undefined }))
+  await $.session.start({ cwd: root, surface: 'desktop', isInteractive: true })
+  await clock.settle()
+  await $.command.run({ command: 'modz-open', args: 'files' })
+  await clock.settle()
+  // The hub is off: nothing to step aside for.
+  expect(shown).toEqual([])
+  await $.command.run({ command: 'modz-on', args: '' })
+  await $.command.run({ command: 'modz-open', args: 'files' })
+  await clock.settle()
+  expect(shown).toEqual(['files'])
+  await $.command.run({ command: 'modz-stage', args: 'files' })
+  expect(closed).toEqual([])
+  await $.command.run({ command: 'modz-stage', args: 'agents' })
+  expect(closed).toEqual(['filetree'])
 })
 
 test('desktop toolbar: one row, the rest under Daha fazla, and single-key shortcuts', { timeoutMs: 20_000 }, async ($, on) => {

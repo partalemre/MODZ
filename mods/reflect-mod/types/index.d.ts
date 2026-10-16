@@ -83,8 +83,10 @@ declare module 'claude-code' {
       copied: string | null
       /** Written when the person presses "← MODZ" in the Ideas pane (DESIGN.md §9). */
       home: { at: number }
+      // The Ideas pane is open: the MODZ hub puts it in its one panel and closes the rest (kit/stage.ts).
+      shown: { pane: string; at: number }
     }
     // The MODZ main panel's values this mod reads (DESIGN.md §9); modz owns and writes them.
-    modz: { open: { pane: string; at: number }; isOn: boolean }
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
   }
 }

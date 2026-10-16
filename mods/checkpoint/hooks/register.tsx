@@ -9,6 +9,8 @@ import type { MetaMap } from './meta'
 import { clip, paneTree, targetOf } from './pane'
 import { withHome } from './home'
 import { pinned } from './pin'
+import { shownOf } from './stage'
+import { hookStage } from './stage-hook'
 import { setLang } from './lang'
 import { AUTO, themeFrom } from './tidemark'
 import { words } from './words'
@@ -178,7 +180,7 @@ async function toggle($: EngineInterface, arg: string): Promise<void> {
   $.ui.toast(words().toggled(isOn))
 }
 
-// `isFocused` for the main panel's request: an open pane comes forward instead of staying behind.
+// `isFocused` for the main panel's request: an open pane comes forward. Once up it takes a running hub's panel (kit/stage.ts).
 async function openPane($: EngineInterface, isFocused = false): Promise<void> {
   try {
     const repo = await repoOf($)
@@ -188,7 +190,13 @@ async function openPane($: EngineInterface, isFocused = false): Promise<void> {
   } catch {
     $.ui.log('checkpoint: could not list checkpoints', { to: 'debug' })
   }
-  await $.ui.open({ id: PANE, title: words().title, ...(isFocused ? { focus: true } : {}) })
+  const opened = await $.ui.open({ id: PANE, title: words().title, ...(isFocused ? { focus: true } : {}) })
+  try {
+    const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
+    if (opened.isPlaced && isHubOn) await $.state.set({ plugin: 'checkpoint', key: 'shown' }, shownOf(HUB_PANE, await $.clock.now()))
+  } catch (error) {
+    $.ui.log(`checkpoint: shown failed (${String(error)})`, { to: 'debug' })
+  }
 }
 
 type On = Parameters<Register>[0]
@@ -263,6 +271,7 @@ function hookTurns(on: On): void {
 export const register: Register = on => {
   hookCommands(on)
   hookTurns(on)
+  hookStage(on)
 
   // The main panel's open request: opens only, so a pane already open comes forward instead of closing.
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {

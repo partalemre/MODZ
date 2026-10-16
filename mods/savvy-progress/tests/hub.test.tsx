@@ -20,6 +20,14 @@ const HUB_STAND_IN = {
       await $.state.set({ plugin: 'modz', key: 'open' }, { pane: e.args, at: Date.now() })
       return { text: 'ok' }
     })
+    on('command.run', { command: 'hub-on' }, async ($: any) => {
+      await $.state.set({ plugin: 'modz', key: 'isOn' }, true)
+      return { text: 'ok' }
+    })
+    on('command.run', { command: 'hub-stage' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'stage' }, { pane: e.args, at: Date.now() })
+      return { text: 'ok' }
+    })
   },
 }
 const WITH_HUB = { plugins: [HUB_STAND_IN] }
@@ -27,6 +35,7 @@ const WITH_HUB = { plugins: [HUB_STAND_IN] }
 const reading = async ($: any) => JSON.parse((await $.command.run({ command: 'hub-card', args: '' })).text)
 const card = async ($: any) => (await reading($)).value
 const openFromHub = ($: any, pane: string) => $.command.run({ command: 'hub-open', args: pane })
+const stageFromHub = ($: any, pane: string) => $.command.run({ command: 'hub-stage', args: pane })
 
 test('the card stands from session start: idle, nothing to say', WITH_HUB, async ($, on) => {
   await setup($, on)
@@ -75,6 +84,22 @@ test("the hub's open request opens the Ajanlar pane, and only for its own key", 
   // Open, never toggle: a second request leaves it open.
   expect(world.opened).toEqual(['savvy-agents', 'savvy-agents'])
   expect(world.closed).toEqual([])
+})
+
+test('with the hub on the opened pane reports itself shown, and steps aside when another pane takes the panel', WITH_HUB, async ($, on) => {
+  const shown: unknown[] = []
+  on('state.set', { plugin: 'savvy-progress', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
+  const { world } = await setup($, on)
+  await openFromHub($, 'agents')
+  // The hub is off: nothing to step aside for.
+  expect(shown).toEqual([])
+  await $.command.run({ command: 'hub-on', args: '' })
+  await openFromHub($, 'agents')
+  expect(shown).toEqual(['agents'])
+  await stageFromHub($, 'agents')
+  expect(world.closed).toEqual([])
+  await stageFromHub($, 'files')
+  expect(world.closed).toEqual(['savvy-agents'])
 })
 
 const waitingElsewhere = (at: number) => ({ project: 'shop', title: 'Fix checkout', state: 'waiting', since: 0, at })

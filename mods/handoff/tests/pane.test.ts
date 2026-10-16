@@ -86,3 +86,22 @@ test('a note a later chat took says so, and offers no toggle', async ($: any, on
   expect(await pane.find({ text: /A later chat already took it in/ })).toBeDefined()
   expect(buttonsOf(await pane.drawn())).toEqual(['handoff-write-now', 'handoff-delete'])
 })
+
+test('with the hub on the opened pane reports itself shown, and steps aside when another pane takes the panel', { plugins: [modz] }, async ($: any, on: any) => {
+  const shown: unknown[] = []
+  const closed: unknown[] = []
+  on('state.set', { plugin: 'handoff', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
+  on('ui.close', (_: any, e: any) => (closed.push(e.id), { value: undefined }))
+  stub(on, newWorld())
+  await start($, 'desktop')
+  await $.command.run({ command: 'handoff', args: 'show' })
+  // The hub is off: nothing to step aside for.
+  expect(shown).toEqual([])
+  await $.command.run({ command: 'hub-on', args: '' })
+  await $.command.run({ command: 'modz-open', args: 'handoff' })
+  expect(shown).toEqual(['handoff'])
+  await $.command.run({ command: 'modz-stage', args: 'handoff' })
+  expect(closed).toEqual([])
+  await $.command.run({ command: 'modz-stage', args: 'usage' })
+  expect(closed).toEqual(['handoff'])
+})

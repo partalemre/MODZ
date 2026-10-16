@@ -16,6 +16,16 @@ const modz = {
 
       return {}
     })
+    on('command.run', { command: 'modz-on' }, async ($: any) => {
+      await $.state.set({ plugin: 'modz', key: 'isOn' }, true)
+
+      return {}
+    })
+    on('command.run', { command: 'modz-stage' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'stage' }, { pane: e.args, at: 1 })
+
+      return {}
+    })
     on('command.run', { command: 'modz-hub' }, async ($: any) => ({ text: JSON.stringify((await $.state.get({ plugin: 'replay-theater', key: 'hub' })).value ?? null) }))
   },
 }
@@ -58,6 +68,25 @@ test('a MODZ open request for replay opens the pane, even with nothing to replay
   // Already open: it only comes forward, with no second wait.
   await $.command.run({ command: 'modz-open', args: 'replay' })
   expect(world.opened).toEqual(['replay-theater', 'replay-theater'])
+})
+
+test('with the hub on the opened pane reports itself shown, and steps aside when another pane takes the panel', { plugins: [modz] }, async ($: any, on: any) => {
+  const shown: unknown[] = []
+  on('state.set', { plugin: 'replay-theater', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
+  const world = newWorld()
+  const clock = await setup($, on, world)
+  const opening = $.command.run({ command: 'modz-open', args: 'replay' })
+  await clock.advance(OPEN_WAIT_MS)
+  await opening
+  // The hub is off: nothing to step aside for.
+  expect(shown).toEqual([])
+  await $.command.run({ command: 'modz-on', args: '' })
+  await $.command.run({ command: 'modz-open', args: 'replay' })
+  expect(shown).toEqual(['replay'])
+  await $.command.run({ command: 'modz-stage', args: 'replay' })
+  expect(world.closed).toEqual([])
+  await $.command.run({ command: 'modz-stage', args: 'checkpoints' })
+  expect(world.closed).toEqual(['replay-theater'])
 })
 
 test('the card and the open match are pure', () => {

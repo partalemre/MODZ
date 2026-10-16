@@ -4,13 +4,14 @@ import type { EngineInterface, Register, ThemeKey } from 'claude-code'
 import type { CrabMood } from '../types'
 import { bandSvg, BAND_H } from './band-svg'
 import { isOwnOpen } from './hub'
+import { isOffStage, shownOf } from './stage'
 import { t } from './i18n'
 import type { JobView } from './job'
 import { deriveJob, percentText } from './job'
 import { isIdleMood, restingCrab } from './mood'
 import { FACES } from './mood-svg'
 import { pinned } from './pin'
-import { PANE } from './state'
+import { HUB_PANE, PANE } from './state'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
 const agents = atom({ plugin: 'savvy-progress', key: 'agents' } as const, [])
@@ -50,11 +51,22 @@ const pillKey = (view: JobView): ThemeKey => {
   return view.failed ? 'warning' : 'success'
 }
 
+// Tells the hub this pane now holds the panel, so the hub and every other pane step aside (kit/stage.ts).
+async function reportShown($: EngineInterface, at: number): Promise<void> {
+  try {
+    if ((await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
+    await $.state.set({ plugin: 'savvy-progress', key: 'shown' }, shownOf(HUB_PANE, at))
+  } catch (cause) {
+    $.ui.log(`savvy-progress: could not tell MODZ the pane is shown: ${String(cause)}`, { to: 'debug' })
+  }
+}
+
 // Opens the İlerleme pane, or brings it forward when it is up already; never closes it.
 async function openPane($: EngineInterface): Promise<void> {
   const at = await $.clock.now()
   await update($, now, () => at)
-  await $.ui.open({ id: PANE, title: t().pane, focus: true })
+  const opened = await $.ui.open({ id: PANE, title: t().pane, focus: true })
+  if (opened.isPlaced) await reportShown($, at)
 }
 
 // /agents-info and the crew button: open the pane, or close it when it is up; true when it ends up open.
@@ -162,6 +174,13 @@ function onOpen(on: On): void {
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
     const done = await next(e)
     if (isOwnOpen(e.value)) await openPane($)
+    return done
+  }).catch(($, e, next) => next(e))
+
+  // Another pane took the MODZ panel: this one steps aside rather than wait as a tab.
+  on('state.set', { plugin: 'modz', key: 'stage' }, async ($, e, next) => {
+    const done = await next(e)
+    if (isOffStage(e.value, HUB_PANE)) await $.ui.close({ id: PANE })
     return done
   }).catch(($, e, next) => next(e))
 }

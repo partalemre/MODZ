@@ -115,13 +115,14 @@ export function buttonsOf(node: any, out: string[] = []): string[] {
   return out
 }
 
-// Stands for the MODZ hub: it switches itself on, writes open requests, reads this mod's card and hears `home`.
+// Stands for the MODZ hub: it switches itself on, writes open and stage requests, reads this mod's card and hears `home`.
 export const modz = {
   name: 'modz',
   register(on: any) {
     const heard: unknown[] = []
-    on('command.run', { command: 'hub-on' }, async ($: any) => ($.state.set({ plugin: 'modz', key: 'isOn' }, true), {}))
-    on('command.run', { command: 'modz-open' }, async ($: any, e: any) => ($.state.set({ plugin: 'modz', key: 'open' }, { pane: e.args, at: 1 }), {}))
+    on('command.run', { command: 'hub-on' }, async ($: any) => (await $.state.set({ plugin: 'modz', key: 'isOn' }, true), {}))
+    on('command.run', { command: 'modz-open' }, async ($: any, e: any) => (await $.state.set({ plugin: 'modz', key: 'open' }, { pane: e.args, at: 1 }), {}))
+    on('command.run', { command: 'modz-stage' }, async ($: any, e: any) => (await $.state.set({ plugin: 'modz', key: 'stage' }, { pane: e.args, at: 1 }), {}))
     on('command.run', { command: 'modz-hub' }, async ($: any) => ({ text: JSON.stringify((await $.state.get({ plugin: 'handoff', key: 'hub' })).value ?? null) }))
     on('state.set', { key: 'home' }, async (_: any, e: any, next: any) => (heard.push(e.value), next(e)))
     on('command.run', { command: 'hub-heard' }, async () => ({ text: JSON.stringify(heard) }))

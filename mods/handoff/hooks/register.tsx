@@ -11,6 +11,7 @@ import { withHome } from './kit/home'
 import { setLang } from './kit/lang'
 import { pinned } from './kit/pin'
 import { isSame } from './kit/same'
+import { isOffStage, shownOf } from './kit/stage'
 import { resolveLight } from './kit/tokens'
 import type { DrawCtx } from './kit/ui'
 import { COMMAND, PANE, settingsOf } from './limits'
@@ -57,6 +58,18 @@ function cellsOf($: EngineInterface): Cells {
   }
 }
 
+// Every open of the pane is a person's (the card's button, /handoff show, the hub's row). Placed, it takes a running
+// hub's one panel, so the hub and every other pane step aside (kit/stage.ts); a failed note of that is only logged.
+async function openPane($: EngineInterface): Promise<void> {
+  const opened = await $.ui.open({ id: PANE, title: words().title, focus: true })
+  try {
+    if (!opened.isPlaced || (await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
+    await $.state.set({ plugin: 'handoff', key: 'shown' }, shownOf(PANE, await $.clock.now()))
+  } catch (error) {
+    $.ui.log(`handoff: shown failed (${reasonOf(error)})`, { to: 'debug' })
+  }
+}
+
 // The engine calls the other files use, as closures over this hook's `$`.
 function ioOf($: EngineInterface): Io {
   const cells = cellsOf($)
@@ -77,7 +90,7 @@ function ioOf($: EngineInterface): Io {
     run: (argv, options) => $.process.run(argv, options),
     writeFile: (path, text) => $.fs.write(path, text),
     compact: () => $.session.compact(),
-    openPane: () => $.ui.open({ id: PANE, title: words().title, focus: true }),
+    openPane: () => openPane($),
     log: text => $.ui.log(`handoff: ${text}`, { to: 'debug' }),
   }
 }
@@ -155,6 +168,14 @@ function hookCommands(on: On, settings: Settings): void {
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
     const done = await next(e)
     if (isOpenFor(e.value, PANE)) await ioOf($).openPane()
+
+    return done
+  }).catch(($, e, next) => next(e))
+
+  // Another pane took the hub's one panel: this one steps aside rather than wait as a tab.
+  on('state.set', { plugin: 'modz', key: 'stage' }, async ($, e, next) => {
+    const done = await next(e)
+    if (isOffStage(e.value, PANE)) await $.ui.close({ id: PANE })
 
     return done
   }).catch(($, e, next) => next(e))

@@ -11,6 +11,7 @@ import type { JudgeEnv, JudgeIo } from './kit/judge'
 import { setLang } from './kit/lang'
 import { pinned } from './kit/pin'
 import { isSame } from './kit/same'
+import { isOffStage, shownOf } from './kit/stage'
 import { resolveLight } from './kit/tokens'
 import { paneTree } from './pane'
 import { DEFAULT_MODE, isSkipped, resolveMode, routedEffort } from './route'
@@ -77,8 +78,21 @@ async function setMode($: EngineInterface, mode: EffortMode): Promise<void> {
   await writeHub($)
 }
 
-const openPane = ($: EngineInterface, isFocused: boolean) =>
-  $.ui.open({ id: PANE, title: words().title, ...(isFocused ? { focus: true } : {}) })
+// Placed, the pane takes a running hub's one panel, so the hub and every other pane step aside (kit/stage.ts).
+// A failed note of that is only logged: the pane is open either way.
+async function reportShown($: EngineInterface): Promise<void> {
+  try {
+    if ((await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
+    await $.state.set({ plugin: 'effort-router', key: 'shown' }, shownOf(PANE, await $.clock.now()))
+  } catch (error) {
+    $.ui.log(`effort-router: shown failed (${String(error)})`, { to: 'debug' })
+  }
+}
+
+async function openPane($: EngineInterface, isFocused: boolean): Promise<void> {
+  const opened = await $.ui.open({ id: PANE, title: words().title, ...(isFocused ? { focus: true } : {}) })
+  if (opened.isPlaced) await reportShown($)
+}
 
 type On = Parameters<Register>[0]
 type Options = Parameters<Register>[1]
@@ -104,6 +118,14 @@ function sessionHooks(on: On, options: Options): void {
     const done = await next(e)
     const pane = (e.value as { pane?: unknown } | undefined)?.pane
     if (pane === PANE) await openPane($, true)
+
+    return done
+  }).catch(($, e, next) => next(e))
+
+  // Another pane took the hub's one panel: this one steps aside rather than wait as a tab.
+  on('state.set', { plugin: 'modz', key: 'stage' }, async ($, e, next) => {
+    const done = await next(e)
+    if (isOffStage(e.value, PANE)) await $.ui.close({ id: PANE })
 
     return done
   }).catch(($, e, next) => next(e))

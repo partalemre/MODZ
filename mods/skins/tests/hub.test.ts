@@ -9,12 +9,23 @@ setLang('tr')
 
 // The MODZ main panel's side of skins (DESIGN.md §9): the `hub` card and the `modz.open` request.
 
-// A stand-in for the MODZ main panel: a press on one of its rows writes `modz.open`.
+// A stand-in for the MODZ main panel: a press on one of its rows writes `modz.open`; it also switches itself on
+// and puts a pane in its one panel (`modz.stage`).
 const MODZ = {
   name: 'modz',
   register(on: any) {
     on('command.run', { command: 'modz-press' }, async ($: any, e: any) => {
       await $.state.set({ plugin: 'modz', key: 'open' }, { pane: e.args, at: 1 })
+
+      return {}
+    })
+    on('command.run', { command: 'modz-on' }, async ($: any) => {
+      await $.state.set({ plugin: 'modz', key: 'isOn' }, true)
+
+      return {}
+    })
+    on('command.run', { command: 'modz-stage' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'stage' }, { pane: e.args, at: 1 })
 
       return {}
     })
@@ -42,6 +53,25 @@ test('a MODZ hub press for skins opens the settings asking for the keyboard, so 
   expect(world.opens[0]?.focus).toBe(true)
   expect(isOwnOpen({ pane: 'skins', at: 1 })).toBe(true)
   expect(isOwnOpen(null)).toBe(false)
+})
+
+test('with the hub on the opened settings report themselves shown, and both panes step aside when another takes the panel', { plugins: [MODZ] } as never, async ($: any, on: any) => {
+  const shown: unknown[] = []
+  const closed: unknown[] = []
+  on('state.set', { plugin: 'skins', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
+  on('ui.close', (_: any, e: any) => (closed.push(e.id), { value: undefined }))
+  stubEngine(on)
+  await start($)
+  await runSkin($, '')
+  // The hub is off: nothing to step aside for.
+  expect(shown).toEqual([])
+  await $.command.run({ command: 'modz-on', args: '' })
+  await $.command.run({ command: 'modz-press', args: 'skins' })
+  expect(shown).toEqual(['skins'])
+  await $.command.run({ command: 'modz-stage', args: 'skins' })
+  expect(closed).toEqual([])
+  await $.command.run({ command: 'modz-stage', args: 'usage' })
+  expect(closed).toEqual(['skins-settings', 'skins-gallery'])
 })
 
 test('the MODZ card names the skin and its background, once per change', async ($, on) => {

@@ -3,9 +3,8 @@ import type { EngineInterface, Frozen, On, Register, RenderInput } from 'claude-
 
 import type { SkinSlot, UsageSnap } from '../types'
 import { DEFAULT_PREFS } from './command'
-import { DESIGN, DESIGN_TOOL, runDesign } from './designer'
-import { diffstat } from './format'
-import { EMPTY_HUB, isOwnOpen } from './hub'
+import { DESIGN_TOOL, runDesign } from './designer'
+import { EMPTY_HUB, HUB_PANE, isOwnOpen } from './hub'
 import { lookOf } from './look'
 import { activeSkin, commit, load, syncHub } from './prefs-store'
 import type { PrefsHost } from './prefs-store'
@@ -18,9 +17,11 @@ import { runSkin, skinCommand } from './skin-command'
 import { PROBE_MS, refreshTheme } from './theme'
 import type { ThemeHost } from './theme'
 import { usageSnap } from './svg-usage'
-import { addCall, type Live, NO_STATS, withTurn } from './turn-stats'
+import { type Live, NO_STATS, withTurn } from './turn-stats'
+import { onCalls } from './call-marks'
 import type { View } from './view'
 import { setLang } from './lang'
+import { isOffStage, shownOf } from './stage'
 import { say } from './words'
 
 const SETTINGS = 'skins-settings'
@@ -84,7 +85,19 @@ async function refreshUsage($: EngineInterface): Promise<void> {
 // stays open, so only a focused pane comes in front of it. Opened otherwise it takes none, so
 // letters typed meant elsewhere never reach its hotkeys.
 async function openSettings($: EngineInterface, isAsked: boolean): Promise<void> {
-  await $.ui.open({ id: SETTINGS, title: settingsTitle(), closeOnEscape: true, ...(isAsked ? { focus: true } : {}) })
+  const opened = await $.ui.open({ id: SETTINGS, title: settingsTitle(), closeOnEscape: true, ...(isAsked ? { focus: true } : {}) })
+  if (isAsked && opened.isPlaced) await reportShown($)
+}
+
+// The settings, opened when asked, take a running hub's one panel, so the hub and every other pane step aside
+// (kit/stage.ts). A failed note of that is only logged: the pane is open either way.
+async function reportShown($: EngineInterface): Promise<void> {
+  try {
+    if ((await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
+    await $.state.set({ plugin: 'skins', key: 'shown' }, shownOf(HUB_PANE, await $.clock.now()))
+  } catch {
+    $.ui.log('skins: could not tell the hub the settings are shown', { to: 'debug' })
+  }
 }
 
 const openGallery = ($: EngineInterface) => $.ui.open({ id: GALLERY, title: say().galleryTitle, focus: true, closeOnEscape: true })
@@ -205,15 +218,6 @@ function onTurnStart(on: On, live: Live): void {
 
     return result
   })
-
-  // Notes which prompts carried images, so their row keeps Claude Code's drawing of them.
-  on('session.append', async ($, e, next) => {
-    const stored = await next(e)
-    const hasImage = e.door === 'prompt' && e.message.content.some(block => block.type === 'image')
-    if (hasImage && stored.uuid !== undefined) await update($, memberOf(imagesAtom, { requestId: stored.uuid }), () => true)
-
-    return stored
-  })
 }
 
 function onTurnEnd(on: On, live: Live): void {
@@ -235,17 +239,7 @@ function onTurnEnd(on: On, live: Live): void {
     return next(e)
   })
 
-  // Times every call and counts the main loop's calls and changed lines.
-  on('tool.call', async ($, e, next) => {
-    const startedAt = await $.clock.now()
-    const ran = await next(e)
-    const ms = (await $.clock.now()) - startedAt
-
-    await update($, memberOf(durationAtom, { requestId: e.tool_use_id }), () => ms)
-    if (e.agentId === undefined && e.tool !== DESIGN && ran.deny === undefined) live.stats = addCall(live.stats, diffstat(ran.result))
-
-    return ran
-  })
+  onCalls(on, live)
 }
 
 function onCommands(on: On, live: Live): void {
@@ -262,6 +256,14 @@ function onCommands(on: On, live: Live): void {
   on('state.set', { plugin: 'modz', key: 'open' } as any, async ($: EngineInterface, e: any, next: any) => {
     const done = await next(e)
     if (isOwnOpen(e.value)) await openSettings($, true)
+
+    return done
+  }).catch(($: EngineInterface, e: any, next: any) => next(e))
+
+  // Another pane took the hub's one panel: the settings and the gallery step aside rather than wait as tabs.
+  on('state.set', { plugin: 'modz', key: 'stage' } as any, async ($: EngineInterface, e: any, next: any) => {
+    const done = await next(e)
+    if (isOffStage(e.value, HUB_PANE)) for (const id of [SETTINGS, GALLERY]) await $.ui.close({ id })
 
     return done
   }).catch(($: EngineInterface, e: any, next: any) => next(e))

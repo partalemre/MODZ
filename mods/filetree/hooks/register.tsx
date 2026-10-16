@@ -13,6 +13,7 @@ import { promptContext } from './prompt'
 import { loopDone, noteRead, stepDone, takeReads } from './readstep'
 import { settleBackground, touched } from './scan'
 import { sceneOf } from './scene'
+import { isOffStage, shownOf } from './stage'
 import { mem } from './session'
 import { pinned } from './pin'
 import { openByCommand, resumePane, startPane } from './start'
@@ -76,6 +77,14 @@ function stateOf($: EngineInterface): StateHost {
         $.ui.log(`filetree: home failed (${String(error)})`, { to: 'debug' })
       }
     },
+    reportShown: async () => {
+      try {
+        if ((await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
+        await $.state.set({ plugin: 'filetree', key: 'shown' }, shownOf(HUB_PANE, await $.clock.now()))
+      } catch (error) {
+        $.ui.log(`filetree: shown failed (${String(error)})`, { to: 'debug' })
+      }
+    },
   }
 }
 
@@ -129,6 +138,13 @@ function onStart(on: On): void {
   on('state.set', { plugin: 'modz', key: 'open' } as any, async ($: EngineInterface, e: any, next: any) => {
     const done = await next(e)
     if (isOpenFor(e.value, HUB_PANE)) await openFromHub(hostOf($))
+
+    return done
+  }).catch(($, e, next) => next(e))
+  // Another pane took the MODZ panel: this one steps aside rather than wait as a tab.
+  on('state.set', { plugin: 'modz', key: 'stage' } as any, async ($: EngineInterface, e: any, next: any) => {
+    const done = await next(e)
+    if (isOffStage(e.value, HUB_PANE)) await $.ui.close({ id: PANE })
 
     return done
   }).catch(($, e, next) => next(e))

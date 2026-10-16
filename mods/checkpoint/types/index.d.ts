@@ -57,8 +57,8 @@ export type HubCard = { pane: string; detail: string; tone: HubTone; at: number 
 
 declare module 'claude-code' {
   interface PluginState {
-    checkpoint: { view: CheckpointView; isEnabled: boolean; meta: Record<string, CheckpointMeta>; theme: CheckpointTheme; hub: HubCard; home: { at: number } }
+    checkpoint: { view: CheckpointView; isEnabled: boolean; meta: Record<string, CheckpointMeta>; theme: CheckpointTheme; hub: HubCard; home: { at: number }; shown: { pane: string; at: number } }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
-    modz: { open: { pane: string; at: number }; isOn: boolean }
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
   }
 }

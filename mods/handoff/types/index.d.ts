@@ -63,9 +63,11 @@ declare module 'claude-code' {
       hub: HubCard
       // The person pressed "← MODZ" in the Handoff pane; the hub hears it and comes forward.
       home: { at: number }
+      // The Handoff pane is open: the MODZ hub puts it in its one panel and closes the rest (kit/stage.ts).
+      shown: { pane: string; at: number }
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
-    modz: { open: { pane: string; at: number }; isOn: boolean }
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
     // Read for the note's open plan steps; plan-steps owns and writes it.
     'plan-steps': { tasks: PlanTask[] }
   }

@@ -2,12 +2,14 @@
 // owning mod to open its pane. "Customize" turns the buttons into Up and Hide, and lists the hidden rows
 // with Show. The catalog ("Mods") is a pane of its own (register.tsx).
 import type { Drawing } from './draw'
+import type { Cue } from './motion'
 import type { Focus, HubRow, Section } from './hub'
 import { ROLE_OF_TONE, SECTIONS } from './hub'
 import { hubHeadSvg, hubRowSvg, sectionSvg } from './hub-draw'
 import { GLYPH } from './kit/icons'
 import { upper } from './kit/lang'
 import type { Theme } from './theme'
+import type { Stable } from './stable'
 import { hubWords } from './words'
 
 // The resolved element table of the surface that draws the pane.
@@ -15,11 +17,11 @@ type Ui = Record<string, any>
 
 // What a press asks of the hub; register.tsx writes each one where it is kept.
 export type HubActions = {
-  onOpen: (pane: string) => void
-  onEdit: (isEditing: boolean) => void
-  onMove: (opts: { pane: string; panes: string[] }) => void
-  onHide: (opts: { pane: string; isHidden: boolean }) => void
-  onReset: () => void
+  onOpen: (pane: string) => unknown
+  onEdit: (isEditing: boolean) => unknown
+  onMove: (opts: { pane: string; panes: string[] }) => unknown
+  onHide: (opts: { pane: string; isHidden: boolean }) => unknown
+  onReset: () => unknown
 }
 
 export type HubView = {
@@ -32,6 +34,8 @@ export type HubView = {
   theme: Theme
   isEditing: boolean
   actions: HubActions
+  // The drawings kept since the hub was put in the panel (stable.ts), so an unchanged one keeps its frame.
+  stable: Stable
 }
 
 const PX_PER_COLUMN = 8
@@ -39,6 +43,8 @@ const WIDTH_MIN = 280
 const WIDTH_MAX = 640
 // Room the native buttons take beside a row's drawing: one "Open", or "Up" and "Hide" while customizing.
 const BUTTON_ROOM = 64
+// The head's pixel mark and its text enter first; the sections and rows follow.
+const HEAD_STEPS = 4
 const EDIT_BUTTON_ROOM = 136
 
 export const hubWidth = (columns: number): number => Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, columns * PX_PER_COLUMN - PX_PER_COLUMN))
@@ -111,27 +117,44 @@ function groupsOf(view: HubView): Group[] {
   return [...sections, ...hidden].filter(group => group.rows.length > 0)
 }
 
+// What a row's drawing shows: its words and tone, not when its card was written.
+function rowShows(row: HubRow, look: { width: number; theme: Theme }) {
+  const card = row.card === null ? null : { detail: row.card.detail, tone: row.card.tone }
+
+  return { ...look, entry: row.entry, card }
+}
+
 function desktopTree(ui: Ui, view: HubView) {
   const { Box, Svg } = ui
   const width = hubWidth(view.columns)
   const draw = (drawing: Drawing, key: string, drawnWidth: number) => (
-    <Svg key={key} source={drawing.source} alt={drawing.alt} width={drawnWidth} height={drawing.height} />
+    <Svg key={key} source={drawing.source} alt={drawing.alt} width={drawnWidth} height={drawing.height} isInteractive />
   )
   const rowWidth = width - (view.isEditing ? EDIT_BUTTON_ROOM : BUTTON_ROOM)
+  // Each drawing's place in the opening cascade, top to bottom: the head's own pieces take the first few.
+  let order = HEAD_STEPS
+  const kept = (key: string, what: unknown, build: (cue: Cue) => Drawing) => {
+    const at = order++
+
+    return view.stable.draw(key, what, phase => build({ phase, order: at }))
+  }
+  const focus = view.focus === null ? null : { pane: view.focus.row.entry.pane, tone: view.focus.tone, detail: view.focus.row.card?.detail }
+  const head = view.stable.draw('head', { width, theme: view.theme, focus, meta: view.meta }, phase =>
+    hubHeadSvg({ width, theme: view.theme, focus: view.focus, meta: view.meta, cue: { phase, order: 0 } }))
 
   return (
     <Box flexDirection="column" rowGap={1}>
-      {draw(hubHeadSvg({ width, theme: view.theme, focus: view.focus, meta: view.meta }), 'head', width)}
+      {draw(head, 'head', width)}
       {focusButton(ui, view)}
       {groupsOf(view).map(group => {
         const panes = group.isHiddenGroup ? null : group.rows.map(row => row.entry.pane)
 
         return (
           <Box key={`section-${group.key}`} flexDirection="column">
-            {draw(sectionSvg({ width, theme: view.theme, label: group.label }), `eyebrow-${group.key}`, width)}
+            {draw(kept(`eyebrow-${group.key}`, { width, theme: view.theme, label: group.label }, cue => sectionSvg({ width, theme: view.theme, label: group.label, cue })), `eyebrow-${group.key}`, width)}
             {group.rows.map(row => (
               <Box key={`row-${row.entry.pane}`} flexDirection="row" alignItems="center" columnGap={1}>
-                {draw(hubRowSvg({ width: rowWidth, theme: view.theme, row }), `svg-${row.entry.pane}`, rowWidth)}
+                {draw(kept(`row-${row.entry.pane}`, rowShows(row, { width: rowWidth, theme: view.theme }), cue => hubRowSvg({ width: rowWidth, theme: view.theme, row, cue })), `svg-${row.entry.pane}`, rowWidth)}
                 {rowButtons(ui, view, { row, panes })}
               </Box>
             ))}

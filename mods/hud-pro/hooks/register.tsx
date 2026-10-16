@@ -4,7 +4,6 @@ import type { EngineInterface, Register } from 'claude-code'
 import { bandRow } from './band'
 import type { ContextView } from './breakdown'
 import { compactedOf, forecastsFrom, freshBreakdown, keepBreakdown, keepLast, reasonOf } from './context'
-import { addTurn } from './forecast'
 import { addSample, isHistory } from './history'
 import { EMPTY_HUB, HUB_PANE, hubOf, isOwnOpen } from './hub'
 import { setLang } from './lang'
@@ -14,16 +13,17 @@ import { paneTree, withHome } from './pane'
 import type { CardData } from './pane'
 import { isSame } from './same'
 import { pinned } from './pin'
-import { addUsage, newNotices, toUsage } from './usage'
+import { isOffStage, shownOf } from './stage'
+import { EMPTY_TURN, onTurns } from './turns-hook'
+import { newNotices, toUsage } from './usage'
 import { words } from './words'
-import type { HudTurn, HudUsage } from '../types'
+import type { HudUsage } from '../types'
 
 const PANE = 'hud-pro'
 const HIDDEN_KEY = 'hud-pro.hidden'
 const HISTORY_KEY = 'hud-pro.history'
 // Reset countdowns move by the minute, so the idle line redraws once a minute.
 const REFRESH_MS = 60_000
-const EMPTY_TURN: HudTurn = { requests: 0, input: 0, output: 0, cacheRead: 0 }
 
 const usageAtom = atom({ plugin: 'hud-pro', key: 'usage' } as const, null)
 const turnAtom = atom({ plugin: 'hud-pro', key: 'turn' } as const, EMPTY_TURN)
@@ -104,9 +104,21 @@ async function toggle($: EngineInterface): Promise<{ text: string }> {
   return { text: isHidden ? words().hidden : words().shown }
 }
 
+// Placed, the pane takes a running MODZ hub's panel, so the hub and every other pane step aside (kit/stage.ts).
+// A failed note of that is only logged: the pane is open either way.
+async function reportShown($: EngineInterface): Promise<void> {
+  try {
+    if ((await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
+    await $.state.set({ plugin: 'hud-pro', key: 'shown' }, shownOf(HUB_PANE, await $.clock.now()))
+  } catch {
+    $.ui.log('hud-pro: could not tell the hub the pane is shown', { to: 'debug' })
+  }
+}
+
 // Opens the pane, or brings it forward when it is open already; never closes it.
 async function openPane($: EngineInterface): Promise<void> {
-  await $.ui.open({ id: PANE, title: words().paneTitle, focus: true, closeOnEscape: true })
+  const opened = await $.ui.open({ id: PANE, title: words().paneTitle, focus: true, closeOnEscape: true })
+  if (opened.isPlaced) await reportShown($)
 }
 
 async function runCommand($: EngineInterface, args: string): Promise<{ text?: string }> {
@@ -165,39 +177,19 @@ function onUsage(on: On) {
   })
 }
 
-function onTurns(on: On) {
-  on('turn.start', async ($, e, next) => {
-    const finished = await read($, turnAtom)
-    if (finished.requests > 0) await update($, lastTurnAtom, () => finished)
-    await update($, turnAtom, () => EMPTY_TURN)
-
-    return next(e)
-  })
-
-  // The context's fill as each main-loop turn ends, for the "~N turns" forecast.
-  on('turn.complete', async ($, e, next) => {
-    const done = await next(e)
-    const tokens = e.agentId === undefined ? (await $.session.usage()).context.tokens : undefined
-    if (tokens !== undefined) await update($, contextTurnsAtom, turns => addTurn(turns, tokens))
-
-    return done
-  })
-
-  on('turn.step', async function* ($, e, next) {
-    const result = yield* next(e)
-    const usage = result.usage
-    if (usage !== null && e.agentId === undefined) await update($, turnAtom, turn => addUsage(turn, usage))
-
-    return result
-  })
-}
-
 // The MODZ main panel asks for this pane by writing `{ pane: 'usage' }` to `modz.open`. modz's
 // contract is not this mod's to import, so its address stays untyped here.
 function onOpen(on: On) {
   on('state.set', { plugin: 'modz', key: 'open' } as any, async ($: EngineInterface, e: any, next: any) => {
     const done = await next(e)
     if (isOwnOpen(e.value)) await openPane($)
+
+    return done
+  }).catch(($: EngineInterface, e: any, next: any) => next(e))
+  // Another pane took the hub's one panel: this one steps aside rather than wait as a tab.
+  on('state.set', { plugin: 'modz', key: 'stage' } as any, async ($: EngineInterface, e: any, next: any) => {
+    const done = await next(e)
+    if (isOffStage(e.value, HUB_PANE)) await $.ui.close({ id: PANE })
 
     return done
   }).catch(($: EngineInterface, e: any, next: any) => next(e))

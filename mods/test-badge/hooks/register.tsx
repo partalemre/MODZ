@@ -12,6 +12,7 @@ import { overridesOf, type Overrides } from './options'
 import { badgeText, isFailing, parseLint, parseTests } from './parse'
 import type { ParseContext } from './text'
 import { withHome } from './home'
+import { isOffStage, shownOf } from './stage'
 import { pinned } from './pin'
 import { AUTO, themeFrom } from './tidemark'
 import { paneTree } from './view'
@@ -154,9 +155,21 @@ async function writeHub($: EngineInterface): Promise<void> {
   if (card !== null) await $.state.set(hubRef, card)
 }
 
-// The same pane whoever asks (Ayrıntı, /test-badge details, the MODZ main panel); an open one comes forward.
+// Tells the hub this pane now holds the panel, so the hub and every other pane step aside (kit/stage.ts).
+async function reportShown($: EngineInterface): Promise<void> {
+  try {
+    if ((await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
+    await $.state.set({ plugin: 'test-badge', key: 'shown' }, shownOf(HUB_PANE, await $.clock.now()))
+  } catch (error) {
+    $.ui.log(`test-badge: shown failed (${String(error)})`, { to: 'debug' })
+  }
+}
+
+// The same pane whoever asks (/test-badge details, the MODZ main panel; band-hook.tsx opens it the same way); an
+// open one comes forward.
 async function openPane($: EngineInterface): Promise<void> {
-  await $.ui.open({ id: PANE, title: words().paneTitle, focus: true })
+  const opened = await $.ui.open({ id: PANE, title: words().paneTitle, focus: true })
+  if (opened.isPlaced) await reportShown($)
 }
 
 async function runCommand($: EngineInterface, arg: string, overrides: Overrides): Promise<string> {
@@ -220,11 +233,18 @@ function hookRuns(on: On, overrides: Overrides): void {
   })
 }
 
-// The main panel's open request opens the details pane, or brings it forward; it never closes it.
+// The main panel's open request opens the details pane, or brings it forward; it never closes it. Another
+// pane taking the main panel closes it, so it never waits as a tab.
 function hookHub(on: On): void {
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
     const done = await next(e)
     if (isOpenFor(e.value, HUB_PANE)) await openPane($)
+
+    return done
+  }).catch(($, e, next) => next(e))
+  on('state.set', { plugin: 'modz', key: 'stage' }, async ($, e, next) => {
+    const done = await next(e)
+    if (isOffStage(e.value, HUB_PANE)) await $.ui.close({ id: PANE })
 
     return done
   }).catch(($, e, next) => next(e))

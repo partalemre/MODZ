@@ -6,11 +6,19 @@ import { eyebrowWidth } from './kit/svg-text'
 import { textWidth } from './kit/svg-metrics'
 import { monogram } from './meta'
 import type { Group } from './meta'
+import { entering, HOVER_CSS, MOTION_CSS } from './motion'
+import type { Cue } from './motion'
 import { svgDoc } from './theme'
 import type { RoleName, Theme } from './theme'
 import { catalogWords, placeLine } from './words'
 
 export type Drawing = { source: string; alt: string; height: number }
+
+// A catalog drawing's cue as the catalog opens (motion.ts); absent, it is drawn still.
+const settled = (spec: { width: number; height: number; theme: Theme; body: string; cue?: Cue }) =>
+  spec.cue === undefined
+    ? svgDoc(spec)
+    : svgDoc({ width: spec.width, height: spec.height, theme: spec.theme, body: entering(spec.body, spec.cue), css: MOTION_CSS + HOVER_CSS })
 
 const HEAD = 48
 const GROUP = 22
@@ -73,25 +81,25 @@ export function pill(spec: PillSpec): { svg: string; width: number } {
   }
 }
 
-export function headSvg(spec: { width: number; theme: Theme; title: string; meta: string; metaRole: RoleName | null }): Drawing {
+export function headSvg(spec: { width: number; theme: Theme; title: string; meta: string; metaRole: RoleName | null; cue?: Cue }): Drawing {
   const meta = spec.meta === '' ? '' : `<text x="${spec.width}" y="40" text-anchor="end" class="lb ${spec.metaRole === null ? 'lo' : `fg-${spec.metaRole}`}">${esc(spec.meta)}</text>`
   const title = fit(spec.title, spec.width - measure(spec.meta, 12) - GAP * 2, { size: 17, weight: 620 })
   const allMods = catalogWords().allMods
   const body = eyebrow({ y: 12, width: spec.width, label: allMods, role: 'edit', meta: '' }) + `<text x="0" y="40" class="hl hi">${esc(title)}</text>${meta}`
 
-  return { source: svgDoc({ width: spec.width, height: HEAD, theme: spec.theme, body }), alt: `${allMods}: ${spec.title}${spec.meta === '' ? '' : ` · ${spec.meta}`}`, height: HEAD }
+  return { source: settled({ width: spec.width, height: HEAD, theme: spec.theme, body, cue: spec.cue }), alt: `${allMods}: ${spec.title}${spec.meta === '' ? '' : ` · ${spec.meta}`}`, height: HEAD }
 }
 
 // Each group keeps one colour, on its eyebrow notch and on every monogram tile beneath it.
 export const GROUP_ROLE: Record<Group, RoleName | null> = { look: 'edit', safety: 'ok', meter: 'read', flow: 'run', other: null }
 
-export function groupSvg(spec: { width: number; theme: Theme; group: Group; count: number }): Drawing {
+export function groupSvg(spec: { width: number; theme: Theme; group: Group; count: number; cue?: Cue }): Drawing {
   const words = catalogWords()
   const label = words.groups[spec.group]
   const count = words.mods(spec.count)
   const body = eyebrow({ y: 15, width: spec.width, label, role: GROUP_ROLE[spec.group], meta: count })
 
-  return { source: svgDoc({ width: spec.width, height: GROUP, theme: spec.theme, body }), alt: `${label}: ${count}`, height: GROUP }
+  return { source: settled({ width: spec.width, height: GROUP, theme: spec.theme, body, cue: spec.cue }), alt: `${label}: ${count}`, height: GROUP }
 }
 
 // The right edge says only what is unusual: a problem or a switched-off mod gets a word,
@@ -124,7 +132,7 @@ function monogramTile(mod: ModInfo): string {
   return `<g${fade}><rect x="0.5" y="${top + 0.5}" width="${TILE - 1}" height="${TILE - 1}" rx="9" class="${frame}"/><text x="${TILE / 2}" y="${top + 22.5}" text-anchor="middle" style="font-size:13px;font-weight:700;letter-spacing:.04em" class="num ${ink}">${esc(monogram(mod.name))}</text></g>`
 }
 
-export function rowSvg(spec: { width: number; theme: Theme; mod: ModInfo }): Drawing {
+export function rowSvg(spec: { width: number; theme: Theme; mod: ModInfo; cue?: Cue }): Drawing {
   const { mod, width } = spec
   const mark = stateMark(mod, width)
   // A mod that tracks commits has no version to show, so its row has no pill.
@@ -144,5 +152,5 @@ export function rowSvg(spec: { width: number; theme: Theme; mod: ModInfo }): Dra
   ].join('')
   const alt = `${[mod.name, versionText].filter(Boolean).join(' ')} · ${placeLine(mod)} · ${stateLabel(mod)} · ${mod.description}`
 
-  return { source: svgDoc({ width, height: ROW, theme: spec.theme, body }), alt, height: ROW }
+  return { source: settled({ width, height: ROW, theme: spec.theme, body, cue: spec.cue }), alt, height: ROW }
 }

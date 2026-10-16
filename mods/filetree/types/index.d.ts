@@ -113,8 +113,10 @@ declare module 'claude-code' {
       hub: HubCard
       // The person pressed "← MODZ" in the Files pane; the hub hears it and comes forward.
       home: { at: number }
+      // The Files pane is open: the MODZ hub puts it in its one panel and closes the rest (kit/stage.ts).
+      shown: { pane: string; at: number }
     }
-    // The MODZ main panel's open request this mod listens for (DESIGN.md §9), and whether the hub runs; modz owns and writes both.
-    modz: { open: { pane: string; at: number }; isOn: boolean }
+    // The MODZ main panel's open request this mod listens for (DESIGN.md §9), whether the hub runs, and which pane holds its panel; modz owns and writes all three.
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
   }
 }

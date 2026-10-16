@@ -71,6 +71,19 @@ const transceiverReporter = {
   },
 }
 
+// A mod's answer to the hub's open request, as every MODZ mod gives it once its pane is open: `/shown <pane>`.
+// A stand-in loads beneath the hub and so never hears the hub's own write; the test says when it answers.
+const agentsMod = {
+  name: 'savvy-progress',
+  register(on: any) {
+    on('command.run', { command: 'shown' }, async ($: any, e: any, next: any) => {
+      await $.state.set({ plugin: 'savvy-progress', key: 'shown' }, { pane: e.args, at: 1 })
+
+      return next(e)
+    })
+  },
+}
+
 const testsReporter = {
   name: 'test-badge',
   register(on: any) {
@@ -95,16 +108,21 @@ test('with openOnStart off nothing opens until /modz', { options: { openOnStart:
   expect(w.opened).toEqual([])
   await $.command.run({ command: 'modz', args: '' })
 
-  expect(w.opened).toEqual(['modz'])
+  expect(w.opened).toEqual(['modz', 'close:modz-mods'])
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
-  test(`pressing a row asks its mod for a tab and keeps the hub open; Modlar opens its own tab (${surface})`, async ($: any, on: any) => {
+  test(`pressing a row swaps the panel to that mod and the catalog swaps with the hub (${surface})`, { plugins: [agentsMod] }, async ($: any, on: any) => {
     const w = stubWorld(on)
     const asked: unknown[] = []
     on('state.set', { plugin: 'modz', key: 'open' }, (_: unknown, e: any, next: any) => {
       asked.push(e.value?.pane)
-      w.opened.push(`ask:${e.value?.pane}`)
+
+      return next(e)
+    })
+    const staged: unknown[] = []
+    on('state.set', { plugin: 'modz', key: 'stage' }, (_: unknown, e: any, next: any) => {
+      staged.push(e.value?.pane)
 
       return next(e)
     })
@@ -113,15 +131,30 @@ for (const surface of ['terminal', 'desktop'] as const) {
     w.opened.length = 0
     await ui.press({ key: 'open-agents' })
     expect(asked).toEqual(['agents'])
-    expect(w.opened).toEqual(['ask:agents'])
+    expect(w.opened).toEqual([])
+    await $.command.run({ command: 'shown', args: 'agents' })
+    expect(w.opened).toEqual(['close:modz', 'close:modz-mods'])
+    expect(staged).toEqual(['agents'])
 
+    await $.command.run({ command: 'modz', args: '' })
+    expect(staged).toEqual(['agents', 'modz'])
+    w.opened.length = 0
     await ui.press({ key: 'open-modz-mods' })
-    expect(w.opened).toEqual(['ask:agents', 'modz-mods'])
-    expect(await ui.find({ key: 'open-agents' })).toBeDefined()
+    expect(w.opened).toEqual(['modz-mods', 'close:modz'])
+    expect(staged).toEqual(['agents', 'modz', 'modz-mods'])
     const catalog = await $.ui.mount({ ...PANE, requestId: 'modz-mods', surface })
     expect(await catalog.find({ key: 'mod-savvy-progress' })).toBeDefined()
   })
 
+  test(`a mod that does not answer leaves the hub in the panel (${surface})`, async ($: any, on: any) => {
+    const w = stubWorld(on)
+    await $.session.start({ surface, isInteractive: true, cwd: '/work' })
+    const ui = await $.ui.mount({ ...PANE, surface })
+    w.opened.length = 0
+    await ui.press({ key: 'open-agents' })
+    expect(w.opened).toEqual([])
+    expect(await ui.find({ key: 'open-agents' })).toBeDefined()
+  })
 }
 
 test('Transceiver shows in Çalışma once it reports its line, and its row asks it to open', { plugins: [transceiverReporter] }, async ($: any, on: any) => {

@@ -206,11 +206,13 @@ declare module 'claude-code' {
       types: AgentType[]
       // The person pressed "← MODZ" in the Agents pane; the hub hears it and comes forward.
       home: { at: number }
+      // The Agents pane is open: the MODZ hub puts it in its one panel and closes the rest (kit/stage.ts).
+      shown: { pane: string; at: number }
       self: SelfChat | null
       chats: OtherChat[]
       crab: HomeCrab
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
-    modz: { open: { pane: string; at: number }; isOn: boolean }
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
   }
 }

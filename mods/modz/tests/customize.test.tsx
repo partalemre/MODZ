@@ -109,11 +109,13 @@ const homeMod = {
   },
 }
 
-test('a mod\'s home press brings the hub forward, and the hub says it runs', { plugins: [homeMod] }, async ($: any, on: any) => {
-  const world = stubWorld(on, { env: ENGLISH })
+test('a mod\'s home press brings the hub forward once the mod\'s write settles, and the hub says it runs', { plugins: [homeMod] }, async ($: any, on: any) => {
+  const world = stubWorld(on, { env: ENGLISH, hasOwnClock: true })
+  const clock = mock.clock(on, { now: 1_000 })
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   const before = world.opened.filter(id => id === 'modz').length
   await $.command.run({ command: 'go-home', args: '' })
+  await clock.advance(1)
 
   expect(world.opened.filter(id => id === 'modz').length).toBe(before + 1)
   expect((await $.command.run({ command: 'hub-on', args: '' })).text).toBe('true')

@@ -41,8 +41,8 @@ export type HubCard = {
 declare module 'claude-code' {
   interface PluginState {
     // `mode` is the one in force (the person's pick, else the option); `turns` the newest main-loop turns, newest first.
-    'effort-router': { mode: EffortMode; turns: TurnRow[]; hub: HubCard; home: { at: number } }
+    'effort-router': { mode: EffortMode; turns: TurnRow[]; hub: HubCard; home: { at: number }; shown: { pane: string; at: number } }
     // The MODZ main panel's values this mod reads (DESIGN.md §9); modz owns and writes them.
-    modz: { open: { pane: string; at: number }; isOn: boolean }
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
   }
 }

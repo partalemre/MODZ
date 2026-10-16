@@ -15,7 +15,8 @@ const hubOn = {
   name: 'modz',
   register(on: any) {
     const heard: unknown[] = []
-    on('command.run', { command: 'hub-on' }, async ($: any) => ($.state.set({ plugin: 'modz', key: 'isOn' }, true), {}))
+    on('command.run', { command: 'hub-on' }, async ($: any) => (await $.state.set({ plugin: 'modz', key: 'isOn' }, true), {}))
+    on('command.run', { command: 'hub-stage' }, async ($: any, e: any) => (await $.state.set({ plugin: 'modz', key: 'stage' }, { pane: e.args, at: 1 }), {}))
     on('state.set', { key: 'home' }, async (_: any, e: any, next: any) => (heard.push(e.value), next(e)))
     on('command.run', { command: 'hub-heard' }, async () => ({ text: JSON.stringify(heard) }))
   },
@@ -147,4 +148,23 @@ test('a chat over 4 MiB is read from its end with tail, its torn first row dropp
   expect(w.mined[0]).toContain('"sample":"npm test"')
   const { alts } = await paneWords($, 'desktop')
   expect(alts.join(' ')).toContain('2 chats read · 1 from the end · 1 unreadable')
+})
+
+test('with the hub on the opened Ideas pane reports itself shown, and steps aside when another pane takes the panel', { plugins: [hubOn] }, async ($: any, on: any) => {
+  const shown: unknown[] = []
+  const closed: unknown[] = []
+  on('state.set', { plugin: 'reflect-mod', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
+  on('ui.close', (_: any, e: any) => (closed.push(e.id), { value: undefined }))
+  const w = mineWorld(on, { ideas: IDEAS, lang: null })
+  await start($)
+  await mine($, w)
+  // The hub is off: nothing to step aside for.
+  expect(shown).toEqual([])
+  await $.command.run({ command: 'hub-on', args: '' })
+  await mine($, w)
+  expect(shown).toEqual(['reflect-ideas'])
+  await $.command.run({ command: 'hub-stage', args: 'reflect-ideas' })
+  expect(closed).toEqual([])
+  await $.command.run({ command: 'hub-stage', args: 'modz' })
+  expect(closed).toEqual(['reflect-ideas'])
 })

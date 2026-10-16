@@ -20,12 +20,36 @@ const modz = {
 
       return {}
     })
+    on('command.run', { command: 'hub-stage' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'stage' }, { pane: e.args, at: 1 })
+
+      return {}
+    })
     on('state.set', { key: 'home' }, async (_: any, e: any, next: any) => (heard.push(e.value), next(e)))
     on('command.run', { command: 'hub-heard' }, async () => ({ text: JSON.stringify(heard) }))
   },
 }
 
 const WITH = { plugins: [spy, modz] }
+
+test('with the hub on the opened pane reports itself shown, and steps aside when another pane takes the panel', WITH, async ($: any, on: any) => {
+  const shown: unknown[] = []
+  const closed: unknown[] = []
+  on('state.set', { plugin: 'effort-router', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
+  on('ui.close', (_: any, e: any) => (closed.push(e.id), { value: undefined }))
+  stub(on, worldOf())
+  await begin($)
+  await $.command.run({ command: 'effort-router', args: '' })
+  // The hub is off: nothing to step aside for.
+  expect(shown).toEqual([])
+  await $.command.run({ command: 'hub-on', args: '' })
+  await $.command.run({ command: 'hub-open', args: 'effort' })
+  expect(shown).toEqual(['effort'])
+  await $.command.run({ command: 'hub-stage', args: 'effort' })
+  expect(closed).toEqual([])
+  await $.command.run({ command: 'hub-stage', args: 'tests' })
+  expect(closed).toEqual(['effort'])
+})
 
 function buttonsOf(node: any, out: string[] = []): string[] {
   if (node === null || typeof node !== 'object') return out

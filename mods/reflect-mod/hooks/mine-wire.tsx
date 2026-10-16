@@ -17,6 +17,7 @@ import { mineWords } from './mine-words'
 import { pinned } from './pin'
 import { SAME, similarity } from './rules'
 import { signalsOf } from './signals'
+import { isOffStage, shownOf } from './stage'
 import { findFolder, projectsBase, readRecent } from './transcripts'
 import type { Disk } from './transcripts'
 
@@ -158,14 +159,35 @@ function actions($: EngineInterface, deps: MineDeps): PaneActions {
   }
 }
 
+/**
+ * With the MODZ hub on, the opened pane takes its one panel and the hub and every other pane step aside
+ * (kit/stage.ts). Ideas has no hub row, so its own id names it there. A failed note is only logged.
+ */
+async function reportShown($: EngineInterface) {
+  try {
+    if ((await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
+    await $.state.set({ plugin: 'reflect-mod', key: 'shown' }, shownOf(PANE, await $.clock.now()))
+  } catch {
+    $.ui.log('reflect: could not tell MODZ the Ideas pane is shown', { to: 'debug' })
+  }
+}
+
 /** `/mine` is registered with the mod's other commands, at its one session.start. */
 export function wireMine(on: On, deps: MineDeps) {
   // The command answers with no text: a transcript row would be read by the model on its next request.
   on('command.run', { command: MINE_COMMAND }, async $ => {
     await start($, deps)
-    await $.ui.open({ id: PANE, title: mineWords().title })
+    const opened = await $.ui.open({ id: PANE, title: mineWords().title })
+    if (opened.isPlaced) await reportShown($)
     return {}
   })
+
+  // Another pane took the hub's one panel: Ideas steps aside rather than wait as a tab.
+  on('state.set', { plugin: 'modz', key: 'stage' }, async ($, e, next) => {
+    const done = await next(e)
+    if (isOffStage(e.value, PANE)) await $.ui.close({ id: PANE })
+    return done
+  }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const view = (await read($, ideas)) ?? READING

@@ -2,6 +2,9 @@
 import type { Market, ModInfo } from './catalog'
 import { headline, healthOf } from './catalog'
 import { groupSvg, headSvg, rowSvg } from './draw'
+import type { Drawing } from './draw'
+import type { Cue } from './motion'
+import type { Stable } from './stable'
 import { upper } from './kit/lang'
 import { GROUPS } from './meta'
 import type { Group } from './meta'
@@ -12,7 +15,8 @@ import { withHome } from './kit/home'
 // The resolved element table of the surface that draws the pane.
 type Ui = Record<string, any>
 
-export type View = { market: Market; surface: string; columns: number; theme: Theme; onHome: () => void }
+// `stable`: the catalog's drawings kept since it was put in the panel (stable.ts).
+export type View = { market: Market; surface: string; columns: number; theme: Theme; onHome: () => void; stable: Stable }
 
 const PX_PER_COLUMN = 8
 const WIDTH_MIN = 320
@@ -77,25 +81,29 @@ function desktopTree(ui: Ui, view: View) {
   const { Box, Svg } = ui
   const width = Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, view.columns * PX_PER_COLUMN - PX_PER_COLUMN))
   const health = healthOf(view.market.mods)
-  const head = headSvg({ width, theme: view.theme, title: headline(view.market.mods), meta: health.text, metaRole: health.isBad ? 'danger' : null })
-  const draw = (drawing: { source: string; alt: string; height: number }, key: string) => (
-    <Svg key={key} source={drawing.source} alt={drawing.alt} width={width} height={drawing.height} />
-  )
+  let order = 0
+  const draw = (key: string, what: unknown, build: (cue: Cue) => Drawing) => {
+    const at = order++
+    const drawing = view.stable.draw(key, { width, theme: view.theme, what }, phase => build({ phase, order: at }))
+
+    return <Svg key={key} source={drawing.source} alt={drawing.alt} width={width} height={drawing.height} isInteractive />
+  }
+  const title = headline(view.market.mods)
 
   return (
     <Box flexDirection="column" rowGap={1}>
-      {draw(head, 'head')}
+      {draw('head', [title, health], cue => headSvg({ width, theme: view.theme, title, meta: health.text, metaRole: health.isBad ? 'danger' : null, cue }))}
       {groupsOf(view.market.mods).map(([group, list]) => (
         <Box key={`group-${group}`} flexDirection="column">
-          {draw(groupSvg({ width, theme: view.theme, group, count: list.length }), `eyebrow-${group}`)}
-          {list.map(mod => <Box key={`mod-${mod.name}`}>{draw(rowSvg({ width, theme: view.theme, mod }), `row-${mod.name}`)}</Box>)}
+          {draw(`eyebrow-${group}`, [group, list.length], cue => groupSvg({ width, theme: view.theme, group, count: list.length, cue }))}
+          {list.map(mod => <Box key={`mod-${mod.name}`}>{draw(`row-${mod.name}`, mod, cue => rowSvg({ width, theme: view.theme, mod, cue }))}</Box>)}
         </Box>
       ))}
     </Box>
   )
 }
 
-// The catalog with its "← MODZ" button on top: the hub is a tab beside it, and the button brings it back if closed.
+// The catalog with its "← MODZ" button on top, which swaps the panel back to the hub.
 export const modzTree = (ui: Ui, view: View) => withHome(ui, catalogTree(ui, view), view.onHome)
 
 function catalogTree(ui: Ui, view: View) {

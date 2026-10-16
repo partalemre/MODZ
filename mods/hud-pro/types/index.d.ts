@@ -49,8 +49,11 @@ declare module 'claude-code' {
       lastCompact: HudCompacted | null
       hub: HubCard
       home: { at: number }
+      // The Usage pane is open: the MODZ hub puts it in its one panel and closes the rest (kit/stage.ts).
+      shown: { pane: string; at: number }
     }
-    // Written by the MODZ hub, which owns it: true while the hub runs, so this pane draws its way back.
-    modz: { isOn: boolean }
+    // Written by the MODZ hub, which owns both: true while the hub runs, so this pane draws its way back; and
+    // which pane holds the hub's one panel.
+    modz: { isOn: boolean; stage: { pane: string; at: number } }
   }
 }

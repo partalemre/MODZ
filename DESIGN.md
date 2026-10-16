@@ -87,7 +87,10 @@ Text ile: başlık = bold text.hi · gövde = text.mid · meta = text.lo · vurg
 
 ## 5. Hareket
 Kısa 120ms (hover) · durum 200ms · yol 320ms `cubic-bezier(.2,.8,.2,1)` · nefes 1.8s · parıltı 1.4s.
-Yüzey başına tek döngü animasyonu; iş bitince durur. Her Svg `<style>` sonu:
+Döngü yalnızca canlı işte (nabız halkası, ışık şeridi); iş bitince durur, sakin yüzey kıpırdamaz. Masaüstünde her
+Svg kendi resmidir ve kaynağı değişince animasyonu baştan oynar: giriş (kademeli kayma, piksel yazı) yalnızca panel
+açıldıktan sonraki ilk 1.2 sn çizilir, değişen satırın tek seferlik ışık süpürmesi yalnızca kartı 2.5 sn içinde
+değiştiyse (`mods/modz/hooks/motion.ts`). Değişmeyen çizim aynı kaynağı korur, yeniden oynamaz. Her Svg `<style>` sonu:
 `@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}`.
 Terminal spinner `◐◓◑◒` ≥250ms/kare, yalnızca aktif satırda.
 
@@ -133,9 +136,12 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
 - **Aç isteği:** ana panel `{ plugin: 'modz', key: 'open' }` değerine `{ pane, at }` yazar. Paneli olan mod
   `on('state.set', { plugin: 'modz', key: 'open' }, …)` ile dinler, `next(e)`'den sonra `pane` kendi anahtarıysa
   kendi `$.ui.open`'ını çağırır (komut değil). Kanca `.catch(($, e, next) => next(e))` taşır.
-- **Öne getirme:** ana panel açık kalır, her satır kendi sekmesini açar. Yüzey, klavyeyi tutan paneli yerinden
-  etmez; bu yüzden sahibi `$.ui.open`'ı `focus: true` ile çağırır: oluru yüzey verir (masaüstünde istem kutusu boş
-  ve tur yokken), panel klavyeyi ve önü alır. Olmazsa panel ana panelin yanında sekme olarak bekler.
+- **Tek panel (sahne):** hub, kataloğu ve her modun paneli sağda **aynı yerde sırayla** görünür; sekme yığılmaz
+  (`kit/stage.ts`). Paneli açılan mod, açıldıktan sonra (`isPlaced`) kendi `{ plugin: '<mod>', key: 'shown' }`
+  değerine `{ pane, at }` yazar. Hub bunu duyunca kendi panellerini kapatır ve `{ plugin: 'modz', key: 'stage' }`
+  değerine o paneli yazar; açık paneli olan diğer her mod `state.set { plugin: 'modz', key: 'stage' }` kancasında
+  `isOffStage(e.value, kendiAnahtarı)` ise kendi panelini kapatır. Hub geri gelince (satırı, "← MODZ", `/modz`)
+  sahneyi `modz` yazar. Cevap vermeyen bir mod hub'ı yerinde bırakır: boş panel olmaz. Her açılış `focus: true`.
 - **Sabit basış tutamacı:** JSX her çizimde yeni tutamaç verir, host da yeniden çizimde eskileri bırakır; masaüstü
   son boyadığı ağaca tıkladığı için araya giren her çizim tıklamayı düşürürdü. Button, Input ya da Select çizen her
   `ui.render` kancası ağacını `pinned(e, ağaç)` ile döner (`kit/pin.ts`): her öğe yeri ve anahtarı için ilk aldığı
@@ -146,7 +152,7 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
 - **Eve dönüş:** hub çalıştıkça `{ plugin: 'modz', key: 'isOn' }` `true`'dur. Hub'ın açtığı her panel bunu çizerken
   okur ve açıksa ağacın başına `HomeButton` (`kit/home.tsx`, "← MODZ") koyar. Basınca mod kendi
   `{ plugin: '<mod>', key: 'home' }` değerine `{ at }` yazar; hub `state.set { key: 'home' }` ile duyar ve kendini
-  `focus: true` ile açar, kapanmışsa yeniden. Tek panel kalıp sekme şeridi çizilmese de dönüş yolu hep vardır.
+  `focus: true` ile açar, kapanmışsa yeniden, ve sahneyi `modz` yazar: mod paneli kapanır, hub aynı yerde belirir.
 - **Kişiye göre düzen:** hub'da "Düzenle" satırları yukarı taşır ya da gizler; gizlenenler "Gizli" bölümünde
   "Göster" ile bekler, "Sıfırla" hepsini geri koyar. Düzen `$.store`'da (`layout`: `{ hidden, order }`) oturumlar
   arasında kalır.

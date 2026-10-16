@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 // The Plan pane opens with a "← MODZ" button while the hub runs; pressing it writes this mod's own `home` value.
+// While the hub runs the pane also takes turns in its one panel (kit/stage.ts).
 
 const SURFACES = ['terminal', 'desktop'] as const
 
@@ -11,6 +12,16 @@ const modz = {
     const homes: unknown[] = []
     on('command.run', { command: 'hub-on' }, async ($: any) => {
       await $.state.set({ plugin: 'modz', key: 'isOn' }, true)
+
+      return {}
+    })
+    on('command.run', { command: 'hub-open' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'open' }, { pane: e.args, at: 1 })
+
+      return {}
+    })
+    on('command.run', { command: 'hub-stage' }, async ($: any, e: any) => {
+      await $.state.set({ plugin: 'modz', key: 'stage' }, { pane: e.args, at: 1 })
 
       return {}
     })
@@ -67,3 +78,21 @@ for (const surface of SURFACES) {
     expect(heard).toEqual([{ from: 'plan-steps', value: { at: await clock.now() } }])
   })
 }
+
+test('with the hub on the opened Plan pane reports itself shown, and steps aside when another pane takes the panel', { plugins: [modz] }, async ($, on) => {
+  const shown: unknown[] = []
+  const closed: unknown[] = []
+  on('state.set', { plugin: 'plan-steps', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
+  on('ui.close', (_: any, e: any) => (closed.push(e.id), { value: undefined }))
+  await setup($, on, { isHubOn: false })
+  await $.command.run({ command: 'steps', args: '' })
+  // The hub is off: nothing to step aside for.
+  expect(shown).toEqual([])
+  await $.command.run({ command: 'hub-on', args: '' })
+  await $.command.run({ command: 'hub-open', args: 'plan' })
+  expect(shown).toEqual(['plan'])
+  await $.command.run({ command: 'hub-stage', args: 'plan' })
+  expect(closed).toEqual([])
+  await $.command.run({ command: 'hub-stage', args: 'tests' })
+  expect(closed).toEqual(['plan-steps'])
+})

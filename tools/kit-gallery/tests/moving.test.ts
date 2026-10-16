@@ -2,7 +2,7 @@
 // enters on its first draw since the pane opened, sweeps once when it changes, and always says its colour scheme.
 import { expect, test } from 'claude-code/testing'
 
-import { motionCss, rings, shine } from '../hooks/kit/motion'
+import { motionCss, rings, shine, SWEEP } from '../hooks/kit/motion'
 import { animate, paneMotion } from '../hooks/kit/moving'
 import { pill } from '../hooks/kit/svg'
 
@@ -87,4 +87,16 @@ test('live loops come only with the drawings that use them', () => {
   expect(motionCss(live)).toContain('@keyframes m-shine')
   expect(motionCss(live)).not.toContain('m-sweep')
   expect(motionCss('<rect/>')).toBe('')
+})
+
+// Reduced motion drops every animation, so a piece rests at its own rule: the sweep and the flash must rest unseen.
+const restingRule = (css: string, name: string): string => new RegExp(`\\.${name}\\{([^}]*)\\}`).exec(css)?.[1] ?? ''
+
+test('under reduced motion a changed drawing keeps no sweep or flash over it', () => {
+  const css = motionCss(`${SWEEP}<rect class="m-flash"/>`)
+
+  expect(css).toContain('@media (prefers-reduced-motion: reduce){*{animation:none!important')
+  expect(restingRule(css, 'm-sweep')).toContain('opacity:0')
+  expect(restingRule(css, 'm-flash')).toContain('opacity:0')
+  expect(css).toMatch(/@keyframes m-sweep\{from\{opacity:1;/)
 })

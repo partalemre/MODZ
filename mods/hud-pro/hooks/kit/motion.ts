@@ -23,8 +23,9 @@ const RULES: Record<string, string> = {
   'm-fade': `.m-fade{animation:m-fade .5s ${EASE} both}@keyframes m-fade{from{opacity:0}}`,
   'm-grow': `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
   'm-px': `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
-  'm-sweep': `.m-sweep{pointer-events:none;animation:m-sweep 1.1s ${EASE} both}@keyframes m-sweep{from{transform:translateX(-120%)}to{transform:translateX(220%)}}`,
-  'm-flash': '.m-flash{animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}',
+  // These two rest unseen and show only while their animation runs, so under reduced motion they never appear.
+  'm-sweep': `.m-sweep{pointer-events:none;opacity:0;animation:m-sweep 1.1s ${EASE} both}@keyframes m-sweep{from{opacity:1;transform:translateX(-120%)}to{opacity:1;transform:translateX(220%)}}`,
+  'm-flash': '.m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}',
   'm-ripple': '.m-ripple{transform-box:fill-box;transform-origin:center;animation:m-ripple 1.8s ease-out infinite}@keyframes m-ripple{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(3.2)}}',
   'm-shine': '.m-shine{transform-box:fill-box;animation:m-shine 1.6s linear infinite}@keyframes m-shine{from{transform:translateX(-100%)}to{transform:translateX(250%)}}',
   // Hover inside the frame: a row's wash comes up and its tile lifts (a press stays on the native button).

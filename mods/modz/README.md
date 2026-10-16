@@ -15,7 +15,7 @@ Install this first, then the mods you want. Start a new session, or run `/reload
 
 ## What you see
 
-The panel opens on the right when a session starts, and again any time with `/modz`.
+The panel opens on the right when a session starts, and again any time with `/modz`. In the desktop app the prompt footer also carries a dim **MODZ** button beside the mode labels: like the app's own session-rail toggle, one press brings the panel back (over any mod's pane) and the next puts it away. It never takes the keyboard from the prompt.
 
 - **A head card** that leads with what needs you most: a failure, then a warning, then live work. Idle, it says "All quiet". When something leads, a primary button opens that mod's pane (for example "Open Tests").
 - **Rows in three sections**, each with the mod's one-line report and an **Open** button. In the terminal the rows also have number keys (`1` to `9`, then `0`).
@@ -42,6 +42,7 @@ The desktop app draws the panel as pictures; the terminal draws the same as text
 ## Commands
 
 - `/modz` opens the panel and brings it forward.
+- **MODZ** in the desktop prompt footer shows or hides the panel.
 
 ## Settings
 

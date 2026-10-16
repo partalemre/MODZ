@@ -103,3 +103,11 @@ export function svgDoc(doc: SvgDoc): string {
 
   return `<svg xmlns="http://www.w3.org/2000/svg" class="t-${doc.theme}" width="${width}" height="${doc.height}" viewBox="0 0 ${width} ${doc.height}">${styleOf()}<style>${scheme}${doc.css ?? ''}</style>${doc.body}</svg>`
 }
+
+// Claude Code's theme names say light or dark; anything else follows the system in the Svg.
+export function themeOf(value: unknown): Theme {
+  const name = String(value ?? '').toLowerCase()
+  if (name.includes('light')) return 'light'
+
+  return name.includes('dark') ? 'dark' : 'auto'
+}

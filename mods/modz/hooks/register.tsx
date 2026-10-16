@@ -10,6 +10,7 @@ import { autoUpdateSettings, installOf } from './auto-update'
 import type { Drawing } from './draw'
 import { linkCheck, loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
+import { footerTree, isHubShown } from './footer'
 import { cardOf, focusOf, hiddenRowsOf, MODS_PANE, modsTitle, presenceOf, rowsOf } from './hub'
 import { hubTree } from './hub-pane'
 import type { HubActions } from './hub-pane'
@@ -21,6 +22,7 @@ import { isSame } from './kit/same'
 import { pinned } from './kit/pin'
 import { stableDrawings } from './kit/stable'
 import { modzTree } from './pane'
+import { themeOf } from './theme'
 import type { Theme } from './theme'
 import { hubWords } from './words'
 
@@ -36,14 +38,6 @@ const editingAtom = atom({ plugin: 'modz', key: 'isEditing' } as const, false)
 const ON = { plugin: 'modz', key: 'isOn' } as const
 const LAYOUT_KEY = 'layout'
 const DEFAULT_COLUMNS = 80
-
-// Claude Code's theme names say light or dark; anything else follows the system in the Svg.
-function themeOf(value: unknown): Theme {
-  const name = String(value ?? '').toLowerCase()
-  if (name.includes('light')) return 'light'
-
-  return name.includes('dark') ? 'dark' : 'auto'
-}
 
 async function themeNow($: EngineInterface): Promise<Theme> {
   const rows = await $.config.list().catch(() => [])
@@ -96,16 +90,24 @@ const closeQuietly = ($: EngineInterface, id: string) =>
   $.ui.close({ id }).catch(cause => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: 'debug' }))
 
 // Puts one of the hub's own panes in the panel and closes the other; every mod's open pane closes too.
-async function show($: EngineInterface, pane: typeof PANE | typeof MODS_PANE): Promise<void> {
+// The footer toggle opens it without the keyboard (footer.tsx): the composer keeps it.
+async function show($: EngineInterface, pane: typeof PANE | typeof MODS_PANE, isFocused = true): Promise<void> {
   const title = pane === PANE ? TITLE : modsTitle()
   const drawings = pane === PANE ? hubDrawings : catalogDrawings
   drawings.reset()
-  await $.ui.open({ id: pane, title, focus: true })
+  await $.ui.open(isFocused ? { id: pane, title, focus: true } : { id: pane, title })
   await $.state.set(STAGE, { pane, at: Date.now() })
   await closeQuietly($, pane === PANE ? MODS_PANE : PANE)
 }
 
 const openHub = ($: EngineInterface) => show($, PANE)
+
+// The footer toggle (footer.tsx): the hub's panes away when one is shown, else the hub on stage without the keyboard.
+async function toggleHub($: EngineInterface): Promise<void> {
+  if (!isHubShown(await $.ui.panes())) return show($, PANE, false)
+  await closeQuietly($, PANE)
+  await closeQuietly($, MODS_PANE)
+}
 
 async function saveLayout($: EngineInterface, change: (layout: HubLayout) => HubLayout): Promise<void> {
   const next = change(await read($, layoutAtom))
@@ -279,7 +281,18 @@ function paneHooks(on: On): void {
   })
 }
 
+// The desktop only: the terminal keeps its footer as the engine draws it, and /modz.
+function footerHooks(on: On): void {
+  on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
+    if (e.surface !== 'desktop') return next(e)
+    const onPress = () => void toggleHub($).catch(cause => $.ui.log(`modz: the footer toggle failed: ${String(cause)}`, { to: 'debug' }))
+
+    return pinned(e, footerTree($.ui.resolve(e), { modes: e.props.modes, onPress }))
+  })
+}
+
 export const register: Register = (on, options) => {
   hubHooks(on, options)
   paneHooks(on)
+  footerHooks(on)
 }

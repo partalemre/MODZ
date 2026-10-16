@@ -5,8 +5,8 @@
 // Classes carry an `m-` prefix so they never meet a drawing's own (the kit's `shimmer` skeleton is another loop).
 
 // Where a drawing is in its life: first drawn since the pane opened, or redrawn because what it shows changed (an
-// unchanged one is never redrawn: its source is reused).
-export type Phase = 'enter' | 'change'
+// unchanged one is never redrawn: its source is reused). `still`: redrawn for a ticking clock alone, so no sweep.
+export type Phase = 'enter' | 'change' | 'still'
 
 // Its place in the opening cascade, top to bottom.
 export type Cue = { phase: Phase; order: number }

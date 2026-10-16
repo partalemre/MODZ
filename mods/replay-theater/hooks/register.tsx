@@ -19,6 +19,7 @@ import { withHome } from './home'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { setLang } from './lang'
 import { offerCard } from './offer'
+import { motion } from './pane'
 import { LIST_PAGE, PANE_ROWS_MAX } from './pane-io'
 import type { PaneIo } from './pane-io'
 import { pinned } from './pin'
@@ -94,6 +95,7 @@ function paneIo($: EngineInterface): PaneIo {
     kept: { get: () => $.store.get(KEPT_KEY), set: value => $.store.set(KEPT_KEY, value) },
     open: async rows => {
       const size = rows === undefined ? {} : { closeOnEscape: true as const, rows, columns: PANE_COLUMNS }
+      motion.reset()
       const isPlaced = (await $.ui.open({ id: PANE_ID, title, focus: true, ...size })).isPlaced !== false
       if (isPlaced) await reportShown($)
 

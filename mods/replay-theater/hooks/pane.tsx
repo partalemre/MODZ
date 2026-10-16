@@ -1,9 +1,11 @@
 import { buttons } from './buttons'
 import type { PaneHandlers } from './buttons'
 import { diffSvg } from './diff-svg'
+import { paneMotion } from './kit/moving'
 import type { Ui } from './offer'
 import { baseName, detailSvg, overviewSvg, totals } from './pane-svg'
 import type { PaneModel } from './pane-svg'
+import type { ReplayStep } from '../types'
 import { terminalView } from './terminal'
 import { escape, eyebrow, widthFor, wrap } from './ui/svg'
 import { svgDoc } from './ui/theme'
@@ -31,21 +33,40 @@ function altOf(model: PaneModel): string {
   return `${w.editsInFiles(model.steps.length, sum.files)}; ${w.nowOn(model.index + 1, step === undefined ? '' : baseName(step.file))}`
 }
 
+// The pane's drawings on the desktop (kit/moving.ts), its lists' too: reset as the pane opens, so they cascade in.
+export const motion = paneMotion()
+
+// A step's drawings follow the edit itself: its tool call, or the file and which edit of that file it is.
+function stepKey(steps: ReplayStep[], index: number): string {
+  const step = steps[index]
+  if (step === undefined) return 'none'
+  if (step.toolUseId !== undefined) return step.toolUseId
+  const before = steps.slice(0, index).filter(other => other.file === step.file).length
+
+  return `${step.file}#${before}`
+}
+
 function desktopView(ui: Ui, model: PaneModel, on: PaneHandlers) {
   const { Box, Svg } = ui
   const overview = overviewSvg(model)
   const detail = detailSvg(model)
   const step = model.steps[model.index]
+  const id = stepKey(model.steps, model.index)
   const diff = diffSvg({ lines: step?.diff ?? [], width: model.width, theme: model.theme })
-  // A wider diff is drawn live in its own frame, which scrolls it sideways instead of cutting its lines.
+  // A wider diff scrolls sideways in its frame instead of cutting its lines, with room for the scrollbar under it.
   const isWide = diff.contentWidth > model.width
-  const wide = isWide ? { isInteractive: true, height: diff.height + SCROLLBAR_ROOM } : { height: diff.height }
+  const diffHeight = isWide ? diff.height + SCROLLBAR_ROOM : diff.height
+  // "3m ago" reads on as time passes; only the replay itself is a change worth a sweep.
+  const { age, ...shown } = model
+  const overviewPic = motion.pic('rt-overview', { source: overview.source, alt: altOf(model), width: model.width, height: overview.height }, { shows: { ...shown, isAged: (age ?? '') !== '' } })
+  const detailPic = motion.pic(`rt-detail-${id}`, { source: detail.source, alt: step?.said ?? (step === undefined ? '' : step.file), width: model.width, height: detail.height })
+  const diffPic = motion.pic(`rt-diff-${id}`, { source: diff.source, alt: words().diffAlt, width: model.width, height: diffHeight })
 
   return (
     <Box key="rt-pane" flexDirection="column" gap={1} paddingX={1} paddingY={1}>
-      <Svg key="rt-overview" source={overview.source} alt={altOf(model)} width={model.width} height={overview.height} />
-      <Svg key="rt-detail" source={detail.source} alt={step?.said ?? (step === undefined ? '' : step.file)} width={model.width} height={detail.height} />
-      <Svg key="rt-diff" source={diff.source} alt={words().diffAlt} width={model.width} {...wide} />
+      <Svg key="rt-overview" {...overviewPic} />
+      <Svg key={`rt-detail-${id}`} {...detailPic} />
+      <Svg key={`rt-diff-${id}`} {...diffPic} />
       {buttons(ui, model, on)}
     </Box>
   )
@@ -89,7 +110,7 @@ function emptyView(ui: Ui, spec: { surface: string; width: number; theme: Theme;
 
   return (
     <Box key="rt-empty" flexDirection="column" gap={1} paddingX={1} paddingY={1}>
-      <Svg key="rt-empty-svg" source={drawn.source} alt={emptyText()} width={spec.width} height={drawn.height} />
+      <Svg key="rt-empty-svg" {...motion.pic('rt-empty-svg', { source: drawn.source, alt: emptyText(), width: spec.width, height: drawn.height })} />
       {actions}
     </Box>
   )

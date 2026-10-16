@@ -8,7 +8,7 @@ import type { EngineInterface, On, RenderSurface } from 'claude-code'
 import type { Candidate, Idea, IdeasView, Learning, SavedRule } from '../types'
 import { withHome } from './home'
 import { SYSTEM, ideasPrompt, parseIdeas } from './ideas'
-import { ideasPane } from './ideas-pane'
+import { ideasPane, motion } from './ideas-pane'
 import type { PaneActions, RowState } from './ideas-pane'
 import { claudePaths, isHere, items, record, waitingHere } from './learn'
 import type { Io } from './learn'
@@ -176,6 +176,8 @@ async function reportShown($: EngineInterface) {
 export function wireMine(on: On, deps: MineDeps) {
   // The command answers with no text: a transcript row would be read by the model on its next request.
   on('command.run', { command: MINE_COMMAND }, async $ => {
+    // Reset before the run starts: its "reading" head is the pane's first draw, so that one enters.
+    motion.reset()
     await start($, deps)
     const opened = await $.ui.open({ id: PANE, title: mineWords().title })
     if (opened.isPlaced) await reportShown($)

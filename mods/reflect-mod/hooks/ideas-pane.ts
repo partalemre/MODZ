@@ -7,6 +7,7 @@ import type { Elements, RenderElement, RenderSurface } from 'claude-code'
 import type { Candidate, Idea, IdeasView } from '../types'
 import type { Look } from './card'
 import { headSvg } from './ideas-svg'
+import { paneMotion } from './kit/moving'
 import { upper } from './lang'
 import { mineWords } from './mine-words'
 import { MAX_CHATS } from './transcripts'
@@ -24,6 +25,9 @@ type Level = 'hi' | 'mid' | 'lo'
 // A pane has no card frame of its own: its head is as wide as the body, about 8 px a column.
 const PX_PER_COLUMN = 8
 const MIN_WIDTH = 300
+const HEAD_KEY = 'ideas-head'
+/** The pane's drawing on the desktop (kit/moving.ts): reset as `/mine` opens the pane, so it cascades in each time. */
+export const motion = paneMotion()
 /** How a surface colours: the desktop by hex from the palette, the terminal by theme keys and dim text. */
 type Ink = { ui: Ui; p: Palette; isDesktop: boolean }
 
@@ -57,7 +61,8 @@ function head(ink: Ink, view: IdeasView, columns: number): RenderElement {
   if (ink.isDesktop && ink.ui.Svg) {
     const width = Math.max(MIN_WIDTH, columns * PX_PER_COLUMN)
     const art = headSvg(width, { eyebrow, headline, meta, isLoading }, ink.p)
-    return ink.ui.Svg({ source: art.source, alt: [`${eyebrow}: ${headline}`, ...(meta ? [meta] : [])].join(', '), width, height: art.height })
+    const alt = [`${eyebrow}: ${headline}`, ...(meta ? [meta] : [])].join(', ')
+    return ink.ui.Svg({ key: HEAD_KEY, ...motion.pic(HEAD_KEY, { source: art.source, alt, width, height: art.height }) })
   }
   const { Box, Text } = ink.ui
   return Box({ flexDirection: 'column', children: [

@@ -60,6 +60,26 @@ test('drawings first drawn together cascade top to bottom; redrawn, each keeps i
   expect(redrawn).toEqual(sources)
 })
 
+test('a source changed only by its ticking clock is redrawn without the sweep', () => {
+  const motion = paneMotion()
+  motion.pic('row', pic('turn 3 · 1 dk'), { shows: 'turn 3' })
+  const ticked = motion.pic('row', pic('turn 3 · 2 dk'), { shows: 'turn 3' })
+  const changed = motion.pic('row', pic('turn 4 · 2 dk'), { shows: 'turn 4' })
+
+  expect(ticked.source).toContain('2 dk')
+  expect(ticked.source).not.toContain('m-sweep')
+  expect(changed.source).toContain('m-sweep')
+})
+
+test('a drawing drawn at a new width reflowed, it did not change: no sweep', () => {
+  const motion = paneMotion()
+  motion.pic('head', pic('a'))
+  const wider = motion.pic('head', { ...pic('a'), source: svg('a').replace('width="200"', 'width="300"'), width: 300 })
+
+  expect(wider.source).toContain('width="300"')
+  expect(wider.source).not.toContain('m-sweep')
+})
+
 test('live loops come only with the drawings that use them', () => {
   const live = `${rings({ cx: 4, cy: 4, r: 3, className: 'f-run' })}${shine({ id: 'bar', x: 0, y: 0, width: 100, height: 6 })}`
 

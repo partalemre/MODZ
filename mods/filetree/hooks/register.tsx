@@ -1,6 +1,6 @@
 import { type EngineInterface, type On, type Register, update } from 'claude-code'
 
-import { drawDesktop } from './desktop'
+import { drawDesktop, opening } from './desktop'
 import { HomeButton } from './home'
 import { gitDir } from './gitread'
 import type { Host, IoHost, StateHost, UiHost } from './host'
@@ -114,7 +114,7 @@ function ioOf($: EngineInterface): IoHost {
 function uiOf($: EngineInterface): UiHost {
   return {
     toast: text => $.ui.toast(text),
-    openPane: isFocused => $.ui.open(isFocused ? { id: PANE, title: words().title, focus: true } : { id: PANE, title: words().title }),
+    openPane: isFocused => opening(() => $.ui.open(isFocused ? { id: PANE, title: words().title, focus: true } : { id: PANE, title: words().title })),
     isPaneOpen: async () => {
       try {
         return (await $.ui.panes()).some(p => p.id === PANE)

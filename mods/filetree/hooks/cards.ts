@@ -2,6 +2,7 @@
 
 import type { Look } from '../types'
 import type { BadgeKind } from './badges'
+import { rings } from './kit/motion'
 import type { Hero, Part } from './now'
 import {
   badge,
@@ -39,6 +40,10 @@ const LINE = 24
 const TOP_BLOCK = 66
 // Where a line's text starts after its 15px icon.
 const ICON_INDENT = 22
+// The live dot after the eyebrow: its radius, and its gap from the eyebrow's last letter.
+const DOT_R = 3
+const DOT_GAP = 12
+const EYEBROW = { size: 10.5, spacing: 1.05 }
 
 const frame = (w: number, h: number): string =>
   `<rect x=".5" y=".5" width="${w - 1}" height="${h - 1}" rx="12" class="card"/>`
@@ -127,12 +132,25 @@ function legendLine(items: LegendItem[], y: number): string {
 
 export type Canvas = { look: Look; w: number }
 
+// A neutral hero (Claude thinking) has no role colour: its eyebrow and dot take the quiet ink.
+const inkOf = (hero: Hero): string => (hero.role === 'neutral' ? 'lo' : `f-${hero.role}`)
+
+// The dot after "NOW" while Claude works, its rings going out under it (kit/motion.ts); none once the turn ends.
+function liveDot(hero: Hero, { x, y }: Pt): string {
+  if (hero.isLive !== true) return ''
+  const text = [...hero.eyebrow]
+  const dot = { cx: x + measure(hero.eyebrow, EYEBROW.size, true) + text.length * EYEBROW.spacing + DOT_GAP, cy: y - DOT_R - 0.5, r: DOT_R, className: inkOf(hero) }
+
+  return `${rings(dot)}<circle cx="${dot.cx}" cy="${dot.cy}" r="${dot.r}" class="${dot.className}"/>`
+}
+
 export function heroCard(hero: Hero, { git, cost, legend }: { git: GitRow | null; cost: CostRow | null; legend: LegendItem[] }, { look, w }: Canvas): Drawn {
   const textX = PAD + ICON_BOX + GAP
   const textW = w - textX - PAD
   const top = [
     iconBox(hero.icon, { x: PAD, y: PAD + 2 }, hero.role),
-    eyebrowText(hero.eyebrow, { x: textX, y: PAD + 10 }, hero.role === 'neutral' ? 'lo' : `f-${hero.role}`),
+    eyebrowText(hero.eyebrow, { x: textX, y: PAD + 10 }, inkOf(hero)),
+    liveDot(hero, { x: textX, y: PAD + 10 }),
     titleLine(hero, { x: textX, y: PAD + 31, width: textW }),
     `<text x="${textX}" y="${PAD + 50}" font-size="${SUB}">${spans(hero.sub, textW, SUB)}</text>`,
   ]

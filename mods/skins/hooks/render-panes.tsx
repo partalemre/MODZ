@@ -4,8 +4,10 @@ import type { SkinSlot } from '../types'
 import { DEFAULT_PREFS } from './command'
 import { resolveSkin, skinNames } from './custom'
 import { galleryPane } from './gallery'
+import { paneMotion } from './kit/moving'
 import { forTheme } from './light'
 import { lookOf } from './look'
+import { movingLook } from './moving-look'
 import type { PrefsHost } from './prefs-store'
 import { settingsPane, swatchesOf } from './settings'
 import { settingsActions } from './settings-actions'
@@ -13,6 +15,10 @@ import type { SettingsPorts } from './settings-actions'
 import { pinned } from './pin'
 import type { Drawing } from './view'
 import { say } from './words'
+
+// One motion per pane (kit/moving.ts), reset as it opens, so its drawings cascade in each time.
+export const settingsMotion = paneMotion()
+export const galleryMotion = paneMotion()
 
 // The settings pane's tab title, wherever it is opened from.
 export const settingsTitle = (): string => say().settingsTitle
@@ -27,7 +33,7 @@ export async function galleryView({ view, e }: Omit<Drawing<'Pane'>, 'pass'>): P
     return <Text>{say().galleryEmpty}</Text>
   }
 
-  const look = view.look(active)
+  const look = movingLook(view.look(active), galleryMotion)
 
   return pinned(e, galleryPane(look, e.props.bodyColumns))
 }
@@ -53,7 +59,7 @@ export async function settingsView(host: SettingsHost, e: Frozen<RenderInput<'Pa
     return <ui.Text>{say().settingsElsewhere}</ui.Text>
   }
 
-  const look = lookOf({ ui, active: { prefs, custom, skin }, surface: e.surface })
+  const look = movingLook(lookOf({ ui, active: { prefs, custom, skin }, surface: e.surface }), settingsMotion)
   const isLight = await host.isLight()
   const names = skinNames(custom)
   const skins = names.flatMap(name => resolveSkin(name, custom) ?? []).map(one => forTheme(one, isLight))

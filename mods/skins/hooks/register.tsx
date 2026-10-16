@@ -6,11 +6,12 @@ import { DEFAULT_PREFS } from './command'
 import { DESIGN_TOOL, runDesign } from './designer'
 import { EMPTY_HUB, HUB_PANE, isOwnOpen } from './hub'
 import { lookOf } from './look'
+import { opening } from './moving-look'
 import { activeSkin, commit, load, syncHub } from './prefs-store'
 import type { PrefsHost } from './prefs-store'
 import { abovePromptView, askView } from './render-bands'
 import { FRAME_MS, replyView, spinnerView, turnDurationView, userMessageView } from './render-messages'
-import { galleryView, settingsTitle, settingsView } from './render-panes'
+import { galleryMotion, galleryView, settingsMotion, settingsTitle, settingsView } from './render-panes'
 import type { SettingsHost } from './render-panes'
 import { toolGroupView, toolResultView, toolUseView } from './render-tools'
 import { runSkin, skinCommand } from './skin-command'
@@ -85,7 +86,7 @@ async function refreshUsage($: EngineInterface): Promise<void> {
 // stays open, so only a focused pane comes in front of it. Opened otherwise it takes none, so
 // letters typed meant elsewhere never reach its hotkeys.
 async function openSettings($: EngineInterface, isAsked: boolean): Promise<void> {
-  const opened = await $.ui.open({ id: SETTINGS, title: settingsTitle(), closeOnEscape: true, ...(isAsked ? { focus: true } : {}) })
+  const opened = await opening(settingsMotion, () => $.ui.open({ id: SETTINGS, title: settingsTitle(), closeOnEscape: true, ...(isAsked ? { focus: true } : {}) }))
   if (isAsked && opened.isPlaced) await reportShown($)
 }
 
@@ -100,7 +101,7 @@ async function reportShown($: EngineInterface): Promise<void> {
   }
 }
 
-const openGallery = ($: EngineInterface) => $.ui.open({ id: GALLERY, title: say().galleryTitle, focus: true, closeOnEscape: true })
+const openGallery = ($: EngineInterface) => opening(galleryMotion, () => $.ui.open({ id: GALLERY, title: say().galleryTitle, focus: true, closeOnEscape: true }))
 
 // Runs Claude Code's own /compact, so the person sees its usual progress and result.
 // Work a press starts is abandoned when the press ends, which cancels a compaction

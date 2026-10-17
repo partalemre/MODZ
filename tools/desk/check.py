@@ -6,7 +6,8 @@ its pane open, the hub closed, nothing else left as a tab. That pane must draw a
 press handle across a focus flip, and offer "← MODZ", whose press swaps the panel back to the hub alone. Its Svgs
 must be interactive frames that entered as it opened, say their colour scheme and keep their very sources on a
 redraw (kit/moving.ts), else the desktop rebuilds each frame and its loops restart. The band must draw a tree of its
-own too.
+own too, and the prompt footer (SessionMode) the engine's labels plus a "MODZ" toggle: a press on the tree drawn before
+a redraw takes the hub away, the next brings it back alone.
 Usage: python3 -I tools/desk/check.py [repo]   (exit 1 on any failure)
 """
 import os
@@ -14,7 +15,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from desk import Desk, Engine, walk  # noqa: E402
+from desk import Desk, Engine, walk, words  # noqa: E402
 
 HUB = 'modz'
 SETTLE_S = 1.5
@@ -110,6 +111,30 @@ def check_row(desk, engine, row):
     return problems
 
 
+FOOTER_PROPS = {'modes': ['focus']}
+
+
+def check_footer(desk, engine):
+    """The footer keeps the engine's labels and its "MODZ" toggle takes the hub away and brings it back."""
+    if not bring_hub(desk, engine):
+        return 'footer: the hub could not be brought back first'
+    tree = desk.render('session-mode', 'SessionMode', FOOTER_PROPS)
+    if not isinstance(tree, dict) or tree.get('type') == 'engine':
+        return 'footer: drew no tree of its own'
+    if 'focus' not in ' '.join(words(tree)):
+        return 'footer: the engine\'s labels were dropped'
+    if handles(tree) != handles(desk.render('session-mode', 'SessionMode', FOOTER_PROPS)):
+        return 'footer: press handles changed on a redraw'
+    for want, label in (([], 'away'), ([HUB], 'back')):
+        stale = desk.tree
+        desk.render('session-mode', 'SessionMode', FOOTER_PROPS)
+        if not desk.press('modz-toggle', tree=stale).get('handled'):
+            return f'footer: the toggle press ({label}) was dropped'
+        if not wait(lambda: ids(engine) == want, OPEN_WAIT_S):
+            return f'footer: the toggle ({label}) left {ids(engine)}, want {want}'
+    return None
+
+
 def main(repo):
     engine = Engine(repo)
     desk = Desk(engine)
@@ -122,6 +147,9 @@ def main(repo):
         failures += check_row(desk, engine, row)
     problem = check_site(desk, 'above-prompt', 'AbovePrompt')
     print(f'  band {"":<18} {"✘ " + problem if problem else "✔"}')
+    failures += [problem] if problem else []
+    problem = check_footer(desk, engine)
+    print(f'  footer {"":<16} {"✘ " + problem if problem else "✔"}')
     failures += [problem] if problem else []
     engine.close()
     for failure in failures:

@@ -145,7 +145,8 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
   değerine `{ pane, at }` yazar. Hub bunu duyunca kendi panellerini kapatır ve `{ plugin: 'modz', key: 'stage' }`
   değerine o paneli yazar; açık paneli olan diğer her mod `state.set { plugin: 'modz', key: 'stage' }` kancasında
   `isOffStage(e.value, kendiAnahtarı)` ise kendi panelini kapatır. Hub geri gelince (satırı, "← MODZ", `/modz`)
-  sahneyi `modz` yazar. Cevap vermeyen bir mod hub'ı yerinde bırakır: boş panel olmaz. Her açılış `focus: true`.
+  sahneyi `modz` yazar. Cevap vermeyen bir mod hub'ı yerinde bırakır: boş panel olmaz. Her açılış `focus: true`
+  (alt bilgi düğmesi hariç, aşağıda).
 - **Sabit basış tutamacı:** JSX her çizimde yeni tutamaç verir, host da yeniden çizimde eskileri bırakır; masaüstü
   son boyadığı ağaca tıkladığı için araya giren her çizim tıklamayı düşürürdü. Button, Input ya da Select çizen her
   `ui.render` kancası ağacını `pinned(e, ağaç)` ile döner (`kit/pin.ts`): her öğe yeri ve anahtarı için ilk aldığı
@@ -157,6 +158,11 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
   okur ve açıksa ağacın başına `HomeButton` (`kit/home.tsx`, "← MODZ") koyar. Basınca mod kendi
   `{ plugin: '<mod>', key: 'home' }` değerine `{ at }` yazar; hub `state.set { key: 'home' }` ile duyar ve kendini
   `focus: true` ile açar, kapanmışsa yeniden, ve sahneyi `modz` yazar: mod paneli kapanır, hub aynı yerde belirir.
+- **Alt bilgi düğmesi (masaüstü):** prompt altındaki soluk mod etiketleri (`SessionMode`) `modz` tarafından çizilir:
+  motorun `modes` etiketleri aynı sırada ve ` & ` ile kalır, sağlarına `plain` + `dimColor` bir "MODZ" düğmesi
+  (`modz-toggle`) gelir. Uygulamanın "Show session rail" düğmesi gibi çalışır: hub ya da katalog gösterilen panelse
+  ikisini de kapatır; değilse hub'ı sahneye `focus` istemeden açar (klavye prompt'ta kalır). Terminalde alt bilgi
+  motorundur; orada `/modz` var. Masaüstü motoru bu yüzeyde Box/Text/Button kabul eder (`bin/modz desk`).
 - **Kişiye göre düzen:** hub'da "Düzenle" satırları yukarı taşır ya da gizler; gizlenenler "Gizli" bölümünde
   "Göster" ile bekler, "Sıfırla" hepsini geri koyar. Düzen `$.store`'da (`layout`: `{ hidden, order }`) oturumlar
   arasında kalır.

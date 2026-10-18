@@ -21,6 +21,8 @@ export type ChatWords = {
   more: (n: number) => string
   /** The hub card's addition: "1 chat waits". */
   hubWaits: (n: number) => string
+  /** The hub card's addition while none waits: "2 chats working". */
+  hubWorks: (n: number) => string
 }
 
 /** The home crab: a word for each mood (the drawing's alt and the terminal), and its level pill. */

@@ -2,7 +2,7 @@ import { CONTEXT, CONTEXT_WARN } from './format'
 import { lineTree } from './line'
 import type { Ui } from './line'
 import { gaugeViews } from './model'
-import type { Forecasts } from './model'
+import type { Forecasts, GaugeView } from './model'
 import { lineSvg } from './svg-line'
 import { words } from './words'
 import type { HudUsage } from '../types'
@@ -19,7 +19,19 @@ export type BandInput = {
   // False while a turn runs or a compaction is under way: the button hides then.
   canCompact: boolean
   compact: () => void
+  // The `band: alerts` option: only a window or the context that needs a look; no cost, no button.
+  isAlertsOnly?: boolean
 }
+
+const needsLook = (gauge: GaugeView): boolean => gauge.tone !== 'neutral' || gauge.alert !== ''
+
+function shownGauges(input: BandInput): GaugeView[] {
+  const gauges = gaugeViews(input.usage, input.nowMs, input.forecasts)
+
+  return input.isAlertsOnly === true ? gauges.filter(needsLook) : gauges
+}
+
+const shownCost = (input: BandInput): number | null => (input.isAlertsOnly === true ? null : input.usage.costUsd)
 
 const PX_PER_COLUMN = 6.4
 // The room the button and its gap take beside the desktop line.
@@ -29,8 +41,8 @@ export const COMPACT_HOTKEY = 's'
 function desktopLine(ui: Ui, input: BandInput, reserve: number) {
   const { Svg } = ui
   const drawn = lineSvg({
-    gauges: gaugeViews(input.usage, input.nowMs, input.forecasts),
-    costUsd: input.usage.costUsd,
+    gauges: shownGauges(input),
+    costUsd: shownCost(input),
     maxWidth: input.columns * PX_PER_COLUMN - reserve,
   })
 
@@ -40,10 +52,10 @@ function desktopLine(ui: Ui, input: BandInput, reserve: number) {
 export function bandRow(ui: Ui, input: BandInput) {
   const { Box, Button } = ui
   const context = input.usage.gauges.find(gauge => gauge.id === CONTEXT)
-  const showsCompact = input.canCompact && context !== undefined && context.percent >= CONTEXT_WARN
+  const showsCompact = input.canCompact && input.isAlertsOnly !== true && context !== undefined && context.percent >= CONTEXT_WARN
   const line = input.isDesktop
     ? desktopLine(ui, input, showsCompact ? BUTTON_PX : 0)
-    : lineTree(ui, { gauges: gaugeViews(input.usage, input.nowMs, input.forecasts), costUsd: input.usage.costUsd, columns: input.columns })
+    : lineTree(ui, { gauges: shownGauges(input), costUsd: shownCost(input), columns: input.columns })
   if (line === null && !showsCompact) return null
 
   return (

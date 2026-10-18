@@ -7,7 +7,8 @@ import { bandOf, setup, spyOf, turn } from './world'
 import type { Spy } from './world'
 
 const LONG_MS = 75_000
-const banners = (spy: Spy) => spy.runs.filter(argv => argv[0] === 'osascript')
+const NOTIFIER = '/opt/homebrew/bin/terminal-notifier'
+const banners = (spy: Spy) => spy.runs.filter(argv => argv[0] === 'osascript' || argv[0] === NOTIFIER)
 
 describe('sound packs', () => {
   test('a pack name maps to its two clips, and anything else reads as off', () => {
@@ -62,7 +63,7 @@ describe('sound packs', () => {
 
   for (const surface of ['terminal', 'desktop'] as const) {
     test(`${surface}: a host that cannot play keeps the banner, draws nothing and writes one debug line`, { options: { soundPack: 'soft' } }, async ($, on) => {
-      const spy = spyOf({ isPlayFailing: true, surface })
+      const spy = spyOf({ isPlayFailing: true, surface, files: new Set([NOTIFIER]) })
       await setup($, on, spy)
 
       await turn($, spy, LONG_MS)
@@ -70,7 +71,8 @@ describe('sound packs', () => {
 
       expect(banners(spy)).toHaveLength(1)
       expect(spy.logs.filter(line => line.startsWith('done-ping: sound did not play'))).toHaveLength(1)
-      expect(await ui.drawn()).toEqual({ type: 'Text', props: {}, children: ['engine'] })
+      // Newer engines tag the fallback with the part that drew it; only the drawing itself matters.
+      expect(await ui.drawn()).toMatchObject({ type: 'Text', props: {}, children: ['engine'] })
     })
   }
 })

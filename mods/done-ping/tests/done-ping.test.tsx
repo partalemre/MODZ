@@ -55,6 +55,36 @@ test('a permission ask pings once per burst and never shows the command', async 
   expect(banners(spy)[0]?.slice(-4)).toEqual(['Bash komutu', 'Onay bekliyor', 'eliti', 'Glass'])
 })
 
+test('on the desktop a permission ask sends nothing: the app notifies on its own', async ($, on) => {
+  const spy = spyOf({ surface: 'desktop', files: new Set([NOTIFIER]), push: { message: '', localSent: true } })
+  await setup($, on, spy)
+
+  await $.tool.check({ tool: 'Bash', input: { command: 'ls' }, tool_use_id: 'u1' })
+  await spy.clock.advance(5)
+
+  expect(spy.calls).toHaveLength(0)
+  expect(banners(spy)).toHaveLength(0)
+})
+
+test('an older engine that names no surface is still told apart by the Claude bundle', async ($, on) => {
+  const spy = spyOf({ host: CLAUDE_APP, surface: 'unknown' as any })
+  await setup($, on, spy)
+
+  await turn($, spy, 75_000)
+
+  expect(spy.runs.some(run => run[0] === 'osascript')).toBe(false)
+})
+
+test('claude in a terminal opened inside the desktop app still pings like a terminal', async ($, on) => {
+  const spy = spyOf({ host: CLAUDE_APP })
+  await setup($, on, spy)
+
+  await $.tool.check({ tool: 'Bash', input: { command: 'ls' }, tool_use_id: 'u1' })
+  await spy.clock.advance(5)
+
+  expect(spy.runs.some(run => run[0] === 'osascript')).toBe(true)
+})
+
 test('no banner while the app the session runs in is in front; /done-ping test still rings', async ($, on) => {
   const spy = spyOf({ host: 'com.apple.Terminal', front: 'com.apple.Terminal' })
   await setup($, on, spy)
@@ -112,13 +142,24 @@ test('on the desktop, the app saying the person is present keeps it quiet', asyn
 })
 
 test('with appNotification off the desktop uses the banner', { options: { appNotification: false } }, async ($, on) => {
-  const spy = spyOf({ surface: 'desktop', push: { message: '', localSent: true } })
+  const spy = spyOf({ surface: 'desktop', files: new Set([NOTIFIER]), push: { message: '', localSent: true } })
   await setup($, on, spy)
 
   await turn($, spy, 75_000)
 
   expect(spy.calls).toHaveLength(0)
   expect(banners(spy)).toHaveLength(1)
+})
+
+test('on the desktop without terminal-notifier no Script Editor banner is sent', async ($, on) => {
+  const spy = spyOf({ surface: 'desktop' })
+  await setup($, on, spy)
+
+  await turn($, spy, 75_000)
+  const ui = await $.ui.mount(bandOf('desktop') as any)
+
+  expect(banners(spy)).toHaveLength(0)
+  expect(await ui.find({ key: 'done-ping-dismiss' })).toBeDefined()
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {

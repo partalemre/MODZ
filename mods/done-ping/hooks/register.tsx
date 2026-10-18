@@ -5,7 +5,7 @@ import { pingRow } from './band'
 import { configFrom, donePing, editedPath, isTestCommand, parseSeconds, permissionPing, projectOf, questionPing } from './ping'
 import type { Ping, PingConfig, TestsSeen } from './ping'
 import { AUTO, themeFrom } from './tidemark'
-import { ring } from './ring'
+import { isDesktop, ring } from './ring'
 import type { RingIo, Rung } from './ring'
 import { packAsset } from './pack'
 import { pinned } from './pin'
@@ -98,8 +98,10 @@ async function later($: EngineInterface, ping: Ping, spec: { config: PingConfig;
   $.clock.after(1, () => void deliver($, ping, spec))
 }
 
+// The desktop app already notifies when a session waits on the person, so a second ping there is noise.
 async function waitingOnUser($: EngineInterface, ping: Ping, config: PingConfig): Promise<void> {
   if (!config.isPermissionPing || !(await read($, enabledAtom))) return
+  if (await isDesktop(ioOf($))) return
   const nowMs = await $.clock.now()
   if (nowMs - session.lastWaitAt < WAIT_GAP_MS) return
   session.lastWaitAt = nowMs

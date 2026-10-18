@@ -26,6 +26,7 @@ type AppAnswer = 'sent' | 'present' | 'unavailable'
 type PushResult = { localSent?: boolean; pushSent?: boolean; disabledReason?: string }
 
 const PUSH_TOOL = 'PushNotification'
+const DESKTOP_BUNDLE = 'com.anthropic.claudefordesktop'
 const RUN_TIMEOUT_MS = 5_000
 
 export function appMessage(ping: Ping): string {
@@ -54,6 +55,20 @@ async function hostBundle(io: RingIo): Promise<string | null> {
   return value === undefined || value.trim() === '' ? null : value.trim()
 }
 
+// The surface list, or the launching app's bundle where an older engine names neither surface. A terminal
+// opened inside the desktop app inherits its bundle, so a listed 'terminal' wins over the bundle.
+export async function isDesktop(io: RingIo): Promise<boolean> {
+  try {
+    const surfaces = await io.surfaces()
+    if (surfaces.includes('desktop')) return true
+    if (surfaces.includes('terminal')) return false
+
+    return (await hostBundle(io)) === DESKTOP_BUNDLE
+  } catch {
+    return false
+  }
+}
+
 // True while the app this session runs in (the desktop app, the terminal) is the frontmost one.
 async function isHostFrontmost(io: RingIo, host: string | null): Promise<boolean> {
   if (host === null) return false
@@ -73,7 +88,9 @@ async function notifierPath(io: RingIo): Promise<string | null> {
   return null
 }
 
-async function banner(io: RingIo, note: { ping: Ping; sound: Sound; host: string | null }): Promise<boolean> {
+type Banner = { ping: Ping; sound: Sound; host: string | null; isDesktop: boolean }
+
+async function banner(io: RingIo, note: Banner): Promise<boolean> {
   const { ping, sound, host } = note
   const notifier = await notifierPath(io)
   if (notifier !== null) {
@@ -81,6 +98,8 @@ async function banner(io: RingIo, note: { ping: Ping; sound: Sound; host: string
     const shown = await io.run(argv, { timeoutMs: RUN_TIMEOUT_MS })
     if (shown.exitCode === 0) return true
   }
+  // An osascript banner belongs to Script Editor and a click opens it; the desktop shows its own row instead.
+  if (note.isDesktop) return false
   const shown = await io.run(osascriptArgv(ping, sound), { timeoutMs: RUN_TIMEOUT_MS })
 
   return shown.exitCode === 0
@@ -105,7 +124,7 @@ export async function ring(io: RingIo, spec: RingSpec): Promise<Rung> {
   const shouldCheckFocus = spec.config.isQuietWhenFocused && !spec.isForced
   if (shouldCheckFocus && (await isHostFrontmost(io, host).catch(() => false))) return 'quiet'
   const sound = soundOf(spec.config.sound)
-  const isShown = await banner(io, { ping: spec.ping, sound, host }).catch(() => false)
+  const isShown = await banner(io, { ping: spec.ping, sound, host, isDesktop: await isDesktop(io) }).catch(() => false)
   const play = afplayArgv(sound)
   if (isShown && play !== null) {
     await io.run(play, { timeoutMs: RUN_TIMEOUT_MS }).catch(() => io.log('done-ping: afplay failed'))

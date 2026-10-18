@@ -7,9 +7,11 @@ press handle across a focus flip, and offer "← MODZ", whose press swaps the pa
 must be interactive frames that entered as it opened, say their colour scheme and keep their very sources on a
 redraw (kit/moving.ts), else the desktop rebuilds each frame and its loops restart. The band must draw a tree of its
 own too, and the prompt footer (SessionMode) the engine's labels plus a "MODZ" toggle: a press on the tree drawn before
-a redraw takes the hub away, the next brings it back alone.
+a redraw takes the hub away, the next brings it back alone. In the band only this repo's mods are held to the
+pinned-handle rule; another plugin's buttons there are named, not failed.
 Usage: python3 -I tools/desk/check.py [repo]   (exit 1 on any failure)
 """
+import json
 import os
 import sys
 import time
@@ -22,8 +24,30 @@ SETTLE_S = 1.5
 OPEN_WAIT_S = 8
 
 
-def handles(tree):
-    return {f'{kind}:{key}': p['handle'] for kind in ('Button', 'Input', 'Select') for key, p in walk(tree, kind)}
+def handles(tree, owners=None):
+    """Each pressable element's handle; with `owners`, only those plugins' elements."""
+    return {f'{kind}:{key}': p['handle'] for kind in ('Button', 'Input', 'Select') for key, p in walk(tree, kind)
+            if owners is None or p['plugin'] in owners}
+
+
+def own_mods(repo):
+    """The plugin names this repo ships: the band check holds only them to the pinned-handle rule."""
+    mods = os.path.join(repo, 'mods')
+    manifests = [os.path.join(mods, name, '.claude-plugin', 'plugin.json') for name in os.listdir(mods)]
+    return {json.load(open(path))['name'] for path in manifests if os.path.isfile(path)}
+
+
+def check_band(desk, owners):
+    """The band draws a tree, and MODZ's own buttons keep their handles across a focus flip. Other
+    plugins' buttons are theirs to pin: they are named, not failed."""
+    first = desk.render('above-prompt', 'AbovePrompt')
+    if not isinstance(first, dict) or first.get('type') == 'engine':
+        return 'AbovePrompt above-prompt: drew no tree of its own', []
+    desk.render('above-prompt', 'AbovePrompt', {'isFocused': False, 'bodyColumns': 80})
+    again = desk.render('above-prompt', 'AbovePrompt')
+    others = sorted({p['plugin'] for kind in ('Button', 'Input', 'Select') for _, p in walk(first, kind)} - owners)
+    same = handles(first, owners) == handles(again, owners)
+    return (None if same else 'AbovePrompt above-prompt: press handles changed on a redraw'), others
 
 
 def wait(pred, secs):
@@ -145,8 +169,9 @@ def main(repo):
     failures += [problem for problem in (check_motion(desk, HUB), check_site(desk, HUB)) if problem]
     for row in rows:
         failures += check_row(desk, engine, row)
-    problem = check_site(desk, 'above-prompt', 'AbovePrompt')
-    print(f'  band {"":<18} {"✘ " + problem if problem else "✔"}')
+    problem, others = check_band(desk, own_mods(repo))
+    note = f'  (not ours, not checked: {", ".join(others)})' if others else ''
+    print(f'  band {"":<18} {"✘ " + problem if problem else "✔"}{note}')
     failures += [problem] if problem else []
     problem = check_footer(desk, engine)
     print(f'  footer {"":<16} {"✘ " + problem if problem else "✔"}')

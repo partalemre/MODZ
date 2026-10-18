@@ -27,7 +27,7 @@ Where a ping goes, in order:
 4. A macOS banner through `osascript`, with the sound you chose. Not in the desktop app: macOS files that banner under Script Editor, and clicking it opens Script Editor.
 5. If no banner could be shown, a one-line notice above the prompt: a bell tile (green when done, red if the turn's tests failed, amber when waiting), the title, then the facts. It clears itself after 20 seconds or when you send the next prompt. A live notice from session-budget or test-badge takes that line first.
 
-One waiting ping is sent per 15-second burst, and any two pings are at least 10 seconds apart.
+In the desktop app no waiting ping is sent: the app already notifies when a session needs your approval or answer. One waiting ping is sent per 15-second burst, and any two pings are at least 10 seconds apart.
 
 ## Sound packs
 

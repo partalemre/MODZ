@@ -55,6 +55,26 @@ test('a permission ask pings once per burst and never shows the command', async 
   expect(banners(spy)[0]?.slice(-4)).toEqual(['Bash komutu', 'Onay bekliyor', 'eliti', 'Glass'])
 })
 
+test('on the desktop a permission ask sends nothing: the app notifies on its own', async ($, on) => {
+  const spy = spyOf({ surface: 'desktop', files: new Set([NOTIFIER]), push: { message: '', localSent: true } })
+  await setup($, on, spy)
+
+  await $.tool.check({ tool: 'Bash', input: { command: 'ls' }, tool_use_id: 'u1' })
+  await spy.clock.advance(5)
+
+  expect(spy.calls).toHaveLength(0)
+  expect(banners(spy)).toHaveLength(0)
+})
+
+test('an older engine that lists no desktop surface is still told apart by the Claude bundle', async ($, on) => {
+  const spy = spyOf({ host: CLAUDE_APP })
+  await setup($, on, spy)
+
+  await turn($, spy, 75_000)
+
+  expect(spy.runs.some(run => run[0] === 'osascript')).toBe(false)
+})
+
 test('no banner while the app the session runs in is in front; /done-ping test still rings', async ($, on) => {
   const spy = spyOf({ host: 'com.apple.Terminal', front: 'com.apple.Terminal' })
   await setup($, on, spy)

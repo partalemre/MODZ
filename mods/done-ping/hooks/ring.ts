@@ -26,6 +26,7 @@ type AppAnswer = 'sent' | 'present' | 'unavailable'
 type PushResult = { localSent?: boolean; pushSent?: boolean; disabledReason?: string }
 
 const PUSH_TOOL = 'PushNotification'
+const DESKTOP_BUNDLE = 'com.anthropic.claudefordesktop'
 const RUN_TIMEOUT_MS = 5_000
 
 export function appMessage(ping: Ping): string {
@@ -52,6 +53,13 @@ async function hostBundle(io: RingIo): Promise<string | null> {
   const value = await io.hostBundle()
 
   return value === undefined || value.trim() === '' ? null : value.trim()
+}
+
+// The surface list, or the launching app's bundle where an older engine leaves the list without 'desktop'.
+export async function isDesktop(io: RingIo): Promise<boolean> {
+  if ((await io.surfaces()).includes('desktop')) return true
+
+  return (await hostBundle(io)) === DESKTOP_BUNDLE
 }
 
 // True while the app this session runs in (the desktop app, the terminal) is the frontmost one.
@@ -109,8 +117,7 @@ export async function ring(io: RingIo, spec: RingSpec): Promise<Rung> {
   const shouldCheckFocus = spec.config.isQuietWhenFocused && !spec.isForced
   if (shouldCheckFocus && (await isHostFrontmost(io, host).catch(() => false))) return 'quiet'
   const sound = soundOf(spec.config.sound)
-  const isDesktop = (await io.surfaces()).includes('desktop')
-  const isShown = await banner(io, { ping: spec.ping, sound, host, isDesktop }).catch(() => false)
+  const isShown = await banner(io, { ping: spec.ping, sound, host, isDesktop: await isDesktop(io) }).catch(() => false)
   const play = afplayArgv(sound)
   if (isShown && play !== null) {
     await io.run(play, { timeoutMs: RUN_TIMEOUT_MS }).catch(() => io.log('done-ping: afplay failed'))

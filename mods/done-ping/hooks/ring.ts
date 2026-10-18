@@ -55,11 +55,18 @@ async function hostBundle(io: RingIo): Promise<string | null> {
   return value === undefined || value.trim() === '' ? null : value.trim()
 }
 
-// The surface list, or the launching app's bundle where an older engine leaves the list without 'desktop'.
+// The surface list, or the launching app's bundle where an older engine names neither surface. A terminal
+// opened inside the desktop app inherits its bundle, so a listed 'terminal' wins over the bundle.
 export async function isDesktop(io: RingIo): Promise<boolean> {
-  if ((await io.surfaces()).includes('desktop')) return true
+  try {
+    const surfaces = await io.surfaces()
+    if (surfaces.includes('desktop')) return true
+    if (surfaces.includes('terminal')) return false
 
-  return (await hostBundle(io)) === DESKTOP_BUNDLE
+    return (await hostBundle(io)) === DESKTOP_BUNDLE
+  } catch {
+    return false
+  }
 }
 
 // True while the app this session runs in (the desktop app, the terminal) is the frontmost one.

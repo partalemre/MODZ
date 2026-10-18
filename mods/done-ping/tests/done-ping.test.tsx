@@ -66,13 +66,23 @@ test('on the desktop a permission ask sends nothing: the app notifies on its own
   expect(banners(spy)).toHaveLength(0)
 })
 
-test('an older engine that lists no desktop surface is still told apart by the Claude bundle', async ($, on) => {
-  const spy = spyOf({ host: CLAUDE_APP })
+test('an older engine that names no surface is still told apart by the Claude bundle', async ($, on) => {
+  const spy = spyOf({ host: CLAUDE_APP, surface: 'unknown' as any })
   await setup($, on, spy)
 
   await turn($, spy, 75_000)
 
   expect(spy.runs.some(run => run[0] === 'osascript')).toBe(false)
+})
+
+test('claude in a terminal opened inside the desktop app still pings like a terminal', async ($, on) => {
+  const spy = spyOf({ host: CLAUDE_APP })
+  await setup($, on, spy)
+
+  await $.tool.check({ tool: 'Bash', input: { command: 'ls' }, tool_use_id: 'u1' })
+  await spy.clock.advance(5)
+
+  expect(spy.runs.some(run => run[0] === 'osascript')).toBe(true)
 })
 
 test('no banner while the app the session runs in is in front; /done-ping test still rings', async ($, on) => {

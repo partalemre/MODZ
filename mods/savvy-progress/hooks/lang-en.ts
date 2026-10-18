@@ -111,6 +111,7 @@ export const en: Strings = {
     untitled: 'New chat',
     more: n => `+${n} more`,
     hubWaits: n => (n === 1 ? '1 chat waits' : `${n} chats wait`),
+    hubWorks: n => (n === 1 ? '1 chat working' : `${n} chats working`),
   },
   crab: {
     moods: { sleeping: 'napping', working: 'working', happy: 'happy', worried: 'worried' },

@@ -128,6 +128,7 @@ export const tr: Strings = {
     untitled: 'Yeni sohbet',
     more: n => `+${n} daha`,
     hubWaits: n => `${n} sohbet bekliyor`,
+    hubWorks: n => `${n} sohbet çalışıyor`,
   },
   crab: {
     moods: { sleeping: 'uyuyor', working: 'çalışıyor', happy: 'mutlu', worried: 'endişeli' },

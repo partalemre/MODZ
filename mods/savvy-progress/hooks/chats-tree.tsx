@@ -56,17 +56,21 @@ export function waitingTree(ui: Ui, chats: OtherChat[], layout: Layout) {
 
 export type QuietView = { chats: OtherChat[]; layout: Layout; isOpen: boolean; onToggle: () => void }
 
-/** The working and idle chats, folded under "Other chats · 2" until the person opens it; nothing when none. */
+/**
+ * The working and idle chats under "Other chats · 2"; nothing when none. The working ones always show, as the desktop
+ * hands work to side sessions rather than agents; the idle ones stay folded until the person opens the row.
+ */
 export function quietTree(ui: Ui, view: QuietView) {
   const { Box, Text } = ui
   const s = t().chats
   const quiet = quietOf(view.chats)
   if (!quiet.length) return null
+  const shown = view.isOpen ? quiet : quiet.filter(chat => chat.state === 'working')
   const head = sectionHead(ui, view.layout, { id: 'chats', label: `${s.title} · ${quiet.length}`, dot: 'idle', toggle: { key: 'chats', isOpen: view.isOpen, onPress: view.onToggle } })
   return (
     <Box key="chats-quiet" flexDirection="column" rowGap={0}>
       {head}
-      {view.isOpen && quiet.map(chat => (
+      {shown.map(chat => (
         <Text key={`chat-${chat.id}`} wrap="truncate-end"><Text bold>{chat.project}</Text><Text dimColor>{` · ${chat.title || s.untitled} · ${s.states[chat.state === 'working' ? 'working' : 'idle']}`}</Text></Text>
       ))}
     </Box>

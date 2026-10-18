@@ -104,12 +104,15 @@ test('with the hub on the opened pane reports itself shown, and steps aside when
 
 const waitingElsewhere = (at: number) => ({ project: 'shop', title: 'Fix checkout', state: 'waiting', since: 0, at })
 
-test('a chat waiting elsewhere adds itself to the card, and only while it waits', WITH_HUB, async ($, on) => {
+test('a chat elsewhere adds itself to the card while it waits or works, and leaves once idle', WITH_HUB, async ($, on) => {
   const { world, clock } = await setup($, on, { store: { 'sessions/S2': waitingElsewhere(0) } })
   expect(await card($)).toMatchObject({ detail: '1 sohbet bekliyor', tone: 'idle' })
   world.store.set('sessions/S2', { ...waitingElsewhere(HEARTBEAT_MS), state: 'working' })
   await clock.advance(HEARTBEAT_MS)
-  expect((await card($)).detail).toBe('')
+  expect(await card($)).toMatchObject({ detail: '1 sohbet çalışıyor', tone: 'live' })
+  world.store.set('sessions/S2', { ...waitingElsewhere(2 * HEARTBEAT_MS), state: 'idle' })
+  await clock.advance(HEARTBEAT_MS)
+  expect(await card($)).toMatchObject({ detail: '', tone: 'idle' })
 })
 
 test('beside a job the waiting chats keep their words and the card stays within 40 characters', WITH_HUB, async ($, on) => {

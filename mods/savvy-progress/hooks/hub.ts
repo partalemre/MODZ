@@ -1,6 +1,6 @@
 import type { AgentRun, Flow, HubTone, Job, OtherChat, TrackedTask } from '../types'
 import { isRunning } from './agents'
-import { waitingOf } from './chats'
+import { quietOf, waitingOf } from './chats'
 import { clip } from './format'
 import { t } from './i18n'
 import { deriveJob } from './job'
@@ -26,12 +26,15 @@ export const toneOf = (view: JobView | null): HubTone => {
 
 /**
  * "Görevler 3/4 · 2 ajan" ("Tasks 3/4 · 2 running") while agents run, the band's label alone otherwise, "" with no job;
- * "· 1 chat waits" after it while another chat on this machine waits on the person. The job's part gives way first.
+ * "· 1 chat waits" after it while another chat on this machine waits on the person, else "· 2 chats working" while
+ * others work (the desktop runs work in side sessions). The job's part gives way first.
  */
-export const hubDetailOf = (view: JobView | null, running: number, waiting = 0): string => {
+export const hubDetailOf = (view: JobView | null, running: number, others: { waiting?: number; working?: number } = {}): string => {
+  const { waiting = 0, working = 0 } = others
   const crew = running > 0 ? `${SEP}${t().hubCrew(running)}` : ''
   const jobPart = view ? `${view.label}${crew}` : ''
-  const waits = waiting > 0 ? t().chats.hubWaits(waiting) : ''
+  const works = working > 0 ? t().chats.hubWorks(working) : ''
+  const waits = waiting > 0 ? t().chats.hubWaits(waiting) : works
   if (!waits) return clip(jobPart, DETAIL_MAX)
   if (!view) return clip(waits, DETAIL_MAX)
   const room = DETAIL_MAX - waits.length - SEP.length
@@ -46,5 +49,7 @@ export type HubSources = { flow: Flow | null; agents: AgentRun[]; job: Job | nul
 /** The card's words and tone. */
 export const hubCardOf = (src: HubSources): { detail: string; tone: HubTone } => {
   const view = deriveJob({ flow: src.flow, agents: src.agents, job: src.job, tasks: src.tasks })
-  return { detail: hubDetailOf(view, src.agents.filter(isRunning).length, waitingOf(src.chats).length), tone: toneOf(view) }
+  const others = { waiting: waitingOf(src.chats).length, working: quietOf(src.chats).filter(chat => chat.state === 'working').length }
+  const tone = !view && others.working > 0 ? 'live' : toneOf(view)
+  return { detail: hubDetailOf(view, src.agents.filter(isRunning).length, others), tone }
 }

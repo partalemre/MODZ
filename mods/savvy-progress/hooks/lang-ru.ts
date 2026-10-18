@@ -111,6 +111,7 @@ export const ru: Strings = {
     untitled: 'Новый чат',
     more: n => `+${n} ещё`,
     hubWaits: n => `чатов ждёт: ${n}`,
+    hubWorks: n => `чатов в работе: ${n}`,
   },
   crab: {
     moods: { sleeping: 'спит', working: 'работает', happy: 'доволен', worried: 'волнуется' },

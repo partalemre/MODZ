@@ -37,7 +37,13 @@ The line sits beneath other mods' rows without swallowing them, and steps aside 
 
 ## Settings
 
-There are no plugin options.
+| Option | Default | Meaning |
+|---|---|---|
+| `band` | `always` | `always` draws the full line. `alerts` keeps the band empty while everything is calm and draws only a limit or the context that needs a look (amber or red, or a near `~` estimate), without the cost or the **Compact** button. Use it when another mod already shows the cost and a Compact button (ponytail does), or when the desktop's usage ring is enough. |
+
+```json
+{ "pluginConfigs": { "hud-pro@skills-dir": { "options": { "band": "alerts" } } } }
+```
 
 ## Limits
 

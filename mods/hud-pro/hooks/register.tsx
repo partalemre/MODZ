@@ -249,7 +249,7 @@ function onRender(on: On) {
   })
 }
 
-function onBand(on: On) {
+function onBand(on: On, isAlertsOnly: boolean) {
   // The bottom row of the band, right above the prompt: what the plugins beneath drew stays above it.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const theirs = await next(e)
@@ -265,6 +265,7 @@ function onBand(on: On) {
         isDesktop: e.surface !== 'terminal' && 'Svg' in ui,
         canCompact: !e.props.isWorking && !(await read($, compactingAtom)),
         compact: () => compactNow($),
+        isAlertsOnly,
       })
       if (row === null) return theirs
       const { Box } = ui
@@ -283,10 +284,10 @@ function onBand(on: On) {
   })
 }
 
-export const register: Register = on => {
+export const register: Register = (on, options) => {
   onUsage(on)
   onTurns(on)
   onOpen(on)
   onRender(on)
-  onBand(on)
+  onBand(on, options?.band === 'alerts')
 }

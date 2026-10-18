@@ -71,7 +71,8 @@ describe('sound packs', () => {
 
       expect(banners(spy)).toHaveLength(1)
       expect(spy.logs.filter(line => line.startsWith('done-ping: sound did not play'))).toHaveLength(1)
-      expect(await ui.drawn()).toEqual({ type: 'Text', props: {}, children: ['engine'] })
+      // Newer engines tag the fallback with the part that drew it; only the drawing itself matters.
+      expect(await ui.drawn()).toMatchObject({ type: 'Text', props: {}, children: ['engine'] })
     })
   }
 })

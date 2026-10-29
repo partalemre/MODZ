@@ -10,13 +10,15 @@ import type { Ui } from './line'
 import { gaugeViews } from './model'
 import type { Forecasts, GaugeView } from './model'
 import { motion } from './pane-motion'
+import { pastCard } from './past-card'
+import type { PastView } from './past-hook'
 import { tilesSvg } from './svg-tiles'
 import type { Tile } from './svg-tiles'
 import { words } from './words'
 import type { HudContext, HudSample, HudTurn, HudUsage } from '../types'
 
 // `/hud full`: stat tiles with rings and sparklines on the desktop, rows with text sparklines
-// on the terminal; then the context card, and the turn's tokens under both.
+// on the terminal; then the context card, the history card, and the turn's tokens under both.
 
 // What the context card reads beyond the pane's own figures.
 export type CardData = Pick<CardView, 'view' | 'turns' | 'lastCompact' | 'isCompacting' | 'compact'>
@@ -31,6 +33,8 @@ export type PaneView = {
   card: CardData
   // A turn is running: the meters shine.
   isLive: boolean
+  // The last 7 or 30 days from the transcripts; null until they have been read.
+  past: PastView | null
   svg?: PaneSvg
 }
 
@@ -170,6 +174,7 @@ function terminalBody(ui: Ui, view: PaneView, gauges: readonly GaugeView[]) {
         {gauges.map(gauge => terminalRow(ui, gauge, view))}
       </Box>
       {contextCard(ui, cardOf(view, gauges))}
+      {view.past !== null && pastCard(ui, view.past)}
     </Box>
   )
 }
@@ -188,6 +193,7 @@ function body(ui: Ui, view: PaneView, usage: HudUsage) {
     <Box flexDirection="column">
       <Svg key="hud-tiles" {...motion.pic('hud-tiles', drawn, { shows })} />
       {contextCard(ui, cardOf(view, gauges, drawn.width))}
+      {view.past !== null && pastCard(ui, { ...view.past, width: drawn.width, svg: Svg })}
     </Box>
   )
 }

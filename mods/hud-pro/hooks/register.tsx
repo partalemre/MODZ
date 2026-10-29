@@ -11,6 +11,7 @@ import { gaugeViews } from './model'
 import type { Forecasts } from './model'
 import { paneTree, withHome } from './pane'
 import type { CardData } from './pane'
+import { onPast, pastViewOf } from './past-hook'
 import { motion } from './pane-motion'
 import { isSame } from './same'
 import { pinned } from './pin'
@@ -36,6 +37,8 @@ const contextTurnsAtom = atom({ plugin: 'hud-pro', key: 'contextTurns' } as cons
 const lastCompactAtom = atom({ plugin: 'hud-pro', key: 'lastCompact' } as const, null)
 const hubAtom = atom({ plugin: 'hud-pro', key: 'hub' } as const, EMPTY_HUB)
 const liveAtom = atom({ plugin: 'hud-pro', key: 'isLive' } as const, false)
+const pastAtom = atom({ plugin: 'hud-pro', key: 'past' } as const, null)
+const rangeAtom = atom({ plugin: 'hud-pro', key: 'pastRange' } as const, 7)
 
 const noticed = new Set<string>()
 // What the minute clock last moved on screen: the gauges' countdowns, pace marks and estimates.
@@ -242,6 +245,7 @@ function onRender(on: On) {
       isLive: await read($, liveAtom),
       // The breakdown read first, so the forecast counts up to the compaction point it names.
       forecasts: await forecastsOf($, usage),
+      past: pastViewOf(await read($, pastAtom), { range: await read($, rangeAtom), choose: range => void update($, rangeAtom, () => range) }),
       ...(e.surface !== 'terminal' && 'Svg' in ui ? { svg: ui.Svg } : {}),
     })
 
@@ -287,6 +291,7 @@ function onBand(on: On, isAlertsOnly: boolean) {
 export const register: Register = (on, options) => {
   onUsage(on)
   onTurns(on)
+  onPast(on)
   onOpen(on)
   onRender(on)
   onBand(on, options?.band === 'alerts')

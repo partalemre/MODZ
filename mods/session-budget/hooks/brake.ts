@@ -10,6 +10,8 @@ export const BRAKE_DEFAULT = 85
 // "Continue" lets spawns through until the window has moved this many points more.
 export const ACK_POINTS = 5
 const MAX_PERCENT = 100
+// Below this the pace alone never asks: early in a window a short burst projects a fill that rarely comes.
+const PACE_FLOOR = 50
 // A pace needs this many readings spread over at least this long, all from the last hour.
 const PACE_MIN_SAMPLES = 3
 const PACE_MIN_SPAN_MS = 10 * 60_000
@@ -66,7 +68,7 @@ export function brakeWhy(spec: BrakeSpec): string | null {
   if (spec.at === null || last === undefined) return null
   const { ack } = spec
   if (ack !== null && ack.window === spec.resetsAt && last.value < ack.percent + ACK_POINTS) return null
-  const fullAt = fullAtOf(spec.points, spec.resetsAt)
+  const fullAt = last.value < PACE_FLOOR ? null : fullAtOf(spec.points, spec.resetsAt)
   if (last.value < spec.at && fullAt === null) return null
   const says = words()
   const percent = says.percent(says.decimal(String(last.value)))

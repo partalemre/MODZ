@@ -41,7 +41,7 @@ There are no plugin options.
 - The 5-hour figure is account-wide: other sessions in the same window count toward it. A session that outlives a 5-hour reset keeps what it spent before the reset and counts from 0 in the new window.
 - Rate-limit data exists only on a subscription, and only after the first response of the session. A percent budget set earlier starts counting at the first reading. With an API key, use a `$` budget.
 - The budget lives for the session only. The on/off switch and the spawn brake setting are what persist.
-- The spawn brake needs 5-hour data too: with an API key, or before the first reading, spawns are never held. The pace needs three readings over ten minutes.
+- The spawn brake needs 5-hour data too: with an API key, or before the first reading, spawns are never held. The pace needs three readings over ten minutes, and alone it only asks from 50%.
 
 Uses no model tokens: it reads the same usage figures the status line shows.
 

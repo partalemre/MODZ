@@ -101,14 +101,27 @@ test('headless (nobody to ask) never blocks a spawn', async ($: any, on: any) =>
 test('a pace that fills the window before it resets asks below the line', async ($: any, on: any) => {
   const w = world('Stop')
   const clock = await setup($, on, w)
+  await measure($, 50)
+  await clock.advance(5 * MINUTE)
+  await measure($, 55)
+  await clock.advance(5 * MINUTE)
+  await measure($, 60)
+  await spawn($, 'one')
+  expect(w.asked[0]).toBe(`Spawn brake: 5-hour window at 60%, full by ${clockOf(50 * MINUTE)} at this pace, resets ${clockOf(RESETS_AT_MS)}. Start the subagent anyway?`)
+  expect(w.spawned).toEqual([])
+})
+
+test('the pace alone stays quiet early in a window', async ($: any, on: any) => {
+  const w = world('Stop')
+  const clock = await setup($, on, w)
   await measure($, 10)
   await clock.advance(5 * MINUTE)
   await measure($, 15)
   await clock.advance(5 * MINUTE)
   await measure($, 20)
   await spawn($, 'one')
-  expect(w.asked[0]).toBe(`Spawn brake: 5-hour window at 20%, full by ${clockOf(90 * MINUTE)} at this pace, resets ${clockOf(RESETS_AT_MS)}. Start the subagent anyway?`)
-  expect(w.spawned).toEqual([])
+  expect(w.asked).toEqual([])
+  expect(w.spawned).toEqual(['one'])
 })
 
 test('/budget brake sets the line or turns it off, and the choice is saved', async ($: any, on: any) => {

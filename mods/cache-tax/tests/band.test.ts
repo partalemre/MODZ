@@ -59,9 +59,10 @@ describe('status row', () => {
     test(`${surface}: official cube follows state and theme with a text alternative`, async ($, on) => {
       const clock = mock.clock(on, { now: 10 * HOUR })
       const theme = { value: 'dark' }
-      const w = world(on, [], { theme })
+      // A ping with nothing to fork leaves the window waiting, so the cache goes cold by the clock alone.
+      const w = world(on, [{ isAnswered: false, reason: 'nothing-to-fork' } satisfies ModelForkResult], { theme })
       await $.session.start({ ...session, surface, isInteractive: true })
-      await $.command.run(run('keepwarm', '3h every 90m'))
+      await $.command.run(run('keepwarm', '3h'))
       const ui = await $.ui.mount({ plugin: 'cache-tax', surface, component: 'AbovePrompt', props: bandProps })
       const type = surface === 'terminal' ? 'Image' : 'Svg'
       const lid = async () => String((await ui.find({ type }))?.props.source ?? '')
@@ -80,7 +81,7 @@ describe('status row', () => {
       if (surface === 'terminal') expect((await ui.find({ type }))?.props.source).toEqual({ png: statusIcons.light.cold.png })
       else expect(await lid()).toContain(`fill="${KILN_LIGHT}"`)
       expect((await ui.find({ type: 'Text', text: /^soğuk$/ }))?.props.color).toBe(surface === 'terminal' ? 'claude' : KILN_LIGHT)
-      expect(w.forks.length).toBe(0)
+      expect(w.forks.length).toBe(1)
       await $.command.run(run('keepwarm', 'off'))
       // keepwarm is off, but a cold cache this big still earns its row.
       expect((await ui.find(ROW))?.text).toMatch(/soğuk · 0 dk önce soğudu · sonraki mesaj en fazla \$4,01/)
@@ -103,21 +104,21 @@ describe('status row', () => {
   for (const surface of ['terminal', 'desktop'] as const) {
     test(`${surface}: unknown, warm, cold and warm again agree with the card`, async ($, on) => {
       const clock = mock.clock(on, { now: 10 * HOUR })
-      const w = world(on, [], { bandText: 'other mod' })
+      const w = world(on, [{ isAnswered: false, reason: 'nothing-to-fork' } satisfies ModelForkResult], { bandText: 'other mod' })
       await $.session.start({ ...session, surface, isInteractive: true })
       const ui = await $.ui.mount({ plugin: 'cache-tax', surface, component: 'AbovePrompt', props: bandProps })
       expect(await ui.find({ text: 'Önbellek · ' })).toBe(undefined)
-      await $.command.run(run('keepwarm', '3h every 90m'))
+      await $.command.run(run('keepwarm', '3h'))
       expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(undefined)
       expect((await ui.find(ROW))?.text).toMatch(/bilinmiyor.*ilk tur bekleniyor/)
       await $.turn.complete(turn())
       expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(MOSS_OF[surface])
-      expect((await ui.find(ROW))?.text).toMatch(/sıcak.*ping 1 sa 30 dk sonra/)
+      expect((await ui.find(ROW))?.text).toMatch(/sıcak.*ping 50 dk sonra/)
       await clock.advance(HOUR)
       expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(KILN_OF[surface])
       expect((await ui.find(ROW))?.text).toMatch(/soğuk.*şimdi soğuk/)
       expect((await $.command.run(run('cache-tax', ''))).text).toMatch(/durum       SOĞUK/)
-      expect(w.forks.length).toBe(0)
+      expect(w.forks.length).toBe(1)
       expect((await ui.find({ text: /^other mod$/ }))?.text).toBe('other mod')
       await $.turn.complete(turn())
       expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(MOSS_OF[surface])
@@ -125,7 +126,7 @@ describe('status row', () => {
       expect(w.status.filter(Boolean)).toEqual([])
       await $.command.run(run('keepwarm', 'off'))
       expect(await ui.find({ text: 'Önbellek · ' })).toBe(undefined)
-      expect(w.forks.length).toBe(0)
+      expect(w.forks.length).toBe(1)
     })
   }
 
@@ -164,9 +165,9 @@ describe('status row', () => {
     expect(w.forks.length).toBe(0)
   })
 
-  test('a warm resume restores green and ignores subagent cache activity', async ($, on) => {
+  test('a warm resume restores green and ignores subagent cache activity; a stored hour-long period pings at 50m', async ($, on) => {
     const clock = mock.clock(on, { now: 10 * HOUR })
-    const w = world(on, [], { store: new Map<string, unknown>([['deadline:S1', 13 * HOUR], ['every:S1', 90 * MIN]]) })
+    const w = world(on, [{ isAnswered: false, reason: 'nothing-to-fork' } satisfies ModelForkResult], { store: new Map<string, unknown>([['deadline:S1', 13 * HOUR], ['every:S1', 90 * MIN]]) })
     await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
     await $.classic.SessionStart({ source: 'resume', seconds_since_last_response: 30 * 60, context_tokens: 200000 })
     const ui = await $.ui.mount({ plugin: 'cache-tax', surface: 'terminal', component: 'AbovePrompt', props: bandProps })
@@ -175,7 +176,7 @@ describe('status row', () => {
     await $.session.compact({ trigger: 'manual', agentId: 'worker', messages: [{ role: 'user', text: 'summary', toolUses: [] }] })
     await clock.advance(30 * MIN)
     expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe('claude')
-    expect(w.forks.length).toBe(0)
+    expect(w.forks.length).toBe(1)
   })
 
   for (const surface of ['vscode', 'mobile', null] as const) {
@@ -209,12 +210,11 @@ describe('status row', () => {
   })
 
   for (const failure of [
-    { isAnswered: false, reason: 'nothing-to-fork' },
-    { isAnswered: false, reason: 'api-error', status: 429, error: 'rate_limit', usage: usage() },
+    { isAnswered: false, reason: 'api-error', status: 400, error: 'invalid_request', usage: usage() },
     { isAnswered: false, reason: 'empty-reply', usage: usage() },
     { isAnswered: false, reason: 'aborted', usage: usage() },
   ] satisfies ModelForkResult[]) {
-    test(`structured fork failure ${failure.reason} stops without retrying`, async ($, on) => {
+    test(`structured fork failure ${failure.reason}${'status' in failure ? ` ${failure.status}` : ''} stops without retrying`, async ($, on) => {
       const clock = mock.clock(on, { now: START })
       const w = world(on, [failure])
       await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
@@ -228,6 +228,46 @@ describe('status row', () => {
       expect(w.forks.length).toBe(1)
     })
   }
+})
+
+describe('keepwarm survives a restart and a busy API', () => {
+  test('nothing to fork waits for the next turn instead of ending the window', async ($, on) => {
+    const clock = mock.clock(on, { now: START })
+    const w = world(on, [{ isAnswered: false, reason: 'nothing-to-fork' } satisfies ModelForkResult, warm])
+    await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
+    await $.turn.complete(turn())
+    await $.command.run(run('keepwarm', '3h every 1m'))
+    const ui = await $.ui.mount({ plugin: 'cache-tax', surface: 'terminal', component: 'AbovePrompt', props: bandProps })
+    await clock.advance(MIN)
+    expect((await ui.find(ROW))?.text).toMatch(/ilk tur bekleniyor/)
+    await clock.advance(10 * MIN)
+    expect(w.forks.length).toBe(1)
+    await $.turn.complete(turn())
+    await clock.advance(MIN)
+    expect(w.forks.length).toBe(2)
+    expect((await ui.find(ROW))?.text).toMatch(/son ping 200k okudu/)
+  })
+
+  test('a busy API is retried after 1, 2 and 4 minutes, then the window stops', async ($, on) => {
+    const busy = { isAnswered: false, reason: 'api-error', status: 529, error: 'overloaded', usage: usage() } satisfies ModelForkResult
+    const clock = mock.clock(on, { now: START })
+    const w = world(on, [busy, busy, busy, busy, warm])
+    await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
+    await $.turn.complete(turn())
+    await $.command.run(run('keepwarm', '3h every 1m'))
+    const ui = await $.ui.mount({ plugin: 'cache-tax', surface: 'terminal', component: 'AbovePrompt', props: bandProps })
+    await clock.advance(MIN)
+    expect(w.forks.length).toBe(1)
+    await clock.advance(MIN)
+    expect(w.forks.length).toBe(2)
+    await clock.advance(2 * MIN)
+    expect(w.forks.length).toBe(3)
+    await clock.advance(4 * MIN)
+    expect(w.forks.length).toBe(4)
+    expect((await ui.find(ROW))?.text).toMatch(/durdu.*529/)
+    await clock.advance(HOUR)
+    expect(w.forks.length).toBe(4)
+  })
 })
 
 describe('status row visibility', () => {

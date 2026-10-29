@@ -46,7 +46,7 @@ export const EN = {
     off: 'keepwarm off',
     offAlways: 'keepwarm off; it no longer turns on by itself when a session starts',
     usage: 'keepwarm takes a span (6h, 90m) or always, off, status',
-    every: 'every takes a span of at least 1m',
+    every: 'every takes a span from 1m to 59m',
   },
   guardMode: {
     usage: '/cache-tax guard takes warn or refuse',

@@ -11,6 +11,10 @@ const HOUR_S = 3600
 const EM_NARROW = 0.3
 const EM_WIDE = 0.72
 const EM_BODY = 0.56
+const EM_FULL = 1
+// CJK, fullwidth forms and emoji advance about 1em; at the body width a Chinese title was sized at half its width.
+const WIDE =
+  /[\u1100-\u115F\u2E80-\u303E\u3041-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uA960-\uA97F\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF01-\uFF60\uFFE0-\uFFE6\u{1F300}-\u{1FAFF}\u{20000}-\u{3FFFD}]/u
 
 export const xml = (s: string): string =>
   s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c)
@@ -19,6 +23,7 @@ export const clip = (s: string, max: number): string => (s.length > max ? s.slic
 
 // Rough advance of system UI text, in em; good enough to size a text's slot.
 const charEm = (ch: string): number => {
+  if (WIDE.test(ch)) return EM_FULL
   if (/[\s.,:;'|!il1ıİ()[\]]/.test(ch)) return EM_NARROW
   if (/[A-ZÇĞÖŞÜА-ЯЁmwшщжюМШЩЖЮ@%]/.test(ch)) return EM_WIDE
   return EM_BODY

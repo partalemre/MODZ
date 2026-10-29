@@ -3,7 +3,7 @@ import type { EngineInterface, On, Register, TurnCompleteInput } from 'claude-co
 import { composeBand } from './band'
 import { pinned } from './pin'
 import type { Prefs } from './band'
-import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, freshState, isFullMiss, parseDuration, priceOf, resetForClear } from './core'
+import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, TTL_MS, freshState, isFullMiss, parseDuration, priceOf, resetForClear } from './core'
 import type { State } from './core'
 import { NAME, onPrompt } from './guard'
 import type { GuardIo } from './guard'
@@ -84,16 +84,21 @@ async function readPrefs($: EngineInterface, prefs: Prefs) {
   prefs.noColor = Boolean(await $.env.get('NO_COLOR'))
 }
 
+/** A period of the cache's whole hour or more would fire only once the cache is already cold. */
+const isPingPeriod = (ms: unknown): ms is number => typeof ms === 'number' && ms >= MIN_PING_MS && ms < TTL_MS
+
+/** Always means any break up to six hours: each session start, /clear and main turn opens a fresh default window. */
+const openAlways = ($: EngineInterface, s: State): Promise<void> => startWindow(io($), s, { windowMs: DEFAULT_WINDOW_MS, every: PING_AFTER_MS })
+
 async function restore($: EngineInterface, s: State, now: number) {
   await prune(io($), s, now)
   const saved = await $.store.get(deadlineKey(s))
   const savedEvery = await $.store.get(everyKey(s))
   s.deadline = typeof saved === 'number' && saved > now ? saved : 0
-  s.every = typeof savedEvery === 'number' && savedEvery >= MIN_PING_MS ? savedEvery : PING_AFTER_MS
+  s.every = isPingPeriod(savedEvery) ? savedEvery : PING_AFTER_MS
   s.guard = (await $.store.get(KEY_GUARD)) === 'warn' ? 'warn' : 'refuse'
   s.always = (await $.store.get(KEY_ALWAYS)) === true
-  // Always means a fresh default window every session, whatever the last one left behind.
-  if (s.always) await startWindow(io($), s, { windowMs: DEFAULT_WINDOW_MS, every: PING_AFTER_MS })
+  if (s.always) await openAlways($, s)
   const usage = await $.session.usage()
   if (usage.context.tokens) s.ctx = usage.context.tokens
 }
@@ -117,17 +122,18 @@ async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<s
   if (words[0] === 'always') {
     s.always = true
     await $.store.set(KEY_ALWAYS, true)
-    await startWindow(io($), s, { windowMs: DEFAULT_WINDOW_MS, every: PING_AFTER_MS })
+    await openAlways($, s)
     return alwaysText(s, now)
   }
   if (words[0] === 'status') return statusText(s, now) ?? say().keepwarm.off
   const window = words.length ? parseDuration(words[0] ?? '') : DEFAULT_WINDOW_MS
-  if (window == null) return say().keepwarm.usage
+  // A zero window would be off as soon as it was on.
+  if (!window) return say().keepwarm.usage
   // "every 2m" is a testing knob and lasts only for the window it was given with.
   let every = PING_AFTER_MS
   if (words[1] === 'every') {
     const period = parseDuration(words[2] ?? '')
-    if (period == null || period < MIN_PING_MS) return say().keepwarm.every
+    if (!isPingPeriod(period)) return say().keepwarm.every
     every = period
   }
   await startWindow(io($), s, { windowMs: window, every })
@@ -150,6 +156,7 @@ async function onTurnComplete($: EngineInterface, s: State, e: TurnCompleteInput
   // turn.step stamps the exact request time; when no step of this turn did, the turn's end is the floor.
   if (now - s.lastRequestAt > e.durationMs) s.lastRequestAt = now
   s.compacted = false
+  s.waitForTurn = false
   s.ackedAt = 0
   s.held = null
   const u = e.usage
@@ -164,11 +171,12 @@ async function onTurnComplete($: EngineInterface, s: State, e: TurnCompleteInput
     if (isFullMiss(prev, write) || s.coldWritePending) await scoreMiss($, s, { now, write })
   }
   s.coldWritePending = false
-  await arm(io($), s)
+  if (s.always) await openAlways($, s)
+  else await arm(io($), s)
 }
 
 async function scoreMiss($: EngineInterface, s: State, { now, write }: { now: number; write: number }) {
-  const price = priceOf(s.lastModel)
+  const price = priceOf(s.lastModel, s.ctx)
   const usd = price ? write * price[1] / 1e6 : null
   s.misses.push({ at: now, tokens: write, usd })
   if (s.deadline >= now + AUTO_WARM_MS) return
@@ -223,7 +231,9 @@ function wireSession(on: On, c: Ctx) {
       await stop(io($), s, null)
       resetForClear(s)
       s.sid = await $.session.id()
-      updateStatus(io($), s, await $.clock.now())
+      // /clear raises no session.start, so always arms the new conversation here.
+      if (s.always) await openAlways($, s)
+      else updateStatus(io($), s, await $.clock.now())
       return r
     }
     const line = seedFromResume(s, e, await $.clock.now())

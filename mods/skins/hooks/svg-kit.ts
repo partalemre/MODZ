@@ -1,3 +1,4 @@
+import { charWidth } from './markdown'
 import type { Palette } from './skin'
 
 // What every vector card shares: fonts, text measuring and fitting, escaping, and the
@@ -13,10 +14,18 @@ export const escape = (text: string): string =>
 // Width of a string in pixels, close enough to lay out a card without a renderer.
 export function measure(text: string, isMono: boolean, size: number): number {
   if (isMono) {
-    return [...text].length * size * 0.6
+    return [...text].reduce((sum, char) => sum + charWidth(char), 0) * size * 0.6
   }
 
   return [...text].reduce((sum, char) => {
+    const cells = charWidth(char)
+
+    // Wide East Asian characters (Hangul, kana, Han) and emoji are about one em wide,
+    // nearly twice a Latin letter; combining marks and joiners take no room.
+    if (cells !== 1) {
+      return sum + cells * size * 0.5
+    }
+
     if ('iljtf.,:;|!\'` '.includes(char)) {
       return sum + size * 0.3
     }
@@ -46,9 +55,11 @@ export function fitText(text: string, width: number, { isMono, size }: Font): st
 }
 
 // The room a reply gives a card, from the width the desktop reports in cells of its code
-// font, kept to a range a card reads well at. The reported width runs wider than the
-// reply column, so this errs small: a card that fits beats one that runs off the edge.
-const PX_PER_COLUMN = 6.4
+// font, kept to a range a card reads well at. Measured against the desktop's reply column,
+// a reported cell is about 7.2px (6.4 drew cards at about 88% of the column). A card drawn
+// a little wider than the column is scaled down to fit it, since cards leave their size to
+// the markup, so this errs wide rather than leaving the column's right side empty.
+const PX_PER_COLUMN = 7.2
 
 export const cardWidth = (columns: number, min = 480, max = 1600): number =>
   Math.round(Math.min(max, Math.max(min, columns * PX_PER_COLUMN)))

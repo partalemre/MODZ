@@ -25,15 +25,15 @@ Sending the same message again also pays. Slash commands are never held. Without
 
 **A status row** at the bottom of the band, shown only when it means something: keepwarm is on or has stopped, the cache is cold, or a large cache goes cold within 10 minutes. It says `warm`, `cold`, `unknown` or `stopped` in words, so colour is never the only signal.
 
-**Warming.** `/keepwarm` opens a bounded window. After 50 idle minutes inside it, one tool-less request over the session's transcript refreshes the cache. After each ping the mod reads the usage back and stops if the ping read nothing or wrote at least a tenth of what it read. A window belongs to one session and ends at its deadline.
+**Warming.** `/keepwarm` opens a bounded window. After 50 idle minutes inside it, one tool-less request over the session's transcript refreshes the cache. After each ping the mod reads the usage back and stops if the ping read nothing or wrote at least a tenth of what it read. A window belongs to one session and ends at its deadline. A busy API (429, 5xx) is retried after 1, 2 and 4 minutes while a ping can still land before the cache goes cold; a restarted session waits for its first turn before pinging.
 
 ## Commands
 
 ```
 /keepwarm               keep warm for six hours
 /keepwarm 90m           a window of your own (also 2h30m, 6h)
-/keepwarm always        a six-hour window at every session start, remembered
-/keepwarm 6h every 2m   ping every two minutes (testing knob, minimum 1m, this window only)
+/keepwarm always        any break up to six hours: each turn and /clear rolls the window on, remembered
+/keepwarm 6h every 2m   ping every two minutes (testing knob, 1m to 59m, this window only)
 /keepwarm status        the window, next ping and last receipt
 /keepwarm off           stop, and turn always off
 /cache-tax              model, cache state, cold price, keepwarm, guard and this session's cold writes

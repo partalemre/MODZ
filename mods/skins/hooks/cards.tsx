@@ -10,20 +10,21 @@ import { say } from './words'
 import { terminalSvg } from './svg-terminal'
 import type { ShellOutput } from './svg-terminal'
 
-type Built = { source: string; alt: string; width: number; height: number }
+type Built = { source: string; alt: string }
 
 type Copyable = { Svg: SvgElement; built: Built; key: string; text: string }
 
 // A card drawn as an image, with its Copy button laid over the top-right corner the card
 // left free. The image cannot be pressed, so the button is a real one on top of it; the
-// box hugs the image so the corner is the card's, not the column's.
+// box hugs the image so the corner is the card's, not the column's. The image takes the
+// markup's own size, so one drawn wider than the reply column is scaled down to fit it.
 function cardWithCopy(look: Look, { Svg, built, key, text }: Copyable) {
   const { Box, Button } = look.ui
   const copy = look.copy
 
   return (
     <Box marginY={1} alignSelf="flex-start">
-      <Svg source={built.source} alt={built.alt} width={built.width} height={built.height} />
+      <Svg source={built.source} alt={built.alt} />
       {copy === undefined ? (
         ''
       ) : (

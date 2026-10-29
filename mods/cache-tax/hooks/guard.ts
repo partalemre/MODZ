@@ -12,6 +12,10 @@ import { dropText, warnText } from './words'
 
 export const NAME = 'cache-tax'
 
+// Prompts no person sent, so nobody could send them again after a refusal. Every other origin, sdk and Slack
+// included, may carry a person's words and keeps the guard.
+const UNATTENDED = new Set(['task-notification', 'scheduled-trigger', 'peer', 'peer-send-message', 'projects-relay', 'coordinator', 'observer', 'observer-activity'])
+
 export type Submit = { e: PromptSubmitInput; next: (e: PromptSubmitInput) => Promise<PromptSubmitResult> }
 
 /** The guard's reach, bound in register.ts, the one file that holds `$`. */
@@ -52,8 +56,9 @@ export async function onPrompt(io: GuardIo, s: State, { e, next }: Submit): Prom
     if (s.held?.switch) release(io, s)
     return next(e)
   }
-  if (s.guard === 'warn' || s.ackedAt === s.lastRequestAt) {
-    if (s.guard === 'warn') io.log(warnText(s, { now, switched }))
+  const isUnattended = UNATTENDED.has(e.origin.kind)
+  if (s.guard === 'warn' || isUnattended || s.ackedAt === s.lastRequestAt) {
+    if (s.guard === 'warn' || isUnattended) io.log(warnText(s, { now, switched }))
     s.ackedAt = 0
     s.coldWritePending = true
     release(io, s)

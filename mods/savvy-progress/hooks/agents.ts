@@ -76,7 +76,7 @@ export const stepUsage = (a: AgentRun, facts: StepFacts): AgentRun => ({
   contextTokens: tokensOf(facts.usage),
   contextMax: windowOf(facts.model),
   tokens: a.tokens + tokensOf(facts.usage),
-  costUsd: a.costUsd + costOf(facts.model, facts.usage),
+  costUsd: a.costUsd + costOf(facts.model, facts.usage, true),
   steps: a.steps + 1,
 })
 
@@ -95,7 +95,7 @@ export const endRun = (a: AgentRun, facts: EndFacts): AgentRun => {
     endReason: isAnswered ? undefined : facts.reason,
     endedAt: facts.at,
     answer: answer ?? a.answer,
-    ...(usage ? { model, tokens: tokensOf(usage), costUsd: costOf(model, usage) } : {}),
+    ...(usage ? { model, tokens: tokensOf(usage), costUsd: costOf(model, usage, false) } : {}),
   }
 }
 

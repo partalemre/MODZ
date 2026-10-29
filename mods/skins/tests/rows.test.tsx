@@ -149,47 +149,33 @@ test('a folded group is one node, an expanded one keeps its rows', async ($, on)
   expect(await expanded.find({ type: 'Text', text: 'stock row' })).toBeDefined()
 })
 
-test('a typed prompt sits in an outline sized to its text, other senders keep their row', async ($, on) => {
+test('a typed prompt sits in an outline sized to its text in the terminal, other senders keep their row', async ($, on) => {
   stubEngine(on)
 
-  for (const surface of SURFACES) {
-    const prompt = (kind: 'composer' | 'task-notification') =>
-      ({ ...SITE, surface, component: 'UserMessage', requestId: 'm1', props: { text: 'fix the build', origin: { kind }, isExpanded: false } }) as const
+  const prompt = (kind: 'composer' | 'task-notification') =>
+    ({ ...SITE, surface: 'terminal', component: 'UserMessage', requestId: 'm1', props: { text: 'fix the build', origin: { kind }, isExpanded: false } }) as const
 
-    const typed = await $.ui.mount(prompt('composer'))
-    const column = (await typed.find({ type: 'Box' })) as { props: { alignItems?: string }; children?: readonly { props?: { borderStyle?: string } }[] } | undefined
-    // The outline hugs the text: its column does not stretch it to the full width.
-    expect(column?.props.alignItems).toBe('flex-start')
-    expect(column?.children?.[0]?.props?.borderStyle).toBe('round')
-    expect(await typed.find({ type: 'Text', text: 'fix the build' })).toBeDefined()
-    await typed.unmount()
+  const typed = await $.ui.mount(prompt('composer'))
+  const column = (await typed.find({ type: 'Box' })) as { props: { alignItems?: string }; children?: readonly { props?: { borderStyle?: string } }[] } | undefined
+  // The outline hugs the text: its column does not stretch it to the full width.
+  expect(column?.props.alignItems).toBe('flex-start')
+  expect(column?.children?.[0]?.props?.borderStyle).toBe('round')
+  expect(await typed.find({ type: 'Text', text: 'fix the build' })).toBeDefined()
+  expect(await typed.find({ type: 'Button' })).toBeUndefined()
+  await typed.unmount()
 
-    const notice = await $.ui.mount(prompt('task-notification'))
-    expect(await notice.find({ type: 'Text', text: 'stock row' })).toBeDefined()
-    await notice.unmount()
-  }
+  const notice = await $.ui.mount(prompt('task-notification'))
+  expect(await notice.find({ type: 'Text', text: 'stock row' })).toBeDefined()
+  await notice.unmount()
 })
 
-test('on the desktop a typed prompt can be copied, in the terminal it is selected as text', async ($, on) => {
+test('on the desktop a typed prompt keeps Claude Code\u2019s own message, with its copy and rewind buttons', async ($, on) => {
   stubEngine(on)
-  const copied: string[] = []
-  on('ui.copy', ($, e) => {
-    copied.push(e.text)
-    return { value: { isCopied: true } }
-  })
 
-  const prompt = (surface: (typeof SURFACES)[number]) =>
-    ({ ...SITE, surface, component: 'UserMessage', requestId: `p-${surface}`, props: { text: 'fix the build', origin: { kind: 'composer' }, isExpanded: false } }) as const
-
-  const desktop = await $.ui.mount(prompt('desktop'))
-  await desktop.press({ key: 'copy-prompt' })
-  await desktop.unmount()
-
-  const terminal = await $.ui.mount(prompt('terminal'))
-  expect(await terminal.find({ type: 'Button' })).toBeUndefined()
-  await terminal.unmount()
-
-  expect(copied).toEqual(['fix the build'])
+  const ui = await $.ui.mount({ ...SITE, surface: 'desktop', component: 'UserMessage', requestId: 'p-desktop', props: { text: 'fix the build', origin: { kind: 'composer' }, isExpanded: false } })
+  expect(await ui.find({ type: 'Text', text: 'stock row' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'fix the build' })).toBeUndefined()
+  await ui.unmount()
 })
 
 test('a reply with a table draws the table, a reply without one keeps its own drawing', async ($, on) => {
@@ -341,18 +327,55 @@ test('a table wider than its share spans the column instead of running off it', 
       requestId: 'r2',
       props: { text: wide, isFirstOfReply: true },
     })
-    type Node = { props?: { width?: unknown; position?: unknown; top?: unknown }; children?: readonly Node[] }
+    type Node = { props?: { width?: unknown; position?: unknown; top?: unknown; borderStyle?: unknown }; children?: readonly Node[] }
     const reply = (await ui.find({ type: 'Box' })) as Node
     const frame = reply.children?.[0]
-    // Copy sits on the frame's top border, laid over it at the right.
+    // Copy sits on the frame's top border, laid over it from a plain Box around the bordered one:
+    // inside it, Windows Terminal drew the border over the button.
     const control = frame?.children?.at(-1)
 
     expect(frame?.props?.width).toBe('100%')
+    expect(frame?.props?.borderStyle).toBeUndefined()
+    expect(frame?.children?.[0]?.props?.borderStyle).toBe('round')
     expect(control?.props?.position).toBe('absolute')
-    expect(control?.props?.top).toBe(-1)
-    expect(await ui.find({ type: 'Text', text: /…$/ })).toBeDefined()
+    expect(control?.props?.top).toBe(0)
     await ui.unmount()
   }
+})
+
+test('a terminal table wraps long cells within their column in full, with no …', async ($, on) => {
+  stubEngine(on)
+
+  const endless = 'word '.repeat(120).trim()
+  const ui = await $.ui.mount({ ...SITE, surface: 'terminal', component: 'AssistantMessage', requestId: 'wrap', props: { text: `| # | Note |\n|---|---|\n| 1 | ${endless} |`, isFirstOfReply: true } })
+  const texts = (node: unknown): string[] => {
+    const el = node as { type?: string; children?: readonly unknown[] } | undefined
+    if (el?.type === 'Text' && el.children?.every(child => typeof child === 'string')) return [el.children.join('')]
+    return (el?.children ?? []).flatMap(texts)
+  }
+  const shown = texts(await ui.find({ type: 'Box' }))
+
+  // The terminal has no tooltip to read a cut cell by, so a long cell keeps every word.
+  expect(shown.filter(line => line.startsWith('word')).length).toBeGreaterThan(1)
+  expect(shown.filter(line => line.startsWith('word')).join(' ')).toBe(endless)
+  expect(shown.filter(line => line.endsWith('…'))).toHaveLength(0)
+  await ui.unmount()
+})
+
+test('a terminal table that spans its row grows each column by its padding too, so a narrow one stays whole', async ($, on) => {
+  stubEngine(on)
+
+  type Node = { type?: string; props?: Record<string, unknown>; children?: readonly (Node | string)[] }
+  const all = (node: Node | string | undefined): Node[] => (node === undefined || typeof node === 'string' ? [] : [node, ...(node.children ?? []).flatMap(all)])
+  const step = 'Install the plugin from the marketplace, then restart Claude Code so the hooks module loads and the skin draws'
+  const ui = await $.ui.mount({ ...SITE, surface: 'terminal', component: 'AssistantMessage', requestId: 'span', props: { text: `| # | Step |\n|---|---|\n| 1 | ${step} |`, isFirstOfReply: true } })
+  const row = all((await ui.find({ type: 'Box' })) as Node).find(node => node.props?.flexDirection === 'row')
+  const grows = (row?.children ?? []).map(cell => (typeof cell === 'string' ? 0 : Number(cell.props?.flexGrow)))
+  const total = grows.reduce((sum, grow) => sum + grow, 0)
+
+  // Flex hands each column the row's inner width in proportion to its grow factor.
+  expect(((100 - 2) * (grows[0] ?? 0)) / total).toBeGreaterThanOrEqual(widthOf('#') + 2)
+  await ui.unmount()
 })
 
 test('the desktop draws a table as an animated vector card, with a tooltip on a cut cell', async ($, on) => {

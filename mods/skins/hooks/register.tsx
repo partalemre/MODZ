@@ -15,6 +15,7 @@ import { galleryMotion, galleryView, settingsMotion, settingsTitle, settingsView
 import type { SettingsHost } from './render-panes'
 import { toolGroupView, toolResultView, toolUseView } from './render-tools'
 import { runSkin, skinCommand } from './skin-command'
+import { DESIGN_WAIT_MS, type SessionHost, type SessionLoad, sessionLoad, waitAtMost } from './session-load'
 import { PROBE_MS, refreshTheme } from './theme'
 import type { ThemeHost } from './theme'
 import { usageSnap } from './svg-usage'
@@ -166,22 +167,23 @@ function paneOf($: EngineInterface, e: Frozen<RenderInput>): SettingsHost {
   }
 }
 
-async function refreshLook($: EngineInterface): Promise<void> {
-  await load(storeOf($))
-  await refreshTheme(themeOf($))
-  await syncHub(storeOf($))
-}
+// The new-session load's port (session-load.ts), which the theme's change also takes.
+const sessionOf = ($: EngineInterface): SessionHost => ({
+  id: () => $.session.id().catch(() => undefined),
+  load: () => load(storeOf($)),
+  theme: () => refreshTheme(themeOf($)).then(() => syncHub(storeOf($))),
+  log: text => $.ui.log(text, { to: 'debug' }),
+})
 
-function onSession(on: On, live: Live): void {
+function onSession(on: On, live: Live, loaded: SessionLoad): void {
   on('session.start', async ($, e, next) => {
     // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     await $.command.register(skinCommand())
-    await $.tool.register({ name: DESIGN_TOOL.name, description: DESIGN_TOOL.description, inputSchema: DESIGN_TOOL.inputSchema })
-    await load(storeOf($))
+    const design = $.tool.register({ name: DESIGN_TOOL.name, description: DESIGN_TOOL.description, inputSchema: DESIGN_TOOL.inputSchema })
+    await waitAtMost(design.catch((error: unknown) => $.ui.log(`skins: design tool: ${String(error)}`, { to: 'debug' })), DESIGN_WAIT_MS, (ms, fn) => $.clock.after(ms, fn))
+    await loaded.start(sessionOf($))
     await refreshUsage($)
-    await refreshTheme(themeOf($))
-    await syncHub(storeOf($))
 
     // Only the spinner reads the frame, so a tick redraws the spinner and nothing else.
     live.ticker?.cancel()
@@ -192,16 +194,17 @@ function onSession(on: On, live: Live): void {
     return next(e)
   })
 
-  // /clear, /resume and /branch reset $.state to its defaults and skip session.start.
+  // /clear, /resume and /branch reset $.state to its defaults and skip session.start; /resume loads for its own id.
   on('classic.SessionStart', { source: ['clear', 'resume', 'fork'] }, async ($, e, next) => {
-    await refreshLook($)
-
+    await loaded.start(sessionOf($), typeof e.session_id === 'string' && e.session_id !== '' ? e.session_id : undefined)
     return next(e)
   })
 }
 
-function onTurnStart(on: On, live: Live): void {
+function onTurnStart(on: On, live: Live, loaded: SessionLoad): void {
   on('turn.start', async ($, e, next) => {
+    // Where the guard holds classic.SessionStart back (Team, Enterprise), a new session's first turn loads it.
+    await loaded.turn(sessionOf($))
     live.stats = NO_STATS
     live.isWorking = true
     const now = await $.clock.now()
@@ -212,10 +215,7 @@ function onTurnStart(on: On, live: Live): void {
 
   on('config.set', async ($, e, next) => {
     const result = await next(e)
-    if (e.key === 'theme') {
-      await refreshTheme(themeOf($))
-      await syncHub(storeOf($))
-    }
+    if (e.key === 'theme') await sessionOf($).theme()
 
     return result
   })
@@ -290,9 +290,10 @@ function onRenders(on: On, live: Live): void {
 
 export const register: Register = on => {
   const live: Live = { stats: NO_STATS, isWorking: false }
+  const loaded = sessionLoad()
 
-  onSession(on, live)
-  onTurnStart(on, live)
+  onSession(on, live, loaded)
+  onTurnStart(on, live, loaded)
   onTurnEnd(on, live)
   onCommands(on, live)
   onRenders(on, live)

@@ -3,7 +3,6 @@ import { formatDuration } from './format'
 import { spinnerIcon } from './icons'
 import type { SpinnerMode } from './icons'
 import type { Look, SvgElement, Ui } from './look'
-import { copyRow } from './row-table'
 import type { Palette } from './skin'
 import { say } from './words'
 
@@ -33,7 +32,6 @@ export function promptRow(look: Look, text: string, images?: ReturnType<Ui['Text
       <Box borderStyle="round" borderColor={look.skin.palette.muted} paddingX={1} flexShrink={1}>
         <Text color={look.skin.palette.fg}>{text}</Text>
       </Box>
-      {copyRow(look, 'copy-prompt', text)}
       {images ?? ''}
     </Box>
   )

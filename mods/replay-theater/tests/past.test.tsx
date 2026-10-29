@@ -33,6 +33,12 @@ for (const surface of SURFACES) {
     expect(shown).toContain('1 tur · düzenleme yok')
     expect(shown).toContain('Big refactor')
     expect(await pane.find({ key: `rt-session-${OLD_ID}-open` })).toBeDefined()
+    // The desktop row is pressed as a whole: a plain cover whose label is a run of Hangul fillers, not an "Aç" button at its end.
+    if (surface === 'desktop') {
+      const cover = (await pane.find({ key: `rt-session-${OLD_ID}-open` }))?.props
+      expect(cover?.plain).toBe(true)
+      expect(String(cover?.label)).toMatch(/^\u3164+$/)
+    }
     expect(await pane.find({ key: 'rt-session-s-empty-open' })).toBeUndefined()
     expect(world.spawned).toEqual([['dd', `if=${DIR}/${BIG_ID}.jsonl`, `bs=${MIB}`, 'skip=0']])
   })
@@ -52,7 +58,7 @@ for (const surface of SURFACES) {
 
     await press(pane, clock, 'rt-turn-1-open')
     const first = await shownIn(pane)
-    expect(first).toContain('DÜZENLEME 1 / 2')
+    expect(first).toContain('Düzenleme 1 / 2')
     expect(first).toContain('Tur 1')
     expect(first).toContain('I rename the function first, then the docs')
     expect(first).toContain('Plan adımı 1/2')
@@ -60,7 +66,7 @@ for (const surface of SURFACES) {
 
     await press(pane, clock, 'rt-next')
     const second = await shownIn(pane)
-    expect(second).toContain('DÜZENLEME 2 / 2')
+    expect(second).toContain('Düzenleme 2 / 2')
     expect(second).toContain('guide.md')
     expect(second).toContain('Updating the guide')
     expect((await pane.find({ key: 'rt-next' }))?.props?.label).toBe('Bitir')
@@ -81,7 +87,7 @@ test('from the live replay, Turns lists this session’s turns from its transcri
   await press(pane, clock, 'rt-turns')
 
   const shown = await shownIn(pane)
-  expect(shown).toContain('● DÜZENLEME YAPAN TURLAR')
+  expect(shown).toContain('Düzenleme yapan turlar')
   expect(shown).toContain('· Bu oturum')
   expect(shown).toContain('“Fix the greeting”')
   expect(shown).toContain('Tur 1 · 1 düzenleme · 1 dosya')

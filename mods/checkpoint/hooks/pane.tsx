@@ -1,4 +1,5 @@
 import { paneMotion } from './kit/moving'
+import { PressRow } from './kit/press'
 import type { MoveOpts } from './kit/moving'
 import type { MetaMap } from './meta'
 import { diffstatSvg, headSvg, rowFits, rowSvg } from './pane-svg'
@@ -24,8 +25,7 @@ export type PaneOpts = { now: number; meta: MetaMap; look: PaneLook; actions: Pa
 
 const LABEL_MAX = 60
 const WIDTH = { min: 240, max: 860 }
-// Columns the row's Undo button takes; the card's padding and border.
-const ROW_RESERVE = 12
+// Columns the confirm card's padding and border take.
 const CARD_RESERVE = 6
 
 export const ago = (ms: number): string => words().ago(ms)
@@ -75,7 +75,7 @@ function confirmCard(ui: Ui, pending: PendingUndo, opts: PaneOpts) {
   const { Box, Button } = ui
   const frame: Frame = { width: svgWidth(opts.look.columns, { ...WIDTH, reserve: CARD_RESERVE }), mode: opts.look.theme.mode }
   const said = words()
-  const head = headSvg(frame, { role: 'amber', label: said.undo, meta: said.undoMeta, lead: questionOf(pending), rest: changedText(pending) })
+  const head = headSvg(frame, { label: said.undo, meta: said.undoMeta, lead: questionOf(pending), rest: changedText(pending) })
   const confirm = confirmOf(pending)
 
   return (
@@ -106,20 +106,21 @@ function rowPicture(ui: Ui, row: { frame: Frame; spec: RowSpec; isStacked: boole
 }
 
 // Every row stacks its facts under the label once one row has no room beside its title, so the rows stay alike.
+// The whole row is the press that asks to undo to it; its drawing ends in a chevron.
 function timeline(ui: Ui, view: CheckpointView, opts: PaneOpts) {
-  const { Box, Button } = ui
-  const frame: Frame = { width: svgWidth(opts.look.columns, { ...WIDTH, reserve: ROW_RESERVE }), mode: opts.look.theme.mode }
+  const { Box } = ui
+  const frame: Frame = { width: svgWidth(opts.look.columns, WIDTH), mode: opts.look.theme.mode }
   const specs = rowSpecs(view, opts)
   const isStacked = specs.some(spec => !rowFits(frame, spec))
 
   return (
     <Box flexDirection="column">
-      {view.entries.map((entry, index) => (
-        <Box key={`cp-row-${index}`} flexDirection="row" alignItems="flex-start" columnGap={1}>
-          {rowPicture(ui, { frame, spec: specs[index] as RowSpec, isStacked, ref: entry.ref })}
-          <Button key={`cp-undo-${index}`} plain dimColor label={words().undo} onPress={() => opts.actions.onUndo(entry)} />
-        </Box>
-      ))}
+      {view.entries.map((entry, index) => {
+        const spec = specs[index] as RowSpec
+        const drawing = rowPicture(ui, { frame, spec, isStacked, ref: entry.ref })
+
+        return PressRow(ui, { box: `cp-row-${index}`, key: `cp-undo-${index}`, drawing, onPress: () => opts.actions.onUndo(entry) })
+      })}
     </Box>
   )
 }
@@ -156,7 +157,7 @@ export function paneTree(ui: Ui, view: CheckpointView, opts: PaneOpts) {
   const said = words()
   const turns = view.entries.filter(entry => titleOf(entry, opts.meta).title !== said.beforeUndo).length
   const lead = count === 0 ? { lead: said.emptyLead, rest: said.emptyRest, joiner: ' · ' } : { lead: said.turnsSaved(turns), rest: '' }
-  const head = headSvg(frame, { role: 'kiln', label: said.title, meta: headerMeta(view, opts.now), ...lead })
+  const head = headSvg(frame, { label: said.title, meta: headerMeta(view, opts.now), ...lead })
 
   return (
     <Box flexDirection="column" rowGap={1}>

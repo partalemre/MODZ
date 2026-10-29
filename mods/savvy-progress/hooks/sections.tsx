@@ -4,10 +4,9 @@ import type { AgentRun } from '../types'
 import { NOTICE_H, SECTION_SVG_H, noticeSvg, sectionSvg } from './card-svg'
 import type { SectionHead } from './card-svg'
 import { headerSvg } from './header-svg'
-import { KIND_KEY } from './history'
 import { t } from './i18n'
-import { upper } from './lang'
 import { lookAt, lookOf } from './identity'
+import { PressRow } from './kit/press'
 import { stuckOf } from './insight'
 import { FACES, HOME_LOOK } from './mood-svg'
 import type { HomeMark } from './mood-svg'
@@ -19,7 +18,7 @@ import type { Ui } from './rows'
 import { laneCells, runsOf, timelineOf } from './timeline'
 import type { Run, Timeline } from './timeline'
 import { timelineSvg } from './timeline-svg'
-import { colorOf, costumeOf, keyOf, plannedTierOf, tierOf } from './tiers'
+import { costumeOf, plannedTierOf } from './tiers'
 
 // The panel's parts around the cards: the header card, the toolbar under it, the attention line,
 // the section heads, the timeline, the compact strip and the empty state. Each draws on both
@@ -96,35 +95,31 @@ export function toolbarTree(ui: Ui, d: PaneData, on: PaneHandlers) {
   )
 }
 
-/** One agent that needs a look, under the header; "Bak" opens its card. */
+/** One agent that needs a look, under the header; the desktop row is pressed whole, the terminal's "Bak" opens it. */
 export function attentionTree(ui: Ui, view: PaneView) {
   const { Box, Button, Text } = ui
   const { layout, on } = view
   const att = view.d.attention
   if (!att) return null
-  const look = <Button key="look" plain label={t().look} onPress={() => on.onLook(att.agentId)} />
+  const onPress = () => on.onLook(att.agentId)
   if (!layout.isDesktop) {
     return (
       <Box key="attention" flexDirection="row" columnGap={1}>
         <Text color={att.role === 'warn' ? 'warning' : 'error'} wrap="truncate-end">{`! ${att.name} ${att.reason}`}<Text dimColor>{` · ${att.title}`}</Text></Text>
-        {look}
+        <Button key="look" plain label={t().look} onPress={onPress} />
       </Box>
     )
   }
-  const width = layout.W - BUTTON_PX
-  return (
-    <Box key="attention" flexDirection="row" alignItems="center" columnGap={1}>
-      {picture(ui, { key: 'notice', at: 'attention', pic: { source: noticeSvg(width, att), alt: `${att.name} ${att.reason}: ${att.title}`, width, height: NOTICE_H } })}
-      {look}
-    </Box>
-  )
+  const pic = { source: noticeSvg(layout.W, att), alt: `${att.name} ${att.reason}: ${att.title} (${t().look})`, width: layout.W, height: NOTICE_H }
+  const drawing = picture(ui, { key: 'notice', at: 'attention', pic, opts: { isRow: true } })
+  return PressRow(ui, { box: 'attention', key: 'look', drawing, onPress })
 }
 
 export type Toggle = { key: string; isOpen: boolean; onPress: () => void }
 
 /**
- * A section's head: a drawn eyebrow on the desktop (its toggle at the right), a bold line or a ▸/▾ button on the
- * terminal. `id` names the section for good, while its label's count changes.
+ * A section's head: a drawn label on the desktop (its quiet toggle at the right), a bold line or a ▸/▾ button on
+ * the terminal. `id` names the section for good, while its label's count changes.
  */
 export function sectionHead(ui: Ui, layout: Layout, head: SectionHead & { id: string; toggle?: Toggle }) {
   const { Box, Button, Text } = ui
@@ -145,7 +140,6 @@ export function sectionHead(ui: Ui, layout: Layout, head: SectionHead & { id: st
   )
 }
 
-const RUN_KEY: Record<string, ThemeKey | undefined> = { ...KIND_KEY, idle: undefined }
 const RUN_GLYPH: Record<string, string> = { none: ' ', idle: '─' }
 
 function termLane(ui: Ui, runs: Run[], label: { name: string; end: string; key: ThemeKey }) {
@@ -154,16 +148,16 @@ function termLane(ui: Ui, runs: Run[], label: { name: string; end: string; key: 
     <Text key={`lane-${label.name}`} wrap="truncate-end">
       <Text bold>{label.name.padEnd(TERM_NAME)}</Text>
       {runs.map((run, i) => (
-        <Text key={`r${i}`} color={RUN_KEY[run.kind]} dimColor={run.kind === 'idle'}>{(RUN_GLYPH[run.kind] ?? '━').repeat(run.length)}</Text>
+        <Text key={`r${i}`} dimColor={run.kind === 'idle'}>{(RUN_GLYPH[run.kind] ?? '━').repeat(run.length)}</Text>
       ))}
       <Text color={label.key}>{` ${label.end}`}</Text>
     </Text>
   )
 }
 
-// How each lane ends: still running, done, failed, or gone quiet.
+// How each lane ends: still running (Claude's accent), done (quiet), failed, or gone quiet.
 const END_GLYPH: Record<string, string> = { running: '●', done: '✓', failed: '✗', stuck: '!' }
-const END_KEY: Record<string, ThemeKey> = { running: 'permission', done: 'success', failed: 'error', stuck: 'warning' }
+const END_KEY: Record<string, ThemeKey> = { running: 'claude', done: 'subtle', failed: 'error', stuck: 'warning' }
 
 function termTimeline(ui: Ui, tl: Timeline, layout: Layout) {
   const { Box } = ui
@@ -192,7 +186,7 @@ export function timelineTree(ui: Ui, view: PaneView) {
   const tl = d.list.length >= TIMELINE_MIN_AGENTS ? timelineOf(d.list, layout.isDesktop ? d.drawnAt : d.at) : null
   if (!tl) return null
   const isOpen = d.panel.isTimelineHidden !== true
-  const head = sectionHead(ui, layout, { id: 'timeline', label: t().timeline, dot: tl.isLive ? 'run' : 'idle', toggle: { key: 'timeline', isOpen, onPress: on.onTimeline } })
+  const head = sectionHead(ui, layout, { id: 'timeline', label: t().timeline, toggle: { key: 'timeline', isOpen, onPress: on.onTimeline } })
   return (
     <Box key="timeline-section" flexDirection="column" rowGap={layout.isDesktop ? 1 : 0}>
       {head}
@@ -204,12 +198,12 @@ export function timelineTree(ui: Ui, view: PaneView) {
 
 const glyphKeyOf = (a: AgentRun): ThemeKey => {
   if (a.status === 'failed') return 'error'
-  return a.status === 'done' ? 'success' : keyOf(tierOf(a))
+  return a.status === 'done' ? 'subtle' : 'claude'
 }
 
 const iconsOf = (d: PaneData) => [
-  ...[...d.running, ...d.finished].map(a => ({ costume: costumeOf(a), look: lookOf(a), color: colorOf(tierOf(a)), isRunning: a.status === 'running' && !stuckOf(a, d.at), isDim: false })),
-  ...d.planned.map((p, i) => ({ costume: plannedTierOf(p.tier), look: lookAt(i), color: colorOf(p.tier), isRunning: false, isDim: true })),
+  ...[...d.running, ...d.finished].map(a => ({ costume: costumeOf(a), look: lookOf(a), isRunning: a.status === 'running' && !stuckOf(a, d.at), isDim: false })),
+  ...d.planned.map((p, i) => ({ costume: plannedTierOf(p.tier), look: lookAt(i), isRunning: false, isDim: true })),
 ]
 
 /** The whole crew as one strip of crabs (desktop) or glyphs (terminal). */
@@ -227,7 +221,7 @@ export function compactTree(ui: Ui, d: PaneData, layout: Layout) {
   )
 }
 
-/** Nothing launched yet: the home crab, an eyebrow, one sentence and one action (DESIGN.md §4). */
+/** Nothing launched yet: the home crab, a title, one sentence and one action (DESIGN.md §4). */
 export function emptyTree(ui: Ui, view: PaneView) {
   const { Box, Button, Text } = ui
   const { layout, on } = view
@@ -239,7 +233,7 @@ export function emptyTree(ui: Ui, view: PaneView) {
       {crab}
       <Box flexDirection="column" rowGap={1} flexShrink={1}>
         {!layout.isDesktop && <Text dimColor>{`${FACES[home.mood]} · ${home.level}`}</Text>}
-        <Text bold color="permission">{`● ${upper(s.emptyTitle)}`}</Text>
+        <Text bold>{s.emptyTitle}</Text>
         <Text dimColor>{s.empty}</Text>
         <Box flexDirection="row"><Button key="new-task" variant="primary" label={`＋ ${s.newTask}`} onPress={on.onNewTask} /></Box>
       </Box>

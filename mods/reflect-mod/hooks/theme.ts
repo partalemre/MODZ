@@ -56,6 +56,3 @@ export const isLightTheme = (value: unknown): boolean => typeof value === 'strin
 
 export const FONT = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`
 export const MONO = `ui-monospace, 'SF Mono', Menlo, monospace`
-
-/** Eyebrows are upper case the interface language's way: Turkish keeps i → İ. */
-export { upper } from './lang'

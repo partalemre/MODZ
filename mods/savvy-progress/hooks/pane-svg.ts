@@ -1,7 +1,6 @@
 import type { AgentRun } from '../types'
 import { elapsed } from './agents'
 import { crab } from './crabs'
-import { rings } from './kit/motion'
 import type { CrabOptions } from './crabs'
 import type { Planned } from './flow'
 import { fmtTime, modelName } from './format'
@@ -23,8 +22,6 @@ const LIVE_DOT = { x: 32, y: 4, r: 3 } as const
 export const CRAB = { w: 36, h: 32 } as const
 export const PULSE = 12
 const PULSE_CORE = 3
-// The kit's rings grow to 3.2 times their dot: from this one they stay inside the drawing's 12 px.
-const PULSE_RINGS = 1.8
 
 /** The worker's own count of its steps or its task list, when it keeps one: "3/5 · Hero copy". */
 export const stepsOf = (a: AgentRun): string => {
@@ -78,11 +75,10 @@ export const heroCrabSvg = (home: HomeMark): string => {
   return paneSvg(HERO_CRAB.w, HERO_CRAB.h, homeCrab(0, 2, { home, scale: HERO_CRAB.scale }) + pill)
 }
 
-// The call still open, as an Iris dot in a faint ring, rings going out of it while the call runs.
+// The call still open, as a dot in Claude's accent that breathes while the call runs.
 export const pulseSvg = (): string => {
   const c = PULSE / 2
-  const live = rings({ cx: c, cy: c, r: PULSE_RINGS, className: 'f-run' })
-  return paneSvg(PULSE, PULSE, `<circle class="b-run l-run" cx="${c}" cy="${c}" r="${c - 1}" stroke-width="1"/>${live}<circle class="f-run" cx="${c}" cy="${c}" r="${PULSE_CORE}"/>`)
+  return paneSvg(PULSE, PULSE, `<circle class="f-edit live" cx="${c}" cy="${c}" r="${PULSE_CORE}"/>`)
 }
 
 export const plannedLine = (p: Planned): string => {
@@ -92,7 +88,7 @@ export const plannedLine = (p: Planned): string => {
   return parts.filter(Boolean).join(' · ')
 }
 
-type Icon = { costume: string; look: Look; color: string; isRunning: boolean; isDim: boolean }
+type Icon = { costume: string; look: Look; isRunning: boolean; isDim: boolean }
 
 // The whole crew as a row of crabs, a "+n" past what fits; the header above keeps the totals.
 export const compactSvg = (W: number, icons: Icon[]): string => {
@@ -100,7 +96,7 @@ export const compactSvg = (W: number, icons: Icon[]): string => {
   const shown = icons.slice(0, fit)
   const more = icons.length - shown.length
   const body = shown
-    .map((ic, i) => crab(i * CRAB_PITCH, 0, { costume: ic.costume, look: ic.look, isDim: ic.isDim, isWalking: ic.isRunning }) + (ic.isRunning ? `<circle cx="${i * CRAB_PITCH + LIVE_DOT.x}" cy="${LIVE_DOT.y}" r="${LIVE_DOT.r}" fill="${ic.color}"/>` : ''))
+    .map((ic, i) => crab(i * CRAB_PITCH, 0, { costume: ic.costume, look: ic.look, isDim: ic.isDim, isWalking: ic.isRunning }) + (ic.isRunning ? `<circle class="f-edit live" cx="${i * CRAB_PITCH + LIVE_DOT.x}" cy="${LIVE_DOT.y}" r="${LIVE_DOT.r}"/>` : ''))
     .join('')
   const plus = more ? `<text class="s" x="${shown.length * CRAB_PITCH + 4}" y="21" font-family="${FONT}" font-size="12">+${more}</text>` : ''
   return paneSvg(W, COMPACT_H, body + plus)

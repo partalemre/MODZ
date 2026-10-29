@@ -17,7 +17,7 @@ import type { Tile } from './svg-tiles'
 import { words } from './words'
 import type { HudContext, HudSample, HudTurn, HudUsage } from '../types'
 
-// `/hud full`: stat tiles with rings and sparklines on the desktop, rows with text sparklines
+// `/hud full`: figures with meters and sparklines on the desktop, rows with text sparklines
 // on the terminal; then the context card, the history card, and the turn's tokens under both.
 
 // What the context card reads beyond the pane's own figures.
@@ -31,7 +31,7 @@ export type PaneView = {
   nowMs: number
   forecasts: Forecasts
   card: CardData
-  // A turn is running: the meters shine.
+  // A turn is running: a dot breathes by the title.
   isLive: boolean
   // The last 7 or 30 days from the transcripts; null until they have been read.
   past: PastView | null
@@ -79,7 +79,7 @@ function gaugeTile(gauge: GaugeView, view: PaneView): Tile {
   const meta = gauge.id === CONTEXT && context !== null ? `${compact(context.tokens)} / ${compact(context.window)}` : reset
 
   return {
-    eyebrow: gauge.long,
+    label: gauge.long,
     meta,
     value: valueText(gauge.percent),
     ...noteOf(gauge, context),
@@ -98,7 +98,7 @@ function costTile(usd: number, view: PaneView): Tile {
   const turnTokens = turn === null ? 0 : turn.input + turn.output
 
   return {
-    eyebrow: words().sessionCost,
+    label: words().sessionCost,
     meta: '',
     value: costText(usd),
     note: turn === null ? '' : words().lastTurnTokens({ tokens: compact(turnTokens), count: turnTokens }),
@@ -154,7 +154,6 @@ function cardOf(view: PaneView, gauges: readonly GaugeView[], width?: number): C
 
   return {
     ...view.card,
-    isLive: view.isLive,
     forecast,
     context: view.usage?.context ?? null,
     columns: view.columns,

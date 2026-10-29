@@ -22,12 +22,13 @@ const MARK = 3
 
 const ringR = DOT / 2 - RING_STROKE / 2
 
+// A done step is plain ink: green is kept for a result, and a step list is progress, not a verdict.
 function dot(state: StepState, cx: number, role: Role): string {
   const cy = DOTS_H / 2
   const ring = (paint: string, extra = ''): string =>
     `<circle cx="${cx}" cy="${cy}" r="${ringR}" class="s-${paint}" stroke-width="${RING_STROKE}" fill="none"${extra}/>`
 
-  if (state === 'done') return `<circle cx="${cx}" cy="${cy}" r="${DOT / 2}" class="f-ok"/>`
+  if (state === 'done') return `<circle cx="${cx}" cy="${cy}" r="${DOT / 2}" class="f-mid"/>`
   if (state === 'active') return ring(role) + `<circle cx="${cx}" cy="${cy}" r="${CORE_R}" class="f-${role} breathe"/>`
   if (state === 'pending') return ring('line-strong')
   if (state === 'skipped') return ring('line-strong', ` stroke-dasharray="${DASH}"`)
@@ -39,7 +40,7 @@ function link(from: number, isDone: boolean): string {
   const x = from + DOT / 2 + LINK_GAP
   const width = PITCH - DOT - LINK_GAP * 2
 
-  return rectEl({ x, y: DOTS_H / 2, width, height: 1, paint: isDone ? 'ok' : 'line-strong' }, isDone ? ` fill-opacity="${LINK_DONE_OPACITY}"` : '')
+  return rectEl({ x, y: DOTS_H / 2, width, height: 1, paint: isDone ? 'mid' : 'line-strong' }, isDone ? ` fill-opacity="${LINK_DONE_OPACITY}"` : '')
 }
 
 export function stepDotsPart(o: StepDotsOpts): Part {

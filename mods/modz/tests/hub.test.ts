@@ -2,6 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { cardOf, focusOf, presenceOf, rowsOf } from '../hooks/hub'
 import type { Presence } from '../hooks/hub'
+import { shortValue, sizesOf } from '../hooks/hub-draw'
 import type { HubCard } from '../types'
 import { stubWorld } from './world'
 
@@ -209,33 +210,76 @@ function beneath(element: any): any[] {
   return children.flatMap((child: any) => [child, ...beneath(child)])
 }
 
-test('on the desktop each row is one surface: its button sits over the drawing\'s right edge, and a status dot rides the tile', { plugins: [transceiverReporter] }, async ($: any, on: any) => {
+test('on the desktop the whole row is the press: plain blank buttons over a still drawing, live work in the glyph', { plugins: [transceiverReporter] }, async ($: any, on: any) => {
   stubWorld(on)
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   await $.command.run({ command: 'say', args: JSON.stringify(card('transceiver', { tone: 'live', detail: '2 okunmamış' })) })
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
-  const inside = beneath(await ui.find({ type: 'Box', key: 'row-transceiver' }))
+  const row = await ui.find({ type: 'Box', key: 'row-transceiver' })
+  const inside = beneath(row)
   const drawing = inside.find(element => element.type === 'Svg')
   const over = inside.find(element => element.type === 'Box' && element.props?.position === 'absolute')
-  expect(drawing?.props?.isInteractive).toBe(true)
-  expect(beneath(over).some(element => element.props?.key === 'open-transceiver')).toBe(true)
-  // A row is not a whole number of cells tall: the button spans it and centres, never pinned a cell from its top.
-  expect(over?.props).toMatchObject({ top: 0, bottom: 0, alignItems: 'center' })
-  expect(String(drawing?.props?.source)).toContain('m-ripple')
-  expect(String(drawing?.props?.source)).not.toMatch(/class="[^"]*breathe/)
+  // A frame would sit over the buttons and take the click, so the drawing is an image, held still. (The harness
+  // does not show a box's hover; the wash is checked on the desktop with bin/modz shot.)
+  expect(drawing?.props?.isInteractive).toBeUndefined()
+  expect(String(drawing?.props?.source)).toContain('animation:none!important')
+  const buttons = beneath(over).filter(element => element.type === 'Button')
+  expect(buttons.some(button => button.props?.key === 'open-transceiver')).toBe(true)
+  // A desktop paints a button's label: each is blank Hangul fillers, never cut to "…"; the drawing's alt names it.
+  expect(buttons.every(button => button.props?.plain === true && /^\u3164+$/.test(button.props?.label))).toBe(true)
+  expect(drawing?.props?.alt).toMatch(/^Transceiver.*2 okunmamış/)
+  expect(over?.props).toMatchObject({ top: 0, bottom: 0, left: 0, right: 0 })
+  // Live work lights the row's pixel glyph in clay; the value's words stay quiet.
+  expect(String(drawing?.props?.source)).toMatch(/<g class="fg-edit"><rect/)
+  expect(String(drawing?.props?.source)).not.toContain('chev')
 })
 
-test('on the desktop the head gives its focus button a band of its own, in an even bottom-right corner', { plugins: [transceiverReporter] }, async ($: any, on: any) => {
+test('on the desktop no card above the list repeats a row', { plugins: [transceiverReporter] }, async ($: any, on: any) => {
   stubWorld(on)
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
-  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
-  const idleHead = beneath(await ui.find({ type: 'Box', key: 'head-card' })).find(element => element.type === 'Svg')
   await $.command.run({ command: 'say', args: JSON.stringify(card('transceiver', { tone: 'live', detail: '2 okunmamış' })) })
-  const inside = beneath(await ui.find({ type: 'Box', key: 'head-card' }))
-  const head = inside.find(element => element.type === 'Svg')
-  const over = inside.find(element => element.type === 'Box' && element.props?.position === 'absolute')
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
 
-  expect(beneath(over).some(element => element.props?.key === 'open-focus')).toBe(true)
-  expect(over?.props).toMatchObject({ bottom: 1, right: 2 })
-  expect(head?.props?.height).toBeGreaterThan(idleHead?.props?.height)
+  expect(await ui.find({ type: 'Box', key: 'head-card' })).toBeUndefined()
+  expect(await ui.find({ key: 'open-focus' })).toBeUndefined()
+  expect((await ui.findAll({ type: 'Svg' })).filter((svg: any) => /2 okunmamış/.test(svg.props.alt))).toHaveLength(1)
+})
+
+test('a value too long for its row is shortened at a word, never mid-word', () => {
+  expect(shortValue('2 oda', 200)).toBe('2 oda')
+  expect(shortValue('30 nokta · son 6 sa önce', 80)).toBe('30 nokta')
+  expect(shortValue('257 değişiklik commit edilmedi', 110)).toBe('257 değişiklik')
+  expect(shortValue('30 nokta · son 6 sa önce', 30)).toBe('')
+  expect(shortValue('çokçokçokuzunbirkelime', 40).endsWith('…')).toBe(true)
+})
+
+test('a desktop that comes back with no hub gets it again; one that still has it gets no second', async ($: any, on: any) => {
+  const world = stubWorld(on)
+  on('session.attach', (_: unknown, e: any) => ({ clientId: e.clientId }))
+  await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
+  const opens = () => world.opened.filter(id => id === 'modz').length
+  const before = opens()
+
+  await $.session.attach({ surface: 'desktop', clientId: 'desktop:default' })
+  expect(opens()).toBe(before)
+  // The app restarted: the session resumes with no panes up, and no session.start.
+  world.up.splice(0)
+  await $.session.attach({ surface: 'desktop', clientId: 'desktop:default' })
+  expect(opens()).toBe(before + 1)
+  await $.session.attach({ surface: 'terminal', clientId: 'terminal:default' })
+  expect(opens()).toBe(before + 1)
+})
+
+test('the hub grows with its pane: a wide one gets taller rows and larger type, a narrow one stays compact', () => {
+  const narrow = sizesOf(280)
+  const wide = sizesOf(640)
+  expect(narrow.row).toBe(30)
+  expect(wide.row).toBeGreaterThan(narrow.row)
+  expect(wide.title.size).toBeGreaterThan(narrow.title.size)
+  expect(sizesOf(520)).toEqual(wide)
+  // Every box between is whole pixels: a fraction of a pixel leaves the desktop pane blank.
+  for (let width = 240; width <= 700; width += 7) {
+    const z = sizesOf(width)
+    expect([z.row, z.section, z.head].every(Number.isInteger)).toBe(true)
+  }
 })

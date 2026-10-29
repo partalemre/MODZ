@@ -3,13 +3,13 @@ import type { RenderElement } from 'claude-code'
 import { ButtonRow, Card, cardInnerWidth, isTextSurface } from './kit/ui'
 import type { DrawCtx } from './kit/ui'
 import { stepDots } from './kit/svg-steps'
-import { ROLE_KEY } from './kit/tokens'
 import { clip } from './progress'
 import { words } from './words'
 import type { FinishNotice, StepMark } from '../types'
 
-// The finish card above the prompt (DESIGN.md §6, a notification): PLAN eyebrow, how many steps are still
+// The finish card above the prompt (DESIGN.md §6, a notification): a quiet "Plan" label, how many steps are still
 // open, the next one, the plan's steps as dots, and three ways on. The terminal draws the dots as text.
+// A neutral card: an open plan is not a state that asks for colour (DESIGN.md §0.1).
 
 export type FinishActions = { onContinue: () => void; onMarkDone: () => void; onNotNow: () => void }
 
@@ -47,7 +47,7 @@ function textDots(draw: DrawCtx, notice: FinishNotice, room: number): RenderElem
   return (
     <Box key="plan-dots" flexDirection="row">
       {runs.map((run, k) => (
-        <Text key={`dots-${k}`} color={run.mark === 'done' ? ROLE_KEY.ok : undefined} dimColor={run.mark === 'open' ? true : undefined}>{run.text}</Text>
+        <Text key={`dots-${k}`} dimColor={run.mark === 'open' ? true : undefined}>{run.text}</Text>
       ))}
       <Text dimColor>{caption}</Text>
     </Box>
@@ -57,7 +57,7 @@ function textDots(draw: DrawCtx, notice: FinishNotice, room: number): RenderElem
 function svgDots(draw: DrawCtx, notice: FinishNotice, width: number): RenderElement | null {
   if (!('Svg' in draw.ui)) return null
   const { Svg } = draw.ui
-  const pic = stepDots({ steps: notice.marks.map(mark => (mark === 'done' ? 'done' : 'pending')), caption: `${notice.done}/${notice.total}`, role: 'plan' })
+  const pic = stepDots({ steps: notice.marks.map(mark => (mark === 'done' ? 'done' : 'pending')), caption: `${notice.done}/${notice.total}` })
 
   return pic.width > width ? null : <Svg key="plan-dots" {...pic} />
 }
@@ -84,5 +84,5 @@ export function finishCard(draw: DrawCtx, view: FinishView): RenderElement {
     width,
   }
 
-  return Card(draw, { role: 'plan', header, children: dots === null ? [buttons] : [dots, buttons] })
+  return Card(draw, { header, children: dots === null ? [buttons] : [dots, buttons] })
 }

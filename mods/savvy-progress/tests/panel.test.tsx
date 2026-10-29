@@ -108,7 +108,7 @@ for (const surface of SURFACES) {
     const seen = await words(ui)
     expect(seen).toContain('Pip sessiz 2 dk')
     expect(seen).not.toContain('Mako sessiz')
-    if (surface === 'desktop') expect(await svgOf(ui)).toContain('b-warn')
+    if (surface === 'desktop') expect(await svgOf(ui)).toContain('class="f-warn"')
     await ui.press({ key: 'look' })
     expect(await ui.find({ key: 'stop-a1' })).toBeDefined()
   })

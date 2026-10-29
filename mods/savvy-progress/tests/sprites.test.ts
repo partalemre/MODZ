@@ -92,9 +92,9 @@ const GOLDEN: Record<string, string> = {
   "heavy/dim/scale2": "af85ea81",
   "css": "2ad845f7",
   "meter/empty": "01aff699",
-  "meter/segments": "5d2da56e",
-  "meter/solid": "6c4d8c24",
-  "meter/all-done": "0f30488e"
+  "meter/segments": "aa99eb0d",
+  "meter/solid": "3f8c8feb",
+  "meter/all-done": "2b8c8df6"
 
 }
 

@@ -6,7 +6,7 @@ import { pick } from './lang'
 const plural = (n: string, one: string, many: string): string => `${n} ${n === '1' ? one : many}`
 
 const EN = {
-  eyebrow: 'Cache tax',
+  name: 'Cache tax',
   headline: 'Your message is on hold',
   wentCold: (ago: string): string => `The cache went cold ${ago} ago.`,
   switched: (from: string, to: string): string[] =>
@@ -22,7 +22,6 @@ const EN = {
   fresh: { label: 'Start fresh', hotkey: 'n' },
   status: { label: 'Cache status', hotkey: 's' },
   alt: (cold: string, warm: string): string => `Cache tax: your message is on hold. Send now ${cold}, a warm turn ${warm}.`,
-  terminalEyebrow: '● CACHE TAX',
   held: 'Held: ',
   states: { warm: 'warm', cold: 'cold', unknown: 'unknown', stopped: 'stopped' },
   cache: 'Cache · ',
@@ -41,7 +40,7 @@ const EN = {
 }
 
 const TR: typeof EN = {
-  eyebrow: 'Önbellek vergisi',
+  name: 'Önbellek vergisi',
   headline: 'Mesajın bekletiliyor',
   wentCold: (ago: string): string => `Önbellek ${ago} önce soğudu.`,
   switched: (from: string, to: string): string[] =>
@@ -57,7 +56,6 @@ const TR: typeof EN = {
   fresh: { label: 'Yeni başla', hotkey: 'y' },
   status: { label: 'Önbellek durumu', hotkey: 'd' },
   alt: (cold: string, warm: string): string => `Önbellek vergisi: mesajın bekletiliyor. Şimdi gönder ${cold}, sıcak bir tur ${warm}.`,
-  terminalEyebrow: '● ÖNBELLEK VERGİSİ',
   held: 'Bekleyen: ',
   states: { warm: 'sıcak', cold: 'soğuk', unknown: 'bilinmiyor', stopped: 'durdu' },
   cache: 'Önbellek · ',

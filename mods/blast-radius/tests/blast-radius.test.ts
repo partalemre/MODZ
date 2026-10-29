@@ -129,7 +129,7 @@ for (const surface of SURFACES) {
     const ui = await mountPane($, surface)
     const drawn = JSON.stringify(await ui.drawn())
     expect(drawn).toContain('Değişiklikleri sil')
-    expect(drawn).toContain('KOMUT BEKLETİLDİ')
+    expect(drawn).toContain('Komut bekletildi')
     await ui.press({ key: 'cancel' })
     await pass(w)
     const result: any = await call

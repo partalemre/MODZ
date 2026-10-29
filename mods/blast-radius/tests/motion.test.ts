@@ -1,6 +1,6 @@
 // The card in motion on the desktop (kit/moving.ts): in the pane every drawing is an interactive frame that enters
-// as the pane opens, keeps its very source while what it shows is unchanged, sweeps when its rows change and is
-// struck without a sweep. The band above the prompt is no pane: its drawings stay plain.
+// as the pane opens, keeps its very source while what it shows is unchanged, flashes when its rows change and is
+// struck without a flash. The band above the prompt is no pane: its drawings stay plain.
 import { expect, test } from 'claude-code/testing'
 
 import { BUILD_SCAN, PANE_PROPS, mountBand, mountPane, pass, start, stub, world } from './world'
@@ -35,7 +35,7 @@ test('desktop pane: the drawings cascade in as frames and keep their sources acr
   await call
 })
 
-test('desktop pane: Show more sweeps the list, the strike plays alone, a new card enters anew', async ($: any, on: any) => {
+test('desktop pane: Show more flashes the list, the strike plays alone, a new card enters anew', async ($: any, on: any) => {
   const w = world({ answers: { files: BUILD_SCAN } })
   stub(on, w)
   await start($, w)
@@ -46,13 +46,13 @@ test('desktop pane: Show more sweeps the list, the strike plays alone, a new car
 
   await pane.press({ key: 'toggle' })
   expect((await sources(pane))[0]).toBe(head)
-  expect(await listOf(pane)).toContain('class="m-sweep"')
+  expect(await listOf(pane)).toContain('m-flash')
 
   await pane.press({ key: 'run' })
   await pass(w, POLL_MS)
   const struck = await listOf(pane)
   expect(struck).toContain('class="st"')
-  expect(struck).not.toContain('class="m-sweep"')
+  expect(struck).not.toContain('m-flash')
   expect((await svgsOf(pane)).every((svg: any) => svg.props.isInteractive === true)).toBe(true)
   await pass(w)
   await call

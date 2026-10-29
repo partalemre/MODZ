@@ -1,7 +1,6 @@
 import { etaMinutes, etaText, percentOf, ratioOf, spendText, stepText } from './budget'
 import { fullCardSvg, stoppedRowSvg, warnRowSvg } from './svg-rows'
 import type { SvgDoc } from './svg'
-import { upper } from './lang'
 import { words } from './words'
 import type { Budget } from '../types'
 
@@ -104,7 +103,7 @@ export function fullCard(ui: Ui, spec: { budget: Budget; columns: number; surfac
     svgOf(ui, fullCardSvg({ spend: spendText(budget), percent: percentOf(budget), step: stepText(budget), width }))
   ) : (
     <Box flexDirection="column" borderStyle="round" borderColor="warning" paddingX={1}>
-      <Text color="warning" bold>{`● ${upper(words().eyebrow)}`}</Text>
+      <Text bold dimColor>{words().eyebrow}</Text>
       <Text bold>{words().fullLine(spendText(budget), percentOf(budget))}</Text>
       <Text dimColor>{words().held(stepText(budget))}</Text>
     </Box>

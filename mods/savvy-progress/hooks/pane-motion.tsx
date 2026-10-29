@@ -7,7 +7,7 @@ import type { Ui } from './rows'
 export const motion = paneMotion()
 
 // `key` is the drawing's React key among its siblings; `at` names its one place in the whole pane, by the agent or
-// the part it draws, so a card that moves up the list keeps its frame rather than sweep every card under it.
+// the part it draws, so a row that moves up the list keeps its frame rather than mark every row under it.
 export type Placed = { key: string; at: string; pic: Pic; opts?: MoveOpts }
 
 export function picture(ui: Ui, placed: Placed) {

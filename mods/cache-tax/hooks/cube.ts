@@ -1,5 +1,5 @@
 // The Cache Tax cube, taken from upstream's official asset (status-icons.ts): its lid carries the
-// temperature, Kiln when cold and Moss when warm, its outline the text colour.
+// temperature, Amber when cold and Moss when warm, its outline the text colour.
 
 import { statusIcons } from './status-icons'
 import type { Square } from './svg'

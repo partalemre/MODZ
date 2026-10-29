@@ -31,15 +31,18 @@ for (const surface of SURFACES) {
   }
   const seen = async (ui: any) => (surface === 'terminal' ? text(ui) : `${await text(ui)}\n${await svgOf(ui)}`)
 
-  test(`${surface}: the card opens from a labelled, keyboard-pressable button and closes again`, async ($, on) => {
+  test(`${surface}: the row opens from a keyboard-pressable button and closes again`, async ($, on) => {
     await setup($, on)
     await spawn($, 'Build the landing page')
     const ui = await mount($)
     const closed = await ui.find({ key: 'open-a1' })
     expect(closed?.type).toBe('Button')
-    expect(closed?.props?.label).toBe(surface === 'terminal' ? '▸ Build the landing page' : 'Detay ▾')
+    // The terminal's button is the title; the desktop's lies over the whole row, its drawing naming what it does.
+    if (surface === 'terminal') expect(closed?.props?.label).toBe('▸ Build the landing page')
+    else expect(await svgOf(ui)).toContain('(Detay)')
     await ui.press({ key: 'open-a1' })
-    expect((await ui.find({ key: 'open-a1' }))?.props?.label).toBe(surface === 'terminal' ? '▾ Build the landing page' : 'Gizle ▴')
+    if (surface === 'terminal') expect((await ui.find({ key: 'open-a1' }))?.props?.label).toBe('▾ Build the landing page')
+    else expect(await svgOf(ui)).toContain('(Gizle)')
     expect(await text(ui)).toContain('Pip yanıtlıyor…')
     await ui.press({ key: 'open-a1' })
     expect(await text(ui)).not.toContain('Pip yanıtlıyor…')
@@ -70,7 +73,7 @@ for (const surface of SURFACES) {
     const ui = await mount($)
     await ui.press({ key: 'open-a1' })
     const all = await seen(ui)
-    expect(all).toContain(surface === 'terminal' ? 'Düşünüyor' : 'DÜŞÜNÜYOR')
+    expect(all).toContain('Düşünüyor')
     expect(all).toContain('npm test -- --runInBand')
     expect(all).not.toContain('echo done')
     expect(all).toContain('40 sn önce')
@@ -131,13 +134,16 @@ const drawnByKey = (node: any, key: string): any => {
   return undefined
 }
 
-test('desktop: the whole card lights under the pointer, and its button with it', async ($, on) => {
+test('desktop: the whole row is one plain press, its head washing under the pointer with a chevron', async ($, on) => {
   await setup($, on)
   await spawn($, 'Build the landing page')
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   const tree = await ui.drawn()
-  expect(drawnByKey(tree, 'a1')?.hover).toEqual({ borderDimColor: false })
-  expect(drawnByKey(tree, 'open-a1')?.hover).toEqual({ color: 'permission' })
+  expect(drawnByKey(tree, 'a1')?.borderStyle).toBeUndefined()
+  expect((await ui.find({ key: 'open-a1' }))?.props?.plain).toBe(true)
+  const head = (await ui.findAll({ type: 'Svg' })).find((s: any) => String(s.props.alt).startsWith('Build the landing page: Pip'))
+  expect(head?.props?.source).toContain('m-wash')
+  expect(head?.props?.source).toContain('class="chev"')
 })
 
 test('now: an open call is what it does, a closed one means thinking, an ended run shows its last step', () => {

@@ -1,14 +1,14 @@
-import { eyebrow, measure } from './ui/svg'
+import { measure } from './ui/svg'
 import { svgDoc } from './ui/theme'
 import type { Theme } from './ui/theme'
 import { words } from './words'
 
-// The empty pane: the eyebrow, one sentence saying where a plan comes from, and the faint outline of the
-// rail a plan will fill, so the pane reads as waiting rather than broken.
+// The empty pane: one sentence saying where a plan comes from (no label above it: the pane's title says "Plan"),
+// and the faint outline of the rail a plan will fill, so the pane reads as waiting rather than broken.
 
 const SIZE = 13
 const LINE = 18
-const FIRST_BASE = 40
+const FIRST_BASE = 14
 const GHOST_GAP = 16
 const GHOST_ROW = 30
 const GHOST_SHARES = [0.62, 0.46, 0.54]
@@ -71,7 +71,7 @@ export function emptySvg(theme: Theme, width: number): { source: string; height:
   const text = sentence(width)
   const top = text.bottom + GHOST_GAP
   const height = top + (GHOST_SHARES.length - 1) * GHOST_ROW + 2 * DOT_R + 2
-  const body = `<text x="0" y="14" class="eyebrow f-plan">${eyebrow('Plan')}</text>${text.svg}${ghost(width, top)}`
+  const body = `${text.svg}${ghost(width, top)}`
 
   return { source: svgDoc({ width, height, theme }, body), height, alt: `Plan: ${words().emptyLead} · ${words().emptyHow}` }
 }

@@ -1,21 +1,19 @@
-// What the "NOW" card says: the turn's file activity told as one sentence in the session's language.
+// What the "Now" card says: the turn's file activity told as one sentence in the session's language.
 
 import type { Touch, TouchRole, TurnLog } from '../types'
 import { badgeOf } from './badges'
 import type { TouchedRow } from './cards'
 import { costText } from './costtext'
-import type { IconName } from './svg'
 import type { Role } from './theme'
 import { words } from './words'
 
 export type Part = { text: string; cls: string; isBold?: boolean; isNum?: boolean }
 export type Hero = {
-  role: Role
-  icon: IconName
-  eyebrow: string
+  // "Now" or "Done": not drawn on the card, whose headline says as much; it names the card to a reader.
+  label: string
   title: { lead: string; name: string; tail: string }
   sub: Part[]
-  // Claude is at work this very moment: the card's dot runs its rings.
+  // Claude is at work this very moment: the card's dot breathes.
   isLive?: boolean
 }
 export type NowInput = {
@@ -28,7 +26,6 @@ export type NowInput = {
 }
 
 const ROLE: Record<TouchRole, Role> = { read: 'read', edit: 'edit', commit: 'ok' }
-const ICON: Record<TouchRole, IconName> = { read: 'eye', edit: 'pencil', commit: 'check' }
 
 export const baseName = (id: string): string => id.slice(id.lastIndexOf('/') + 1)
 
@@ -71,7 +68,7 @@ function liveHero(input: NowInput, latest: Touch): Hero {
   const isMany = same.length > 1
   const title = isMany ? { lead: w.liveMany[latest.role](same.length), name: '', tail: '' } : { lead, name: baseName(latest.id), tail }
   const sub = latest.role === 'commit' ? shaParts(input) : [where(latest.id, input.root)]
-  return { role: ROLE[latest.role], icon: ICON[latest.role], eyebrow: w.now, title, sub }
+  return { label: w.now, title, sub }
 }
 
 function shaParts(input: NowInput): Part[] {
@@ -80,10 +77,8 @@ function shaParts(input: NowInput): Part[] {
   return [...sha, ...branch]
 }
 
-const quiet = (eyebrow: string, lead: string, sub: string): Hero => ({
-  role: 'neutral',
-  icon: 'sparkle',
-  eyebrow,
+const quiet = (label: string, lead: string, sub: string): Hero => ({
+  label,
   title: { lead, name: '', tail: '' },
   sub: [{ text: sub, cls: 'mid' }],
 })
@@ -98,7 +93,7 @@ function doneHero(input: NowInput): Hero {
   const commits = count(turn, 'commit')
   if (commits || turn.committed) {
     const n = Math.max(commits, turn.committed)
-    return { role: 'ok', icon: 'check', eyebrow: w.done, title: { lead: w.committedN(n), name: '', tail: '' }, sub: shaParts(input) }
+    return { label: w.done, title: { lead: w.committedN(n), name: '', tail: '' }, sub: shaParts(input) }
   }
   const edits = turn.touches.filter(t => t.role === 'edit')
   const reads = count(turn, 'read')
@@ -106,11 +101,11 @@ function doneHero(input: NowInput): Hero {
   if (edits.length) {
     const first = edits[0] as Touch
     const sub = edits.length === 1 ? [{ text: relPath(first.id, root), cls: 'mid' }, ...diffParts(input.diff[first.id])] : [{ text: names(edits), cls: 'mid' }]
-    return { role: 'edit', icon: 'pencil', eyebrow: w.done, title: { lead: w.editedN(edits.length), name: '', tail: '' }, sub: [...sub, ...opened] }
+    return { label: w.done, title: { lead: w.editedN(edits.length), name: '', tail: '' }, sub: [...sub, ...opened] }
   }
   if (reads) {
     const sub = [{ text: names(turn.touches), cls: 'mid' }]
-    return { role: 'read', icon: 'eye', eyebrow: w.done, title: { lead: w.readN(reads), name: '', tail: '' }, sub }
+    return { label: w.done, title: { lead: w.readN(reads), name: '', tail: '' }, sub }
   }
   return quiet(w.done, w.untouched, w.untouchedSub)
 }
@@ -122,7 +117,7 @@ function runningHero(input: NowInput): Hero {
   if (latest) return liveHero(input, latest)
   if (input.isCommitting) {
     const sub = input.branch ? [{ text: w.toBranch(input.branch), cls: 'mid' }] : []
-    return { role: 'ok', icon: 'check', eyebrow: w.now, title: { lead: w.committing, name: '', tail: '' }, sub }
+    return { label: w.now, title: { lead: w.committing, name: '', tail: '' }, sub }
   }
   return quiet(w.now, w.thinking, tally(turn))
 }
@@ -149,7 +144,7 @@ export function touchedRows(input: NowInput): TouchedRow[] {
       name: baseName(t.id),
       dir: relDir(t.id, root),
       badge: badgeOf(baseName(t.id)),
-      pill: { text: (isLive ? w.pillLive : w.pillDone)[t.role], role: ROLE[t.role] },
+      pill: { text: (isLive ? w.pillLive : w.pillDone)[t.role], role: isLive ? ROLE[t.role] : null },
       ...(diff && (diff[0] || diff[1]) ? { diff } : {}),
       ...(cost ? { cost: costText(cost) } : {}),
     }

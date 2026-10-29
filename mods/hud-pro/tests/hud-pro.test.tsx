@@ -101,7 +101,8 @@ for (const surface of SURFACES) {
       expect(await ui.find({ type: 'Text', text: '↻ 3g 22sa' })).toBeUndefined()
     } else {
       const source = ((await ui.find({ type: 'Svg' })) as Drawn)?.props.source ?? ''
-      expect(source).toContain('f-danger-t s-danger-l')
+      expect(source).toContain('class="f-danger tab"')
+      expect(source).not.toContain('class="f-danger-t')
       expect(source).toContain('↻ 1sa 20dk')
       expect(source).not.toContain('↻ 3g 22sa')
       expect(((await ui.find({ type: 'Svg' })) as Drawn)?.props.width).toBeLessThanOrEqual(NARROW_COLUMNS.desktop * 6.4)

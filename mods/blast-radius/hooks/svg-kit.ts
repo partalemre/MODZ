@@ -1,4 +1,4 @@
-// Small vector pieces: escaping, text measuring, original line icons on a 24 grid, the icon tile.
+// Small vector pieces: escaping, text measuring, original line icons on a 24 grid.
 
 export const escape = (text: string): string =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -72,16 +72,6 @@ export function icon(name: IconName, at: { x: number; y: number; size: number; c
   const scale = at.size / GRID
 
   return `<g transform="translate(${at.x} ${at.y}) scale(${scale})" fill="none" style="stroke:${at.color}" stroke-width="${STROKE / scale > 2.4 ? 2.4 : STROKE / scale}" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</g>`
-}
-
-const TILE_RADIUS = 10
-const TILE_ICON = 18
-
-/** The icon tile: a rounded square in the role's tint with its icon in the role's colour. */
-export function tile(name: IconName, at: { x: number; y: number; size: number; role: string }): string {
-  const inset = (at.size - TILE_ICON) / 2
-
-  return `<rect x="${at.x}" y="${at.y}" width="${at.size}" height="${at.size}" rx="${TILE_RADIUS}" style="fill:var(--${at.role}-tint)"/>${icon(name, { x: at.x + inset, y: at.y + inset, size: TILE_ICON, color: `var(--${at.role})` })}`
 }
 
 export const svgOpen = (width: number, height: number): string =>

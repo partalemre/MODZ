@@ -14,14 +14,16 @@ import { stuckOf } from './insight'
 import type { Stuck } from './insight'
 import { progressLabel } from './metrics'
 import { BAR_H, progressBarSvg } from './metrics-svg'
+import { PressCover } from './kit/press'
 import { picture } from './pane-motion'
 import { CARD_CRAB, CRAB, activityOf, cardCrabSvg, clockOf, crabSvg, modelLine, plannedLine } from './pane-svg'
-import { costumeOf, keyOf, plannedTierOf, tierOf, tierWordOf } from './tiers'
+import { costumeOf, plannedTierOf, tierWordOf } from './tiers'
 
-// One agent as a card. The desktop draws who it is and its task as the card's head beside its
-// crab, the bar under them and one native line of what it does now, ended by a "Detay" button that
-// lights while the pointer is anywhere on the card. The terminal keeps native text, its title the
-// button that opens it. Either way the button is a real one: the focus ring and Enter reach it.
+// One agent as a row. The desktop draws who it is and its task as the row's head beside its crab, the bar
+// under them and one native line of what it does now; the whole row is the press that opens it (a plain
+// button spread over it, kit/press.tsx), its head drawing the chevron and the hover wash. No frame: the rows
+// rest on spacing. The terminal keeps native text, its title the button that opens it. Either way the button
+// is a real one: the focus ring and Enter reach it.
 
 export type Ui = Record<string, any>
 
@@ -40,15 +42,13 @@ export type RowContext = {
   onStop: (id: string) => void
 }
 
-// The desktop card's frame: two cells of padding and a border on each side (DESIGN.md §4).
-export const CARD_PAD_X = 2
+// A card's frame (the new-task form's): two cells of padding and a border on each side (DESIGN.md §4).
 export const FRAME_PX = 34
 export const FRAME_COLS = 4
-// The gap between the card's parts, and a native button's padding around its label.
+// The gap between the row's parts.
 const GAP_PX = 8
 // Narrower than this beside the meta, the now line takes a row of its own rather than shrink to "ba…".
 const LINE_MIN_PX = 120
-const BUTTON_PAD_PX = 28
 const TERM_BAR_MAX = 24
 // Room the percent and the cost beside the bar take on the terminal: "~%100" and "≈$12.34".
 const PCT_COLS = 6
@@ -58,8 +58,8 @@ const ANSWER_LINE = 120
 const BODY_PX = 14
 
 const GLYPH: Record<string, string> = { running: '●', done: '✓', failed: '✗' }
-// Iris running, Moss done, Flare failed (DESIGN.md §2), as the bar beside it.
-const STATUS_KEY: Record<string, ThemeKey> = { running: 'permission', done: 'success', failed: 'error' }
+// Claude's accent while running, quiet once done, red after a failure (DESIGN.md §0), as the bar beside it.
+const STATUS_KEY: Record<string, ThemeKey> = { running: 'claude', done: 'subtle', failed: 'error' }
 
 const statusWord = (a: AgentRun): string => {
   const s = t()
@@ -78,7 +78,6 @@ const pillOf = (a: AgentRun, stuck: Stuck | null): Pill => {
 
 const headOf = (a: AgentRun, stuck: Stuck | null): CardHead => ({
   name: lookOf(a).name,
-  tier: tierOf(a),
   tierWord: tierWordOf(a),
   model: modelLine(a),
   title: a.description || a.type,
@@ -111,7 +110,7 @@ function termBarTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box, Text } = ui
   const progress = agentProgress(a)
   const width = Math.max(6, Math.min(TERM_BAR_MAX, ctx.inner - PCT_COLS - COST_COLS))
-  const key = STATUS_KEY[a.status] ?? 'permission'
+  const key = STATUS_KEY[a.status] ?? 'claude'
   return (
     <Box flexDirection="row" columnGap={1}>
       <Text color={key} dimColor={progress.isEstimate}>{termBar(progress, width)}</Text>
@@ -135,15 +134,14 @@ function termSummary(ui: Ui, a: AgentRun, ctx: RowContext) {
   return (
     <Box flexDirection="column" flexGrow={1} flexShrink={1}>
       <Box flexDirection="row" justifyContent="space-between" columnGap={1}>
-        <Button key={`open-${a.id}`} plain label={`${isOpen ? '▾' : '▸'} ${a.description || a.type}`} hover={{ color: 'permission' }} onPress={() => ctx.onToggle(a.id)} />
+        <Button key={`open-${a.id}`} plain label={`${isOpen ? '▾' : '▸'} ${a.description || a.type}`} hover={{ color: 'claude' }} onPress={() => ctx.onToggle(a.id)} />
         {termStatus(ui, a, stuckOf(a, ctx.at))}
       </Box>
       {termBarTree(ui, a, ctx)}
       <Box flexDirection="row" justifyContent="space-between" columnGap={1}>
         <Text wrap="truncate-end">
           <Text bold>{lookOf(a).name}</Text>
-          <Text dimColor>{' · '}</Text>
-          <Text color={keyOf(tierOf(a))}>{tierWordOf(a)}</Text>
+          <Text dimColor>{` · ${tierWordOf(a)}`}</Text>
           <Text dimColor>{` · ${[modelLine(a), t().tools(a.toolCount || 0)].filter(Boolean).join(' · ')}`}</Text>
         </Text>
         <Text dimColor>{clockOf(a, ctx.at)}</Text>
@@ -166,43 +164,40 @@ function termCard(ui: Ui, a: AgentRun, ctx: RowContext) {
   )
 }
 
+// The head answers the pointer and says, in its alt, what pressing the row does; opening the row changes only
+// that alt, so the drawing keeps its frame.
 function deskHead(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box } = ui
   const look = lookOf(a)
   const stuck = stuckOf(a, ctx.at)
+  const isOpen = ctx.selected === a.id
   const head = headOf(a, stuck)
   const headW = ctx.inner - CARD_CRAB.w - GAP_PX
-  // A stuck crab stands still: the calm card says it before the pill does.
+  // A stuck crab stands still: the calm row says it before the pill does.
   const crab = cardCrabSvg({ costume: costumeOf(a), look, isWalking: a.status === 'running' && !stuck })
+  const alt = `${head.title}: ${head.name} · ${head.tierWord} · ${head.model} · ${head.pill.text} (${isOpen ? t().hide : t().details})`
   return (
     <Box flexDirection="row" alignItems="center" columnGap={1}>
       {picture(ui, { key: 'crab', at: `crab-${a.id}`, pic: { source: crab, alt: `${look.name}, ${tierWordOf(a)}`, width: CARD_CRAB.w, height: CARD_CRAB.h } })}
-      {picture(ui, { key: 'head', at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head), alt: `${head.title}: ${head.name} · ${head.tierWord} · ${head.model} · ${head.pill.text}`, width: headW, height: HEAD_H } })}
+      {picture(ui, { key: 'head', at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head), alt, width: headW, height: HEAD_H }, opts: { isRow: true } })}
     </Box>
   )
 }
 
-/** The card's disclosure: "Detay ▾" opens it, "Gizle ▴" closes it. */
-export const toggleLabel = (isOpen: boolean): string => (isOpen ? `${t().hide} ▴` : `${t().details} ▾`)
-
-// The now line, the meta and the disclosure in one row; the line gives way, never the button. A
-// card too narrow for a readable line sets it above the meta instead.
+// The now line and the meta in one row; the line gives way. A row too narrow for a readable line sets it above
+// the meta instead.
 function deskFoot(ui: Ui, a: AgentRun, ctx: RowContext) {
-  const { Box, Button, Text } = ui
+  const { Box, Text } = ui
   const isOpen = ctx.selected === a.id
   const meta = `${t().tools(a.toolCount || 0)} · ${clockOf(a, ctx.at)} · ≈${fmtCost(a.costUsd)}`
-  const toggle = toggleLabel(isOpen)
-  const room = ctx.inner - textWidth(meta, BODY_PX) - textWidth(toggle, BODY_PX) - BUTTON_PAD_PX - GAP_PX * 2
+  const room = ctx.inner - textWidth(meta, BODY_PX) - GAP_PX * 2
   const isStacked = room < LINE_MIN_PX
   const line = (
     <Box flexShrink={1} flexGrow={1}>
       <Text wrap="truncate-end" dimColor={a.status !== 'running'}>{fitText(nowLine(a, isOpen), BODY_PX, isStacked ? ctx.inner : room)}</Text>
     </Box>
   )
-  const tail = [
-    <Box key="meta" flexShrink={0}><Text dimColor>{meta}</Text></Box>,
-    <Button key={`open-${a.id}`} plain dimColor={!isOpen} label={toggle} hover={{ color: 'permission' }} onPress={() => ctx.onToggle(a.id)} />,
-  ]
+  const tail = <Box key="meta" flexShrink={0}><Text dimColor>{meta}</Text></Box>
   if (isStacked) {
     return (
       <Box flexDirection="column">
@@ -219,8 +214,7 @@ function deskFoot(ui: Ui, a: AgentRun, ctx: RowContext) {
   )
 }
 
-// The bar fills with the work and shines while it runs; only its run ending, or a measure taking over from the
-// estimate, sweeps it.
+// The bar fills with the work; only its run ending, or a measure taking over from the estimate, marks a change.
 function deskBar(ui: Ui, a: AgentRun, ctx: RowContext) {
   const progress = agentProgress(a)
   const label = barLabel(a, progress)
@@ -228,15 +222,22 @@ function deskBar(ui: Ui, a: AgentRun, ctx: RowContext) {
   return picture(ui, { key: 'bar', at: `bar-${a.id}`, pic, opts: { shows: { status: a.status, isEstimate: progress.isEstimate } } })
 }
 
+// Taller than any row, so the cover's stack of buttons reaches its foot; the cover clips the rest.
+const ROW_COVER_PX = 160
+
+// The row (head, bar, now line) is one press that opens or closes it; what opens sits under it, outside the press,
+// since it holds its own field and buttons.
 function deskCard(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box } = ui
   const isOpen = ctx.selected === a.id
-  // Keyed, so the pointer anywhere on the card lights its edge and its "Detay" button.
   return (
-    <Box key={a.id} flexDirection="column" borderStyle="round" borderDimColor={!isOpen} hover={{ borderDimColor: false }} paddingX={CARD_PAD_X} paddingY={1}>
-      {deskHead(ui, a, ctx)}
-      {deskBar(ui, a, ctx)}
-      {deskFoot(ui, a, ctx)}
+    <Box key={a.id} flexDirection="column">
+      <Box key="row" flexDirection="column" alignSelf="flex-start">
+        {deskHead(ui, a, ctx)}
+        {deskBar(ui, a, ctx)}
+        {deskFoot(ui, a, ctx)}
+        {PressCover(ui, { key: `open-${a.id}`, width: ctx.inner, height: ROW_COVER_PX, onPress: () => ctx.onToggle(a.id) })}
+      </Box>
       {isOpen && detailTree(ui, a, ctx)}
     </Box>
   )
@@ -254,8 +255,7 @@ export function plannedRow(ui: Ui, p: Planned, ctx: Pick<RowContext, 'isDesktop'
       <Box flexDirection="column" flexGrow={1}>
         <Text dimColor wrap="truncate-end">{`${p.n}. ${p.title}`}</Text>
         <Text wrap="truncate-end">
-          <Text color={keyOf(tier)}>{tier}</Text>
-          <Text dimColor>{` · ${plannedLine(p)}`}</Text>
+          <Text dimColor>{[tier, plannedLine(p)].filter(Boolean).join(' · ')}</Text>
         </Text>
       </Box>
     </Box>

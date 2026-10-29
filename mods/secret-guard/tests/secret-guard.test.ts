@@ -90,7 +90,7 @@ test('terminal: the text card, eyebrow and file, the headline, masked values in 
 
   expect(setup.asked).toEqual([QUESTION])
   expect(setup.cards[0]).toEqual([
-    '● SIZINTI ENGELLENDİ · src/lib/supabase.ts',
+    'Sızıntı engellendi · src/lib/supabase.ts',
     'Bu yazımda 2 gizli anahtar var',
     '  Anthropic API key  sk-a****  satır 1',
     '  GitHub token       ghp_****  satır 3',
@@ -109,7 +109,7 @@ test('desktop: one vector card in a single border, the safe fix first with a lin
   expect(card?.props).toMatchObject({ borderStyle: 'single' })
   expect(svg?.type).toBe('Svg')
   expect(svg?.props.alt).toBe('Bu yazımda 2 gizli anahtar var: Anthropic src/lib/supabase.ts:1 sk-a****; GitHub src/lib/supabase.ts:3 ghp_****')
-  expect(svg?.props.source).toContain('SIZINTI ENGELLENDİ')
+  expect(svg?.props.source).toContain('Sızıntı engellendi')
   // The header names the file, so each row says only its line.
   expect(svg?.props.source).toContain('satır 3')
   expect(svg?.props.source).not.toContain('supabase.ts:3')
@@ -128,7 +128,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     const denied: any = await ($ as any).tool.call({ tool: 'Bash', command: 'git add .' })
 
-    if (surface === 'terminal') expect(setup.cards[0]).toEqual(['● ORTAM DOSYASI · git add .', ".env.local git'e ekleniyor", '  ortam dosyası  .env.local'])
+    if (surface === 'terminal') expect(setup.cards[0]).toEqual(['Ortam dosyası · git add .', ".env.local git'e ekleniyor", '  ortam dosyası  .env.local'])
     else expect(JSON.stringify(setup.trees[0])).toContain(".env.local git'e ekleniyor")
     expect(denied.deny).toMatch(/blocked/)
   })
@@ -173,7 +173,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const denied: any = await ($ as any).tool.call({ tool: 'Bash', command: 'git commit -m "pay"' })
 
     if (surface === 'terminal') {
-      expect(setup.cards[0]?.[0]).toBe('● SIZINTI ENGELLENDİ · git commit -m "pay"')
+      expect(setup.cards[0]?.[0]).toBe('Sızıntı engellendi · git commit -m "pay"')
       expect(setup.cards[0]?.[2]).toBe('  Stripe live key  sk_l****  src/pay.ts')
     } else {
       expect(setup.trees[0]?.children?.[0]?.children?.[0]?.props.alt).toBe("Bu commit'te 1 gizli anahtar var: Stripe src/pay.ts sk_l****")

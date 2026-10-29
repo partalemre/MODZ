@@ -1,5 +1,3 @@
-import type { ThemeKey } from 'claude-code'
-
 import type { AgentRun, ToolEvent } from '../types'
 import { toolName, toolTarget } from './format'
 
@@ -21,7 +19,6 @@ export const kindOf = (tool: string): Kind => {
   return AGENT.includes(tool) ? 'agent' : 'other'
 }
 
-export const KIND_KEY: Record<Kind, ThemeKey> = { read: 'suggestion', edit: 'claude', run: 'permission', agent: 'merged', other: 'subtle' }
 export const KIND_GLYPH: Record<Kind, string> = { read: '◇', edit: '✎', run: '❯', agent: '◆', other: '•' }
 
 export type CallFacts = { call: Record<string, unknown>; at: number; id?: string }

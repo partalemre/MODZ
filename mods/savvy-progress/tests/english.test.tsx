@@ -25,7 +25,7 @@ for (const surface of SURFACES) {
     expect(seen).not.toMatch(TURKISH)
   }
 
-  test(`${surface}: the Agents pane header reads AGENTS, the counts and the four figures`, async ($, on) => {
+  test(`${surface}: the Agents pane header reads Agents, the counts and the four figures`, async ($, on) => {
     await setup($, on, EN)
     await progress($, { title: 'Checkout migration', tasks: TASKS, phase: 'delegate' })
     await spawn($, 'Task 1')
@@ -33,7 +33,7 @@ for (const surface of SURFACES) {
     await finish($, 'a1')
     await progress($, { done: 1 })
     const seen = await words(await pane($))
-    const figures = surface === 'desktop' ? ['AGENTS', 'COST', 'TOKENS', 'TIME', '5H SHARE'] : ['Cost', 'Tokens', 'Time', '5h share']
+    const figures = surface === 'desktop' ? ['Agents', 'Cost', 'Tokens', 'Time', '5h share'] : ['Cost', 'Tokens', 'Time', '5h share']
     expectAll(seen, ['Checkout migration', '25%', '1 running · 1 done · 2 planned', ...figures])
   })
 
@@ -62,7 +62,7 @@ for (const surface of SURFACES) {
   test(`${surface}: the empty pane offers "New task" and the form speaks English`, async ($, on) => {
     const { world } = await setup($, on, EN)
     const ui = await pane($)
-    expectAll(await words(ui), ['NO AGENTS YET', 'Hand out a task and a crab gets to work', '＋ New task'])
+    expectAll(await words(ui), ['No agents yet', 'Hand out a task and a crab gets to work', '＋ New task'])
     await ui.press({ key: 'new-task' })
     expectAll(await words(ui), ['built-in · Research, search and multi-step work', 'Cancel'])
     await ui.input({ key: 'dispatch-task', text: 'Find every caller of fetchPrices' })

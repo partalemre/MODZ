@@ -88,7 +88,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
       expect(await ui.find({ type: 'Text' })).toBeUndefined()
     } else {
       expect(world.registered).toContain('browser')
-      expect(await ui.find({ type: 'Text', text: '● TARAYICI' })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: 'Tarayıcı' })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: 'http://localhost:3000' })).toBeDefined()
     }
   })

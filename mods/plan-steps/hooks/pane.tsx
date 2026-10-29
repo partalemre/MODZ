@@ -43,6 +43,7 @@ function header(ui: Ui, left: string, right: string) {
   )
 }
 
+// Ink, not colour: the bar turns green only once every step is done (DESIGN.md §0.1).
 function bar(ui: Ui, view: { percent: number; columns: number; eta: string }) {
   const { Box, Text } = ui
   const width = Math.max(BAR_MIN, view.columns - 2 * PAD - (view.eta === '' ? 0 : view.eta.length + 2))
@@ -50,7 +51,7 @@ function bar(ui: Ui, view: { percent: number; columns: number; eta: string }) {
 
   return (
     <Box key="bar" flexDirection="row">
-      <Text color="success">{'━'.repeat(filled)}</Text>
+      <Text color={view.percent >= 100 ? 'success' : undefined}>{'━'.repeat(filled)}</Text>
       <Text dimColor>{'━'.repeat(width - filled)}</Text>
       {view.eta !== '' && <Text dimColor>{`  ${view.eta}`}</Text>}
     </Box>
@@ -66,7 +67,7 @@ function checksText(step: Step): string {
 function lookOf(step: Step, context: { track: StepTrack | undefined; now: number; isCurrent: boolean }): RowLook {
   const elapsed = durationOf(context.track, context.now)
   const time = elapsed === null ? '' : formatDuration(elapsed)
-  if (step.status === 'completed') return { glyph: '✓', glyphColor: 'success', isDim: true, isBold: false, right: time }
+  if (step.status === 'completed') return { glyph: '✓', isDim: true, isBold: false, right: time }
   if (step.status === 'in_progress') {
     const right = context.isCurrent ? time : [checksText(step), time].filter(Boolean).join(' · ')
 

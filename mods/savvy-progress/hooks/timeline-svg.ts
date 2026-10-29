@@ -1,15 +1,14 @@
-import { fitText, fmtTime, textWidth, xml } from './format'
-import type { Kind } from './history'
+import { fitText, fmtTime, xml } from './format'
 import { t } from './i18n'
-import { KIND_COLOR } from './metrics-svg'
 import type { Lane, Timeline } from './timeline'
 import { FONT, MONO, paneSvg } from './theme'
 
-// The timeline as one still drawing: a lane per agent (its shell-coloured dot and name), each tool
-// call a segment in its kind's colour, an end cap that says how it went, a "şimdi" hairline while
-// any runs and an Amber notch on a lane that went quiet. Ticks count from the crew's first start.
+// The timeline as one still drawing: a lane per agent (its shell-coloured dot and name, as its crab wears),
+// each tool call a quiet segment, an end cap that says how it went (live in the accent, a failure red), a
+// "şimdi" hairline while any runs and an Amber notch on a lane that went quiet. Ticks count from the crew's
+// first start. No colour per kind of call: colour is kept for state (DESIGN.md §0).
 
-const LEGEND_H = 20
+const TOP = 6
 const LANE_H = 24
 const AXIS_H = 20
 const LABEL_W = 74
@@ -23,15 +22,11 @@ const DOT_R = 4
 const CAP_R = 3.5
 const NAME_SIZE = 12
 const MICRO = 10.5
-const SWATCH = 8
-const SWATCH_GAP = 4
-const LEGEND_GAP = 14
 const TICKS_MAX = 4
 const SECOND = 1000
 const MINUTE = 60 * SECOND
 const STEPS_MS = [10 * SECOND, 30 * SECOND, MINUTE, 2 * MINUTE, 5 * MINUTE, 10 * MINUTE, 15 * MINUTE, 30 * MINUTE, 60 * MINUTE]
-const LEGEND: Kind[] = ['read', 'edit', 'run', 'agent']
-const CAP: Record<string, string> = { running: 'f-run', done: 'f-ok', failed: 'f-danger' }
+const CAP: Record<string, string> = { running: 'f-edit', done: 'm', failed: 'f-danger' }
 const ENDED_OPACITY = 0.6
 
 type Scale = { x0: number; x1: number; t0: number; span: number }
@@ -41,20 +36,6 @@ export type TimelineDrawing = { source: string; height: number; alt: string }
 const xOf = (scale: Scale, ms: number): number => scale.x0 + ((ms - scale.t0) / scale.span) * (scale.x1 - scale.x0)
 
 const n1 = (v: number): string => v.toFixed(1)
-
-// The swatches of the kinds the lanes hold, at the top right, laid right to left from the edge.
-const legendSvg = (W: number, tl: Timeline): string => {
-  const kinds = t().kinds
-  const present = LEGEND.filter(kind => tl.lanes.some(lane => lane.segments.some(seg => seg.kind === kind)))
-  let x = W - RIGHT_PAD
-  return [...present].reverse().map(kind => {
-    const label = kinds[kind]
-    x -= Math.ceil(textWidth(label, MICRO)) + SWATCH + SWATCH_GAP
-    const at = x
-    x -= LEGEND_GAP
-    return `<rect x="${at}" y="5" width="${SWATCH}" height="${SWATCH}" rx="2" fill="${KIND_COLOR[kind]}"/><text class="m" x="${at + SWATCH + SWATCH_GAP}" y="12.5" font-family="${FONT}" font-size="${MICRO}">${xml(label)}</text>`
-  }).join('')
-}
 
 function laneSvg(lane: Lane, y: number, scale: Scale): string {
   const cy = y + LANE_H / 2
@@ -66,9 +47,9 @@ function laneSvg(lane: Lane, y: number, scale: Scale): string {
   const segs = lane.segments.map(seg => {
     const x = xOf(scale, seg.from)
     const w = Math.max(SEG_MIN, xOf(scale, seg.to) - x)
-    return `<rect x="${n1(x)}" y="${cy - SEG_H / 2}" width="${n1(w)}" height="${SEG_H}" rx="2.5" fill="${KIND_COLOR[seg.kind]}"/>`
+    return `<rect class="s" x="${n1(x)}" y="${cy - SEG_H / 2}" width="${n1(w)}" height="${SEG_H}" rx="2.5"/>`
   }).join('')
-  const cap = `<circle class="${lane.isStuck ? 'f-warn' : (CAP[lane.status] ?? 'f-run')}" cx="${n1(end)}" cy="${cy}" r="${CAP_R}"/>`
+  const cap = `<circle class="${lane.isStuck ? 'f-warn' : (CAP[lane.status] ?? 'f-edit')}" cx="${n1(end)}" cy="${cy}" r="${CAP_R}"/>`
   const notch = lane.isStuck ? `<rect class="f-warn" x="${n1(end + CAP_R + 3)}" y="${cy - SEG_H / 2 - 2}" width="3" height="${SEG_H + 4}" rx="1.5"/>` : ''
   return `<g>${label}<g opacity="${isLive ? 1 : ENDED_OPACITY}">${track}${segs}</g>${cap}${notch}</g>`
 }
@@ -102,10 +83,10 @@ const altOf = (tl: Timeline): string => {
 
 export function timelineSvg(W: number, tl: Timeline): TimelineDrawing {
   const scale: Scale = { x0: LABEL_W, x1: W - RIGHT_PAD, t0: tl.t0, span: tl.span }
-  const bottom = LEGEND_H + tl.lanes.length * LANE_H
+  const bottom = TOP + tl.lanes.length * LANE_H
   const height = bottom + AXIS_H + 4
-  const lanes = tl.lanes.map((lane, i) => laneSvg(lane, LEGEND_H + i * LANE_H, scale)).join('')
+  const lanes = tl.lanes.map((lane, i) => laneSvg(lane, TOP + i * LANE_H, scale)).join('')
   const nowX = tl.isLive ? xOf(scale, tl.t1) : null
-  const body = legendSvg(W, tl) + lanes + axisSvg(scale, bottom + 2, nowX) + (tl.isLive ? nowSvg(scale, tl.t1, { top: LEGEND_H, bottom }) : '')
+  const body = lanes + axisSvg(scale, bottom + 2, nowX) + (tl.isLive ? nowSvg(scale, tl.t1, { top: TOP, bottom }) : '')
   return { source: paneSvg(W, height, body), height, alt: altOf(tl) }
 }

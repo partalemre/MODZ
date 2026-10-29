@@ -63,7 +63,6 @@ type PastSpec = { active: number; range: number; sessions: number; tokens: strin
 type Words = {
   paneTitle: string
   limits: string
-  eyebrow: string
   compact: string
   session: string
   sessionCost: string
@@ -117,7 +116,6 @@ type Words = {
 const EN: Words = {
   paneTitle: 'Usage',
   limits: 'Limits',
-  eyebrow: 'HUD · usage',
   compact: 'Compact',
   session: 'session',
   sessionCost: 'session cost',
@@ -175,7 +173,6 @@ const EN: Words = {
 const TR: Words = {
   paneTitle: 'Kullanım',
   limits: 'Limitler',
-  eyebrow: 'HUD · kullanım',
   compact: 'Sıkıştır',
   session: 'oturum',
   sessionCost: 'oturum maliyeti',

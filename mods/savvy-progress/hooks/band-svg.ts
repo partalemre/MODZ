@@ -35,9 +35,12 @@ const pillRole = (view: JobView): Role => {
 
 type Pill = { label: string; role: Role; x: number; w: number }
 
+// The pill rests on the neutral track; its word takes the state's ink: the accent while live, body text once done.
+const PILL_INK: Record<Role, string> = { run: 'f-edit', ok: 's', warn: 'f-warn', danger: 'f-danger' }
+
 const pillSvg = ({ label, role, x, w }: Pill): string =>
-  `<rect class="b-${role} l-${role}" x="${x + 0.5}" y="${PILL.y + 0.5}" width="${w - 1}" height="${PILL.h - 1}" rx="${(PILL.h - 1) / 2}" stroke-width="1"/>
-<text class="f-${role}" x="${x + w / 2}" y="${BASELINE - 0.5}" text-anchor="middle" font-family="${FONT}" font-size="${PILL.size}" font-weight="600">${xml(label)}</text>`
+  `<rect class="k" x="${x}" y="${PILL.y}" width="${w}" height="${PILL.h}" rx="${PILL.h / 2}"/>
+<text class="${PILL_INK[role]}" x="${x + w / 2}" y="${BASELINE - 0.5}" text-anchor="middle" font-family="${FONT}" font-size="${PILL.size}" font-weight="600">${xml(label)}</text>`
 
 type Plan = { title: string; titleW: number; meterW: number; pillW: number; pctW: number }
 

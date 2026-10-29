@@ -1,5 +1,5 @@
 // A pane's drawings in motion (kit/moving.ts): each source is kept byte for byte while what it shows is unchanged,
-// enters on its first draw since the pane opened, sweeps once when it changes, and always says its colour scheme.
+// enters on its first draw since the pane opened, flashes once when it changes, and always says its colour scheme.
 import { expect, test } from 'claude-code/testing'
 
 import { motionCss, rings, shine, SWEEP } from '../hooks/kit/motion'
@@ -9,13 +9,13 @@ import { pill } from '../hooks/kit/svg'
 const svg = (text: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40"><text>${text}</text></svg>`
 const pic = (text: string) => ({ source: svg(text), width: 200, height: 40, alt: text })
 
-test('an entering drawing cascades in after the ones before it; a changed one sweeps instead', () => {
+test('an entering drawing cascades in after the ones before it; a changed one flashes instead', () => {
   const first = animate(svg('a'), { cue: { phase: 'enter', order: 2 } })
   const changed = animate(svg('a'), { cue: { phase: 'change', order: 0 } })
 
   expect(first).toMatch(/<g class="m-in" style="animation-delay:90ms"><text>a<\/text><\/g><\/svg>$/)
   expect(first).toContain('@keyframes m-in')
-  expect(changed).toContain('class="m-sweep"')
+  expect(changed).toContain('m-flash')
   expect(changed).not.toContain('m-in')
 })
 
@@ -43,9 +43,9 @@ test('an unchanged drawing keeps its very source across redraws; a reset makes i
 
   expect(first.isInteractive).toBe(true)
   expect(again.source).toBe(first.source)
-  expect(changed.source).toContain('m-sweep')
+  expect(changed.source).toContain('m-flash')
   expect(reopened.source).toContain('m-in')
-  expect(reopened.source).not.toContain('m-sweep')
+  expect(reopened.source).not.toContain('m-flash')
 })
 
 const NEXT_PASS_MS = 150
@@ -60,24 +60,24 @@ test('drawings first drawn together cascade top to bottom; redrawn, each keeps i
   expect(redrawn).toEqual(sources)
 })
 
-test('a source changed only by its ticking clock is redrawn without the sweep', () => {
+test('a source changed only by its ticking clock is redrawn without the flash', () => {
   const motion = paneMotion()
   motion.pic('row', pic('turn 3 · 1 dk'), { shows: 'turn 3' })
   const ticked = motion.pic('row', pic('turn 3 · 2 dk'), { shows: 'turn 3' })
   const changed = motion.pic('row', pic('turn 4 · 2 dk'), { shows: 'turn 4' })
 
   expect(ticked.source).toContain('2 dk')
-  expect(ticked.source).not.toContain('m-sweep')
-  expect(changed.source).toContain('m-sweep')
+  expect(ticked.source).not.toContain('m-flash')
+  expect(changed.source).toContain('m-flash')
 })
 
-test('a drawing drawn at a new width reflowed, it did not change: no sweep', () => {
+test('a drawing drawn at a new width reflowed, it did not change: no flash', () => {
   const motion = paneMotion()
   motion.pic('head', pic('a'))
   const wider = motion.pic('head', { ...pic('a'), source: svg('a').replace('width="200"', 'width="300"'), width: 300 })
 
   expect(wider.source).toContain('width="300"')
-  expect(wider.source).not.toContain('m-sweep')
+  expect(wider.source).not.toContain('m-flash')
 })
 
 test('live loops come only with the drawings that use them', () => {
@@ -85,7 +85,7 @@ test('live loops come only with the drawings that use them', () => {
 
   expect(motionCss(live)).toContain('@keyframes m-ripple')
   expect(motionCss(live)).toContain('@keyframes m-shine')
-  expect(motionCss(live)).not.toContain('m-sweep')
+  expect(motionCss(live)).not.toContain('m-flash')
   expect(motionCss('<rect/>')).toBe('')
 })
 

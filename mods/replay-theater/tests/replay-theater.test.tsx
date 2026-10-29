@@ -27,7 +27,7 @@ for (const surface of SURFACES) {
     const before = await texts(band)
     expect(before[before.length - 1]).toBe('engine')
     expect((await band.find({ key: 'rt-open' }))?.props?.label).toBe('Düzenlemeleri izle')
-    if (surface === 'terminal') expect(before).toEqual(expect.arrayContaining(['▶ TEKRAR', '2 düzenleme · 2 dosya']))
+    if (surface === 'terminal') expect(before).toEqual(expect.arrayContaining(['Tekrar', '2 düzenleme · 2 dosya']))
     else expect(await svgText(band)).toContain('2 düzenleme · 2 dosya')
 
     await band.press({ key: 'rt-open' })
@@ -44,14 +44,14 @@ for (const surface of SURFACES) {
     const pane = await $.ui.mount(paneOf(surface))
 
     const first = await shown(pane, surface)
-    expect(first).toContain('DÜZENLEME 1 / 2')
+    expect(first).toContain('Düzenleme 1 / 2')
     expect(first).toContain('README içindeki çağrıyı yeni adla güncelliyorum')
     expect(first).toContain('Plan adımı 2/3')
     expect(first).toContain('Adı değiştir')
 
     await pane.press({ key: 'rt-next' })
     const second = await shown(pane, surface)
-    expect(second).toContain('DÜZENLEME 2 / 2')
+    expect(second).toContain('Düzenleme 2 / 2')
     expect(second).toContain('Selam dosyasını oluşturur')
     expect(second).toContain('yeni dosya')
     expect(world.modelCalls).toHaveLength(1)
@@ -86,7 +86,7 @@ for (const surface of SURFACES) {
     const pane = await $.ui.mount(paneOf(surface))
 
     const text = await shown(pane, surface)
-    expect(text).toContain('DÜZENLEME 1 / 1')
+    expect(text).toContain('Düzenleme 1 / 1')
     expect(text).not.toContain('Plan adımı')
     expect(text).not.toContain('açıklanıyor')
     expect(world.modelCalls).toHaveLength(1)
@@ -164,7 +164,7 @@ test('a terminal with no room for the pane draws the replay in the band, above t
   const band = await openFromBand($, clock, 'terminal')
 
   const lines = await texts(band)
-  expect(lines).toContain('● DÜZENLEME 1 / 1')
+  expect(lines).toContain('Düzenleme 1 / 1')
   expect(lines[lines.length - 1]).toBe('engine')
   await band.press({ key: 'rt-close' })
   expect(await texts(band)).toEqual(['engine'])

@@ -1,12 +1,12 @@
 // One tree row as the rows Client draws it: upstream's terminal row, and the desktop row
-// with a file-type badge, a role tint while Claude touches the file and a status pill.
+// with a neutral file-type badge, the activity's colour while Claude touches the file and a status pill.
 
 import type { FileNode, FileTree, Theme } from '../types'
 import { badgeOf } from './badges'
 import { TONES } from './git'
 import { CHEVRON_CLOSED, CHEVRON_OPEN, fileIcon, GIT_COLOR } from './icons'
 import type { RowSpec, Seg } from './rows'
-import { folderColor, type Palette, type Role, roleOfTone } from './theme'
+import { type Palette, type Role, roleOfTone } from './theme'
 import { dirname, formatSize, type Row, stamp, underAny } from './tree'
 import { words } from './words'
 
@@ -131,7 +131,7 @@ export function terminalRow(ctx: RowCtx, r: Row): RowSpec {
 
 function folderGlyphColor(pal: Palette, n: FileNode, changes: number): string {
   if (n.hidden) return pal.lo
-  return changes ? pal.roles.warn.fg : folderColor(pal)
+  return changes ? pal.roles.warn.fg : pal.lo
 }
 
 function desktopIcon(ctx: RowCtx, r: Row, role: Role | null): Seg[] {
@@ -143,9 +143,8 @@ function desktopIcon(ctx: RowCtx, r: Row, role: Role | null): Seg[] {
     const glyph = { t: '■', c: role ? pal.roles[role].fg : color }
     return [{ t: r.open ? '▾ ' : '▸ ', c: pal.lo }, glyph, { t: ' '.repeat(ICON_CELLS - 3) }]
   }
-  const kind = badgeOf(n.name)
-  const colors = role ? { fg: pal.roles[role].fg, bg: pal.roles[role].line } : { fg: pal.roles[kind.role].fg, bg: pal.roles[kind.role].tint }
-  const label = ` ${kind.label} `
+  const colors = role ? { fg: pal.roles[role].fg, bg: pal.roles[role].line } : { fg: pal.lo, bg: pal.track }
+  const label = ` ${badgeOf(n.name)} `
   return [{ t: label, c: colors.fg, bg: colors.bg, b: true }, { t: ' '.repeat(Math.max(1, ICON_CELLS - label.length)) }]
 }
 
@@ -165,7 +164,7 @@ function desktopRight(ctx: RowCtx, r: Row, role: Role | null): Seg[] {
     if (loc[1] > 0) out.push({ t: ` −${loc[1]}`, c: pal.roles.danger.fg })
   }
   const cost = ctx.costOf(n.id)
-  if (cost) out.push({ t: ` ${cost}`, c: pal.roles.read.fg })
+  if (cost) out.push({ t: ` ${cost}`, c: pal.mid })
   const meta = metaOf(ctx, r)
   if (meta) out.push({ t: ` ${meta}`, c: pal.lo })
   return out

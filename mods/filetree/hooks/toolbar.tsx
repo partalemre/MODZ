@@ -1,5 +1,6 @@
 // The desktop pane's toolbar: one row (search, Collapse, Refresh, More) and, on demand, the rest.
-// Every action stays one click away, and each has a key the tree takes while it has focus.
+// Every action stays one click away, and each has a key the tree takes while it has focus. All of them are
+// low-weight upkeep, so none is a filled button (DESIGN.md §0.6).
 
 import type { ElementTable } from 'claude-code'
 
@@ -49,15 +50,15 @@ export function drawToolbar(ui: ElementTable<'desktop'>, bar: Toolbar) {
           <Input key="q" placeholder={w.find} submitLabel={w.findOpen} autoFocus value={t.query} onInput={bar.search.onInput} onSubmit={bar.search.onSubmit} />
         </Box>
         {t.query ? <Button key="clear" plain dimColor label={w.clear} onPress={() => bar.search.onInput('')} /> : null}
-        <Button key="collapse" variant="secondary" label={labels.collapse} onPress={act.collapse} />
-        <Button key="refresh" variant="secondary" label={labels.refresh} onPress={act.refresh} />
+        <Button key="collapse" plain dimColor label={labels.collapse} onPress={act.collapse} />
+        <Button key="refresh" plain dimColor label={labels.refresh} onPress={act.refresh} />
         <Button key="more" plain dimColor={!t.showTools} label={labels.more} onPress={act.more} />
       </Box>
       {t.showTools && (
         <Box flexDirection="column" gap={1}>
           <Box flexDirection="row" flexWrap="wrap" gap={1}>
             {more.map(k => (
-              <Button key={k} variant="secondary" label={labels[k]} onPress={act[k]} />
+              <Button key={k} plain dimColor label={labels[k]} onPress={act[k]} />
             ))}
           </Box>
           <Box flexDirection="row" flexWrap="wrap" columnGap={2}>

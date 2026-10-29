@@ -1,15 +1,14 @@
-import { upper } from './lang'
 import { fillOf, strokeOf, svgStyle } from './theme'
 import type { Tone } from './theme'
 
 // Svg building blocks of the Tidemark kit: a document shell, the slim meter with its pace tick,
-// the sparkline and the eyebrow. Pure strings; colors come from classes.
+// the sparkline and the group label. Pure strings; colors come from classes.
 
 export type SvgDoc = { source: string; alt: string; width: number; height: number }
 
 const AREA_OPACITY = 0.12
-const EYEBROW_SIZE = 10.5
-const EYEBROW_TRACKING = 1.05
+const LABEL_SIZE = 12
+const LABEL_WEIGHT = 600
 const PERCENT = 100
 
 export const escape = (text: string): string =>
@@ -85,9 +84,7 @@ export function sparkline(spec: SparkSpec): string {
   ].join('')
 }
 
-// The upper-case label each card and tile opens with.
-export function eyebrow(text: string, at: { x: number; y: number; cls: string }): string {
-  const label = escape(upper(text))
-
-  return `<text class="${at.cls}" x="${at.x}" y="${at.y}" font-size="${EYEBROW_SIZE}" font-weight="700" letter-spacing="${EYEBROW_TRACKING}">${label}</text>`
+// A group's label: sentence case, quiet, no tracking (DESIGN.md §0.2).
+export function groupLabel(text: string, at: { x: number; y: number }): string {
+  return `<text class="f-lo" x="${at.x}" y="${at.y}" font-size="${LABEL_SIZE}" font-weight="${LABEL_WEIGHT}">${escape(text)}</text>`
 }

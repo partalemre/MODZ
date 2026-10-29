@@ -98,7 +98,7 @@ export function terminalSvg(output: ShellOutput, isErrored: boolean, frame: Card
   const note = output.returnCodeInterpretation === undefined ? say().output : `${say().output} · ${output.returnCodeInterpretation}`
   const header = [
     strokeIcon(PROMPT, { x: 16, y: HEADER_MID - 9, size: 18, color: palette.fg }),
-    `<text x="42" y="${HEADER_MID + 4}" font-size="12" style="fill:${palette.muted};letter-spacing:.04em">${escape(note)}</text>`,
+    `<text x="42" y="${HEADER_MID + 4}" font-size="12" style="fill:${palette.muted}">${escape(note)}</text>`,
     pill(palette, { right: width - 16 - (hasControl ? CONTROL_SLOT : 0), y: HEADER_MID - 10, text: status.text, color: status.color }),
     `<line x1="0" y1="${HEADER_H - 0.5}" x2="${width}" y2="${HEADER_H - 0.5}" stroke="${palette.muted}" stroke-opacity=".3"/>`,
   ].join('')

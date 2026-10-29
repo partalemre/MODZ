@@ -127,7 +127,7 @@ for (const surface of SURFACES) {
     } else {
       const svg = (await ui.find({ type: 'Svg' })) as { props: { alt: string; source: string } } | undefined
       expect(svg?.props.alt).toBe('Durduruldu: bütçe doldu · 5s %6 / %5 · /budget ile artır')
-      expect(svg?.props.source).toContain('f-danger-t')
+      expect(svg?.props.source).toContain('class="f-danger" font-size="13"')
     }
     await clock.advance(1_000)
     expect(world.filled).toEqual(['one more thing'])

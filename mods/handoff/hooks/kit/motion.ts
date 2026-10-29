@@ -64,6 +64,9 @@ export const SWEEP = [
   '<rect x="0" y="0" width="50%" height="100%" fill="url(#m-sheen)" class="m-sweep"/>',
 ].join('')
 
+// A neutral tint under the whole drawing that fades once: what it shows just changed. Quieter than a beam.
+export const FLASH = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN}" fill-opacity=".22" class="m-flash"/>`
+
 // The hover wash under a row's drawing.
 export const WASH = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>'
 

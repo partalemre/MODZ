@@ -1,4 +1,3 @@
-import { upper } from '../kit/lang'
 
 // Text measuring and fitting for hand-laid Svg, close enough to lay out without a renderer.
 
@@ -65,8 +64,4 @@ export function widthFor(columns: number | undefined, range: { min: number; max:
   const fromCells = Math.floor((columns ?? 0) * PX_PER_COLUMN)
 
   return Math.max(range.min, Math.min(range.max, fromCells))
-}
-
-export function eyebrow(text: string): string {
-  return escape(upper(text))
 }

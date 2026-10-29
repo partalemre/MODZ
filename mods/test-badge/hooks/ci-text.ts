@@ -9,8 +9,7 @@ import type { CiCard, CiCheck, CiPhase, CiWatch, HubTone } from '../types'
 // The card names this many failing checks, then "+N".
 const NAMED = 2
 const TONE: Record<CiPhase, HubTone> = { watching: 'live', passed: 'ok', failed: 'bad', merged: 'ok', closed: 'idle', ended: 'warn', none: 'idle' }
-const ROLE: Record<CiPhase, Role | 'lo'> = { watching: 'iris', passed: 'moss', failed: 'flare', merged: 'moss', closed: 'lo', ended: 'amber', none: 'lo' }
-export const CHECK_ROLE: Record<CiCheck['state'], Role | 'lo'> = { pending: 'iris', pass: 'moss', fail: 'flare', skipped: 'lo' }
+export const CHECK_ROLE: Record<CiCheck['state'], Role | 'lo'> = { pending: 'kiln', pass: 'moss', fail: 'flare', skipped: 'lo' }
 
 // "CI 3/4 · 1 failing", "CI 2/4 · 2 running", "CI 4/4 passed", "PR #12 merged"; empty when there is no CI to tell.
 export function ciLine(watch: CiWatch): string {
@@ -27,7 +26,6 @@ export function ciLine(watch: CiWatch): string {
 }
 
 export const ciTone = (watch: CiWatch): HubTone => TONE[watch.phase]
-export const ciRole = (watch: CiWatch): Role | 'lo' => ROLE[watch.phase]
 
 export function namesOf(failing: CiCheck[]): string {
   const named = failing.slice(0, NAMED).map(check => check.name).join(', ')

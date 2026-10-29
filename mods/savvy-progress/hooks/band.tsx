@@ -32,12 +32,12 @@ const DEFAULT_COLS = 100
 // Terminal cells: the dot and its space, the two buttons, the gaps between the row's parts.
 const TERM = { dot: 2, buttons: 12, gaps: 5, titleMin: 8, meterMin: 8, meterMax: 40, segMin: 3 } as const
 
-// The meter's unit colours on the terminal (DESIGN.md §2: ok→success, danger→error, run→permission).
+// The meter's unit colours on the terminal: done quiet, a failure red, the live ones in Claude's own accent.
 type Cell = { key: ThemeKey | null; glyph: string }
 const CELL: Record<string, Cell> = {
-  ok: { key: 'success', glyph: '━' },
+  ok: { key: 'subtle', glyph: '━' },
   danger: { key: 'error', glyph: '━' },
-  run: { key: 'permission', glyph: '━' },
+  run: { key: 'claude', glyph: '━' },
   wait: { key: null, glyph: '─' },
 }
 
@@ -48,8 +48,8 @@ const unitKind = (view: JobView, i: number): string => {
 }
 
 const pillKey = (view: JobView): ThemeKey => {
-  if (!view.isFinished) return 'permission'
-  return view.failed ? 'warning' : 'success'
+  if (!view.isFinished) return 'claude'
+  return view.failed ? 'warning' : 'subtle'
 }
 
 // Tells the hub this pane now holds the panel, so the hub and every other pane step aside (kit/stage.ts).

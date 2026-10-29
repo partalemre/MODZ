@@ -3,7 +3,6 @@ import { quietOf, waitingOf } from './chats'
 import { chatsCardSvg } from './chats-svg'
 import type { WaitRow } from './chats-svg'
 import { t } from './i18n'
-import { upper } from './lang'
 import { picture } from './pane-motion'
 import type { Ui } from './rows'
 import { sectionHead } from './sections'
@@ -45,7 +44,7 @@ export function waitingTree(ui: Ui, chats: OtherChat[], layout: Layout) {
   }
   return (
     <Box key="chats-waiting" flexDirection="column">
-      <Text bold color="warning">{`● ${upper(s.waitingTitle)}`}</Text>
+      <Text bold dimColor>{s.waitingTitle}</Text>
       {rows.map((row, i) => (
         <Text key={`wait-${i}`} wrap="truncate-end"><Text bold>{row.project}</Text><Text dimColor>{` · ${row.title}  `}</Text><Text color="warning">{row.wait}</Text></Text>
       ))}
@@ -66,7 +65,7 @@ export function quietTree(ui: Ui, view: QuietView) {
   const quiet = quietOf(view.chats)
   if (!quiet.length) return null
   const shown = view.isOpen ? quiet : quiet.filter(chat => chat.state === 'working')
-  const head = sectionHead(ui, view.layout, { id: 'chats', label: `${s.title} · ${quiet.length}`, dot: 'idle', toggle: { key: 'chats', isOpen: view.isOpen, onPress: view.onToggle } })
+  const head = sectionHead(ui, view.layout, { id: 'chats', label: `${s.title} · ${quiet.length}`, toggle: { key: 'chats', isOpen: view.isOpen, onPress: view.onToggle } })
   return (
     <Box key="chats-quiet" flexDirection="column" rowGap={0}>
       {head}

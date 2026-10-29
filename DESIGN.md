@@ -1,13 +1,36 @@
-# MODZ tasarım dili v2 — "Tidemark"
+# MODZ tasarım dili v3 — "Tidemark, sessiz"
 
 Bütün modlar tek bir ürün gibi görünür. Ana yüzey Claude masaüstü uygulamasının **Code sekmesi** (`desktop`);
 terminal (`terminal`) aynı bilgiyi metinle verir. Kaynaklar: [design/RESEARCH.md](design/RESEARCH.md) (internet
 araştırması, Tidemark önerisi) ve [design/video/](design/video/) (videodaki 9 modun kare kare ölçümü).
-Hedef: videodaki kalite, ama kopya değil — özgün çizim, aynı zenginlik.
+Hedef: Claude uygulamasının kendi parçası gibi duran, iyi bir insan tasarımcının elinden çıkmış sakin bir panel.
+v3 (2026-10-29) v2'nin şablon görünümünü söktü: renkli ikon kutuları, büyük harfli renkli "kicker" etiketleri,
+ışıma/süpürme efektleri ve satır sonundaki "Aç" düğmeleri yok. Aşağıdaki "Sessiz kurallar" her şeyden önce gelir.
+
+## 0. Sessiz kurallar (v3)
+1. **Renk yalnızca durum içindir.** Canlı iş = vurgu (Claude kili, `edit` fg) + nefes alan 6px nokta; uyarı Amber;
+   hata/geri alınamaz Flare; başarı Moss yalnızca sonucun kendisiyse ("42/42 geçti"). Kategori renklendirmesi yok:
+   "plan pembe, testler yeşil" gibi rol rengi başlığa, etikete, ikona, rozete verilmez.
+2. **Kicker yok.** Başlığın üstünde BÜYÜK HARF, aralıklı, renkli etiket yok. Grup etiketi cümle düzeninde
+   12/600 text.lo; yanında renkli kare/nokta ya da yatay çizgi yok. Başlığı tekrar eden etiket silinir, bağlamı
+   gerekiyorsa başlığın altındaki meta satırına girer.
+3. **İkon kutusu yok.** İkonlar çıplak 16px çizgi ikon (stroke 1.5, text.mid). Monogram ve dosya rozetleri nötr
+   (track zemin, text.lo); okuma/düzenleme rengi yalnızca o an anlam taşıyorsa.
+4. **Efekt yok.** Işıma (radial glow), parlak süpürme, ışık şeridi, gradyan, halka dalgası yok. Değişiklik: satıra bir
+   kez solan `m-flash` (track). Canlı: nefes alan nokta (opaklık), dalga değil.
+5. **Satırın tamamı basılır.** Bir şey açan satırın sonunda "Aç" düğmesi olmaz: satır çizimi sağda `›` ok ve
+   hover yıkaması çizer, üstüne `kit/press.tsx` `PressRow`/`PressCover` tam kaplayan `plain` düğme koyar.
+   Masaüstü düğmenin etiketini boyar (motor çocukları da etikete çevirir), bu yüzden etiket boşluktur ve satırın
+   adını çizimin `alt` metni verir. Terminal kendi düğmelerini korur.
+6. **Düğme hiyerarşisi.** Panelde en fazla bir `primary`. Gerçek alternatifler `secondary`. Düşük ağırlıklı işler
+   (Düzenle, Yenile, Daha fazla, Şimdi değil) `plain dimColor`. Satır içi her eylem için düğme yığılmaz.
+7. **Tek seviye yüzey.** İç içe kart yok. Liste satırları kutuya değil boşluğa yaslanır; kart yalnızca bir şeyi öne
+   çıkarmak için (hub başı, karar kartı): card zemin + 1px line, rx 10.
+8. **Tipografi.** Başlık 16/600 · satır başlığı 13/560 text.hi · gövde 12 text.mid · meta 12 text.lo. Mono yalnızca
+   veri, kod ve ölçüde. Terminalde `● ETİKET` yerine kalın, cümle düzeninde, `dimColor` etiket.
 
 ## 1. İlkeler
-1. **Zengin ama sakin.** Kart, ikon kutusu, büyük başlık, etiket, ölçer — ama ekranda aynı anda tek vurgu.
-   Neon, ışıma (glow), gökkuşağı, emoji yok. Videodaki turuncu odak halkaları kurgu efektidir, kopyalanmaz.
+1. **Sakin.** Ekranda aynı anda tek vurgu. Neon, ışıma (glow), gökkuşağı, emoji, renkli ikon kutusu yok (§0).
 2. **Dürüst sayı.** Ölçülemeyen değer gösterilmez ("—"); tahmin `~` ile işaretlenir ve dayanağı yoksa çizilmez.
    Bayat veri text.lo + "· 3 dk önce".
 3. **Sıfır token varsayılan.** `$.model` yalnızca özelliğin özü gerektiriyorsa (reflect), en ucuz model, olay başına ≤1.
@@ -55,7 +78,7 @@ Svg font: `-apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui`; 
 - **Display** 24/650 — fiyat, büyük sayı (stat kutusu, "$0.52").
 - **Headline** 17/620 — kart başlığı ("Mesajın bekletiliyor"), pane başlığı.
 - **Title** 14/600 — satır başlığı, ajan adı.
-- **Eyebrow** 10.5/700, +0.10em, BÜYÜK HARF, rol rengi — her kart bununla açılır.
+- **Grup etiketi** (eski adıyla eyebrow) 12/600, cümle düzeni, text.lo, harf aralığı yok; kartı açmak zorunda değil.
 - **Label** 12/500 · **Micro** 10.5/500 (tick, birim).
 Text ile: başlık = bold text.hi · gövde = text.mid · meta = text.lo · vurgu = highlight span (tint zemin + fg).
 İtalik yalnızca kullanıcıdan alıntıda; üstü çizili yalnızca geri alınan/silinen işte.
@@ -64,22 +87,23 @@ Text ile: başlık = bold text.hi · gövde = text.mid · meta = text.lo · vurg
 - **Kart:** Box `borderStyle="round"`, `borderColor=line` (rol kartında role.line), `backgroundColor=card`,
   `paddingX 2, paddingY 1, gap 1`. Sıra: başlık bloğu (ikon kutusu + eyebrow + headline + meta sağda) →
   gövde → düğme sırası. Kararlı/riskli işlemde (blast-radius, secret-guard) kenar `single` + Flare.line.
-- **İkon kutusu:** Svg 32–38px yuvarlak kare (rx 9) role.tint zemin, 18px çizgi ikon (stroke 1.75, role.fg).
+- **İkon:** çıplak 16–18px çizgi ikon (stroke 1.5, text.mid); `iconTile` yalnızca yer tutan kareyi verir, zemin çizmez.
   İkonlar kit'te özgün çizim: trash, shield, key, eye, pencil, check, x, clock, cube, bookmark, bulb, play,
   pause, folder, file, branch, terminal, bell, sparkle, list, flag, bolt, gauge, rewind, plug.
-- **Eyebrow satırı:** Svg h16: (ops. 6px nokta) + BÜYÜK HARF etiket + sağda meta ("%95 emin", "2 dk önce").
+- **Etiket satırı:** Svg h16: (ops. durum noktası) + cümle düzeninde text.lo etiket + sağda meta ("2 dk önce"); çizgi yok.
 - **Stat kutusu:** Svg ~120×58 rx 10, inset zemin: eyebrow, Display değer, birim; ops. ince alan grafiği.
-- **Pill:** Svg h20 rx 10, tint zemin + line kenar + fg 11/600 ("Okunuyor", "Commit", "3/5").
+- **Pill:** Svg h20 rx 10, nötr track zemin, kenarsız, 11/600 metin (durum varsa durum rengi, yoksa text.mid).
 - **Ölçer:** iz h4 (kahraman h6) + dolgu + **tempo çentiği** (beklenen yer, 1×10 text.mid). Renk: tempoda nötr,
   >%10 öndeyse Amber, ≥%95 Flare. %100'ü asla aşmaz ("dolu").
 - **Halka (segmentli yay):** 270°, 20 segment, 44px (band) / 72px (pane); ortada değer.
 - **Adım noktaları:** 8px noktalar ince çizgiyle bağlı: bitti Moss dolu ✓, aktif Iris/Orchid halka + nefes alan
   çekirdek, bekleyen line.strong halka, hata Flare ✕.
 - **Numaralı adım dairesi** (replay/plan): 22px daire; şimdiki = rol dolgu + beyaz sayı, biten = gri ✓, gelecek = halka.
-- **Dosya rozeti:** Svg 26×16 rx 4, tür rengi tint + fg 9.5/700 mono ("TS", "PDF").
+- **Dosya rozeti:** Svg 26×16 rx 4, nötr track zemin + text.lo 9.5/700 mono ("TS", "PDF"); okuma/düzenleme anında rengi.
+- **Basılabilir satır:** Svg satır (hover yıkaması `m-wash`, sağda `›` ok) + `kit/press.tsx` kaplaması (§0.5).
 - **Boyut çubuğu:** 96×6 rx 3, toplam üzerinden oran (en büyük satır değil).
 - **Highlight span:** Text `backgroundColor=role.tint`, `color=role.fg`, bold değil.
-- **Düğme sırası:** en fazla bir `primary` (önerilen yol), sonra `secondary`, en sonda `plain` ("Şimdi değil").
+- **Düğme sırası:** en fazla bir `primary` (önerilen yol), sonra `secondary`, en sonda `plain dimColor` ("Şimdi değil").
   Tehlikede güvenli seçenek odakta (`autoFocus`), yıkıcı düğme fiil + nesne ("9 dosyayı sil") ve harf kısayolu.
 - **Maskot:** savvy-progress yengeçleri (asıl moddan) ajan kimliğidir; başka modda maskot yok, tehlike kartında asla.
 - **Durumlar:** boş = eyebrow + tek cümle + tek eylem · yükleniyor = 1.4s parıltılı iskelet (azaltılmış harekette sabit) ·
@@ -87,11 +111,11 @@ Text ile: başlık = bold text.hi · gövde = text.mid · meta = text.lo · vurg
 
 ## 5. Hareket
 Kısa 120ms (hover) · durum 200ms · yol 320ms `cubic-bezier(.2,.8,.2,1)` · nefes 1.8s · parıltı 1.4s.
-Döngü yalnızca canlı işte (nabız halkası, ışık şeridi); iş bitince durur, sakin yüzey kıpırdamaz. Masaüstünde her
+Döngü yalnızca canlı işte (nefes alan nokta); iş bitince durur, sakin yüzey kıpırdamaz. Masaüstünde her
 panenin Svg'si `isInteractive` ile kendi çerçevesinde çizilir; çerçeve, kaynağı bayt bayt aynı kaldıkça korunur ve
 döngüleri kesilmez. Bu yüzden her çizimin kaynağı gösterdiği şeye göre bir kez kurulur (`kit/moving.ts`,
 `kit/stable.ts`, `kit/motion.ts`): panel açıldıktan sonraki ilk çizim kademeli girer (45 ms arayla, yukarıdan aşağı),
-gösterdiği şey değişince tek seferlik ışık süpürmesi alır, değişmeyen çizim aynı kaynağı korur. İşleyen saat ("2 dk
+gösterdiği şey değişince bir kez solan bir track yıkaması (`m-flash`) alır, değişmeyen çizim aynı kaynağı korur. İşleyen saat ("2 dk
 önce", saniyeler) tek başına değişiklik sayılmaz: süpürmesiz çizilir ya da Svg dışında kalır. Liste satırı hover'da
 yıkanır. Her Svg `:root{color-scheme:light dark}` söyler, yoksa çerçeve opak beyaz bir sayfaya oturur. Basışın
 altındaki çizim düz Svg kalır (çerçeve tıklamayı yutar); bant (AbovePrompt) düz kalır. Her Svg `<style>` sonu:

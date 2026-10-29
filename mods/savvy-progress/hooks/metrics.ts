@@ -10,8 +10,6 @@ import type { Chip } from './metrics-svg'
 // its tokens, its ≈$ and, once the session has a rate for it, its ≈share of the 5h limit.
 
 const PERCENT = 100
-const CONTEXT_COLOR = '#8f8cf4'
-const LIMIT_COLOR = '#d49a3a'
 
 export const limitShareOf = (a: AgentRun, limit: LimitTrack | null): number | null => shareOf(a.costUsd, limit)
 
@@ -23,11 +21,11 @@ export const usageChipsOf = (a: AgentRun, limit: LimitTrack | null): Chip[] => {
   const ctx = ctxOf(a)
   const share = limitShareOf(a, limit)
   const chips: Chip[] = [
-    { text: `${s.context} ${s.pct(ctx)}`, ring: { ratio: ctx / PERCENT, color: CONTEXT_COLOR } },
+    { text: `${s.context} ${s.pct(ctx)}`, ring: { ratio: ctx / PERCENT } },
     { text: `${fmtTokens(a.tokens)} ${s.tokensWord}` },
     { text: `≈${fmtCost(a.costUsd)}` },
   ]
-  if (share !== null) chips.push({ text: `${s.limit} ≈${s.pct(shareNumber(share))}`, ring: { ratio: share / PERCENT, color: LIMIT_COLOR } })
+  if (share !== null) chips.push({ text: `${s.limit} ≈${s.pct(shareNumber(share))}`, ring: { ratio: share / PERCENT } })
   return chips
 }
 

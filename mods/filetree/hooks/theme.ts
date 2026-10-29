@@ -105,9 +105,6 @@ export function shimmerTones(p: Palette, isLight: boolean): Record<string, { bri
   return out
 }
 
-// The folder glyph: a quiet steel blue, so the read color stays a signal.
-export const folderColor = (p: Palette): string => mix(p.roles.read.fg, p.lo, 0.55)
-
 // Light, dark, or undefined when Claude's theme name says neither (`auto`).
 export function lightByName(value: unknown): boolean | undefined {
   const name = typeof value === 'string' ? value.trim().toLowerCase() : ''

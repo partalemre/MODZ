@@ -114,7 +114,7 @@ for (const surface of SURFACES) {
     const pane = await $.ui.mount(paneOf(surface))
     if (surface === 'desktop') {
       const svg = await svgOf(pane)
-      for (const part of ['PLAN', '1 / 4 adım', '~%38', 'görev listesi', 'Tipleri yaz', '4dk', 'Ayrıştırıcı', '3dk', '>parse.test.ts<', '>parse.ts<', 'tests/', 'Testleri yaz', 'çalışıyor', 'Paneli çiz']) expect(svg).toContain(part)
+      for (const part of ['1 / 4 adım', '~%38', 'görev listesi', 'Tipleri yaz', '4dk', 'Ayrıştırıcı', '3dk', '>parse.test.ts<', '>parse.ts<', 'tests/', 'Testleri yaz', 'çalışıyor', 'Paneli çiz']) expect(svg).toContain(part)
       expect(svg).not.toContain('kalan')
 
       return
@@ -184,7 +184,8 @@ for (const surface of SURFACES) {
     if (surface === 'desktop') {
       const svg = await pane.find({ type: 'Svg' })
       expect(svg?.props?.alt).toBe('Plan: Henüz plan yok · görev listesi ya da onaylı bir plan gelince adımlar burada belirir')
-      expect(String(svg?.props?.source)).toContain('PLAN')
+      expect(String(svg?.props?.source)).toContain('Henüz')
+      expect(String(svg?.props?.source)).not.toContain('PLAN')
 
       return
     }

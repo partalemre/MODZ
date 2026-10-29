@@ -18,20 +18,16 @@ const ROLES = {
   run: { dark: { fg: '#B19CF3', tint: '#29243D', line: '#4A3F75' }, light: { fg: '#6243C4', tint: '#F0ECFC', line: '#CFC3F3' } },
   ok: { dark: { fg: '#6FC593', tint: '#1B2F25', line: '#2F5A42' }, light: { fg: '#1F6E43', tint: '#E4F4EA', line: '#B5DEC4' } },
   danger: { dark: { fg: '#F2727F', tint: '#3B2023', line: '#74343C' }, light: { fg: '#C0263A', tint: '#FCE8EA', line: '#F1B9C0' } },
-  plan: { dark: { fg: '#E07BC0', tint: '#351F2E', line: '#6B3A5C' }, light: { fg: '#A8337F', tint: '#FBE9F4', line: '#EDBFDC' } },
 } satisfies Record<string, { dark: Tone; light: Tone }>
 
-// The number on a filled plan circle: dark ink on the light Orchid of the dark theme, white on the deep one.
-const ON_PLAN = { dark: '#2A0F21', light: '#FFFFFF' }
-
-export type Palette = Base & { plan: Tone; ok: Tone; danger: Tone; run: Tone; onPlan: string }
+export type Palette = Base & { ok: Tone; danger: Tone; run: Tone }
 
 export function palette(isLight: boolean): Palette {
   const mode = isLight ? 'light' : 'dark'
 
   return {
     ...(isLight ? LIGHT : DARK),
-    plan: ROLES.plan[mode], ok: ROLES.ok[mode], danger: ROLES.danger[mode], run: ROLES.run[mode], onPlan: ON_PLAN[mode],
+    ok: ROLES.ok[mode], danger: ROLES.danger[mode], run: ROLES.run[mode],
   }
 }
 
@@ -44,11 +40,11 @@ export function themeOf(value: unknown): Theme {
 }
 
 function vars(p: Palette): string {
-  const tones = (['plan', 'ok', 'danger', 'run'] as const).map(role => `--${role}:${p[role].fg};--${role}-t:${p[role].tint};--${role}-l:${p[role].line}`)
+  const tones = (['ok', 'danger', 'run'] as const).map(role => `--${role}:${p[role].fg};--${role}-t:${p[role].tint};--${role}-l:${p[role].line}`)
 
   return [
     `--sheet:${p.sheet};--card:${p.card};--inset:${p.inset};--line:${p.line};--line2:${p.lineStrong};--track:${p.track}`,
-    `--hi:${p.hi};--mid:${p.mid};--lo:${p.lo};--on-plan:${p.onPlan}`,
+    `--hi:${p.hi};--mid:${p.mid};--lo:${p.lo}`,
     ...tones,
   ].join(';')
 }
@@ -59,13 +55,14 @@ export const MONO_FONT = `ui-monospace,"SF Mono",Menlo,Consolas,monospace`
 const TYPE = [
   `text{font-family:${FONT};font-variant-numeric:tabular-nums}`,
   `.mono{font-family:${MONO_FONT}}`,
-  '.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.1em}',
+  // A group's label (DESIGN.md §0.2): sentence case and quiet, never a coloured capital kicker.
+  '.group{font-size:12px;font-weight:600}',
   '.headline{font-size:17px;font-weight:620}',
-  '.title{font-size:13.5px;font-weight:600}',
+  '.title{font-size:13px;font-weight:560}',
   '.label{font-size:12px;font-weight:500}',
   '.micro{font-size:10.5px;font-weight:500}',
   '.hi{fill:var(--hi)}.mid{fill:var(--mid)}.lo{fill:var(--lo)}',
-  '.f-plan{fill:var(--plan)}.f-ok{fill:var(--ok)}.f-danger{fill:var(--danger)}.f-run{fill:var(--run)}',
+  '.f-ok{fill:var(--ok)}.f-danger{fill:var(--danger)}.f-run{fill:var(--run)}',
 ].join('')
 
 const CALM = '@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}'

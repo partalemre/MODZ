@@ -1,24 +1,16 @@
 import type { TouchedFile } from '../types'
 import { fitMono, fitStart, fitText, monoWidth, shortPath, textWidth, xml } from './format'
-import type { Kind } from './history'
 import { upper } from './lang'
 import type { NowView } from './now'
 import { extOf } from './touched'
 import { FONT, MONO, paneSvg } from './theme'
 
-// The open card's drawings on the desktop: the "now" card (an icon box in the call's colour, the
-// verb as its eyebrow, the tool and its whole target; its ticking span is native text above it)
-// and the list of files it touched, each with a type badge and how often it read or changed it.
+// The open row's drawings on the desktop: the "now" line (a bare icon of the call, the verb as a quiet label in
+// its state's ink, the tool and its whole target; its ticking span is native text above it) and the list of files
+// it touched, each with a neutral type badge and how often it read or changed it. No box, no tint: the open row
+// is one surface, and colour is kept for state (DESIGN.md §0).
 
-type Role = 'read' | 'edit' | 'run' | 'ok' | 'warn' | 'danger' | 'plan'
-
-// A role's classes from theme.ts; `null` is the quiet neutral of a call of no known kind.
-const cls = (role: Role | null) =>
-  role ? { fg: `f-${role}`, tint: `b-${role}`, icon: `i-${role}` } : { fg: 'm', tint: 'k', icon: 'i-m' }
-
-const KIND_ROLE: Record<Kind, Role | null> = { read: 'read', edit: 'edit', run: 'run', agent: 'ok', other: null }
-
-// 16 px line icons, stroke 1.75, drawn for this card (DESIGN.md §4: no emoji, no glyph stand-ins).
+// 16 px line icons, stroke 1.5, drawn for this row (DESIGN.md §4: no emoji, no glyph stand-ins).
 const ICON = {
   read: '<circle cx="7" cy="7" r="4.5"/><path d="M10.4 10.4L14 14"/>',
   edit: '<path d="M3 13l.8-3.2L10.6 3l2.4 2.4-6.8 6.8z"/><path d="M9.2 4.4l2.4 2.4"/>',
@@ -33,27 +25,29 @@ const ICON = {
 type Icon = keyof typeof ICON
 
 const ICON_SIZE = 16
-const STROKE = 1.75
+const STROKE = 1.5
 
 const iconAt = (icon: Icon, opts: { x: number; y: number; cls: string; scale?: number }): string =>
   `<g class="${opts.cls}" transform="translate(${opts.x} ${opts.y}) scale(${opts.scale ?? 1})" fill="none" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round">${ICON[icon]}</g>`
 
-// Baselines: the eyebrow's at 24 px, the call's at 40 px, a 56 px card with 12 px of padding.
-const NOW = { h: 56, pad: 12, box: 32, rx: 12, boxRx: 9, eyebrow: 10.5, eyebrowY: 24, lineY: 40, tracking: 0.9, line2: 13.5, mono: 12.5 } as const
+// Baselines: the verb's at 15 px, the call's at 34 px; the words start past the icon's column.
+const NOW = { h: 42, textX: 26, iconY: 3, label: 12, labelY: 15, lineY: 34, line2: 13.5, mono: 12.5 } as const
 const BOLD = 1.06
 // A line of text sits centred on a row when its baseline is this far below the middle, in em.
 const MID_BASELINE = 0.36
 
-type NowLook = { role: Role | null; icon: Icon }
+// The verb's ink: live work in the accent, a failure red, a finish quiet; the icon stays body ink.
+type NowLook = { ink: string; icon: Icon }
 
 const lookOfNow = (now: NowView): NowLook => {
-  if (now.state === 'done') return { role: 'ok', icon: 'done' }
-  if (now.state === 'failed') return { role: 'danger', icon: 'failed' }
-  if (now.state === 'call') return { role: KIND_ROLE[now.kind], icon: now.kind }
-  return { role: 'run', icon: 'thinking' }
+  if (now.state === 'done') return { ink: 'm', icon: 'done' }
+  if (now.state === 'failed') return { ink: 'f-danger', icon: 'failed' }
+  if (now.state === 'call') return { ink: 'f-edit', icon: now.kind }
+  return { ink: 'f-edit', icon: 'thinking' }
 }
 
-const strokeOf = (role: Role | null): string => (role ? `l-${role}` : 'ln')
+// Sentence case in either language: the kit's upper keeps Turkish İ.
+const capital = (s: string): string => upper(s.charAt(0)) + s.slice(1)
 
 // The tool bright, its target in mono after it; the target gives way first, from its end.
 const callLine = (now: NowView, x: number, room: number): string => {
@@ -63,20 +57,15 @@ const callLine = (now: NowView, x: number, room: number): string => {
   return `<text x="${x}" y="${NOW.lineY}" font-family="${FONT}" font-size="${NOW.line2}" font-weight="620"><tspan class="t">${xml(tool)}</tspan><tspan class="s" font-family="${MONO}" font-size="${NOW.mono}" font-weight="450">${xml(shown)}</tspan></text>`
 }
 
-/** The "now" card: what the agent does this moment, or where it stopped. */
+/** The "now" line: what the agent does this moment, or where it stopped. */
 export const nowSvg = (W: number, now: NowView): string => {
   const look = lookOfNow(now)
-  const c = cls(look.role)
-  const boxY = (NOW.h - NOW.box) / 2
-  const x = NOW.pad + NOW.box + NOW.pad
-  const verb = fitText(upper(now.verb), NOW.eyebrow + NOW.tracking, W - x - NOW.pad)
-  const iconOffset = (NOW.box - ICON_SIZE) / 2
+  const x = NOW.textX
+  const verb = fitText(capital(now.verb), NOW.label * BOLD, W - x)
   const body = [
-    `<rect class="tile ${strokeOf(look.role)}" x=".5" y=".5" width="${W - 1}" height="${NOW.h - 1}" rx="${NOW.rx}" stroke-width="1"/>`,
-    `<rect class="${c.tint}" x="${NOW.pad}" y="${boxY}" width="${NOW.box}" height="${NOW.box}" rx="${NOW.boxRx}"/>`,
-    iconAt(look.icon, { x: NOW.pad + iconOffset, y: boxY + iconOffset, cls: c.icon }),
-    `<text class="${c.fg}" x="${x}" y="${NOW.eyebrowY}" font-family="${FONT}" font-size="${NOW.eyebrow}" font-weight="700" letter-spacing="${NOW.tracking}">${xml(verb)}</text>`,
-    now.tool ? callLine(now, x, W - x - NOW.pad) : '',
+    iconAt(look.icon, { x: 0, y: NOW.iconY, cls: 'i-s' }),
+    `<text class="${look.ink}" x="${x}" y="${NOW.labelY}" font-family="${FONT}" font-size="${NOW.label}" font-weight="600">${xml(verb)}</text>`,
+    now.tool ? callLine(now, x, W - x) : '',
   ]
   return paneSvg(W, NOW.h, body.join(''))
 }
@@ -85,26 +74,21 @@ export const NOW_H = NOW.h
 
 const ROW = { h: 26, badgeW: 34, badgeH: 17, badgeRx: 4, badge: 9, gap: 10, path: 12.5, count: 11.5, icon: 0.72, iconGap: 3, countGap: 10 } as const
 
-const EXT_ROLE: Record<string, Role> = {
-  TS: 'warn', TSX: 'warn', JS: 'warn', JSX: 'warn', MJS: 'warn', CJS: 'warn',
-  PY: 'read', MD: 'run', TXT: 'run', JSON: 'ok', CSV: 'ok', YAML: 'ok', YML: 'ok', TOML: 'ok',
-  PDF: 'danger', PNG: 'plan', JPG: 'plan', JPEG: 'plan', GIF: 'plan', SVG: 'plan', WEBP: 'plan',
-}
-
 const BADGE_MAX = 4
 
+// Every type wears the same neutral badge: the track behind the extension in quiet mono.
 const badgeOf = (path: string, y: number): string => {
   const ext = extOf(path).slice(0, BADGE_MAX)
-  const c = cls(EXT_ROLE[ext] ?? null)
   const mid = y + ROW.h / 2
-  return `<rect class="${c.tint}" x="0" y="${mid - ROW.badgeH / 2}" width="${ROW.badgeW}" height="${ROW.badgeH}" rx="${ROW.badgeRx}"/>` +
-    `<text class="${c.fg}" x="${ROW.badgeW / 2}" y="${mid + ROW.badge * MID_BASELINE}" text-anchor="middle" font-family="${MONO}" font-size="${ROW.badge}" font-weight="700">${xml(ext || '·')}</text>`
+  return `<rect class="k" x="0" y="${mid - ROW.badgeH / 2}" width="${ROW.badgeW}" height="${ROW.badgeH}" rx="${ROW.badgeRx}"/>` +
+    `<text class="m" x="${ROW.badgeW / 2}" y="${mid + ROW.badge * MID_BASELINE}" text-anchor="middle" font-family="${MONO}" font-size="${ROW.badge}" font-weight="600">${xml(ext || '·')}</text>`
 }
 
-type Count = { n: number; icon: Icon; role: Role }
+// Edits in body ink, reads quieter: what it changed reads first, without a colour per kind.
+type Count = { n: number; icon: Icon; ink: 's' | 'm' }
 
 const countsOf = (f: TouchedFile): Count[] =>
-  [{ n: f.edits, icon: 'edit' as const, role: 'edit' as const }, { n: f.reads, icon: 'read' as const, role: 'read' as const }].filter(c => c.n > 0)
+  [{ n: f.edits, icon: 'edit' as const, ink: 's' as const }, { n: f.reads, icon: 'read' as const, ink: 'm' as const }].filter(c => c.n > 0)
 
 const countW = (c: Count): number => ICON_SIZE * ROW.icon + ROW.iconGap + monoWidth(String(c.n), ROW.count)
 
@@ -114,8 +98,8 @@ const countsSvg = (counts: Count[], opts: { right: number; y: number }): { body:
   const mid = opts.y + ROW.h / 2
   const parts = [...counts].reverse().map(c => {
     x -= countW(c)
-    const part = iconAt(c.icon, { x, y: mid - (ICON_SIZE * ROW.icon) / 2, cls: `i-${c.role}`, scale: ROW.icon }) +
-      `<text class="f-${c.role}" x="${x + ICON_SIZE * ROW.icon + ROW.iconGap}" y="${mid + ROW.count * MID_BASELINE}" font-family="${MONO}" font-size="${ROW.count}" font-weight="600">${c.n}</text>`
+    const part = iconAt(c.icon, { x, y: mid - (ICON_SIZE * ROW.icon) / 2, cls: `i-${c.ink}`, scale: ROW.icon }) +
+      `<text class="${c.ink}" x="${x + ICON_SIZE * ROW.icon + ROW.iconGap}" y="${mid + ROW.count * MID_BASELINE}" font-family="${MONO}" font-size="${ROW.count}" font-weight="600">${c.n}</text>`
     x -= ROW.countGap
     return part
   })

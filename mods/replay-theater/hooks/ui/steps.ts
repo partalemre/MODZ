@@ -1,5 +1,6 @@
-// The numbered step circle (DESIGN.md §4) shared by replay-theater and plan-steps: current = Orchid fill with
-// its number, done = ✓ (gray, or Moss for finished plan work), upcoming = a ring with its number.
+// The numbered step circle (DESIGN.md §4) shared by replay-theater and plan-steps: current = an ink fill with
+// its number (where you are is no category, so no role colour), done = ✓ (gray, or Moss for finished plan work),
+// upcoming = a ring with its number.
 
 export type DotState = 'done' | 'current' | 'next'
 export type DotTone = 'gray' | 'moss'
@@ -24,7 +25,7 @@ export function stepDot(dot: Dot): string {
   const { cx, cy, state } = dot
   const r = DOT_RADIUS
   if (state === 'current') {
-    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--plan)"/>${number(dot, 'dot-n on-plan')}`
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--hi)"/>${number(dot, 'dot-n on-hi')}`
   }
   if (state === 'done' && dot.tone === 'moss') {
     return `<circle cx="${cx}" cy="${cy}" r="${r - 0.5}" fill="var(--ok-t)" stroke="var(--ok-l)"/>${check(cx, cy, 'var(--ok)')}`
@@ -44,4 +45,4 @@ export function stepRail(cx: number, fromCy: number, toCy: number): string {
 }
 
 // The styles the circles use; added once to a drawing's style block.
-export const DOT_CSS = '.dot-n{font-size:11px;font-weight:700}.on-plan{fill:var(--on-plan)}'
+export const DOT_CSS = '.dot-n{font-size:11px;font-weight:700}.on-hi{fill:var(--sheet)}'

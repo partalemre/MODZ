@@ -1,5 +1,3 @@
-import type { ThemeKey } from 'claude-code'
-
 import type { AgentRun } from '../types'
 
 type Who = Pick<AgentRun, 'type' | 'effort'>
@@ -12,15 +10,6 @@ export const TIER_COLOR: Record<string, string> = {
   medium: '#378ADD',
   light: '#1D9E75',
   other: '#888780',
-}
-
-// The terminal colours tiers with theme keys, never hex.
-const TIER_KEY: Record<string, ThemeKey> = {
-  fable: 'merged',
-  heavy: 'error',
-  careful: 'warning',
-  medium: 'suggestion',
-  light: 'success',
 }
 
 // What each savvy tier runs on, for planned tasks that have no run yet.
@@ -44,7 +33,6 @@ const EFFORT_TIER: Record<string, string> = {
 
 export const colorOf = (tier: string): string => TIER_COLOR[tier] ?? '#888780'
 
-export const keyOf = (tier: string): ThemeKey => TIER_KEY[tier] ?? 'subtle'
 
 // `savvy-careful`, or `savvy-flow:savvy-careful` when the agents ship in a plugin.
 export const savvyTierOf = (type: string): string | null => {

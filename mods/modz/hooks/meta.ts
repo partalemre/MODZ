@@ -44,12 +44,3 @@ export function githubName(url: unknown): string | null {
 
   return match[2] === undefined ? (match[1] ?? null) : `${match[1]}/${match[2].replace(/\.git$/, '')}`
 }
-
-// Two letters for the monogram tile: the initials of a two-part name, else its first two letters.
-export function monogram(name: string): string {
-  const parts = name.split('-').filter(part => part !== '')
-  const letters = parts.length > 1 ? `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}` : name.slice(0, 2)
-
-  // Mod names are English: a dotless I, never İ.
-  return letters.toUpperCase()
-}

@@ -1,6 +1,6 @@
 // The pane in motion on the desktop (kit/moving.ts): both drawings are interactive frames that enter as the pane
 // opens and keep their very sources while what they show is unchanged; the clock alone never sweeps them, and a
-// running turn lights the meters.
+// running turn breathes a dot by the title.
 import { expect, test } from 'claude-code/testing'
 
 import { PANE, start, stubSession, withBreakdown } from './stubs'
@@ -52,13 +52,15 @@ test('the clock: seconds leave both sources as they were, a minute moves the cou
   expect(kept).toBe(card)
 })
 
-test('a running turn lights the meters and the window, its end puts them out', async ($, on) => {
+test('a running turn breathes a dot by the title, its end puts it out; nothing shines', async ($, on) => {
   const { pane } = await openPane($, on)
 
   await $.turn.start({ text: 'go', turnId: 't1' } as any)
-  const live = await sources(pane)
-  expect(live.every(source => source.includes('class="m-shine"'))).toBe(true)
+  const [tiles, card] = await sources(pane)
+  expect(tiles).toContain('class="f-edit breathe"')
+  expect(card).not.toContain('breathe')
+  expect([tiles, card].some(source => source.includes('m-shine'))).toBe(false)
 
   await $.turn.complete({ answer: 'ok', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' } as any)
-  expect((await sources(pane)).some(source => source.includes('m-shine'))).toBe(false)
+  expect((await sources(pane)).some(source => source.includes('class="f-edit breathe"'))).toBe(false)
 })

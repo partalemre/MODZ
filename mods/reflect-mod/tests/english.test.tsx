@@ -31,10 +31,13 @@ for (const surface of SURFACES) {
     const w = world(on, { lang: null, verdicts: { [SAID]: PNPM }, files: { '/repo/CLAUDE.md': '# Repo\n' } })
     await start($)
     await say($, w, SAID)
-    expect(await buttons($, surface)).toEqual(['This project only', 'All your projects', '[s]Save to this project', 'Save to all projects', 'Rewrite', "Don't save"])
+    // The desktop's destination rows are pressed whole: their buttons carry a blank label (Hangul fillers), the drawing's alt the words.
+    const blank = (label: string) => (/^\u3164+$/.test(label) ? '~' : label)
+    const picks = surface === 'desktop' ? ['~', '~'] : ['This project only', 'All your projects']
+    expect((await buttons($, surface)).map(blank)).toEqual([...picks, '[s]Save to this project', 'Save to all projects', 'Rewrite', "Don't save"])
     const ui = await mountOn($, surface)
     const card = JSON.stringify(await ui.drawn())
-    for (const part of ['SAVE AS A RULE?', '92% sure', 'You said: ', 'WHERE']) expect(card).toContain(part)
+    for (const part of ['Save as a rule?', '92% sure', 'You said: ', 'Where']) expect(card).toContain(part)
     expect(card).not.toMatch(TURKISH)
     await ui.unmount()
 
@@ -42,7 +45,7 @@ for (const surface of SURFACES) {
     expect((await buttons($, surface)).filter(label => label.startsWith('['))).toEqual(['[s]Save to all projects'])
     await pressOn($, surface, 'other:')
     const saved = JSON.stringify(await (await mountOn($, surface)).drawn())
-    for (const part of ['RULE SAVED', 'Saved to this project', 'Added to: ']) expect(saved).toContain(part)
+    for (const part of ['Rule saved', 'Saved to this project', 'Added to: ']) expect(saved).toContain(part)
     expect(saved).not.toMatch(TURKISH)
   })
 }

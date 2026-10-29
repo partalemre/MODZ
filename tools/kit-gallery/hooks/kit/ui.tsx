@@ -6,7 +6,6 @@ import type { ElementTable, RenderChildren, RenderElement, RenderSurface } from 
 import { GLYPH } from './icons'
 import { headerSvg, statRowSvg } from './svg-compose'
 import type { HeaderOpts } from './svg-compose'
-import { upperTr } from './svg-core'
 import { clampRatio, meter, meterTone, percentText } from './svg-meters'
 import type { MeterOpts } from './svg-meters'
 import { pill } from './svg-shapes'
@@ -73,7 +72,7 @@ export function Eyebrow(draw: DrawCtx, o: EyebrowOpts): RenderElement {
   if (isTextSurface(ui, surface)) {
     return (
       <Box flexDirection="row" justifyContent="space-between">
-        <Text color={o.role ? ROLE_KEY[o.role] : undefined} dimColor={!o.role} bold>{`● ${upperTr(o.text)}`}</Text>
+        <Text dimColor bold>{o.text}</Text>
         {o.meta ? <Text dimColor>{o.meta}</Text> : null}
       </Box>
     )
@@ -88,11 +87,11 @@ export function HeaderBlock(draw: DrawCtx, o: HeaderOpts): RenderElement {
 
   if (!isTextSurface(ui, surface)) return svgOf(draw, { key: `header:${o.eyebrow}`, shows: { ...o, meta: o.meta !== undefined } }, headerSvg(o)) ?? <Box />
 
-  const glyph = o.icon ? `${GLYPH[o.icon]} ` : '● '
+  // A quiet sentence-case label, as on the desktop: a coloured "● LABEL" over a headline is decoration.
   return (
     <Box flexDirection="column">
       <Box flexDirection="row" justifyContent="space-between">
-        <Text color={o.role ? ROLE_KEY[o.role] : undefined} dimColor={!o.role} bold>{glyph + upperTr(o.eyebrow)}</Text>
+        <Text dimColor bold>{o.eyebrow}</Text>
         {o.meta ? <Text dimColor>{o.meta}</Text> : null}
       </Box>
       {o.headline ? <Text bold>{o.headline}</Text> : null}
@@ -155,6 +154,7 @@ export function ButtonRow(draw: DrawCtx, o: ButtonRowOpts): RenderElement {
           onPress={b.onPress}
           variant={BUTTON_VARIANT[b.variant]}
           plain={b.variant === 'plain' ? true : undefined}
+          dimColor={b.variant === 'plain' ? true : undefined}
           hotkey={b.hotkey}
           autoFocus={b.isFocused ? true : undefined}
         />

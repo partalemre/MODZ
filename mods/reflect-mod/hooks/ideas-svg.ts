@@ -1,19 +1,17 @@
-// The Ideas pane's desktop head: an Orchid tile (Orchid is repetition, DESIGN.md §2), the eyebrow, meta on
-// the right, the headline, and a shimmering skeleton while `/mine` reads.
+// The Ideas pane's desktop head: a bare icon, the label, meta on the right, the headline, and a
+// shimmering skeleton while `/mine` reads.
 
 import { ICONS } from './icons'
-import { EYEBROW, doc, eyebrow, fit, icon, measure, text, tile, wrap } from './svg'
+import { LABEL, doc, fit, icon, label, measure, text, wrap } from './svg'
 import type { Font } from './svg'
-import { upper } from './theme'
 import type { Palette } from './theme'
 
-const TILE = 38
-const TILE_Y = 4
 const GLYPH = 18
-const TEXT_X = 52
-const EYEBROW_Y = 16
-const HEADLINE: Font = { size: 17, weight: 620 }
-const HEADLINE_TOP = 38
+const GLYPH_Y = 21
+const TEXT_X = 30
+const LABEL_Y = 13
+const HEADLINE: Font = { size: 16, weight: 600 }
+const HEADLINE_TOP = 35
 const HEADLINE_STEP = 22
 const HEADLINE_LINES = 2
 const META: Font = { size: 12 }
@@ -39,18 +37,15 @@ function skeleton(o: { top: number; width: number }, p: Palette): string {
 }
 
 export function headSvg(width: number, h: Head, p: Palette): { source: string; height: number } {
-  const orchid = p.role.plan
-  const inset = (TILE - GLYPH) / 2
   const lines = wrap(h.headline, { width: width - TEXT_X, font: HEADLINE, maxLines: HEADLINE_LINES })
   const last = HEADLINE_TOP + (lines.length - 1) * HEADLINE_STEP
   const parts = [
-    tile({ x: 0, y: TILE_Y, size: TILE, tint: orchid.tint }),
-    icon(ICONS.bulb, { x: inset, y: TILE_Y + inset, size: GLYPH, color: orchid.fg }),
-    eyebrow({ x: TEXT_X, y: EYEBROW_Y, fill: orchid.fg }, h.eyebrow),
+    icon(ICONS.bulb, { x: 0, y: GLYPH_Y, size: GLYPH, color: p.mid }),
+    label({ x: TEXT_X, y: LABEL_Y, fill: p.lo }, h.eyebrow),
     ...lines.map((line, i) => text({ ...HEADLINE, x: TEXT_X, y: HEADLINE_TOP + i * HEADLINE_STEP, fill: p.hi, text: line })),
   ]
-  const room = width - TEXT_X - measure(upper(h.eyebrow), EYEBROW) - META_GAP
-  if (h.meta !== '' && room > 0) parts.push(text({ ...META, x: width, y: EYEBROW_Y, fill: p.lo, anchor: 'end', text: fit(h.meta, room, META) }))
+  const room = width - TEXT_X - measure(h.eyebrow, LABEL) - META_GAP
+  if (h.meta !== '' && room > 0) parts.push(text({ ...META, x: width, y: LABEL_Y, fill: p.lo, anchor: 'end', text: fit(h.meta, room, META) }))
   const skeletonTop = last + SKELETON_TOP
   if (h.isLoading) parts.push(skeleton({ top: skeletonTop, width }, p))
   const height = h.isLoading ? skeletonTop + (SKELETON_WIDTHS.length - 1) * SKELETON_PITCH + SKELETON_H + BOTTOM : last + BOTTOM

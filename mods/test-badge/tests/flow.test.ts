@@ -118,7 +118,7 @@ for (const surface of SURFACES) {
 }
 
 for (const surface of SURFACES) {
-  test(`${surface}: lint errors alone read Amber, not Flare, from the eyebrow down`, async ($: any, on: any) => {
+  test(`${surface}: lint errors alone read Amber, not Flare, from the headline down`, async ($: any, on: any) => {
     const world = newWorld({ outs: { test: ' Tests  42 passed (42)', lint: ESLINT_FAIL }, code: 0, lintCode: 1 })
     await editAndRun($, await setup($, on, world))
 
@@ -126,7 +126,9 @@ for (const surface of SURFACES) {
     expect(await shown(pane, surface)).toMatch(/2 lint hatası\s*· 42 test geçti/)
     expect(await pane.find({ key: 'tb-filter-unit' })).toBeUndefined()
     if (surface === 'terminal') {
-      expect((await pane.find({ type: 'Text', text: /TEST SONUÇLARI/ }))?.props?.color).toBe('warning')
+      expect((await pane.find({ type: 'Text', text: /TEST SONUÇLARI/ }))).toBeUndefined()
+      expect((await pane.find({ type: 'Text', text: 'Test sonuçları' }))?.props?.dimColor).toBe(true)
+      expect((await pane.find({ type: 'Text', text: /lint hatası/ }))?.props?.color).toBe('warning')
 
       return
     }

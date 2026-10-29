@@ -4,7 +4,6 @@
 
 import { paneMotion } from './kit/moving'
 import type { MoveOpts, Pic } from './kit/moving'
-import { upper } from './lang'
 import { headerSvg, bannerSvg, listSvg } from './svg-card'
 import { palette, role, TERMINAL_KEY } from './theme'
 import type { Row, View } from './view'
@@ -193,7 +192,7 @@ export function terminalCard(ui: Ui, props: CardProps) {
   return (
     <Box flexDirection="column" paddingX={1} {...frame}>
       <Box flexDirection="row" justifyContent="space-between" gap={2}>
-        <Text bold color={tone}>{`● ${upper(view.eyebrow)}`}</Text>
+        <Text bold color={tone}>{view.eyebrow}</Text>
         {view.context === '' ? null : <Text dimColor wrap="truncate-start">{view.context}</Text>}
       </Box>
       {headlineText(ui, view)}

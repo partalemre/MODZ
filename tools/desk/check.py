@@ -4,7 +4,7 @@ A session starts in the repo with every linked mod, a desktop attaches, and the 
 row is pressed on a tree drawn before a redraw (what a desktop click is) and must swap the one panel to that mod:
 its pane open, the hub closed, nothing else left as a tab. That pane must draw a tree of its own, keep each button's
 press handle across a focus flip, and offer "← MODZ", whose press swaps the panel back to the hub alone. Its Svgs
-must be interactive frames that entered as it opened, say their colour scheme and keep their very sources on a
+(save a pressed row's still image, kit/press.tsx) must be interactive frames that entered as it opened, say their colour scheme and keep their very sources on a
 redraw (kit/moving.ts), else the desktop rebuilds each frame and its loops restart. The band must draw a tree of its
 own too, and the prompt footer (SessionMode) the engine's labels plus a "MODZ" toggle: a press on the tree drawn before
 a redraw takes the hub away, the next brings it back alone. In the band only this repo's mods are held to the
@@ -69,27 +69,47 @@ def check_site(desk, inst, comp='Pane'):
     return None if handles(first) == handles(again) else f'{comp} {inst}: press handles changed on a redraw'
 
 
-def svgs(tree):
-    """(alt, props) for every Svg in a tree, in document order."""
+# A pressed row's buttons wear a blank Hangul-filler label (kit/press.tsx): the drawing beneath them is a plain image.
+BLANK = '\u3164'
+
+
+def is_press_row(tree):
+    """A box holding a drawing and the blank buttons of kit/press.tsx over it."""
+    return any(str(p.get('props', {}).get('label', '')).startswith(BLANK) for p in buttons(tree))
+
+
+def buttons(tree):
     if not isinstance(tree, dict):
         return []
-    own = [(tree['props'].get('alt'), tree['props'])] if tree.get('type') == 'Svg' else []
-    return own + [svg for child in tree.get('children') or [] for svg in svgs(child)]
+    own = [tree] if tree.get('type') == 'Button' else []
+    return own + [b for child in tree.get('children') or [] for b in buttons(child)]
+
+
+def svgs(tree, is_pressed=False):
+    """(alt, props, is_pressed) for every Svg in a tree, in document order; `is_pressed`: under a press row."""
+    if not isinstance(tree, dict):
+        return []
+    is_pressed = is_pressed or (tree.get('type') == 'Box' and is_press_row(tree) and any(c.get('type') == 'Svg' for c in tree.get('children') or [] if isinstance(c, dict)))
+    own = [(tree['props'].get('alt'), tree['props'], is_pressed)] if tree.get('type') == 'Svg' else []
+    return own + [svg for child in tree.get('children') or [] for svg in svgs(child, is_pressed)]
 
 
 def check_motion(desk, inst):
     """The pane's drawings in motion: kept frames that entered, said their scheme and hold still on a redraw."""
+    # A pressed row's drawing is a still image under its buttons (a frame would swallow the click): held to the
+    # stable-source rule, not to the frame and entrance rules.
     first, again = svgs(desk.render(inst)), svgs(desk.render(inst))
     if not first:
         return None
-    plain = [alt for alt, props in first if not props.get('isInteractive')]
+    framed = [(alt, props) for alt, props, is_pressed in first if not is_pressed]
+    plain = [alt for alt, props in framed if not props.get('isInteractive')]
     if plain:
         return f'Pane {inst}: {len(plain)} Svg not interactive, e.g. {plain[0]!r}'
-    if not any('m-in' in props['source'] for _, props in first):
+    if framed and not any('m-in' in props['source'] for _, props in framed):
         return f'Pane {inst}: no drawing entered as the pane opened'
-    if not all(':root{color-scheme:' in props['source'] for _, props in first):
+    if not all(':root{color-scheme:' in props['source'] for _, props in framed):
         return f'Pane {inst}: a drawing does not say its colour scheme'
-    moved = [alt for (alt, a), (_, b) in zip(first, again) if a['source'] != b['source']]
+    moved = [alt for (alt, a, _), (_, b, _) in zip(first, again) if a['source'] != b['source']]
     return f'Pane {inst}: {len(moved)} source(s) changed on a redraw, e.g. {moved[0]!r}' if moved else None
 
 

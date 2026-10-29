@@ -14,7 +14,6 @@ import { heroInput, type Room, rowCtx, type Scene, treeWindow } from './scene'
 import { jump, search } from './search'
 import { mem } from './session'
 import { unsized, wantSizes } from './sizes'
-import type { Role } from './theme'
 import { words } from './words'
 
 type Ui = ElementTable<'terminal'>
@@ -28,7 +27,6 @@ const SHIMMER = Object.fromEntries(
     return [k, { bright: v?.bright ?? [], dim: v?.dim ?? [] }]
   }),
 )
-const TERMINAL_ROLE: Record<Role, string> = { read: 'suggestion', edit: 'claude', ok: 'success', run: 'permission', warn: 'warning', danger: 'error', plan: 'merged', note: 'subtle', neutral: 'subtle' }
 const ADD_COLOR = '#98c379'
 const DEL_COLOR = '#e06c75'
 // The header, the search row and the body's least rows.
@@ -146,12 +144,12 @@ function nowLine(ui: Ui, s: Scene, width: number) {
   return (
     <Box flexDirection="row" height={1} overflow="hidden">
       <Box flexDirection="row" flexShrink={1} overflow="hidden">
-        <Text bold color={TERMINAL_ROLE[hero.role]}>{`● ${hero.eyebrow}  `}</Text>
+        <Text bold dimColor>{`${hero.label}  `}</Text>
         <Text wrap="truncate-end">{heroText(hero)}</Text>
         <Text dimColor wrap="truncate-end">{` · ${subText(hero)}`}</Text>
       </Box>
       <Box flexGrow={1} />
-      {cost ? <Text color={TERMINAL_ROLE.read}>{` ${cost}`}</Text> : null}
+      {cost ? <Text color="suggestion">{` ${cost}`}</Text> : null}
     </Box>
   )
 }

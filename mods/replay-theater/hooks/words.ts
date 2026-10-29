@@ -45,7 +45,6 @@ const EN = {
   unchanged: 'Unchanged',
   linesAdded: (n: number) => `${count(n, 'line', 'lines')} added`,
   removedCount: (n: number) => `${n} removed`,
-  inOrder: 'Edits in order',
   earlier: (n: number) => `↑ ${n} earlier`,
   moreEdits: (n: number) => `↓ ${count(n, 'more edit', 'more edits')}`,
   // Browsing earlier turns and sessions, read back from the transcripts.
@@ -125,7 +124,6 @@ const TR: Words = {
   unchanged: 'Değişmedi',
   linesAdded: n => `${n} satır eklendi`,
   removedCount: n => `${n} silindi`,
-  inOrder: 'Sırayla düzenlemeler',
   earlier: n => `↑ ${n} önceki`,
   moreEdits: n => `↓ ${n} düzenleme daha`,
   turns: 'Turlar',

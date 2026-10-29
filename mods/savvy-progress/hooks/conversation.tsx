@@ -1,5 +1,3 @@
-import type { ThemeKey } from 'claude-code'
-
 import type { AgentRun, ThreadTurn } from '../types'
 import { clip } from './format'
 import { t } from './i18n'
@@ -12,14 +10,15 @@ import type { RowContext, Ui } from './rows'
 const BRIEF_SHOWN = 280
 const ANSWER_SHOWN = 900
 
-type Said = { key: string; who: string; whoKey?: ThemeKey; frame?: ThemeKey; text: string }
+type Said = { key: string; who: string; text: string }
 
+// Every turn in one quiet frame: who said it is the name above, not a colour.
 function saidTree(ui: Ui, said: Said) {
   const { Box, Text } = ui
   return (
     <Box key={said.key} flexDirection="column">
-      <Text bold color={said.whoKey}>{said.who}</Text>
-      <Box flexDirection="column" borderStyle="round" borderColor={said.frame} borderDimColor={!said.frame} paddingX={1}>
+      <Text bold>{said.who}</Text>
+      <Box flexDirection="column" borderStyle="round" borderDimColor paddingX={1}>
         <Text>{said.text}</Text>
       </Box>
     </Box>
@@ -53,7 +52,7 @@ const turnsOf = (a: AgentRun): ThreadTurn[] =>
 const turnTree = (ui: Ui, a: AgentRun, turn: ThreadTurn, i: number) =>
   turn.from === 'you'
     ? saidTree(ui, { key: `turn-${i}`, who: t().you, text: turn.text })
-    : saidTree(ui, { key: `turn-${i}`, who: lookOf(a).name, whoKey: 'success', frame: 'success', text: clip(turn.text, ANSWER_SHOWN) })
+    : saidTree(ui, { key: `turn-${i}`, who: lookOf(a).name, text: clip(turn.text, ANSWER_SHOWN) })
 
 // It is on it while it runs, and after a follow-up the engine has not picked up yet.
 const isAwaited = (a: AgentRun, turns: ThreadTurn[]): boolean =>
@@ -62,7 +61,7 @@ const isAwaited = (a: AgentRun, turns: ThreadTurn[]): boolean =>
 function tailTree(ui: Ui, a: AgentRun, turns: ThreadTurn[]) {
   const { Text } = ui
   const s = t()
-  if (isAwaited(a, turns)) return <Text color="permission">{`● ${s.answering(lookOf(a).name)}`}</Text>
+  if (isAwaited(a, turns)) return <Text color="claude">{`● ${s.answering(lookOf(a).name)}`}</Text>
   if (a.status !== 'failed') return null
   return <Text color="error">{`${s.cheerFailed} · ${a.endReason === 'aborted' ? s.aborted : s.failedNow}`}</Text>
 }

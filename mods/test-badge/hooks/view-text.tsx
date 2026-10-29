@@ -1,7 +1,6 @@
 import { failuresOf, isFailing } from './parse'
-import { chipsOf, durationText, eyebrowRole, groupsOf, headlineOf, runMeta, suiteTag } from './summary'
+import { chipsOf, durationText, groupsOf, headlineOf, runMeta, suiteTag } from './summary'
 import type { Tone } from './summary'
-import { upper } from './svg'
 import { THEME_KEY } from './tidemark'
 import { ciPart } from './ci-view'
 import type { PaneView } from './view'
@@ -34,17 +33,15 @@ export function unplacedOf(spec: { name: CheckName; outcome: CheckOutcome | null
   return { title: `${says.checkNames[spec.name]} ${why[outcome.status] ?? says.whyUnread}`, lines: outcome.tail }
 }
 
+// The filters read as quiet segmented text: plain buttons, the one in use in full ink, the rest dim.
 export function chipRow(ui: Ui, view: PaneView) {
   const { Box, Button } = ui
 
   return (
-    <Box flexDirection="row" columnGap={1} flexWrap="wrap">
-      {chipsOf(view.badge, view.filter).map(chip => {
-        const isOn = chip.filter === view.filter
-        const look = isOn ? { variant: 'secondary' } : { plain: true, dimColor: chip.count === 0 }
-
-        return <Button key={`tb-filter-${chip.filter}`} label={`${chip.label} ${chip.count}`} {...look} onPress={() => view.onFilter(chip.filter)} />
-      })}
+    <Box flexDirection="row" columnGap={2} flexWrap="wrap">
+      {chipsOf(view.badge, view.filter).map(chip => (
+        <Button key={`tb-filter-${chip.filter}`} label={`${chip.label} ${chip.count}`} plain dimColor={chip.filter !== view.filter} onPress={() => view.onFilter(chip.filter)} />
+      ))}
     </Box>
   )
 }
@@ -124,13 +121,13 @@ function tailText(ui: Ui, spec: { name: CheckName; outcome: CheckOutcome | null 
   )
 }
 
-// No run yet: the eyebrow, one sentence and the one action.
+// No run yet: a quiet label, one sentence and the one action.
 function emptyText(ui: Ui, view: PaneView) {
   const { Box, Text } = ui
 
   return (
     <Box flexDirection="column">
-      <Text color={THEME_KEY.tide} bold>{`● ${upper(words().eyebrowTests)}`}</Text>
+      <Text bold dimColor>{words().eyebrowTests}</Text>
       <Box key="tb-empty">
         <Text wrap="wrap">
           <Text bold>{words().emptyLead}</Text>
@@ -150,12 +147,11 @@ export function textPane(ui: Ui, view: PaneView) {
   const { badge } = view
   if (badge.finishedAt === null && !badge.isRunning) return emptyText(ui, view)
   const head = headlineOf(badge)
-  const role = eyebrowRole(badge)
 
   return (
     <Box flexDirection="column">
       <Box flexDirection="row" justifyContent="space-between" columnGap={1}>
-        <Text color={THEME_KEY[role]} bold>{`${badge.isRunning ? '◐' : '●'} ${upper(words().eyebrowResults)}`}</Text>
+        <Text bold dimColor>{`${badge.isRunning ? '◐ ' : ''}${words().eyebrowResults}`}</Text>
         <Text dimColor>{runMeta(badge, view.now)}</Text>
       </Box>
       <Box flexDirection="row">

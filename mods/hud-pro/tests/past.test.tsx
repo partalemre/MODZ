@@ -203,7 +203,8 @@ test('desktop: the history card draws the 7 days, and its switch shows 30', asyn
   const svg = await pastSvgOf(ui)
   expect(svg?.props.alt).toContain('son 7 gün')
   expect(svg?.props.alt).toContain('aktif gün 1/7')
-  expect((await ui.find({ type: 'Button', key: 'past-7' }))?.props.variant).toBe('primary')
+  expect((await ui.find({ type: 'Button', key: 'past-7' }))?.props.variant).toBe('secondary')
+  expect((await ui.find({ type: 'Button', key: 'past-30' }))?.props.plain).toBe(true)
 
   await ui.press({ key: 'past-30' })
   const month = await pastSvgOf(ui)

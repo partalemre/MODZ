@@ -39,11 +39,12 @@ function askCard(draw: DrawCtx, view: BandView, width: number): RenderElement {
     { key: 'handoff-snooze', label: says.notNow, variant: 'plain', onPress: view.actions.onSnooze },
   ]
 
+  // An offer, not an alarm: the card stays neutral and the meter alone turns red near full. The headline says the
+  // percent, so the meter carries no label of its own.
   return Card(draw, {
-    role: 'warn',
     header: { icon: 'flag', eyebrow: says.eyebrow, meta: says.askMeta(view.threshold), headline: says.askHeadline(percent), sub: says.askSub, width },
     children: [
-      Meter(draw, { label: says.context, value: percent / PERCENT, width }),
+      Meter(draw, { value: percent / PERCENT, width }),
       ButtonRow(draw, { buttons }),
     ],
   })
@@ -59,7 +60,6 @@ function savedCard(draw: DrawCtx, view: BandView, width: number): RenderElement 
   ]
 
   return Card(draw, {
-    role: 'ok',
     header: { icon: 'check', eyebrow: says.eyebrow, headline: says.savedHeadline, sub: says.savedSub, width },
     children: [<Text key="handoff-path" dimColor wrap="truncate-middle">{path}</Text>, ButtonRow(draw, { buttons })],
   })
@@ -79,8 +79,9 @@ function failedCard(draw: DrawCtx, view: BandView, width: number): RenderElement
   })
 }
 
+// Live work: a neutral card, the accent only on the label's dot.
 function writingCard(draw: DrawCtx, width: number): RenderElement {
-  return Card(draw, { role: 'run', header: { icon: 'pencil', eyebrow: words().eyebrow, headline: words().writingHeadline, width } })
+  return Card(draw, { header: { icon: 'pencil', role: 'edit', hasDot: true, eyebrow: words().eyebrow, headline: words().writingHeadline, width } })
 }
 
 export function bandCard(draw: DrawCtx, view: BandView): RenderElement {

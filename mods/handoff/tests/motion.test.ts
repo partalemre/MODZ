@@ -24,7 +24,7 @@ test('desktop: the drawings cascade in as frames, and a new reading moves only t
   const [sameHead, newMeter] = await sources(pane)
   expect(sameHead).toBe(head)
   expect(newMeter).not.toBe(meter)
-  expect(newMeter).toContain('m-sweep')
+  expect(newMeter).toContain('m-flash')
 
   // The desktop mounts a pane anew as it opens.
   await pane.unmount()

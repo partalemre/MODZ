@@ -5,6 +5,7 @@ import { emptySvg, fileHeadSvg, headerSvg, rowSvg, skeletonSvg, tailHeadSvg } fr
 import { groupsOf } from './summary'
 import { svgWidth } from './svg'
 import type { Theme } from './tidemark'
+import { PressRow } from './kit/press'
 import { chipRow, rerunRow, textPane, unplacedOf } from './view-text'
 import type { CheckName } from './view-text'
 import { words } from './words'
@@ -27,19 +28,30 @@ export type PaneView = {
   ci: CiWatch | null
 }
 
-// Room the "Aç" button and the row indent take beside a failure row, in columns.
-const ROW_RESERVE = 12
+// Columns a failure row is indented by under its file, and so narrower than the pane.
+const ROW_INDENT = 2
 const WIDTH = { min: 300, max: 880 }
-// A failure row is narrower than the pane by the button beside it; it never runs past a narrow pane.
-const ROW_WIDTH = { min: 220, max: 880, reserve: ROW_RESERVE }
+const ROW_WIDTH = { min: 220, max: 880, reserve: ROW_INDENT }
 
 // A failure row moves with its failure, not its place, so a fix above it leaves it still.
 const failureKey = (failure: Failure): string => `${failure.suite}:${failure.file ?? '-'}:${failure.line ?? '-'}:${failure.name}:${failure.message}`
 
+// A failure with a file is pressed as a whole (DESIGN.md §0.5): its drawing ends in a chevron, a clear button
+// lies over it. One with no file to open is a plain drawing.
+function failureRow(ui: Ui, view: PaneView, spec: { failure: Failure; index: number; width: number }) {
+  const { failure, index } = spec
+  const isPressable = failure.file !== null
+  const frame = { width: spec.width, mode: view.theme.mode }
+  const drawing = picture(ui, rowSvg(frame, failure, isPressable), `tb-svg-${failureKey(failure)}`, { isRow: isPressable })
+  if (!isPressable) return drawing
+
+  return PressRow(ui, { box: `tb-press-${index}`, key: `tb-open-${index}`, drawing, onPress: () => view.onOpen(failure) })
+}
+
 function groupTree(ui: Ui, view: PaneView, group: { file: string | null; failures: Failure[] }) {
-  const { Box, Button } = ui
+  const { Box } = ui
   const all = failuresOf(view.badge)
-  const frame = { width: svgWidth(view.columns, ROW_WIDTH), mode: view.theme.mode }
+  const width = svgWidth(view.columns, ROW_WIDTH)
   const head = fileHeadSvg({ width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }, { file: group.file, count: group.failures.length })
 
   return (
@@ -49,9 +61,8 @@ function groupTree(ui: Ui, view: PaneView, group: { file: string | null; failure
         const index = all.indexOf(failure)
 
         return (
-          <Box key={`tb-row-${index}`} flexDirection="row" alignItems="center" columnGap={1} paddingLeft={4}>
-            {picture(ui, rowSvg(frame, failure), `tb-svg-${failureKey(failure)}`, { isRow: true })}
-            {failure.file !== null && <Button key={`tb-open-${index}`} plain dimColor label={words().open} onPress={() => view.onOpen(failure)} />}
+          <Box key={`tb-row-${index}`} flexDirection="row" paddingLeft={ROW_INDENT}>
+            {failureRow(ui, view, { failure, index, width })}
           </Box>
         )
       })}

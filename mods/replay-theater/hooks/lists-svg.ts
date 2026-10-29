@@ -1,37 +1,42 @@
 import { ageText, dateText } from './age'
-import { escape, eyebrow, fit, measure, wrap } from './ui/svg'
+import { escape, fit, measure, wrap } from './ui/svg'
 import { svgDoc } from './ui/theme'
 import type { Theme } from './ui/theme'
 import { words } from './words'
 import type { ReplaySession, ReplayTurnRow } from '../types'
 
-// The desktop drawings of the two lists the pane browses: a head (eyebrow, headline, one or two lines under
-// it) and one drawing per row; each row's button sits beside its drawing.
+// The desktop drawings of the two lists the pane browses: a head (headline, one or two lines under it) and one
+// drawing per row. A row that opens something is pressed as a whole (lists.tsx lays a button over it), so its
+// drawing ends in a chevron; the hover wash is moving.ts's.
 
 export type Drawing = { source: string; height: number; alt: string }
 export type ListHead = { width: number; theme: Theme; title: string; meta: string; lines: string[]; quote?: string }
 
-const ROW_H = 44
-const TITLE_SIZE = 13.5
+const ROW_H = 48
+const ROW_X = 12
+const CHEVRON_ROOM = 28
+const TITLE_SIZE = 13
 const META_SIZE = 12
 const LINE_H = 18
 const NOTE_SIZE = 13
 const NOTE_LINES_MAX = 3
 
-// The eyebrow with its meta on the right, the headline, the quoted title (italic) and the facts lines.
+const CHEVRON_CSS = '.chev{transition:transform .16s cubic-bezier(.2,.8,.2,1)}svg:hover .chev{transform:translateX(2px)}'
+
+// The headline with its meta on the right, the quoted title (italic) and the facts lines.
 export function headSvg(head: ListHead): Drawing {
-  const w = words()
-  const quote = head.quote === undefined || head.quote === '' ? '' : `<text x="0" y="62" class="mid" font-size="12.5" font-style="italic">${escape(fit(`“${head.quote}”`, head.width, 12.5))}</text>`
-  const top = quote === '' ? 62 : 84
+  const metaWidth = head.meta === '' ? 0 : measure(head.meta, META_SIZE) + 12
+  const quote = head.quote === undefined || head.quote === '' ? '' : `<text x="0" y="42" class="mid" font-size="12.5" font-style="italic">${escape(fit(`“${head.quote}”`, head.width, 12.5))}</text>`
+  const top = quote === '' ? 40 : 62
   const lines = head.lines.map((line, n) => `<text x="0" y="${top + n * LINE_H}" class="label lo">${escape(fit(line, head.width, META_SIZE))}</text>`)
   const body = [
-    `<rect x="0" y="5" width="6" height="6" rx="1.5" fill="var(--plan)"/><text x="13" y="12" class="eyebrow f-plan">${eyebrow(w.title)}</text>`,
-    head.meta === '' ? '' : `<text x="${head.width}" y="12" text-anchor="end" class="label lo">${escape(head.meta)}</text>`,
-    `<text x="0" y="40" class="headline hi">${escape(fit(head.title, head.width, 17))}</text>`,
+    `<text x="0" y="20" class="headline hi">${escape(fit(head.title, head.width - metaWidth, 17))}</text>`,
+    head.meta === '' ? '' : `<text x="${head.width}" y="20" text-anchor="end" class="label lo">${escape(head.meta)}</text>`,
     quote,
     ...lines,
   ]
-  const height = top + Math.max(0, head.lines.length - 1) * LINE_H + 8
+  const last = head.lines.length > 0 ? top + (head.lines.length - 1) * LINE_H : top - LINE_H - 2
+  const height = last + 8
 
   return { source: svgDoc({ width: head.width, height, theme: head.theme }, body.join('')), height, alt: [head.title, head.quote ?? '', ...head.lines].filter(Boolean).join('. ') }
 }
@@ -46,14 +51,21 @@ export function noteSvg(note: { width: number; theme: Theme; lead: string; rest:
   return { source: svgDoc({ width: note.width, height, theme: note.theme }, lead + lines.join('')), height, alt: [note.lead, note.rest].filter(Boolean).join('. ') }
 }
 
-function rowText(spec: { x: number; width: number; title: string; meta: string; tag?: string }): string {
-  const tag = spec.tag === undefined ? '' : `<tspan class="f-plan" font-weight="650">${escape(spec.tag)}</tspan><tspan class="lo"> · </tspan>`
-  const tagWidth = spec.tag === undefined ? 0 : measure(`${spec.tag} · `, META_SIZE)
-  const room = spec.width - spec.x - 4
-  const title = `<text x="${spec.x}" y="18" class="title hi">${escape(fit(spec.title, room, TITLE_SIZE))}</text>`
-  const meta = `<text x="${spec.x}" y="36" class="label">${tag}<tspan class="lo">${escape(fit(spec.meta, room - tagWidth, META_SIZE))}</tspan></text>`
+type RowSpec = { width: number; theme: Theme; title: string; meta: string; tag?: string; isPressable: boolean }
 
-  return title + meta
+const chevron = (x: number, y: number) =>
+  `<g class="chev"><path d="M${x} ${y - 4.5}l4.5 4.5-4.5 4.5" fill="none" stroke="var(--lo)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></g>`
+
+// The title over its meta; a tag ("This session") leads the meta in body ink, no colour of its own.
+function rowSvg(spec: RowSpec): string {
+  const tag = spec.tag === undefined ? '' : `<tspan class="mid" font-weight="600">${escape(spec.tag)}</tspan><tspan class="lo"> · </tspan>`
+  const tagWidth = spec.tag === undefined ? 0 : measure(`${spec.tag} · `, META_SIZE)
+  const room = spec.width - ROW_X - (spec.isPressable ? CHEVRON_ROOM : ROW_X)
+  const title = `<text x="${ROW_X}" y="21" class="title hi">${escape(fit(spec.title, room, TITLE_SIZE))}</text>`
+  const meta = `<text x="${ROW_X}" y="37" class="label">${tag}<tspan class="lo">${escape(fit(spec.meta, room - tagWidth, META_SIZE))}</tspan></text>`
+  const body = `${title}${meta}${spec.isPressable ? chevron(spec.width - 18, ROW_H / 2) : ''}`
+
+  return svgDoc({ width: spec.width, height: ROW_H, theme: spec.theme }, body, spec.isPressable ? CHEVRON_CSS : '')
 }
 
 export const turnTitle = (row: ReplayTurnRow): string => (row.ask === '' ? words().untitled : `“${row.ask}”`)
@@ -65,9 +77,8 @@ export const turnMeta = (row: ReplayTurnRow, now: number): string =>
 export function turnRowSvg(row: ReplayTurnRow, look: { width: number; theme: Theme; now: number }): Drawing {
   const title = turnTitle(row)
   const meta = turnMeta(row, look.now)
-  const body = rowText({ x: 0, width: look.width, title, meta })
 
-  return { source: svgDoc({ width: look.width, height: ROW_H, theme: look.theme }, body), height: ROW_H, alt: `${title}. ${meta}` }
+  return { source: rowSvg({ width: look.width, theme: look.theme, title, meta, isPressable: true }), height: ROW_H, alt: `${title}. ${meta}` }
 }
 
 export function sessionFacts(row: ReplaySession): string {
@@ -80,12 +91,13 @@ export function sessionFacts(row: ReplaySession): string {
 }
 
 // The session's first prompt, then when it was last written and its turns and edits; this session is tagged.
-export function sessionRowSvg(row: ReplaySession, look: { width: number; theme: Theme }): Drawing {
+// `isPressable`: it has edits to open, so the row ends in a chevron.
+export function sessionRowSvg(row: ReplaySession, look: { width: number; theme: Theme; isPressable: boolean }): Drawing {
   const w = words()
   const title = row.title === '' ? w.untitled : row.title
   const meta = [dateText(row.at), sessionFacts(row)].filter(Boolean).join(' · ')
   const tag = row.isCurrent ? w.thisSession : undefined
-  const body = rowText({ x: 0, width: look.width, title, meta, ...(tag === undefined ? {} : { tag }) })
+  const source = rowSvg({ ...look, title, meta, ...(tag === undefined ? {} : { tag }) })
 
-  return { source: svgDoc({ width: look.width, height: ROW_H, theme: look.theme }, body), height: ROW_H, alt: [tag, title, meta].filter(Boolean).join('. ') }
+  return { source, height: ROW_H, alt: [tag, title, meta].filter(Boolean).join('. ') }
 }

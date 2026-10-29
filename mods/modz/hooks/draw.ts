@@ -1,10 +1,9 @@
-// The desktop pane's Svg: the head, a group's eyebrow and one row per mod (monogram tile, name,
-// version pill, health dot, one line of description and a quiet line of surfaces and source).
+// The catalog pane's Svg: the head, a group's label and one row per mod, set as the hub is: no tiles, no pills, no
+// dot on every healthy row. A row is the name with its version in the mono at the right, then what it does, then a
+// quiet line of where it runs and where it came from. Only what is unusual is marked: a broken mod in red, a
+// switched-off one dimmed with the word, an unknown state with the word.
 import type { ModInfo } from './catalog'
-import { upper } from './kit/lang'
-import { eyebrowWidth } from './kit/svg-text'
 import { textWidth } from './kit/svg-metrics'
-import { monogram } from './meta'
 import type { Group } from './meta'
 import { entering, MOTION_CSS } from './kit/motion'
 import type { Cue } from './kit/motion'
@@ -20,17 +19,11 @@ const settled = (spec: { width: number; height: number; theme: Theme; body: stri
     ? svgDoc(spec)
     : svgDoc({ width: spec.width, height: spec.height, theme: spec.theme, body: entering(spec.body, spec.cue), css: MOTION_CSS })
 
-const HEAD = 48
-const GROUP = 22
-const ROW = 66
-const TILE = 36
-const TEXT_X = TILE + 12
-const PILL = 18
-export const PILL_HEIGHT = PILL
-const PILL_PAD = 8
+const HEAD = 44
+const GROUP = 28
+const ROW = 62
+const TEXT_X = 16
 const GAP = 6
-const NOTCH = 6
-const DOT_ROOM = 16
 
 export function esc(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -55,64 +48,34 @@ export function fit(text: string, width: number, font: { size: number; weight?: 
   return `${chars.join('').trimEnd()}…`
 }
 
-export function eyebrow(spec: { y: number; width: number; label: string; role: RoleName | null; meta: string }): string {
-  const label = upper(spec.label)
-  const end = NOTCH + 6 + eyebrowWidth(label)
-  const metaStart = spec.width - measure(spec.meta, 12)
-  const notch = spec.role === null ? 'f-strong' : `fg-${spec.role}`
-  const rule = metaStart - end > 24 ? `<rect x="${end + 8}" y="${spec.y - 4}" width="${metaStart - end - 16}" height="1" class="f-line"/>` : ''
-
-  return `<rect x="0.5" y="${spec.y - 7.5}" width="${NOTCH}" height="${NOTCH}" rx="1.5" class="${notch}"/><text x="${NOTCH + 6.5}" y="${spec.y}" class="eb ${spec.role === null ? 'lo' : `fg-${spec.role}`}">${esc(label)}</text>${rule}<text x="${spec.width}" y="${spec.y}" text-anchor="end" class="lb lo">${esc(spec.meta)}</text>`
-}
-
-type PillSpec = { right: number; y: number; text: string; role: RoleName | null; isMono?: boolean; isLeft?: boolean }
-
-// A badge whose right edge is at `right` (its left edge, given `isLeft`); neutral without a role.
-export function pill(spec: PillSpec): { svg: string; width: number } {
-  const textSize = spec.isMono === true ? monoMeasure(spec.text, 10.5) : measure(spec.text, 10.5, 600)
-  const width = Math.ceil(textSize + PILL_PAD * 2)
-  const x = spec.isLeft === true ? spec.right : spec.right - width
-  const frame = spec.role === null ? 'inset line' : `bg-${spec.role} ln-${spec.role}`
-  const ink = spec.role === null ? 'mid' : `fg-${spec.role}`
-  const font = spec.isMono === true ? ' num' : ''
-
-  return {
-    svg: `<rect x="${x + 0.5}" y="${spec.y + 0.5}" width="${width - 1}" height="${PILL - 1}" rx="${PILL / 2}" class="${frame}"/><text x="${x + width / 2}" y="${spec.y + 12.5}" text-anchor="middle" style="font-size:10.5px;font-weight:600" class="${ink}${font}">${esc(spec.text)}</text>`,
-    width,
-  }
-}
-
+// A group's label: sentence case, quiet ink, its count at the right. `role` is kept for callers and draws
+// nothing: a coloured label over a list is decoration.
+// The head: how many mods and whether all are on, the health at the right. The pane's tab already says "Mods".
 export function headSvg(spec: { width: number; theme: Theme; title: string; meta: string; metaRole: RoleName | null; cue?: Cue }): Drawing {
-  const meta = spec.meta === '' ? '' : `<text x="${spec.width}" y="40" text-anchor="end" class="lb ${spec.metaRole === null ? 'lo' : `fg-${spec.metaRole}`}">${esc(spec.meta)}</text>`
-  const title = fit(spec.title, spec.width - measure(spec.meta, 12) - GAP * 2, { size: 17, weight: 620 })
-  const allMods = catalogWords().allMods
-  const body = eyebrow({ y: 12, width: spec.width, label: allMods, role: 'edit', meta: '' }) + `<text x="0" y="40" class="hl hi">${esc(title)}</text>${meta}`
+  const meta = spec.meta === '' ? '' : `<text x="${spec.width - TEXT_X}" y="28" text-anchor="end" style="font-size:11.5px" class="num ${spec.metaRole === null ? 'lo' : `fg-${spec.metaRole}`}">${esc(spec.meta)}</text>`
+  const title = fit(spec.title, spec.width - TEXT_X * 2 - measure(spec.meta, 12) - GAP * 2, { size: 16, weight: 600 })
+  const body = `<text x="${TEXT_X}" y="28" style="font-size:16px;font-weight:600" class="hi">${esc(title)}</text>${meta}`
 
-  return { source: settled({ width: spec.width, height: HEAD, theme: spec.theme, body, cue: spec.cue }), alt: `${allMods}: ${spec.title}${spec.meta === '' ? '' : ` · ${spec.meta}`}`, height: HEAD }
+  return { source: settled({ width: spec.width, height: HEAD, theme: spec.theme, body, cue: spec.cue }), alt: `${catalogWords().allMods}: ${spec.title}${spec.meta === '' ? '' : ` · ${spec.meta}`}`, height: HEAD }
 }
-
-// Each group keeps one colour, on its eyebrow notch and on every monogram tile beneath it.
-export const GROUP_ROLE: Record<Group, RoleName | null> = { look: 'edit', safety: 'ok', meter: 'read', flow: 'run', other: null }
 
 export function groupSvg(spec: { width: number; theme: Theme; group: Group; count: number; cue?: Cue }): Drawing {
   const words = catalogWords()
   const label = words.groups[spec.group]
   const count = words.mods(spec.count)
-  const body = eyebrow({ y: 15, width: spec.width, label, role: GROUP_ROLE[spec.group], meta: count })
+  const body = `<text x="${TEXT_X}" y="${GROUP - 8}" style="font-size:11px;font-weight:600" class="lo">${esc(label)}</text><text x="${spec.width - TEXT_X}" y="${GROUP - 8}" text-anchor="end" style="font-size:11px" class="num lo">${esc(count)}</text>`
 
   return { source: settled({ width: spec.width, height: GROUP, theme: spec.theme, body, cue: spec.cue }), alt: `${label}: ${count}`, height: GROUP }
 }
 
-// The right edge says only what is unusual: a problem or a switched-off mod gets a word,
-// an unknown state a dashed ring, and an on mod one quiet green dot.
-function stateMark(mod: ModInfo, right: number): { svg: string; width: number } {
+// The right edge says only what is unusual, in words: broken, off, or a state that could not be read. An on mod
+// shows its version alone.
+function stateWord(mod: ModInfo): { text: string; ink: string } | null {
   const words = catalogWords()
-  if (!mod.isHealthy) return pill({ right, y: 9, text: words.brokenWord, role: 'danger' })
-  if (mod.isEnabled === false) return pill({ right, y: 9, text: words.offWord, role: null })
-  const cx = right - DOT_ROOM / 2
-  if (mod.isEnabled === null) return { svg: `<circle cx="${cx}" cy="18" r="3.5" fill="none" stroke-width="1.3" stroke-dasharray="2 1.6" class="strong"/>`, width: DOT_ROOM }
+  if (!mod.isHealthy) return { text: words.brokenWord, ink: 'fg-danger' }
+  if (mod.isEnabled === false) return { text: words.offWord, ink: 'lo' }
 
-  return { svg: `<circle cx="${cx}" cy="18" r="3.5" class="fg-ok"/>`, width: DOT_ROOM }
+  return mod.isEnabled === null ? { text: words.stateUnknown, ink: 'lo' } : null
 }
 
 function stateLabel(mod: ModInfo): string {
@@ -123,33 +86,21 @@ function stateLabel(mod: ModInfo): string {
   return mod.isEnabled ? words.onWord : words.offWord
 }
 
-function monogramTile(mod: ModInfo): string {
-  const role = mod.isHealthy ? GROUP_ROLE[mod.group] : 'danger'
-  const top = (ROW - TILE) / 2
-  const frame = role === null ? 'inset strong' : `bg-${role} ln-${role}`
-  const ink = role === null ? 'mid' : `fg-${role}`
-  const fade = mod.isEnabled === false ? ' opacity=".5"' : ''
-
-  return `<g${fade}><rect x="0.5" y="${top + 0.5}" width="${TILE - 1}" height="${TILE - 1}" rx="9" class="${frame}"/><text x="${TILE / 2}" y="${top + 22.5}" text-anchor="middle" style="font-size:13px;font-weight:700;letter-spacing:.04em" class="num ${ink}">${esc(monogram(mod.name))}</text></g>`
-}
-
 export function rowSvg(spec: { width: number; theme: Theme; mod: ModInfo; cue?: Cue }): Drawing {
   const { mod, width } = spec
-  const mark = stateMark(mod, width)
-  // A mod that tracks commits has no version to show, so its row has no pill.
+  const right = width - TEXT_X
+  // A mod that tracks commits has no version to show.
   const versionText = mod.version === null ? '' : `v${mod.version}`
-  const versionWidth = versionText === '' ? 0 : monoMeasure(versionText, 10.5) + PILL_PAD * 2
-  const nameRoom = width - TEXT_X - mark.width - versionWidth - GAP * 2
-  const name = fit(mod.name, nameRoom, { size: 14, weight: 600 })
-  const version = versionText === '' ? { svg: '' } : pill({ right: TEXT_X + measure(name, 14, 600) + GAP, y: 9, text: versionText, role: null, isMono: true, isLeft: true })
-  const lineRoom = width - TEXT_X - 4
+  const state = stateWord(mod)
+  const edge = [state?.text, versionText].filter(Boolean).join(' · ')
+  const name = fit(mod.name, right - TEXT_X - monoMeasure(edge, 11.5) - GAP * 2, { size: 13, weight: 560 })
+  const isQuiet = mod.isEnabled === false
+  const lineRoom = right - TEXT_X
   const body = [
-    monogramTile(mod),
-    `<text x="${TEXT_X}" y="22" style="font-size:14px;font-weight:600" class="${mod.isEnabled === false ? 'lo' : 'hi'}">${esc(name)}</text>`,
-    version.svg,
-    mark.svg,
-    `<text x="${TEXT_X}" y="41" class="lb ${mod.isHealthy ? 'mid' : 'fg-danger'}">${esc(fit(mod.description, lineRoom, { size: 12 }))}</text>`,
-    `<text x="${TEXT_X}" y="58" class="mi lo">${esc(fit(placeLine(mod), lineRoom, { size: 10.5 }))}</text>`,
+    `<text x="${TEXT_X}" y="21" style="font-size:13px;font-weight:560" class="${isQuiet ? 'lo' : 'hi'}">${esc(name)}</text>`,
+    edge === '' ? '' : `<text x="${right}" y="21" text-anchor="end" style="font-size:11.5px" class="num ${state?.ink ?? 'lo'}">${esc(edge)}</text>`,
+    `<text x="${TEXT_X}" y="39" style="font-size:12px" class="${mod.isHealthy ? (isQuiet ? 'lo' : 'mid') : 'fg-danger'}">${esc(fit(mod.description, lineRoom, { size: 12 }))}</text>`,
+    `<text x="${TEXT_X}" y="55" style="font-size:11px" class="lo">${esc(fit(placeLine(mod), lineRoom, { size: 11 }))}</text>`,
   ].join('')
   const alt = `${[mod.name, versionText].filter(Boolean).join(' ')} · ${placeLine(mod)} · ${stateLabel(mod)} · ${mod.description}`
 

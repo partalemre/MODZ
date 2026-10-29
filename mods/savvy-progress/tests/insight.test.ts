@@ -81,12 +81,12 @@ test('a lane reads as cells: its calls by kind, idle stretches between, nothing 
   ])
 })
 
-test('the timeline drawing names every lane, marks a quiet one and only the kinds it holds', () => {
+test('the timeline drawing names every lane, marks a quiet one, and colours no kind of call', () => {
   const crew = [run('a1', { history: [call('Read', 0, SECOND)] }), run('a2', { status: 'done', endedAt: MINUTE }), run('a3', { heardAt: 0 })]
   const drawing = timelineSvg(400, timelineOf(crew, 3 * MINUTE)!)
   expect(drawing.alt).toBe('Zaman çizelgesi: Pip 3:00 çalışıyor, Mako 1:00 bitti, Nori 3:00 çalışıyor')
-  expect(drawing.source).toContain('okuma')
-  expect(drawing.source).not.toContain('düzenleme')
+  expect(drawing.source).not.toContain('okuma')
+  expect(drawing.source).not.toMatch(/rx="2.5" fill=/)
   expect(drawing.source).toContain('class="f-warn"')
   expect(drawing.source).toContain('şimdi')
 })

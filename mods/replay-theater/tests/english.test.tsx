@@ -45,8 +45,8 @@ for (const surface of SURFACES) {
     expect((await band.find({ key: 'rt-dismiss' }))?.props?.label).toBe('Not now')
     expect(shown).toContain('2 edits · 2 files')
     expect(shown).toContain('or type /replay')
-    if (surface === 'terminal') expect(await texts(band)).toContain('▶ REPLAY')
-    else expect(await svgText(band)).toContain('REPLAY')
+    if (surface === 'terminal') expect(await texts(band)).toContain('Replay')
+    else expect(await svgText(band)).toMatch(/Replay ·/)
     expect(shown).not.toMatch(TURKISH_ONLY)
   })
 
@@ -63,7 +63,7 @@ for (const surface of SURFACES) {
     const first = await everything(pane)
     expect(first).toContain('2 edits in 2 files')
     expect(first).toContain('3m ago')
-    expect(first).toContain('EDIT 1 / 2')
+    expect(first).toContain('Edit 1 / 2')
     expect(first).toContain('Plan step 2/3')
     expect(first).toContain('Updating the call in the README')
     expect((await pane.find({ key: 'rt-prev' }))?.props?.label).toBe('Previous')
@@ -105,7 +105,9 @@ test('the desktop pane draws the English totals and legend', async ($: any, on: 
 
   expect(drawn).toContain('3 lines added')
   expect(drawn).toContain('1 removed')
-  expect(drawn).toContain('EDITS IN ORDER')
+  // The quiet look: a sentence-case label, no capital kicker or plan colour.
+  expect(drawn).toContain('Edit 1 / 2')
+  expect(drawn).not.toMatch(/letter-spacing|var\(--plan|REPLAY/)
   expect(drawn).toContain('Changed word')
 })
 
@@ -124,7 +126,7 @@ test('the session list and a past turn speak English', async ($: any, on: any) =
   const pane = await $.ui.mount(paneOf('terminal'))
   const sessions = await everything(pane)
 
-  expect(sessions).toContain('● PAST SESSIONS')
+  expect(sessions).toContain('Past sessions')
   expect(sessions).toContain('This project · 4 sessions')
   expect(sessions).toContain('This session · Oct 13')
   expect(sessions).toContain('3 turns · 5 edits')
@@ -132,7 +134,7 @@ test('the session list and a past turn speak English', async ($: any, on: any) =
   expect((await pane.find({ key: 'rt-this-session' }))?.props?.label).toBe('This session')
   await pane.press({ key: 'rt-session-s-old-open' })
   await settle(clock)
-  expect(await everything(pane)).toContain('● TURNS WITH EDITS')
+  expect(await everything(pane)).toContain('Turns with edits')
   expect((await pane.find({ key: 'rt-turn-2-open' }))?.props?.label).toBe('Watch')
   await pane.press({ key: 'rt-turn-2-open' })
   await settle(clock)

@@ -44,12 +44,13 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await clock.settle()
     const shown = await texts(ui)
 
-    expect(shown).toContain('DONE')
+    expect(shown).toContain('Done')
     expect(shown).toContain('Claude edited 1 file')
     expect(shown).toContain('Find a file')
     expect(shown).not.toMatch(TURKISH_ONLY)
     if (surface === 'desktop') {
-      for (const label of ['TOUCHED BY CLAUDE · 1 FILE', 'Edited', 'ALL FILES', 'Collapse', 'Refresh', 'More', '1 change']) expect(shown).toContain(label)
+      for (const label of ['Touched by Claude · 1 file', 'Edited', 'All files', 'Collapse', 'Refresh', 'More', '1 change']) expect(shown).toContain(label)
+      for (const kicker of ['TOUCHED BY CLAUDE', 'ALL FILES', 'DONE']) expect(shown).not.toContain(kicker)
     }
     await ui.unmount()
   })

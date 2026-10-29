@@ -79,7 +79,7 @@ function emptyCard(draw: DrawCtx, view: PaneView, width: number): RenderElement 
   const buttons: ButtonSpec[] = [{ key: 'handoff-write-now', label: says.writeNow, variant: 'primary', onPress: view.actions.onWrite }]
 
   return Card(draw, {
-    header: { icon: 'flag', role: 'read', eyebrow: says.title, sub: says.emptyLine(view.threshold), width },
+    header: { icon: 'flag', eyebrow: says.latest, sub: says.emptyLine(view.threshold), width },
     children: [...contextMeter(draw, view, width), ButtonRow(draw, { buttons })],
   })
 }
@@ -91,7 +91,7 @@ function noteCard(draw: DrawCtx, view: PaneView, note: HandoffNote, width: numbe
 
   return Card(draw, {
     header: {
-      icon: 'flag', role: 'read', eyebrow: says.latest, meta: ageText(view.now - note.at), headline: fileName(note.path),
+      icon: 'flag', eyebrow: says.latest, meta: ageText(view.now - note.at), headline: fileName(note.path),
       sub: `${statusOf(note, view.now)} · ${kind}`, width,
     },
     children: [
@@ -102,8 +102,9 @@ function noteCard(draw: DrawCtx, view: PaneView, note: HandoffNote, width: numbe
   })
 }
 
+// The pane is titled "Handoff", so its label names the note, not the mod; live work takes the accent dot.
 function writingCard(draw: DrawCtx, width: number): RenderElement {
-  return Card(draw, { role: 'run', header: { icon: 'pencil', eyebrow: words().title, headline: words().writingHeadline, width } })
+  return Card(draw, { header: { icon: 'pencil', role: 'edit', hasDot: true, eyebrow: words().latest, headline: words().writingHeadline, width } })
 }
 
 export function paneTree(draw: DrawCtx, view: PaneView): RenderElement {

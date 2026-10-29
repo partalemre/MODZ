@@ -3,7 +3,7 @@ import { expect, mock, test } from 'claude-code/testing'
 import { headline, marketRoot } from '../hooks/catalog'
 import type { ModInfo } from '../hooks/catalog'
 import { setLang } from '../hooks/kit/lang'
-import { githubName, monogram } from '../hooks/meta'
+import { githubName } from '../hooks/meta'
 
 const FILES: Record<string, string> = {
   '/m/.claude-plugin/marketplace.json': JSON.stringify({
@@ -26,9 +26,7 @@ test('marketRoot climbs out of mods/<name>', () => {
   expect(marketRoot('/m/mods/modz')).toBe('/m')
 })
 
-test('names: monogram initials and GitHub owner/repo', () => {
-  expect(monogram('blast-radius')).toBe('BR')
-  expect(monogram('skins')).toBe('SK')
+test('names: GitHub owner/repo', () => {
   expect(githubName('https://github.com/zenbu-labs/terminal-browser/tree/main')).toBe('zenbu-labs/terminal-browser')
   expect(githubName('https://github.com/hellosverre')).toBe('hellosverre')
 })

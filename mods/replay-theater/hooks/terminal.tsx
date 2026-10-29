@@ -5,7 +5,6 @@ import { MAX_DIFF_LINES } from './diff-svg'
 import type { Ui } from './offer'
 import { baseName, folderOf, totals, windowOf } from './pane-svg'
 import type { PaneModel } from './pane-svg'
-import { upper } from './lang'
 import { words } from './words'
 import type { ReplayDiffLine, ReplayStep } from '../types'
 
@@ -17,7 +16,7 @@ const WORD_BG: Record<string, string> = { '-': 'diffRemovedWord', '+': 'diffAdde
 type TerminalSite = { isCompact: boolean; maxRows: number; on: PaneHandlers }
 
 function glyphOf(k: number, index: number): { glyph: string; color?: string } {
-  if (k === index) return { glyph: '●', color: 'merged' }
+  if (k === index) return { glyph: '●' }
 
   return k < index ? { glyph: '✓', color: 'subtle' } : { glyph: '○' }
 }
@@ -30,7 +29,7 @@ function stepRow(ui: Ui, step: ReplayStep, at: { k: number; index: number }) {
 
   return (
     <Box key={`rt-row-${at.k}`} flexDirection="row" columnGap={1}>
-      <Text color={look.color} dimColor={look.color === undefined}>{look.glyph}</Text>
+      <Text color={look.color} bold={isCurrent} dimColor={look.color === undefined && !isCurrent}>{look.glyph}</Text>
       <Box flexShrink={1}>
         <Text bold={isCurrent} dimColor={at.k < at.index} wrap="truncate-end">{`${at.k + 1}. ${baseName(step.file)}`}</Text>
       </Box>
@@ -67,7 +66,7 @@ function contextRows(ui: Ui, step: ReplayStep, isPending: boolean) {
   if (step.plan !== undefined) {
     rows.push(
       <Text key="rt-plan" wrap="truncate-end">
-        <Text color="merged">{`◆ ${w.planStep(step.plan.index, step.plan.total)}`}</Text>
+        <Text bold>{`◆ ${w.planStep(step.plan.index, step.plan.total)}`}</Text>
         <Text dimColor>{` · ${step.plan.title}`}</Text>
       </Text>,
     )
@@ -108,8 +107,8 @@ export function terminalView(ui: Ui, model: PaneModel, site: TerminalSite) {
     <Box key="rt-pane" flexDirection="column" paddingX={1}>
       {!site.isCompact && header(ui, model)}
       {!site.isCompact && model.steps.slice(shown.start, shown.end).map((one, n) => stepRow(ui, one, { k: shown.start + n, index: model.index }))}
-      <Box key="rt-eyebrow" marginTop={site.isCompact ? 0 : 1}>
-        <Text color="merged" bold>{`● ${upper(w.editNumber(model.index + 1, model.steps.length))}`}</Text>
+      <Box key="rt-label" marginTop={site.isCompact ? 0 : 1}>
+        <Text bold dimColor>{w.editNumber(model.index + 1, model.steps.length)}</Text>
       </Box>
       <Box key="rt-file" flexDirection="row" columnGap={1}>
         <Text bold>{baseName(step.file)}</Text>

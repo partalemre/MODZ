@@ -2,7 +2,7 @@
 
 import type { ModelForkResult } from 'claude-code'
 
-import { PING_AFTER_MS, PING_PROMPT, TTL_MS, disarm, isCold, pingUsd, priceOf } from './core'
+import { MIN_PING_MS, PING_AFTER_MS, PING_PROMPT, TTL_MS, disarm, isCold, pingUsd, priceOf } from './core'
 import type { State } from './core'
 import { fmtTok, fmtUsd } from './fmt'
 import { bandWords } from './ui-words'
@@ -13,6 +13,7 @@ const KEY_EVERY = 'every'
 export const KEY_GUARD = 'guard'
 export const KEY_ALWAYS = 'always'
 const MIN_DELAY_MS = 1000
+const MAX_RETRIES = 3
 /** A warm ping writes only its own message; a write of this share of the read or more means the prefix broke. */
 const BROKEN_SHARE = 0.1
 
@@ -74,11 +75,12 @@ export const stopForGood = (io: Io, s: State): Promise<void> => halt(io, s, { wh
 
 export async function arm(io: Io, s: State) {
   disarm(s)
+  s.retries = 0
   if (!s.deadline) return
   const now = await io.now()
   if (now >= s.deadline) return stop(io, s, null)
   // A cold window still needs expiry cleanup, but must not send a model request.
-  if (s.lastRequestAt && !s.compacted && !isCold(s, now)) {
+  if (s.lastRequestAt && !s.compacted && !s.waitForTurn && !isCold(s, now)) {
     const untilCold = s.lastRequestAt + TTL_MS - now
     const delay = Math.min(s.deadline - now, untilCold, Math.max(MIN_DELAY_MS, s.lastRequestAt + s.every - now))
     s.pending = io.after(delay, () => { void ping(io, s) })
@@ -98,24 +100,49 @@ function failureText(reply: ForkReply): string | null {
   return reply.reason === 'aborted' ? bandWords().aborted : bandWords().noText
 }
 
+/** A restarted process has nothing to fork until its first turn, and a busy API is usually brief: neither ends the window. */
+async function isRetried(io: Io, s: State, reply: Extract<ModelForkResult, { isAnswered: false }>): Promise<boolean> {
+  if (reply.reason === 'nothing-to-fork') {
+    s.waitForTurn = true
+    await arm(io, s)
+    return true
+  }
+  const isBusy = reply.reason === 'api-error' && (reply.status === null || reply.status === 429 || reply.status >= 500)
+  const wait = MIN_PING_MS * 2 ** s.retries
+  const now = await io.now()
+  // Only while a retry can still land a minute before the cache goes cold.
+  if (!isBusy || s.retries >= MAX_RETRIES || now + wait >= Math.min(s.deadline, s.lastRequestAt + TTL_MS - MIN_PING_MS)) return false
+  s.retries++
+  disarm(s)
+  s.pending = io.after(wait, () => { void ping(io, s) })
+  return true
+}
+
 async function ping(io: Io, s: State) {
   s.pending = null
   if (!s.deadline) return
   const now = await io.now()
   if (now >= s.deadline) return arm(io, s)
-  // A turn in the meantime re-armed the timer; this callback is stale.
-  if (isCold(s, now)) return arm(io, s)
-  if (now - s.lastRequestAt < s.every - MIN_DELAY_MS) return
+  if (isCold(s, now) || s.waitForTurn) return arm(io, s)
+  // A request since this timer was set moved the clock; schedule from it.
+  if (now - s.lastRequestAt < s.every - MIN_DELAY_MS) return arm(io, s)
+  // A host that slept past a retry's slot must not send it inside the last minute.
+  if (s.retries && now >= s.lastRequestAt + TTL_MS - MIN_PING_MS) return stop(io, s, bandWords().apiError(''))
+  const sentAt = s.lastRequestAt
   let reply: ForkReply
   try {
     reply = await io.fork(PING_PROMPT)
   } catch (err) {
     return stop(io, s, bandWords().pingFailed(err instanceof Error ? err.message : String(err)))
   }
+  // A main request while the fork was out warmed the cache itself and re-armed; this reply is stale.
+  if (s.lastRequestAt !== sentAt) return
+  if (reply?.isAnswered === false && await isRetried(io, s, reply)) return
   const failure = failureText(reply)
   if (failure !== null || reply === null || reply.isAnswered === false) return stop(io, s, failure)
+  s.retries = 0
   const u = reply.usage
-  const price = priceOf(s.lastModel)
+  const price = priceOf(s.lastModel, u.input_tokens + u.cache_read_input_tokens + u.cache_creation_input_tokens)
   const warm = u.cache_read_input_tokens > 0 && u.cache_creation_input_tokens < BROKEN_SHARE * u.cache_read_input_tokens
   const usd = price ? pingUsd(u, price) : null
   s.last = { at: now, read: u.cache_read_input_tokens, write: u.cache_creation_input_tokens, usd, warm }

@@ -547,3 +547,54 @@ describe('store per session', () => {
     expect([...store.keys()]).toEqual(['deadline:other', 'every:other'])
   })
 })
+
+describe('upstream 2.2.2 and 2.3.0 fixes', () => {
+  for (const [model, rate] of [['claude-opus-5-5', '$8/MTok'], ['claude-opus-4-1-20250805', '$30/MTok'], ['claude-opus-4-5', '$10/MTok'], ['claude-haiku-5-5', '$1/MTok']] as const) {
+    test(`a cold send on ${model} is priced from its own row`, async ($, on) => {
+      const clock = mock.clock(on, { now: START })
+      world(on, [], { model })
+      await $.session.start(session)
+      await $.turn.complete(turn({ usage: usage({ model }) }))
+      await clock.advance(3 * HOUR)
+      const r = await $.prompt.submit(prompt('hi'))
+      expect(r.drop).toContain(rate)
+    })
+  }
+
+  test('/keepwarm refuses a zero window and a period of an hour or more', async ($, on) => {
+    mock.clock(on, { now: START })
+    const store = new Map<string, unknown>()
+    world(on, [], { store })
+    await $.session.start(session)
+    expect((await $.command.run(run('keepwarm', '0m'))).text).toMatch(/^keepwarm bir süre alır/)
+    expect((await $.command.run(run('keepwarm', '3h every 60m'))).text).toMatch(/1m ile 59m/)
+    expect(store.has('deadline:S1')).toBe(false)
+  })
+
+  test('always arms the conversation /clear starts, and each turn rolls the window six hours on', async ($, on) => {
+    const clock = mock.clock(on, { now: START })
+    const store = new Map<string, unknown>([['always', true]])
+    world(on, [], { store })
+    await $.session.start(session)
+    expect(store.get('deadline:S1')).toBe(START + 6 * HOUR)
+    await clock.advance(5 * HOUR)
+    await $.turn.complete(turn())
+    expect(store.get('deadline:S1')).toBe(START + 11 * HOUR)
+    await $.classic.SessionStart({ source: 'clear' })
+    expect(store.get('deadline:S1')).toBe(START + 11 * HOUR)
+    const status = await $.command.run(run('keepwarm', 'status'))
+    expect(status.text).toMatch(/6 sa kaldı · ilk tur bekleniyor/)
+  })
+
+  test('a cold prompt nobody typed is sent with the price logged, not refused', async ($, on) => {
+    const clock = mock.clock(on, { now: START })
+    const w = world(on, [])
+    await $.session.start(session)
+    await $.turn.complete(turn())
+    await clock.advance(3 * HOUR)
+    const r = await $.prompt.submit({ text: 'task done', wait: false, origin: { kind: 'task-notification' } })
+    expect(r.drop).toBe(undefined)
+    expect(w.entered).toEqual(['task done'])
+    expect(w.logs.at(-1)).toMatch(/Yine de gönderiliyor/)
+  })
+})

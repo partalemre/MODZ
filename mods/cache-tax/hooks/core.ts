@@ -14,16 +14,31 @@ export const SOON_MS = 10 * MIN_MS
 export const BIG_TOKENS = 50000
 export const PING_PROMPT = 'Reply with the single word: warm'
 
-// $ per million tokens, [cache read, 1h cache write, output], list prices September 2026.
-// Longer family names first: a model id matches the first row it contains.
-const PRICES: Array<[string, number, number, number]> = [
+// $ per million tokens, [cache read, 1h cache write, output], list prices October 2026.
+// More specific families first: a model id takes the first row it matches.
+const PRICES: Array<[string | RegExp, number, number, number]> = [
   ['fable-5-1', 0.25, 20, 50],
+  ['mythos-5-1', 0.25, 20, 50],
   ['fable-5', 1, 20, 50],
+  ['mythos-5', 1, 20, 50],
+  ['opus-5-5', 0.2, 8, 20],
   ['opus-5', 0.5, 10, 25],
+  // Opus 4 and 4.1 in every spelling (claude-opus-4-1-20250805, claude-opus-4@20250514), never Opus 4.5 and later.
+  [/opus-4(?:-[01])?(?:$|[^-\d]|-20\d{6})/, 1.5, 30, 75],
   ['opus-4', 0.5, 10, 25],
+  ['sonnet-5-5', 0.1, 4, 10],
   ['sonnet-5', 0.2, 4, 10],
   ['sonnet', 0.3, 6, 15],
+  ['haiku-5-5', 0.01, 0.2, 0.5],
+  ['3-5-haiku', 0.08, 1.6, 4],
+  ['haiku-3-5', 0.08, 1.6, 4],
   ['haiku', 0.1, 2, 5],
+]
+
+const LONG_PROMPT_TOKENS = 100000
+// A request whose prompt, cache reads and writes included, is over 100k tokens pays these instead.
+const LONG_PRICES: Array<[string, number, number, number]> = [
+  ['haiku-5-5', 0.05, 1, 2.5],
 ]
 
 export type Price = [number, number, number]
@@ -55,29 +70,36 @@ export type State = {
   stopped: string | null
   held: Held | null
   resend: string | null
+  /** A restored window found no conversation to fork; it pings again only after this process's first turn. */
+  waitForTurn: boolean
+  /** Ping retries spent on a busy API since the last answered ping. */
+  retries: number
 }
 
 export function freshState(): State {
   return {
     hasBand: false, hasStatus: false, sid: '', deadline: 0, every: PING_AFTER_MS, always: false, lastRequestAt: 0,
     lastModel: null, cacheModel: null, ctx: 0, compacted: false, guard: 'refuse', ackedAt: 0, coldWritePending: false, misses: [],
-    pending: null, last: null, stopped: null, held: null, resend: null,
+    pending: null, last: null, stopped: null, held: null, resend: null, waitForTurn: false, retries: 0,
   }
 }
 
-export function priceOf(model: string | null): Price | null {
+export function priceOf(model: string | null, promptTokens: number): Price | null {
   const m = (model ?? '').toLowerCase().replace(/[\s.]+/g, '-')
-  for (const [family, read, write, output] of PRICES) if (m.includes(family)) return [read, write, output]
+  const rows = promptTokens > LONG_PROMPT_TOKENS ? [...LONG_PRICES, ...PRICES] : PRICES
+  for (const [family, read, write, output] of rows) {
+    if (typeof family === 'string' ? m.includes(family) : family.test(m)) return [read, write, output]
+  }
   return null
 }
 
 export function coldUsd(s: State, model = s.lastModel): number | null {
-  const price = priceOf(model)
+  const price = priceOf(model, s.ctx)
   return price ? s.ctx * price[1] / 1e6 : null
 }
 
 export function warmUsd(s: State, model = s.lastModel): number | null {
-  const price = priceOf(model)
+  const price = priceOf(model, s.ctx)
   return price ? s.ctx * price[0] / 1e6 : null
 }
 
@@ -90,7 +112,7 @@ export function pingUsd(u: ForkUsage, price: Price): number {
 
 /** The read-only upper bound: pings at the cache-read rate that cost as much as one cold write of the same context. */
 export function breakEvenPings(s: State): number | null {
-  const price = priceOf(s.lastModel)
+  const price = priceOf(s.lastModel, s.ctx)
   if (!price || s.ctx <= 0) return null
   return Math.floor(price[1] / price[0])
 }
@@ -139,5 +161,6 @@ export function resetForClear(s: State) {
   s.misses = []
   s.held = null
   s.resend = null
+  s.waitForTurn = false
   disarm(s)
 }

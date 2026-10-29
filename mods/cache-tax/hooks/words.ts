@@ -21,7 +21,7 @@ export const autoWarm = (): string => fmtDuration(AUTO_WARM_MS)
 export const coldFor = (s: State, now: number): number => now - s.lastRequestAt - TTL_MS
 
 export function rateText(s: State, model = s.lastModel): string {
-  const price = priceOf(model)
+  const price = priceOf(model, s.ctx)
   return price ? `$${decimal(price[1])}/MTok` : say().rateUnknown
 }
 
@@ -55,6 +55,7 @@ function nextPingText(s: State, now: number): string {
   if (!s.lastRequestAt) return say().firstTurn
   if (s.compacted) return say().afterCompact
   if (isCold(s, now)) return say().coldPing(fmtDuration(s.every))
+  if (s.waitForTurn) return say().firstTurn
   return say().pingIn(fmtDuration(s.lastRequestAt + s.every - now))
 }
 

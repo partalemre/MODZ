@@ -42,7 +42,7 @@ export const TR: Phrases = {
     off: 'keepwarm kapalı',
     offAlways: 'keepwarm kapalı; oturum başında artık kendiliğinden açılmayacak',
     usage: 'keepwarm bir süre alır (6h, 90m) ya da always, off, status',
-    every: 'every en az 1m bir süre alır',
+    every: 'every 1m ile 59m arası bir süre alır',
   },
   guardMode: {
     usage: '/cache-tax guard warn ya da refuse alır',

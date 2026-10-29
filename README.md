@@ -198,3 +198,5 @@ Several mods are adaptations of open-source projects, each under its original li
 | `terminal-browser` | [zenbu-labs/terminal-browser](https://github.com/zenbu-labs/terminal-browser) | MIT |
 
 Everything else is [MIT](LICENSE).
+
+`upstreams.json` records the upstream date each adaptation is synced to; a weekly workflow (`.github/workflows/upstream-watch.yml`) keeps one open `upstream` issue per mod listing the newer upstream commits.

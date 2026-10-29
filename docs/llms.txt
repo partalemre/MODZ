@@ -22,7 +22,7 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 
 ## Mods
 
-- modz: the panel; one live line per mod, one click to each mod's pane
+- modz: the panel; one live line per mod, one click to each mod's pane; keeps replies in your language
 - savvy-progress: Agents pane and progress band; each subagent's progress, cost and time; other chats on this machine waiting on you; a home crab
 - savvy-flow: orchestrated delivery; the session model plans and reviews, tiered worker agents implement
 - filetree: files Claude touched this turn, what it is doing now, git status
@@ -34,9 +34,9 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 - checkpoint: silent git snapshot before each turn's first write; /checkpoints undoes a turn
 - test-badge: runs tests and lint after edits and shows a badge; watches the open PR's GitHub CI through gh
 - replay-theater: replays the last turn's edits step by step, and earlier turns and past sessions
-- session-budget: per-session spend budget; notice at 80%, stop at 100%
+- session-budget: per-session spend budget; notice at 80%, stop at 100%; spawn brake asks before subagents when the 5-hour window runs low
 - cache-tax: keeps the one-hour prompt cache warm through breaks (uses tokens when on); prices a cold send, a model change included
-- hud-pro: one line with the 5-hour and 7-day limits, context and session cost; when the 5-hour window fills; a context breakdown with turns left and Compact now
+- hud-pro: one line with the 5-hour and 7-day limits, context and session cost; when the 5-hour window fills; a context breakdown with turns left and Compact now; 7/30-day usage history (active days, sessions, tokens, heatmap)
 - effort-router: shows each turn's effort and model; in auto mode sends light prompts at low effort (one small model call per prompt)
 - done-ping: notification when a long turn ends or Claude waits on you; optional sound packs (soundPack)
 - reflect-mod: saves corrections worth keeping to a CLAUDE.md (one small model check per correction); /mine turns friction that repeats across past chats into rule, hook, skill or mod ideas (one small call)

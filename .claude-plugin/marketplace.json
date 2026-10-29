@@ -70,7 +70,7 @@
     {
       "name": "session-budget",
       "source": "./mods/session-budget",
-      "description": "A spend budget per session, as a share of the 5-hour limit or in dollars: a notice at 80%, a stop at 100%."
+      "description": "A spend budget per session, as a share of the 5-hour limit or in dollars: a notice at 80%, a stop at 100%, and a question before new subagents when the 5-hour window runs low."
     },
     {
       "name": "cache-tax",
@@ -80,7 +80,7 @@
     {
       "name": "hud-pro",
       "source": "./mods/hud-pro",
-      "description": "One quiet line above the prompt: the 5-hour limit and its reset, 7-day use, context and session cost. The Usage pane shows what fills the context."
+      "description": "One quiet line above the prompt: the 5-hour limit and its reset, 7-day use, context and session cost. The Usage pane shows what fills the context and 7 or 30 days of usage history."
     },
     {
       "name": "done-ping",

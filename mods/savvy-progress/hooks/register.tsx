@@ -7,7 +7,7 @@ import { isRunning } from './agents'
 import { onBand } from './band'
 import { onDispatch } from './dispatch'
 import { onEvents } from './events'
-import { PHASES } from './flow'
+import { PHASES, TIERS } from './flow'
 import { hubCardOf } from './hub'
 import { isLang, langOf, setLang, t } from './i18n'
 import type { Lang } from './i18n'
@@ -41,7 +41,8 @@ const PROGRESS_SPEC = {
   description:
     'Report /savvy-flow progress to the progress bar above the prompt and the agents panel. ' +
     'Call it after presenting the plan (title, total, tasks, phase "delegate"), each time a task is accepted (done), ' +
-    'when switching phase or re-planning (tasks), and once at the end with finished: true. Fields left out keep their previous value.',
+    'when switching phase or re-planning (tasks), and once at the end with finished: true. Fields left out keep their previous value. ' +
+    'For the main session only: a call from a subagent is ignored (workers report with `step`).',
   inputSchema: {
     type: 'object',
     properties: {
@@ -58,7 +59,7 @@ const PROGRESS_SPEC = {
           type: 'object',
           properties: {
             title: { type: 'string', description: 'A few words; reused verbatim as the Agent description.' },
-            tier: { type: 'string', enum: ['fable', 'heavy', 'careful', 'medium', 'light'] },
+            tier: { type: 'string', enum: [...TIERS] },
             after: { type: 'array', items: { type: 'integer' }, description: 'Numbers of the tasks this one waits for.' },
           },
           required: ['title', 'tier'],
@@ -83,6 +84,8 @@ const STEP_SPEC = {
     },
     required: ['done'],
   },
+  // In every agent's tool list, not behind ToolSearch: workers do not go looking for it.
+  isDeferred: false,
 } as const
 
 async function settingsLang($: EngineInterface): Promise<Lang | null> {

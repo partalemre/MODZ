@@ -45,8 +45,8 @@ The pane lists the engine's own agent list (refreshed every second), so an agent
 
 ## Tools it adds
 
-- `mcp__savvy-progress__progress`: the orchestrator reports the plan, the phase and the accepted tasks.
-- `mcp__savvy-progress__step`: a worker reports its own steps (`done`, `total`, `note`).
+- `mcp__savvy-progress__progress`: the orchestrator reports the plan, the phase and the accepted tasks. Only the main session can: a call from a subagent is ignored.
+- `mcp__savvy-progress__step`: a worker reports its own steps (`done`, `total`, `note`). It is listed up front rather than behind ToolSearch, and each `savvy-*` worker gets one line at the end of its brief asking for these reports.
 
 ## Settings
 
@@ -61,7 +61,7 @@ The pane lists the engine's own agent list (refreshed every second), so an agent
 
 ## Limits
 
-- Cost is a rough estimate from token counts and a built-in price table, not a bill.
+- Cost is a rough estimate from token counts and a built-in price table (list prices as of 2026-10-10), not a bill. Cache writes are priced at the 1-hour rate, which Claude Code writes on a subscription; 5-minute writes are overestimated.
 - The percentage of an agent that reports nothing is an estimate and is marked `~`.
 - A permission ask counts as waiting from the dialog until its tool call finishes, so a long command you approved still reads `waiting` until it ends (the engine raises no event for the answer itself). A turn's end always clears it.
 - Other chats show up only in sessions that run this mod. A session that is suspended (a sleeping laptop) drops off after 2 minutes and comes back on its next beat.

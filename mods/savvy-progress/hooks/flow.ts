@@ -1,7 +1,13 @@
 import type { AgentRun, Flow, Phase, PlannedTask } from '../types'
-import { norm } from './format'
+import { clip, norm } from './format'
 
 export const PHASES: readonly Phase[] = ['plan', 'design', 'delegate', 'review', 'close']
+export const TIERS: readonly string[] = ['fable', 'heavy', 'careful', 'medium', 'light']
+// The tool's schema is advice to the model, not a check: what a call may ask the band
+// and the panel to draw is bounded here.
+const MAX_TASKS = 200
+const MAX_AFTER = 20
+const MAX_TITLE = 120
 
 export type ProgressInput = {
   title?: string
@@ -24,26 +30,33 @@ export const blankFlow = (): Flow => ({
 })
 
 export const isNewFlow = (prev: Flow | null, input: ProgressInput): boolean =>
-  !prev || prev.isFinished || (input.title !== undefined && input.title.trim() !== prev.title)
+  !prev || prev.isFinished || (input.title !== undefined && clip(input.title.trim(), MAX_TITLE) !== prev.title)
+
+// Only a known tier is kept: the name is later a key into the tier tables.
+const tierName = (v: string): string => {
+  const tier = v.replace(/^savvy-/, '').trim().toLowerCase()
+  return TIERS.includes(tier) ? tier : ''
+}
 
 const cleanTasks = (tasks: ProgressInput['tasks']): PlannedTask[] | undefined =>
   tasks
     ?.filter(task => task.title?.trim())
+    .slice(0, MAX_TASKS)
     .map(task => ({
       title: (task.title ?? '').trim(),
-      tier: (task.tier ?? '').replace(/^savvy-/, '').trim().toLowerCase(),
-      after: (task.after ?? []).filter(n => Number.isInteger(n) && n > 0),
+      tier: tierName(task.tier ?? ''),
+      after: (task.after ?? []).filter(n => Number.isInteger(n) && n > 0).slice(0, MAX_AFTER),
     }))
 
 export const mergeFlow = (prev: Flow | null, input: ProgressInput): Flow => {
   // A new title means a new flow: never carry counters over from an earlier one.
   const base = isNewFlow(prev, input) || !prev ? blankFlow() : { ...blankFlow(), ...prev }
   const tasks = cleanTasks(input.tasks) ?? base.tasks
-  const total = Math.max(0, Math.round(input.total ?? (input.tasks ? tasks.length : base.total)))
+  const total = Math.min(MAX_TASKS, Math.max(0, Math.round(input.total ?? (input.tasks ? tasks.length : base.total))))
   const done = Math.min(total || Infinity, Math.max(0, Math.round(input.done ?? base.done)))
   const phase = input.phase && PHASES.includes(input.phase) ? input.phase : base.phase
   return {
-    title: input.title?.trim() || base.title,
+    title: clip(input.title?.trim() || base.title, MAX_TITLE),
     total,
     done,
     phase: input.finished ? 'close' : phase,

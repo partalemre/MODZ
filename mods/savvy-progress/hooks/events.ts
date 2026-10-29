@@ -12,6 +12,7 @@ import { deriveJob, joinJob, sealJob } from './job'
 import { STEP_TOOL, TOOL } from './state'
 import { TASK_TOOLS, applyTaskTool, openTasks } from './tasks'
 import { isSame } from './same'
+import { savvyTierOf } from './tiers'
 import { touchFile } from './touched'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
@@ -28,6 +29,12 @@ type On = Parameters<Register>[0]
 // Lost on a reload, harmlessly: the first model request reports the effort again.
 const launchEffort = new Map<string, string>()
 
+// Added to the end of each savvy worker's brief. Their system prompt words step reporting
+// as a condition and they skip it even with the tool listed; the same request in the brief is followed.
+const STEP_BRIEF = `
+
+Progress reporting: before any other work, call \`${STEP_TOOL}\` with \`total\` (your plan in 3-8 steps) and \`done: 0\`; call it again with \`done\` and a few-word \`note\` as each step finishes. It only draws a progress bar.`
+
 async function stamp($: EngineInterface): Promise<number> {
   const at = await $.clock.now()
   await update($, now, () => at)
@@ -37,6 +44,9 @@ async function stamp($: EngineInterface): Promise<number> {
 // The orchestrator's report and the workers' own steps.
 function onReports(on: On): void {
   on('tool.call', { tool: TOOL }, async ($, e) => {
+    // The flow is the main session's: a call from a worker's loop carries its agentId
+    // and changes nothing, or any subagent could rename, finish or reset the flow.
+    if (e.agentId) return { result: 'ignored: only the main session reports the flow' }
     const input = e as unknown as ProgressInput
     const prev = await read($, flow)
     // A new flow starts with a clean list; agents still running stay.
@@ -52,8 +62,9 @@ function onReports(on: On): void {
     if (!agentId) return { result: 'ignored: only subagents report steps' }
     const input = e as unknown as StepInput
     const at = await $.clock.now()
-    await update($, agents, list => patchRun(list, agentId, a => heard(stepReport(a, input), at)))
-    return { result: 'ok' }
+    const list = await update($, agents, all => patchRun(all, agentId, a => heard(stepReport(a, input), at)))
+    // A dropped update must not read as a success.
+    return { result: list.some(a => a.agentId === agentId) ? 'ok' : `ignored: no panel row for agent ${agentId}` }
   })
 }
 
@@ -69,7 +80,8 @@ function onLaunches(on: On): void {
   })
 
   on('agent.spawn', async ($, e, next) => {
-    const started = await next(e)
+    const isUnbriefed = savvyTierOf(e.subagentType) !== null && !e.prompt.includes(STEP_TOOL)
+    const started = await next(isUnbriefed ? { ...e, prompt: e.prompt + STEP_BRIEF } : e)
     if (started.deny !== undefined) return started
     const at = await stamp($)
     const id = started.agentId ?? e.tool_use_id

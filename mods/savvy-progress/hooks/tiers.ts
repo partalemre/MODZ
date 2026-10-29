@@ -50,10 +50,12 @@ export const keyOf = (tier: string): ThemeKey => TIER_KEY[tier] ?? 'subtle'
 export const savvyTierOf = (type: string): string | null => {
   const bare = type.replace(/^[^:]*:/, '')
   const tier = bare.replace(/^savvy-/, '').toLowerCase()
-  return bare.startsWith('savvy-') && tier in TIER_MODEL ? tier : null
+  return bare.startsWith('savvy-') && Object.hasOwn(TIER_MODEL, tier) ? tier : null
 }
 
-export const tierOf = (a: Who): string => savvyTierOf(a.type) ?? EFFORT_TIER[a.effort ?? ''] ?? 'other'
+const effortTierOf = (effort = ''): string | null => (Object.hasOwn(EFFORT_TIER, effort) ? EFFORT_TIER[effort] : null)
+
+export const tierOf = (a: Who): string => savvyTierOf(a.type) ?? effortTierOf(a.effort) ?? 'other'
 
 // The upstream costumes stand first (savvy tiers, the Explore pirate); the effort fills in the rest.
 export const costumeOf = (a: Who): string => savvyTierOf(a.type) ?? (a.type === 'Explore' ? 'explore' : tierOf(a))
@@ -64,4 +66,4 @@ export const tierWordOf = (a: Who): string => {
   return tier === 'other' ? a.type : tier
 }
 
-export const plannedTierOf = (tier: string): string => (tier in TIER_MODEL ? tier : 'other')
+export const plannedTierOf = (tier: string): string => (Object.hasOwn(TIER_MODEL, tier) ? tier : 'other')

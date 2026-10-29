@@ -3,6 +3,7 @@
 import { mock, test } from 'claude-code/testing'
 
 import { MARKET_FILES } from './market-fixture'
+import { posix } from './world'
 
 /** The test runner's console: bin/preview reads the trees it prints. */
 declare const console: { log: (text: string) => void }
@@ -25,7 +26,7 @@ function stub(on: any, theme: string, isTroubled: boolean) {
   mock.env(on, { MODZ_LANG: 'tr' })
   on('fs.stat', () => ({ value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
   on('fs.read', (_: unknown, e: { path: string }) => {
-    const text = files[e.path]
+    const text = files[posix(e.path)]
     if (!text) throw new Error(`ENOENT ${e.path}`)
 
     return { value: text }

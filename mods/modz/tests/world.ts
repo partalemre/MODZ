@@ -2,6 +2,10 @@ import { mock } from 'claude-code/testing'
 
 import { MARKET_FILES } from './market-fixture'
 
+// The engine hands an fs hook the native path: on Windows '/m/x' arrives as 'C:\m\x'. Fixtures are keyed by
+// the '/' spelling, so a mock looks a path up by this.
+export const posix = (path: string) => path.replaceAll('\\', '/').replace(/^[A-Za-z]:/, '')
+
 // The engine the hub tests stand in: the catalog read from the market fixture, every mod in it switched
 // on, and the panes the hub asks for recorded. A test that mocks the clock itself says so. The hub
 // speaks Turkish unless a test hands it another env (an empty one draws English); `files` replaces the fixture;
@@ -19,7 +23,7 @@ export function stubWorld(on: any, options: WorldOptions = {}) {
   mock.env(on, options.env ?? { MODZ_LANG: 'tr' })
   on('fs.stat', () => ({ value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
   on('fs.read', (_: unknown, e: { path: string }) => {
-    const text = files[e.path]
+    const text = files[posix(e.path)]
     if (!text) throw new Error(`ENOENT ${e.path}`)
 
     return { value: text }

@@ -14,6 +14,7 @@ import { footerTree, isHubShown } from './footer'
 import { cardOf, focusOf, hiddenRowsOf, MODS_PANE, modsTitle, presenceOf, rowsOf } from './hub'
 import { hubTree } from './hub-pane'
 import type { HubActions } from './hub-pane'
+import { wireLanguageKeeper } from './language-keeper'
 import { EMPTY_LAYOUT, layoutOf, moveUp, setHidden } from './layout'
 import type { HubLayout } from './layout'
 import { setLang } from './kit/lang'
@@ -295,4 +296,5 @@ export const register: Register = (on, options) => {
   hubHooks(on, options)
   paneHooks(on)
   footerHooks(on)
+  wireLanguageKeeper(on, options)
 }

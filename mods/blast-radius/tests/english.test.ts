@@ -17,7 +17,7 @@ for (const surface of SURFACES) {
     const tree = await ui.drawn()
     const drawn = JSON.stringify(tree)
 
-    for (const text of ['HELD · BLAST RADIUS', 'Waiting for you', 'git reset --hard', 'Run anyway', 'Keep my work']) expect(drawn).toContain(text)
+    for (const text of ['Held · Blast Radius', 'Waiting for you', 'git reset --hard', 'Run anyway', 'Keep my work']) expect(drawn).toContain(text)
     expect(drawn).toContain('This would throw away 3 files and 124 lines you haven\'t committed.')
     expect(hasTurkish(tree)).toBe(false)
     await ui.press({ key: 'cancel' })

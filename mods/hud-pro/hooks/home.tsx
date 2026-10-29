@@ -1,7 +1,8 @@
 // MODZ kit — the way back to the hub from a mod's pane (DESIGN.md §9). While the hub runs it keeps
 // `{ plugin: 'modz', key: 'isOn' }` true; a pane then draws `HomeButton` first, and its press writes the mod's
 // own `{ plugin: '<mod>', key: 'home' }` value (`{ at }`). The hub hears it, comes forward, and opens again if
-// it was closed, so the person always has a way back, even with one pane left and no tab to click.
+// it was closed, so the person always has a way back, even with one pane left and no tab to click. It is a quiet
+// link, not a grey pill: the way back is always there, never the thing to look at.
 
 // The resolved element table of the surface that draws the pane.
 type Table = Record<string, any>
@@ -13,7 +14,7 @@ export function HomeButton(ui: Table, onPress: () => void) {
 
   return (
     <Box key="modz-home-row" flexDirection="row">
-      <Button key="modz-home" label={HOME_LABEL} variant="secondary" onPress={onPress} />
+      <Button key="modz-home" label={HOME_LABEL} plain dimColor onPress={onPress} />
     </Box>
   )
 }

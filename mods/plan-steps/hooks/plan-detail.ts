@@ -2,7 +2,6 @@ import type { Step } from './match'
 import { baseName } from './parse'
 import type { StepTrack } from '../types'
 import { upper } from './kit/lang'
-import { rings } from './kit/motion'
 import { escape, fit, measure, wrap } from './ui/svg'
 import { words } from './words'
 
@@ -22,12 +21,7 @@ const NAME_SIZE = 12
 const META_SIZE = 12
 const AGENT_INDENT = 14
 const LINES_MAX = 3
-const AGENT_DOT = { dx: 4, dy: 9, r: 3.5 }
-
-const BADGE_ROLE: Record<string, string> = {
-  ts: 'amber', tsx: 'amber', js: 'amber', jsx: 'amber', mjs: 'amber', cjs: 'amber', py: 'tide', md: 'run', txt: 'run',
-  json: 'ok', csv: 'ok', yaml: 'ok', yml: 'ok', pdf: 'danger', png: 'plan', jpg: 'plan', svg: 'plan',
-}
+const AGENT_DOT = { dx: 4, dy: 9, r: 3 }
 
 export const DETAIL_CSS = '.badge{font-size:9.5px;font-weight:700}'
 
@@ -44,18 +38,14 @@ export function hasDetails(details: DeskDetails): boolean {
   return details.meta !== '' || details.files.length > 0 || details.running.length > 0
 }
 
-// The extension in mono capitals on its type's tint (DESIGN.md §4); an unknown type sits on the inset.
+// The extension in mono capitals on a neutral track (DESIGN.md §0.3): a file's type is not a state, so no colour.
 function fileBadge(x: number, y: number, path: string): string {
   const name = baseName(path)
   const dot = name.lastIndexOf('.')
   const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : ''
-  const role = BADGE_ROLE[ext]
   const label = escape(upper(ext === '' ? '·' : ext.slice(0, 3)))
-  const box = role === undefined
-    ? `<rect x="${x}" y="${y}" width="${BADGE.w}" height="${BADGE.h}" rx="4" fill="var(--inset)" stroke="var(--line)"/>`
-    : `<rect x="${x}" y="${y}" width="${BADGE.w}" height="${BADGE.h}" rx="4" fill="var(--${role}-t)"/>`
 
-  return `${box}<text x="${x + BADGE.w / 2}" y="${y + 11.5}" text-anchor="middle" class="mono badge" fill="var(--${role ?? 'lo'})">${label}</text>`
+  return `<rect x="${x}" y="${y}" width="${BADGE.w}" height="${BADGE.h}" rx="4" fill="var(--track)"/><text x="${x + BADGE.w / 2}" y="${y + 11.5}" text-anchor="middle" class="mono badge lo">${label}</text>`
 }
 
 // The folder in text.lo, the name in text.hi; a long folder gives way from its start, the name never does.
@@ -87,8 +77,8 @@ function filesBlock(files: string[], frame: Frame): Block {
 function agentBlock(agent: string, frame: Frame): Block {
   const texts = wrap(`${agent} · ${words().running}`, { width: frame.width - AGENT_INDENT, size: META_SIZE, maxLines: LINES_MAX })
   const at = { cx: frame.x + AGENT_DOT.dx, cy: frame.top + AGENT_DOT.dy, r: AGENT_DOT.r }
-  // A running agent is live work: rings go out of its dot.
-  const dot = `${rings({ ...at, className: 'f-run' })}<circle cx="${at.cx}" cy="${at.cy}" r="${at.r}" class="f-run breathe"/>`
+  // A running agent is live work: its dot breathes in the live clay.
+  const dot = `<circle cx="${at.cx}" cy="${at.cy}" r="${at.r}" class="f-edit breathe"/>`
 
   return { svg: dot + lines(texts, { x: frame.x + AGENT_INDENT, top: frame.top, cls: 'label mid' }), height: texts.length * LINE }
 }

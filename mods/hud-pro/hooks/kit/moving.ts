@@ -1,9 +1,9 @@
 // MODZ kit — a pane's drawings on the desktop, in motion (motion.ts). Any finished Svg source goes in under a key
 // naming its place in the pane; out comes the props for an interactive Svg whose source stays byte-identical while
 // what it shows does (stable.ts), so the desktop keeps its frame and its loops run on. The first draw of a key since
-// the pane opened cascades in with the other new ones, a changed one sweeps once, a row's drawing answers hover, and
+// the pane opened cascades in with the other new ones, a changed one flashes once, a row's drawing answers hover, and
 // every source says its colour scheme, else the frame is painted on an opaque white sheet.
-import { entering, motionCss, SWEEP, WASH } from './motion'
+import { entering, FLASH, motionCss, WASH } from './motion'
 import type { Cue } from './motion'
 import { stableDrawings } from './stable'
 
@@ -12,7 +12,7 @@ export type Pic = { source: string; width?: number; height?: number; alt: string
 export type MovingPic<T extends Pic> = T & { isInteractive: true }
 
 // `isRow`: the drawing is one row of a list, so hover washes it. `shows`: what it shows leaving out time that ticks
-// ("2 dk önce"); a new source with the same `shows` is redrawn without the sweep, as is one drawn at a new width
+// ("2 dk önce"); a new source with the same `shows` is redrawn without the flash, as is one drawn at a new width
 // (the pane was resized: every drawing reflows, none of them changed).
 export type MoveOpts = { isRow?: boolean; shows?: unknown }
 
@@ -35,13 +35,13 @@ const PASS_MS = 120
 // The cascade stops lengthening here, so a long list is in place soon.
 const MAX_ORDER = 12
 
-// `source` with its scheme said and, per its cue, its entrance or its sweep; the hover wash for a row.
+// `source` with its scheme said and, per its cue, its entrance or its flash; the hover wash for a row.
 export function animate(source: string, spec: { cue: Cue; isRow?: boolean }): string {
   const parts = SVG.exec(source)
   if (parts === null) return source
   const [, open, inner, close] = parts
   const scheme = SAYS_SCHEME.test(inner) ? '' : SCHEME
-  const lit = `${spec.isRow === true ? WASH : ''}${inner}${spec.cue.phase === 'change' ? SWEEP : ''}`
+  const lit = `${spec.isRow === true ? WASH : ''}${spec.cue.phase === 'change' ? FLASH : ''}${inner}`
   const body = entering(lit, spec.cue)
   const css = motionCss(body)
 

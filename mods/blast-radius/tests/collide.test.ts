@@ -66,7 +66,7 @@ for (const surface of SURFACES) {
     const ui = await mountPane($, surface)
     const tree = await ui.drawn()
     const drawn = JSON.stringify(tree)
-    for (const text of ['HELD · BLAST RADIUS', 'Another chat edited client.ts 12 min ago', 'billing-api · Waiting for you', 'src/api/client.ts', 'Edit anyway', 'Skip this edit']) expect(drawn).toContain(text)
+    for (const text of ['Held · Blast Radius', 'Another chat edited client.ts 12 min ago', 'billing-api · Waiting for you', 'src/api/client.ts', 'Edit anyway', 'Skip this edit']) expect(drawn).toContain(text)
     expect(byKey(tree, 'cancel')?.props?.autoFocus).toBe(true)
     expect(byKey(tree, 'run')?.props?.autoFocus).toBeUndefined()
     await ui.press({ key: 'cancel' })
@@ -129,7 +129,7 @@ test('the Turkish card says it in Turkish', async ($, on) => {
   await pass(w, 0)
   const ui = await mountPane($, 'terminal')
   const drawn = JSON.stringify(await ui.drawn())
-  for (const text of ['DÜZENLEME BEKLETİLDİ', 'Başka bir sohbet client.ts dosyasını az önce düzenledi', 'Bu düzenlemeyi atla']) expect(drawn).toContain(text)
+  for (const text of ['Düzenleme bekletildi', 'Başka bir sohbet client.ts dosyasını az önce düzenledi', 'Bu düzenlemeyi atla']) expect(drawn).toContain(text)
   await ui.press({ key: 'cancel' })
   await pass(w)
   await call

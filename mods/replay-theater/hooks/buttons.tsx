@@ -17,7 +17,7 @@ export function buttons(ui: Ui, model: PaneModel, on: PaneHandlers) {
       <Button key="rt-next" variant="primary" hotkey="n" label={isLast ? w.finish : w.next} autoFocus onPress={isLast ? on.onFinish : on.onNext} />
       <Button key="rt-turns" variant="secondary" hotkey="t" label={w.turns} onPress={on.onTurns} />
       <Box flexGrow={1} />
-      <Button key="rt-close" plain hotkey="c" label={w.close} onPress={on.onClose} />
+      <Button key="rt-close" plain dimColor hotkey="c" label={w.close} onPress={on.onClose} />
     </Box>
   )
 }

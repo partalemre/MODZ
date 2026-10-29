@@ -10,8 +10,8 @@ import { words } from './words'
 // A pill reads label, a thin meter with its pace tick, the value, then "↻" and the reset. Drawn as
 // an image, so the band shows through around it. As the band narrows it drops detail, never
 // overflows: the 7-day reset goes first, then the meters shorten, the labels shorten, the meters go,
-// then the 5-hour reset and last the cost. A critical window (≥95 %) keeps its reset to the end and
-// sits on a Flare tint: the one accent of the line. A near estimate ("~full 15:40", "~3 turns")
+// then the 5-hour reset and last the cost. A critical window (≥95 %) keeps its reset to the end, its
+// value and reset in Flare: the one colour of the line; every pill keeps the same neutral frame. A near estimate ("~full 15:40", "~3 turns")
 // follows its value in every layout but the narrowest.
 
 const HEIGHT = 26
@@ -78,10 +78,9 @@ function gaugePill(gauge: GaugeView, layout: Layout): Pill {
   const resetCls = isHot ? 'f-danger tab' : 'f-lo tab'
   const reset = hasReset(gauge, layout.resets) ? [text({ value: resetText(gauge.reset), cls: resetCls, size: LABEL_SIZE })] : []
   const alert = layout.hasAlert && gauge.alert !== '' ? [text({ value: gauge.alert, cls: 'f-mid tab', size: LABEL_SIZE })] : []
-  const frame = gauge.tone === 'neutral' ? 's-line' : `s-${gauge.tone}-l`
   const meters = layout.meter > 0 ? [meterPiece(gauge, layout.meter)] : []
 
-  return { pieces: [label, ...meters, value, ...alert, ...reset], frame, fill: isHot ? 'f-danger-t' : 'f-card' }
+  return { pieces: [label, ...meters, value, ...alert, ...reset], frame: 's-line', fill: 'f-card' }
 }
 
 function costPill(usd: number): Pill {

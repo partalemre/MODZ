@@ -16,7 +16,6 @@ import { mem } from './session'
 import { unsized, wantSizes } from './sizes'
 import { paletteOf, roleOfTone, shimmerTones } from './theme'
 import { drawToolbar } from './toolbar'
-import { upper } from './lang'
 import { words } from './words'
 
 type Ui = ElementTable<'desktop'>
@@ -69,7 +68,7 @@ export function opening<T>(open: () => T): T {
   return open()
 }
 
-// The three cards above the tree, drawn at the pane's width. Each one's `shows` leaves out what reads put into
+// The drawings above the tree, drawn at the pane's width. Each one's `shows` leaves out what reads put into
 // context: that count climbs with every read, so it redraws the card without the sweep a real change gets.
 function cardsOf(s: Scene, w: number) {
   const { t, look } = s
@@ -79,7 +78,7 @@ function cardsOf(s: Scene, w: number) {
   const hero = heroOf(input)
   const legend = legendOf(s, git)
   const touchedList = touchedRows(input)
-  const section = sectionLine({ left: words().allFiles, right: upper((t.top ? t.top : t.root).split('/').pop() ?? '') }, { look, w })
+  const section = sectionLine({ left: words().allFiles, right: (t.top ? t.top : t.root).split('/').pop() ?? '' }, { look, w })
   return {
     hero: { drawn: heroCard(hero, { git, cost, legend }, { look, w }), shows: { hero, git, legend, isCounted: Boolean(cost?.turn), isSummed: Boolean(cost?.session), look, w } },
     touched: touchedList.length ? { drawn: touchedCard(touchedList, look, w), shows: { rows: touchedList.map(({ cost: c, ...row }) => ({ ...row, isCounted: c !== undefined })), look, w } } : null,

@@ -145,7 +145,7 @@ for (const surface of SURFACES) {
   test(`${surface}: the pane lists turns; Geri al shows the confirm card, Vazgeç changes nothing`, async ($: any, on: any) => {
     const fake = newFake({ ...ONE, numstat: '12\t3\ta.ts\0' + '0\t20\tnew.ts\0' })
     const pane = await openPane($, on, { fake, surface })
-    expect(await shown(pane)).toMatch(/KONTROL NOKTALARI|Kontrol noktaları/)
+    expect(await shown(pane)).toContain('Kontrol noktaları')
     expect(await shown(pane)).toMatch(/1 kayıt · en yenisi /)
     expect(await shown(pane)).toContain('fix login')
 

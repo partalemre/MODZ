@@ -1,10 +1,10 @@
 import { newTalkOf } from './ci-state'
 import { cardHeadSvg, checkRowSvg, ciHeadSvg } from './ci-svg'
 import type { Drawing } from './ci-svg'
-import { CHECK_ROLE, cardHeadline, ciLine, ciRole } from './ci-text'
+import { CHECK_ROLE, cardHeadline, ciLine } from './ci-text'
 import { picture } from './pane-pic'
 import { ago } from './parse'
-import { svgWidth, upper } from './svg'
+import { svgWidth } from './svg'
 import { THEME_KEY, cardColors } from './tidemark'
 import type { Role, Theme } from './tidemark'
 import { words } from './words'
@@ -55,7 +55,7 @@ function richSection(ui: Ui, view: CiView) {
         <Box key="tb-ci-checks" flexDirection="column">
           {checks.map((check, index) => (
             <Box key={`tb-ci-row-${index}`} flexDirection="row" alignItems="center" columnGap={1}>
-              {picture(ui, checkRowSvg(rowFrame, { check, isFirst: index === 0, isLast: index === checks.length - 1 }), `tb-ci-svg-${check.name}`, { isRow: true })}
+              {picture(ui, checkRowSvg(rowFrame, { check, isFirst: index === 0, isLast: index === checks.length - 1 }), `tb-ci-svg-${check.name}`)}
               {logsLink(ui, check, index)}
             </Box>
           ))}
@@ -77,7 +77,7 @@ function textSection(ui: Ui, view: CiView) {
   return (
     <Box key="tb-ci" flexDirection="column">
       <Box flexDirection="row" justifyContent="space-between" columnGap={1}>
-        <Text bold {...look(ciRole(ci))}>{`${ci.phase === 'watching' ? '◐' : '●'} ${upper(words().ci.eyebrow)} · #${ci.number}`}</Text>
+        <Text bold dimColor>{`${ci.phase === 'watching' ? '◐ ' : ''}${words().ci.eyebrow} · #${ci.number}`}</Text>
         <Text dimColor>{ci.checkedAt === null ? '' : ago(view.now - ci.checkedAt)}</Text>
       </Box>
       <Text bold wrap="truncate">{ci.title}</Text>
@@ -116,18 +116,19 @@ function cardActions(ui: Ui, view: CardView) {
       <Button key="tb-ci-ask" variant="primary" hotkey="f" label={words().ci.askFix} onPress={view.onAsk} />
       <Link key="tb-ci-open" href={view.card.url} label={words().ci.openPr} />
       <Box flexGrow={1} />
-      <Button key="tb-ci-dismiss" plain label={words().ci.dismiss} onPress={view.onDismiss} />
+      <Button key="tb-ci-dismiss" plain dimColor label={words().ci.dismiss} onPress={view.onDismiss} />
     </Box>
   )
 }
 
 export function ciCardTree(ui: Ui, view: CardView, theirs: unknown) {
   const { Box, Text } = ui
-  const colors = cardColors(view.theme, 'flare')
+  const colors = cardColors(view.theme)
   const frame = { width: svgWidth(view.columns, CARD_WIDTH), mode: view.theme.mode }
   const head = view.isRich ? plainPicture(ui, cardHeadSvg(frame, { card: view.card, title: view.title }), 'tb-ci-card-head') : (
     <Box key="tb-ci-card-head" flexDirection="row" columnGap={1}>
-      <Text color={THEME_KEY.flare} bold>{`✕ ${upper(words().ci.eyebrow)} · #${view.card.number}`}</Text>
+      <Text color={THEME_KEY.flare}>✕</Text>
+      <Text bold dimColor>{`${words().ci.eyebrow} · #${view.card.number}`}</Text>
       <Text bold wrap="truncate">{cardHeadline(view.card)}</Text>
     </Box>
   )

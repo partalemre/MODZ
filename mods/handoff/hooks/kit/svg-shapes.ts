@@ -1,23 +1,22 @@
-// MODZ kit — small shapes: icon tile, pill, stat tile, file badge, size bar, skeleton.
-import { baseline, iconEl, mono, num, outlineEl, rectEl, sans, TYPE, textEl, toPic } from './svg-core'
+// MODZ kit — small shapes: icon, pill, stat tile, file badge, size bar, skeleton.
+import { baseline, iconEl, mono, num, rectEl, sans, TYPE, textEl, toPic } from './svg-core'
 import type { Part, SvgPic } from './svg-core'
 import type { IconName } from './icons'
 import { fitText } from './svg-metrics'
 import { eyebrowPart } from './svg-text'
 import { sparklinePart } from './svg-meters'
-import { badgePaints, fileType } from './tokens'
+import { fileType } from './tokens'
 import type { Role } from './tokens'
 import { pick } from './lang'
 
-const HAIRLINE_OPACITY = 0.6
 
 // ---------------------------------------------------------------------------
-// Icon tile: rounded square in the role's tint, an 18 px line icon in its fg.
+// Icon: an 18 px line icon in text.mid, centred in its square. No tinted tile: a row of coloured tiles reads as
+// a template, and colour is kept for state.
 
 export type IconTileOpts = { icon: IconName; role?: Role; size?: number }
 
 const TILE = 36
-const TILE_RADIUS = 9
 const TILE_ICON = 18
 const SMALL_TILE = 32
 const SMALL_ICON_RATIO = 0.5
@@ -25,22 +24,15 @@ const SMALL_ICON_RATIO = 0.5
 export function iconTilePart(o: IconTileOpts): Part {
   const size = o.size ?? TILE
   const glyph = size >= SMALL_TILE ? TILE_ICON : Math.round(size * SMALL_ICON_RATIO)
-  const radius = Math.min(TILE_RADIUS, size / 4)
-  const box = { x: 0, y: 0, width: size, height: size, radius }
-  const fill = o.role ? `${o.role}-tint` : 'track'
-  const body = [
-    rectEl({ ...box, paint: fill }),
-    o.role ? outlineEl({ ...box, paint: `${o.role}-line` }, HAIRLINE_OPACITY) : '',
-    iconEl({ name: o.icon, x: (size - glyph) / 2, y: (size - glyph) / 2, size: glyph, paint: o.role ?? 'mid' }),
-  ]
+  const body = iconEl({ name: o.icon, x: (size - glyph) / 2, y: (size - glyph) / 2, size: glyph, paint: 'mid' })
 
-  return { body: body.join(''), width: size, height: size, alt: o.icon }
+  return { body, width: size, height: size, alt: o.icon }
 }
 
 export const iconTile = (o: IconTileOpts): SvgPic => toPic(iconTilePart(o))
 
 // ---------------------------------------------------------------------------
-// Pill: h20, full radius, tint + hairline + 11/600 fg; an optional 12 px leading icon.
+// Pill: h20, full radius, a neutral track fill and 11/600 text in the role's fg; an optional 12 px leading icon.
 
 export type PillOpts = { text: string; role?: Role; icon?: IconName }
 
@@ -58,8 +50,7 @@ export function pillPart(o: PillOpts): Part {
   const width = evenUp(textX + sans(PILL_TEXT.size, PILL_TEXT.weight)(o.text) + PILL_PAD)
   const box = { x: 0, y: 0, width, height: PILL_H, radius: PILL_H / 2 }
   const body = [
-    rectEl({ ...box, paint: o.role ? `${o.role}-tint` : 'track' }),
-    outlineEl({ ...box, paint: o.role ? `${o.role}-line` : 'line-strong' }),
+    rectEl({ ...box, paint: 'track' }),
     o.icon ? iconEl({ name: o.icon, x: PILL_PAD - 1, y: (PILL_H - PILL_ICON) / 2, size: PILL_ICON, paint }) : '',
     textEl({ x: textX, y: baseline(0, PILL_H, PILL_TEXT.size), text: o.text, paint, ...PILL_TEXT }),
   ]
@@ -123,7 +114,7 @@ export const statTile = (o: StatTileOpts): SvgPic => toPic(statTilePart(o))
 export const STAT_HEIGHT = STAT_H
 
 // ---------------------------------------------------------------------------
-// File badge: 26×16, kind tint + 9.5/700 mono label; a read/edit activity colour wins.
+// File badge: 26×16, a neutral track fill and a 9.5/700 mono label in text.lo; a read/edit activity colour wins.
 
 export type FileBadgeOpts = { name: string; activity?: 'read' | 'edit' }
 
@@ -134,7 +125,7 @@ const BADGE_TEXT = { size: 9.5, weight: 700 }
 
 export function fileBadgePart(o: FileBadgeOpts): Part {
   const type = fileType(o.name)
-  const paints = o.activity ? { fg: o.activity, tint: `${o.activity}-tint` } : badgePaints(type.kind)
+  const paints = o.activity ? { fg: o.activity, tint: `${o.activity}-tint` } : { fg: 'lo', tint: 'track' }
   const body = [
     rectEl({ x: 0, y: 0, width: BADGE_W, height: BADGE_H, radius: BADGE_RADIUS, paint: paints.tint }),
     textEl({ x: BADGE_W / 2, y: baseline(0, BADGE_H, BADGE_TEXT.size), text: type.label, paint: paints.fg, ...BADGE_TEXT, anchor: 'middle', isMono: true }),

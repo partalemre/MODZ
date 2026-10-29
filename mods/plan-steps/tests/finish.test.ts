@@ -7,14 +7,15 @@ const SURFACES = ['terminal', 'desktop'] as const
 const CONTINUE = 'Continue the plan with the next open step: Draw the band. Keep the task list current as you go.'
 
 for (const surface of SURFACES) {
-  test(`${surface}: an answer that worked on the plan and left steps open gets the PLAN card`, async ($: any, on: any) => {
+  test(`${surface}: an answer that worked on the plan and left steps open gets the Plan card`, async ($: any, on: any) => {
     await world($, on)
     await turn($, () => $.tool.call(UNDER_WAY))
     const band = await mountBand($, surface)
     const text = await drawnText(band)
     expect(text).toContain('2 of 3 steps still open')
     expect(text).toContain('Next: Draw the band')
-    expect(text).toContain('PLAN')
+    expect(text).toContain('Plan')
+    expect(text).not.toContain('PLAN')
     for (const label of ['Continue the plan', 'Mark plan done', 'Not now']) expect(text).toContain(label)
     if (surface === 'terminal') expect(text).toContain('●')
     if (surface === 'desktop') expect(text).toContain('1/3')
@@ -124,7 +125,7 @@ const handoff = {
   },
 }
 
-test('a handoff notice keeps the slot: the PLAN card waits', { plugins: [handoff] }, async ($: any, on: any) => {
+test('a handoff notice keeps the slot: the Plan card waits', { plugins: [handoff] }, async ($: any, on: any) => {
   await world($, on)
   await turn($, () => $.tool.call(UNDER_WAY))
   const band = await mountBand($, 'terminal')

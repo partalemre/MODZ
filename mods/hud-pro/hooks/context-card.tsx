@@ -5,13 +5,12 @@ import { compact, sparkText } from './format'
 import type { Ui } from './line'
 import { motion } from './pane-motion'
 import { contextSvg } from './svg-context'
-import { TERMINAL_KEY } from './theme'
 import { words } from './words'
 import type { HudCompacted, HudContext } from '../types'
 
 // The Usage pane's context card: the window by category, the last turns' fill with the turns it has
 // left, and a "Compact now" button with what the last press came to. Svg on the desktop, text on
-// the terminal: the bar's parts as shades of one accent, the free space as the dim track.
+// the terminal: the bar's parts as shades of plain ink, the free space as the dim track.
 
 export type CardView = {
   view: ContextView | null
@@ -20,8 +19,6 @@ export type CardView = {
   context: HudContext | null
   lastCompact: HudCompacted | null
   isCompacting: boolean
-  // A turn is running: the bar's used part shines.
-  isLive: boolean
   compact: () => void
   columns: number
   // The desktop's width for the card in px, and its Svg element; absent on the terminal.
@@ -70,7 +67,7 @@ function terminalBar(ui: Ui, view: ContextView, columns: number) {
       {view.segments.map((segment, rank) => {
         const glyphs = glyphOf(segment, rank).repeat(cells[rank] ?? 0)
 
-        return isAccent(segment) ? <Text key={`bar-${rank}`} color={TERMINAL_KEY.read}>{glyphs}</Text> : <Text key={`bar-${rank}`} dimColor>{glyphs}</Text>
+        return isAccent(segment) ? <Text key={`bar-${rank}`}>{glyphs}</Text> : <Text key={`bar-${rank}`} dimColor>{glyphs}</Text>
       })}
     </Box>
   )
@@ -140,10 +137,7 @@ function bodyOf(ui: Ui, card: CardView) {
   const Svg = card.svg
   if (Svg === undefined || card.width === undefined) return terminalCard(ui, card)
   const spec = { view: card.view, turns: card.turns, forecast: card.forecast, meta: metaOf(card), width: card.width }
-  const drawn = contextSvg({ ...spec, isLive: card.isLive })
-
-  // A turn starting or ending lights the bar or puts it out: no change of what the card shows.
-  return <Svg key="hud-context" {...motion.pic('hud-context', drawn, { shows: spec })} />
+  return <Svg key="hud-context" {...motion.pic('hud-context', contextSvg(spec), { shows: spec })} />
 }
 
 export function contextCard(ui: Ui, card: CardView) {

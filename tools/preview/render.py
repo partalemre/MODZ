@@ -31,9 +31,9 @@ def find_chrome() -> str:
 CHROME = find_chrome()
 UNIT = 8
 THEMES = {
-    "dark": {"bg": "#151515", "text": "#ececec", "dim": "#878785", "surface": "#202020", "line": "#2e2e2e",
+    "dark": {"bg": "#151515", "text": "#ececec", "dim": "#878785", "surface": "#202020", "button": "#353533", "line": "#2e2e2e",
              "primary_bg": "#ececec", "primary_fg": "#151515"},
-    "light": {"bg": "#faf9f5", "text": "#1f1e1d", "dim": "#73726c", "surface": "#f0eee6", "line": "#e0ddd4",
+    "light": {"bg": "#faf9f5", "text": "#1f1e1d", "dim": "#73726c", "surface": "#f0eee6", "button": "#e6e3da", "line": "#e0ddd4",
               "primary_bg": "#1f1e1d", "primary_fg": "#faf9f5"},
 }
 THEME_KEYS = {
@@ -114,12 +114,15 @@ def button(props, theme, inner=""):
     hotkey = props.get("hotkey")
     variant = props.get("variant")
     t = THEMES[theme]
-    if variant == "primary":
+    # As the desktop draws them (bin/modz shot, 2026-10-29): primary a light pill, secondary a filled grey pill,
+    # plain no chrome at all, its label at full strength unless dimColor.
+    ink = t['dim'] if props.get("dimColor") else t['text']
+    if props.get("plain"):
+        style = f"background:transparent;color:{ink};border:1px solid transparent"
+    elif variant == "primary":
         style = f"background:{t['primary_bg']};color:{t['primary_fg']};border:1px solid {t['primary_bg']}"
-    elif props.get("plain"):
-        style = f"background:transparent;color:{t['dim']};border:1px solid transparent"
     else:
-        style = f"background:transparent;color:{t['text']};border:1px solid {t['line']}"
+        style = f"background:{t['button']};color:{ink};border:1px solid {t['button']}"
     key = f"<span style='opacity:.5;margin-left:6px'>{html.escape(hotkey)}</span>" if hotkey else ""
     return f"<button style='{style};border-radius:8px;padding:6px 14px;font:inherit;font-weight:500'>{label}{key}</button>"
 
@@ -170,7 +173,10 @@ SCHEME = {"dark": "0", "light": "1"}
 def shoot(markup, out, width, theme="dark"):
     with tempfile.NamedTemporaryFile("w", suffix=".html", delete=False) as handle:
         handle.write(markup)
+    # MODZ_PREVIEW_SCALE=2 draws as a Retina desktop does: fine lines and pixel glyphs read as they will there.
+    scale = os.environ.get("MODZ_PREVIEW_SCALE", "1")
     subprocess.run([CHROME, "--headless=new", "--no-sandbox", "--disable-gpu", "--hide-scrollbars", f"--window-size={width + 40},1400",
+                    f"--force-device-scale-factor={scale}",
                     f"--blink-settings=preferredColorScheme={SCHEME[theme]}", "--force-prefers-reduced-motion",
                     f"--screenshot={out}", f"file://{handle.name}"], capture_output=True, timeout=60, check=False)
     trim(out)

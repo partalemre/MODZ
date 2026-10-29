@@ -1,11 +1,15 @@
-// The "Effort" pane: the newest turns, each with its effort and model, and the mode picker. The desktop
-// draws the head as the kit's Svg header; the terminal draws it in text. Pure: no `$`.
+// The "Effort" pane: the latest effort and model with the mode in force, the mode picker, and the newest turns.
+// One surface, no card: the pane is the surface. The desktop draws the head and the group label in Svg; the
+// terminal draws them in text. Pure: no `$`.
 import type { RenderElement, RenderSurface } from 'claude-code'
 
 import type { EffortMode, TurnRow } from '../types'
 import { paneMotion } from './kit/moving'
-import { Card, paneInnerWidth, Eyebrow, isTextSurface } from './kit/ui'
+import { isTextSurface, PANE_PX_PER_CELL } from './kit/ui'
 import type { DrawCtx, Ui } from './kit/ui'
+import { place, toPic } from './kit/svg-core'
+import type { SvgPic } from './kit/svg-core'
+import { eyebrow, linesPart } from './kit/svg-text'
 import { palette } from './kit/tokens'
 import { MODES } from './route'
 import { effortText, isLowered, shortModel, TURNS_KEPT } from './turns'
@@ -99,10 +103,57 @@ function stackedRow(ctx: RowCtx, o: { row: TurnRow; index: number }) {
   )
 }
 
+// The pane's drawings on the desktop (kit/moving.ts): reset as the pane opens, so they cascade in each time.
+export const motion = paneMotion()
+
+const HEAD = { title: 16, titleWeight: 600, titleLine: 22, sub: 12, subLine: 16, gap: 4 }
+// The pane fills its column; the hub's pane uses the same reckoning (one column of slack).
+const MIN_WIDTH = 240
+export const paneWidth = (columns: number): number => Math.max(MIN_WIDTH, (columns - 1) * PANE_PX_PER_CELL)
+
+// Headline 16/600 over the mode's line in text.mid; the pane's title already names it, so no label above.
+function headSvg(o: { headline: string; sub: string; width: number }): SvgPic {
+  const title = linesPart({ text: o.headline, width: o.width, size: HEAD.title, weight: HEAD.titleWeight, lineHeight: HEAD.titleLine, maxLines: 1 })
+  const sub = linesPart({ text: o.sub, width: o.width, size: HEAD.sub, weight: 400, lineHeight: HEAD.subLine, paint: 'mid' })
+  const top = title.height + HEAD.gap
+  const alt = `${o.headline}. ${o.sub}`
+
+  return toPic({ body: title.body + place(sub.body, 0, top), width: o.width, height: top + sub.height, alt })
+}
+
+// The kit's change cue is a sheen; a constant `shows` redraws a change quietly, keeping only the entrance.
+const QUIET = { shows: 'quiet' }
+
+function svgOf(ui: Ui, key: string, pic: SvgPic): RenderElement {
+  const { Svg } = ui as Ui & { Svg: any }
+
+  return <Svg key={key} {...motion.pic(key, pic, QUIET)} />
+}
+
+function head(draw: DrawCtx, o: { headline: string; sub: string; width: number }): RenderElement {
+  const { Box, Text } = draw.ui
+  if (!isTextSurface(draw.ui, draw.surface)) return svgOf(draw.ui, 'er-head', headSvg(o))
+
+  return (
+    <Box flexDirection="column">
+      <Text bold>{o.headline}</Text>
+      <Text dimColor>{o.sub}</Text>
+    </Box>
+  )
+}
+
+// A group's label: sentence case, 12/600 text.lo, no dot; on the terminal a bold dim line.
+function groupLabel(draw: DrawCtx, o: { text: string; width: number }): RenderElement {
+  const { Text } = draw.ui
+  if (!isTextSurface(draw.ui, draw.surface)) return svgOf(draw.ui, 'er-group', eyebrow(o))
+
+  return <Text dimColor bold>{o.text}</Text>
+}
+
 function turnsBlock(draw: DrawCtx, o: { view: PaneView; width: number; columns: number }) {
   const { Box, Text } = draw.ui
   const { turns, now } = o.view
-  const head = Eyebrow(draw, { text: words().lastTurns(TURNS_KEPT), width: o.width })
+  const head = groupLabel(draw, { text: words().lastTurns(TURNS_KEPT), width: o.width })
   if (turns.length === 0) {
     return (
       <Box flexDirection="column" rowGap={1}>
@@ -149,19 +200,17 @@ function modePicker(draw: DrawCtx, o: { mode: EffortMode; onMode: (mode: EffortM
   )
 }
 
-// The pane's drawings on the desktop (kit/moving.ts): reset as the pane opens, so they cascade in each time.
-export const motion = paneMotion()
-
 export function paneTree(look: PaneLook, o: { view: PaneView; onMode: (mode: EffortMode) => void }): RenderElement {
   const draw: DrawCtx = { ui: look.ui, surface: look.surface, isLight: look.isLight, motion }
-  const width = paneInnerWidth(look.columns)
+  const { Box } = look.ui
+  const width = paneWidth(look.columns)
   const { mode } = o.view
-  const said = words()
-  const header = { icon: 'bolt' as const, eyebrow: said.eyebrow, meta: said.modeName[mode], headline: headlineOf(o.view.turns), sub: said.modeLine[mode], width }
 
-  return Card(draw, {
-    role: 'read',
-    header,
-    children: [turnsBlock(draw, { view: o.view, width, columns: look.columns }), modePicker(draw, { mode, onMode: o.onMode })],
-  })
+  return (
+    <Box flexDirection="column" rowGap={1}>
+      {head(draw, { headline: headlineOf(o.view.turns), sub: words().modeLine[mode], width })}
+      {modePicker(draw, { mode, onMode: o.onMode })}
+      {turnsBlock(draw, { view: o.view, width, columns: look.columns })}
+    </Box>
+  )
 }

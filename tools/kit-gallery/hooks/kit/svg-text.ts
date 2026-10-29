@@ -1,16 +1,14 @@
-// MODZ kit — type in Svg: the eyebrow row that opens every card, and wrapped lines
+// MODZ kit — type in Svg: the quiet label row over a group (sentence case, text.lo), and wrapped lines
 // (headline, body) with an optional highlighted phrase.
-import { baseline, escapeXml, num, rectEl, sans, TYPE, textEl, toPic, upperTr } from './svg-core'
+import { baseline, escapeXml, rectEl, sans, TYPE, textEl, toPic } from './svg-core'
 import type { Part, SvgPic } from './svg-core'
 import { fitText, wrapText } from './svg-metrics'
 import type { Role } from './tokens'
 
 export const EYEBROW_H = 16
 const DOT = 6
-const DOT_GAP = 6
+const DOT_GAP = 7
 const META_GAP = 12
-const RULE_GAP = 8
-const RULE_Y = EYEBROW_H / 2 + 0.5
 const META = TYPE.label
 
 export type EyebrowOpts = {
@@ -19,30 +17,26 @@ export type EyebrowOpts = {
   role?: Role
   hasDot?: boolean
   meta?: string
+  // Kept for callers; a label row draws no rule: space, not lines, separates groups.
   hasRule?: boolean
 }
 
 const eyebrowTracking = (): number => TYPE.eyebrow.size * TYPE.eyebrow.tracking
 
-// Width of an uppercased, tracked eyebrow label (Svg letter-spacing follows every glyph).
+// Width of a label row's text (Svg letter-spacing follows every glyph).
 export const eyebrowWidth = (label: string): number =>
   sans(TYPE.eyebrow.size, TYPE.eyebrow.weight)(label) + [...label].length * eyebrowTracking()
 
 export function eyebrowPart(o: EyebrowOpts): Part {
-  const paint = o.role ?? 'lo'
+  // The role colours only the status dot: a coloured label over a heading is decoration.
   const y = baseline(0, EYEBROW_H, TYPE.eyebrow.size)
   const left = o.hasDot ? DOT + DOT_GAP : 0
   const meta = o.meta ? fitText(o.meta, o.width / 2, sans(META.size, META.weight)) : ''
   const metaW = meta ? sans(META.size, META.weight)(meta) + META_GAP : 0
-  const label = fitText(upperTr(o.text), o.width - left - metaW, eyebrowWidth)
-  const labelEnd = left + eyebrowWidth(label)
-  const ruleEnd = o.width - metaW
+  const label = fitText(o.text, o.width - left - metaW, eyebrowWidth)
   const parts = [
-    o.hasDot ? `<circle cx="${DOT / 2}" cy="${EYEBROW_H / 2}" r="${DOT / 2}" class="f-${paint}"/>` : '',
-    textEl({ x: left, y, text: label, paint, ...TYPE.eyebrow, tracking: eyebrowTracking() }),
-    o.hasRule && ruleEnd - labelEnd > RULE_GAP * 2
-      ? `<path d="M${num(labelEnd + RULE_GAP)} ${RULE_Y}H${num(ruleEnd)}" class="s-line"/>`
-      : '',
+    o.hasDot ? `<circle cx="${DOT / 2}" cy="${EYEBROW_H / 2}" r="${DOT / 2}" class="f-${o.role ?? 'lo'}"/>` : '',
+    textEl({ x: left, y, text: label, paint: 'lo', ...TYPE.eyebrow, tracking: eyebrowTracking() }),
     meta ? textEl({ x: o.width, y, text: meta, paint: 'lo', ...META, anchor: 'end' }) : '',
   ]
 

@@ -142,8 +142,10 @@ async function openPane($: EngineInterface, pane: string): Promise<void> {
   }
   answered = null
   await $.state.set(OPEN, { pane, at: Date.now() })
-  // The mod answered inside this write, where the engine hands the hub's own hook no event (`.catch`, re-entry).
-  if (answered !== null) await stepAside($, answered)
+  // The mod answered inside this write, where the hub's own hooks hear nothing: engines up to 2.1.296 ran its
+  // `.catch` (re-entry), 2.1.309 skips that too. So the panel itself tells: a mod pane that took it leaves the hub
+  // no longer shown.
+  if (answered !== null || !isHubShown(await $.ui.panes())) await stepAside($, answered ?? pane)
 }
 
 // The pane a mod said it opened while the hub's own write was still running; read once that write settles.
@@ -207,6 +209,16 @@ function hubHooks(on: On, options: Options): void {
 
     return started
   })
+
+  // A desktop that comes back (the app restarted, a session resumed) gets no session.start, and its panes are gone:
+  // the hub comes back too, without the keyboard, unless one of its own panes is already up.
+  on('session.attach', async ($, e, next) => {
+    const done = await next(e)
+    const isDesktop = e.surface === 'desktop'
+    if (isDesktop && options.openOnStart !== false && (await $.ui.panes()).length === 0) await show($, PANE, false)
+
+    return done
+  }).catch(($, e, next) => next(e))
 
   // Every mod reports its line under its own `hub` key; the hub keeps the latest of each.
   on('state.set', { key: 'hub' }, async ($, e, next) => {

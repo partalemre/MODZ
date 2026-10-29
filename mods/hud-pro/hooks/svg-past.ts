@@ -1,26 +1,25 @@
 import { compact } from './format'
 import { LEVELS } from './past'
-import { escape, eyebrow, svgDoc } from './svg'
+import { escape, groupLabel, svgDoc } from './svg'
 import type { SvgDoc } from './svg'
 import { words } from './words'
 import type { HudCell, HudPast } from '../types'
 
-// The history card on the desktop: eyebrow and the range, four figures in two columns (active days, sessions,
+// The history section on the desktop, on the pane with no box: its label and the range, four figures in two columns (active days, sessions,
 // tokens, the most used model), and beside them a GitHub-style heatmap, a column per week and a row per weekday,
-// Sunday on top, each day shaded in the one accent by its tokens against the range's busiest day. Where the
+// Sunday on top, each day shaded in plain ink by its tokens against the range's busiest day. Where the
 // card is too narrow for both side by side, the heatmap goes under the figures.
 
-const PAD = 14
-const RADIUS = 10
-const EYEBROW_Y = 23
-const TOP = 40
+const PAD = 0
+const LABEL_Y = 13
+const TOP = 28
 const STAT = { w: 104, h: 48, value: 17, label: 10.5, labelY: 34 } as const
 const STAT_COLUMNS = 2
 const CELL = { size: 11, gap: 3, radius: 2 } as const
 const DAYS_PER_WEEK = 7
 const HEAT_GAP = 16
-const BOTTOM_PAD = 14
-// The shade of each level above none, in the accent: the busiest day is full strength.
+const BOTTOM_PAD = 2
+// The shade of each level above none, in ink: the busiest day is full strength.
 const LEVEL_OPACITY = [0, 0.3, 0.5, 0.75, 1] as const
 
 export type PastCardSpec = { past: HudPast; width: number }
@@ -50,7 +49,7 @@ function statsSvg(past: HudPast, top: number): string {
 }
 
 function cellSvg(cell: HudCell, at: { x: number; y: number }): string {
-  const paint = cell.level === 0 ? 'class="f-track"' : `class="f-read" fill-opacity="${LEVEL_OPACITY[Math.min(LEVELS, cell.level)]}"`
+  const paint = cell.level === 0 ? 'class="f-track"' : `class="f-mid" fill-opacity="${LEVEL_OPACITY[Math.min(LEVELS, cell.level)]}"`
   const tip = escape(words().dayTokens(cell.day, compact(cell.tokens)))
 
   return `<rect ${paint} x="${at.x}" y="${at.y}" width="${CELL.size}" height="${CELL.size}" rx="${CELL.radius}"><title>${tip}</title></rect>`
@@ -81,11 +80,10 @@ export function pastSvg(spec: PastCardSpec): SvgDoc {
   const height = (isBeside ? TOP + Math.max(statsH, heatH) : heatAt.y + heatH) + BOTTOM_PAD
   const range = words().lastDays(past.range)
   const head = [
-    eyebrow(words().pastTitle, { x: PAD, y: EYEBROW_Y, cls: 'f-lo' }),
-    `<text class="f-lo" x="${width - PAD}" y="${EYEBROW_Y}" font-size="10.5" text-anchor="end">${escape(range)}</text>`,
+    groupLabel(words().pastTitle, { x: PAD, y: LABEL_Y }),
+    `<text class="f-lo" x="${width - PAD}" y="${LABEL_Y}" font-size="12" text-anchor="end">${escape(range)}</text>`,
   ].join('')
-  const frame = `<rect class="f-inset s-line" x=".5" y=".5" width="${width - 1}" height="${height - 1}" rx="${RADIUS}"/>`
   const alt = [words().pastTitle, range, ...statsOf(past).map(stat => `${stat.label} ${stat.value}`)].join(' · ')
 
-  return svgDoc({ width, height, body: frame + head + statsSvg(past, TOP) + heatSvg(past.cells, heatAt), alt })
+  return svgDoc({ width, height, body: head + statsSvg(past, TOP) + heatSvg(past.cells, heatAt), alt })
 }

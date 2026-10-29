@@ -42,9 +42,17 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
     const text = await drawnText(ui)
 
-    for (const word of [/17 mods on/, /WORK|Work/, /SAFETY|Safety/, /METER|Meter/, /Agents/, /Checkpoints/, /Usage/, /Look/, /Mods/, /3 running/, /Now/]) expect(text).toMatch(word)
-    expect((await ui.find({ key: 'open-focus' }))?.props.label).toBe('Open Agents')
-    expect((await ui.find({ key: 'open-tests' }))?.props.label).toBe('Open')
+    for (const word of [/17 mods on/, /WORK|Work/, /SAFETY|Safety/, /METER|Meter/, /Agents/, /Checkpoints/, /Usage/, /Look/, /Mods/, /3 running/]) expect(text).toMatch(word)
+    // The terminal keeps an "Open" button per row and leads with what matters now; on the desktop the whole row is
+    // a blank cover over its drawing, and no card above the list repeats a row.
+    if (surface === 'terminal') {
+      expect(text).toMatch(/Now/)
+      expect((await ui.find({ key: 'open-focus' }))?.props.label).toBe('Open Agents')
+      expect((await ui.find({ key: 'open-tests' }))?.props.label).toBe('Open')
+    } else {
+      expect(await ui.find({ key: 'open-focus' })).toBeUndefined()
+      expect((await ui.find({ key: 'open-tests' }))?.props).toMatchObject({ plain: true })
+    }
     expect(text).not.toMatch(TURKISH_ONLY)
   })
 
@@ -53,7 +61,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await $.session.start({ surface, isInteractive: true, cwd: '/work' })
     const text = await drawnText(await $.ui.mount({ ...PANE, surface }))
 
-    expect(text).toMatch(/All quiet/)
+    // The desktop has no head: a quiet hub is its rows with nothing on their right.
+    if (surface === 'terminal') expect(text).toMatch(/All quiet/)
     expect(text).not.toMatch(TURKISH_ONLY)
   })
 

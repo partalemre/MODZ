@@ -1,7 +1,7 @@
-// Small SVG builders: text that is measured, fitted and wrapped without a renderer, eyebrows,
-// and icon tiles. Every drawing ends with the reduced-motion rule (DESIGN.md §5).
+// Small SVG builders: text that is measured, fitted and wrapped without a renderer, group labels
+// and line icons. Every drawing ends with the reduced-motion rule (DESIGN.md §5).
 
-import { FONT, MONO, upper } from './theme'
+import { FONT, MONO } from './theme'
 
 export const esc = (text: string): string =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -12,7 +12,7 @@ const BOLD_GROWTH = 1.06
 /** Advance widths as a share of the font size, for a system sans and a monospace. */
 const GLYPH = { narrow: 0.3, wide: 0.82, capital: 0.64, space: 0.28, other: 0.54, mono: 0.6 }
 
-export type Font = { size: number; weight?: number; isMono?: boolean; tracking?: number }
+export type Font = { size: number; weight?: number; isMono?: boolean }
 
 function share(c: string): number {
   if (NARROW.includes(c)) return GLYPH.narrow
@@ -24,10 +24,9 @@ function share(c: string): number {
 /** Width of a string in pixels, close enough to lay out a card. */
 export function measure(text: string, font: Font): number {
   const chars = [...text]
-  const tracking = (font.tracking ?? 0) * chars.length
-  if (font.isMono) return chars.length * font.size * GLYPH.mono + tracking
+  if (font.isMono) return chars.length * font.size * GLYPH.mono
   const base = chars.reduce((sum, c) => sum + font.size * share(c), 0)
-  return base * ((font.weight ?? 400) >= 600 ? BOLD_GROWTH : 1) + tracking
+  return base * ((font.weight ?? 400) >= 600 ? BOLD_GROWTH : 1)
 }
 
 /** The text cut with an ellipsis to fit `width`. */
@@ -67,18 +66,16 @@ export function text(t: TextSpec): string {
     `x="${t.x}" y="${t.y}" fill="${t.fill}" font-size="${t.size}" font-weight="${t.weight ?? 400}"`,
     `font-family="${t.isMono ? MONO : FONT}"`,
     t.isMono ? 'font-variant-numeric="tabular-nums"' : '',
-    t.tracking ? `letter-spacing="${t.tracking}"` : '',
     t.anchor && t.anchor !== 'start' ? `text-anchor="${t.anchor}"` : '',
     t.isItalic ? 'font-style="italic"' : '',
   ]
   return `<text ${attrs.filter(Boolean).join(' ')}>${esc(t.text)}</text>`
 }
 
-export const EYEBROW: Font = { size: 10.5, weight: 700, tracking: 1.05 }
+export const LABEL: Font = { size: 12, weight: 600 }
 
-/** BÜYÜK HARF label, tracked, in the role colour. */
-export const eyebrow = (at: { x: number; y: number; fill: string }, label: string): string =>
-  text({ ...EYEBROW, ...at, text: upper(label) })
+/** A group label: sentence case, 12/600, quiet (DESIGN.md §0.2). */
+export const label = (at: { x: number; y: number; fill: string }, words: string): string => text({ ...LABEL, ...at, text: words })
 
 export const ICON_STROKE = 1.75
 
@@ -88,11 +85,6 @@ export type IconSpec = { x: number; y: number; size: number; color: string }
 export const icon = (paths: string, { x, y, size, color }: IconSpec): string =>
   `<g transform="translate(${x} ${y}) scale(${size / 24})" fill="none" stroke="${color}" stroke-width="${ICON_STROKE * 24 / size}" ` +
   `stroke-linecap="round" stroke-linejoin="round">${paths}</g>`
-
-const TILE_RADIUS = 10
-
-export const tile = ({ x, y, size, tint }: { x: number; y: number; size: number; tint: string }): string =>
-  `<rect x="${x}" y="${y}" width="${size}" height="${size}" rx="${TILE_RADIUS}" fill="${tint}"/>`
 
 const REDUCED = '@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}'
 

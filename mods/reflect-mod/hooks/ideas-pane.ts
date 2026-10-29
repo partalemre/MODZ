@@ -1,6 +1,6 @@
-// The Ideas pane `/mine` fills: a head (Svg on the desktop, an eyebrow line in text elsewhere), then one
-// framed row per idea, or per local candidate when the model's answer was unusable. A rule row saves through
-// reflect's own card; the other kinds copy their text.
+// The Ideas pane `/mine` fills: a head (Svg on the desktop, a label line in text elsewhere), then one
+// row per idea (framed on the terminal, set apart by space on the desktop), or per local candidate when the
+// model's answer was unusable. A rule row saves through reflect's own card; the other kinds copy their text.
 
 import type { Elements, RenderElement, RenderSurface } from 'claude-code'
 
@@ -8,7 +8,6 @@ import type { Candidate, Idea, IdeasView } from '../types'
 import type { Look } from './card'
 import { headSvg } from './ideas-svg'
 import { paneMotion } from './kit/moving'
-import { upper } from './lang'
 import { mineWords } from './mine-words'
 import { MAX_CHATS } from './transcripts'
 import { TERMINAL, palette } from './theme'
@@ -37,10 +36,8 @@ function tone(ink: Ink, level: Level): { color?: string; dimColor?: boolean } {
   return level === 'lo' ? { dimColor: true } : {}
 }
 
-/** The kind label: a highlight span in Orchid, the pane's one accent. */
-const tag = (ink: Ink, label: string): RenderElement => (ink.isDesktop
-  ? ink.ui.Text({ backgroundColor: ink.p.role.plan.tint, color: ink.p.role.plan.fg, children: [` ${label} `] })
-  : ink.ui.Text({ color: TERMINAL.plan, children: [`[${label}]`] }))
+/** The kind label: quiet ink, no colour of its own. */
+const tag = (ink: Ink, label: string): RenderElement => ink.ui.Text({ ...tone(ink, 'lo'), children: [`${label} · `] })
 
 function headOf(view: IdeasView): { headline: string; meta: string } {
   const says = mineWords()
@@ -67,7 +64,7 @@ function head(ink: Ink, view: IdeasView, columns: number): RenderElement {
   }
   const { Box, Text } = ink.ui
   return Box({ flexDirection: 'column', children: [
-    Text({ children: [Text({ bold: true, color: TERMINAL.plan, children: [`● ${upper(eyebrow)}`] }), Text({ dimColor: true, children: [meta ? `  ${meta}` : ''] })] }),
+    Text({ children: [Text({ bold: true, children: [eyebrow] }), Text({ dimColor: true, children: [meta ? `  ${meta}` : ''] })] }),
     Text({ bold: true, wrap: 'wrap', children: [isLoading ? `◐ ${headline}` : headline] }),
   ] })
 }
@@ -78,17 +75,18 @@ function action(ink: Ink, c: PaneInput, i: number): RenderElement {
   const state = c.states[i]
   if (idea.type !== 'rule') {
     const label = c.copied === idea.text ? says.copied : says.copy
-    return ink.ui.Button({ key: `idea-copy:${i}`, label, variant: 'secondary', onPress: press => c.on.copy(i, press.surface) })
+    return ink.ui.Button({ key: `idea-copy:${i}`, label, plain: true, dimColor: true, onPress: press => c.on.copy(i, press.surface) })
   }
-  if (state === undefined) return ink.ui.Button({ key: `idea-save:${i}`, label: says.save, variant: 'secondary', onPress: () => c.on.save(i) })
+  if (state === undefined) return ink.ui.Button({ key: `idea-save:${i}`, label: says.save, plain: true, onPress: () => c.on.save(i) })
   const text = { waiting: says.waiting, known: says.known, saved: says.saved }[state]
-  const check = ink.ui.Text({ color: ink.isDesktop ? ink.p.role.ok.fg : TERMINAL.ok, children: ['✓'] })
+  const check = ink.ui.Text({ color: ink.isDesktop ? ink.p.role.ok.fg : TERMINAL.ok, children: ['✓'] }) // the result itself: the one place Moss stays
   return ink.ui.Text({ ...tone(ink, 'mid'), children: [check, ` ${text}`] })
 }
 
+// The terminal frames each row; the desktop sets rows apart by space (the pane's gap), not boxes.
 function frame(ink: Ink, o: { key: string; children: RenderElement[] }): RenderElement {
-  const colours = ink.isDesktop ? { borderColor: ink.p.line, backgroundColor: ink.p.card } : { borderDimColor: true }
-  return ink.ui.Box({ key: o.key, flexDirection: 'column', paddingX: 1, borderStyle: 'round', ...colours, children: o.children })
+  if (ink.isDesktop) return ink.ui.Box({ key: o.key, flexDirection: 'column', children: o.children })
+  return ink.ui.Box({ key: o.key, flexDirection: 'column', paddingX: 1, borderStyle: 'round', borderDimColor: true, children: o.children })
 }
 
 function ideaRow(ink: Ink, c: PaneInput, i: number): RenderElement {
@@ -96,7 +94,7 @@ function ideaRow(ink: Ink, c: PaneInput, i: number): RenderElement {
   const idea = c.view.ideas[i] as Idea
   const says = mineWords()
   return frame(ink, { key: `idea:${i}`, children: [
-    Text({ wrap: 'wrap', children: [tag(ink, says.type[idea.type]), ' ', Text({ bold: true, ...tone(ink, 'hi'), children: [idea.text] })] }),
+    Text({ wrap: 'wrap', children: [tag(ink, says.type[idea.type]), Text({ bold: true, ...tone(ink, 'hi'), children: [idea.text] })] }),
     Text({ wrap: 'wrap', ...tone(ink, 'mid'), children: [idea.why] }),
     Box({ flexDirection: 'row', gap: 1, flexWrap: 'wrap', alignItems: 'center', children: [
       Text({ ...tone(ink, 'lo'), children: [says.seen(idea.count, idea.chats)] }), Box({ flexGrow: 1 }), action(ink, c, i),
@@ -107,7 +105,7 @@ function ideaRow(ink: Ink, c: PaneInput, i: number): RenderElement {
 function candidateRow(ink: Ink, cand: Candidate, i: number): RenderElement {
   const says = mineWords()
   return frame(ink, { key: `cand:${i}`, children: [
-    ink.ui.Text({ wrap: 'wrap', children: [tag(ink, says.kind[cand.kind]), ' ', ink.ui.Text({ ...tone(ink, 'hi'), children: [cand.sample] })] }),
+    ink.ui.Text({ wrap: 'wrap', children: [tag(ink, says.kind[cand.kind]), ink.ui.Text({ ...tone(ink, 'hi'), children: [cand.sample] })] }),
     ink.ui.Text({ ...tone(ink, 'lo'), children: [says.seen(cand.count, cand.chats)] }),
   ] })
 }

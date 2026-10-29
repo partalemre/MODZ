@@ -26,11 +26,11 @@ describe('in English', () => {
       expect(dropped.drop).toBe('cache-tax: your message is on hold, choose on the card (cold cache, up to $4.01).')
       if (surface === 'desktop') {
         const header = String((await ui.find({ type: 'Svg' }))?.props.source)
-        expect(header).toContain('CACHE TAX')
+        expect(header).not.toContain('CACHE TAX')
         expect(header).toContain('Your message is on hold')
         expect(header).toContain('The cache went cold 6h ago.')
       } else {
-        expect(await ui.find({ type: 'Text', text: '● CACHE TAX' })).not.toBe(undefined)
+        expect((await ui.find({ type: 'Text', text: 'Cache tax' }))?.props.dimColor).toBe(true)
         expect(await ui.find({ type: 'Text', text: '~200,502 tokens rewritten · $20/MTok' })).not.toBe(undefined)
         expect(await ui.find({ type: 'Text', text: '✓ Pay once and keepwarm holds the cache for 3h.' })).not.toBe(undefined)
       }

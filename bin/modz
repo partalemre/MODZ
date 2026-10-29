@@ -18,6 +18,9 @@ modz <command>
   new <name> [desc]    make a mod from templates/blank and add it to the marketplace
   check [name]         validate + test on the CLI and the desktop engine (all mods without a name)
   desk                 end to end on the desktop engine: hub rows, panes, the band and presses
+  shot [--pane] [--title t] [out]
+                       a PNG of the Claude window, covered or not (--pane: the right panel; --title: the
+                       pop-out window whose title holds t, e.g. a session opened in its own window)
   sync                 bring marketplace.json in line with mods/
   import <folder>      copy a mod from a dev-mods folder into MODZ
   dev                  show every session mod under ~/.claude/dev-mods
@@ -117,6 +120,27 @@ cmd_check() {
 # The real desktop engine over the Code tab's control protocol: presses every hub row from an older tree.
 cmd_desk() { python3 -I "$ROOT/tools/desk/check.py" "$ROOT"; }
 
+# Agents cannot see the desktop app; this hands them its window. The panel crop is the right PANE_PT points.
+PANE_PT=540
+cmd_shot() {
+  local pane=0 title="" out id w scale
+  while [[ "${1:-}" == --* ]]; do
+    case "$1" in --pane) pane=1; shift ;; --title) title="${2:?a title is needed}"; shift 2 ;; *) break ;; esac
+  done
+  out="${1:-${TMPDIR:-/tmp}/modz-shot.png}"
+  # Largest window first: the main window, unless a title picks a pop-out.
+  read -r id _ _ w _ < <(swift "$ROOT/tools/shot/windows.swift" Claude | grep -F -- "$title" | head -1) || true
+  [[ -n "${id:-}" ]] || { echo "modz shot: no Claude window on screen" >&2; return 1; }
+  # -o: no window shadow, -x: no sound. Needs Screen Recording for the app running this shell.
+  screencapture -o -x -l"$id" "$out"
+  if (( pane )); then
+    scale=$(( $(sips -g pixelWidth "$out" | awk '/pixelWidth/{print $2}') / w ))
+    sips -c "$(sips -g pixelHeight "$out" | awk '/pixelHeight/{print $2}')" $(( PANE_PT * scale )) \
+      --cropOffset 0 $(( (w - PANE_PT) * scale )) "$out" >/dev/null
+  fi
+  echo "$out"
+}
+
 cmd_import() {
   local src="${1:?a source folder is needed}" name
   name="$(basename "$src")"
@@ -183,6 +207,7 @@ case "${1:-}" in
   new) shift; cmd_new "$@" ;;
   check) shift; cmd_check "$@" ;;
   desk) cmd_desk ;;
+  shot) shift; cmd_shot "$@" ;;
   sync) cmd_sync ;;
   import) shift; cmd_import "$@" ;;
   dev) cmd_dev ;;

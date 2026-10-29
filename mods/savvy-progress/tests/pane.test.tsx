@@ -13,10 +13,11 @@ for (const surface of SURFACES) {
   const all = async (ui: any) => (surface === 'terminal' ? text(ui) : `${await text(ui)}\n${await svgOf(ui)}`)
   const hasHead = async (ui: any, label: string) =>
     surface === 'terminal' ? (await ui.find({ type: 'Text', text: label })) !== undefined : (await svgOf(ui)).includes(label)
-  // The card's disclosure: the title itself on the terminal, a "Detay" button under the drawn head on the desktop.
-  const toggleLabel = (isOpen: boolean, title: string) => {
-    if (surface === 'terminal') return `${isOpen ? '▾' : '▸'} ${title}`
-    return isOpen ? 'Gizle ▴' : 'Detay ▾'
+  // The row's disclosure: the title itself on the terminal; on the desktop the whole row is the press, its drawn
+  // head saying what pressing it does ("Detay" to open, "Gizle" to close).
+  const isShownOpen = async (ui: any, isOpen: boolean, title: string) => {
+    if (surface === 'terminal') return (await ui.find({ key: 'open-a3' }))?.props?.label === `${isOpen ? '▾' : '▸'} ${title}`
+    return (await svgOf(ui)).includes(`${title}: Nori`) && (await svgOf(ui)).includes(isOpen ? '(Gizle)' : '(Detay)')
   }
 
   test(`${surface}: rows are titled by the Agent description with tier, model, tool and meta`, async ($, on) => {
@@ -92,11 +93,11 @@ for (const surface of SURFACES) {
     await finish($, 'a3')
     const ui = await mount($)
     expect(await text(ui)).not.toContain('İş geçmişi')
-    expect((await ui.find({ key: 'open-a3' }))?.props?.label).toBe(toggleLabel(false, 'Build the landing page'))
+    expect(await isShownOpen(ui, false, 'Build the landing page')).toBe(true)
 
     await ui.press({ key: 'open-a3' })
     const open = await text(ui)
-    expect((await ui.find({ key: 'open-a3' }))?.props?.label).toBe(toggleLabel(true, 'Build the landing page'))
+    expect(await isShownOpen(ui, true, 'Build the landing page')).toBe(true)
     expect(open).toContain('Görev')
     expect(open).toContain('do it')
     expect(open).toContain('İş geçmişi · 2 araç')

@@ -7,7 +7,6 @@ export type Words = {
   title: string
   hint: string
   command: string
-  eyebrow: string
   modeLabel: string
   modeName: Record<EffortMode, string>
   modeLine: Record<EffortMode, string>
@@ -38,7 +37,6 @@ const EN: Words = {
   title: 'Effort',
   hint: "Each turn's effort and model",
   command: "Open the Effort pane: each turn's effort and model",
-  eyebrow: 'Effort',
   modeLabel: 'Mode',
   modeName: { show: 'Show only', auto: 'Route', off: 'Off' },
   modeLine: {
@@ -63,7 +61,6 @@ const TR: Words = {
   title: 'Efor',
   hint: 'Her turun eforu ve modeli',
   command: 'Efor panelini aç: her turun eforu ve modeli',
-  eyebrow: 'Efor',
   modeLabel: 'Kip',
   modeName: { show: 'Yalnızca göster', auto: 'Yönlendir', off: 'Kapalı' },
   modeLine: {

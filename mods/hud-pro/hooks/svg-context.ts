@@ -1,27 +1,24 @@
 import type { ContextView, Segment } from './breakdown'
 import { compact } from './format'
-import { shine } from './kit/motion'
-import { escape, eyebrow, measure, sparkline, svgDoc } from './svg'
+import { escape, groupLabel, measure, sparkline, svgDoc } from './svg'
 import type { SvgDoc } from './svg'
 import { words } from './words'
 
-// The context card on the desktop: eyebrow and the estimate, one segmented bar of the window by
-// category in a single accent (Tide, stepped by opacity; the free space is the bare track), a legend
-// that wraps, then the last turns' fill as a sparkline beside the "~N turns left" estimate. While a
-// turn runs, a light runs along the window's used part.
+// The context section on the desktop, on the pane with no box: its label and the estimate, one segmented bar
+// of the window by category in plain ink (stepped by opacity; the free space is the bare track), a legend that
+// wraps, then the last turns' fill as a sparkline beside the "~N turns left" estimate.
 
-export type ContextCardSpec = { view: ContextView | null; turns: readonly number[]; forecast: string; meta: string; width: number; isLive?: boolean }
+export type ContextCardSpec = { view: ContextView | null; turns: readonly number[]; forecast: string; meta: string; width: number }
 
-const PAD = 14
-const RADIUS = 10
-const EYEBROW_Y = 23
-const BAR = { y: 36, h: 8 } as const
-const LEGEND = { top: 64, row: 18, size: 11.5, swatch: 8, gap: 16, inner: 6 } as const
+const PAD = 0
+const LABEL_Y = 13
+const BAR = { y: 26, h: 8 } as const
+const LEGEND = { top: 54, row: 18, size: 11.5, swatch: 8, gap: 16, inner: 6 } as const
 const SPARK = { w: 120, h: 22, gap: 12 } as const
 const NOTE_SIZE = 11.5
 const FOOT_H = 40
 const EMPTY_H = 22
-const BOTTOM_PAD = 12
+const BOTTOM_PAD = 4
 // Used rows step down in strength by rank; the "Other" fold is the faintest.
 const USED_OPACITY = [1, 0.72, 0.5, 0.34] as const
 const OTHER_OPACITY = 0.2
@@ -32,17 +29,10 @@ function paintOf(segment: Segment, rank: number, isSwatch = false): string {
   if (segment.kind === 'reserve') return 'class="f-strong"'
   const opacity = segment.kind === 'other' ? OTHER_OPACITY : (USED_OPACITY[rank] ?? OTHER_OPACITY)
 
-  return `class="f-read" fill-opacity="${opacity}"`
+  return `class="f-mid" fill-opacity="${opacity}"`
 }
 
-function liveLight(view: ContextView, width: number): string {
-  const used = (view.usedTokens / view.total) * width
-
-  return used > 0 ? shine({ id: 'ctx-live', x: PAD, y: BAR.y, width: used, height: BAR.h }) : ''
-}
-
-function barSvg(view: ContextView, spec: { width: number; isLive: boolean }): string {
-  const { width } = spec
+function barSvg(view: ContextView, width: number): string {
   let x = PAD
   const parts = view.segments.map((segment, rank) => {
     const share = (segment.tokens / view.total) * width
@@ -53,9 +43,7 @@ function barSvg(view: ContextView, spec: { width: number; isLive: boolean }): st
   })
   const clip = `<clipPath id="ctx-bar"><rect x="${PAD}" y="${BAR.y}" width="${width}" height="${BAR.h}" rx="${BAR.h / 2}"/></clipPath>`
 
-  const light = spec.isLive ? liveLight(view, width) : ''
-
-  return `${clip}<g clip-path="url(#ctx-bar)"><rect class="f-track" x="${PAD}" y="${BAR.y}" width="${width}" height="${BAR.h}"/>${parts.join('')}</g>${light}`
+  return `${clip}<g clip-path="url(#ctx-bar)"><rect class="f-track" x="${PAD}" y="${BAR.y}" width="${width}" height="${BAR.h}"/>${parts.join('')}</g>`
 }
 
 // One legend entry: swatch, label, tokens; the entries wrap to new rows within the card.
@@ -84,7 +72,7 @@ function legendSvg(view: ContextView, width: number): { body: string; rows: numb
 
 function footSvg(spec: ContextCardSpec, top: number): string {
   const max = Math.max(...spec.turns, 1)
-  const spark = sparkline({ x: PAD, y: top, width: SPARK.w, height: SPARK.h, values: spec.turns, max, tone: 'read' })
+  const spark = sparkline({ x: PAD, y: top, width: SPARK.w, height: SPARK.h, values: spec.turns, max, tone: 'neutral' })
   const hasSpark = spark !== ''
   const noteX = hasSpark ? PAD + SPARK.w + SPARK.gap : PAD
   const caption = spec.turns.length > 1 ? words().lastTurns(spec.turns.length) : ''
@@ -99,20 +87,19 @@ function footSvg(spec: ContextCardSpec, top: number): string {
 export function contextSvg(spec: ContextCardSpec): SvgDoc {
   const inner = spec.width - PAD * 2
   const head = [
-    eyebrow(words().contextTitle, { x: PAD, y: EYEBROW_Y, cls: 'f-lo' }),
-    `<text class="f-lo num" x="${spec.width - PAD}" y="${EYEBROW_Y}" font-size="10.5" text-anchor="end">${escape(spec.meta)}</text>`,
+    groupLabel(words().contextTitle, { x: PAD, y: LABEL_Y }),
+    `<text class="f-lo num" x="${spec.width - PAD}" y="${LABEL_Y}" font-size="10.5" text-anchor="end">${escape(spec.meta)}</text>`,
   ].join('')
   const legend = spec.view === null ? null : legendSvg(spec.view, inner)
   const middle =
     spec.view === null || legend === null
       ? `<text class="f-lo" x="${PAD}" y="${BAR.y + BAR.h}" font-size="${NOTE_SIZE}">${escape(words().noBreakdown)}</text>`
-      : barSvg(spec.view, { width: inner, isLive: spec.isLive === true }) + legend.body
+      : barSvg(spec.view, inner) + legend.body
   const footTop = legend === null ? BAR.y + EMPTY_H : LEGEND.top + (legend.rows - 1) * LEGEND.row + LEGEND.row
   const hasFoot = spec.turns.length > 1 || spec.forecast !== ''
   const height = (hasFoot ? footTop + FOOT_H : footTop) + BOTTOM_PAD - LEGEND.row / 2
-  const frame = `<rect class="f-inset s-line" x=".5" y=".5" width="${spec.width - 1}" height="${height - 1}" rx="${RADIUS}"/>`
   const foot = hasFoot ? footSvg(spec, footTop) : ''
   const alt = [words().contextTitle, spec.meta, ...(spec.view?.segments.map(segment => `${segment.label} ${compact(segment.tokens)}`) ?? []), spec.forecast].filter(part => part !== '').join(' · ')
 
-  return svgDoc({ width: spec.width, height, body: frame + head + middle + foot, alt })
+  return svgDoc({ width: spec.width, height, body: head + middle + foot, alt })
 }

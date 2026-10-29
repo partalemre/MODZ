@@ -24,7 +24,7 @@ import { deliveryText } from './steer'
 import type { StopNoun } from './steer'
 
 // The Ajanlar panel: the header card, the toolbar ("Yeni görev", Daralt), the attention line, the
-// form while it is open, the timeline, then the running, finished and planned agents as cards.
+// form while it is open, the timeline, then the running, finished and planned agents as rows.
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
 const agents = atom({ plugin: 'savvy-progress', key: 'agents' } as const, [])
@@ -153,15 +153,16 @@ function listTree(ui: Ui, view: PaneView) {
   const { Box } = ui
   const { d, layout, on } = view
   const s = t()
-  const ctx: RowContext = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen }
+  // The desktop's rows have no frame: they take the pane's whole width.
+  const ctx: RowContext = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.isDesktop ? layout.W : layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen }
   const isDoneOpen = !d.panel.isDoneCollapsed
   return (
     <Box key="list" flexDirection="column" rowGap={1}>
-      {d.running.length > 0 && sectionHead(ui, layout, { id: 'running', label: `${s.running} · ${d.running.length}`, dot: 'run' })}
+      {d.running.length > 0 && sectionHead(ui, layout, { id: 'running', label: `${s.running} · ${d.running.length}` })}
       {d.running.map(a => agentRow(ui, a, ctx))}
-      {d.finished.length > 0 && sectionHead(ui, layout, { id: 'finished', label: `${s.finished} · ${d.finished.length}`, dot: 'ok', toggle: { key: 'done', isOpen: isDoneOpen, onPress: on.onDone } })}
+      {d.finished.length > 0 && sectionHead(ui, layout, { id: 'finished', label: `${s.finished} · ${d.finished.length}`, toggle: { key: 'done', isOpen: isDoneOpen, onPress: on.onDone } })}
       {isDoneOpen && d.finished.map(a => agentRow(ui, a, ctx))}
-      {d.planned.length > 0 && sectionHead(ui, layout, { id: 'planned', label: `${s.planned} · ${d.planned.length}`, dot: 'idle' })}
+      {d.planned.length > 0 && sectionHead(ui, layout, { id: 'planned', label: `${s.planned} · ${d.planned.length}` })}
       {d.planned.map(p => plannedRow(ui, p, ctx))}
     </Box>
   )

@@ -13,10 +13,10 @@ for (const surface of SURFACES) {
   const mount = ($: any) => $.ui.mount({ ...PANE, surface })
   const texts = async (ui: any) => (await ui.findAll({ type: 'Text' })).map((t: any) => t.text ?? '').join('\n')
 
-  test(`${surface}: the empty panel invites with an eyebrow, one sentence and one action`, async ($, on) => {
+  test(`${surface}: the empty panel invites with a title, one sentence and one action`, async ($, on) => {
     await setup($, on)
     const ui = await mount($)
-    expect(await texts(ui)).toContain('● HENÜZ AJAN YOK')
+    expect(await texts(ui)).toContain('Henüz ajan yok')
     expect(await texts(ui)).toContain('Bir görev ver, bir yengeç işe koyulsun')
     expect((await ui.findAll({ type: 'Button' })).map((b: any) => b.props.label)).toEqual(['＋ Yeni görev'])
     await ui.press({ key: 'new-task' })
@@ -48,7 +48,8 @@ for (const surface of SURFACES) {
     world.roster.push({ id: 'agent-77', type: 'Explore', description: String(world.spawns[3]?.description), status: 'running' })
     await clock.advance(SECOND)
     expect(await ui.find({ key: 'send-agent-77' })).toBeUndefined()
-    expect((await ui.findAll({ type: 'Button' })).filter((b: any) => String(b.props.key).startsWith('open-'))).toHaveLength(4)
+    // A pressed desktop row may stack extra buttons (`open-<id>~1`): count the rows by their first button.
+    expect((await ui.findAll({ type: 'Button' })).filter((b: any) => /^open-[^~]*$/.test(String(b.props.key)))).toHaveLength(4)
     expect(field?.props?.key).toBe((await ui.findAll({ type: 'Input' })).find((input: any) => input.props.key.startsWith('send-'))?.props?.key)
   })
 

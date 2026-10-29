@@ -34,7 +34,7 @@ for (const surface of SURFACES) {
   test(`${surface}: the pane lists turns and asks before an undo, in English`, async ($: any, on: any) => {
     const pane = await openPane($, on, { fake: english(ONE), surface })
     const list = await shown(pane)
-    expect(list).toMatch(/CHECKPOINTS/)
+    expect(list).toContain('Checkpoints')
     expect(list).toContain('1 saved · newest ')
     expect(list).toContain('Undo')
     expect(TURKISH_ONLY.test(list)).toBe(false)

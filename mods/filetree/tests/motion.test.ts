@@ -61,9 +61,9 @@ test('desktop: the cards cascade in as sized frames and keep their sources acros
   expect(svgs).toHaveLength(3)
   expect(svgs.every((svg: any) => svg.props.isInteractive === true && svg.props.width > 0 && svg.props.height > 0)).toBe(true)
   expect(first.every(source => source.includes(':root{color-scheme:light dark}'))).toBe(true)
-  // The touched card is new with the read, so it enters; the hero changed, so it sweeps.
+  // The touched card is new with the read, so it enters; the hero changed, so it flashes.
   expect(isEntering(first[1] ?? '')).toBe(true)
-  expect(first[0]).toContain('class="m-sweep"')
+  expect(first[0]).toContain('m-flash')
   expect(await pane.findAll({ type: 'Client' })).toHaveLength(1)
 
   await pane.redraw({ ...PROPS, isFocused: !PROPS.isFocused })
@@ -71,19 +71,21 @@ test('desktop: the cards cascade in as sized frames and keep their sources acros
   expect(await sources(pane)).toEqual(first)
 })
 
-test('desktop: the live dot runs its rings while Claude works and stops once the turn ends', WITH_HUB, async ($: any, on: any) => {
+test('desktop: the live dot breathes while Claude works and goes once the turn ends', WITH_HUB, async ($: any, on: any) => {
   const { clock, pane } = await opened($, on)
   const hero = async () => (await sources(pane))[0] ?? ''
 
-  expect(await hero()).not.toContain('m-ripple')
+  const dot = 'class="f-edit breathe"'
+  expect(await hero()).not.toContain(dot)
   await $.turn.start({ text: 'go', turnId: 't1' })
   await $.tool.call({ tool: 'Read', file_path: `${ROOT}/a.ts` })
   await clock.settle()
-  expect(await hero()).toContain('m-ripple')
+  expect(await hero()).toContain(dot)
+  expect(await hero()).not.toContain('m-ripple')
 
   await $.turn.complete(DONE)
   await clock.settle()
-  expect(await hero()).not.toContain('m-ripple')
+  expect(await hero()).not.toContain(dot)
 })
 
 test('desktop: opening the pane again brings every card in anew', WITH_HUB, async ($: any, on: any) => {

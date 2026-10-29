@@ -35,7 +35,7 @@ function buttons(ui: Elements['desktop'] | Elements['terminal'], actions: HoldAc
   return Box({ flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'center', children: [
     Button({ key: 'cache-tax:pay', ...pay, variant: 'secondary', onPress: actions.pay }),
     Button({ key: 'cache-tax:fresh', ...fresh, variant: 'secondary', onPress: actions.fresh }),
-    Button({ key: 'cache-tax:status', ...status, plain: true, onPress: actions.status }),
+    Button({ key: 'cache-tax:status', ...status, plain: true, dimColor: true, onPress: actions.status }),
   ] })
 }
 
@@ -51,10 +51,10 @@ function infoRow(ui: Elements['desktop'], glyph: { paths: string; color: string 
 function desktopInfo(ui: Elements['desktop'], view: HoldView, p: Palette): RenderElement {
   const { Box, Text } = ui
   return Box({ flexDirection: 'column', children: [
-    infoRow(ui, { paths: ICONS.pauseCircle, color: p.lo }, [
+    infoRow(ui, { paths: ICONS.pauseCircle, color: p.mid }, [
       Text({ color: p.mid, wrap: 'truncate-end', children: [words().held, Text({ color: p.hi, children: [heldQuote(view)] })] }),
     ]),
-    infoRow(ui, { paths: ICONS.shieldCheck, color: p.lo }, [Text({ color: p.mid, children: [keepText(view)] })]),
+    infoRow(ui, { paths: ICONS.shieldCheck, color: p.mid }, [Text({ color: p.mid, children: [keepText(view)] })]),
   ] })
 }
 
@@ -98,16 +98,16 @@ function priceLine(ui: Elements['terminal'], { label, usd, color, bar }: PriceLi
 
 export function holdTerminal(ui: Elements['terminal'], o: HoldOptions): RenderElement {
   const { Box, Text } = ui
-  const kiln = o.noColor ? undefined : TERMINAL.edit
+  const warn = o.noColor ? undefined : TERMINAL.warn
   const v = o.view
   const share = v.coldUsd && v.warmUsd !== null ? Math.min(1, v.warmUsd / v.coldUsd) : 0
   const cells = Math.max(BAR_MIN, Math.min(BAR_FULL, o.columns - LINE_CHROME))
   const said = words()
   return Box({ key: 'cache-tax:hold', flexDirection: 'column', paddingX: 1, borderStyle: 'round', borderDimColor: true, children: [
-    Text({ bold: true, color: kiln, children: [said.terminalEyebrow] }),
+    Text({ bold: true, dimColor: true, children: [said.name] }),
     Text({ bold: true, children: [said.headline] }),
     Text({ dimColor: true, children: [v.reason[0] ?? ''] }),
-    priceLine(ui, { label: said.sendNow, usd: fmtUsd(v.coldUsd), color: kiln, bar: textBar(1, cells) }),
+    priceLine(ui, { label: said.sendNow, usd: fmtUsd(v.coldUsd), color: warn, bar: textBar(1, cells) }),
     priceLine(ui, { label: said.warmTurn, usd: fmtUsd(v.warmUsd), color: undefined, bar: `${textBar(share, cells)} ${warmCaptions(v).at(-1) ?? ''}` }),
     Text({ dimColor: true, children: [`${said.tokens(v.tokens)} ${said.rewritten(v.rate)[0]}`] }),
     Text({ wrap: 'truncate-end', children: [Text({ dimColor: true, children: [`⏸ ${said.held}`] }), heldQuote(v)] }),

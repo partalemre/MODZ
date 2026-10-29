@@ -1,6 +1,6 @@
-// The pane in motion on the desktop (kit/moving.ts): the kit's header and eyebrow are interactive frames that enter
-// as the pane opens; a new turn sweeps the header it changes and leaves the eyebrow's very source, and the pane
-// opening anew brings them in again.
+// The pane in motion on the desktop (kit/moving.ts): the head and the group label are interactive frames that enter
+// as the pane opens; a new turn redraws the head it changes without a sheen (DESIGN.md §0.4) and leaves the label's
+// very source, and the pane opening anew brings them in again.
 import { expect, test } from 'claude-code/testing'
 
 import { begin, paneOf, stub, turn, worldOf } from './stubs'
@@ -22,7 +22,8 @@ test('desktop: the drawings cascade in as frames, and a new turn moves only the 
   await turn($, { text: 'fix the login bug', turnId: 't1' })
   const [newHead, sameEyebrow] = await sources(pane)
   expect(newHead).not.toBe(head)
-  expect(newHead).toContain('m-sweep')
+  expect(newHead).toContain('opus-5-5')
+  expect(newHead).not.toContain('m-sweep')
   expect(sameEyebrow).toBe(eyebrow)
 
   // The desktop mounts a pane anew as it opens.

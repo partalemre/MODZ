@@ -1,8 +1,8 @@
 import { themeCss } from './tidemark'
 import type { Mode, Neutral, Role } from './tidemark'
 
-// Svg building blocks of the Tidemark language (DESIGN.md §3–§5): text, shapes, icons and icon
-// tiles. Every color is a CSS variable, so one drawing serves both themes.
+// Svg building blocks of the Tidemark language (DESIGN.md §3–§5): text, shapes and bare line
+// icons. Every color is a CSS variable, so one drawing serves both themes.
 
 export type Ink = Neutral | Role | `${Role}-t` | `${Role}-l`
 export type Font = { size: number; weight?: number; isMono?: boolean; spacing?: number }
@@ -81,12 +81,12 @@ export function text(spec: TextSpec): string {
   return `<text ${attrs.join(' ')} style="fill:var(--${spec.ink})">${esc(spec.text)}</text>`
 }
 
-export type Run = { text: string; ink: Ink; weight?: number; isMono?: boolean }
+export type Run = { text: string; ink: Ink; weight?: number; size?: number; isMono?: boolean }
 
 // One line of differently inked runs; the renderer places each run after the last.
 export function runs(spec: { x: number; y: number; size: number; parts: Run[] }): string {
   const spans = spec.parts.map(part => {
-    const weight = part.weight === undefined ? '' : ` font-weight="${part.weight}"`
+    const weight = (part.weight === undefined ? '' : ` font-weight="${part.weight}"`) + (part.size === undefined ? '' : ` font-size="${part.size}"`)
     const mono = part.isMono === true ? ' class="mono"' : ''
 
     return `<tspan${weight}${mono} style="fill:var(--${part.ink})">${esc(part.text)}</tspan>`
@@ -115,13 +115,3 @@ export function icon(name: IconName, at: { x: number; y: number; size: number; i
 
   return `<g transform="translate(${px(at.x)} ${px(at.y)}) scale(${scale})" fill="none" stroke-width="${px(width)}" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--${at.ink})">${ICONS[name]}</g>`
 }
-
-// A rounded tint square with a line icon: the identity of a card or a notice row.
-export function iconTile(spec: { x: number; y: number; size: number; role: Role; icon: IconName }): string {
-  const glyph = Math.round(spec.size * 0.56)
-  const inset = (spec.size - glyph) / 2
-
-  return rect({ x: spec.x, y: spec.y, w: spec.size, h: spec.size, rx: Math.round(spec.size * 0.27), fill: `${spec.role}-t` })
-    + icon(spec.icon, { x: spec.x + inset, y: spec.y + inset, size: glyph, ink: spec.role })
-}
-

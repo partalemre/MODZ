@@ -143,7 +143,10 @@ test('file types, theme hints and the Svg style', () => {
   expect(style).toContain('prefers-color-scheme: light')
   expect(style.endsWith('@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}')).toBe(true)
   const small = pill({ text: 'Okunuyor', role: 'read' }).source
-  expect(small).toContain('--read-tint')
+  // A pill is neutral: a track fill and its role's ink, and only the paints it uses reach its style.
+  expect(small).toContain('--track')
+  expect(small).toContain('--read:')
+  expect(small).not.toContain('--read-tint')
   expect(small).not.toContain('--danger')
   expect(ICON_NAMES.length).toBeGreaterThanOrEqual(25)
 })

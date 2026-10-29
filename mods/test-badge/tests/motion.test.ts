@@ -28,6 +28,8 @@ const PAST_TICK_MS = 31_000
 // Past a CI poll, so the watch reads the checks again.
 const PAST_POLL_MS = 60_000
 
+const STILL = '<style>*{animation:none!important;transition:none!important}</style></svg>'
+
 test('desktop: the pane cascades in as frames, and a redraw or a tick of its age keeps every source', async ($: any, on: any) => {
   const clock = await setup($, on, newWorld({ surface: 'desktop' }))
   await editAndRun($, clock)
@@ -38,7 +40,12 @@ test('desktop: the pane cascades in as frames, and a redraw or a tick of its age
   await pane.unmount()
 
   expect(svgs.length).toBeGreaterThan(3)
-  expect(svgs.every((svg: any) => svg.props.isInteractive === true && svg.props.width > 0 && svg.props.height > 0)).toBe(true)
+  expect(svgs.every((svg: any) => svg.props.width > 0 && svg.props.height > 0)).toBe(true)
+  // A drawing under a press is a plain still image (its buttons take the press); the rest stay interactive frames.
+  const isPressed = (svg: any) => (svg.props.source as string).endsWith(STILL)
+  expect(svgs.filter(isPressed).length).toBeGreaterThan(0)
+  expect(svgs.filter(isPressed).every((svg: any) => svg.props.isInteractive !== true)).toBe(true)
+  expect(svgs.filter(svg => !isPressed(svg)).every((svg: any) => svg.props.isInteractive === true)).toBe(true)
   expect(first.every(source => source.includes(':root{color-scheme:light dark}') && source.includes('class="m-in"'))).toBe(true)
   expect(first.filter(source => source.includes('class="m-wash"'))).toHaveLength(3)
   expect(await draw($)).toEqual(first)
@@ -53,23 +60,26 @@ test('desktop: the pane cascades in as frames, and a redraw or a tick of its age
   expect((await draw($)).every(source => source.includes('class="m-in"'))).toBe(true)
 })
 
-test('desktop: a run still going has a light running along its bar', async ($: any, on: any) => {
+test('desktop: a run still going breathes one accent dot, with no light running along a bar', async ($: any, on: any) => {
   await editAndRun($, await setup($, on, newWorld({ surface: 'desktop', hold: new Promise<void>(() => undefined) })))
   await openPane($)
   const [header] = await draw($)
 
-  expect(header).toContain('m-shine')
+  expect(header).toContain('class="breathe" cx="3" cy="9" r="3" style="fill:var(--kiln)"')
+  expect(header).not.toContain('m-shine')
+  expect(header).not.toContain('Gradient')
 })
 
-test('desktop: a pending CI check has rings on its dot, and its row follows the check, not its place', async ($: any, on: any) => {
+test('desktop: a pending CI check breathes, with no rings, and its row follows the check, not its place', async ($: any, on: any) => {
   const gh = newGh({ checks: [passed('lint'), pending('unit tests')] })
   const clock = await setupCi($, on, { gh, surface: 'desktop', lang: 'tr' })
   await clock.advance(PAST_POLL_MS)
   await openPane($)
   const before = await rowsOf($)
 
-  expect(before['unit tests']).toContain('m-ripple')
-  expect(before.lint).not.toContain('m-ripple')
+  expect(before['unit tests']).toContain('class="breathe"')
+  expect(before['unit tests']).not.toContain('m-ripple')
+  expect(before.lint).not.toContain('class="breathe"')
 
   gh.checks = [pending('build'), ...gh.checks]
   await clock.advance(PAST_POLL_MS)

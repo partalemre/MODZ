@@ -43,35 +43,32 @@ const card = (detail: string, tone: HubCard['tone'], at: number): HubCard => ({ 
 
 const sources = async (ui: any) => Object.fromEntries((await ui.findAll({ type: 'Svg' })).map((svg: any) => [svg.props.alt, svg.props.source]))
 
-test('a changed card redraws only its own row, lit once; the rest keep their frames', { plugins: [testsMod] }, async ($: any, on: any) => {
+test('a changed card redraws only its own row; the rest keep their sources, pressed rows held still', { plugins: [testsMod] }, async ($: any, on: any) => {
   stubWorld(on)
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   const say = (value: HubCard) => $.command.run({ command: 'say', args: JSON.stringify(value) })
   await say(card('41/42 geçti', 'bad', 1))
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   const svgs = await ui.findAll({ type: 'Svg' })
-  expect(svgs.every((svg: any) => svg.props.isInteractive === true)).toBe(true)
-  expect(svgs.some((svg: any) => /class="m-in"/.test(svg.props.source))).toBe(true)
+  // Section labels are frames that enter; rows are images under their buttons, so they never animate.
+  expect(svgs.some((svg: any) => svg.props.isInteractive === true && /class="m-fade"/.test(svg.props.source))).toBe(true)
+  expect(svgs.filter((svg: any) => svg.props.isInteractive !== true).every((svg: any) => /animation:none!important/.test(svg.props.source))).toBe(true)
   const before = await sources(ui)
 
   await say(card('42/42 geçti', 'ok', 2))
   const after = await sources(ui)
   const changed = Object.keys(after).filter(alt => after[alt] !== before[alt])
-  const testsRow = Object.keys(after).find(alt => alt.startsWith('Testler'))
 
-  expect(changed).toContain(testsRow)
-  expect(changed.every(alt => alt === testsRow || alt.startsWith('MODZ') || alt.startsWith('Şu an'))).toBe(true)
-  expect(after[testsRow ?? '']).toMatch(/class="[^"]*sweep/)
-  expect(after[testsRow ?? '']).not.toMatch(/class="m-in"/)
+  expect(changed).toEqual(['Testler: 42/42 geçti'])
 })
 
-test('live work keeps a ring going out of its dot; a quiet row has none', { plugins: [testsMod] }, async ($: any, on: any) => {
+test('live work lights its glyph; a quiet row stays in the quiet ink', { plugins: [testsMod] }, async ($: any, on: any) => {
   stubWorld(on)
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   await $.command.run({ command: 'say', args: JSON.stringify(card('Çalışıyor 12/42', 'live', 1)) })
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
   const all = await sources(ui)
 
-  expect(all[Object.keys(all).find(alt => alt.startsWith('Testler')) ?? '']).toMatch(/class="[^"]*ripple/)
-  expect(all[Object.keys(all).find(alt => alt.startsWith('Kontrol')) ?? '']).not.toMatch(/class="[^"]*ripple/)
+  expect(all[Object.keys(all).find(alt => alt.startsWith('Testler')) ?? '']).toMatch(/<g class="fg-edit"><rect/)
+  expect(all[Object.keys(all).find(alt => alt.startsWith('Kontrol')) ?? '']).toMatch(/<g class="f-mid"><rect/)
 })

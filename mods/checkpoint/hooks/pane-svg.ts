@@ -1,25 +1,25 @@
-import { bar, eyebrow, eyebrowWidth, fileBadge, fit, fitStart, iconTile, line, measure, monogram, rect, runs, svgDoc, text, wrap } from './svg'
+import { bar, fileBadge, fit, fitStart, line, measure, monogram, rect, runs, svgDoc, text, wrap } from './svg'
 import type { Font, Ink } from './svg'
-import type { Mode, Role } from './tidemark'
+import type { Mode } from './tidemark'
 import type { CheckpointMeta, PendingUndo, UndoFile } from '../types'
 import { words } from './words'
 
 // The pane's vector parts: the header, one timeline row (a step dot on the rail), and the
 // confirm card's heading and diffstat. A narrow panel stacks what a wide one puts side by side,
-// so nothing has to be cut.
+// so nothing has to be cut. Colour is kept for state: the newest checkpoint's dot, the diff's
+// counts and a file the undo deletes; the rest is ink.
 
 export type Drawing = { source: string; width: number; height: number; alt: string }
 export type Frame = { width: number; mode: Mode }
 export type RowSpec = { title: string; when: string; label: string; meta: CheckpointMeta; isNewest: boolean; isFirst: boolean; isLast: boolean }
-export type HeadSpec = { role: Role; label: string; meta: string; lead: string; rest: string; joiner?: string }
+// `label` names the drawing for a reader only: the pane's own title already says it to the eye.
+export type HeadSpec = { label: string; meta: string; lead: string; rest: string; joiner?: string }
 
-const HEAD_X = 48
-const HEAD_LEAD_Y = 37
-const HEAD_MIN_H = 44
-const SUB_LINE_H = 19
-const LEAD: Font = { size: 17, weight: 620 }
-const SUB: Font = { size: 13 }
-const HEAD_META: Font = { size: 11.5 }
+const HEAD_LEAD_Y = 18
+const HEAD_PAD_BOTTOM = 6
+const SUB_LINE_H = 18
+const LEAD: Font = { size: 16, weight: 600 }
+const SUB: Font = { size: 12 }
 const ROW_MIN_H = 48
 const ROW_PAD_BOTTOM = 10
 const DOT_X = 8
@@ -33,38 +33,37 @@ const CHIP = 16
 const CHIP_GAP = 4
 const RIGHT_GAP = 12
 const FILES_GAP = 10
-const TITLE: Font = { size: 13.5, weight: 650 }
-const WHEN: Font = { size: 13.5 }
-const LABEL: Font = { size: 12.5 }
+const TITLE: Font = { size: 13, weight: 560 }
+const WHEN: Font = { size: 13 }
+const LABEL: Font = { size: 12 }
 const META: Font = { size: 11, isMono: true }
 const STRIKE_FIT = 0.95
-const TOOL_ROLE: Record<string, Role> = { E: 'kiln', W: 'kiln', $: 'iris', R: 'tide', S: 'tide', G: 'tide', A: 'iris', T: 'orchid' }
+// The room on a row's right edge for the chevron that says the row opens its undo.
+const CHEVRON_ROOM = 28
+const CHEVRON_INSET = 18
 
 const drawing = (frame: Frame, spec: { height: number; body: string; alt: string }): Drawing =>
   ({ source: svgDoc({ width: frame.width, height: spec.height, mode: frame.mode, body: spec.body }), width: frame.width, height: spec.height, alt: spec.alt })
 
-// The lines under the headline: `rest` when it does not fit beside the lead, then `meta` when the eyebrow has no room for it.
-function headLines(room: number, spec: HeadSpec): { inline: string; sub: { text: string; font: Font; ink: Ink }[]; isMetaUp: boolean } {
+// The lines under the headline: `rest` when it does not fit beside the lead, then the meta line.
+function headLines(room: number, spec: HeadSpec): { inline: string; sub: { text: string; ink: Ink }[] } {
   const joiner = spec.joiner ?? ' '
-  const isMetaUp = spec.meta === '' || eyebrowWidth(spec.label, spec.meta) <= room
   const isRestInline = spec.rest === '' || measure(`${spec.lead}${joiner}${spec.rest}`, LEAD) <= room
-  const rest = isRestInline ? [] : wrap(spec.rest, room, { font: SUB, maxLines: LABEL_LINES }).map(part => ({ text: part, font: SUB, ink: 'mid' as Ink }))
-  const meta = isMetaUp ? [] : [{ text: fit(spec.meta, room, HEAD_META), font: HEAD_META, ink: 'lo' as Ink }]
+  const rest = isRestInline ? [] : wrap(spec.rest, room, { font: SUB, maxLines: LABEL_LINES }).map(part => ({ text: part, ink: 'mid' as Ink }))
+  const meta = spec.meta === '' ? [] : [{ text: fit(spec.meta, room, SUB), ink: 'lo' as Ink }]
 
-  return { inline: isRestInline && spec.rest !== '' ? `${joiner}${spec.rest}` : '', sub: [...rest, ...meta], isMetaUp }
+  return { inline: isRestInline && spec.rest !== '' ? `${joiner}${spec.rest}` : '', sub: [...rest, ...meta] }
 }
 
-// Icon tile, eyebrow and headline: the opening of the pane and of the confirm card.
+// The headline and the meta under it: the opening of the pane and of the confirm card.
 export function headSvg(frame: Frame, spec: HeadSpec): Drawing {
-  const room = frame.width - HEAD_X
+  const room = frame.width
   const lines = headLines(room, spec)
   const lead = fit(spec.lead, room, LEAD)
-  const subs = lines.sub.map((part, index) => text({ ...part.font, x: HEAD_X, y: HEAD_LEAD_Y + SUB_LINE_H * (index + 1), text: part.text, ink: part.ink }))
-  const body = iconTile({ x: 0, y: 2, size: 36, role: spec.role, icon: 'history' })
-    + eyebrow({ x: HEAD_X, y: 13, width: room, label: spec.label, role: spec.role, meta: lines.isMetaUp ? spec.meta : '' })
-    + runs({ x: HEAD_X, y: HEAD_LEAD_Y, size: LEAD.size, parts: [{ text: lead, ink: 'hi', weight: LEAD.weight }, { text: lines.inline, ink: 'mid', weight: 500 }] })
+  const subs = lines.sub.map((part, index) => text({ ...SUB, x: 0, y: HEAD_LEAD_Y + SUB_LINE_H * (index + 1), text: part.text, ink: part.ink }))
+  const body = runs({ x: 0, y: HEAD_LEAD_Y, size: LEAD.size, parts: [{ text: lead, ink: 'hi', weight: LEAD.weight }, { text: lines.inline, ink: 'mid', weight: 500 }] })
     + subs.join('')
-  const height = Math.max(HEAD_MIN_H, HEAD_MIN_H + SUB_LINE_H * lines.sub.length)
+  const height = HEAD_LEAD_Y + SUB_LINE_H * lines.sub.length + HEAD_PAD_BOTTOM
   const meta = spec.meta === '' ? '' : ` · ${spec.meta}`
   const rest = spec.rest === '' ? '' : `${spec.joiner ?? ' '}${spec.rest}`
 
@@ -73,9 +72,10 @@ export function headSvg(frame: Frame, spec: HeadSpec): Drawing {
 
 function dotOf(spec: RowSpec): string {
   const { meta } = spec
-  if (meta.isSafety === true) return rect({ x: DOT_X - 3.5, y: DOT_Y - 3.5, w: 7, h: 7, rx: 1.5, fill: 'amber-t', stroke: 'amber' })
+  // A safety snapshot is a kind, not a state: its shape tells it apart, not a colour.
+  if (meta.isSafety === true) return rect({ x: DOT_X - 3.5, y: DOT_Y - 3.5, w: 7, h: 7, rx: 1.5, fill: 'card', stroke: 'lo' })
   if (meta.isUndone === true) return `<circle cx="${DOT_X}" cy="${DOT_Y}" r="4" stroke-dasharray="2 1.6" style="fill:var(--card);stroke:var(--lo)"/>`
-  if (spec.isNewest) return `<circle cx="${DOT_X}" cy="${DOT_Y}" r="7" style="fill:var(--kiln-t)"/><circle cx="${DOT_X}" cy="${DOT_Y}" r="4" style="fill:var(--kiln)"/>`
+  if (spec.isNewest) return `<circle cx="${DOT_X}" cy="${DOT_Y}" r="4" style="fill:var(--kiln)"/>`
 
   return `<circle cx="${DOT_X}" cy="${DOT_Y}" r="4" style="fill:var(--strong)"/>`
 }
@@ -99,7 +99,7 @@ function factsOf(meta: CheckpointMeta, at: { x: number; y: number; isCountFirst:
   const gap = chipsW > 0 && filesW > 0 ? FILES_GAP : 0
   const chipsX = at.isCountFirst ? at.x + filesW + gap : at.x
   const filesX = at.isCountFirst ? at.x : at.x + chipsW + gap
-  const chips = tools.map((glyph, index) => monogram({ x: chipsX + index * (CHIP + CHIP_GAP), y: at.y, glyph, role: TOOL_ROLE[glyph] ?? 'tide' }))
+  const chips = tools.map((glyph, index) => monogram({ x: chipsX + index * (CHIP + CHIP_GAP), y: at.y, glyph }))
   const label = files === '' ? '' : text({ ...META, x: filesX, y: at.y + 12, text: files, ink: meta.isUndone === true ? 'lo' : 'mid' })
 
   return { svg: chips.join('') + label, width: chipsW + gap + filesW }
@@ -112,7 +112,7 @@ const headWidth = (spec: RowSpec): number => measure(spec.title, TITLE) + measur
 export function rowFits(frame: Frame, spec: RowSpec): boolean {
   const facts = factsWidth(spec.meta)
 
-  return facts === 0 || TEXT_X + headWidth(spec) + RIGHT_GAP + facts <= frame.width
+  return facts === 0 || TEXT_X + headWidth(spec) + RIGHT_GAP + facts + CHEVRON_ROOM <= frame.width
 }
 
 function struck(spec: { x: number; y: number; text: string; font: Font }): string {
@@ -123,31 +123,31 @@ function struck(spec: { x: number; y: number; text: string; font: Font }): strin
   return line({ x1: spec.x - 1, y1: y, x2: spec.x + width + 1, y2: y, ink: 'lo' })
 }
 
-function titleInkOf(meta: CheckpointMeta): Ink {
-  if (meta.isSafety === true) return 'amber'
+const titleInkOf = (meta: CheckpointMeta): Ink => (meta.isUndone === true ? 'lo' : 'hi')
 
-  return meta.isUndone === true ? 'lo' : 'hi'
-}
+const chevron = (x: number, y: number): string =>
+  `<path d="M${x} ${y - 4.5}l4.5 4.5-4.5 4.5" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--lo)"/>`
 
 export function rowSvg(frame: Frame, spec: RowSpec & { isStacked: boolean }): Drawing {
   const { meta } = spec
   const isUndone = meta.isUndone === true
   const titleInk = titleInkOf(meta)
   const head = runs({ x: TEXT_X, y: TITLE_Y, size: TITLE.size, parts: [{ text: spec.title, ink: titleInk, weight: TITLE.weight }, { text: `  ${spec.when}`, ink: 'lo', weight: 400 }] })
-  const labels = wrap(spec.label, frame.width - TEXT_X, { font: LABEL, maxLines: LABEL_LINES })
+  const labels = wrap(spec.label, frame.width - TEXT_X - CHEVRON_ROOM, { font: LABEL, maxLines: LABEL_LINES })
   const labelY = (index: number) => LABEL_Y + index * LABEL_LINE_H
   const body = labels.map((part, index) => text({ ...LABEL, x: TEXT_X, y: labelY(index), text: part, ink: isUndone ? 'lo' : 'mid' })).join('')
   const lastY = labelY(Math.max(0, labels.length - 1))
   const hasFacts = factsWidth(meta) > 0
   const factsTop = spec.isStacked ? lastY + ROW_PAD_BOTTOM - 2 : TITLE_Y - 15
-  const facts = factsOf(meta, { x: spec.isStacked ? TEXT_X : frame.width - factsWidth(meta), y: factsTop, isCountFirst: !spec.isStacked })
+  const facts = factsOf(meta, { x: spec.isStacked ? TEXT_X : frame.width - CHEVRON_ROOM - factsWidth(meta), y: factsTop, isCountFirst: !spec.isStacked })
   const bottom = spec.isStacked && hasFacts ? factsTop + CHIP : lastY
   const height = Math.max(ROW_MIN_H, Math.ceil(bottom + ROW_PAD_BOTTOM))
   const strikes = isUndone ? [struck({ x: TEXT_X, y: TITLE_Y, text: spec.title, font: TITLE }), ...labels.map((part, index) => struck({ x: TEXT_X, y: labelY(index), text: part, font: LABEL }))].join('') : ''
-  const all = railOf(spec, height) + dotOf(spec) + head + facts.svg + body + strikes
+  const all = railOf(spec, height) + dotOf(spec) + head + facts.svg + body + strikes + chevron(frame.width - CHEVRON_INSET, height / 2)
   const files = filesText(meta)
 
-  return drawing(frame, { height, body: all, alt: `${spec.title}, ${spec.when}${isUndone ? `, ${words().undone}` : ''}${files === '' ? '' : `, ${files}`}: ${spec.label}` })
+  // The cover over the row has no name of its own, so the alt says what pressing it does.
+  return drawing(frame, { height, body: all, alt: `${words().undo}: ${spec.title}, ${spec.when}${isUndone ? `, ${words().undone}` : ''}${files === '' ? '' : `, ${files}`}: ${spec.label}` })
 }
 
 const STAT_LINE_Y = 17

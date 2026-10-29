@@ -14,7 +14,7 @@ test('in English /browser opens and closes the pane and the pane says it is load
   expect(world.opened[0]).toEqual({ id: 'browser', title: 'Browser', focus: true })
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   const text = await shown(ui)
-  expect(text).toContain('● BROWSER')
+  expect(text).toContain('Browser')
   expect(text).toContain('Loading the page…')
   expect(text).not.toMatch(TURKISH_ONLY)
 

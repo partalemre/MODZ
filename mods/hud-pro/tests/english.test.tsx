@@ -104,7 +104,7 @@ test('pane in English on the terminal: limits, resets, range and the last turn',
   await expectNoTurkish(ui)
 })
 
-test('pane in English on the desktop: tiles with English eyebrows, notes and captions', async ($, on) => {
+test('pane in English on the desktop: figures with English labels, notes and captions', async ($, on) => {
   const ui = await fullPane($, on, 'desktop')
   const svg = await svgOf(ui)
 
@@ -112,8 +112,8 @@ test('pane in English on the desktop: tiles with English eyebrows, notes and cap
     expect(svg?.props.alt).toContain(text)
   }
   expect(svg?.props.alt).toContain('118k tokens free')
-  expect(svg?.props.source).toContain('HUD · USAGE')
-  expect(svg?.props.source).toContain('5-HOUR')
+  expect(svg?.props.source).toContain('>5-hour<')
+  expect(svg?.props.source).not.toContain('letter-spacing')
   await expectNoTurkish(ui)
 })
 

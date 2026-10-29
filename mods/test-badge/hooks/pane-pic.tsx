@@ -9,6 +9,5 @@ export const motion = paneMotion()
 
 export function picture(ui: Ui, drawing: Pic, key: string, opts?: MoveOpts) {
   const { Svg } = ui
-
   return <Svg key={key} {...motion.pic(key, drawing, opts)} />
 }

@@ -36,7 +36,7 @@ for (const surface of SURFACES) {
     const pane = await $.ui.mount(paneOf(surface))
     const text = await shown(pane, surface)
     expect(text).toMatch(/1 failed\s*· 41 passed/)
-    expect(text).toMatch(surface === 'desktop' ? /Test results: / : /TEST RESULTS/)
+    expect(text).toMatch(surface === 'desktop' ? /Test results: / : /Test results/)
     expect((await pane.find({ key: 'tb-filter-all' }))?.text).toBe('All 3')
     expect((await pane.find({ key: 'tb-rerun' }))?.props?.label).toBe('Run again')
     expect(await drawnText(pane)).not.toMatch(TURKISH)

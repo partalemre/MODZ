@@ -1,6 +1,6 @@
 // The pane in motion on the desktop (kit/moving.ts): its drawing is an interactive frame that enters as the pane
-// opens, the step under way sends rings out of its circle, and the 30-second tick rebuilds nothing until a time it
-// shows really moves on, and even then without the sweep a real change gets.
+// opens, the step under way breathes one live dot, and the 30-second tick rebuilds nothing until a time it
+// shows really moves on, and even then without the flash a real change gets.
 import { expect, test } from 'claude-code/testing'
 
 import { MIN, seen, todos, UNDER_WAY, world } from './world'
@@ -28,7 +28,7 @@ async function opened($: any, on: any) {
   return $.ui.mount(paneOf())
 }
 
-test('desktop: the plan enters as a frame with rings on the step under way', async ($: any, on: any) => {
+test('desktop: the plan enters as a frame with a breathing dot on the step under way', async ($: any, on: any) => {
   const pane = await opened($, on)
   const svgs = await pane.findAll({ type: 'Svg' })
   const [source] = await sources(pane)
@@ -39,10 +39,11 @@ test('desktop: the plan enters as a frame with rings on the step under way', asy
   expect(svgs[0].props.height).toBeGreaterThan(0)
   expect(source).toContain(':root{color-scheme:light dark}')
   expect(source).toContain('class="m-in"')
-  expect(source).toContain('m-ripple')
+  expect(source).toContain('class="f-edit breathe"')
+  expect(source).not.toContain('m-ripple')
 })
 
-test('desktop: a tick rebuilds nothing, a new minute redraws without a sweep, a finished step sweeps', async ($: any, on: any) => {
+test('desktop: a tick rebuilds nothing, a new minute redraws without a flash, a finished step flashes once', async ($: any, on: any) => {
   const pane = await opened($, on)
   const first = await sources(pane)
 
@@ -53,13 +54,15 @@ test('desktop: a tick rebuilds nothing, a new minute redraws without a sweep, a 
   const [minute] = await sources(pane)
   expect(minute).not.toBe(first[0])
   expect(minute).toContain('>11m<')
-  expect(minute).not.toContain('m-sweep')
+  expect(minute).not.toContain('m-flash')
 
   await $.tool.call(todos([['Write the types', 'completed'], ['Draw the band', 'completed'], ['Write the README', 'in_progress']]))
-  expect((await sources(pane))[0]).toContain('m-sweep')
+  const [changed] = await sources(pane)
+  expect(changed).toContain('m-flash')
+  expect(changed).not.toContain('m-sweep')
 })
 
-test('desktop: the plan enters again when the pane opens anew, and a quiet plan has no rings', async ($: any, on: any) => {
+test('desktop: the plan enters again when the pane opens anew, and a quiet plan does not breathe', async ($: any, on: any) => {
   const pane = await opened($, on)
   await seen.clock.advance(2 * TICK)
   expect((await sources(pane))[0]).not.toContain('class="m-in"')
@@ -71,7 +74,7 @@ test('desktop: the plan enters again when the pane opens anew, and a quiet plan 
   expect((await sources(again))[0]).toContain('class="m-in"')
 
   await seen.clock.advance(45 * MIN)
-  expect((await sources(again))[0]).not.toContain('m-ripple')
+  expect((await sources(again))[0]).not.toContain('class="f-edit breathe"')
 })
 
 test('desktop: the empty pane is a frame too', async ($: any, on: any) => {

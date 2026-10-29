@@ -29,7 +29,7 @@ export function statusView(ui: Ui, status: PaneStatus) {
 
   return (
     <Box key="tb-status" flexDirection="column" paddingX={1} paddingY={1}>
-      <Text color="suggestion" bold>{word('eyebrow')}</Text>
+      <Text bold>{word('eyebrow')}</Text>
       <Text dimColor wrap="truncate-middle">{shownUrl(status.url)}</Text>
       <Text color={line.color} dimColor={!isStuck}>{line.text}</Text>
       {isStuck ? <Text dimColor>{word('retry')}</Text> : null}

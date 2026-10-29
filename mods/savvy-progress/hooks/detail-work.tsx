@@ -3,7 +3,7 @@ import type { ThemeKey } from 'claude-code'
 import type { AgentRun, ToolEvent, TouchedFile } from '../types'
 import { NOW_H, filesSvg, nowSvg } from './detail-svg'
 import { shortPath } from './format'
-import { KIND_GLYPH, KIND_KEY, kindOf } from './history'
+import { KIND_GLYPH, kindOf } from './history'
 import type { Kind } from './history'
 import { upper } from './lang'
 import { t } from './i18n'
@@ -23,14 +23,15 @@ const RECENT_SHOWN = 8
 const FILES_SHOWN = 6
 const KIND_ORDER: Kind[] = ['read', 'edit', 'run', 'agent', 'other']
 
-const NOW_KEY: Record<NowView['state'], ThemeKey | undefined> = { call: undefined, thinking: 'permission', starting: 'permission', done: 'success', failed: 'error' }
+// Live work in Claude's accent, a finish quiet, a failure red; no colour per kind of call.
+const NOW_KEY: Record<NowView['state'], ThemeKey> = { call: 'claude', thinking: 'claude', starting: 'claude', done: 'subtle', failed: 'error' }
 
 const capital = (s: string): string => upper(s.charAt(0)) + s.slice(1)
 
-// The terminal's "now": the verb in the call's colour with its span, the call itself beneath.
+// The terminal's "now": the verb in its state's colour with its span, the call itself beneath.
 function nowText(ui: Ui, now: NowView) {
   const { Box, Text } = ui
-  const key = NOW_KEY[now.state] ?? KIND_KEY[now.kind]
+  const key = NOW_KEY[now.state]
   const glyph = now.state === 'call' ? KIND_GLYPH[now.kind] : '●'
   return (
     <Box flexDirection="column">
@@ -75,7 +76,7 @@ export function nowTree(ui: Ui, a: AgentRun, ctx: RowContext) {
 
 // How a call came back: ✓ or ✗, … while its agent still runs, — when it never answered.
 const outcomeOf = (e: ToolEvent, isLive: boolean): { glyph: string; key: ThemeKey } => {
-  if (e.endAt !== undefined) return e.isError ? { glyph: '✗', key: 'error' } : { glyph: '✓', key: 'success' }
+  if (e.endAt !== undefined) return e.isError ? { glyph: '✗', key: 'error' } : { glyph: '✓', key: 'subtle' }
   return { glyph: isLive ? '…' : '—', key: 'subtle' }
 }
 
@@ -92,7 +93,7 @@ function eventTree(ui: Ui, e: ToolEvent, ctx: EventContext) {
     : <Text color={outcome.key}>{outcome.glyph}</Text>
   return (
     <Box key={`ev-${ctx.index}`} flexDirection="row" alignItems="center" columnGap={1}>
-      <Text color={KIND_KEY[kind]}>{KIND_GLYPH[kind]}</Text>
+      <Text dimColor>{KIND_GLYPH[kind]}</Text>
       <Box flexGrow={1} flexShrink={1}>
         <Text wrap="truncate-end">
           <Text bold>{e.tool}</Text>
@@ -117,7 +118,7 @@ function mixTree(ui: Ui, parts: MixPart[], ctx: RowContext & { id: string }) {
   const words = parts.map(p => `${s.kinds[p.kind]} ${p.count}`).join(' · ')
   const legend = parts.map((p, i) => (
     <Text key={`k-${p.kind}`}>
-      <Text color={KIND_KEY[p.kind]}>{`${KIND_GLYPH[p.kind]} `}</Text>
+      <Text dimColor>{`${KIND_GLYPH[p.kind]} `}</Text>
       <Text dimColor>{`${s.kinds[p.kind]} ${p.count}${i < parts.length - 1 ? '   ' : ''}`}</Text>
     </Text>
   ))
@@ -161,7 +162,7 @@ function fileText(ui: Ui, f: TouchedFile) {
   const counts = [f.edits ? `${KIND_GLYPH.edit}${f.edits}` : '', f.reads ? `${KIND_GLYPH.read}${f.reads}` : ''].filter(Boolean).join(' ')
   return (
     <Text key={`file-${f.path}`} wrap="truncate-middle">
-      <Text color={KIND_KEY[kind]}>{`${KIND_GLYPH[kind]} `}</Text>
+      <Text dimColor>{`${KIND_GLYPH[kind]} `}</Text>
       <Text>{shortPath(f.path)}</Text>
       <Text dimColor>{`  ${counts}`}</Text>
     </Text>

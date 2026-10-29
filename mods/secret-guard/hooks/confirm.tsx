@@ -1,6 +1,5 @@
 // secret-guard's text card for the terminal: the desktop card's words (eyebrow, headline, one row per finding) as text.
 
-import { upper } from './lang'
 import { words } from './words'
 
 // The resolved element table of the surface that draws the dialog.
@@ -11,7 +10,7 @@ export type CardColumn = { align: 'left' | 'right'; isDim: boolean; isToned?: bo
 
 export type CardModel = {
   tone: 'error' | 'warning'
-  // `● <EYEBROW> · <subject>`: what happened, then to what; the headline says how much.
+  // `<Label> · <subject>`: what happened, then to what; the headline says how much.
   eyebrow: string
   subject: string
   headline: string
@@ -98,7 +97,7 @@ function detailsOf(ui: Ui, model: CardModel, width: number) {
 
 export function confirmCard(ui: Ui, model: CardModel, width: number) {
   const { Box, Text } = ui
-  const head = `● ${upper(model.eyebrow)}`
+  const head = model.eyebrow
   const subject = clipMiddle(model.subject.split('\n')[0] ?? '', Math.max(SUBJECT_MIN, width - head.length - SUBJECT_GLUE.length))
 
   return (

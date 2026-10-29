@@ -81,10 +81,9 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
 
     expect(await said(ui, /eski ajan kartı/)).toBe(false)
-    const focus = await ui.find({ key: 'open-focus' })
-    expect(focus?.props.label).toBe('Testler panelini aç')
-    expect(focus?.props.variant).toBe('primary')
-    await ui.press({ key: 'open-focus' })
+    // The terminal leads with the real card; the desktop has no head, and the row is there to press.
+    if (surface === 'terminal') expect((await ui.find({ key: 'open-focus' }))?.props).toMatchObject({ label: 'Testler panelini aç', variant: 'primary' })
+    await ui.press({ key: surface === 'terminal' ? 'open-focus' : 'open-tests' })
     expect(asked).toEqual(['tests'])
   })
 

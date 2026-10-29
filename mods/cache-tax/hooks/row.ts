@@ -66,7 +66,7 @@ const CUBE_PX = 16
 function lidOf(state: RowState, isLight: boolean): string {
   const p = palette(isLight)
   if (state === 'warm') return p.role.ok.fg
-  return state === 'cold' ? p.role.edit.fg : p.lo
+  return state === 'cold' ? p.role.warn.fg : p.lo
 }
 
 export type RowOptions = { row: Row; isLight: boolean; noColor: boolean; columns: number }
@@ -90,7 +90,7 @@ const IMAGE_CELLS = 3
 function terminalColor(state: RowState, noColor: boolean): string | undefined {
   if (noColor) return undefined
   if (state === 'warm') return TERMINAL.ok
-  return state === 'cold' ? TERMINAL.edit : undefined
+  return state === 'cold' ? TERMINAL.warn : undefined
 }
 
 export function rowTerminal(ui: Elements['terminal'], o: RowOptions): RenderElement {

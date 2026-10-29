@@ -101,7 +101,7 @@ for (const surface of SURFACES) {
     const ui = await mountPane($, surface)
     const tree = await ui.drawn()
     const drawn = JSON.stringify(tree)
-    for (const text of ['HELD · BLAST RADIUS', command, 'House rule: no network calls to *.internal', 'Run anyway', 'Keep my work']) expect(drawn).toContain(text)
+    for (const text of ['Held · Blast Radius', command, 'House rule: no network calls to *.internal', 'Run anyway', 'Keep my work']) expect(drawn).toContain(text)
     expect(byKey(tree, 'cancel')?.props?.autoFocus).toBe(true)
     await ui.press({ key: 'cancel' })
     await pass(w)

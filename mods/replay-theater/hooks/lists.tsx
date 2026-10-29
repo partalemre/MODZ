@@ -1,16 +1,17 @@
 import { dateText } from './age'
-import { upper } from './lang'
 import { headSvg, noteSvg, sessionFacts, sessionRowSvg, turnMeta, turnRowSvg, turnTitle } from './lists-svg'
 import type { Drawing, ListHead } from './lists-svg'
 import type { MoveOpts } from './kit/moving'
+import { PressRow } from './kit/press'
 import type { Ui } from './offer'
 import { motion } from './pane'
 import type { Theme } from './ui/theme'
 import { words } from './words'
 import type { ReplaySession, ReplaySessions, ReplayTurnRow, ReplayTurns } from '../types'
 
-// The pane's two lists: a session's turns that edited files, and this project's sessions. Each row has its
-// own button (1–9 as keys); under them "More", the way to the other list, and Close.
+// The pane's two lists: a session's turns that edited files, and this project's sessions. A row that opens
+// something is pressed as a whole on the desktop (a button laid over its drawing) and has a button with 1–9 as
+// keys in the terminal; under them the way to the other list, "More" and Close.
 
 export type ListHandlers = {
   onTurn: (n: number) => void
@@ -25,8 +26,6 @@ export type ListSite = { surface: string; width: number; theme: Theme; isCompact
 type Row = { key: string; drawing: () => Drawing; shows?: unknown; text: { title: string; meta: string }; button: { label: string; onPress: () => void } | null }
 type ListBody = { head: ListHead; note: { lead: string; rest: string } | null; rows: Row[]; more: number; other: { key: string; label: string; hotkey: string; onPress: () => void } }
 
-// A drawn row leaves this much room for its button.
-const BUTTON_ROOM = 72
 const HOTKEYS = 9
 // What a compact (band) list keeps for its head and buttons.
 const COMPACT_CHROME_ROWS = 4
@@ -45,7 +44,7 @@ function noteOf(status: string, notes: Notes): ListBody['note'] {
 
 function turnsBody(turns: ReplayTurns, view: { shown: number; now: number; site: ListSite }): ListBody {
   const w = words()
-  const look = { width: view.site.width - BUTTON_ROOM, theme: view.site.theme, now: view.now }
+  const look = { width: view.site.width, theme: view.site.theme, now: view.now }
   const rows = turns.rows.slice(0, view.shown).map((row: ReplayTurnRow): Row => {
     const drawing = () => turnRowSvg(row, look)
     const text = { title: turnTitle(row), meta: turnMeta(row, view.now) }
@@ -65,10 +64,10 @@ function turnsBody(turns: ReplayTurns, view: { shown: number; now: number; site:
 
 function sessionsBody(sessions: ReplaySessions, view: { shown: number; site: ListSite }): ListBody {
   const w = words()
-  const look = { width: view.site.width - BUTTON_ROOM, theme: view.site.theme }
+  const look = { width: view.site.width, theme: view.site.theme }
   const rows = sessions.rows.slice(0, view.shown).map((row: ReplaySession): Row => {
-    const drawing = () => sessionRowSvg(row, look)
     const hasEdits = row.edits === null || row.edits > 0
+    const drawing = () => sessionRowSvg(row, { ...look, isPressable: hasEdits })
     const button = hasEdits ? { label: w.openSession, onPress: () => view.site.on.onSession(row.id) } : null
     const meta = [row.isCurrent ? w.thisSession : '', dateText(row.at), sessionFacts(row)].filter(Boolean).join(' · ')
 
@@ -89,17 +88,27 @@ function bottomRow(ui: Ui, body: ListBody, on: ListHandlers) {
   return (
     <Box key="rt-list-buttons" flexDirection="row" columnGap={2} alignItems="center">
       <Button key={body.other.key} variant="secondary" hotkey={body.other.hotkey} label={body.other.label} onPress={body.other.onPress} />
-      {body.more > 0 && <Button key="rt-more" variant="secondary" hotkey="m" label={`${w.more} (${body.more})`} onPress={on.onMore} />}
+      {body.more > 0 && <Button key="rt-more" plain dimColor hotkey="m" label={`${w.more} (${body.more})`} onPress={on.onMore} />}
       <Box flexGrow={1} />
-      <Button key="rt-close" plain hotkey="c" label={w.close} onPress={on.onClose} />
+      <Button key="rt-close" plain dimColor hotkey="c" label={w.close} onPress={on.onClose} />
     </Box>
   )
 }
 
 const hotkeyOf = (k: number) => (k < HOTKEYS ? { hotkey: String(k + 1) } : {})
 
+// A row that opens something is one press over its drawing; one that does not is the drawing alone.
+// No digit on the desktop (as the hub's rows): a cover's hint would float in the middle of the row.
+function desktopRow(ui: Ui, row: Row, at: { draw: (drawing: Drawing, key: string, opts: MoveOpts) => unknown }) {
+  const { Box } = ui
+  const isPressable = row.button !== null
+  const drawing = at.draw(row.drawing(), `${row.key}-svg`, { isRow: isPressable, shows: row.shows })
+  if (row.button === null) return <Box key={row.key} alignSelf="flex-start">{drawing}</Box>
+  return PressRow(ui, { box: row.key, key: `${row.key}-open`, onPress: row.button.onPress, drawing })
+}
+
 function desktopList(ui: Ui, body: ListBody, site: ListSite) {
-  const { Box, Svg, Button } = ui
+  const { Box, Svg } = ui
   const draw = (drawing: Drawing, key: string, opts: MoveOpts & { width?: number } = {}) => {
     const { width = site.width, ...moves } = opts
 
@@ -112,12 +121,7 @@ function desktopList(ui: Ui, body: ListBody, site: ListSite) {
     <Box key="rt-list" flexDirection="column" gap={1} paddingX={1} paddingY={1}>
       {draw(head, 'rt-list-head')}
       {note !== null && draw(note, 'rt-list-note')}
-      {body.rows.map((row, k) => (
-        <Box key={row.key} flexDirection="row" alignItems="center" columnGap={1}>
-          {draw(row.drawing(), `${row.key}-svg`, { width: site.width - BUTTON_ROOM, isRow: true, shows: row.shows })}
-          {row.button !== null && <Button key={`${row.key}-open`} variant="secondary" label={row.button.label} onPress={row.button.onPress} {...hotkeyOf(k)} />}
-        </Box>
-      ))}
+      {body.rows.length > 0 && <Box key="rt-list-rows" flexDirection="column">{body.rows.map(row => desktopRow(ui, row, { draw }))}</Box>}
       {bottomRow(ui, body, site.on)}
     </Box>
   )
@@ -146,7 +150,7 @@ function terminalList(ui: Ui, body: ListBody, site: ListSite) {
   return (
     <Box key="rt-list" flexDirection="column" paddingX={1}>
       <Box key="rt-list-title" flexDirection="row" columnGap={1}>
-        <Text color="merged" bold>{`● ${upper(body.head.title)}`}</Text>
+        <Text bold dimColor>{body.head.title}</Text>
         {body.head.meta !== '' && <Text dimColor>{`· ${body.head.meta}`}</Text>}
       </Box>
       {facts !== '' && <Text key="rt-list-facts" dimColor wrap="truncate-end">{facts}</Text>}

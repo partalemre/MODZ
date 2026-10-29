@@ -43,9 +43,9 @@ function lintPill(outcome: CheckOutcome): BadgePill {
   return { tone: 'amber', label: outcome.errors !== null && outcome.errors > 0 ? says.lintErrors(outcome.errors) : says.lintFailed }
 }
 
-// The band: one pill per check, then how long ago, in text.lo; while running, one Iris pill.
+// The band: one pill per check, then how long ago, in text.lo; while running, one pill in the live accent.
 export function bandParts(badge: TestBadge, now: number): { pills: BadgePill[]; meta: string } {
-  if (badge.isRunning) return { pills: [{ tone: 'iris', glyph: 'pulse', label: words().testRunning }], meta: '' }
+  if (badge.isRunning) return { pills: [{ tone: 'kiln', glyph: 'pulse', label: words().testRunning }], meta: '' }
   const pills: BadgePill[] = []
   if (badge.tests !== null) pills.push(testsPill(badge.tests))
   if (badge.lint !== null) pills.push(lintPill(badge.lint))
@@ -72,7 +72,7 @@ function passedRest(tests: CheckOutcome | null): string {
 export function headlineOf(badge: TestBadge): Headline {
   const { tests, lint } = badge
   const says = words()
-  if (badge.isRunning) return { lead: says.leadRunning, tone: 'iris', rest: '' }
+  if (badge.isRunning) return { lead: says.leadRunning, tone: 'kiln', rest: '' }
   if (badge.finishedAt === null) return { lead: says.leadNotRun, tone: 'neutral', rest: '' }
   if (tests !== null && tests.status === 'timeout') return { lead: says.leadTimeout, tone: 'amber', rest: '' }
   if (tests !== null && tests.status === 'error') return { lead: says.leadNotStarted, tone: 'amber', rest: '' }
@@ -87,14 +87,6 @@ export function headlineOf(badge: TestBadge): Headline {
   if (linted !== null) return { ...linted, rest: passedRest(tests) }
 
   return { lead: says.leadAllPassed, tone: 'moss', rest: `${passedRest(tests)}${lint === null ? '' : says.restLintClean}` }
-}
-
-// The eyebrow wears the headline's role: Flare only when tests failed, Amber for lint or a run that
-// did not finish, Moss when all passed.
-export function eyebrowRole(badge: TestBadge): Role {
-  const tone = headlineOf(badge).tone
-
-  return tone === 'neutral' ? 'tide' : tone
 }
 
 export function runMeta(badge: TestBadge, now: number): string {
@@ -128,7 +120,7 @@ export function durationText(ms: number | null | undefined): string {
   return ms < SECOND ? `${Math.round(ms)} ms` : words().seconds(ms, SECOND)
 }
 
-// The failure's place as the row's highlight span shows it: the file's name and line.
+// The failure's place as the row shows it: the file's name and line.
 export function spanOf(failure: Failure): string {
   const name = (failure.file ?? '').split('/').pop() ?? ''
   if (name === '') return failure.line === null ? '—' : `:${failure.line}`

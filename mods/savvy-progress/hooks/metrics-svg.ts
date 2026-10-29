@@ -1,7 +1,6 @@
 import type { AgentRun } from '../types'
 import type { Progress } from './estimate'
 import { textWidth, xml } from './format'
-import { shine } from './kit/motion'
 import { FONT, MONO, paneSvg } from './theme'
 import type { Kind } from './history'
 
@@ -24,16 +23,16 @@ const RING_W = 2.2
 const RING_SLOT = 17
 const MIX_GAP = 2
 
-export const KIND_COLOR: Record<Kind, string> = { read: '#6aa6e6', edit: '#e58466', run: '#a48ff0', agent: '#5fbf8f', other: '#9a968c' }
 
 // An estimate wears soft still stripes, so it never reads as a measured fill.
 const stripesOf = (filled: number, y: number, uid: string): string =>
   `<defs><pattern id="st${uid}" width="${STRIPE}" height="${STRIPE}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${STRIPE / 2}" height="${STRIPE}" fill="#fff" opacity=".28"/></pattern></defs><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" fill="url(#st${uid})"/>`
 
-const FILL: Record<string, string> = { running: 'f-run', done: 'f-ok', failed: 'f-danger' }
+const FILL: Record<string, string> = { running: 'f-edit', done: 'm', failed: 'f-danger' }
+const LABEL: Record<string, string> = { running: 's', done: 'm', failed: 'f-danger' }
 
-// One colour per state (Iris running, Moss done, Flare failed), a light running along it while it runs: the crab
-// carries the tier.
+// A plain track and one fill in its state's colour (the accent while live, quiet once done, red after a failure);
+// the crab carries the tier.
 // The percent sits right after the bar's end, in a slot of one width, so every card's bar ends at
 // the same x and its percent starts there.
 export const progressBarSvg = (W: number, a: AgentRun, opts: { progress: Progress; label: string }): string => {
@@ -44,15 +43,14 @@ export const progressBarSvg = (W: number, a: AgentRun, opts: { progress: Progres
   const uid = a.id.replace(/\W/g, '')
   const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`
-  const bar = `<rect class="${FILL[a.status] ?? 'f-run'}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`
+  const bar = `<rect class="${FILL[a.status] ?? 'f-edit'}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`
   const isRunning = a.status === 'running'
   const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : ''
-  const light = isRunning ? shine({ id: `sh${uid}`, x: 0, y, width: filled, height: TRACK_H }) : ''
-  const label = `<text class="${FILL[a.status] ?? 'f-run'}" x="${barW + PCT_GAP}" y="${BAR_H / 2 + PCT_SIZE * 0.34}" font-family="${MONO}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`
-  return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${light}${label}`)
+  const label = `<text class="${LABEL[a.status] ?? 's'}" x="${barW + PCT_GAP}" y="${BAR_H / 2 + PCT_SIZE * 0.34}" font-family="${MONO}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`
+  return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`)
 }
 
-export type Chip = { text: string; ring?: { ratio: number; color: string } }
+export type Chip = { text: string; ring?: { ratio: number } }
 
 const ringOf = (x: number, ring: NonNullable<Chip['ring']>): string => {
   const c = 2 * Math.PI * RING_R
@@ -60,7 +58,7 @@ const ringOf = (x: number, ring: NonNullable<Chip['ring']>): string => {
   const cx = x + CHIP_PAD + RING_R - 1
   const cy = CHIPS_H / 2
   return `<circle cx="${cx}" cy="${cy}" r="${RING_R}" fill="none" class="rk" stroke-width="${RING_W}"/>` +
-    `<circle cx="${cx}" cy="${cy}" r="${RING_R}" fill="none" stroke="${ring.color}" stroke-width="${RING_W}" stroke-linecap="round" stroke-dasharray="${dash.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`
+    `<circle cx="${cx}" cy="${cy}" r="${RING_R}" fill="none" class="i-s" stroke-width="${RING_W}" stroke-linecap="round" stroke-dasharray="${dash.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`
 }
 
 const chipWidth = (chip: Chip): number => Math.ceil(textWidth(chip.text, CHIP_TEXT)) + CHIP_PAD * 2 + (chip.ring ? RING_SLOT : 0)
@@ -88,7 +86,8 @@ export const chipsSvg = (W: number, chips: Chip[]): { source: string; height: nu
 
 export type MixPart = { kind: Kind; count: number }
 
-// The work so far as one strip: reading, editing, commands, agents, each in its own color.
+// The work so far as one strip: reading, editing, commands, agents, each its own span in one quiet ink, in the
+// legend's order beneath (no colour per kind: colour is kept for state).
 export const mixSvg = (W: number, parts: MixPart[]): string => {
   const total = parts.reduce((sum, p) => sum + p.count, 0)
   if (!total) return paneSvg(W, MIX_H, `<rect class="k" width="${W}" height="${MIX_H}" rx="${MIX_H / 2}"/>`)
@@ -96,7 +95,7 @@ export const mixSvg = (W: number, parts: MixPart[]): string => {
   let x = 0
   const segs = parts.map(p => {
     const w = Math.max(MIX_H, (room * p.count) / total)
-    const seg = `<rect x="${x.toFixed(1)}" width="${w.toFixed(1)}" height="${MIX_H}" rx="${MIX_H / 2}" fill="${KIND_COLOR[p.kind]}"/>`
+    const seg = `<rect class="m" x="${x.toFixed(1)}" width="${w.toFixed(1)}" height="${MIX_H}" rx="${MIX_H / 2}"/>`
     x += w + MIX_GAP
     return seg
   })

@@ -65,9 +65,9 @@ for (const surface of SURFACES) {
     const ui = await $.ui.mount(pane(surface, 'skins-settings'))
 
     expect(world.opened[0]?.title).toBe('Look')
-    expect(await ui.find({ type: 'Text', text: 'THEME' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: 'OPTIONS' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: 'COLORS' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Theme' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Options' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Colors' })).toBeDefined()
     expect(await labelOf(ui, 'toggle-rail')).toBe('● Reply rail')
     expect(await labelOf(ui, 'skin-off')).toBe('Off')
     expect(await labelOf(ui, 'gallery')).toBe('Open the gallery')

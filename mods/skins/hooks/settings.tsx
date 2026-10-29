@@ -9,7 +9,6 @@ import { HomeButton } from './home'
 import { footerRow, promptRow } from './rows'
 import { tableRows } from './row-table'
 import { groupRow, toolRow } from './row-tool'
-import { upper } from './lang'
 import { say } from './words'
 
 export type PaneUi = Pick<ElementTable<'terminal' | 'desktop'>, 'Box' | 'Text' | 'Markdown' | 'Button' | 'Input' | 'Select'>
@@ -81,16 +80,17 @@ function preview(look: Look, width: number) {
 const OFF = 'off'
 const HOTKEYS = 9
 
-// Each part of the pane opens with an eyebrow (and a quiet hint beside it), so a narrow side
-// panel wraps the buttons under it instead of beside a label.
+// Each part of the pane opens with a label in sentence case (and a quiet hint beside it), so a narrow side
+// panel wraps the buttons under it instead of beside a label. The labels are the pane's own ink, not the skin's:
+// only the previews and swatches show a skin's palette.
 function section(look: Look, head: { title: string; hint?: string }, body: RenderElement) {
   const { Box, Text } = look.ui
 
   return (
     <Box key={`section-${head.title}`} flexDirection="column">
       <Box flexDirection="row" columnGap={2}>
-        <Text color={look.skin.palette.muted} bold>{upper(head.title)}</Text>
-        {head.hint === undefined ? null : <Text color={look.skin.palette.muted}>{head.hint}</Text>}
+        <Text dimColor bold>{head.title}</Text>
+        {head.hint === undefined ? null : <Text dimColor>{head.hint}</Text>}
       </Box>
       {body}
     </Box>
@@ -164,7 +164,7 @@ function colorControls({ look, ui, model, actions }: Parts) {
         {SLOTS.map(slot => (
           <Text key={`swatch-${slot}`}>
             <Text backgroundColor={palette[slot]}>{'  '}</Text>
-            <Text color={slot === model.editing ? palette.fg : palette.muted} bold={slot === model.editing}>
+            <Text dimColor={slot !== model.editing} bold={slot === model.editing}>
               {` ${slot}`}
             </Text>
           </Text>
@@ -194,7 +194,6 @@ function colorControls({ look, ui, model, actions }: Parts) {
 export function settingsPane(parts: Parts) {
   const { look, ui, model, actions, home } = parts
   const { Box, Button, Text } = ui
-  const { palette } = look.skin
   const count = model.names.length
 
   return (
@@ -205,9 +204,9 @@ export function settingsPane(parts: Parts) {
       {section(look, { title: say().options }, optionButtons(parts))}
       {section(look, { title: say().colors, hint: say().colorsHint }, colorControls(parts))}
       <Box flexDirection="row" flexWrap="wrap" columnGap={2} alignItems="center">
-        <Text color={palette.muted}>
+        <Text dimColor>
           {say().askClaude}
-          <Text color={palette.fg}>{say().askExample}</Text>
+          <Text>{say().askExample}</Text>
         </Text>
         <Button key="gallery" label={say().openGallery} hotkey="g" plain onPress={() => actions.gallery()} />
       </Box>

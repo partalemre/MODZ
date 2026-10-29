@@ -1,6 +1,5 @@
 import { ago, changedText, confirmOf, emptyText, headerMeta, questionOf, statusRow, titleOf } from './pane'
 import type { PaneOpts, Ui } from './pane'
-import { upper } from './lang'
 import { words } from './words'
 import type { CheckpointMeta, CheckpointView, PendingUndo } from '../types'
 
@@ -71,7 +70,7 @@ export function textPane(ui: Ui, view: CheckpointView, opts: PaneOpts) {
   return (
     <Box flexDirection="column">
       <Box flexDirection="row" justifyContent="space-between" columnGap={1}>
-        <Text color="claude" bold>{`● ${upper(words().title)}`}</Text>
+        <Text bold dimColor>{words().title}</Text>
         <Text dimColor>{headerMeta(view, opts.now)}</Text>
       </Box>
       <Text> </Text>

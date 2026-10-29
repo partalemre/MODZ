@@ -22,7 +22,7 @@ export const TYPE = {
   headline: { size: 17, weight: 620, line: 22 },
   title: { size: 14, weight: 600, line: 20 },
   body: { size: 13, weight: 400, line: 18 },
-  eyebrow: { size: 10.5, weight: 700, tracking: 0.1 },
+  eyebrow: { size: 12, weight: 600, tracking: 0 },
   label: { size: 12, weight: 500 },
   micro: { size: 10.5, weight: 500 },
 } as const

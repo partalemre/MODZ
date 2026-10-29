@@ -4,13 +4,11 @@
 import type { Elements, RenderElement } from 'claude-code'
 
 import type { JustSaved, Learning } from '../types'
-import { pathSvg, proposalSvg, savedSvg } from './card-svg'
+import { destSvg, isStackedAt, proposalSvg, savedSvg } from './card-svg'
+import { PressRow } from './kit/press'
 import { ICONS } from './icons'
-import { iconSvg, measure } from './svg'
-import type { Font } from './svg'
 import { TERMINAL, palette } from './theme'
 import type { Palette } from './theme'
-import { upper } from './lang'
 import { words } from './words'
 
 export type Scope = 'global' | 'project'
@@ -41,13 +39,7 @@ const PX_PER_COLUMN = 8
 const CARD_CHROME = 6
 const MIN_WIDTH = 300
 const MAX_WIDTH = 720
-const ROW_ICON = 16
 const PERCENT = 100
-// A destination row's own chrome in px: border, padding, icon, two gaps, the button's padding and hotkey.
-const DEST_CHROME = 110
-const LABEL_FONT: Font = { size: 14 }
-// The path under a stacked row's label lines up with the label: past the icon and its gap.
-const DEST_INDENT = 3
 
 export const contentWidth = (columns: number): number =>
   Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, (columns - CARD_CHROME) * PX_PER_COLUMN))
@@ -76,45 +68,27 @@ function actionsRow(ui: TextUi, c: CardInput): RenderElement {
   return Box({ flexDirection: 'row', gap: 1, flexWrap: 'wrap', alignItems: 'center', children: [
     Button({ key: `save:${id}`, label: says.saveLabel[c.picked], variant: 'primary', hotkey: says.saveKey, onPress: () => c.on.save(c.picked) }),
     Button({ key: `other:${id}`, label: says.saveLabel[other(c.picked)], variant: 'secondary', onPress: () => c.on.save(other(c.picked)) }),
-    Button({ key: `edit:${id}`, label: says.reword, variant: 'secondary', hotkey: says.rewordKey, onPress: c.on.reword }),
-    Button({ key: `skip:${id}`, label: says.skip, plain: true, onPress: c.on.skip }),
+    Button({ key: `edit:${id}`, label: says.reword, plain: true, dimColor: true, hotkey: says.rewordKey, onPress: c.on.reword }),
+    Button({ key: `skip:${id}`, label: says.skip, plain: true, dimColor: true, onPress: c.on.skip }),
   ] })
 }
 
 // `isStacked`: both rows put the path under the label when either one's path would not fit beside it.
-type Dest = { scope: Scope; p: Palette; isStacked: boolean }
-
-/** What a destination row needs beside its path: its frame and padding, the icon, the gaps and the label button. */
-const rowChromeOf = (label: string): number => DEST_CHROME + measure(label, LABEL_FONT)
+type Dest = { scope: Scope; p: Palette; width: number; isStacked: boolean }
 
 /** Whether either destination's path would not fit beside its label at this width. */
-function stacksAt(c: CardInput, width: number): boolean {
-  return (['project', 'global'] as const).some(scope => rowChromeOf(words().rowLabel[scope]) + pathSvg(c.paths[scope], '').width > width)
-}
+const stacksAt = (c: CardInput, width: number): boolean =>
+  isStackedAt((['project', 'global'] as const).map(scope => ({ label: words().rowLabel[scope], path: c.paths[scope] })), width)
 
-// The path stays whole: when it and the label do not fit on one line it moves under the label. The picked
-// row's label is drawn at full strength, the other one dim.
+// The whole row is the press (kit/press.tsx): the drawing shows the picked row on a wash, the native button over it
+// takes the press. A desktop paints no hotkey on that cover, so the digit keys are the terminal's.
 function destDesktop(ui: Elements['desktop'], c: CardInput, d: Dest): RenderElement {
-  const { Box, Button, Svg } = ui
-  const { scope, p } = d
-  const isPicked = c.picked === scope
-  const tone = p.role.ok
-  const path = pathSvg(c.paths[scope], isPicked ? p.hi : p.lo)
-  const isStacked = d.isStacked
-  const pathEl = Svg({ source: path.source, alt: c.paths[scope], width: path.width, height: path.height })
-  const pick = [
-    Svg({ source: iconSvg(ROW_ICONS[scope], ROW_ICON, isPicked ? tone.fg : p.lo), alt: '', width: ROW_ICON, height: ROW_ICON }),
-    // The desktop engine takes a Button's label as its one string: a Text child is refused and drops the band.
-    Button({ key: `pick-${scope}:${c.l.id}`, label: words().rowLabel[scope], plain: true, hotkey: HOTKEY[scope], dimColor: !isPicked, onPress: () => c.on.pick(scope) }),
-  ]
-  const frame = { key: `dest-${scope}:${c.l.id}`, paddingX: 1, borderStyle: 'round', borderColor: isPicked ? tone.line : p.line, backgroundColor: isPicked ? tone.tint : p.card } as const
-  if (isStacked) {
-    return Box({ ...frame, flexDirection: 'column', children: [
-      Box({ flexDirection: 'row', alignItems: 'center', gap: 1, children: pick }),
-      Box({ paddingLeft: DEST_INDENT, children: [pathEl] }),
-    ] })
-  }
-  return Box({ ...frame, flexDirection: 'row', alignItems: 'center', gap: 1, children: [...pick, Box({ flexGrow: 1 }), pathEl] })
+  const { scope } = d
+  const label = words().rowLabel[scope]
+  const art = destSvg(d.width, { icon: ROW_ICONS[scope], label, path: c.paths[scope], isPicked: c.picked === scope, isStacked: d.isStacked }, d.p)
+  const drawing = ui.Svg({ source: art.source, alt: `${label}: ${c.paths[scope]}`, width: d.width, height: art.height })
+
+  return PressRow(ui, { box: `dest-${scope}:${c.l.id}`, key: `pick-${scope}:${c.l.id}`, drawing, onPress: () => c.on.pick(scope) })
 }
 
 const shell = (ui: Elements['desktop'], p: Palette, children: RenderElement[]): RenderElement =>
@@ -129,7 +103,7 @@ export function cardDesktop(ui: Elements['desktop'], c: CardInput, look: Look): 
   const more = c.more > 0 ? [ui.Text({ color: p.lo, children: [words().more(c.more)] })] : []
   return shell(ui, p, [
     ui.Svg({ source: head.source, alt: words().askAlt(c.l.rule), width, height: head.height }),
-    ui.Box({ flexDirection: 'column', gap: 0, children: (['project', 'global'] as const).map(scope => destDesktop(ui, c, { scope, p, isStacked })) }),
+    ui.Box({ flexDirection: 'column', gap: 0, children: (['project', 'global'] as const).map(scope => destDesktop(ui, c, { scope, p, width, isStacked })) }),
     actionsRow(ui, c),
     ...more,
   ])
@@ -158,10 +132,10 @@ export function cardText(ui: TextUi, c: CardInput): RenderElement {
   const count = c.l.count > 1 ? ` ×${c.l.count}` : ''
   const meta = c.l.isExplicit ? '' : `  ${says.sure(Math.round(c.l.confidence * PERCENT))}`
   return Box({ key: 'reflect:card', flexDirection: 'column', paddingX: 1, borderStyle: 'round', borderDimColor: true, children: [
-    Text({ children: [Text({ bold: true, color: TERMINAL.ok, children: [`● ${upper(says.ask)}`] }), Text({ dimColor: true, children: [meta] })] }),
+    Text({ children: [Text({ bold: true, children: [says.ask] }), Text({ dimColor: true, children: [meta] })] }),
     Text({ bold: true, wrap: 'wrap', children: [`“${c.l.rule}”${count}`] }),
     ...(c.l.said ? [Text({ dimColor: true, wrap: 'truncate-end', children: [says.said, Text({ italic: true, children: [`“${c.l.said}”`] })] })] : []),
-    Text({ dimColor: true, bold: true, children: [upper(says.where)] }),
+    Text({ dimColor: true, bold: true, children: [says.where] }),
     destText(ui, c, 'project'),
     destText(ui, c, 'global'),
     actionsRow(ui, c),
@@ -174,7 +148,7 @@ export function savedText(ui: TextUi, s: JustSaved): RenderElement {
   const says = words()
   const title = s.isNew ? says.savedTitle[s.scope] : says.alreadySaved
   return Box({ key: 'reflect:card', flexDirection: 'column', paddingX: 1, borderStyle: 'round', borderDimColor: true, children: [
-    Text({ bold: true, color: TERMINAL.ok, children: [`✓ ${upper(says.saved)}`] }),
+    Text({ bold: true, color: TERMINAL.ok, children: [`✓ ${says.saved}`] }),
     Text({ bold: true, children: [title] }),
     Text({ wrap: 'wrap', children: [`“${s.rule}”`] }),
     Text({ dimColor: true, children: [`${s.isNew ? says.addedTo : says.alreadyIn}: ${s.path}`] }),

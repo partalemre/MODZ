@@ -1,6 +1,5 @@
 import { CONTROL_SLOT, escape, HEADER_MID, fitText, MONO, riseDelay, svgCard, tint } from './svg-kit'
 import type { CardFrame } from './svg-kit'
-import { upper } from './lang'
 import { say } from './words'
 
 // A fenced code block as a card: the language and line count in a header, line numbers
@@ -110,7 +109,7 @@ export function codeSvg(code: string, lang: string, { palette, width, hasControl
   const footer = hidden > 0 ? `<text x="${gutter}" y="${HEADER_H + 8 + lines.length * LINE_H + 14}" font-size="11.5" style="fill:${palette.muted}">${escape(say().moreLines(hidden))}</text>` : ''
   const height = HEADER_H + 8 + lines.length * LINE_H + (hidden > 0 ? 28 : 10)
   const header = [
-    `<text x="16" y="${HEADER_MID + 4}" font-size="11" style="fill:${palette.muted};letter-spacing:.1em;font-weight:600">${escape(upper(lang || say().code))}</text>`,
+    `<text x="16" y="${HEADER_MID + 4}" font-size="12" style="fill:${palette.muted};font-weight:600">${escape(lang || say().code)}</text>`,
     `<text x="${width - 16 - (hasControl ? CONTROL_SLOT : 0)}" y="${HEADER_MID + 4}" text-anchor="end" font-size="11" style="fill:${palette.muted}">${all.length} line${all.length === 1 ? '' : 's'}</text>`,
     `<line x1="0" y1="${HEADER_H - 0.5}" x2="${width}" y2="${HEADER_H - 0.5}" stroke="${palette.muted}" stroke-opacity=".3"/>`,
     `<g transform="translate(0 ${HEADER_H})">${tint(palette, { y: 0, width: gutter - 4, height: height - HEADER_H, opacity: 0.04 })}</g>`,

@@ -7,10 +7,9 @@ import { baseName, detailSvg, overviewSvg, totals } from './pane-svg'
 import type { PaneModel } from './pane-svg'
 import type { ReplayStep } from '../types'
 import { terminalView } from './terminal'
-import { escape, eyebrow, widthFor, wrap } from './ui/svg'
+import { escape, widthFor, wrap } from './ui/svg'
 import { svgDoc } from './ui/theme'
 import type { Theme } from './ui/theme'
-import { upper } from './lang'
 import { words } from './words'
 
 export type PaneSite = { surface: string; columns: number; inBand: boolean; maxRows: number }
@@ -20,7 +19,7 @@ const PANE_GUTTER_COLUMNS = 3
 const SCROLLBAR_ROOM = 12
 // The replay outlives turns without edits, so an empty pane means none yet this session.
 const emptyText = (): string => `${words().emptyLead}. ${words().emptyRest}`
-const EMPTY_LEAD_Y = 40
+const EMPTY_LEAD_Y = 20
 const EMPTY_LINE_H = 19
 const EMPTY_REST_SIZE = 13
 
@@ -72,14 +71,14 @@ function desktopView(ui: Ui, model: PaneModel, on: PaneHandlers) {
   )
 }
 
-// The eyebrow, the lead and one sentence under it.
+// The lead and one sentence under it; the pane's own title already says whose it is.
 function emptySvg(width: number, theme: Theme): { source: string; height: number } {
   const w = words()
   const rest = wrap(w.emptyRest, { width, size: EMPTY_REST_SIZE, maxLines: 2 })
   const lead = `<text x="0" y="${EMPTY_LEAD_Y}" class="headline hi">${escape(w.emptyLead)}</text>`
   const lines = rest.map((part, n) => `<text x="0" y="${EMPTY_LEAD_Y + (n + 1) * EMPTY_LINE_H + 2}" class="mid" font-size="${EMPTY_REST_SIZE}">${escape(part)}</text>`)
   const height = EMPTY_LEAD_Y + rest.length * EMPTY_LINE_H + 10
-  const body = `<rect x="0" y="5" width="6" height="6" rx="1.5" fill="var(--plan)"/><text x="13" y="12" class="eyebrow f-plan">${eyebrow(w.title)}</text>${lead}${lines.join('')}`
+  const body = `${lead}${lines.join('')}`
 
   return { source: svgDoc({ width, height, theme }, body), height }
 }
@@ -87,7 +86,7 @@ function emptySvg(width: number, theme: Theme): { source: string; height: number
 function emptyView(ui: Ui, spec: { surface: string; width: number; theme: Theme; on: PaneHandlers }) {
   const { Box, Text, Button, Svg } = ui
   const w = words()
-  const close = <Button key="rt-close" plain hotkey="c" label={w.close} onPress={spec.on.onClose} />
+  const close = <Button key="rt-close" plain dimColor hotkey="c" label={w.close} onPress={spec.on.onClose} />
   const sessions = <Button key="rt-sessions" variant="secondary" hotkey="s" label={w.pastSessions} onPress={spec.on.onSessions} />
   const actions = (
     <Box flexDirection="row" columnGap={2}>
@@ -99,7 +98,7 @@ function emptyView(ui: Ui, spec: { surface: string; width: number; theme: Theme;
   if (spec.surface === 'terminal' || !('Svg' in ui)) {
     return (
       <Box key="rt-empty" flexDirection="column" gap={1} paddingX={1}>
-        <Text color="merged" bold>{`● ${upper(w.title)}`}</Text>
+        <Text bold dimColor>{w.title}</Text>
         <Text bold>{w.emptyLead}</Text>
         <Text dimColor>{w.emptyRest}</Text>
         {actions}

@@ -33,7 +33,7 @@ for (const surface of SURFACES) {
     await setup($, on, { store: sessions([['shop', 'waiting', 3], ['blog', 'idle']]) })
     const ui = await mount($)
     const all = await seen(ui)
-    expect(all).toContain(surface === 'terminal' ? '● SENİ BEKLİYOR' : 'Seni bekliyor, shop · shop work · 3 dk bekliyor')
+    expect(all).toContain(surface === 'terminal' ? 'Seni bekliyor' : 'Seni bekliyor, shop · shop work · 3 dk bekliyor')
     expect(all).toContain('shop')
     expect(all).toContain('shop work')
     expect(all).toContain('3 dk bekliyor')
@@ -59,7 +59,7 @@ for (const surface of SURFACES) {
     const ui = await mount($)
     const all = await seen(ui)
     expect(all).not.toContain('bekliyor')
-    expect(all).not.toContain('● SENİ BEKLİYOR')
+    expect(all).not.toContain('Seni bekliyor')
     expect(await ui.find({ key: 'chats' })).toBeDefined()
     expect(all).toContain(surface === 'terminal' ? '▸ Diğer sohbetler · 2' : 'Göster')
     // The working one shows while folded; the idle one waits for the press.

@@ -48,7 +48,7 @@ test('a Russian correction becomes a band row, and Save writes the repo CLAUDE.m
   await press($, 'save:')
   expect(w.files['/repo/CLAUDE.md']).toContain('- Use pnpm, not npm, in this repo\n<!-- end claude-reflect -->')
   const ui = await mount($)
-  expect(await ui.find({ type: 'Text', text: '✓ KURAL KAYDEDİLDİ' })).not.toBe(undefined)
+  expect(await ui.find({ type: 'Text', text: '✓ Kural kaydedildi' })).not.toBe(undefined)
   expect((await ui.find({ type: 'Text', text: /^Eklendiği yer: / }))?.text).toBe('Eklendiği yer: repo/CLAUDE.md')
   await ui.unmount()
   await w.clock.advance(4000)

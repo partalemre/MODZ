@@ -1,6 +1,6 @@
 // The pane in motion on the desktop (kit/moving.ts): every drawing is an interactive frame that enters as the pane
 // opens, keeps its very source while what it shows is unchanged (the once-a-second tick included), and enters again
-// when the pane opens anew. Live work moves: a running bar shines, a running pill's dot sends out rings.
+// when the pane opens anew. Live work only breathes: a running pill's dot and the open call's dot; no bar shines.
 import { expect, test } from 'claude-code/testing'
 
 import { pulseSvg } from '../hooks/pane-svg'
@@ -21,9 +21,9 @@ test('desktop: the drawings cascade in as frames, live work moves, and the one-s
   expect(svgs.length).toBeGreaterThan(10)
   expect(svgs.every((svg: any) => svg.props.isInteractive === true && svg.props.width > 0 && svg.props.height > 0)).toBe(true)
   expect(drawn.every(source => source.includes(':root{color-scheme:light dark}') && source.includes('class="m-in"'))).toBe(true)
-  expect(drawn.filter(source => source.includes('class="m-shine"'))).toHaveLength(3)
-  expect(drawn.filter(source => source.includes('f-run m-ripple')).length).toBeGreaterThanOrEqual(3)
-  expect(pulseSvg()).toContain('f-run m-ripple')
+  expect(drawn.some(source => /m-shine|m-ripple/.test(source))).toBe(false)
+  expect(drawn.filter(source => source.includes('f-edit live')).length).toBeGreaterThanOrEqual(3)
+  expect(pulseSvg()).toContain('f-edit live')
 
   // The clocks count on in native text; no drawing is rebuilt for them.
   await clock.advance(3 * SECOND)

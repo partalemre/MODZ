@@ -65,8 +65,8 @@ cube, bookmark, bulb, play, pause, folder, file, branch, terminal, bell, sparkle
 |---|---|
 | `textWidth(text, size, weight)` | `textWidth('Mesaj', 13, 600)` → px, measured SF Pro advances |
 | `monoWidth`, `fitText`, `wrapText` | `wrapText(s, { max: 300, maxLines: 2, measure: t => textWidth(t, 17, 620) })` |
-| `iconTile` | `iconTile({ icon: 'trash', role: 'danger', size: 36 })` (rx 9, tint, 18 px icon) |
-| `eyebrow` | `eyebrow({ text: 'Tüm dosyalar', width: 400, hasDot: true, meta: '2 dk önce', hasRule: true })` |
+| `iconTile` | `iconTile({ icon: 'trash', size: 36 })` (a bare 18 px line icon in text.mid; no tile is drawn) |
+| `eyebrow` | `eyebrow({ text: 'Tüm dosyalar', width: 400, hasDot: true, role: 'run', meta: '2 dk önce' })` (sentence case, text.lo; the role colours only the dot) |
 | `headline` | `headline({ text, width: 400, mark: 'yaklaşık $0,45', markRole: 'warn' })` (17/620, ≤2 lines) |
 | `bodyPart`, `linesPart` | `bodyPart({ text: sub, width })` (13/400 text.mid) |
 | `statTile` | `statTile({ label: 'Token', value: '342k', unit: 'tok', role: 'read', spark: [3, 5, 9] })` |
@@ -170,3 +170,10 @@ failed or aborted call, a non-2xx or non-JSON Jev reply, or a timeout: `undefine
 `tools/kit-gallery` draws every component; `bin/preview tools/kit-gallery <out>` (and `--theme light`)
 renders it. Its `tests/kit.test.ts` checks contrast (WCAG, both themes), meter bounds, text measuring and the
 button rules.
+
+## press.tsx (a drawing pressed as a whole)
+
+| Export | Example |
+|---|---|
+| `PressRow(ui, o)` | `PressRow(ui, { box: 'row-a', key: 'open-a', drawing: <Svg … isInteractive />, onPress })` (the Svg's alt names the row) |
+| `PressCover(ui, o)` | laid inside a box that already hugs its drawing; the row's Svg draws its own `›` and `m-wash` |

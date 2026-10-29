@@ -5,7 +5,6 @@ import { RANGES } from './past'
 import type { PastView } from './past-hook'
 import { motion } from './pane-motion'
 import { pastSvg } from './svg-past'
-import { TERMINAL_KEY } from './theme'
 import { words } from './words'
 import type { HudPast } from '../types'
 
@@ -23,7 +22,7 @@ const lineOf = (past: HudPast): string =>
 
 const stripOf = (past: HudPast): string => past.cells.map(cell => LEVEL_GLYPHS[cell.level] ?? LEVEL_GLYPHS[0]).join('')
 
-// The range switch: the one shown is the primary button, the other dim.
+// The range switch: the one shown a quiet secondary, the other plain and dim; the pane keeps no primary.
 function switchOf(ui: Ui, card: PastCard) {
   const { Box, Button } = ui
 
@@ -31,7 +30,7 @@ function switchOf(ui: Ui, card: PastCard) {
     <Box flexDirection="row" columnGap={1}>
       {RANGES.map(range => {
         const isShown = range === card.past.range
-        const look = isShown ? { variant: 'primary' as const } : { dimColor: true }
+        const look = isShown ? { variant: 'secondary' as const } : { plain: true, dimColor: true }
 
         return <Button key={`past-${range}`} label={words().rangeLabel(range)} {...look} onPress={() => card.choose(range)} />
       })}
@@ -49,7 +48,7 @@ function terminalCard(ui: Ui, card: PastCard) {
         <Text dimColor>{lineOf(card.past)}</Text>
       </Box>
       <Box flexDirection="row" columnGap={2} alignItems="center">
-        <Text color={TERMINAL_KEY.read}>{stripOf(card.past)}</Text>
+        <Text>{stripOf(card.past)}</Text>
         {switchOf(ui, card)}
       </Box>
     </Box>

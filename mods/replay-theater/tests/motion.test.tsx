@@ -1,5 +1,5 @@
 // The pane in motion on the desktop (kit/moving.ts): every drawing is an interactive frame that enters as the pane
-// opens, a step's drawings follow its edit rather than its place, the age reading on is no change to sweep, and a
+// opens, a step's drawings follow its edit rather than its place, the age reading on is no change to flash, and a
 // diff wider than the pane still scrolls sideways in its frame.
 import { expect, test } from 'claude-code/testing'
 
@@ -18,7 +18,7 @@ async function draw($: any): Promise<string[]> {
   return drawn
 }
 
-test('desktop: the replay cascades in as frames, a step follows its edit, and its age ticks on without a sweep', async ($: any, on: any) => {
+test('desktop: the replay cascades in as frames, a step follows its edit, and its age ticks on without a flash', async ($: any, on: any) => {
   const world = newWorld()
   const clock = await setup($, on, world)
   await plannedTurn($, world)
@@ -33,7 +33,7 @@ test('desktop: the replay cascades in as frames, a step follows its edit, and it
 
   await pane.press({ key: 'rt-next' })
   const next = await sources(pane)
-  expect(next[0]).toContain('m-sweep')
+  expect(next[0]).toContain('m-flash')
   expect(next.slice(1).every(source => source.includes('class="m-in"'))).toBe(true)
 
   await pane.press({ key: 'rt-prev' })
@@ -45,7 +45,7 @@ test('desktop: the replay cascades in as frames, a step follows its edit, and it
   await clock.advance(PAST_MINUTE_MS)
   const later = await draw($)
   expect(later[0]).not.toEqual(back[0])
-  expect(later[0]).not.toContain('m-sweep')
+  expect(later[0]).not.toContain('m-flash')
   expect(later.slice(1)).toEqual(back.slice(1))
 })
 

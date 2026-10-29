@@ -253,7 +253,7 @@ test('code is split into comments, strings, numbers and keywords by language', a
     'keyword', 'plain', 'plain', 'plain', 'string', 'plain', 'comment',
   ])
   expect(tokenize('x = 1  # note', 'python').at(-1)).toEqual({ text: '# note', role: 'comment' })
-  expect(codeSvg('a\nb', 'ts', { palette: tokyoNight.palette, width: 600 }).source).toContain('TS')
+  expect(codeSvg('a\nb', 'ts', { palette: tokyoNight.palette, width: 600 }).source).toContain('>ts<')
 })
 
 test('plan limits read as 5s and 7g, and a meter warns as it fills', async () => {

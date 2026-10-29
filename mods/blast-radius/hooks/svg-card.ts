@@ -1,13 +1,13 @@
-// The card's vector parts on desktop: header (tile + headline), risk banner, and the
+// The card's vector parts on desktop: header (bare icon, label, headline), risk line, and the
 // list with size bars on one global scale. After Delete, file rows get a drawn strike.
+// Colour is state only: the danger colour sits on the destructive words and the card's frame, the rest is ink.
 
 import { svgStyle } from './theme'
-import { escape, fit, fitMiddle, icon, measure, svgOpen, tile } from './svg-kit'
+import { escape, fit, fitMiddle, icon, measure, svgOpen } from './svg-kit'
 import type { Banner, Row, View } from './view'
-import { upper } from './lang'
 
-const TILE = 38
-const HEAD_X = 52
+const HEAD_ICON = 18
+const HEAD_X = 28
 const HEAD_SIZE = 15.5
 const CMD_SIZE = 14.5
 const META_SIZE = 13
@@ -24,16 +24,12 @@ const STRIKE_MS = 220
 const STRIKE_STAGGER_MS = 60
 
 const LINE_STEP = 19
-const EYEBROW_BASELINE = 13
-const EYEBROW_SIZE = 10.5
-const EYEBROW_TRACKING = 1.05
-const EYEBROW_DOT = 3
-const EYEBROW_TEXT_X = 10
+const LABEL_BASELINE = 13
+const LABEL_SIZE = 12
 const META_GAP = 12
 const FIRST_BASELINE = 35
 const FULL_STEP = 18
 const HEAD_BOTTOM = 6
-const HEAD_MIN = 46
 const GLUE = ' · '
 // `measure` reads regular weight; a bold headline runs about this much wider.
 const BOLD_GAIN = 1.06
@@ -74,19 +70,15 @@ function headlineLines(view: View, room: number): Line[] {
   ]
 }
 
-/** `● HELD · BLAST RADIUS` in the card's role colour (DESIGN.md §3: every card opens with one), and the meta on the right while it fits. */
-function eyebrowLine(view: View, room: number): string {
-  const label = upper(view.eyebrow)
-  const paint = `var(--${view.tone})`
-  const labelW = measure(label, { size: EYEBROW_SIZE, isBold: true }) + [...label].length * EYEBROW_TRACKING
-  const metaRoom = room - EYEBROW_TEXT_X - labelW - META_GAP
-  const meta = view.context === '' || metaRoom < HEAD_X ? '' : fit(view.context, metaRoom, { size: META_SIZE })
-  const y = EYEBROW_BASELINE
+/** The label in sentence case (12/600, quiet), and the meta on the right while it fits. */
+function labelLine(view: View, room: number): string {
+  const labelW = measure(view.eyebrow, { size: LABEL_SIZE, isBold: true })
+  const metaRoom = room - labelW - META_GAP
+  const meta = view.context === '' || metaRoom < HEAD_X ? '' : fit(view.context, metaRoom, { size: META_SIZE - 1 })
 
   return [
-    `<circle cx="${HEAD_X + EYEBROW_DOT}" cy="${y - 3.5}" r="${EYEBROW_DOT}" style="fill:${paint}"/>`,
-    `<text x="${HEAD_X + EYEBROW_TEXT_X}" y="${y}" font-size="${EYEBROW_SIZE}" font-weight="700" letter-spacing="${EYEBROW_TRACKING}" style="fill:${paint}">${escape(label)}</text>`,
-    meta === '' ? '' : `<text x="${HEAD_X + room}" y="${y}" text-anchor="end" font-size="${META_SIZE - 1}" style="fill:var(--lo)">${escape(meta)}</text>`,
+    `<text x="${HEAD_X}" y="${LABEL_BASELINE}" font-size="${LABEL_SIZE}" font-weight="600" style="fill:var(--lo)">${escape(view.eyebrow)}</text>`,
+    meta === '' ? '' : `<text x="${HEAD_X + room}" y="${LABEL_BASELINE}" text-anchor="end" font-size="${META_SIZE - 1}" style="fill:var(--lo)">${escape(meta)}</text>`,
   ].join('')
 }
 
@@ -96,15 +88,15 @@ export function headerSvg(view: View, width: number): { source: string; height: 
   const fullY = (lines[lines.length - 1]?.y ?? FIRST_BASELINE) + FULL_STEP
   const full = view.fullCommand === null ? '' : `<text x="${HEAD_X}" y="${fullY}" class="mono" font-size="11.5" style="fill:var(--lo)">${escape(fitMiddle(view.fullCommand, room, { size: 11.5, isMono: true }))}</text>`
   const lastY = view.fullCommand === null ? (lines[lines.length - 1]?.y ?? FIRST_BASELINE) : fullY
-  const height = Math.max(HEAD_MIN, lastY + HEAD_BOTTOM)
+  const height = lastY + HEAD_BOTTOM
 
   return {
     height,
     source: [
       svgOpen(width, height),
       svgStyle(),
-      tile(view.icon, { x: 0, y: 2, size: TILE, role: view.tone }),
-      eyebrowLine(view, room),
+      icon(view.icon, { x: 0, y: FIRST_BASELINE - 15, size: HEAD_ICON, color: 'var(--mid)' }),
+      labelLine(view, room),
       ...lines.map(line => `<text x="${HEAD_X}" y="${line.y}">${line.markup}</text>`),
       full,
       '</svg>',
@@ -122,21 +114,21 @@ function wrapTwo(text: string, width: number, size: number): string[] {
   return [first.join(' '), fit(words.join(' '), width, { size })].filter(line => line !== '')
 }
 
+// The risk in one line of its state colour, led by the shield: a plain line, not a box inside the card.
 export function bannerSvg(banner: Banner, width: number): { source: string; height: number } {
   const size = 13.5
-  const textX = 40
-  const wrapped = wrapTwo(banner.text, width - textX - 14, size)
-  const height = wrapped.length === 1 ? 40 : 58
+  const textX = 26
+  const wrapped = wrapTwo(banner.text, width - textX, size)
+  const height = wrapped.length === 1 ? 24 : 42
   const tone = banner.tone
-  const texts = wrapped.map((line, i) => `<text x="${textX}" y="${25 + i * 18}" font-size="${size}" style="fill:var(--${tone})">${escape(line)}</text>`)
+  const texts = wrapped.map((line, i) => `<text x="${textX}" y="${16 + i * 18}" font-size="${size}" style="fill:var(--${tone})">${escape(line)}</text>`)
 
   return {
     height,
     source: [
       svgOpen(width, height),
       svgStyle(),
-      `<rect x=".5" y=".5" width="${width - 1}" height="${height - 1}" rx="10" style="fill:var(--${tone}-tint);stroke:var(--${tone}-line)"/>`,
-      icon('shield', { x: 14, y: 12, size: 16, color: `var(--${tone})` }),
+      icon('shield', { x: 0, y: 2, size: 16, color: `var(--${tone})` }),
       ...texts,
       '</svg>',
     ].join(''),

@@ -29,8 +29,8 @@ const TR = {
   waitForData: ' Sayım ilk kullanım okumasıyla başlar (5s verisi abonelik ister).',
   set: (unit: string, wait: string) => `Oturum bütçesi kuruldu: ${unit}.${wait}`,
   switched: (isOn: boolean) => `session-budget ${isOn ? 'açık' : 'kapalı'}`,
-  budgetHelp: 'Oturum bütçesi kur: 5s limitinin yüzdesi ya da $tutar',
-  toggleHelp: 'Bütçe uyarısı ve onayını aç/kapat',
+  budgetHelp: 'Oturum bütçesi kur (5s limitinin yüzdesi ya da $tutar) ya da alt ajan frenini ayarla',
+  toggleHelp: 'Bütçe uyarısını, onayını ve alt ajan frenini aç/kapat',
   // The band rows and the full card.
   budget: 'Bütçe',
   rowTitle: (percent: string) => `Bütçe ${percent}`,
@@ -43,6 +43,16 @@ const TR = {
   // A no-break space keeps the step with its verb when the line wraps.
   heldWrapped: (step: string) => `Mesajın bekletiliyor. Devam edersen bütçe ${step} artar.`,
   fullAlt: (spend: string, percent: string, step: string) => `Oturum bütçesi doldu: ${spend} · ${percent}. Mesajın bekletiliyor; devam edersen bütçe ${step} artar.`,
+  // The spawn brake: its question, the refusal the model reads, and /budget brake.
+  brakeGo: 'Devam et',
+  brakeHeader: 'Alt ajan freni',
+  brakeWhy: (percent: string, pace: string, reset: string) => `5 saatlik pencere ${percent}${pace}${reset}`,
+  brakePace: (time: string) => `, bu hızla dolma ${time}`,
+  brakeReset: (time: string) => `, sıfırlanma ${time}`,
+  brakeQuestion: (why: string) => `Alt ajan freni: ${why}. Alt ajan yine de başlatılsın mı?`,
+  brakeDenied: (why: string) => `alt ajan freni: ${why}`,
+  brakeState: (at: number | null) => (at === null ? 'Alt ajan freni kapalı.' : `Alt ajan freni: 5 saatlik pencere %${at} olunca sorar.`),
+  brakeUsage: 'Kullanım: /budget brake <yüzde, ör. 85> | brake off',
 }
 
 type Words = typeof TR
@@ -70,8 +80,8 @@ const EN: Words = {
   waitForData: ' Counting starts with the first usage reading (5h data needs a subscription).',
   set: (unit, wait) => `Session budget set: ${unit}.${wait}`,
   switched: isOn => `session-budget ${isOn ? 'on' : 'off'}`,
-  budgetHelp: 'Set a session budget: a share of the 5h limit, or a dollar amount',
-  toggleHelp: 'Turn the budget warning and check on or off',
+  budgetHelp: 'Set a session budget (a share of the 5h limit, or a dollar amount), or the spawn brake',
+  toggleHelp: 'Turn the budget warning, check and spawn brake on or off',
   budget: 'Budget',
   rowTitle: percent => `Budget ${percent}`,
   raiseHint: 'raise it with /budget',
@@ -82,6 +92,15 @@ const EN: Words = {
   held: step => `Your message is on hold. Continuing raises the budget by ${step}.`,
   heldWrapped: step => `Your message is on hold. Continuing raises the budget by ${step}.`,
   fullAlt: (spend, percent, step) => `Session budget is full: ${spend} · ${percent}. Your message is on hold; continuing raises the budget by ${step}.`,
+  brakeGo: 'Continue',
+  brakeHeader: 'Spawn brake',
+  brakeWhy: (percent, pace, reset) => `5-hour window at ${percent}${pace}${reset}`,
+  brakePace: time => `, full by ${time} at this pace`,
+  brakeReset: time => `, resets ${time}`,
+  brakeQuestion: why => `Spawn brake: ${why}. Start the subagent anyway?`,
+  brakeDenied: why => `spawn brake: ${why}`,
+  brakeState: at => (at === null ? 'Spawn brake off.' : `Spawn brake on: asks before a subagent at ${at}% of the 5-hour window.`),
+  brakeUsage: 'Usage: /budget brake <percent, e.g. 85> | brake off',
 }
 
 export const words = (): Words => pick({ en: EN, tr: TR })

@@ -1,17 +1,20 @@
 import type { SessionRateLimit } from 'claude-code'
 
 import type { Budget, BudgetKind, BudgetReading } from '../types'
+import { parseBrake } from './brake'
+import type { BrakeCommand } from './brake'
 import { words } from './words'
 
 export type BudgetCommand =
   | { kind: 'status' }
   | { kind: 'off' }
   | { kind: 'set'; budget: { kind: BudgetKind; limit: number } }
-  | { kind: 'error'; text: string }
+  | BrakeCommand
 
 export const WARN_RATIO = 0.8
 export const FIVE_HOUR = 'five_hour'
 const MAX_PERCENT = 100
+const BRAKE = 'brake'
 const PERCENT = 100
 const MS_PER_MINUTE = 60_000
 const MINUTES_PER_HOUR = 60
@@ -25,6 +28,7 @@ export function parseCommand(raw: string): BudgetCommand {
   const arg = raw.trim().toLowerCase().replace(/\s+/g, '')
   if (arg === '' || arg === 'status') return { kind: 'status' }
   if (arg === 'off' || arg === 'clear') return { kind: 'off' }
+  if (arg.startsWith(BRAKE)) return parseBrake(arg.slice(BRAKE.length))
   const usd = /^(?:\$(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)(?:\$|usd))$/.exec(arg)
   if (usd !== null) return positive('usd', Number(usd[1] ?? usd[2]))
   const percent = /^(\d+(?:\.\d+)?)%?$/.exec(arg)

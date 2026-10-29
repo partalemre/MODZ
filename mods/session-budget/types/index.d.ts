@@ -31,6 +31,12 @@ export type BudgetNotice = {
   expiresAt: number
 }
 
+// A 5h reading for the spawn brake's pace: epoch ms and percent used.
+export type PacePoint = { t: number; value: number }
+
+// "Continue" at the spawn brake: spawns go through until the window passes `percent` + 5 in that window.
+export type BrakeAck = { percent: number; window: string | null }
+
 declare module 'claude-code' {
   interface PluginState {
     'session-budget': {
@@ -38,6 +44,10 @@ declare module 'claude-code' {
       reading: BudgetReading
       notice: BudgetNotice | null
       isEnabled: boolean
+      // The spawn brake's line in percent of the 5h window; null when off.
+      brakeAt: number | null
+      brakeAck: BrakeAck | null
+      pace: { points: PacePoint[]; resetsAt: string | null }
     }
   }
 }

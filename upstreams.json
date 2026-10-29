@@ -5,7 +5,7 @@
   "filetree": { "repo": "data-goblin/claude-code-filetree", "synced": "2026-10-29" },
   "reflect-mod": { "repo": "bayramannakov/claude-reflect", "synced": "2026-10-09" },
   "savvy-progress": { "repo": "johnnyvizz/claude-kit", "synced": "2026-10-29" },
-  "savvy-flow": { "repo": "johnnyvizz/claude-kit", "synced": "2026-10-09" },
+  "savvy-flow": { "repo": "johnnyvizz/claude-kit", "synced": "2026-10-29" },
   "skins": { "repo": "hellosverre/claude-skins", "synced": "2026-10-09" },
   "terminal-browser": { "repo": "zenbu-labs/terminal-browser", "synced": "2026-10-29" }
 }

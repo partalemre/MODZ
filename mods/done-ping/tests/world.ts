@@ -28,6 +28,11 @@ export function spyOf(over: Partial<Spy> = {}): Spy {
   return { runs: [], calls: [], clock: null, exitCode: 0, front: 'com.apple.Safari', host: undefined, surface: 'terminal', push: null, files: new Set(), plays: [], logs: [], ...over }
 }
 
+// The person already allowed what a test turn runs, as an allow rule would; anything else asks. From 2.1.309
+// $.tool.call runs the permission check first, and an ask nobody answers there comes back denied.
+const TURN_FILES = new Set(['a.ts', 'b.ts', 'c.ts'])
+export const decisionOf = (e: any) => (e.tool === 'PushNotification' || e.input?.command === 'npm test' || TURN_FILES.has(e.input?.file_path) ? 'allow' : 'ask')
+
 const ok = (stdout: string, exitCode = 0) => ({ value: { exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
 
 function processAnswer(spy: Spy, argv: string[]) {
@@ -66,7 +71,7 @@ export async function setup($: any, on: any, spy: Spy) {
   on('fs.exists', (_: any, e: any) => ({ value: spy.files.has(e.path) }))
   on('tool.list', () => ({ value: spy.push === null ? [] : [{ name: 'PushNotification', description: '', mcp: false }] }))
   on('tool.call', (_: any, e: any) => toolAnswer(spy, e))
-  on('tool.check', (_: any, e: any) => ({ decision: e.tool === 'PushNotification' ? 'allow' : 'ask' }))
+  on('tool.check', (_: any, e: any) => ({ decision: decisionOf(e) }))
   on('process.run', (_: any, e: any) => {
     spy.runs.push([...e.argv])
 

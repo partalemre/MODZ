@@ -1,5 +1,7 @@
 import { mock, test } from 'claude-code/testing'
 
+import { decisionOf } from './world'
+
 /** The test runner's console: bin/preview reads the trees it prints. */
 declare const console: { log: (text: string) => void }
 
@@ -24,7 +26,7 @@ async function setup($: any, on: any, theme: string, isTestFailing = false) {
   on('fs.exists', () => ({ value: false }))
   on('tool.list', () => ({ value: [] }))
   on('tool.call', (_: any, e: any) => (isTestFailing && e.tool === 'Bash' ? { result: 'FAIL', isError: true } : { result: 'ok' }))
-  on('tool.check', () => ({ decision: 'ask' }))
+  on('tool.check', (_: any, e: any) => ({ decision: decisionOf(e) }))
   on('process.run', () => ok(1))
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work/eliti' })
 

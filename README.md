@@ -178,6 +178,7 @@ To remove a mod: `claude plugin uninstall <name>@modz`. To remove everything: al
 
 - **Unit checks.** `bin/modz check [name]` validates each mod and runs its tests, on both the terminal engine and the desktop app's engine.
 - **End to end.** `bin/modz desk` starts a real session, speaks the desktop app's own protocol to it, and clicks through every panel. Run both before opening a pull request.
+- **Seeing it.** An agent cannot see the desktop app, so `bin/modz shot [--pane] [--title t]` saves the Claude window as a PNG, even when another window covers it. Mods load when a session starts: to look at fresh code, open a new session in its own window and shoot it with `--title`.
 - **Releases.** No mod sets `version`: Claude Code then versions each one by its commit, so every push to `main` reaches every user. Keep it that way; a pinned `version` stops updates until someone bumps it.
 - **Types.** Claude Code writes its API types into `.claude-plugin/types/` beside a mod it hot-reloads. Each mod's `tsconfig.json` extends them, so `tsc -p mods/<name>` type-checks that mod.
 - **Kit gallery.** `tools/kit-gallery` draws every kit component; its tests check contrast in both themes.

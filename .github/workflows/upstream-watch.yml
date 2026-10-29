@@ -1,0 +1,34 @@
+# Weekly: for each adapted mod, list the upstream commits since upstreams.json's `synced` date and keep one
+# open issue per mod up to date. Porting stays a reviewed change; after one, raise that mod's `synced`.
+name: upstream-watch
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh label create upstream --color BFD4F2 --description 'An adapted mod has upstream changes' 2>/dev/null || true
+          for mod in $(jq -r 'keys[]' upstreams.json); do
+            repo=$(jq -r --arg m "$mod" '.[$m].repo' upstreams.json)
+            synced=$(jq -r --arg m "$mod" '.[$m].synced' upstreams.json)
+            commits=$(gh api "repos/$repo/commits?since=${synced}T23:59:59Z&per_page=50" \
+              --jq '.[] | "- [`\(.sha[:7])`](\(.html_url)) \(.commit.author.date[:10]) \(.commit.message | split("\n")[0])"')
+            title="Upstream updates: $mod"
+            issue=$(gh issue list --label upstream --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')
+            if [ -z "$commits" ]; then
+              [ -n "$issue" ] && gh issue close "$issue" --comment 'Upstream is in sync again.'
+              continue
+            fi
+            body=$(printf '%s has commits since %s (upstreams.json):\n\n%s\n\nPort what fits, then raise `synced` for %s.' "$repo" "$synced" "$commits" "$mod")
+            if [ -n "$issue" ]; then gh issue edit "$issue" --body "$body"; else gh issue create --title "$title" --label upstream --body "$body"; fi
+          done

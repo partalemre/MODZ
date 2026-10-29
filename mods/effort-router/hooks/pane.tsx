@@ -4,7 +4,7 @@ import type { RenderElement, RenderSurface } from 'claude-code'
 
 import type { EffortMode, TurnRow } from '../types'
 import { paneMotion } from './kit/moving'
-import { Card, cardInnerWidth, Eyebrow, isTextSurface } from './kit/ui'
+import { Card, paneInnerWidth, Eyebrow, isTextSurface } from './kit/ui'
 import type { DrawCtx, Ui } from './kit/ui'
 import { palette } from './kit/tokens'
 import { MODES } from './route'
@@ -154,7 +154,7 @@ export const motion = paneMotion()
 
 export function paneTree(look: PaneLook, o: { view: PaneView; onMode: (mode: EffortMode) => void }): RenderElement {
   const draw: DrawCtx = { ui: look.ui, surface: look.surface, isLight: look.isLight, motion }
-  const width = cardInnerWidth(look.columns)
+  const width = paneInnerWidth(look.columns)
   const { mode } = o.view
   const said = words()
   const header = { icon: 'bolt' as const, eyebrow: said.eyebrow, meta: said.modeName[mode], headline: headlineOf(o.view.turns), sub: said.modeLine[mode], width }

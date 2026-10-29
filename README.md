@@ -198,3 +198,6 @@ Several mods are adaptations of open-source projects, each under its original li
 | `terminal-browser` | [zenbu-labs/terminal-browser](https://github.com/zenbu-labs/terminal-browser) | MIT |
 
 Everything else is [MIT](LICENSE).
+
+`upstreams.json` records the upstream date each adaptation is synced to; a weekly workflow (`.github/workflows/upstream-watch.yml`) keeps one open `upstream` issue per mod listing the newer upstream commits.
+A second weekly workflow (`.github/workflows/mod-radar.yml`) keeps one `radar` issue with the most-starred new mods from the [awesome-claude-code-mods](https://github.com/karanb192/awesome-claude-code-mods) catalogue that MODZ has not adapted. MODZ keeps one mod per job: an idea worth taking is folded into the mod that already does that job.

@@ -42,8 +42,8 @@ type On = Parameters<Register>[0]
 
 const MIN_W = 240
 const MAX_W = 900
-// MODZ measures the desktop in 8 px cells (kit `PX_PER_CELL`).
-const PX_PER_COL = 8
+// A desktop pane reports about 9 px a column (kit `PANE_PX_PER_CELL`).
+const PX_PER_COL = 9
 const MIN_COLS = 24
 const DEFAULT_COLS = 40
 

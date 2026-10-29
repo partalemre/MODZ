@@ -26,6 +26,8 @@ export type DrawCtx = { ui: Ui; surface: RenderSurface; isLight: boolean; motion
 
 // Svg px per layout cell on the desktop; card padding and border in cells (DESIGN.md §4).
 export const PX_PER_CELL = 8
+// A desktop pane reports about 9 px a column (a 365 px body reads 40), wider than the reply column.
+export const PANE_PX_PER_CELL = 9
 const CARD_PAD_X = 2
 const CARD_PAD_Y = 1
 const CARD_BORDER_CELLS = 2
@@ -36,6 +38,10 @@ export const isTextSurface = (ui: Ui, surface: RenderSurface): boolean => surfac
 // The px a card's content gets inside `columns` (e.props.bodyColumns), with a little slack.
 export const cardInnerWidth = (columns: number): number =>
   Math.max(MIN_INNER, (columns - CARD_PAD_X * 2 - CARD_BORDER_CELLS) * PX_PER_CELL)
+
+// cardInnerWidth for a card in a desktop pane.
+export const paneInnerWidth = (columns: number): number =>
+  Math.max(MIN_INNER, (columns - CARD_PAD_X * 2 - CARD_BORDER_CELLS) * PANE_PX_PER_CELL)
 
 export const pxWidth = (columns: number): number => Math.max(MIN_INNER, columns * PX_PER_CELL)
 

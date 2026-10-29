@@ -39,7 +39,8 @@ export type HubView = {
   stable: Stable<Drawing>
 }
 
-const PX_PER_COLUMN = 8
+// A desktop pane reports about 9 px a column (a 365 px body reads 40), wider than the reply column.
+const PX_PER_COLUMN = 9
 const WIDTH_MIN = 280
 const WIDTH_MAX = 640
 // Room the native buttons take over a row's right edge: one "Open", or "Up" and "Hide" while customizing.

@@ -34,7 +34,8 @@ export type PaneView = {
   svg?: PaneSvg
 }
 
-const PX_PER_COLUMN = 6.4
+// A desktop pane reports about 9 px a column (a 365 px body reads 40), wider than the reply column.
+const PX_PER_COLUMN = 9
 const BAR_MAX = 24
 const BAR_MIN = 8
 const ROW_CHROME = 48

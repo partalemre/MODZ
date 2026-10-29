@@ -11,8 +11,8 @@ export type IconName = 'check' | 'x' | 'bell' | 'history' | 'flask' | 'clock' | 
 
 export const SANS = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`
 export const MONO = `ui-monospace, 'SF Mono', Menlo, monospace`
-// Roughly how wide a reported column of the desktop surface is, erring small so nothing overflows.
-export const PX_PER_COLUMN = 7
+// A desktop pane reports about 9 px a column (a 365 px body reads 40), wider than the reply column.
+export const PX_PER_COLUMN = 9
 
 const MONO_EM = 0.6
 const BOLD_FROM = 600

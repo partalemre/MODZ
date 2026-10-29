@@ -4,13 +4,14 @@ import { DEFAULT_PREFS, parsePrefs, runSkinCommand } from '../hooks/command'
 import { buildCustom, resolveSkin, skinNames, withSlot } from '../hooks/custom'
 import { runDesign } from '../hooks/designer'
 import { clipLines, diffstat, formatDuration, formatMs, pick, shortenPath } from '../hooks/format'
-import { columnWidths, cutCell, padCell, splitReply, widthOf } from '../hooks/markdown'
+import { columnWidths, padCell, splitReply, widthOf, wrapLines } from '../hooks/markdown'
 import { codeSvg, tokenize } from '../hooks/svg-code'
+import { cardWidth, measure as measureAt } from '../hooks/svg-kit'
 import { diffLines, diffSvg, hunksOf } from '../hooks/svg-diff'
 import { fitColumns, kindOfCell, measure, tableSvg, wrapCell } from '../hooks/svg-table'
 import { outputLines, shellOutputOf, terminalSvg } from '../hooks/svg-terminal'
 import { limitLabel, meterColor, metersOf, usageSvg } from '../hooks/svg-usage'
-import { deepen, isLightTheme, resolveLight, toLight } from '../hooks/light'
+import { deepen, isLightTheme, macDark, resolveLight, toLight } from '../hooks/light'
 import { parseFolders, prefsFor, withFolder, withoutFolder } from '../hooks/folders'
 import { kindOf, summarize, toolLabel } from '../hooks/tools'
 import tokyoNight from '../hooks/themes/tokyo-night'
@@ -116,8 +117,8 @@ test('wide characters count two cells, so CJK cells are measured and cut in term
   expect(widthOf('ok 🚀')).toBe(5)
   expect(widthOf('👍🏽')).toBe(2)
   expect(widthOf('🫠')).toBe(2)
-  expect(cutCell('레일, 스피너', 12)).toBe('레일, 스피너')
-  expect(cutCell('레일, 스피너', 5)).toBe('레일…')
+  expect(wrapLines('레일, 스피너', 12)).toEqual(['레일, 스피너'])
+  expect(wrapLines('레일, 스피너', 5)).toEqual(['레일,', '스피', '너'])
   expect(widthOf(padCell('레일', 8, 'left'))).toBe(8)
 })
 
@@ -270,6 +271,50 @@ test('a long cell wraps on its words, breaks a word too long for the column, and
   expect(wrapCell('the quick brown fox jumps', 90, { isMono: false })).toEqual(['the quick', 'brown fox', 'jumps'])
   expect(wrapCell('x'.repeat(30), 60, { isMono: true }).every(line => measure(line, true) <= 60)).toBe(true)
   expect(wrapCell('word '.repeat(80), 60, { isMono: false, maxLines: 2 }).at(-1)).toMatch(/…$/)
+})
+
+test('a long cell keeps every line unless asked to cap them, as does a long header', async () => {
+  const words = 'word '.repeat(80).trim()
+  const lines = wrapCell(words, 60, { isMono: false })
+  const header = ['#', 'Where it appears in the season summary']
+  const card = tableSvg({ kind: 'table', header, align: ['left', 'left'], rows: [['1', words]] }, { palette: tokyoNight.palette, width: 480 })
+
+  expect(lines.length > 6).toBe(true)
+  expect(lines.join(' ')).toBe(words)
+  expect(card.source).not.toContain('…')
+  expect(header[1]?.toUpperCase().split(' ').every(word => card.source.includes(word))).toBe(true)
+})
+
+test('crowded columns start from their longest word, give the fullest the most, and stay inside the card', async () => {
+  const least = [56, 65, 60, 70, 100]
+  const widths = fitColumns([56, 120, 110, 105, 2000], 760, { reserve: 84, least })
+  const room = 760 - 2 * 24 - 84 - 4 * 28
+
+  expect(Math.round(widths.reduce((sum, w) => sum + w, 0))).toBe(room)
+  expect(widths.every((w, i) => w >= (least[i] ?? 0))).toBe(true)
+  expect((widths[4] ?? 0) > 2 * (widths[1] ?? 0)).toBe(true)
+})
+
+test('a Hangul, kana or Han character measures about one em, twice a Latin letter, so wide cells wrap in their column', async () => {
+  const korean = '둘째 칸에도 한글 문장을 길게 넣으면 글자가 옆 칸과 겹치고 카드 오른쪽에서 잘린다'
+
+  expect(measure('한', false)).toBeGreaterThan(measure('a', false) * 1.6)
+  expect(measure('漢字', true)).toBe(measure('abcd', true))
+  expect(measureAt('é', false, 15)).toBe(measureAt('e', false, 15))
+  expect(wrapCell(korean, 200, { isMono: false }).every(line => measure(line, false) <= 200)).toBe(true)
+})
+
+test('a card spans the reply column the desktop reports, within its range', async () => {
+  expect(cardWidth(106)).toBe(763)
+  expect(cardWidth(10)).toBe(480)
+  expect(cardWidth(400)).toBe(1600)
+})
+
+test('macOS says light by a missing AppleInterfaceStyle, in its old and its macOS 27 words', async () => {
+  expect(macDark({ exitCode: 0, stdout: 'Dark\n', stderr: '' })).toBe(true)
+  expect(macDark({ exitCode: 1, stdout: '', stderr: 'The domain/default pair of (kCFPreferencesAnyApplication, AppleInterfaceStyle) does not exist' })).toBe(false)
+  expect(macDark({ exitCode: 1, stdout: '', stderr: 'Could not find key AppleInterfaceStyle in domain Apple Global Domain' })).toBe(false)
+  expect(macDark({ exitCode: 1, stdout: '', stderr: 'something else' })).toBeUndefined()
 })
 
 test('short columns keep their width and long ones share the rest', async () => {

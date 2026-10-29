@@ -1,4 +1,5 @@
 import type { Align, Table } from './markdown'
+import { wrapLines } from './markdown'
 import type { Palette } from './skin'
 import { CONTROL_SLOT, escape, HEADER_MID, measure as measureAt, MONO, svgCard } from './svg-kit'
 import type { CardFrame } from './svg-kit'
@@ -11,9 +12,10 @@ import type { CardFrame } from './svg-kit'
 const SIZE = 15
 const LINE_H = 21
 const HEADER_H = 58
+const HEAD_SIZE = 12
+const HEAD_LINE_H = 16
 const ROW_PAD_Y = 12
 const MIN_ROW_H = 44
-const MAX_CELL_LINES = 6
 const PAD_X = 24
 const COL_GAP = 28
 const MIN_COL = 56
@@ -51,82 +53,56 @@ export const kindOfCell = (cell: string): CellKind => {
 // Width of a string in pixels at the table's type size.
 export const measure = (text: string, isMono: boolean): number => measureAt(text, isMono, SIZE)
 
+// Width of a header label: smaller type, spaced out by the header's letter-spacing.
+const measureHead = (text: string): number => measureAt(text, false, HEAD_SIZE) + [...text].length * HEAD_SIZE * 0.1
+
 const isMonoKind = (kind: CellKind): boolean => kind !== 'text'
-
-// Splits a word too long for its column into pieces that each fit.
-function breakWord(word: string, width: number, isMono: boolean): string[] {
-  const pieces: string[] = []
-  let piece = ''
-
-  for (const char of word) {
-    if (piece !== '' && measure(piece + char, isMono) > width) {
-      pieces.push(piece)
-      piece = char
-    } else {
-      piece += char
-    }
-  }
-
-  return piece === '' ? pieces : [...pieces, piece]
-}
 
 export type Wrap = { isMono: boolean; maxLines?: number }
 
-// The cell's text as lines that fit its column; past the cap, the last line ends in `…`.
-export function wrapCell(text: string, width: number, { isMono, maxLines = MAX_CELL_LINES }: Wrap): string[] {
-  const lines: string[] = []
-  let line = ''
+// The cell's text as lines that fit its column, every line kept unless `maxLines` caps it:
+// the card is an image, so a line cut with `…` could not be read anywhere.
+export const wrapCell = (text: string, width: number, { isMono, maxLines = Infinity }: Wrap): string[] =>
+  wrapLines(text, width, { maxLines, measure: line => measure(line, isMono) })
 
-  for (const word of text.split(/\s+/).filter(Boolean)) {
-    const candidate = line === '' ? word : `${line} ${word}`
+const longestWord = (text: string, widthOf: (text: string) => number): number =>
+  Math.max(0, ...text.split(/\s+/).filter(Boolean).map(widthOf))
 
-    if (measure(candidate, isMono) <= width) {
-      line = candidate
-      continue
-    }
+// What a cell needs to sit on one line, and the least it needs: its longest word when it
+// wraps, its whole text when it does not.
+function cellWidths(cell: string): { natural: number; least: number } {
+  const kind = kindOfCell(cell)
+  const isMono = isMonoKind(kind)
+  const natural = measure(cell, isMono) + (kind === 'colour' ? 22 : 0)
+  const isWrapped = kind === 'text' || kind === 'code'
 
-    if (line !== '') {
-      lines.push(line)
-    }
-
-    const pieces = measure(word, isMono) <= width ? [word] : breakWord(word, width, isMono)
-    lines.push(...pieces.slice(0, -1))
-    line = pieces.at(-1) ?? ''
-  }
-
-  const all = line === '' ? lines : [...lines, line]
-
-  if (all.length <= maxLines) {
-    return all.length === 0 ? [''] : all
-  }
-
-  const kept = all.slice(0, maxLines)
-  const last = kept[maxLines - 1] ?? ''
-  const chars = [...last]
-
-  while (chars.length > 0 && measure(`${chars.join('')}…`, isMono) > width) {
-    chars.pop()
-  }
-
-  return [...kept.slice(0, -1), `${chars.join('')}…`]
+  return { natural, least: isWrapped ? longestWord(cell, line => measure(line, isMono)) : natural }
 }
 
 function naturalWidths(table: Table): number[] {
   return table.header.map((header, col) => {
-    const cells = table.rows.map(row => row[col] ?? '')
-    const widest = Math.max(
-      measure(header.toUpperCase(), false) * 0.85,
-      ...cells.map(cell => measure(cell, isMonoKind(kindOfCell(cell))) + (kindOfCell(cell) === 'colour' ? 22 : 0)),
-    )
+    const cells = table.rows.map(row => cellWidths(row[col] ?? '').natural)
 
-    return Math.max(MIN_COL, Math.ceil(widest))
+    return Math.max(MIN_COL, Math.ceil(Math.max(measureHead(header.toUpperCase()), ...cells)))
   })
 }
 
-// Columns that fit their fair share keep their natural width; the rest share what is
-// left in proportion to how much they hold, and wrap. With room to spare, every column
-// stretches in proportion, so the card spans its width.
-export function fitColumns(natural: readonly number[], width: number, reserve = 0): number[] {
+function leastWidths(table: Table): number[] {
+  return table.header.map((header, col) => {
+    const cells = table.rows.map(row => cellWidths(row[col] ?? '').least)
+
+    return Math.max(MIN_COL, Math.ceil(Math.max(longestWord(header.toUpperCase(), measureHead), ...cells)))
+  })
+}
+
+// `reserve` is kept free at the right; `least` is what each column needs at the least.
+export type Fit = { reserve?: number; least?: readonly number[] }
+
+// Columns that fit their fair share keep their natural width. The rest start from their
+// longest word (`least`), so they wrap between words, and share what is left in proportion
+// to how much more they hold: the fullest cell sets a row's height, so its column gains
+// most. With room to spare, every column stretches in proportion, so the card spans its width.
+export function fitColumns(natural: readonly number[], width: number, { reserve = 0, least = [] }: Fit = {}): number[] {
   const room = width - PAD_X * 2 - reserve - COL_GAP * (natural.length - 1)
   const total = natural.reduce((sum, w) => sum + w, 0)
 
@@ -134,12 +110,15 @@ export function fitColumns(natural: readonly number[], width: number, reserve = 
     return natural.map(w => w + ((room - total) * w) / total)
   }
 
+  // A start held to the fair share keeps the columns inside the card; a word wider than
+  // that share is the only one that breaks.
   const fair = room / natural.length
-  const fixed = natural.reduce((sum, w) => sum + (w <= fair ? w : 0), 0)
-  const flexTotal = natural.reduce((sum, w) => sum + (w > fair ? w : 0), 0)
-  const flexRoom = Math.max(0, room - fixed)
+  const starts = natural.map((w, i) => (w <= fair ? w : Math.min(fair, Math.max(MIN_COL, least[i] ?? MIN_COL))))
+  const spare = Math.max(0, room - starts.reduce((sum, w) => sum + w, 0))
+  const wants = natural.map((w, i) => (w <= fair ? 0 : Math.max(0, w - (starts[i] ?? 0))))
+  const wanted = wants.reduce((sum, w) => sum + w, 0)
 
-  return natural.map(w => (w <= fair ? w : Math.max(MIN_COL, (flexRoom * w) / flexTotal)))
+  return starts.map((w, i) => w + (wanted === 0 ? 0 : (spare * (wants[i] ?? 0)) / wanted))
 }
 
 const ANCHORS: Readonly<Record<Align, string>> = { left: 'start', center: 'middle', right: 'end' }
@@ -189,12 +168,13 @@ function cellMarkup(cell: Cell, { left, width, align, rowH, palette }: Slot): st
     .join('')
 }
 
-type Grid = { widths: number[]; lefts: number[]; align: (i: number) => Align }
+// `labels` are the header's lines per column; `headerH` grows to hold the most of them.
+type Grid = { widths: number[]; lefts: number[]; align: (i: number) => Align; labels: string[][]; headerH: number }
 
 const tableStyle = (palette: Palette, cardWidth: number): string =>
   [
     `text{font-size:${SIZE}px}`,
-    `.head{font-size:12px;font-weight:600;letter-spacing:.1em;fill:${palette.muted}}`,
+    `.head{font-size:${HEAD_SIZE}px;font-weight:600;letter-spacing:.1em;fill:${palette.muted}}`,
     `.num{font-variant-numeric:tabular-nums}`,
     `.row{opacity:0;animation:rise .5s cubic-bezier(.2,.8,.2,1) forwards}`,
     `.rule{stroke-dasharray:${cardWidth};stroke-dashoffset:${cardWidth};animation:draw .8s cubic-bezier(.6,0,.2,1) .05s forwards}`,
@@ -203,23 +183,25 @@ const tableStyle = (palette: Palette, cardWidth: number): string =>
     `@media (prefers-reduced-motion:reduce){.row,.rule{animation:none;opacity:1;stroke-dashoffset:0}}`,
   ].join('')
 
-function headerMarkup(table: Table, { widths, lefts, align }: Grid): string {
-  return table.header
-    .map((cell, i) => {
-      const [text = ''] = wrapCell(cell.toUpperCase(), widths[i] ?? MIN_COL, { isMono: false, maxLines: 1 })
-
-      return `<text x="${xOf(lefts[i] ?? 0, widths[i] ?? 0, align(i))}" y="${HEADER_MID + 4}" text-anchor="${anchorOf(align(i))}" class="head">${escape(text)}</text>`
-    })
+// A label too long for its column wraps, and the header band grows to hold it.
+function headerMarkup({ widths, lefts, align, labels }: Grid): string {
+  return labels
+    .flatMap((lines, i) =>
+      lines.map(
+        (line, j) =>
+          `<text x="${xOf(lefts[i] ?? 0, widths[i] ?? 0, align(i))}" y="${HEADER_MID + 4 + j * HEAD_LINE_H}" text-anchor="${anchorOf(align(i))}" class="head">${escape(line)}</text>`,
+      ),
+    )
     .join('')
 }
 
 type Body = { rows: string; height: number }
 
 function rowsMarkup(table: Table, grid: Grid, { palette, width: cardWidth }: CardFrame): Body {
-  const { widths, lefts, align } = grid
+  const { widths, lefts, align, headerH } = grid
   const laid = table.rows.map(row => row.map((cell, i) => layoutCell(cell, (widths[i] ?? MIN_COL) - (kindOfCell(cell) === 'colour' ? 22 : 0))))
   const heights = laid.map(cells => Math.max(MIN_ROW_H, Math.max(...cells.map(cell => cell.lines.length)) * LINE_H + ROW_PAD_Y * 2))
-  const tops = heights.map((_, r) => HEADER_H + heights.slice(0, r).reduce((sum, h) => sum + h, 0))
+  const tops = heights.map((_, r) => headerH + heights.slice(0, r).reduce((sum, h) => sum + h, 0))
   const rows = laid
     .map((cells, r) => {
       const rowH = heights[r] ?? MIN_ROW_H
@@ -231,7 +213,7 @@ function rowsMarkup(table: Table, grid: Grid, { palette, width: cardWidth }: Car
     })
     .join('')
 
-  return { rows, height: HEADER_H + heights.reduce((sum, h) => sum + h, 0) + 6 }
+  return { rows, height: headerH + heights.reduce((sum, h) => sum + h, 0) + 6 }
 }
 
 // `width` is the room the reply gives the card, in pixels; it is clamped to a sane range.
@@ -239,14 +221,16 @@ function rowsMarkup(table: Table, grid: Grid, { palette, width: cardWidth }: Car
 export function tableSvg(table: Table, { palette, width, hasControl = false }: CardFrame): SvgTable {
   const cardWidth = Math.round(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width)))
   const reserve = hasControl ? CONTROL_SLOT : 0
-  const widths = fitColumns(naturalWidths(table), cardWidth, reserve)
+  const widths = fitColumns(naturalWidths(table), cardWidth, { reserve, least: leastWidths(table) })
   const lefts = widths.map((_, i) => PAD_X + widths.slice(0, i).reduce((sum, w) => sum + w + COL_GAP, 0))
-  const grid: Grid = { widths, lefts, align: (i: number): Align => table.align[i] ?? 'left' }
+  const labels = table.header.map((cell, i) => wrapLines(cell.toUpperCase(), widths[i] ?? MIN_COL, { measure: measureHead }))
+  const headerH = HEADER_H + (Math.max(1, ...labels.map(lines => lines.length)) - 1) * HEAD_LINE_H
+  const grid: Grid = { widths, lefts, align: (i: number): Align => table.align[i] ?? 'left', labels, headerH }
   const { rows, height } = rowsMarkup(table, grid, { palette, width: cardWidth })
 
   const body = [
-    headerMarkup(table, grid),
-    `<line class="rule" x1="${PAD_X}" y1="${HEADER_H - 1}" x2="${cardWidth - PAD_X - reserve}" y2="${HEADER_H - 1}" stroke="${palette.user}" stroke-width="1" stroke-linecap="square"/>`,
+    headerMarkup(grid),
+    `<line class="rule" x1="${PAD_X}" y1="${headerH - 1}" x2="${cardWidth - PAD_X - reserve}" y2="${headerH - 1}" stroke="${palette.user}" stroke-width="1" stroke-linecap="square"/>`,
     rows,
   ].join('')
 

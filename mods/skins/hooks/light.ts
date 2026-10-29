@@ -84,13 +84,14 @@ export const resolveLight = (hints: ThemeHints): boolean =>
 // What a probe of the system's appearance printed.
 export type Probe = { exitCode: number | null; stdout: string; stderr: string }
 
-// macOS's AppleInterfaceStyle: unset (exit 1, "does not exist") is how macOS says light.
+// macOS's AppleInterfaceStyle: unset is how macOS says light, exit 1 with "does not exist" before
+// macOS 27 and "Could not find key" from 27 on.
 export function macDark(probe: Probe): boolean | undefined {
   if (probe.exitCode === 0) {
     return probe.stdout.trim() === 'Dark'
   }
 
-  return /does not exist/.test(probe.stderr) ? false : undefined
+  return /does not exist|Could not find key/.test(probe.stderr) ? false : undefined
 }
 
 // GNOME's color-scheme.

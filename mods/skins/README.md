@@ -25,7 +25,7 @@ The MODZ panel (`modz`) shows its line here, under the name Look: the active ski
 | Spinner | An animated icon per phase: thinking, tool use, writing, waiting | The skin's word with a band of light through it |
 | Above the prompt (off by default) | Rings for context and each plan limit, a Compact button, and a nudge to compact from 70% context | Block meters and the same button |
 | Turn footer | not drawn on the desktop app | Time, tool count and lines changed |
-| Your prompts | A rounded outline sized to what you typed | The same |
+| Your prompts | Claude Code's own message, with its copy and rewind buttons | A rounded outline sized to what you typed |
 | The question dialog | A band naming its topics above Claude Code's own dialog | The same |
 
 Every card rises in row by row and respects reduced motion. A skin only changes what is drawn: the stored conversation, and what the model reads, are untouched. Agents, plan mode and the permission prompt keep Claude Code's own drawing.

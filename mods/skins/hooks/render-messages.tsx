@@ -14,12 +14,13 @@ export const FRAME_MS = 90
 export async function userMessageView({ view, e, pass }: Drawing<'UserMessage'>): Promise<RenderElement> {
   const active = await view.active()
 
-  if (active === null || !isOwnPrompt(e.props)) {
+  // Off the terminal your messages keep Claude Code's own component: it carries the copy and
+  // rewind buttons, the context menu and selectable text, which an outline would lose.
+  if (active === null || e.surface !== 'terminal' || !isOwnPrompt(e.props)) {
     return pass(e)
   }
 
-  // Outside the terminal the outline's text cannot be selected, so it carries a Copy button.
-  const look = view.look(active, e.surface !== 'terminal')
+  const look = view.look(active)
   const hasImages = await view.hasImages()
 
   // Claude Code draws the images; the text is already in the outline above them.

@@ -8,7 +8,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { HubCard } from '../types'
 import { autoUpdateSettings, installOf } from './auto-update'
 import type { Drawing } from './draw'
-import { linkCheck, loadCatalog, marketRoot } from './catalog'
+import { installedMarketRoot, linkCheck, loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
 import { footerTree, isHubShown } from './footer'
 import { cardOf, focusOf, hiddenRowsOf, MODS_PANE, modsTitle, presenceOf, rowsOf } from './hub'
@@ -58,10 +58,18 @@ async function enabledPlugins($: EngineInterface): Promise<Record<string, unknow
   }
 }
 
+// The home folder, with '/' separators. Windows sets USERPROFILE and no HOME; each name is spelled out, as the
+// engine admits an env read by a literal name only.
+async function homeOf($: EngineInterface): Promise<string | undefined> {
+  const home = (await $.env.get('HOME').catch(() => undefined)) || (await $.env.get('USERPROFILE').catch(() => undefined))
+
+  return home ? home.replaceAll('\\', '/').replace(/\/+$/, '') : undefined
+}
+
 // Mods are enabled by a skills-folder symlink (~/.claude/skills, or the project's
 // .claude/skills in a cloud session), which settings never mention.
 async function skillLinks($: EngineInterface): Promise<(name: string) => Promise<boolean>> {
-  const home = await $.env.get('HOME').catch(() => undefined)
+  const home = await homeOf($)
   const cwd = await $.session.cwd().catch(() => undefined)
 
   return linkCheck({ roots: [home, cwd], exists: path => $.fs.exists(path) })
@@ -72,7 +80,11 @@ async function skillLinks($: EngineInterface): Promise<(name: string) => Promise
 async function marketOf($: EngineInterface): Promise<Market> {
   try {
     const stat = await $.fs.stat($.plugin.root, { resolve: true }).catch(() => undefined)
-    const root = marketRoot(stat?.realPath ?? $.plugin.root)
+    const real = stat?.realPath ?? $.plugin.root
+    const install = installOf(real)
+    const root = install === undefined
+      ? marketRoot(real)
+      : installedMarketRoot(install, await textOf($, `${install.pluginsDir}/known_marketplaces.json`).catch(() => undefined))
 
     return await loadCatalog({ read: path => $.fs.read(path), root, enabledPlugins: await enabledPlugins($), hasLink: await skillLinks($) })
   } catch (cause) {
@@ -175,7 +187,10 @@ async function textOf($: EngineInterface, path: string): Promise<string | undefi
 async function keepUpdated($: EngineInterface): Promise<void> {
   const install = installOf($.plugin.root)
   if (install === undefined) return
-  const configDir = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? `${await $.env.get('HOME')}/.claude`
+  const home = await homeOf($)
+  const configDir = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? (home === undefined ? undefined : `${home}/.claude`)
+  // With no folder to name, nothing is written: never a settings file under "undefined/.claude".
+  if (configDir === undefined) return
   const settingsPath = `${configDir}/settings.json`
   const next = autoUpdateSettings({
     market: install.market,

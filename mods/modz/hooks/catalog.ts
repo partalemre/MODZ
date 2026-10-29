@@ -51,9 +51,24 @@ export function linkCheck(spec: { roots: (string | undefined)[]; exists: (path: 
 }
 
 // The mod lives in MODZ/mods/modz; given its real path (not the ~/.claude/skills
-// symlink), the marketplace root is two levels up.
+// symlink), the marketplace root is two levels up. Windows separators are read as '/'.
 export function marketRoot(realPluginRoot: string): string {
-  return realPluginRoot.replace(/\/mods\/[^/]+\/?$/, '')
+  return realPluginRoot.replaceAll('\\', '/').replace(/\/mods\/[^/]+\/?$/, '')
+}
+
+// A copy installed from a marketplace sits in the plugins cache with its own folder only; the catalog stays in
+// the marketplace's clone, where known_marketplaces.json says it was put (by default <plugins>/marketplaces/<name>).
+export function installedMarketRoot(install: { market: string; pluginsDir: string }, knownText: string | undefined): string {
+  let known: unknown
+  try {
+    known = JSON.parse(knownText ?? '')
+  } catch {
+    known = undefined
+  }
+  const entry = isRecord(known) ? known[install.market] : undefined
+  const location = isRecord(entry) ? text(entry.installLocation) : undefined
+
+  return (location ?? `${install.pluginsDir}/marketplaces/${install.market}`).replaceAll('\\', '/').replace(/\/+$/, '')
 }
 
 const SAFE_NAME = /^[\w.-]+$/

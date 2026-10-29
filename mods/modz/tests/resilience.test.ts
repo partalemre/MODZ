@@ -3,6 +3,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { MARKET_FILES } from './market-fixture'
+import { posix } from './world'
 
 const PANE = { plugin: 'modz', component: 'Pane', requestId: 'modz', viewport: { columns: 100, rows: 40 }, props: { bodyColumns: 50 } } as const
 
@@ -12,7 +13,7 @@ function stubWorld(on: any, files: Files) {
   mock.env(on, { MODZ_LANG: 'tr' })
   on('fs.stat', () => ({ value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
   on('fs.read', (_: unknown, e: { path: string }) => {
-    const text = files[e.path]
+    const text = files[posix(e.path)]
     if (!text) throw new Error(`ENOENT ${e.path}`)
 
     return { value: text }

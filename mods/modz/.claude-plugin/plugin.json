@@ -17,6 +17,12 @@
       "title": "Keep mods up to date",
       "description": "Turn on Claude Code's own auto-update for the MODZ marketplace once, so every mod you installed (transceiver included) updates itself. A choice you already made under /plugin is kept.",
       "default": true
+    },
+    "keepReplyLanguage": {
+      "type": "boolean",
+      "title": "Keep the reply language",
+      "description": "After English tool output or a subagent's English report, remind Claude once per turn to reply in your language (Claude Code's language setting, else MODZ_LANG=tr). No model call.",
+      "default": true
     }
   }
 }

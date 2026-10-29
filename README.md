@@ -79,7 +79,7 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 
 | | Mod | What it does |
 |---|---|---|
-| **Panel** | `modz` | The panel itself: one live line per mod and one click to each pane |
+| **Panel** | `modz` | The panel itself: one live line per mod and one click to each pane; keeps Claude replying in your language |
 | **Work** | `savvy-progress` | Agents pane and progress band: each subagent's progress, cost and time; other chats waiting on you; a home crab that levels up |
 | | `savvy-flow` | Orchestrated delivery: the session model plans, tiered worker agents build |
 | | `filetree` | Files Claude touched this turn, what it is doing now, git status |
@@ -91,9 +91,9 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 | | `checkpoint` | A silent git snapshot before each turn's first write; undo a turn |
 | | `test-badge` | Runs tests and lint after edits and shows the result; watches your PR's GitHub CI |
 | | `replay-theater` | Replays the last turn's edits step by step, and earlier turns and past sessions |
-| **Meter** | `session-budget` | A spend budget per session, with a stop at 100% |
+| **Meter** | `session-budget` | A spend budget per session, with a stop at 100%; asks before new subagents when the 5-hour window runs low |
 | | `cache-tax` | Keeps the prompt cache warm through breaks and prices a cold send, a model change included |
-| | `hud-pro` | One line with the 5-hour and 7-day limits, context and cost; when the 5-hour window fills; what fills the context and how many turns are left |
+| | `hud-pro` | One line with the 5-hour and 7-day limits, context and cost; when the 5-hour window fills; what fills the context and how many turns are left; 7 and 30 days of usage history |
 | | `effort-router` | Shows each turn's effort and model; can send light prompts at low effort |
 | **Comfort** | `done-ping` | A notification when a long turn ends or Claude waits on you, with optional sound packs |
 | | `reflect-mod` | Saves corrections worth keeping to your CLAUDE.md; `/mine` turns friction that repeats across past chats into ideas |

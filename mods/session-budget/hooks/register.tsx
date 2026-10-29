@@ -1,7 +1,8 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, On, PromptOrigin, Register } from 'claude-code'
+import type { EngineInterface, On, PromptOrigin, Register, SessionRateLimit } from 'claude-code'
 
-import { WARN_RATIO, advance, describe, parseCommand, raise, ratioOf, readingOf, spendText, startBudget, stepText } from './budget'
+import { BRAKE_DEFAULT, addPoint, brakeWhy } from './brake'
+import { FIVE_HOUR, WARN_RATIO, advance, describe, parseCommand, raise, ratioOf, readingOf, spendText, startBudget, stepText } from './budget'
 import { fullCard, isLive, noticeAbove, stoppedRow, warnRow } from './notice'
 import { setLang } from './lang'
 import { pinned } from './pin'
@@ -11,6 +12,9 @@ import type { Budget, BudgetNotice } from '../types'
 const BUDGET = 'budget'
 const TOGGLE = 'session-budget'
 const STORE_KEY = 'session-budget.enabled'
+const BRAKE_KEY = 'session-budget.brake'
+// Agent is today's name of the subagent tool; Task the older one.
+const SPAWN_TOOLS = ['Agent', 'Task']
 const PRIORITY = 1
 const DISMISS_AFTER_MS = 20_000
 // After "Dur" the dropped prompt goes back in the box once the dialog has given it back.
@@ -22,12 +26,16 @@ const budgetAtom = atom({ plugin: 'session-budget', key: 'budget' } as const, nu
 const readingAtom = atom({ plugin: 'session-budget', key: 'reading' } as const, { percent: null, resetsAt: null, usd: null })
 const noticeAtom = atom({ plugin: 'session-budget', key: 'notice' } as const, null)
 const enabledAtom = atom({ plugin: 'session-budget', key: 'isEnabled' } as const, true)
+const brakeAtom = atom({ plugin: 'session-budget', key: 'brakeAt' } as const, BRAKE_DEFAULT)
+const ackAtom = atom({ plugin: 'session-budget', key: 'brakeAck' } as const, null)
+const paceAtom = atom({ plugin: 'session-budget', key: 'pace' } as const, { points: [], resetsAt: null })
 // The shared notice line: every one of these outranks this mod's line.
 const cacheTaxNotice = { plugin: 'cache-tax', key: 'notice' } as const
 const knowNotice = { plugin: 'you-should-know', key: 'notice' } as const
 const reflectNotice = { plugin: 'reflect', key: 'notice' } as const
 
-const run = { nextId: 0 }
+// A fan-out raises several spawns at once: they share one brake question.
+const run: { nextId: number; brake: Promise<boolean> | null } = { nextId: 0, brake: null }
 
 async function notify($: EngineInterface, kind: BudgetNotice['kind'], text: string): Promise<void> {
   run.nextId += 1
@@ -48,6 +56,11 @@ async function checkWarn($: EngineInterface, budget: Budget): Promise<void> {
 async function setBudget($: EngineInterface, args: string): Promise<string> {
   const command = parseCommand(args)
   if (command.kind === 'error') return command.text
+  if (command.kind === 'brake') {
+    await update($, brakeAtom, () => command.at)
+    await $.store.set(BRAKE_KEY, command.at ?? false)
+  }
+  if (command.kind === 'brake' || command.kind === 'brakeStatus') return words().brakeState(await read($, brakeAtom))
   if (command.kind === 'off') {
     await update($, budgetAtom, () => null)
 
@@ -119,9 +132,11 @@ function registerSetup(on: On) {
     try {
       const saved = await $.store.get(STORE_KEY)
       await update($, enabledAtom, () => saved !== false)
+      const brake = await $.store.get(BRAKE_KEY)
+      if (brake === false || typeof brake === 'number') await update($, brakeAtom, () => (brake === false ? null : brake))
       const usage = await $.session.usage()
       await update($, readingAtom, () => readingOf(usage.rateLimits, usage.cost?.usd))
-      await $.command.register({ name: BUDGET, description: words().budgetHelp, argumentHint: '<20% | $5 | off>' })
+      await $.command.register({ name: BUDGET, description: words().budgetHelp, argumentHint: '<20% | $5 | off | brake 85 | brake off>' })
       await $.command.register({ name: TOGGLE, description: words().toggleHelp, argumentHint: '[on|off]' })
     } catch {
       $.ui.log('session-budget: could not load settings', { to: 'debug' })
@@ -148,6 +163,7 @@ function registerFlow(on: On) {
     try {
       const reading = readingOf(e.rateLimits, e.cost?.usd)
       await update($, readingAtom, () => reading)
+      await recordPace($, e.rateLimits)
       const budget = await read($, budgetAtom)
       if (budget !== null) {
         const advanced = advance(budget, reading)
@@ -203,8 +219,55 @@ function registerBand(on: On) {
   })
 }
 
+// One more 5h reading for the spawn brake's pace.
+async function recordPace($: EngineInterface, rateLimits: readonly SessionRateLimit[]): Promise<void> {
+  const window = rateLimits.find(limit => limit.kind === FIVE_HOUR)
+  if (window === undefined) return
+  const point = { t: await $.clock.now(), value: window.percentUsed }
+  await update($, paceAtom, pace => ({ points: addPoint(pace.points, point), resetsAt: window.resetsAt ?? null }))
+}
+
+// "Dur" first, as the main way; anything else, a dismissal or nobody to ask lets spawns through for a step.
+async function askBrake($: EngineInterface, why: string): Promise<boolean> {
+  const says = words()
+  let answer: string | null = null
+  try {
+    answer = await $.ui.ask(says.brakeQuestion(why), { options: [says.stop, says.brakeGo], header: says.brakeHeader })
+  } catch {
+    // Nobody to ask (a -p run) or dismissed: the brake never blocks a spawn it cannot ask about.
+    $.ui.log('session-budget: spawn brake not answered; spawn let through', { to: 'debug' })
+  }
+  if (answer === says.stop) return false
+  const pace = await read($, paceAtom)
+  const percent = pace.points[pace.points.length - 1]?.value ?? 0
+  await update($, ackAtom, () => ({ percent, window: pace.resetsAt }))
+
+  return true
+}
+
+async function heldWhy($: EngineInterface): Promise<string | null> {
+  if (!(await read($, enabledAtom))) return null
+  const pace = await read($, paceAtom)
+
+  return brakeWhy({ at: await read($, brakeAtom), points: pace.points, resetsAt: pace.resetsAt, ack: await read($, ackAtom) })
+}
+
+function registerBrake(on: On) {
+  // Only spawns are braked; a brake that fails lets the spawn through.
+  on('tool.call', { tool: SPAWN_TOOLS }, async ($, e, next) => {
+    const why = await heldWhy($)
+    if (why === null) return next(e)
+    run.brake ??= askBrake($, why).finally(() => {
+      run.brake = null
+    })
+
+    return (await run.brake) ? next(e) : { deny: words().brakeDenied(why) }
+  }).catch(($, e, next) => next(e))
+}
+
 export const register: Register = on => {
   registerSetup(on)
   registerFlow(on)
   registerBand(on)
+  registerBrake(on)
 }

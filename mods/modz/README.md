@@ -49,10 +49,17 @@ The desktop app draws the panel as pictures; the terminal draws the same as text
 | Option | Default | Meaning |
 |---|---|---|
 | `openOnStart` | `true` | Open the MODZ panel on the right at every session start. |
+| `keepReplyLanguage` | `true` | Keep Claude's replies in your language (below). |
 
 The panel's theme follows Claude Code's `theme` setting.
 
 Uses no model tokens. It only reads local files and the lines the other mods report.
+
+## Reply language
+
+Claude's replies can drift to English right after English tool output or a subagent's English report, even when you write in another language ([anthropics/claude-code#96326](https://github.com/anthropics/claude-code/issues/96326)). The hub adds one short line to the model's context for its next reply ("Reply in Turkish, the user's language; keep code, paths and identifiers as they are.") after the first tool result in a turn that reads as English prose. Short output, code, data and output already in your language get nothing, and it never fires twice in one turn.
+
+The language is Claude Code's own `language` setting when you set one, else Turkish when `MODZ_LANG=tr`; with neither (or English) it does nothing. It is a word-count check, no model call. Only Turkish output is recognised as already in your language; for any other `language` the check is on the English alone. Turn it off with `keepReplyLanguage`.
 
 ## Language
 

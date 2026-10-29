@@ -22,8 +22,9 @@ export type PaneInput = { view: IdeasView; states: RowState[]; copied: string | 
 
 type Ui = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button'> & { Svg?: Elements['desktop']['Svg'] }
 type Level = 'hi' | 'mid' | 'lo'
-// A pane has no card frame of its own: its head is as wide as the body, about 8 px a column.
-const PX_PER_COLUMN = 8
+// A pane has no card frame of its own: its head is as wide as the body. A desktop pane reports about 9 px a
+// column (a 365 px body reads 40), wider than the reply column.
+const PX_PER_COLUMN = 9
 const MIN_WIDTH = 300
 const HEAD_KEY = 'ideas-head'
 /** The pane's drawing on the desktop (kit/moving.ts): reset as `/mine` opens the pane, so it cascades in each time. */

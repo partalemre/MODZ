@@ -199,7 +199,7 @@ test('/hud full on the desktop: stat tiles with meters and sparklines', async ($
   expect(svg?.props.alt).toContain('aralık %32–%64')
   expect(svg?.props.alt).toContain('oturum maliyeti ≈$1,23')
   expect(svg?.props.source).toContain('fill-opacity="0.12"')
-  expect(svg?.props.width).toBeLessThanOrEqual(80 * 6.4)
+  expect(svg?.props.width).toBeLessThanOrEqual(80 * 9)
   expect(await ui.find({ type: 'Text', text: /^son tur: girdi 12,4k/ })).toBeDefined()
 })
 

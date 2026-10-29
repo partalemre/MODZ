@@ -14,6 +14,8 @@ export const SANS = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, sy
 export const MONO = `ui-monospace, 'SF Mono', Menlo, monospace`
 // Roughly how wide a reported column of the desktop surface is, erring small so nothing overflows.
 export const PX_PER_COLUMN = 7
+// A desktop pane reports about 9 px a column (a 365 px body reads 40), wider than the reply column.
+const PANE_PX_PER_COLUMN = 9
 
 const MONO_EM = 0.6
 const BOLD_FROM = 600
@@ -114,8 +116,8 @@ export function wrapText(text: string, box: { width: number; font: Font; maxLine
   return kept
 }
 
-export function svgWidth(columns: number, range: { reserve?: number; min: number; max: number }): number {
-  const room = (columns - (range.reserve ?? 0)) * PX_PER_COLUMN
+export function svgWidth(columns: number, range: { reserve?: number; min: number; max: number; isBand?: boolean }): number {
+  const room = (columns - (range.reserve ?? 0)) * (range.isBand === true ? PX_PER_COLUMN : PANE_PX_PER_COLUMN)
 
   return Math.round(Math.max(range.min, Math.min(range.max, room)))
 }

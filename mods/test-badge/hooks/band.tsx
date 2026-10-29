@@ -46,7 +46,7 @@ function pillsSvg(view: BandView): { source: string; width: number } {
     body.push(drawn.svg)
     x += drawn.width + PILL_GAP
   }
-  const room = svgWidth(view.columns, { reserve: BUTTONS_RESERVE, min: 160, max: 1200 })
+  const room = svgWidth(view.columns, { reserve: BUTTONS_RESERVE, min: 160, max: 1200, isBand: true })
   // "4 sn önce" is the first thing a narrow band leaves out: whole or not at all, never cut.
   if (parts.meta !== '' && x + measure(parts.meta, META_FONT) + 4 <= room) {
     body.push(text({ ...META_FONT, x: x + 2, y: 16, text: parts.meta, ink: 'lo' }))

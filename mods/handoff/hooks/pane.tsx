@@ -1,7 +1,7 @@
 import type { RenderElement } from 'claude-code'
 
 import { paneMotion } from './kit/moving'
-import { ButtonRow, Card, Meter, cardInnerWidth } from './kit/ui'
+import { ButtonRow, Card, Meter, paneInnerWidth } from './kit/ui'
 import type { ButtonSpec, DrawCtx } from './kit/ui'
 import { isTooOld } from './inject'
 import { MINUTES_PER_HOUR, MS_PER_MINUTE, PREVIEW_LINES } from './limits'
@@ -107,7 +107,7 @@ function writingCard(draw: DrawCtx, width: number): RenderElement {
 }
 
 export function paneTree(draw: DrawCtx, view: PaneView): RenderElement {
-  const width = cardInnerWidth(view.columns)
+  const width = paneInnerWidth(view.columns)
   if (view.stage === 'writing') return writingCard(draw, width)
 
   return view.note === null ? emptyCard(draw, view, width) : noteCard(draw, view, view.note, width)

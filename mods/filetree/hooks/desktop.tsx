@@ -21,7 +21,8 @@ import { words } from './words'
 
 type Ui = ElementTable<'desktop'>
 
-const PX_PER_COL = 8
+// A desktop pane reports about 9 px a column (a 365 px body reads 40), wider than the reply column.
+const PX_PER_COL = 9
 const ROW_PX = 18
 const MIN_SVG_W = 240
 const MAX_SVG_W = 900

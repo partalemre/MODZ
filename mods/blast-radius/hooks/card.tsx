@@ -27,6 +27,8 @@ export type CardProps = {
 
 const CARD_CHROME = 6
 const PX_PER_COLUMN = 8
+// A desktop pane reports about 9 px a column (a 365 px body reads 40), wider than the reply column.
+const PANE_PX_PER_COLUMN = 9
 const MIN_WIDTH = 300
 const MAX_WIDTH = 720
 const BAND_ROWS = 3
@@ -34,7 +36,8 @@ const TERMINAL_BAR = 10
 const FRAME: Record<View['tone'], string> = { danger: 'single', warn: 'round' }
 const STATUS_KEY: Record<string, keyof typeof TERMINAL_KEY> = { A: 'ok', M: 'warn', D: 'danger', R: 'read', C: 'read', U: 'danger' }
 
-export const svgWidth = (columns: number): number => Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, (columns - CARD_CHROME) * PX_PER_COLUMN))
+export const svgWidth = (columns: number, place: CardProps['place'] = 'band'): number =>
+  Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, (columns - CARD_CHROME) * (place === 'pane' ? PANE_PX_PER_COLUMN : PX_PER_COLUMN)))
 
 /** The band shows the first rows only, and says how many it left for the pane. */
 function bandRows(rows: Row[]): Row[] {
@@ -88,7 +91,7 @@ function picture(ui: Ui, props: CardProps, drawing: { key: string; pic: Pic & { 
 
 export function desktopCard(ui: Ui, props: CardProps) {
   const { Box } = ui
-  const width = svgWidth(props.columns)
+  const width = svgWidth(props.columns, props.place)
   const { view } = props
   const neutral = palette(props.isLight)
   const rows = props.place === 'band' ? bandRows(view.rows) : view.rows

@@ -2,7 +2,7 @@
   "blast-radius": { "repo": "anthropics/claude-code-playground", "synced": "2026-10-09" },
   "replay-theater": { "repo": "anthropics/claude-code-playground", "synced": "2026-10-09" },
   "cache-tax": { "repo": "karanb192/cache-tax", "synced": "2026-10-29" },
-  "filetree": { "repo": "data-goblin/claude-code-filetree", "synced": "2026-10-09" },
+  "filetree": { "repo": "data-goblin/claude-code-filetree", "synced": "2026-10-29" },
   "reflect-mod": { "repo": "bayramannakov/claude-reflect", "synced": "2026-10-09" },
   "savvy-progress": { "repo": "johnnyvizz/claude-kit", "synced": "2026-10-09" },
   "savvy-flow": { "repo": "johnnyvizz/claude-kit", "synced": "2026-10-09" },

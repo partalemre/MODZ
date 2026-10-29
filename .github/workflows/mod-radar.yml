@@ -1,0 +1,39 @@
+# Weekly: the most-starred new mods in karanb192/awesome-claude-code-mods' catalogue that MODZ has not adapted,
+# kept in one open `radar` issue. Picking one is a reviewed choice: fold it into the mod that already owns that job
+# (MODZ keeps one mod per job), credit it in README, and add it to upstreams.json so upstream-watch follows it.
+name: mod-radar
+on:
+  schedule:
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+env:
+  CATALOGUE: https://raw.githubusercontent.com/karanb192/awesome-claude-code-mods/main/data/mods.json
+  WINDOW_DAYS: 60
+  TOP: 20
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -sfL "$CATALOGUE" -o mods.json
+          since=$(date -u -d "-$WINDOW_DAYS days" +%F)
+          known=$(jq -c '[.[].repo | ascii_downcase]' upstreams.json)
+          rows=$(jq -r --arg since "$since" --argjson known "$known" --argjson top "$TOP" '
+            [.mods[] | select(.kind != "builtin" and (.archived | not) and .createdAt >= $since
+              and ((.repo | ascii_downcase) as $r | ($known | index($r) | not))
+              and (.repo | startswith("partalemre/") | not)
+              and ((.license // "") | test("MIT|Apache|BSD|ISC"; "i")))]
+            | group_by(.repo) | map({repo: .[0].repo, stars: .[0].stars, mods: (map(.name) | unique | join(", ")), what: (.[0].description | split(". ")[0])})
+            | sort_by(-.stars) | .[:$top][]
+            | "| \(.stars) | [\(.repo)](https://github.com/\(.repo)) | \(.mods) | \(.what | gsub("\\|"; "/")) |"' mods.json)
+          body=$(printf 'New mods (created in the last %s days, permissive license) that MODZ has not adapted, by stars:\n\n| Stars | Repo | Mods | What |\n|---|---|---|---|\n%s\n\nAdopt one by folding it into the MODZ mod that owns that job, never as a second mod for the same job.' "$WINDOW_DAYS" "$rows")
+          gh label create radar --color D4C5F9 --description 'Mods worth adopting into MODZ' 2>/dev/null || true
+          issue=$(gh issue list --label radar --state open --json number --jq '.[0].number // empty')
+          if [ -n "$issue" ]; then gh issue edit "$issue" --body "$body"; else gh issue create --title 'Mod radar' --label radar --body "$body"; fi

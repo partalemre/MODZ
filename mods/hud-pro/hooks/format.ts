@@ -4,6 +4,7 @@ import type { HudGauge, HudTurn } from '../types'
 
 const THOUSAND = 1_000
 const MILLION = 1_000_000
+const BILLION = 1_000_000_000
 export const PERCENT = 100
 const MS_PER_MINUTE = 60_000
 const MINUTES_PER_HOUR = 60
@@ -67,6 +68,7 @@ export const resetText = (reset: string): string => `${RESET_MARK} ${reset}`
 export const costText = (usd: number): string => `≈$${decimal(usd, 2)}`
 
 export function compact(count: number): string {
+  if (count >= BILLION) return `${short(count / BILLION)}${units().billion}`
   if (count >= MILLION) return `${short(count / MILLION)}M`
   if (count >= THOUSAND) return `${short(count / THOUSAND)}k`
 

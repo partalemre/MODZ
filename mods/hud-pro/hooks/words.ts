@@ -20,11 +20,11 @@ export const shortLabels = (): Labels => pick(SHORT)
 export const longLabels = (): Labels => pick(LONG)
 
 // How numbers read: the decimal mark, where the percent sign goes, a full window, the countdown units.
-export type Units = { decimalMark: string; percent: (rounded: number) => string; full: string; day: string; hour: string; minute: string }
+export type Units = { decimalMark: string; percent: (rounded: number) => string; full: string; day: string; hour: string; minute: string; billion: string }
 
 const UNITS: Readonly<Record<Lang, Units>> = {
-  en: { decimalMark: '.', percent: rounded => `${rounded}%`, full: 'full', day: 'd', hour: 'h', minute: 'm' },
-  tr: { decimalMark: ',', percent: rounded => `%${rounded}`, full: 'dolu', day: 'g', hour: 'sa', minute: 'dk' },
+  en: { decimalMark: '.', percent: rounded => `${rounded}%`, full: 'full', day: 'd', hour: 'h', minute: 'm', billion: 'B' },
+  tr: { decimalMark: ',', percent: rounded => `%${rounded}`, full: 'dolu', day: 'g', hour: 'sa', minute: 'dk', billion: 'Mr' },
 }
 
 export const units = (): Units => pick(UNITS)
@@ -58,6 +58,7 @@ const nouns = (count: number, one: string): string => (count === 1 ? one : `${on
 type TurnSpec = { input: string; output: string; cache: string; requests: number }
 type FreeSpec = { tokens: string; count: number }
 type CompactedSpec = { before: string; after: string }
+type PastSpec = { active: number; range: number; sessions: number; tokens: string; model: string | null }
 
 type Words = {
   paneTitle: string
@@ -102,6 +103,15 @@ type Words = {
   turnsLeft: (count: number) => string
   turnsShort: (count: number) => string
   lastTurns: (count: number) => string
+  pastTitle: string
+  activeDays: string
+  sessions: string
+  tokens: string
+  topModel: string
+  rangeLabel: (days: number) => string
+  lastDays: (days: number) => string
+  pastLine: (spec: PastSpec) => string
+  dayTokens: (day: string, tokens: string) => string
 }
 
 const EN: Words = {
@@ -148,6 +158,18 @@ const EN: Words = {
   turnsLeft: count => `~${plural(count, 'turn', 'turns')} left`,
   turnsShort: count => `~${plural(count, 'turn', 'turns')}`,
   lastTurns: count => `last ${plural(count, 'turn', 'turns')}`,
+  pastTitle: 'History',
+  activeDays: 'active days',
+  sessions: 'sessions',
+  tokens: 'tokens',
+  topModel: 'most used',
+  rangeLabel: days => `${days} days`,
+  lastDays: days => `last ${days} days`,
+  pastLine: spec =>
+    [`${spec.active}/${spec.range} active days`, plural(spec.sessions, 'session', 'sessions'), `${spec.tokens} tokens`, spec.model === null ? '' : `mostly ${spec.model}`]
+      .filter(part => part !== '')
+      .join(' · '),
+  dayTokens: (day, tokens) => `${day}: ${tokens} tokens`,
 }
 
 const TR: Words = {
@@ -193,6 +215,18 @@ const TR: Words = {
   turnsLeft: count => `~${count} tur kaldı`,
   turnsShort: count => `~${count} tur`,
   lastTurns: count => `son ${count} tur`,
+  pastTitle: 'Geçmiş',
+  activeDays: 'aktif gün',
+  sessions: 'oturum',
+  tokens: 'token',
+  topModel: 'en çok',
+  rangeLabel: days => `${days} gün`,
+  lastDays: days => `son ${days} gün`,
+  pastLine: spec =>
+    [`${spec.active}/${spec.range} aktif gün`, `${spec.sessions} oturum`, `${spec.tokens} token`, spec.model === null ? '' : `çoğunlukla ${spec.model}`]
+      .filter(part => part !== '')
+      .join(' · '),
+  dayTokens: (day, tokens) => `${day}: ${tokens} token`,
 }
 
 const WORDS: Readonly<Record<Lang, Words>> = { en: EN, tr: TR }

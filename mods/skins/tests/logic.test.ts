@@ -15,6 +15,8 @@ import { deepen, isLightTheme, macDark, resolveLight, toLight } from '../hooks/l
 import { parseFolders, prefsFor, withFolder, withoutFolder } from '../hooks/folders'
 import { kindOf, summarize, toolLabel } from '../hooks/tools'
 import tokyoNight from '../hooks/themes/tokyo-night'
+import { nextScene, SCENE_NAMES, SCENES } from '../hooks/scenes'
+import { sceneSvg } from '../hooks/svg-scene'
 import { setLang } from '../hooks/lang'
 
 // These tests call the word builders directly and read Turkish.
@@ -163,6 +165,30 @@ test('the design tool saves, applies, changes settings and deletes', async () =>
   expect(runDesign({ action: 'delete', name: 'nord' }, start).isError).toBe(true)
   expect(runDesign({ action: 'apply', name: 'nope' }, start).isError).toBe(true)
   expect(JSON.parse(runDesign({ action: 'show' }, start).text).current).toBe('tidemark')
+})
+
+test('/skin scene picks a living scene or turns it off, and only a known one is kept', async () => {
+  expect(runSkinCommand('scene koi-pond', DEFAULT_PREFS, NAMES).prefs.scene).toBe('koi-pond')
+  expect(runSkinCommand('scene off', { ...DEFAULT_PREFS, scene: 'koi-pond' }, NAMES).prefs.scene).toBe('off')
+  const unknown = runSkinCommand('scene lava', DEFAULT_PREFS, NAMES)
+  expect(unknown.prefs.scene).toBe('off')
+  expect(unknown.channel).toBe('row')
+  expect(parsePrefs({ scene: 'moonlit' }, NAMES).scene).toBe('moonlit')
+  expect(parsePrefs({ scene: 'gone' }, NAMES).scene).toBe('off')
+  expect(nextScene('off')).toBe(SCENE_NAMES[0])
+  expect(nextScene(SCENE_NAMES[SCENE_NAMES.length - 1] ?? '')).toBe('off')
+})
+
+test('every scene is one bounded, script-free svg that says its scheme and stills for reduced motion', async () => {
+  for (const scene of SCENES) {
+    const { source } = sceneSvg(scene)
+    expect(source.length).toBeLessThan(131072)
+    expect(source).toContain('color-scheme')
+    expect(source).toContain('prefers-reduced-motion')
+    expect(source).not.toContain('<script')
+    // Text is escaped: every < opens a tag.
+    expect(source).not.toMatch(/<(?![a-zA-Z/!])/)
+  }
 })
 
 test('/skin names a skin, switches parts, and refuses what it does not know', async () => {

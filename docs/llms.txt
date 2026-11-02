@@ -40,7 +40,7 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 - effort-router: shows each turn's effort and model; in auto mode sends light prompts at low effort (one small model call per prompt)
 - done-ping: notification when a long turn ends or Claude waits on you; optional sound packs (soundPack)
 - reflect-mod: saves corrections worth keeping to a CLAUDE.md (one small model check per correction); /mine turns friction that repeats across past chats into rule, hook, skill or mod ideas (one small call)
-- skins: transcript themes; /skin switches live
+- skins: transcript themes; /skin switches live; /skin scene puts a living ASCII scene above the prompt (desktop)
 - terminal-browser: a browser inside the terminal the agent can drive (terminal only)
 
 ## Customize and extend

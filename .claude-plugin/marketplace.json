@@ -95,7 +95,7 @@
     {
       "name": "skins",
       "source": "./mods/skins",
-      "description": "Themes for the transcript: tool rows, reply gutters and spinner words. /skin switches them live."
+      "description": "Themes for the transcript: tool rows, reply gutters and spinner words, and living ASCII scenes above the prompt. /skin switches them live."
     },
     {
       "name": "terminal-browser",

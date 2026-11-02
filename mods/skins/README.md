@@ -27,6 +27,7 @@ The MODZ panel (`modz`) shows its line here, under the name Look: the active ski
 | Turn footer | not drawn on the desktop app | Time, tool count and lines changed |
 | Your prompts | Claude Code's own message, with its copy and rewind buttons | A rounded outline sized to what you typed |
 | The question dialog | A band naming its topics above Claude Code's own dialog | The same |
+| Living scene (off by default) | An animated ASCII scene above the prompt: a drifting glyph field with turtles, koi, jellyfish, boats, fireflies or a moon crossing it | not drawn |
 
 Every card rises in row by row and respects reduced motion. A skin only changes what is drawn: the stored conversation, and what the model reads, are untouched. Agents, plan mode and the permission prompt keep Claude Code's own drawing.
 
@@ -35,6 +36,7 @@ There are eight skins, each with a light and a dark palette: `tidemark` (the def
 ## Commands
 
 - `/skin` opens the settings pane (named Look): pick a skin, see a live preview, switch the rail, tables, shimmer, band and icons, and repaint any colour. Repainting a built-in skin saves it as your own `my-<skin>`.
+- `/skin scene <name>` puts a living scene above the prompt on the desktop app; `/skin scene off` removes it. The scenes: `honu-lagoon`, `koi-pond`, `jellyfish`, `paper-boats`, `fireflies`, `moonlit`, `cloud-drift` and `ember`. The settings pane's Scene button (`w`) cycles through them. Each is pure CSS motion in one small SVG, and stands still when the system asks for reduced motion.
 - `/skin gallery` shows every element the skin draws, numbered, to point at when you want one changed.
 - `/skin <name>`, `/skin list`, `/skin off` switch skins.
 - `/skin rail|tables|shimmer|band|clip on|off` switch a part on or off. `/skin icons unicode|ascii` picks the icon set.
@@ -61,3 +63,5 @@ The interface is English. Set `MODZ_LANG=tr` in the `env` block of `~/.claude/se
 ## Credits
 
 Adapted from [hellosverre/claude-skins](https://github.com/hellosverre/claude-skins), licensed MIT. The license file is in this folder.
+
+The living scenes are inspired by Marko Vineli's ([@handsher_NGU](https://x.com/handsher_NGU)) `/theme` concept for Claude Code; the scenes and their renderer are written for MODZ.

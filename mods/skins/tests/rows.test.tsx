@@ -501,6 +501,37 @@ test('the band offers Compact, nudges at 70% context, and compacts on a press', 
   expect(await busy.find({ key: 'compact' })).toBeUndefined()
 })
 
+test('a living scene lives above the prompt on the desktop, in one frame that outlasts redraws', async ($, on) => {
+  const store: Record<string, unknown> = {}
+  stubEngine(on, { store: true })
+  on('store.get', ($, e) => ({ value: store[e.key] }))
+  on('store.set', ($, e) => {
+    store[e.key] = e.value
+    return { value: undefined }
+  })
+  on('session.start', () => ({ cwd: '/work' }))
+  on('command.register', () => ({ value: { command: 'skin' } }))
+  on('tool.register', () => ({ value: { tool: 'mcp__skins__design' } }))
+  await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
+
+  const off = await $.ui.mount(BAND('desktop', false))
+  expect(await off.find({ type: 'Svg' })).toBeUndefined()
+  await off.unmount()
+  await runSkin($, 'scene koi-pond')
+
+  type Scene = { props: { source: string; isInteractive?: boolean } } | undefined
+  const first = await $.ui.mount(BAND('desktop', false))
+  const scene = (await first.find({ type: 'Svg' })) as Scene
+  expect(scene?.props.isInteractive).toBe(true)
+  await first.unmount()
+  const again = await $.ui.mount(BAND('desktop', true))
+  expect(((await again.find({ type: 'Svg' })) as Scene)?.props.source).toBe(scene?.props.source)
+  await again.unmount()
+
+  const terminal = await $.ui.mount(BAND('terminal', false))
+  expect(await terminal.find({ type: 'Svg' })).toBeUndefined()
+})
+
 test('cards draw no background of their own', async ($, on) => {
   stubEngine(on)
 

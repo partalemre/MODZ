@@ -10,7 +10,7 @@ import { say } from './words'
 export const skinCommand = (): CommandSpec => ({
   name: 'skin',
   description: say().command,
-  argumentHint: '[gallery | name | list | off | pin | unpin | share | rail | tables | shimmer | band | clip | icons]',
+  argumentHint: '[gallery | name | list | off | pin | unpin | share | rail | tables | shimmer | band | clip | icons | scene]',
   immediate: true,
 })
 

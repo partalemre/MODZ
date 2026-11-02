@@ -1,4 +1,5 @@
 import type { Prefs } from '../types'
+import { SCENE_NAMES } from './scenes'
 import { say } from './words'
 
 export const DEFAULT_PREFS: Prefs = {
@@ -10,6 +11,7 @@ export const DEFAULT_PREFS: Prefs = {
   // Off by default: another mod (hud-pro) shows usage. /skin band on brings it back.
   band: false,
   clipOutput: false,
+  scene: 'off',
 }
 
 // The on/off settings, by the word /skin and the settings pane use for each.
@@ -49,6 +51,7 @@ export function parsePrefs(raw: unknown, names: readonly string[]): Prefs {
     shimmer: flagOr(saved.shimmer, DEFAULT_PREFS.shimmer),
     band: flagOr(saved.band, DEFAULT_PREFS.band),
     clipOutput: flagOr(saved.clipOutput, DEFAULT_PREFS.clipOutput),
+    scene: typeof saved.scene === 'string' && SCENE_NAMES.includes(saved.scene) ? saved.scene : DEFAULT_PREFS.scene,
   }
 }
 
@@ -69,6 +72,7 @@ export const listing = (current: Prefs, names: readonly string[]): string =>
       `shimmer ${onOff(current.shimmer)}`,
       `band ${onOff(current.band)}`,
       `clip ${onOff(current.clipOutput)}`,
+      `scene ${current.scene}`,
     ].join(' · '),
   ].join('\n')
 
@@ -102,6 +106,10 @@ export function runSkinCommand(args: string, current: Prefs, names: readonly str
       return value === 'unicode' || value === 'ascii'
         ? changed({ ...current, icons: value }, `icons: ${value}`)
         : refused(current, say().iconsUsage)
+    case 'scene':
+      return value !== undefined && (value === 'off' || SCENE_NAMES.includes(value))
+        ? changed({ ...current, scene: value }, `scene: ${value}`)
+        : refused(current, say().sceneUsage(SCENE_NAMES))
     default:
       return names.includes(head)
         ? changed({ ...current, skin: head }, `skin: ${head}`)

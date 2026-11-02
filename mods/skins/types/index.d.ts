@@ -26,6 +26,8 @@ export type Prefs = {
   shimmer: boolean
   band: boolean
   clipOutput: boolean
+  // The living scene above the prompt on the desktop (hooks/scenes.ts), or 'off'.
+  scene: string
 }
 
 // A skin someone made in the settings pane or through their agent: a built-in skin

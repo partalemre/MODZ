@@ -9,6 +9,7 @@ import { HomeButton } from './home'
 import { footerRow, promptRow } from './rows'
 import { tableRows } from './row-table'
 import { groupRow, toolRow } from './row-tool'
+import { sceneNamed } from './scenes'
 import { say } from './words'
 
 export type PaneUi = Pick<ElementTable<'terminal' | 'desktop'>, 'Box' | 'Text' | 'Markdown' | 'Button' | 'Input' | 'Select'>
@@ -25,6 +26,7 @@ export type SettingsActions = {
   pick: (name: string) => void
   toggle: (word: ToggleWord) => void
   icons: () => void
+  scene: () => void
   edit: (slot: SkinSlot) => void
   paint: (hex: string) => void
   gallery: () => void
@@ -148,6 +150,7 @@ function optionButtons({ look, ui, actions }: Parts) {
       {toggle('band', 'b', prefs.band)}
       {toggle('clip', 'c', prefs.clipOutput)}
       <Button key="icons" label={say().icons(prefs.icons)} hotkey="i" plain onPress={() => actions.icons()} />
+      <Button key="scene" label={say().scene(sceneNamed(prefs.scene)?.label ?? say().off)} hotkey="w" plain dimColor={prefs.scene === 'off'} onPress={() => actions.scene()} />
     </Box>
   )
 }

@@ -97,7 +97,7 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 | | `effort-router` | Shows each turn's effort and model; can send light prompts at low effort |
 | **Comfort** | `done-ping` | A notification when a long turn ends or Claude waits on you, with optional sound packs |
 | | `reflect-mod` | Saves corrections worth keeping to your CLAUDE.md; `/mine` turns friction that repeats across past chats into ideas |
-| | `skins` | Themes for the transcript, switched live with `/skin` |
+| | `skins` | Themes for the transcript, switched live with `/skin`, and living ASCII scenes above the prompt |
 | | `terminal-browser` | A browser inside the terminal that the agent can drive |
 
 Most mods use no model tokens. These can, each with the cheapest model and never more than one call per event:

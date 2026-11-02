@@ -2,6 +2,7 @@ import type { CustomSkin, Prefs, SkinSlot } from '../types'
 import { DEFAULT_PREFS, TOGGLES } from './command'
 import { withSlot } from './custom'
 import type { DesignState } from './designer'
+import { nextScene } from './scenes'
 import type { SettingsActions } from './settings'
 
 export type SettingsState = { prefs: Prefs; custom: Record<string, CustomSkin>; editing: SkinSlot }
@@ -23,6 +24,7 @@ export function settingsActions({ prefs, custom, editing }: SettingsState, ports
     pick: name => ports.commit({ ...state, prefs: { ...prefs, skin: name } }),
     toggle: word => ports.commit({ ...state, prefs: { ...prefs, [TOGGLES[word]]: !prefs[TOGGLES[word]] } }),
     icons: () => ports.commit({ ...state, prefs: { ...prefs, icons: prefs.icons === 'unicode' ? 'ascii' : 'unicode' } }),
+    scene: () => ports.commit({ ...state, prefs: { ...prefs, scene: nextScene(prefs.scene) } }),
     edit: ports.edit,
     paint: hex => {
       const made = withSlot(prefs.skin === 'off' ? DEFAULT_PREFS.skin : prefs.skin, custom, { slot: editing, hex })

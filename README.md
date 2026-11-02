@@ -95,7 +95,7 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 | | `cache-tax` | Keeps the prompt cache warm through breaks and prices a cold send, a model change included |
 | | `hud-pro` | One line with the 5-hour and 7-day limits, context and cost; when the 5-hour window fills; what fills the context and how many turns are left; 7 and 30 days of usage history |
 | | `effort-router` | Shows each turn's effort and model; can send light prompts at low effort |
-| **Comfort** | `done-ping` | A notification when a long turn ends or Claude waits on you, with optional sound packs |
+| **Comfort** | `done-ping` | A notification when a long turn ends or Claude waits on you, a line when another session waits on you, optional sound packs |
 | | `reflect-mod` | Saves corrections worth keeping to your CLAUDE.md; `/mine` turns friction that repeats across past chats into ideas |
 | | `skins` | Themes for the transcript, switched live with `/skin` |
 | | `terminal-browser` | A browser inside the terminal that the agent can drive |
@@ -192,6 +192,7 @@ Several mods are adaptations of open-source projects, each under its original li
 |---|---|---|
 | `blast-radius`, `replay-theater` | [anthropics/claude-code-playground](https://github.com/anthropics/claude-code-playground) | Apache-2.0 |
 | `cache-tax` | [karanb192/cache-tax](https://github.com/karanb192/cache-tax) | MIT |
+| `done-ping` (other sessions waiting) | [Atoll92/agent-standup](https://github.com/Atoll92/agent-standup) | MIT |
 | `filetree` | [data-goblin/claude-code-filetree](https://github.com/data-goblin/claude-code-filetree) | MIT |
 | `reflect-mod` | [bayramannakov/claude-reflect](https://github.com/bayramannakov/claude-reflect) | MIT |
 | `savvy-progress`, `savvy-flow` | [johnnyvizz/claude-kit](https://github.com/johnnyvizz/claude-kit) | MIT |

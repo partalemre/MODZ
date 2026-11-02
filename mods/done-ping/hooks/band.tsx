@@ -1,7 +1,8 @@
 import { icon, measure, runs, svgDoc, svgWidth } from './svg'
 import type { Ink } from './svg'
 import type { Theme } from './tidemark'
-import type { PingNotice } from '../types'
+import { words } from './words'
+import type { OtherNeed, PingNotice } from '../types'
 
 // The in-app fallback, one row in the notice family: a bare bell (quiet when done, Flare with failing tests,
 // Amber waiting: colour says only the state), the outcome in text.hi, its facts in text.lo, then ✕. It clears
@@ -55,6 +56,31 @@ export function pingRow(ui: Ui, band: PingBand, theirs: unknown) {
         {drawn === null ? <Text wrap="truncate">{text}</Text> : <Svg source={drawn.source} alt={text} width={drawn.width} height={ROW_H} />}
         <Button key="done-ping-dismiss" plain dimColor role="dismiss" label="✕" onPress={band.onDismiss} />
       </Box>
+      {theirs}
+    </Box>
+  )
+}
+
+// Other sessions that wait on you, one line each (three at most), drawn as text on every surface; ✕ puts them away.
+const OTHERS_SHOWN = 3
+
+export function othersRow(ui: Ui, others: { list: readonly OtherNeed[]; onDismiss: () => void }, theirs: unknown) {
+  const { Box, Text, Button } = ui
+  const w = words()
+  const more = others.list.length - OTHERS_SHOWN
+
+  return (
+    <Box flexDirection="column">
+      {others.list.slice(0, OTHERS_SHOWN).map((need, index) => (
+        <Box key={need.key} flexDirection="row" columnGap={1}>
+          <Text color={MARK.wait.color}>{MARK.wait.glyph}</Text>
+          <Text wrap="truncate">
+            {need.where} <Text dimColor>· {need.isApproval ? w.waitingApproval : w.waitingAnswer}</Text>
+          </Text>
+          {index === 0 && <Button key="done-ping-others-dismiss" plain dimColor role="dismiss" label="✕" onPress={others.onDismiss} />}
+        </Box>
+      ))}
+      {more > 0 && <Text dimColor>{w.more(more)}</Text>}
       {theirs}
     </Box>
   )

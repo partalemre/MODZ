@@ -1,7 +1,9 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { pingRow } from './band'
+import { othersRow, pingRow } from './band'
+import { othersWatcher, POLL_MS } from './others'
+import type { OtherNeed, PingNotice } from '../types'
 import { configFrom, donePing, editedPath, isTestCommand, parseSeconds, permissionPing, projectOf, questionPing } from './ping'
 import type { Ping, PingConfig, TestsSeen } from './ping'
 import { AUTO, themeFrom } from './tidemark'
@@ -11,7 +13,6 @@ import { packAsset } from './pack'
 import { pinned } from './pin'
 import { setLang } from './lang'
 import { words } from './words'
-import type { PingNotice } from '../types'
 
 const COMMAND = 'done-ping'
 const ENABLED_KEY = `${COMMAND}.enabled`
@@ -37,6 +38,7 @@ const enabledAtom = atom({ plugin: 'done-ping', key: 'isEnabled' } as const, tru
 const thresholdAtom = atom({ plugin: 'done-ping', key: 'thresholdSeconds' } as const, null)
 const noticeAtom = atom({ plugin: 'done-ping', key: 'notice' } as const, null)
 const themeAtom = atom({ plugin: 'done-ping', key: 'theme' } as const, AUTO)
+const othersAtom = atom({ plugin: 'done-ping', key: 'others' } as const, [] as readonly OtherNeed[])
 
 const session = {
   project: 'Claude', lastWaitAt: -WAIT_GAP_MS, lastPingAt: -PING_GAP_MS, files: new Set<string>(), tests: null as TestsSeen, noticeId: 0,
@@ -50,6 +52,27 @@ async function showNotice($: EngineInterface, ping: Ping): Promise<void> {
   $.clock.after(DISMISS_AFTER_MS, () => {
     void update($, noticeAtom, current => (current !== null && current.id === id ? null : current))
   })
+}
+
+const others = { watcher: null as ReturnType<typeof othersWatcher> | null }
+
+async function lookAtOthers($: EngineInterface): Promise<void> {
+  const shown = await others.watcher?.look()
+  if (shown == null) return
+  await update($, othersAtom, current => (JSON.stringify(current) === JSON.stringify(shown) ? current : shown))
+}
+
+// Other sessions that wait on you, looked at every few seconds.
+async function watchOthers($: EngineInterface): Promise<void> {
+  others.watcher = othersWatcher({
+    configDir: async () => (await $.env.get('CLAUDE_CONFIG_DIR')) || `${(await $.env.get('HOME')) || (await $.env.get('USERPROFILE')) || ''}/.claude`,
+    list: path => $.fs.list(path),
+    read: path => $.fs.read(path),
+    run: (argv, init) => $.process.run(argv, init),
+    sessionId: () => $.session.id(),
+  })
+  await lookAtOthers($)
+  $.clock.every(POLL_MS, () => void lookAtOthers($).catch(() => $.ui.log('done-ping: could not read other sessions', { to: 'debug' })))
 }
 
 function ioOf($: EngineInterface): RingIo {
@@ -202,6 +225,8 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     await loadSettings($, e.cwd).catch(() => $.ui.log('done-ping: could not load settings', { to: 'debug' }))
+    // The desktop app's sidebar already marks a session that waits on you.
+    if (config.isPermissionPing && !(await isDesktop(ioOf($)))) await watchOthers($).catch(() => $.ui.log('done-ping: could not watch other sessions', { to: 'debug' }))
 
     return next(e)
   })
@@ -237,7 +262,8 @@ function registerBand(on: On): void {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const theirs = await next(e)
     const notice: PingNotice | null = await read($, noticeAtom)
-    if (notice === null || e.props.hasSurvey || (await hasLouderNotice($))) return theirs
+    if (e.props.hasSurvey || (await hasLouderNotice($))) return theirs
+    if (notice === null) return othersBand($, e, theirs)
     const band = {
       notice, columns: e.props.bodyColumns, theme: await read($, themeAtom), isRich: e.surface !== 'terminal',
       onDismiss: () => void update($, noticeAtom, () => null),
@@ -247,4 +273,16 @@ function registerBand(on: On): void {
 
     return pinned(e, pingRow(ui, band, theirs))
   })
+}
+
+// Another session's wait takes the line only while this one has no notice of its own and the ping is on.
+async function othersBand($: EngineInterface, e: Parameters<typeof pinned>[0], theirs: unknown) {
+  const list = await read($, othersAtom)
+  if (list.length === 0 || !(await read($, enabledAtom))) return theirs
+  const onDismiss = () => {
+    others.watcher?.hide(list)
+    void update($, othersAtom, () => [])
+  }
+
+  return pinned(e, othersRow($.ui.resolve(e), { list, onDismiss }, theirs))
 }

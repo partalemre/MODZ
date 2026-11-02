@@ -29,6 +29,10 @@ Where a ping goes, in order:
 
 In the desktop app no waiting ping is sent: the app already notifies when a session needs your approval or answer. One waiting ping is sent per 15-second burst, and any two pings are at least 10 seconds apart.
 
+## Other sessions waiting on you
+
+Outside the desktop app, a line above the prompt names each other Claude Code session on this computer that waits for your approval or answer (`! web-shop · Waiting for approval`), up to three, then `and 2 more sessions`. ✕ puts them away until that wait ends. Every 4 seconds it reads only the status files Claude Code keeps in `~/.claude/sessions` (or under `CLAUDE_CONFIG_DIR`) and asks `ps` whether a waiting session still runs, since one that crashed leaves its file behind. A `claude -p` run is left out: its questions go to the program that started it. It sends nothing anywhere, follows `pingOnPermission` and `/done-ping`, and steps aside for this session's own notice. The desktop app's sidebar already marks waiting sessions, so nothing is read there. Adapted from the band in [Atoll92/agent-standup](https://github.com/Atoll92/agent-standup) (MIT).
+
 ## Sound packs
 
 Off by default. Set `soundPack` to `chime`, `soft` or `retro` and each ping also plays one of the mod's own short sounds (under 1.2 seconds): one for a finished turn, another for Claude waiting on you. A pack replaces the banner's own sound, so a ping never rings twice, and it stays quiet whenever the banner does (while you are looking at the session). Where the host has no player (a Linux or Windows terminal) nothing plays and nothing is shown; the debug log says why.
@@ -46,7 +50,7 @@ The sounds are synthesized from plain sine and triangle tones by `tools/sounds/m
 | Option | Default | Meaning |
 |---|---|---|
 | `thresholdSeconds` | `60` | A finished turn pings only when it ran at least this long. |
-| `pingOnPermission` | `true` | Also ping when Claude asks for permission or asks you a question. |
+| `pingOnPermission` | `true` | Also ping when Claude asks for permission or asks you a question, and show other sessions that wait on you. |
 | `sound` | `Glass` | The banner's sound: a macOS system sound name (Glass, Hero, Ping, Purr, Submarine, Funk, Pop), a path to a sound file, or `none`. A sound pack replaces it. |
 | `soundPack` | `off` | `chime`, `soft` or `retro` plays the mod's own sounds, one for done and one for waiting. |
 | `quietWhenFocused` | `true` | Skip the banner while the app this session runs in is the frontmost app. |

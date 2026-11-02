@@ -7,5 +7,6 @@
   "savvy-progress": { "repo": "johnnyvizz/claude-kit", "synced": "2026-10-29" },
   "savvy-flow": { "repo": "johnnyvizz/claude-kit", "synced": "2026-10-29" },
   "skins": { "repo": "hellosverre/claude-skins", "synced": "2026-10-29" },
-  "terminal-browser": { "repo": "zenbu-labs/terminal-browser", "synced": "2026-10-29" }
+  "terminal-browser": { "repo": "zenbu-labs/terminal-browser", "synced": "2026-10-29" },
+  "done-ping": { "repo": "Atoll92/agent-standup", "path": "plugin-band", "synced": "2026-11-02" }
 }

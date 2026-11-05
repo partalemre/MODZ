@@ -1,0 +1,6 @@
+{
+  "name": "wrapped",
+  "author": { "name": "Faik Emre Partal" },
+  "description": "Your year with Claude Code, read from your own transcripts on this machine: prompts, night shifts, most-edited file, how often Claude said you were absolutely right, and a coding persona. Agents and projects month by month too. /wrapped draws a card and makes a short vertical video with the Agents pane's crabs; names stay off until you turn them on. Uses no model tokens.",
+  "types": "./types/index.d.ts"
+}

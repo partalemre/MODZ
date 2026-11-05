@@ -108,6 +108,11 @@
       "description": "Shows each turn's effort and model. In auto mode, light prompts go at low effort."
     },
     {
+      "name": "wrapped",
+      "source": "./mods/wrapped",
+      "description": "Your year with Claude Code as a card and a short video, from your own transcripts: persona, which agents did the work, month by month. /wrapped; names stay off until you turn them on."
+    },
+    {
       "name": "handoff",
       "source": "./mods/handoff",
       "description": "Before the context fills, writes a handoff note and hands it once to your next fresh chat in this repo."

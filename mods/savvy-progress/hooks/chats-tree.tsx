@@ -1,7 +1,8 @@
-import type { OtherChat } from '../types'
-import { quietOf, waitingOf } from './chats'
+import type { OtherAgent, OtherChat } from '../types'
+import { crewedOf, quietOf, waitingOf } from './chats'
 import { chatsCardSvg } from './chats-svg'
 import type { WaitRow } from './chats-svg'
+import { fmtCost } from './format'
 import { t } from './i18n'
 import { picture } from './pane-motion'
 import type { Ui } from './rows'
@@ -49,6 +50,29 @@ export function waitingTree(ui: Ui, chats: OtherChat[], layout: Layout) {
         <Text key={`wait-${i}`} wrap="truncate-end"><Text bold>{row.project}</Text><Text dimColor>{` · ${row.title}  `}</Text><Text color="warning">{row.wait}</Text></Text>
       ))}
       {more !== '' && <Text dimColor>{more}</Text>}
+    </Box>
+  )
+}
+
+const agentLine = (agent: OtherAgent): string =>
+  [agent.name, agent.title, spanOf(agent.minutes), agent.costUsd > 0 ? `≈${fmtCost(agent.costUsd)}` : ''].filter(Boolean).join(' · ')
+
+/** The agents running in the other chats, under their chat; nothing when none. Read-only: each answers to its own session. */
+export function crewTree(ui: Ui, chats: OtherChat[], layout: Layout) {
+  const { Box, Text } = ui
+  const s = t().chats
+  const crewed = crewedOf(chats)
+  if (!crewed.length) return null
+  const count = crewed.reduce((sum, chat) => sum + (chat.agents?.length ?? 0), 0)
+  return (
+    <Box key="chats-crew" flexDirection="column" rowGap={0}>
+      {sectionHead(ui, layout, { id: 'chats-crew', label: `${s.agentsTitle} · ${count}` })}
+      {crewed.map(chat => (
+        <Box key={`crew-${chat.id}`} flexDirection="column">
+          <Text wrap="truncate-end"><Text bold>{chat.project}</Text><Text dimColor>{` · ${chat.title || s.untitled}`}</Text></Text>
+          {chat.agents?.map(agent => <Text key={`crew-${chat.id}-${agent.id}`} dimColor wrap="truncate-end">{`  ${agentLine(agent)}`}</Text>)}
+        </Box>
+      ))}
     </Box>
   )
 }

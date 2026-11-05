@@ -160,7 +160,12 @@ export type Heartbeat = {
   since: number
   /** When it was written; an old one means the session is gone. */
   at: number
+  /** The session's running agents; left out while it has none. */
+  agents?: SharedAgent[]
 }
+
+/** A running agent as its session tells the others. */
+export type SharedAgent = { id: string; name: string; title: string; startedAt: number; costUsd?: number }
 
 /** This session's own side: what it tells the others and what it last wrote. */
 export type SelfChat = {
@@ -178,7 +183,10 @@ export type SelfChat = {
 }
 
 /** Another session on this machine, as the panel draws it; `minutes` is how long it has been in `state`. */
-export type OtherChat = { id: string; project: string; title: string; state: ChatState; minutes: number }
+export type OtherChat = { id: string; project: string; title: string; state: ChatState; minutes: number; agents?: OtherAgent[] }
+
+/** Another session's running agent, as the panel draws it; `minutes` is how long it has run. */
+export type OtherAgent = { id: string; name: string; title: string; minutes: number; costUsd: number }
 
 /** The home crab's mood: no turn yet or rested, a turn runs, the last one answered, or it errored or was stopped. */
 export type CrabMood = 'sleeping' | 'working' | 'happy' | 'worried'

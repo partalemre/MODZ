@@ -127,6 +127,8 @@ export const tr: Strings = {
     states: { working: 'çalışıyor', idle: 'boşta' },
     untitled: 'Yeni sohbet',
     more: n => `+${n} daha`,
+    agentsTitle: 'Diğer sohbetlerdeki ajanlar',
+    emptyHere: 'Bu sohbette ajan yok',
     hubWaits: n => `${n} sohbet bekliyor`,
     hubWorks: n => `${n} sohbet çalışıyor`,
   },

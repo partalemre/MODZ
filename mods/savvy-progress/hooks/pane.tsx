@@ -4,7 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Draft, Panel } from '../types'
 import { BUILTIN_TYPES, DEFAULT_TYPE, TASK_TITLE_MAX, blankDraft, chosenOf } from './agent-types'
 import { addRun, askedAgain } from './agents'
-import { quietTree, waitingTree } from './chats-tree'
+import { crewTree, quietTree, waitingTree } from './chats-tree'
 import { draftTree } from './dispatch'
 import { HomeButton } from './home'
 import type { DraftView } from './dispatch'
@@ -177,6 +177,7 @@ function withChats(ui: Ui, view: PaneView) {
     <Box flexDirection="column" rowGap={1}>
       {waitingTree(ui, d.chats, layout)}
       {paneTree(ui, view)}
+      {crewTree(ui, d.chats, layout)}
       {quiet}
     </Box>
   )

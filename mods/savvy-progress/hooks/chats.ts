@@ -1,5 +1,7 @@
-import type { ChatState, Heartbeat, OtherChat, SelfChat } from '../types'
+import type { AgentRun, ChatState, Heartbeat, OtherAgent, OtherChat, SelfChat, SharedAgent } from '../types'
+import { isRunning } from './agents'
 import { clip } from './format'
+import { lookOf } from './identity'
 
 // The other chats on this machine, their pure half. Each session keeps one small heartbeat in this
 // plugin's store under its own key, so two sessions never write the same value; each reads the
@@ -9,6 +11,8 @@ const SECOND = 1000
 const MINUTE = 60 * SECOND
 /** How often a session writes its heartbeat while nothing changes, and reads the others'. */
 export const HEARTBEAT_MS = 30 * SECOND
+/** How often a session says a change in its agents and reads the others': an agent shows elsewhere within this. */
+export const SCAN_MS = 5 * SECOND
 /** A heartbeat older than this belongs to a session that is gone (four missed beats): it is pruned. */
 export const STALE_MS = 2 * MINUTE
 export const KEY_PREFIX = 'sessions/'
@@ -48,16 +52,27 @@ export const withAsk = (self: SelfChat, id: string): SelfChat =>
 export const withoutAsk = (self: SelfChat, id: string): SelfChat =>
   self.asks.includes(id) ? { ...self, asks: self.asks.filter(ask => ask !== id) } : self
 
-export const beatOf = (self: SelfChat, at: number): Heartbeat => ({
+/** This session's running agents as the others are told; a title goes through the same mask as the chat's. */
+export const sharedOf = (list: readonly AgentRun[]): SharedAgent[] =>
+  list.filter(isRunning).map(a => ({ id: a.id, name: lookOf(a).name, title: titleOf(a.description || a.type), startedAt: a.startedAt, costUsd: a.costUsd }))
+
+export const beatOf = (self: SelfChat, at: number, agents: SharedAgent[] = []): Heartbeat => ({
   project: self.project,
   title: self.title,
   state: stateOf(self),
   since: self.since,
   at,
+  ...(agents.length > 0 ? { agents } : {}),
 })
 
-/** What a beat says, less when it was written: the part a change is measured on. */
-export const bodyOf = (beat: Heartbeat): Omit<Heartbeat, 'at'> => ({ project: beat.project, title: beat.title, state: beat.state, since: beat.since })
+/** What a beat says, less when it was written and what agents cost: the part a change is measured on. */
+export const bodyOf = (beat: Heartbeat): Omit<Heartbeat, 'at'> => ({
+  project: beat.project,
+  title: beat.title,
+  state: beat.state,
+  since: beat.since,
+  ...(beat.agents ? { agents: beat.agents.map(({ costUsd: _cost, ...who }) => who) } : {}),
+})
 
 /** Another session's value as the store hands it over: anything else is not a heartbeat. */
 export const isHeartbeat = (value: unknown): value is Heartbeat => {
@@ -67,6 +82,22 @@ export const isHeartbeat = (value: unknown): value is Heartbeat => {
   const isTime = Number.isFinite(v.since) && Number.isFinite(v.at)
   return isText && isTime && STATES.includes(v.state as ChatState)
 }
+
+const isShared = (value: unknown): value is SharedAgent => {
+  if (typeof value !== 'object' || value === null) return false
+  const v = value as Record<string, unknown>
+  return typeof v.id === 'string' && typeof v.name === 'string' && typeof v.title === 'string' && Number.isFinite(v.startedAt)
+}
+
+// Another session's word for its agents: an older session says nothing, anything malformed is left out.
+const agentsIn = (value: unknown, now: number): OtherAgent[] =>
+  (Array.isArray(value) ? value.filter(isShared) : []).map(a => ({
+    id: a.id,
+    name: a.name,
+    title: a.title,
+    minutes: Math.max(0, Math.floor((now - a.startedAt) / MINUTE)),
+    costUsd: Number.isFinite(a.costUsd) ? Number(a.costUsd) : 0,
+  }))
 
 export const isStale = (beat: Heartbeat, now: number): boolean => now - beat.at > STALE_MS
 
@@ -83,12 +114,16 @@ export function scanOf(entries: readonly [key: string, value: unknown][], own: s
       continue
     }
     const minutes = Math.max(0, Math.floor((now - value.since) / MINUTE))
-    chats.push({ id: key.slice(KEY_PREFIX.length), project: value.project, title: value.title, state: value.state, minutes })
+    const agents = agentsIn(value.agents, now)
+    chats.push({ id: key.slice(KEY_PREFIX.length), project: value.project, title: value.title, state: value.state, minutes, ...(agents.length > 0 ? { agents } : {}) })
   }
   chats.sort((a, b) => RANK[a.state] - RANK[b.state] || b.minutes - a.minutes || a.id.localeCompare(b.id))
   return { chats, gone }
 }
 
 export const waitingOf = (chats: readonly OtherChat[]): OtherChat[] => chats.filter(chat => chat.state === 'waiting')
+
+/** The chats with an agent running: the desktop keeps a session's agents to it, so the panel shows the rest here. */
+export const crewedOf = (chats: readonly OtherChat[]): OtherChat[] => chats.filter(chat => (chat.agents?.length ?? 0) > 0)
 
 export const quietOf = (chats: readonly OtherChat[]): OtherChat[] => chats.filter(chat => chat.state !== 'waiting')

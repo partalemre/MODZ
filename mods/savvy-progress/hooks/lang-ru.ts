@@ -110,6 +110,8 @@ export const ru: Strings = {
     states: { working: 'работает', idle: 'свободен' },
     untitled: 'Новый чат',
     more: n => `+${n} ещё`,
+    agentsTitle: 'Агенты в других чатах',
+    emptyHere: 'В этом чате агентов нет',
     hubWaits: n => `чатов ждёт: ${n}`,
     hubWorks: n => `чатов в работе: ${n}`,
   },

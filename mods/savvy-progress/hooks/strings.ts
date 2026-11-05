@@ -19,6 +19,10 @@ export type ChatWords = {
   states: Record<Exclude<ChatState, 'waiting'>, string>
   untitled: string
   more: (n: number) => string
+  /** The section of the agents running in the other chats. */
+  agentsTitle: string
+  /** The empty pane's title while other chats have agents running. */
+  emptyHere: string
   /** The hub card's addition: "1 chat waits". */
   hubWaits: (n: number) => string
   /** The hub card's addition while none waits: "2 chats working". */

@@ -1,7 +1,8 @@
 import { expect, test } from 'claude-code/testing'
 
-import { HEARTBEAT_MS, STALE_MS, TITLE_MAX, isHeartbeat, scanOf, titleOf } from '../hooks/chats'
-import { SECOND, mainEnd, mainStart, setup, tool } from './fixtures'
+import { noticeSvg } from '../hooks/card-svg'
+import { HEARTBEAT_MS, SCAN_MS, STALE_MS, TITLE_MAX, isHeartbeat, scanOf, titleOf } from '../hooks/chats'
+import { SECOND, finish, mainEnd, mainStart, setup, spawn, tool } from './fixtures'
 
 // Other chats on this machine: each session's heartbeat in the shared store, who waits on the
 // person, and the gone pruned. The store stands for the machine: a test writes the others' keys.
@@ -143,4 +144,27 @@ test('waiting chats come first, the longest wait on top; the own key and other k
   ], 'sessions/ME', now)
   expect(found.chats.map(chat => `${chat.id}:${chat.minutes}`)).toEqual(['C:8', 'B:2', 'A:10'])
   expect(found.gone).toEqual([])
+})
+
+test('a running agent reaches the heartbeat within a quick look, and leaves it when it ends', async ($, on) => {
+  const { world, clock } = await setup($, on)
+  const { agentId } = await spawn($, 'Write the board lines')
+  await clock.advance(SCAN_MS)
+  const agents = (world.store.get(OWN) as { agents: { title: string; startedAt: number }[] }).agents
+  expect(agents.map(a => a.title)).toEqual(['Write the board lines'])
+  await finish($, agentId)
+  await clock.advance(SCAN_MS)
+  expect((world.store.get(OWN) as { agents?: unknown }).agents).toBeUndefined()
+})
+
+test('another session\'s new agent is read within a quick look', WITH_READER, async ($, on) => {
+  const { world, clock } = await setup($, on)
+  world.store.set('sessions/X', beat({ agents: [{ id: 'a', name: 'Pip', title: 'Lines', startedAt: 0 }] }))
+  await clock.advance(SCAN_MS)
+  expect((await chatsOf($))[0].agents).toEqual([{ id: 'a', name: 'Pip', title: 'Lines', minutes: 0, costUsd: 0 }])
+})
+
+test('every chevron drawing is well formed: an attribute closes before the next starts', () => {
+  const source = noticeSvg(320, { name: 'Pip', reason: 'quiet 2 min', title: 'Lines', role: 'warn' })
+  expect(source).not.toMatch(/="[^"]*"[^\s/>?]/)
 })

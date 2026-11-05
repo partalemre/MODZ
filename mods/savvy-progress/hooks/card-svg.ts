@@ -49,7 +49,7 @@ export const pillPart = (pill: Pill, x: number, y: number): PillPart => {
 
 /** The `›` that says a row opens. It holds still when the row opens, so the head keeps its frame. */
 export const chevronSvg = (x: number, y: number): string =>
-  `<g class="chev"><path d=""M${x} ${y - CHEVRON}l${CHEVRON} ${CHEVRON}-${CHEVRON} ${CHEVRON}" fill="none" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round" class="i-m"/></g>`
+  `<g class="chev"><path d="M${x} ${y - CHEVRON}l${CHEVRON} ${CHEVRON}-${CHEVRON} ${CHEVRON}" fill="none" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round" class="i-m"/></g>`
 
 export type CardHead = {
   name: string

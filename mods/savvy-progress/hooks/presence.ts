@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { HomeCrab, SelfChat } from '../types'
 import { hubCardOf } from './hub'
-import { HEARTBEAT_MS, beatOf, blankSelf, bodyOf, keyOf, projectOf, scanOf, settle, titleOf, withAsk, withoutAsk } from './chats'
+import { HEARTBEAT_MS, SCAN_MS, beatOf, blankSelf, bodyOf, keyOf, projectOf, scanOf, settle, sharedOf, titleOf, withAsk, withoutAsk } from './chats'
 import { TURNS_KEY, ended, rested, restingCrab, started, turnsFrom } from './mood'
 import type { TurnEnd } from './mood'
 import { isSame } from './same'
@@ -55,7 +55,7 @@ async function publish($: EngineInterface, isBeat: boolean): Promise<void> {
   if (!mine) return
   const id = await $.session.id()
   if (id === mine.endedId) return
-  const beat = beatOf(mine, await $.clock.now())
+  const beat = beatOf(mine, await $.clock.now(), sharedOf(await read($, agents)))
   if (!isBeat && id === mine.id && isSame(bodyOf(beat), mine.sent)) return
   if (mine.id && mine.id !== id) await $.store.delete(keyOf(mine.id))
   await $.store.set(keyOf(id), beat)
@@ -111,6 +111,17 @@ async function beat($: EngineInterface): Promise<void> {
   }
 }
 
+// A quick look between beats: an agent that started or ended here goes out, and one elsewhere comes in. A write in
+// a hook's own frame does not raise this plugin's state.set, and a timer's neither, so the agents are read here.
+async function glance($: EngineInterface): Promise<void> {
+  try {
+    await publish($, false)
+    await scan($)
+  } catch (error) {
+    log($, 'no look at the other chats this time', error)
+  }
+}
+
 async function projectName($: EngineInterface, cwd: string): Promise<string> {
   try {
     const repo = await $.session.repo()
@@ -135,6 +146,7 @@ async function start($: EngineInterface, cwd: string): Promise<void> {
   }
   await beat($)
   $.clock.every(HEARTBEAT_MS, () => void beat($))
+  $.clock.every(SCAN_MS, () => void glance($))
 }
 
 // The store's count first, so two sessions answering one after another both count.

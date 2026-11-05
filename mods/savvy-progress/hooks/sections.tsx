@@ -1,3 +1,4 @@
+import { crewedOf } from './chats'
 import type { ThemeKey } from 'claude-code'
 
 import type { AgentRun } from '../types'
@@ -233,7 +234,7 @@ export function emptyTree(ui: Ui, view: PaneView) {
       {crab}
       <Box flexDirection="column" rowGap={1} flexShrink={1}>
         {!layout.isDesktop && <Text dimColor>{`${FACES[home.mood]} · ${home.level}`}</Text>}
-        <Text bold>{s.emptyTitle}</Text>
+        <Text bold>{crewedOf(view.d.chats).length > 0 ? s.chats.emptyHere : s.emptyTitle}</Text>
         <Text dimColor>{s.empty}</Text>
         <Box flexDirection="row"><Button key="new-task" variant="primary" label={`＋ ${s.newTask}`} onPress={on.onNewTask} /></Box>
       </Box>

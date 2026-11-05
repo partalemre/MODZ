@@ -110,6 +110,8 @@ export const en: Strings = {
     states: { working: 'working', idle: 'idle' },
     untitled: 'New chat',
     more: n => `+${n} more`,
+    agentsTitle: 'Agents in other chats',
+    emptyHere: 'No agents in this chat',
     hubWaits: n => (n === 1 ? '1 chat waits' : `${n} chats wait`),
     hubWorks: n => (n === 1 ? '1 chat working' : `${n} chats working`),
   },

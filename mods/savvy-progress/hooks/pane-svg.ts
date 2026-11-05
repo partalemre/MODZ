@@ -59,7 +59,7 @@ export const clockOf = (a: AgentRun, at: number): string => {
 export const crabSvg = (opts: CrabOptions): string => paneSvg(CRAB.w, CRAB.h, crab(1, 0, opts))
 
 // The card's crab: the same sprite drawn larger, so each agent's shell, eyes and costume read at a glance.
-export const CARD_CRAB = { w: 50, h: 44, scale: 1.5 } as const
+export const CARD_CRAB = { w: 30, h: 28, scale: 0.92 } as const
 
 export const cardCrabSvg = (opts: Omit<CrabOptions, 'scale'>): string =>
   paneSvg(CARD_CRAB.w, CARD_CRAB.h, crab(1, 0, { ...opts, scale: CARD_CRAB.scale }))

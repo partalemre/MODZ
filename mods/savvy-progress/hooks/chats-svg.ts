@@ -45,3 +45,28 @@ export const chatsCardSvg = (W: number, card: ChatsCard): ChatsDrawing => {
   const alt = [card.title, ...card.rows.map(row => [row.project, row.title, row.wait].filter(Boolean).join(' · ')), card.more].filter(Boolean).join(', ')
   return { source: paneSvg(W, height, body.join('')), height, alt }
 }
+
+const LIST = { rowH: 24, size: 13, sizeSmall: 12, dot: 3, indent: 13, chipGap: 10 } as const
+
+export type ChatLine = { kind: 'chat' | 'agent'; lead: string; text: string; end: string; isLive: boolean }
+
+const lineSvg = (line: ChatLine, y: number, W: number): string => {
+  const base = y + LIST.rowH / 2 + LIST.size * 0.35
+  const x = line.kind === 'agent' ? LIST.indent : LIST.dot * 2 + 7
+  const size = line.kind === 'agent' ? LIST.sizeSmall : LIST.size
+  const endW = line.end ? Math.ceil(textWidth(line.end, LIST.sizeSmall)) + LIST.chipGap : 0
+  const room = W - x - endW
+  const lead = fitText(line.lead, size * BOLD, room)
+  const rest = fitText(` · ${line.text}`, size, room - textWidth(lead, size) * BOLD)
+  const dot = line.kind === 'chat' ? `<circle class="${line.isLive ? 'f-edit live' : 'm'}" cx="${LIST.dot}" cy="${y + LIST.rowH / 2}" r="${LIST.dot}"/>` : ''
+  const end = line.end ? `<text class="m" x="${W}" y="${base}" text-anchor="end" font-family="${FONT}" font-size="${LIST.sizeSmall}" font-variant-numeric="tabular-nums">${xml(line.end)}</text>` : ''
+  const restSpan = line.text && rest !== '…' ? `<tspan class="m">${xml(rest)}</tspan>` : ''
+  return `${dot}<text x="${x}" y="${base}" font-family="${FONT}" font-size="${size}"><tspan class="${line.kind === 'chat' ? 't' : 's'}" font-weight="560">${xml(lead)}</tspan>${restSpan}</text>${end}`
+}
+
+/** The other chats and their agents, one line each and never wrapped: a dot for a chat, an agent indented under it. */
+export const chatLinesSvg = (W: number, lines: readonly ChatLine[]): ChatsDrawing => {
+  const height = lines.length * LIST.rowH
+  const alt = lines.map(line => [line.lead, line.text, line.end].filter(Boolean).join(' · ')).join(', ')
+  return { source: paneSvg(W, height, lines.map((line, i) => lineSvg(line, i * LIST.rowH, W)).join('')), height, alt }
+}

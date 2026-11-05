@@ -4,7 +4,7 @@ import type { EngineInterface, Register, ThemeKey } from 'claude-code'
 import type { CrabMood } from '../types'
 import { bandSvg, BAND_H } from './band-svg'
 import { isOwnOpen } from './hub'
-import { isOffStage, shownOf } from './stage'
+import { isOffStage, paneOf, shownOf } from './stage'
 import { t } from './i18n'
 import type { JobView } from './job'
 import { deriveJob, percentText } from './job'
@@ -172,6 +172,15 @@ function onOpen(on: On): void {
     const isOpen = await togglePane($)
     return { text: isOpen ? t().opened : t().closed }
   })
+
+  // A desktop that comes back (the app restarted, a session resumed) keeps this pane's tab, but the engine's panes are
+  // gone and the tab reads "Nothing to show yet" until the pane opens again.
+  on('session.attach', async ($, e, next) => {
+    const done = await next(e)
+    if (e.surface !== 'desktop' || paneOf((await $.state.get({ plugin: 'savvy-progress', key: 'shown' })).value) !== HUB_PANE) return done
+    if (!(await $.ui.panes()).some(p => p.id === PANE)) await $.ui.open({ id: PANE, title: t().pane })
+    return done
+  }).catch(($, e, next) => next(e))
 
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
     const done = await next(e)

@@ -43,7 +43,7 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 - done-ping: notification when a long turn ends or Claude waits on you; a line above the prompt when another session on this computer waits on you (terminal); optional sound packs (soundPack)
 - reflect-mod: saves corrections worth keeping to a CLAUDE.md (one small model check per correction); /mine turns friction that repeats across past chats into rule, hook, skill or mod ideas (one small call)
 - skins: transcript themes; /skin switches live; /skin scene puts a living ASCII scene above the prompt (desktop)
-- wrapped: your year with Claude Code as a story and a video from your own transcripts; which agents did the work, month by month; /wrapped; Hide names masks project and file names
+- wrapped: your year with Claude Code as a story and a video from your own transcripts; which agents did the work, month by month; /wrapped; shows the kind of each project and file (Game, TypeScript file), real names only on a press
 - terminal-browser: a browser inside the terminal the agent can drive (terminal only)
 
 ## Customize and extend

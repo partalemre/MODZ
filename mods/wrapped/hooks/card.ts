@@ -1,10 +1,11 @@
 import { paintVars, FONT } from './kit/tokens'
 import type { SvgPic } from './kit/svg'
+import { fileKindOf } from './kinds'
 import { NOVEL_TOKENS } from './stats'
 import { compact, monthName, personaLine, personaName, words } from './words'
 import type { Wrapped } from '../types'
 
-// What the story pages share with the plain text: the rows, the masked names and the file that stands alone.
+// What the story pages share with the plain text: the rows, the names or kinds and the file that stands alone.
 
 const PERCENT = 100
 const CARD_AGENTS = 4
@@ -18,8 +19,8 @@ function namedRows(spec: CardSpec): Row[] {
   const file = w.topFile
   const project = w.topProject
   const rows: Row[] = []
-  if (file !== null) rows.push({ label: t.fileRow, value: isNamed ? t.fileValue(file.name, file.count) : t.hiddenCount(file.count, 'edits') })
-  if (project !== null) rows.push({ label: t.projectRow, value: isNamed ? t.projectValue(project.name, project.count) : t.hiddenCount(project.count, 'prompts') })
+  if (file !== null) rows.push({ label: t.fileRow, value: t.fileValue(fileLabel(file.name, isNamed), file.count) })
+  if (project !== null) rows.push({ label: t.projectRow, value: t.projectValue(projectLabels(w, isNamed).get(project.name) ?? project.name, project.count) })
 
   return rows
 }
@@ -55,12 +56,19 @@ export function statsOf(w: Wrapped): Row[] {
   return stats
 }
 
-// A project's name when names are on; else a letter, kept for that project all year.
+// A file's name when names are on; else what kind of file it is.
+export const fileLabel = (name: string, isNamed: boolean): string => (isNamed ? name : words().fileKind(fileKindOf(name)))
+
+// A project's name when names are on; else its kind, numbered from the second of that kind so each stays itself all year.
 export function projectLabels(w: Wrapped, isNamed: boolean): Map<string, string> {
   const labels = new Map<string, string>()
-  for (const name of [...w.projects.map(row => row.name), ...w.months.map(month => month.project)]) {
+  const seen = new Map<string, number>()
+  for (const name of [w.topProject?.name ?? null, ...w.projects.map(row => row.name), ...w.months.map(month => month.project)]) {
     if (name === null || labels.has(name)) continue
-    labels.set(name, isNamed ? name : words().hiddenProject(String.fromCharCode(65 + labels.size)))
+    const kind = words().projectKind(w.projectKinds[name] ?? 'other')
+    const nth = (seen.get(kind) ?? 0) + 1
+    seen.set(kind, nth)
+    labels.set(name, isNamed ? name : nth === 1 ? kind : `${kind} ${nth}`)
   }
 
   return labels

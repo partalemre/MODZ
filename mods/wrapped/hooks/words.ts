@@ -1,5 +1,6 @@
 import { pick } from './kit/lang'
-import type { Persona, Wrapped } from '../types'
+import type { FileLook } from './kinds'
+import type { Persona, ProjectKind, Wrapped } from '../types'
 
 // Every word the mod shows, in both languages.
 
@@ -79,7 +80,8 @@ export const words = () =>
       agentMeta: (tools: number, tokens: number) => `${compact(tools)} tools · ${compact(tokens)} tokens`,
       monthsTitle: 'Month by month',
       monthMeta: (prompts: number, runs: number) => `${compact(prompts)} prompts · ${compact(runs)} agents`,
-      hiddenProject: (letter: string) => `Project ${letter}`,
+      projectKind: (kind: ProjectKind): string => ({ claude: 'Claude tool', game: 'Game', mobile: 'Mobile app', web: 'Web app', tool: 'Code tool', writing: 'Research', other: 'Project' })[kind],
+      fileKind: ({ kind, language }: FileLook): string => (language !== null ? `${language} file` : { test: 'Test file', agent: 'Agent instructions', doc: 'Document', config: 'Settings file', style: 'Stylesheet', data: 'Data file', script: 'Shell script', code: 'Code file' }[kind]),
       filmMake: 'Make the video',
       filmMaking: (made: number, total: number) => `Making the video: ${made}/${total} frames…`,
       filmReady: (path: string) => `Video saved: ${path}`,
@@ -122,12 +124,11 @@ export const words = () =>
       fileValue: (name: string, count: number) => `${name}, ${compact(count)} edits`,
       projectRow: 'Top project',
       projectValue: (name: string, count: number) => `${name}, ${compact(count)} prompts`,
-      hiddenCount: (count: number, unit: 'edits' | 'prompts') => `${compact(count)} ${unit}`,
       chatRow: 'Longest chat',
       chatValue: (count: number) => `${compact(count)} prompts`,
       made: 'made with MODZ',
-      showNames: 'Show names',
-      hideNames: 'Hide names',
+      showNames: 'Show real names',
+      hideNames: 'Back to categories',
       readAgain: 'Read again',
       readAt: (when: string) => `Read on ${when}.`,
     },
@@ -138,7 +139,8 @@ export const words = () =>
       agentMeta: (tools: number, tokens: number) => `${compact(tools)} araç · ${compact(tokens)} token`,
       monthsTitle: 'Ay ay',
       monthMeta: (prompts: number, runs: number) => `${compact(prompts)} mesaj · ${compact(runs)} ajan`,
-      hiddenProject: (letter: string) => `Proje ${letter}`,
+      projectKind: (kind: ProjectKind): string => ({ claude: 'Claude aracı', game: 'Oyun', mobile: 'Mobil uygulama', web: 'Web uygulaması', tool: 'Kod aracı', writing: 'Araştırma', other: 'Proje' })[kind],
+      fileKind: ({ kind, language }: FileLook): string => (language !== null ? `${language} dosyası` : { test: 'Test dosyası', agent: 'Ajan talimatı', doc: 'Doküman', config: 'Ayar dosyası', style: 'Stil dosyası', data: 'Veri dosyası', script: 'Kabuk betiği', code: 'Kod dosyası' }[kind]),
       filmMake: 'Video yap',
       filmMaking: (made: number, total: number) => `Video yapılıyor: ${made}/${total} kare…`,
       filmReady: (path: string) => `Video kaydedildi: ${path}`,
@@ -181,12 +183,11 @@ export const words = () =>
       fileValue: (name: string, count: number) => `${name}, ${compact(count)} düzenleme`,
       projectRow: 'Başlıca proje',
       projectValue: (name: string, count: number) => `${name}, ${compact(count)} mesaj`,
-      hiddenCount: (count: number, unit: 'edits' | 'prompts') => `${compact(count)} ${unit === 'edits' ? 'düzenleme' : 'mesaj'}`,
       chatRow: 'En uzun sohbet',
       chatValue: (count: number) => `${compact(count)} mesaj`,
       made: "MODZ ile yapıldı",
-      showNames: 'Adları göster',
-      hideNames: 'Adları gizle',
+      showNames: 'Gerçek adları göster',
+      hideNames: 'Kategorilere dön',
       readAgain: 'Yeniden oku',
       readAt: (when: string) => `${when} tarihinde okundu.`,
     },

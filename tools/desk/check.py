@@ -2,7 +2,8 @@
 
 A session starts in the repo with every linked mod, a desktop attaches, and the MODZ hub opens by itself. Each hub
 row is pressed on a tree drawn before a redraw (what a desktop click is) and must swap the one panel to that mod:
-its pane open, the hub closed, nothing else left as a tab. That pane must draw a tree of its own, keep each button's
+its pane open, the hub closed, nothing else left as a tab, also when the hub holds the keyboard (a desktop click into its
+body) and when the row is pressed a second time. A client that leaves and comes back finds the same pane. That pane must draw a tree of its own, keep each button's
 press handle across a focus flip, and offer "← MODZ", whose press swaps the panel back to the hub alone. Its Svgs
 (save a pressed row's still image, kit/press.tsx) must be interactive frames that entered as it opened, say their colour scheme and keep their very sources on a
 redraw (kit/moving.ts), else the desktop rebuilds each frame and its loops restart. The band must draw a tree of its
@@ -135,24 +136,52 @@ def bring_hub(desk, engine):
     return wait(lambda: HUB in ids(engine), OPEN_WAIT_S * 2)
 
 
-def check_row(desk, engine, row):
-    """A press on the stale hub tree swaps the panel to the row's pane; that pane then draws and goes home."""
-    problems = []
+def press_row(desk, engine, row):
+    """A press on the stale hub tree; the problem, or None once the row's pane alone holds the panel."""
     if not bring_hub(desk, engine):
-        return [f'hub {row}: the hub could not be brought back']
+        return f'hub {row}: the hub could not be brought back'
     stale = desk.render(HUB)
     desk.render(HUB, props={'isFocused': False, 'bodyColumns': 80})
     if not desk.press(row, tree=stale).get('handled'):
-        return [f'hub {row}: a press on the earlier tree was dropped']
+        return f'hub {row}: a press on the earlier tree was dropped'
     swapped = wait(lambda: len(ids(engine)) == 1 and ids(engine) != [HUB], OPEN_WAIT_S)
+    return None if swapped else f'hub {row}: the panel holds {ids(engine)}, want only the row\'s pane'
+
+
+def check_held(desk, engine, row):
+    """A desktop click lands in the hub's body first, so the hub holds the keyboard: one press must still swap."""
+    if not bring_hub(desk, engine):
+        return f'hub {row}: the hub could not be brought back'
+    desk.hold(HUB)
+    problem = press_row(desk, engine, row)
+    return f'{problem} (the hub held the keyboard)' if problem else check_home(desk, engine, ids(engine)[0])
+
+
+def check_row(desk, engine, row):
+    """One press swaps the panel to the row's pane; that pane then draws and goes home; so does a held press."""
+    problem = press_row(desk, engine, row)
     shown = ids(engine)
-    print(f'  {row:<20} pressed ✔  panel {"✔ " + shown[0] if swapped else "✘ " + str(shown)}')
-    if not swapped:
-        return [f'hub {row}: the panel holds {shown}, want only the row\'s pane']
+    print(f'  {row:<20} pressed ✔  panel {"✘ " + str(shown) if problem else "✔ " + shown[0]}')
+    if problem:
+        return [problem]
+    problems = []
     time.sleep(SETTLE_S)
     for problem in (check_motion(desk, shown[0]), check_site(desk, shown[0]), check_home(desk, engine, shown[0])):
         problems += [problem] if problem else []
-    return problems
+    problem = check_held(desk, engine, row)
+    return problems + ([problem] if problem else [])
+
+
+def check_reattach(desk, engine, row):
+    """A client that leaves and comes back finds the mod's pane where it left it, the hub not over it."""
+    problem = press_row(desk, engine, row)
+    if problem:
+        return f'reattach: {problem}'
+    shown = ids(engine)
+    desk.detach()
+    desk.attach()
+    time.sleep(SETTLE_S)
+    return None if ids(engine) == shown else f'reattach: the panel went from {shown} to {ids(engine)}'
 
 
 FOOTER_PROPS = {'modes': ['focus']}
@@ -189,6 +218,9 @@ def main(repo):
     failures += [problem for problem in (check_motion(desk, HUB), check_site(desk, HUB)) if problem]
     for row in rows:
         failures += check_row(desk, engine, row)
+    problem = check_reattach(desk, engine, rows[0])
+    print(f'  reattach {"":<14} {"✘ " + problem if problem else "✔"}')
+    failures += [problem] if problem else []
     problem, others = check_band(desk, own_mods(repo))
     note = f'  (not ours, not checked: {", ".join(others)})' if others else ''
     print(f'  band {"":<18} {"✘ " + problem if problem else "✔"}{note}')

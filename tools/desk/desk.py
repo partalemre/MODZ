@@ -127,7 +127,7 @@ class Desk:
 
     def __init__(self, engine, client='desk-1'):
         self.e, self.c, self.tree = engine, client, None
-        engine.req({'subtype': 'ui_attach', 'surface': 'desktop', 'client_id': client, 'viewport': VIEWPORT})
+        self.attach()
 
     def render(self, inst, comp='Pane', props=None):
         r = self.e.req({'subtype': 'ui_render', 'surface': 'desktop', 'client_id': self.c, 'component': comp,
@@ -147,6 +147,16 @@ class Desk:
         p = held[key]
         return self.e.req({'subtype': 'ui_input', 'plugin': p['plugin'], 'handle': p['handle'], 'key': key, 'kind': 'submit', 'value': text,
                            'component': 'Pane', 'instance_id': inst, 'surface': 'desktop'}, 60).get('response')
+
+    def hold(self, pane):
+        """A click into a pane's body: it takes the keyboard (None gives it back to the composer)."""
+        return self.e.req({'subtype': 'ui_pane_focus', 'id': pane, 'surface': 'desktop', 'client_id': self.c}).get('response')
+
+    def detach(self):
+        return self.e.req({'subtype': 'ui_detach', 'surface': 'desktop', 'client_id': self.c}).get('response')
+
+    def attach(self):
+        return self.e.req({'subtype': 'ui_attach', 'surface': 'desktop', 'client_id': self.c, 'viewport': VIEWPORT}).get('response')
 
     def text(self):
         return ' '.join(w for w in words(self.tree) if w.strip())

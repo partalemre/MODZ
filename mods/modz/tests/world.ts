@@ -19,6 +19,8 @@ export function stubWorld(on: any, options: WorldOptions = {}) {
   // The panes up now, the shown one last, and every open that asked for the keyboard.
   const up: string[] = []
   const focused: string[] = []
+  // The pane a person's click holds: the engine shows it over any pane opened later, whatever that pane asked for.
+  const hold: { id: string | null } = { id: null }
   const drop = (id: string) => up.includes(id) && up.splice(up.indexOf(id), 1)
   mock.env(on, options.env ?? { MODZ_LANG: 'tr' })
   on('fs.stat', () => ({ value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
@@ -43,14 +45,15 @@ export function stubWorld(on: any, options: WorldOptions = {}) {
   on('ui.close', (_: unknown, e: { id: string }) => {
     opened.push(`close:${e.id}`)
     drop(e.id)
+    if (hold.id === e.id) hold.id = null
 
     return { value: undefined }
   })
-  on('ui.panes', () => ({ value: up.map((id, i) => ({ id, title: titles[id], isShown: i === up.length - 1, isFocused: false, isPlaced: true })) }))
+  on('ui.panes', () => ({ value: up.map((id, i) => ({ id, title: titles[id], isShown: hold.id === null ? i === up.length - 1 : id === hold.id, isFocused: id === hold.id, isPlaced: true })) }))
   on('session.start', () => ({ cwd: '/work' }))
   on('config.list', () => ({ value: [] }))
   if (!options.hasOwnClock) on('clock.now', () => ({ value: 1_000 }))
   on('command.run', () => ({ text: '' }))
 
-  return { opened, titles, up, focused }
+  return { opened, titles, up, focused, hold }
 }

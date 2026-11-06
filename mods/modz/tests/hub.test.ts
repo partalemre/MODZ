@@ -135,14 +135,15 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(w.opened).toEqual([])
     await $.command.run({ command: 'shown', args: 'agents' })
     expect(w.opened).toEqual(['close:modz', 'close:modz-mods'])
-    expect(staged).toEqual(['agents'])
+    // The hub stands alone before it asks, then the mod's pane takes the stage.
+    expect(staged).toEqual(['modz', 'agents'])
 
     await $.command.run({ command: 'modz', args: '' })
-    expect(staged).toEqual(['agents', 'modz'])
+    expect(staged).toEqual(['modz', 'agents', 'modz'])
     w.opened.length = 0
     await ui.press({ key: 'open-modz-mods' })
     expect(w.opened).toEqual(['modz-mods', 'close:modz'])
-    expect(staged).toEqual(['agents', 'modz', 'modz-mods'])
+    expect(staged).toEqual(['modz', 'agents', 'modz', 'modz-mods'])
     const catalog = await $.ui.mount({ ...PANE, requestId: 'modz-mods', surface })
     expect(await catalog.find({ key: 'mod-savvy-progress' })).toBeDefined()
   })

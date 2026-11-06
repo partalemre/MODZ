@@ -11,7 +11,7 @@ import type { Drawing } from './draw'
 import { installedMarketRoot, linkCheck, loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
 import { footerTree, isHubShown } from './footer'
-import { cardOf, focusOf, hiddenRowsOf, MODS_PANE, modsTitle, presenceOf, rowsOf } from './hub'
+import { cardOf, focusOf, hiddenRowsOf, HOLD_PANE, MODS_PANE, modsTitle, presenceOf, rowsOf } from './hub'
 import { hubTree } from './hub-pane'
 import type { HubActions } from './hub-pane'
 import { wireLanguageKeeper } from './language-keeper'
@@ -144,20 +144,29 @@ function actionsOf($: EngineInterface): HubActions {
 }
 
 // A row press puts that pane in the panel: the catalog is this mod's own pane; any other is its
-// mod's to open, asked through `modz.open`. The hub steps aside once the mod says its pane is
-// shown, so a mod that does not answer leaves the hub where it is rather than an empty panel.
+// mod's to open, asked through `modz.open`. The hub steps aside once the mod's pane is up, so a mod that does not
+// answer leaves the hub where it is rather than an empty panel.
 async function openPane($: EngineInterface, pane: string): Promise<void> {
   if (pane === MODS_PANE) {
     await show($, MODS_PANE)
 
     return
   }
+  // A pane already open behind a tab does not come forward on another open: the asked one opens anew, last.
+  await $.state.set(STAGE, { pane: PANE, at: Date.now() })
+  // A click into a pane gives it the keyboard, and the engine shows no new pane over the one a person holds, focus
+  // or no focus. Closing the held pane shows the last one open: the mod's if it answered, else this stand-in.
+  const isHeld = (await $.ui.panes()).some(up => up.id === PANE && up.isFocused)
+  if (isHeld) await $.ui.open({ id: HOLD_PANE, title: TITLE })
   answered = null
-  await $.state.set(OPEN, { pane, at: Date.now() })
+  await $.state.set(OPEN, { pane, at: Date.now() }).catch(cause => $.ui.log(`modz: asking for ${pane} failed: ${String(cause)}`, { to: 'debug' }))
+  if (isHeld) await closeQuietly($, PANE)
   // The mod answered inside this write, where the hub's own hooks hear nothing: engines up to 2.1.296 ran its
   // `.catch` (re-entry), 2.1.309 skips that too. So the panel itself tells: a mod pane that took it leaves the hub
   // no longer shown.
   if (answered !== null || !isHubShown(await $.ui.panes())) await stepAside($, answered ?? pane)
+  else if (isHeld) await show($, PANE)
+  if (isHeld) await closeQuietly($, HOLD_PANE)
 }
 
 // The pane a mod said it opened while the hub's own write was still running; read once that write settles.
@@ -226,11 +235,14 @@ function hubHooks(on: On, options: Options): void {
   })
 
   // A desktop that comes back (the app restarted, a session resumed) gets no session.start, and its panes are gone:
-  // the hub comes back too, without the keyboard, unless one of its own panes is already up.
+  // the hub comes back too, without the keyboard, unless one of its own panes is already up. A client that only left
+  // and came back (the same session, the panes kept) finds a mod's pane still holding the panel: that stays.
   on('session.attach', async ($, e, next) => {
     const done = await next(e)
     const isDesktop = e.surface === 'desktop'
-    if (isDesktop && options.openOnStart !== false && (await $.ui.panes()).length === 0) await show($, PANE, false)
+    const staged = paneOf((await $.state.get(STAGE)).value)
+    const isModStaged = staged !== null && staged !== PANE && staged !== MODS_PANE
+    if (isDesktop && options.openOnStart !== false && !isModStaged && (await $.ui.panes()).length === 0) await show($, PANE, false)
 
     return done
   }).catch(($, e, next) => next(e))
@@ -297,6 +309,12 @@ function paneHooks(on: On): void {
     const view = { rows, hidden: hiddenRowsOf(cards, presence, layout), focus: focusOf(rows), meta: metaOf(market), isEditing }
 
     return pinned(e, hubTree(ui, { ...view, surface: e.surface, columns, theme, actions: actionsOf($), stable: hubDrawings }))
+  })
+
+  on('ui.render', { component: 'Pane', requestId: HOLD_PANE }, async ($, e) => {
+    const { Box } = $.ui.resolve(e)
+
+    return <Box />
   })
 
   on('ui.render', { component: 'Pane', requestId: MODS_PANE }, async ($, e) => {

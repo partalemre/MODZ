@@ -171,6 +171,11 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
   `isOffStage(e.value, kendiAnahtarı)` ise kendi panelini kapatır. Hub geri gelince (satırı, "← MODZ", `/modz`)
   sahneyi `modz` yazar. Cevap vermeyen bir mod hub'ı yerinde bırakır: boş panel olmaz. Her açılış `focus: true`
   (alt bilgi düğmesi hariç, aşağıda).
+- **Satıra basış:** motor, kişinin klavyeyi verdiği panelin üstüne yeni paneli göstermez, `focus: true` istense bile;
+  masaüstünde satıra tıklamak hub'a klavyeyi verir. Modun `shown` cevabı da hub'ın kendi yazımının içinde kaldığı için
+  hub'a ulaşmaz (re-entry). Bu yüzden hub önce sahneyi `modz` yazar (sekme arkasında kalan panel kapanır), klavye
+  kendisindeyse boş bir yedek panel (`modz-hold`) açar, `modz.open` yazar ve kendini kapatır: en son açılan panel öne
+  gelir. Öndeki hâlâ yedekse mod cevap vermemiştir ve hub geri açılır.
 - **Sabit basış tutamacı:** JSX her çizimde yeni tutamaç verir, host da yeniden çizimde eskileri bırakır; masaüstü
   son boyadığı ağaca tıkladığı için araya giren her çizim tıklamayı düşürürdü. Button, Input ya da Select çizen her
   `ui.render` kancası ağacını `pinned(e, ağaç)` ile döner (`kit/pin.ts`): her öğe yeri ve anahtarı için ilk aldığı

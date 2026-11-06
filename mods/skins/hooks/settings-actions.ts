@@ -25,6 +25,7 @@ export function settingsActions({ prefs, custom, editing }: SettingsState, ports
     toggle: word => ports.commit({ ...state, prefs: { ...prefs, [TOGGLES[word]]: !prefs[TOGGLES[word]] } }),
     icons: () => ports.commit({ ...state, prefs: { ...prefs, icons: prefs.icons === 'unicode' ? 'ascii' : 'unicode' } }),
     scene: () => ports.commit({ ...state, prefs: { ...prefs, scene: nextScene(prefs.scene) } }),
+    sceneOff: () => ports.commit({ ...state, prefs: { ...prefs, scene: 'off' } }),
     edit: ports.edit,
     paint: hex => {
       const made = withSlot(prefs.skin === 'off' ? DEFAULT_PREFS.skin : prefs.skin, custom, { slot: editing, hex })

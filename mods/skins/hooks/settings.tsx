@@ -27,6 +27,7 @@ export type SettingsActions = {
   toggle: (word: ToggleWord) => void
   icons: () => void
   scene: () => void
+  sceneOff: () => void
   edit: (slot: SkinSlot) => void
   paint: (hex: string) => void
   gallery: () => void
@@ -151,6 +152,8 @@ function optionButtons({ look, ui, actions }: Parts) {
       {toggle('clip', 'c', prefs.clipOutput)}
       <Button key="icons" label={say().icons(prefs.icons)} hotkey="i" plain onPress={() => actions.icons()} />
       <Button key="scene" label={say().scene(sceneNamed(prefs.scene)?.label ?? say().off)} hotkey="w" plain dimColor={prefs.scene === 'off'} onPress={() => actions.scene()} />
+      {/* Cycling to "off" walks every scene first: a scene on gets its own way out. */}
+      {prefs.scene === 'off' ? null : <Button key="scene-off" label={say().sceneOff} plain onPress={() => actions.sceneOff()} />}
     </Box>
   )
 }

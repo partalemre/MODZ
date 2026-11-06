@@ -16,6 +16,7 @@ import { parseFolders, prefsFor, withFolder, withoutFolder } from '../hooks/fold
 import { kindOf, summarize, toolLabel } from '../hooks/tools'
 import tokyoNight from '../hooks/themes/tokyo-night'
 import { nextScene, SCENE_NAMES, SCENES } from '../hooks/scenes'
+import { settingsActions } from '../hooks/settings-actions'
 import { sceneSvg } from '../hooks/svg-scene'
 import { setLang } from '../hooks/lang'
 
@@ -382,4 +383,11 @@ test('a pinned folder keeps its own prefs, others follow the default', async () 
   expect(prefsFor('/c', folders, DEFAULT_PREFS)).toBe(DEFAULT_PREFS)
   expect(Object.keys(withoutFolder(withFolder(folders, '/c', pinned), '/a'))).toEqual(['/b', '/c'])
   expect(parseFolders('junk', NAMES)).toEqual({})
+})
+
+test('a scene that is on can be turned off in one press, without walking every scene', () => {
+  const committed: unknown[] = []
+  const ports = { commit: (state: unknown) => committed.push(state), edit: () => undefined, gallery: () => undefined } as any
+  settingsActions({ prefs: { ...DEFAULT_PREFS, scene: 'koi-pond' }, custom: {}, editing: 'user' } as any, ports).sceneOff()
+  expect((committed[0] as any).prefs.scene).toBe('off')
 })

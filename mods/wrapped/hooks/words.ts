@@ -67,6 +67,9 @@ const longMonths = {
 // `2026-10` → `October` / `Ekim`.
 export const monthName = (month: string): string => pick(longMonths)[Number(month.split('-')[1]) - 1] ?? month
 
+// `2026-10` → `Oct` / `Eki`.
+export const shortMonth = (month: string): string => pick(MONTHS)[Number(month.split('-')[1]) - 1] ?? month
+
 export const words = () =>
   pick({
     en: {
@@ -82,17 +85,6 @@ export const words = () =>
       filmReady: (path: string) => `Video saved: ${path}`,
       filmFailed: (reason: string) => `No video: ${reason}`,
       filmNoFfmpeg: 'ffmpeg is needed (brew install ffmpeg); macOS draws the frames.',
-      sceneIntro: 'with Claude Code',
-      sceneVolume: 'This year I sent',
-      sceneCrew: 'agents went to work',
-      sceneCrewEach: (each: number) => `each crab is ${compact(each)} agents`,
-      sceneCrewTools: (tools: number, tokens: number) => `${compact(tools)} tool calls · ${compact(tokens)} tokens`,
-      sceneBoard: 'Who did the work',
-      sceneBoardRuns: (runs: number) => `${compact(runs)} runs`,
-      sceneHardest: 'Hardest single shift',
-      sceneHardestMeta: (tools: number, tokens: number) => `${compact(tools)} tool calls · ${compact(tokens)} tokens`,
-      sceneMonths: 'How the year went',
-      scenePersona: 'This year I was',
       paneTitle: 'Wrapped',
       commandHelp: 'Your year with Claude Code: a card and a video. /wrapped 2025 picks a year',
       hubHint: 'Your year with Claude Code on one card',
@@ -134,17 +126,9 @@ export const words = () =>
       chatRow: 'Longest chat',
       chatValue: (count: number) => `${compact(count)} prompts`,
       made: 'made with MODZ',
-      save: 'Save image',
-      copy: 'Copy text',
       showNames: 'Show names',
       hideNames: 'Hide names',
       readAgain: 'Read again',
-      namesOff: 'File and project names are off the card.',
-      namesOn: 'File and project names are on the card, and in what you save or copy.',
-      savedImage: (path: string) => `Saved: ${path}`,
-      savedSvg: (path: string) => `Saved as SVG, no PNG converter here: ${path}`,
-      saveFailed: (reason: string) => `Not saved: ${reason}`,
-      copied: 'Copied.',
       readAt: (when: string) => `Read on ${when}.`,
     },
     tr: {
@@ -160,17 +144,6 @@ export const words = () =>
       filmReady: (path: string) => `Video kaydedildi: ${path}`,
       filmFailed: (reason: string) => `Video yok: ${reason}`,
       filmNoFfmpeg: 'ffmpeg gerekiyor (brew install ffmpeg); kareleri macOS çiziyor.',
-      sceneIntro: 'Claude Code ile',
-      sceneVolume: 'Bu yıl gönderdiğim',
-      sceneCrew: 'ajan işe çıktı',
-      sceneCrewEach: (each: number) => `her yengeç ${compact(each)} ajan`,
-      sceneCrewTools: (tools: number, tokens: number) => `${compact(tools)} araç çağrısı · ${compact(tokens)} token`,
-      sceneBoard: 'İşi kim yaptı',
-      sceneBoardRuns: (runs: number) => `${compact(runs)} görev`,
-      sceneHardest: 'En uzun tek mesai',
-      sceneHardestMeta: (tools: number, tokens: number) => `${compact(tools)} araç çağrısı · ${compact(tokens)} token`,
-      sceneMonths: 'Yıl nasıl geçti',
-      scenePersona: 'Bu yıl şuydum',
       paneTitle: 'Wrapped',
       commandHelp: 'Claude Code ile yılın: kart ve video. /wrapped 2025 başka bir yılı seçer',
       hubHint: 'Claude Code ile yılın tek kartta',
@@ -212,17 +185,9 @@ export const words = () =>
       chatRow: 'En uzun sohbet',
       chatValue: (count: number) => `${compact(count)} mesaj`,
       made: "MODZ ile yapıldı",
-      save: 'Görsel kaydet',
-      copy: 'Metni kopyala',
       showNames: 'Adları göster',
       hideNames: 'Adları gizle',
       readAgain: 'Yeniden oku',
-      namesOff: 'Dosya ve proje adları kartta yok.',
-      namesOn: 'Dosya ve proje adları kartta; kaydettiğinde ve kopyaladığında da görünür.',
-      savedImage: (path: string) => `Kaydedildi: ${path}`,
-      savedSvg: (path: string) => `PNG dönüştürücü yok, SVG olarak kaydedildi: ${path}`,
-      saveFailed: (reason: string) => `Kaydedilemedi: ${reason}`,
-      copied: 'Kopyalandı.',
       readAt: (when: string) => `${when} tarihinde okundu.`,
     },
   })

@@ -1,10 +1,12 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { cardPic, cardText, rowsOf, standalone } from '../hooks/card'
+import { cardText, rowsOf, standalone } from '../hooks/card'
 import { setLang } from '../hooks/kit/lang'
-import { concatList, frameAt, frameCount, holdsOf, scenesFor } from '../hooks/film'
+import { concatList, FPS, frameAt, frameCount, holdsOf } from '../hooks/film'
+import { postUrl } from '../hooks/share'
+import { pagePic, slidesFor, summaryPic } from '../hooks/story'
 import { parseOutput, rootOf, transcriptPaths } from '../hooks/scan'
-import { isWrapped, longestStreak, monthsOf, personaOf, wrappedOf } from '../hooks/stats'
+import { isWrapped, longestStreak, modelLabel, monthsOf, personaOf, weekdaysOf, wrappedOf } from '../hooks/stats'
 import type { Raw } from '../hooks/scan'
 
 const OUTPUT = [
@@ -15,6 +17,8 @@ const OUTPUT = [
   'R\t2026-03-01T12\t100',
   'T\tBash\t50',
   'T\tAgent\t2',
+  'O\tclaude-opus-5-5-20261001\t90',
+  'O\tclaude-sonnet-5\t10',
   'C\t/Users/me/secret-client\t35',
   'S\t30',
   'S\t5',
@@ -67,35 +71,61 @@ test('agents are ranked by work done, the hardest run named, and each month told
   expect(monthsOf(rawOf())).toEqual([{ month: '2026-03', prompts: 35, runs: 10, project: 'secret-client', agent: 'general-purpose' }])
 })
 
-test('the film hides names on every frame until they are on, and its figures end on the real values', () => {
+const allHolds = (spec: Parameters<typeof holdsOf>[0]) => [...holdsOf(spec)]
+
+test('the film runs at 60 frames, hides names on every frame when masked, and shows them when on', () => {
   setLang('en')
   const w = wrappedOf(rawOf(), SPEC)
   if (w === null) throw new Error('expected a reading')
+  expect(FPS).toBe(60)
   const hidden = { wrapped: w, isNamed: false }
-  const scenes = scenesFor(hidden)
-  const holds = holdsOf(hidden)
-  expect(holds.reduce((sum, hold) => sum + hold.frames, 0)).toBe(frameCount(scenes))
+  const slides = slidesFor(w)
+  const holds = allHolds(hidden)
+  expect(holds.reduce((sum, hold) => sum + hold.frames, 0)).toBe(frameCount(slides))
+  // The moves really run at that rate: most frames are pictures of their own, not one held.
+  expect(holds.length).toBeGreaterThan(frameCount(slides) / 2)
   for (const hold of holds) {
     expect(hold.source).not.toContain('secret-client')
+    expect(hold.source).not.toContain('pricing.ts')
     expect(hold.source).not.toContain('<style>')
   }
   expect(holds.some(hold => hold.source.includes('Project A'))).toBe(true)
-  const named = holdsOf({ wrapped: w, isNamed: true })
-  expect(named.some(hold => hold.source.includes('secret-client'))).toBe(true)
-  expect(frameAt(hidden, scenes, frameCount(scenes) - 1)).toContain('</svg>')
+  expect(frameAt({ wrapped: w, isNamed: true }, slides, Math.round(slides.slice(0, 5).reduce((sum, slide) => sum + slide.dur, 0) * FPS) + 240)).toContain('secret-client')
 })
 
-test('a year with no agents drops the agents scenes and still has a film', () => {
+test('a year with no agents drops their pages and still has a film', () => {
   const lone = parseOutput('X\t0\t0\t0\t0\t0\nP\t2026-03-01T12\t10\nS\t10\nM\t2026-03\t/w\t10')
   const w = wrappedOf(lone, SPEC)
   if (w === null) throw new Error('expected a reading')
-  const spec = { wrapped: w, isNamed: false }
-  expect(scenesFor(spec).length).toBe(5)
-  expect(holdsOf(spec).length).toBeGreaterThan(1)
+  const keys = slidesFor(w).map(slide => slide.key)
+  expect(keys).not.toContain('crew')
+  expect(keys).not.toContain('hardest')
+  expect(allHolds({ wrapped: w, isNamed: false }).length).toBeGreaterThan(1)
+})
+
+test('the year adds its busiest weekday, hours, top lists and models', () => {
+  const w = wrappedOf(rawOf(), SPEC)
+  if (w === null) throw new Error('expected a reading')
+  expect(w.busiestDay?.name).toBe('2026-03-02')
+  expect(w.weekdays.reduce((sum, count) => sum + count, 0)).toBe(35)
+  expect(weekdaysOf({ '2026-03-02': 20 })[0]).toBe(20)
+  expect(w.hours.reduce((sum, count) => sum + count, 0)).toBe(35)
+  expect(w.projects[0]).toEqual({ name: 'secret-client', count: 35 })
+  expect(w.tools[0]).toEqual({ name: 'Bash', count: 50 })
+  expect(w.files.map(file => file.name)).toEqual(['pricing.ts'])
+  expect(w.models).toEqual([{ name: 'Opus 5.5', count: 90 }, { name: 'Sonnet 5', count: 10 }])
+  expect(modelLabel('something-else')).toBe('something-else')
+})
+
+test('a saved reading from before the new figures is refused, so it is read again', () => {
+  const w = wrappedOf(rawOf(), SPEC)
+  if (w === null) throw new Error('expected a reading')
+  const { projects: _gone, ...older } = w
+  expect(isWrapped(older)).toBe(false)
 })
 
 test('the concat list holds each picture and repeats the last', () => {
-  const list = concatList('/d', [{ frames: 12 }, { frames: 6 }])
+  const list = concatList('/d', [{ frames: 60 }, { frames: 30 }])
   expect(list.split('\n')).toEqual(["file '/d/f00000.png'", 'duration 1.00000', "file '/d/f00001.png'", 'duration 0.50000', "file '/d/f00001.png'", ''])
 })
 
@@ -121,24 +151,37 @@ test('each persona follows its own measure', () => {
   expect(personaOf({ ...base, average: 2 })).toBe('sprinter')
 })
 
-test('names stay off the card, the saved image and the copied text until turned on', () => {
+test('a mask takes names off every page, the shared image, the text and the post', () => {
   setLang('en')
   const wrapped = wrappedOf(rawOf(), SPEC)
   if (wrapped === null) throw new Error('expected a reading')
   const hidden = { wrapped, isNamed: false }
-  for (const text of [cardPic(hidden).source, cardText(hidden)]) {
+  const pages = slidesFor(wrapped).map((_, index) => pagePic(hidden, index, 360).source)
+  for (const text of [...pages, summaryPic(hidden).source, cardText(hidden)]) {
     expect(text).not.toContain('pricing.ts')
     expect(text).not.toContain('secret-client')
   }
   expect(rowsOf(hidden).some(row => row.value === '9 edits')).toBe(true)
-  expect(cardText({ wrapped, isNamed: true })).toContain('pricing.ts')
+  const named = { wrapped, isNamed: true }
+  expect(cardText(named)).toContain('pricing.ts')
+  expect(summaryPic(named).source).toContain('secret-client')
+  expect(decodeURIComponent(postUrl(named))).not.toContain('secret-client')
 })
 
-test('the saved file carries its colours and one scheme', () => {
+test('a page takes the width it is given, at 9:16', () => {
   setLang('en')
   const wrapped = wrappedOf(rawOf(), SPEC)
   if (wrapped === null) throw new Error('expected a reading')
-  const saved = standalone(cardPic({ wrapped, isNamed: false }))
+  const pic = pagePic({ wrapped, isNamed: true }, 99, 360)
+  expect([pic.width, pic.height]).toEqual([360, 640])
+  expect(pic.source).toContain('viewBox="0 0 540 960"')
+})
+
+test('the shared file stands alone: no style, no theme class, its colours on it', () => {
+  setLang('en')
+  const wrapped = wrappedOf(rawOf(), SPEC)
+  if (wrapped === null) throw new Error('expected a reading')
+  const saved = standalone(summaryPic({ wrapped, isNamed: false }))
   expect(saved).not.toContain('<style>')
   expect(saved).not.toContain('class="f-')
   expect(saved).toContain('fill="#')
@@ -243,24 +286,38 @@ test('/wrapped refuses a year that is not one, and reads nothing', async ($: any
   expect(edges.runs).toEqual([])
 })
 
-test('desktop: the read shows progress, then a card without names; keeps it; saving writes a PNG', async ($: any, on: any) => {
+test('desktop: the read shows progress, then pages with names; next moves; masking hides them; copying saves a PNG', async ($: any, on: any) => {
   const { ui, clock, runs, store, written } = await opened($, on, { awk: READS })
   expect(await ui.find({ type: 'Text', text: /Reading your 2026/ })).toBeDefined()
   for (let tick = 0; tick < 5; tick += 1) await clock.advance(1)
-  const svg = await ui.find({ type: 'Svg' })
-  expect(String(svg?.props.alt)).toContain('35 prompts')
-  expect(String(svg?.props.source)).not.toContain('pricing.ts')
   expect(runs[0]?.[0]).toBe('awk')
   expect(runs[0]).toContain('YEAR=2026')
   expect(isWrapped(store.get('wrapped.2026'))).toBe(true)
+  const first = (await ui.find({ type: 'Svg' }))?.props
+  expect(first?.isInteractive).toBe(true)
+  await ui.press({ key: 'next' })
+  expect((await ui.find({ type: 'Svg' }))?.props.source).not.toBe(first?.source)
+  await ui.press({ key: 'back' })
+  await ui.press({ key: 'back' })
+  expect((await ui.find({ type: 'Svg' }))?.props.source).toBe(first?.source)
 
-  await ui.press({ key: 'save' })
-  expect(String(written.get('/home/me/Downloads/wrapped-2026.svg'))).not.toContain('pricing.ts')
-  expect(runs[1]?.[0]).toBe('sips')
-  expect(await ui.find({ type: 'Text', text: /Saved: .*wrapped-2026\.png/ })).toBeDefined()
+  await ui.press({ key: 'copy-image' })
+  expect(String(written.get('/home/me/Downloads/wrapped-2026.svg'))).toContain('secret-client')
+  expect(runs.map(run => run[0])).toEqual(['awk', 'sips', 'osascript'])
+  expect(await ui.find({ type: 'Text', text: /Copied: .*wrapped-2026\.png/ })).toBeDefined()
 
   await ui.press({ key: 'names' })
-  expect(String((await ui.find({ type: 'Svg' }))?.props.source)).toContain('pricing.ts')
+  await ui.press({ key: 'copy-image' })
+  expect(String(written.get('/home/me/Downloads/wrapped-2026.svg'))).not.toContain('secret-client')
+})
+
+test('sharing on X copies the image and opens a post with the words filled in, sending nothing itself', async ($: any, on: any) => {
+  const { ui, clock, runs } = await opened($, on, { awk: READS })
+  for (let tick = 0; tick < 5; tick += 1) await clock.advance(1)
+  await ui.press({ key: 'share-x' })
+  expect(runs.map(run => run[0]).slice(-3)).toEqual(['sips', 'osascript', 'open'])
+  expect(String(runs.at(-1)?.[1])).toContain('https://x.com/intent/post?text=')
+  expect(await ui.find({ type: 'Text', text: /Cmd\+V/ })).toBeDefined()
 })
 
 test('the film button draws, encodes, opens the video and removes its frames', async ($: any, on: any) => {
@@ -288,11 +345,12 @@ test('a failed encode says why and still removes the frames', async ($: any, on:
   expect(runs.map(run => run[0])).not.toContain('open')
 })
 
-test('with no converter the saved SVG is named as such', async ($: any, on: any) => {
-  const { ui, clock } = await opened($, on, { awk: READS, sips: 1 })
+test('with no converter the image is not copied and its SVG is named', async ($: any, on: any) => {
+  const { ui, clock, runs } = await opened($, on, { awk: READS, sips: 1 })
   for (let tick = 0; tick < 5; tick += 1) await clock.advance(1)
-  await ui.press({ key: 'save' })
-  expect(await ui.find({ type: 'Text', text: /Saved as SVG/ })).toBeDefined()
+  await ui.press({ key: 'copy-image' })
+  expect(runs.map(run => run[0])).not.toContain('osascript')
+  expect(await ui.find({ type: 'Text', text: /Could not copy.*wrapped-2026\.svg/ })).toBeDefined()
 })
 
 test('terminal: the same figures as text', async ($: any, on: any) => {

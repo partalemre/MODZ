@@ -1,32 +1,40 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { cardPic, cardText, standalone } from './card'
+import { cardText } from './card'
 import type { CardSpec } from './card'
 import { makeFilm } from './film'
+import { filmLine } from './film-run'
+import { linesOf, stateTree } from './states'
 import { withHome } from './kit/home'
 import { setLang } from './kit/lang'
 import { isAskedFor, isOffStage, shownOf } from './kit/stage'
+import { copyImage, sharedLine, shareOnX } from './share'
+import type { ShareIo } from './share'
+import { pagePic, slidesFor } from './story'
+import { panelWords } from './story-words'
 import { AWK, parseOutput, rootOf, transcriptPaths } from './scan'
 import { dayKey, isWrapped, wrappedOf } from './stats'
 import { words } from './words'
-import type { Film, Saved, Wrapped, WrappedView } from '../types'
+import type { Film, Shared, Wrapped, WrappedView } from '../types'
 
 const PANE = 'wrapped'
 const IDLE: WrappedView = { status: 'idle' }
 const SCAN_TIMEOUT_MS = 600_000
-const CONVERT_TIMEOUT_MS = 30_000
 const FILM_STEP_TIMEOUT_MS = 180_000
 const YEAR = /^20\d\d$/
-// How much wider than the drawing the saved image is.
-const IMAGE_SCALE = 3
+// A desktop pane reports about 9 px a column; a page wider than this would not fit the pane's height at 9:16.
+const PX_PER_COLUMN = 9
+const PAGE_MIN = 260
+const PAGE_MAX = 400
+const DEFAULT_COLUMNS = 40
 
 const viewAtom = atom({ plugin: 'wrapped', key: 'view' } as const, IDLE, { shape: 'view-1' })
 const rootAtom = atom({ plugin: 'wrapped', key: 'root' } as const, '')
-// Off by default: a project or file name may be private, and the card is made to be posted.
-const namedAtom = atom({ plugin: 'wrapped', key: 'isNamed' } as const, false)
-const savedAtom = atom({ plugin: 'wrapped', key: 'saved' } as const, null as Saved | null)
-const copiedAtom = atom({ plugin: 'wrapped', key: 'copied' } as const, false)
+// On by default: these pages are the person's own; "Hide names" masks them everywhere before anything is shared.
+const namedAtom = atom({ plugin: 'wrapped', key: 'isNamed' } as const, true)
+const pageAtom = atom({ plugin: 'wrapped', key: 'page' } as const, 0)
+const sharedAtom = atom({ plugin: 'wrapped', key: 'shared' } as const, null as Shared | null)
 const filmAtom = atom({ plugin: 'wrapped', key: 'film' } as const, null as Film | null)
 
 const keyOf = (year: number): string => `wrapped.${year}`
@@ -82,8 +90,8 @@ async function kept($: EngineInterface, year: number): Promise<Wrapped | null> {
 }
 
 async function clearNotes($: EngineInterface): Promise<void> {
-  await update($, savedAtom, () => null)
-  await update($, copiedAtom, () => false)
+  await update($, sharedAtom, () => null)
+  await update($, pageAtom, () => 0)
   await update($, filmAtom, film => (film?.status === 'making' ? film : null))
 }
 
@@ -110,31 +118,6 @@ async function openPane($: EngineInterface, year: number): Promise<void> {
   } catch {
     $.ui.log('wrapped: could not tell the hub the pane is shown', { to: 'debug' })
   }
-}
-
-// PNG through macOS's own `sips` where it exists; otherwise the SVG the conversion started from stays.
-async function saveImage($: EngineInterface, spec: CardSpec): Promise<Saved> {
-  const home = await $.env.get('HOME')
-  if (typeof home !== 'string' || home === '') return { error: 'HOME is not set' }
-  const stem = `${home}/Downloads/wrapped-${spec.wrapped.year}`
-  const pic = cardPic(spec)
-  const svgPath = `${stem}.svg`
-  await $.fs.write(svgPath, standalone(pic))
-  const size = [String(pic.height * IMAGE_SCALE), String(pic.width * IMAGE_SCALE)]
-  const png = `${stem}.png`
-  const ran = await $.process.run(['sips', '-s', 'format', 'png', '-z', ...size, svgPath, '--out', png], { timeoutMs: CONVERT_TIMEOUT_MS }).catch(() => null)
-
-  return ran?.exitCode === 0 ? { path: png, isImage: true } : { path: svgPath, isImage: false }
-}
-
-async function onSave($: EngineInterface, spec: CardSpec): Promise<void> {
-  const saved = await saveImage($, spec).catch((error: unknown): Saved => ({ error: why(error) }))
-  await update($, savedAtom, () => saved)
-}
-
-async function onCopy($: EngineInterface, spec: CardSpec, surface: string): Promise<void> {
-  const copied = await $.ui.copy({ text: cardText(spec), surface: surface as never }).catch(() => ({ isCopied: false }))
-  await update($, copiedAtom, () => copied.isCopied)
 }
 
 function filmIo($: EngineInterface) {
@@ -172,43 +155,74 @@ async function startFilm($: EngineInterface, spec: CardSpec): Promise<void> {
   $.clock.after(1, () => runFilm($, spec))
 }
 
-function filmLine(film: Film): string {
-  const t = words()
-  if (film.status === 'making') return t.filmMaking(film.made, film.total)
-
-  return film.status === 'ready' ? t.filmReady(film.path) : t.filmFailed(film.reason)
-}
-
-const savedLine = (saved: Saved): string => {
-  const t = words()
-  if ('error' in saved) return t.saveFailed(saved.error)
-
-  return saved.isImage ? t.savedImage(saved.path) : t.savedSvg(saved.path)
-}
-
 type Table = Record<string, any>
+type ReadyView = { spec: CardSpec; page: number; shared: Shared | null; film: Film | null; surface: string; columns: number }
 
-function readyTree($: EngineInterface, ui: Table, o: { spec: CardSpec; saved: Saved | null; copied: boolean; film: Film | null; surface: string }) {
-  const { Box, Text, Button, Svg } = ui
-  const { spec, saved, copied, film, surface } = o
+// A page comes in as one, in its own frame so the move survives the pane's redraws.
+const ENTER = '<style>:root{color-scheme:dark}svg{animation:page .32s cubic-bezier(.22,1,.36,1)}@keyframes page{from{opacity:0;transform:translateY(10px)}}@media (prefers-reduced-motion: reduce){svg{animation:none}}</style>'
+
+function navTree($: EngineInterface, ui: Table, view: ReadyView, count: number) {
+  const { Box, Text, Button } = ui
+  const t = panelWords()
+  const move = (by: number) => () => update($, pageAtom, page => Math.max(0, Math.min(count - 1, page + by)))
+
+  return (
+    <Box flexDirection="row" alignItems="center" columnGap={1}>
+      <Button key="back" label={`‹ ${t.back}`} variant="secondary" onPress={move(-1)} />
+      <Button key="next" label={`${t.next} ›`} variant="primary" onPress={move(1)} />
+      <Text dimColor>{t.page(view.page + 1, count)}</Text>
+    </Box>
+  )
+}
+
+const shareIo = ($: EngineInterface): ShareIo => ({
+  home: () => $.env.get('HOME'),
+  write: (path, text) => $.fs.write(path, text),
+  run: (argv, timeoutMs) => $.process.run(argv, { timeoutMs }),
+})
+
+function shareTree($: EngineInterface, ui: Table, view: ReadyView) {
+  const { Box, Text, Button } = ui
+  const { spec, shared, film } = view
   const t = words()
-  const canDraw = Svg !== undefined && surface !== 'terminal'
+  const p = panelWords()
+  const note = (press: (spec: CardSpec) => Promise<Shared>) => async () => {
+    const done = await press(spec)
+    await update($, sharedAtom, () => done)
+  }
 
   return (
     <Box flexDirection="column" rowGap={1}>
-      {canDraw ? <Svg key="wrapped-card" {...cardPic(spec)} /> : <Text>{cardText(spec)}</Text>}
-      <Text dimColor>{spec.isNamed ? t.namesOn : t.namesOff}</Text>
       <Box flexDirection="row" columnGap={1} flexWrap="wrap">
-        <Button key="film" label={t.filmMake} variant="primary" onPress={() => startFilm($, spec)} />
-        <Button key="save" label={t.save} variant="secondary" onPress={() => onSave($, spec)} />
-        <Button key="copy" label={t.copy} variant="secondary" onPress={(press: { surface: string }) => onCopy($, spec, press.surface)} />
+        <Button key="copy-image" label={p.copyImage} variant="secondary" onPress={note(s => copyImage(shareIo($), s))} />
+        <Button key="share-x" label={p.shareX} variant="secondary" onPress={note(s => shareOnX(shareIo($), s))} />
+        <Button key="film" label={t.filmMake} variant="secondary" onPress={() => startFilm($, spec)} />
+      </Box>
+      <Box flexDirection="row" columnGap={1} flexWrap="wrap">
         <Button key="names" label={spec.isNamed ? t.hideNames : t.showNames} plain dimColor onPress={() => update($, namedAtom, is => !is)} />
         <Button key="again" label={t.readAgain} plain dimColor onPress={() => rereadYear($, spec.wrapped.year)} />
       </Box>
+      <Text dimColor>{spec.isNamed ? p.namesShown : p.namesHidden}</Text>
+      {shared !== null && <Text dimColor>{sharedLine(shared)}</Text>}
       {film !== null && <Text dimColor>{filmLine(film)}</Text>}
-      {saved !== null && <Text dimColor>{savedLine(saved)}</Text>}
-      {copied && <Text dimColor>{t.copied}</Text>}
-      <Text dimColor>{t.readAt(dayKey(spec.wrapped.readAt))}</Text>
+    </Box>
+  )
+}
+
+function readyTree($: EngineInterface, ui: Table, view: ReadyView) {
+  const { Box, Text, Svg } = ui
+  const { spec, surface, columns } = view
+  const canDraw = Svg !== undefined && surface !== 'terminal'
+  const count = slidesFor(spec.wrapped).length
+  const width = Math.max(PAGE_MIN, Math.min(PAGE_MAX, (columns || DEFAULT_COLUMNS) * PX_PER_COLUMN))
+  const pic = pagePic(spec, view.page, width)
+
+  return (
+    <Box flexDirection="column" rowGap={1}>
+      {canDraw ? <Svg key="wrapped-page" {...pic} source={pic.source.replace(/(<svg[^>]*>)/, `$1${ENTER}`)} isInteractive /> : <Text>{cardText(spec)}</Text>}
+      {canDraw && navTree($, ui, view, count)}
+      {shareTree($, ui, view)}
+      <Text dimColor>{words().readAt(dayKey(spec.wrapped.readAt))}</Text>
     </Box>
   )
 }
@@ -217,26 +231,6 @@ async function rereadYear($: EngineInterface, year: number): Promise<void> {
   await clearNotes($)
   await update($, viewAtom, () => ({ status: 'reading', year }))
   readYear($, year)
-}
-
-function stateTree(ui: Table, lines: { title: string; hint?: string }) {
-  const { Box, Text } = ui
-
-  return (
-    <Box flexDirection="column" rowGap={1}>
-      <Text bold>{lines.title}</Text>
-      {lines.hint !== undefined && <Text dimColor>{lines.hint}</Text>}
-    </Box>
-  )
-}
-
-function linesOf(view: Exclude<WrappedView, { status: 'ready' }>): { title: string; hint?: string } {
-  const t = words()
-  if (view.status === 'reading') return { title: t.reading(view.year), hint: t.readingHint }
-  if (view.status === 'empty') return { title: t.empty(view.year), hint: t.emptyHint }
-  if (view.status === 'failed') return { title: t.failed, hint: view.reason }
-
-  return { title: t.idle }
 }
 
 async function goHome($: EngineInterface): Promise<void> {
@@ -291,7 +285,7 @@ export const register: Register = on => {
     const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' } as any).catch(() => ({ value: false }))).value === true
     const tree =
       view.status === 'ready'
-        ? readyTree($, ui, { spec: { wrapped: view.wrapped, isNamed: await read($, namedAtom) }, saved: await read($, savedAtom), copied: await read($, copiedAtom), film: await read($, filmAtom), surface: e.surface })
+        ? readyTree($, ui, { spec: { wrapped: view.wrapped, isNamed: await read($, namedAtom) }, page: await read($, pageAtom), shared: await read($, sharedAtom), film: await read($, filmAtom), surface: e.surface, columns: e.props.bodyColumns })
         : stateTree(ui, linesOf(view))
 
     return withHome(ui, tree, isHubOn ? () => goHome($) : null)

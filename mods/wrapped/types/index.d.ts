@@ -32,6 +32,12 @@ export type Wrapped = {
   linesAdded: number
   costUsd: number
   days: Record<string, number>
+  hours: number[]
+  weekdays: number[]
+  projects: Named[]
+  tools: Named[]
+  files: Named[]
+  models: Named[]
   agentRuns: number
   agentTools: number
   agentTokens: number
@@ -50,6 +56,8 @@ export type WrappedView =
 
 export type Film = { status: 'making'; made: number; total: number } | { status: 'ready'; path: string } | { status: 'failed'; reason: string }
 
+export type Shared = { kind: 'copied' | 'copyFailed' | 'posted'; path: string } | { kind: 'failed'; reason: string }
+
 export type Saved = { path: string; isImage: boolean } | { error: string }
 
 declare module 'claude-code' {
@@ -61,6 +69,8 @@ declare module 'claude-code' {
       saved: Saved | null
       copied: boolean
       film: Film | null
+      page: number
+      shared: Shared | null
       // The MODZ hub's card, its way back and its one-panel note; the values it reads are its own contract.
       hub: { pane: string; detail: string; tone: 'idle' | 'ok' | 'live'; at: number; title: string; hint: string; icon: string; section: 'meter' }
       home: { at: number }

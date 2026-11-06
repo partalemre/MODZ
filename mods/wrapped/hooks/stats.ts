@@ -91,6 +91,35 @@ function clocked(promptsByHour: Record<string, number>): Clocked {
 }
 
 const AGENT_ROWS = 6
+const TOP_ROWS = 5
+// Monday first, as the story draws the week.
+const MONDAY_FIRST = 6
+
+const topRows = (table: Record<string, number>, name: (key: string) => string = key => key): Named[] => {
+  const merged: Record<string, number> = {}
+  for (const [key, count] of Object.entries(table)) merged[name(key)] = (merged[name(key)] ?? 0) + count
+
+  return Object.entries(merged).map(([key, count]) => ({ name: key, count })).sort((a, b) => b.count - a.count).slice(0, TOP_ROWS)
+}
+
+export function weekdaysOf(days: Record<string, number>): number[] {
+  const week = Array.from({ length: 7 }, () => 0)
+  for (const [day, count] of Object.entries(days)) {
+    const place = (new Date(`${day}T12:00:00Z`).getUTCDay() + MONDAY_FIRST) % 7
+    week[place] = (week[place] ?? 0) + count
+  }
+
+  return week
+}
+
+// `claude-opus-5-5-20261001` reads Opus 5.5; a name it does not know stays as it came.
+export function modelLabel(id: string): string {
+  const parts = /^claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?:-\d{8})?/.exec(id)
+  if (parts === null) return id
+  const family = parts[1] ?? ''
+
+  return `${family.charAt(0).toUpperCase()}${family.slice(1)} ${parts[2]}${parts[3] === undefined ? '' : `.${parts[3]}`}`
+}
 
 function agentRows(raw: Raw): AgentRow[] {
   return [...raw.agents].sort((a, b) => b.tools - a.tools || b.runs - a.runs).slice(0, AGENT_ROWS)
@@ -152,6 +181,12 @@ export function wrappedOf(raw: Raw, spec: { year: number; readAt: number }): Wra
     linesAdded: raw.linesAdded,
     costUsd: raw.costUsd,
     days,
+    hours,
+    weekdays: weekdaysOf(days),
+    projects: topRows(raw.places, baseName),
+    tools: topRows(raw.tools),
+    files: topRows(Object.fromEntries(Object.entries(raw.files).filter(([path]) => !SCRATCH.test(path))), baseName),
+    models: topRows(raw.models, modelLabel),
     agentRuns: sumOf(raw.agents.map(agent => agent.runs)),
     agentTools: sumOf(raw.agents.map(agent => agent.tools)),
     agentTokens: sumOf(raw.agents.map(agent => agent.tokens)),
@@ -166,5 +201,5 @@ export function wrappedOf(raw: Raw, spec: { year: number; readAt: number }): Wra
 export function isWrapped(value: unknown): value is Wrapped {
   const w = value as Wrapped | null
 
-  return typeof w === 'object' && w !== null && typeof w.year === 'number' && typeof w.prompts === 'number' && typeof w.persona === 'string' && typeof w.days === 'object' && w.days !== null && Array.isArray(w.agents) && Array.isArray(w.months)
+  return typeof w === 'object' && w !== null && typeof w.year === 'number' && typeof w.prompts === 'number' && typeof w.persona === 'string' && typeof w.days === 'object' && w.days !== null && Array.isArray(w.agents) && Array.isArray(w.months) && Array.isArray(w.projects) && Array.isArray(w.hours) && Array.isArray(w.models)
 }

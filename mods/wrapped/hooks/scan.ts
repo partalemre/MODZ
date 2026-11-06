@@ -24,6 +24,7 @@ export type Raw = {
   rightCount: number
   costUsd: number
   linesAdded: number
+  models: Record<string, number>
 }
 
 const JSONL = '.jsonl'
@@ -69,7 +70,7 @@ index($0, "\"type\":\"assistant\"") {
   h = hour($0); if (substr(h, 1, 4) != YEAR) next
   isActive[FILENAME] = 1
   id = value(grab("\"id\":\"msg_[A-Za-z0-9]+\"", $0))
-  if (id != "" && !seen[id]++) { replies[h]++; k = value(grab("\"output_tokens\":[0-9]+", $0)) + 0; out += k; if (inAgent) workTokens[FILENAME] += k }
+  if (id != "" && !seen[id]++) { replies[h]++; m = value(grab("\"model\":\"claude-[^\"]*\"", $0)); if (m != "") models[m]++; k = value(grab("\"output_tokens\":[0-9]+", $0)) + 0; out += k; if (inAgent) workTokens[FILENAME] += k }
   if (index($0, "\"content\":[{\"type\":\"text\",\"text\":\"") && isRight($0) && !said[id]++) right++
   rest = $0
   while (match(rest, /"type":"tool_use","id":"toolu_[A-Za-z0-9_-]+","name":"[^"]+"/)) {
@@ -97,6 +98,7 @@ END {
   for (h in prompts) print "P\t" h "\t" prompts[h]
   for (h in replies) print "R\t" h "\t" replies[h]
   for (n in tools) print "T\t" n "\t" tools[n]
+  for (n in models) print "O\t" n "\t" models[n]
   for (c in place) print "C\t" c "\t" place[c]
   for (f in promptsOf) print "S\t" promptsOf[f]
   for (f in files) if (files[f] > 1) print "F\t" f "\t" files[f]
@@ -152,8 +154,8 @@ function readAgentLine(raw: Raw, [kind, first, second, third, fourth]: Parts): v
 
 // awk's output is the transcripts' text at one remove: a line that does not read is dropped.
 export function parseOutput(output: string): Raw {
-  const raw: Raw = { promptsByHour: {}, repliesByHour: {}, outputTokens: 0, tools: {}, files: {}, places: {}, chats: [], agents: [], hardest: null, monthProjects: [], monthAgents: [], stops: 0, rightCount: 0, costUsd: 0, linesAdded: 0 }
-  const tables: Record<string, Record<string, number>> = { P: raw.promptsByHour, R: raw.repliesByHour, T: raw.tools, C: raw.places, F: raw.files }
+  const raw: Raw = { promptsByHour: {}, repliesByHour: {}, outputTokens: 0, tools: {}, files: {}, places: {}, chats: [], agents: [], hardest: null, monthProjects: [], monthAgents: [], stops: 0, rightCount: 0, costUsd: 0, linesAdded: 0, models: {} }
+  const tables: Record<string, Record<string, number>> = { P: raw.promptsByHour, R: raw.repliesByHour, T: raw.tools, C: raw.places, F: raw.files, O: raw.models }
   for (const line of output.split('\n')) {
     const [kind, first, second, third, fourth, fifth] = line.split('\t')
     if (kind === undefined) continue

@@ -4,13 +4,13 @@ import { DEFAULT_PREFS, parsePrefs, runSkinCommand } from '../hooks/command'
 import { buildCustom, resolveSkin, skinNames, withSlot } from '../hooks/custom'
 import { runDesign } from '../hooks/designer'
 import { clipLines, diffstat, formatDuration, formatMs, pick, shortenPath } from '../hooks/format'
-import { columnWidths, padCell, splitReply, widthOf, wrapLines } from '../hooks/markdown'
+import { columnWidths, hardBreaks, padCell, splitReply, widthOf, wrapLines } from '../hooks/markdown'
 import { codeSvg, tokenize } from '../hooks/svg-code'
 import { cardWidth, measure as measureAt } from '../hooks/svg-kit'
 import { diffLines, diffSvg, hunksOf } from '../hooks/svg-diff'
 import { fitColumns, kindOfCell, measure, tableSvg, wrapCell } from '../hooks/svg-table'
 import { outputLines, shellOutputOf, terminalSvg } from '../hooks/svg-terminal'
-import { limitLabel, meterColor, metersOf, usageSvg } from '../hooks/svg-usage'
+import { contextPercent, limitLabel, meterColor, metersOf, usageSvg } from '../hooks/svg-usage'
 import { deepen, isLightTheme, macDark, resolveLight, toLight } from '../hooks/light'
 import { parseFolders, prefsFor, withFolder, withoutFolder } from '../hooks/folders'
 import { kindOf, summarize, toolLabel } from '../hooks/tools'
@@ -390,4 +390,17 @@ test('a scene that is on can be turned off in one press, without walking every s
   const ports = { commit: (state: unknown) => committed.push(state), edit: () => undefined, gallery: () => undefined } as any
   settingsActions({ prefs: { ...DEFAULT_PREFS, scene: 'koi-pond' }, custom: {}, editing: 'user' } as any, ports).sceneOff()
   expect((committed[0] as any).prefs.scene).toBe('off')
+})
+
+test('a lone newline in prose stays a line break, a fence and a parted line stay as written', () => {
+  expect(hardBreaks('one\ntwo\n\nthree')).toBe('one  \ntwo\n\nthree')
+  expect(hardBreaks('```\ncode\nmore\n```')).toBe('```\ncode\nmore\n```')
+  expect(hardBreaks('kept  \nnext')).toBe('kept  \nnext')
+})
+
+test('the context meter reads against the window compaction runs at', () => {
+  const context = { window: 200000, percent: 40, tokens: 80000, breakdown: { rawMaxTokens: 100000 } } as any
+  expect(contextPercent(context)).toBe(80)
+  expect(contextPercent({ ...context, breakdown: { rawMaxTokens: 200000 } })).toBe(40)
+  expect(contextPercent({ window: 200000 } as any)).toBeNull()
 })

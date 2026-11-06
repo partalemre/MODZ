@@ -31,9 +31,21 @@ export function limitLabel(kind: string): string {
   return name.replace(/_/g, ' ')
 }
 
+// Read against the window compaction runs at, as /context does: against the model's whole window, with
+// auto-compact set lower, the warning colours could never come before the engine compacted on its own.
+export function contextPercent(context: SessionUsage['context']): number | null {
+  const compactsAt = context.breakdown?.rawMaxTokens
+
+  if (context.tokens !== undefined && compactsAt !== undefined && compactsAt > 0 && compactsAt < context.window) {
+    return Math.min(100, Math.round((context.tokens / compactsAt) * 100))
+  }
+
+  return context.percent ?? null
+}
+
 // The figures the band keeps from the session's usage.
 export const usageSnap = (usage: SessionUsage): UsageSnap => ({
-  context: usage.context.percent ?? null,
+  context: contextPercent(usage.context),
   limits: usage.rateLimits.map(limit => ({ label: limitLabel(limit.kind), percent: limit.percentUsed })),
 })
 

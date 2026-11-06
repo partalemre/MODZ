@@ -79,7 +79,8 @@ function themeOf($: EngineInterface): ThemeHost {
 }
 
 async function refreshUsage($: EngineInterface): Promise<void> {
-  const snap = usageSnap(await $.session.usage())
+  // A summary breakdown is counted locally; it is asked for only for its window.
+  const snap = usageSnap(await $.session.usage({ breakdown: 'summary' }))
   await update($, usageAtom, () => snap)
 }
 

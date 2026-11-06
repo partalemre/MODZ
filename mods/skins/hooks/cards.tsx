@@ -1,4 +1,5 @@
 import type { Look, SvgElement } from './look'
+import { hardBreaks } from './markdown'
 import type { Code, Segment, Table } from './markdown'
 import { copyButton, copyRow, tableMarkdown, tableRows } from './row-table'
 import { codeSvg } from './svg-code'
@@ -101,7 +102,7 @@ export function replyRows(look: Look, { segments, maxWidth, Svg }: Reply) {
     <Box flexDirection="column">
       {segments.map((segment, i) => {
         if (segment.kind === 'text') {
-          return <Markdown text={segment.text} />
+          return <Markdown text={hardBreaks(segment.text)} />
         }
 
         if (segment.kind === 'code') {

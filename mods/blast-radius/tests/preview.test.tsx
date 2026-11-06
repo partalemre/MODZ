@@ -1,6 +1,6 @@
 import { test } from 'claude-code/testing'
 
-import { BUILD_SCAN, EN, MINUTE, NOW, RESET_NUMSTAT, RESET_STATUS, mountBand, mountPane, pass, start, stub, world } from './world'
+import { BUILD_SCAN, EN, MINUTE, NOW, RESET_NUMSTAT, RESET_STATUS, mountBand, pass, start, stub, world } from './world'
 
 // The previews draw the English card, as the film shows it.
 
@@ -24,8 +24,8 @@ for (const theme of ['dark', 'light']) {
     await ($ as any).session.start({ surface: 'desktop', isInteractive: true, cwd: w.cwd })
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
-    await showOnce(`br-delete-w400${suffix}`, await mountPane($, 'desktop', NARROW_PANE))
-    const ui = await mountPane($, 'desktop')
+    await showOnce(`br-delete-w400${suffix}`, await mountBand($, 'desktop', { columns: NARROW_PANE }))
+    const ui = await mountBand($, 'desktop')
     await show(`br-delete${suffix}`, ui)
     await ui.press({ key: 'run' })
     await pass(w, 300)
@@ -34,15 +34,14 @@ for (const theme of ['dark', 'light']) {
     await call
   })
 
-  test(`preview: git reset card and band fallback (${theme})`, async ($, on) => {
+  test(`preview: git reset card (${theme})`, async ($, on) => {
     const w = world({ ...EN, theme, isPlaced: false, answers: { 'cd demo-app': '/work/demo-app', 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })
     stub(on, w)
-    on('ui.render', () => ({ type: 'Text', props: { dimColor: true }, children: ['● hud-pro · context 42% · ≈$0.38'] }))
     await ($ as any).session.start({ surface: 'desktop', isInteractive: true, cwd: w.cwd })
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'cd demo-app && git reset --hard' })
     await pass(w, 0)
-    await showOnce(`br-reset${suffix}`, await mountPane($, 'desktop'))
-    await show(`br-reset-w400${suffix}`, await mountPane($, 'desktop', NARROW_PANE))
+    await showOnce(`br-reset${suffix}`, await mountBand($, 'desktop'))
+    await showOnce(`br-reset-w400${suffix}`, await mountBand($, 'desktop', { columns: NARROW_PANE }))
     await showOnce(`br-band-w520${suffix}`, await mountBand($, 'desktop', { columns: NARROW_BAND }))
     const band = await mountBand($, 'desktop')
     await show(`br-band${suffix}`, band)
@@ -70,7 +69,7 @@ for (const theme of ['dark', 'light']) {
     for (const [label, command, columns] of cases) {
       const call = ($ as any).tool.call({ tool: 'Bash', command })
       await pass(w, 0)
-      const ui = await mountPane($, 'desktop', columns)
+      const ui = await mountBand($, 'desktop', { columns: columns })
       await show(`${label}${suffix}`, ui)
       await ui.press({ key: 'cancel' })
       await pass(w)
@@ -79,7 +78,7 @@ for (const theme of ['dark', 'light']) {
     }
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
-    const ui = await mountPane($, 'desktop')
+    const ui = await mountBand($, 'desktop')
     await ui.press({ key: 'toggle' })
     await show(`br-expanded${suffix}`, ui)
     await ui.press({ key: 'cancel' })
@@ -91,7 +90,6 @@ for (const theme of ['dark', 'light']) {
 test('preview: terminal reset in the band', async ($, on) => {
   const w = world({ ...EN, isPlaced: false, answers: { 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })
   stub(on, w)
-  on('ui.render', () => ({ type: 'Text', props: { dimColor: true }, children: ['● hud-pro · context 42% · ≈$0.38'] }))
   const call = ($ as any).tool.call({ tool: 'Bash', command: 'git reset --hard' })
   await pass(w, 0)
   const band = await mountBand($, 'terminal')
@@ -118,8 +116,8 @@ for (const theme of ['dark', 'light']) {
     await start($, w)
     const call = ($ as any).tool.call(EDIT)
     await pass(w, 0)
-    await showOnce(`br-collision-w400${suffix}`, await mountPane($, 'desktop', NARROW_PANE))
-    const ui = await mountPane($, 'desktop')
+    await showOnce(`br-collision-w400${suffix}`, await mountBand($, 'desktop', { columns: NARROW_PANE }))
+    const ui = await mountBand($, 'desktop')
     await show(`br-collision${suffix}`, ui)
     await ui.press({ key: 'cancel' })
     await pass(w)
@@ -131,7 +129,6 @@ for (const surface of ['terminal', 'desktop']) {
   test(`preview: another chat's edit in the band (${surface})`, async ($, on) => {
     const w = world({ ...EN, ...CLASH, isPlaced: false })
     stub(on, w)
-    on('ui.render', () => ({ type: 'Text', props: { dimColor: true }, children: ['● hud-pro · context 42% · ≈$0.38'] }))
     await start($, w, surface)
     const call = ($ as any).tool.call(EDIT)
     await pass(w, 0)
@@ -149,7 +146,7 @@ test('preview: another chat\'s edit in the terminal pane', async ($, on) => {
   await start($, w, 'terminal')
   const call = ($ as any).tool.call(EDIT)
   await pass(w, 0)
-  const ui = await mountPane($, 'terminal')
+  const ui = await mountBand($, 'terminal')
   await show('br-collision-terminal', ui)
   await ui.press({ key: 'cancel' })
   await pass(w)
@@ -172,8 +169,8 @@ for (const theme of ['dark', 'light']) {
     await start($, w)
     const call = ($ as any).tool.call(CURL)
     await pass(w, 0)
-    await showOnce(`br-house-w400${suffix}`, await mountPane($, 'desktop', NARROW_PANE))
-    const ui = await mountPane($, 'desktop')
+    await showOnce(`br-house-w400${suffix}`, await mountBand($, 'desktop', { columns: NARROW_PANE }))
+    const ui = await mountBand($, 'desktop')
     await show(`br-house${suffix}`, ui)
     await ui.press({ key: 'cancel' })
     await pass(w)
@@ -185,7 +182,6 @@ for (const surface of ['terminal', 'desktop']) {
   test(`preview: a house rule asks in the band (${surface})`, async ($, on) => {
     const w = world({ ...EN, ...HOUSE, isPlaced: false })
     stub(on, w)
-    on('ui.render', () => ({ type: 'Text', props: { dimColor: true }, children: ['● hud-pro · context 42% · ≈$0.38'] }))
     await start($, w, surface)
     const call = ($ as any).tool.call(CURL)
     await pass(w, 0)
@@ -203,7 +199,7 @@ test('preview: a house rule asks in the terminal pane', async ($, on) => {
   await start($, w, 'terminal')
   const call = ($ as any).tool.call(CURL)
   await pass(w, 0)
-  const ui = await mountPane($, 'terminal')
+  const ui = await mountBand($, 'terminal')
   await show('br-house-terminal', ui)
   await ui.press({ key: 'cancel' })
   await pass(w)
@@ -216,7 +212,7 @@ test('preview: terminal pane', async ($, on) => {
   await start($, w, 'terminal')
   const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
   await pass(w, 0)
-  const ui = await mountPane($, 'terminal')
+  const ui = await mountBand($, 'terminal')
   await show('br-terminal', ui)
   await ui.press({ key: 'cancel' })
   await pass(w)

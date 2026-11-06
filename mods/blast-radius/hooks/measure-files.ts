@@ -108,6 +108,8 @@ export async function measureRm(run: Run, risk: Extract<Risk, { kind: 'rm' }>, c
   const unknown = risk.targets.filter(isUnresolved)
   if (unknown.length > 0) return emptyReport('files', `${risk.label} ${targets} (paths decided at run time)`, words().notes.decidedAtRun(unknown.join(' ')))
   const ran = await run(['bash', '-c', FILES_SCRIPT, 'blast-radius', ...risk.targets], { cwd, timeoutMs: TIMEOUT_MS })
+  // A scan that failed (no such shell, as on some Windows) knows nothing: never read that as "nothing to delete".
+  if (ran.exitCode !== 0) throw new Error(`the files scan exited ${ran.exitCode}`)
   const scan = parseScan(ran.stdout)
   if (!scan.found) return nothingReport('files', `delete nothing: no file matches ${targets}`)
   if (!scan.files) return nothingReport('files', `delete ${plural(scan.found, 'empty path', 'empty paths')}`)

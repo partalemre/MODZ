@@ -2,22 +2,23 @@
 // just made, a command a house rule asks about. One at a time; the card itself is drawn by
 // register's ui.render hooks from `current()`.
 //
+// The card lives in the band above the prompt, never in a pane: a pane is a tab that opens by itself, takes the focus
+// and can outlive its card as a blank tab.
+//
 // A hook has 10 s of its own time, but time spent inside a `$` call is free. So the hold loop
-// waits on a short `$.process.run(["sleep", ...])` until a button's onPress sets the decision.
+// waits on a short process (`pause`) until a button's onPress sets the decision.
 // The engine follows `$` only within one file, so each hooks module hands in its own `HoldIo`.
 
-import { motion } from './card'
 import type { CardProps } from './card'
 import type { View } from './view'
 
-export type Decision = 'proceed' | 'cancel' | 'closed' | 'timeout' | 'interrupted' | 'error'
+export type Decision = 'proceed' | 'cancel' | 'timeout' | 'interrupted' | 'error'
 
 export type Held = {
   command: string
   // What the card shows, once it is ready to draw; null while it is being measured.
   view: ((isExpanded: boolean) => View) | null
   decision: Decision | null
-  where: 'pane' | 'band'
   phase: CardProps['phase']
   isExpanded: boolean
   // Only a delete strikes its rows before it runs.
@@ -26,13 +27,17 @@ export type Held = {
 
 // The hold loop's calls on `$`, as closures from the hooks module.
 export type HoldIo = {
-  // `$.process.run(['sleep', seconds], { timeoutMs: SLEEP_TIMEOUT_MS })`
-  sleep: (seconds: string) => Promise<unknown>
+  // `$.process.run(argv, { timeoutMs: SLEEP_TIMEOUT_MS })`
+  run: (argv: readonly string[]) => Promise<unknown>
   now: () => Promise<number>
-  // `$.ui.open` of PANE_ID with these rows: whether a surface placed it.
-  open: (rows: number) => Promise<boolean>
-  close: () => Promise<void>
   redraw: () => void
+}
+
+// `$.ui` calls on the tab an older copy of this mod left, as closures from the hooks module.
+export type StaleTab = {
+  isListed: () => Promise<boolean>
+  open: (rows: number) => Promise<unknown>
+  close: () => Promise<void>
 }
 
 export type HoldOptions = {
@@ -46,25 +51,38 @@ const POLL_SECONDS = '0.25'
 const STRIKE_SECONDS = '0.9'
 export const SLEEP_TIMEOUT_MS = 5000
 const HOLD_LIMIT_MS = 10 * 60 * 1000
-const PANE_ROWS_MAX = 24
-const PANE_ROWS_CHROME = 9
+const STALE_TAB_ROWS = 9
 
 // The call being held, or null. One at a time: a second call waits for the first answer.
 let held: Held | null = null
 
 export const current = (): Held | null => held
 
-// Reopening only reaches a tab older than this engine: once a card has opened here, a tab is this engine's to close.
+let hasNoSleep = false
 let canReopen = true
+
+/** `sleep` where there is one. Windows has none: ping's second reply comes a second after its first. */
+async function pause(io: HoldIo, seconds: string): Promise<void> {
+  if (!hasNoSleep) {
+    try {
+      await io.run(['sleep', seconds])
+
+      return
+    } catch {
+      hasNoSleep = true
+    }
+  }
+  await io.run(['ping', '-n', '2', '127.0.0.1'])
+}
 
 /** Waits for any earlier card to be answered, then claims the hold; null when the turn was interrupted meanwhile. */
 export async function take(io: HoldIo, input: { command: string; signal: AbortSignal; canStrike: boolean }): Promise<Held | null> {
   while (held !== null) {
     if (input.signal.aborted) return null
-    await io.sleep(POLL_SECONDS)
+    await pause(io, POLL_SECONDS)
   }
   // Claimed with no await between the check and the claim, so two waiting calls can't both get through.
-  const mine: Held = { command: input.command, view: null, decision: null, where: 'pane', phase: 'asking', isExpanded: false, canStrike: input.canStrike }
+  const mine: Held = { command: input.command, view: null, decision: null, phase: 'asking', isExpanded: false, canStrike: input.canStrike }
   held = mine
 
   return mine
@@ -78,65 +96,45 @@ async function waitForDecision(io: HoldIo, mine: Held, signal: AbortSignal): Pro
     } else if ((await io.now()) - startedAt > HOLD_LIMIT_MS) {
       mine.decision = 'timeout'
     } else {
-      await io.sleep(POLL_SECONDS)
+      await pause(io, POLL_SECONDS)
     }
   }
 }
 
-function paneRows(mine: Held): number {
-  const rows = mine.view === null ? 0 : mine.view(false).rows.length
-
-  return Math.min(PANE_ROWS_MAX, PANE_ROWS_CHROME + rows)
-}
-
-/** Opens the card, waits for the answer and lets the hold go, whatever happens. */
+/** Shows the card, waits for the answer and lets the hold go, whatever happens. */
 export async function hold(io: HoldIo, mine: Held, options: HoldOptions): Promise<void> {
-  let isOpened = false
   try {
     if (!(await options.prepare())) {
       mine.decision = 'proceed'
 
       return
     }
-    // Every card's pane opens anew, so its drawings cascade in each time (kit/moving.ts).
-    motion.reset()
-    isOpened = true
-    canReopen = false
-    if (!(await io.open(paneRows(mine)))) mine.where = 'band'
     io.redraw()
     await waitForDecision(io, mine, options.signal)
     if (mine.decision === 'proceed' && mine.canStrike) {
-      // The rows it is about to delete get struck through, then the pane goes.
+      // The rows it is about to delete get struck through, then the card goes.
       mine.phase = 'striking'
       io.redraw()
-      await io.sleep(STRIKE_SECONDS)
+      await pause(io, STRIKE_SECONDS)
     }
   } catch {
     mine.decision = 'error'
   } finally {
-    // Close this call's pane before releasing the hold, so the next call's pane can't be the one closed.
-    // An unplaced pane too: the engine keeps it, and places it blank when a surface that docks panes attaches.
-    if (isOpened) await io.close().catch(() => undefined)
     if (held === mine) held = null
     io.redraw()
   }
 }
 
-/** Closing the pane (Esc, its close mark) answers as the safe button does. */
-export function closeHeld(): void {
-  if (held !== null && held.decision === null) held.decision = 'closed'
-}
-
 /**
- * The pane drawn with no card held. A pane the engine still lists just closes. A desktop keeps a tab across an engine
- * restart though the new engine lists no such pane, and only a change to the list reaches it: so open, then close.
+ * A tab from an older copy of this mod, the only way this pane is ever drawn. A pane the engine still lists just closes.
+ * A desktop keeps a tab across an engine restart though the new engine lists no such pane, and only a change to the
+ * list reaches it: so open, then close, once.
  */
-export async function dropStaleTab(io: HoldIo, isListed: () => Promise<boolean>): Promise<void> {
-  const isKnown = await isListed()
-  if (!isKnown) {
-    if (held !== null || !canReopen) return
+export async function dropStaleTab(tab: StaleTab): Promise<void> {
+  if (!(await tab.isListed())) {
+    if (!canReopen) return
     canReopen = false
-    await io.open(PANE_ROWS_CHROME)
+    await tab.open(STALE_TAB_ROWS)
   }
-  if (held === null) await io.close()
+  await tab.close()
 }

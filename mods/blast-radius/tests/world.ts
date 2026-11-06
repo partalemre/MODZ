@@ -6,6 +6,10 @@ import type { MockClock } from 'claude-code/testing'
 
 export type World = {
   cwd: string
+  // What the engine draws beneath the mod, and machines without `sleep` or with a failing scan.
+  beneath: unknown
+  hasNoSleep: boolean
+  failing: string[]
   isPlaced: boolean
   theme: string
   // What `$.env.get` answers; the Turkish tests set MODZ_LANG=tr, the English ones leave it unset.
@@ -43,7 +47,7 @@ export type World = {
 export const SURFACES = ['terminal', 'desktop'] as const
 
 export function world(over: Partial<World> = {}): World {
-  return { cwd: '/work/demo-app', isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], panes: [], ran: [], toasts: [], clock: null, sessionId: 'chat-a', root: '/work/demo-app', surfaces: ['desktop'], store: {}, links: {}, isToolError: false, logs: [], files: {}, reply: 'allow', asked: [], jevChoice: 'allow', fetched: [], ...over }
+  return { cwd: '/work/demo-app', beneath: { type: 'Text', children: [''] }, hasNoSleep: false, failing: [], isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], panes: [], ran: [], toasts: [], clock: null, sessionId: 'chat-a', root: '/work/demo-app', surfaces: ['desktop'], store: {}, links: {}, isToolError: false, logs: [], files: {}, reply: 'allow', asked: [], jevChoice: 'allow', fetched: [], ...over }
 }
 
 const SECOND = 1000
@@ -166,12 +170,15 @@ export function stub(on: any, w: World): void {
   stubSession(on, w)
   stubJudge(on, w)
   stubUi(on, w)
+  on('ui.render', () => w.beneath)
   on('process.run', async (_: any, e: any) => {
-    if (e.argv[0] === 'sleep') {
-      await w.clock?.sleep(Number(e.argv[1]) * SECOND)
+    if (e.argv[0] === 'sleep' && w.hasNoSleep) throw new Error('sleep: not found')
+    if (e.argv[0] === 'sleep' || e.argv[0] === 'ping') {
+      await w.clock?.sleep((e.argv[0] === 'ping' ? 1 : Number(e.argv[1])) * SECOND)
 
       return ok('')
     }
+    if (w.failing.includes(keyOf(e.argv))) return { value: { exitCode: 127, stdout: '', stderr: 'not found' } }
 
     return ok(w.answers[keyOf(e.argv)] ?? '')
   })

@@ -45,7 +45,7 @@ function runnerOf($: EngineInterface): Run {
 }
 
 async function repoOf($: EngineInterface, isProbeOnly = false): Promise<Repo | null> {
-  const home = (await $.env.get('HOME')) ?? ''
+  const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE')) || ''
   const cwd = await $.session.cwd()
   turn.bin ??= await gitBinary(runnerOf($), cwd)
   if (turn.bin === null) return null

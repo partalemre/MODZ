@@ -116,6 +116,90 @@ for (const surface of SURFACES) {
   })
 }
 
+// What the engine draws beneath the plugin: the blank a pane with no card would show.
+const ENGINE_DRAW = () => ({ type: 'Text', children: [''] })
+
+test('a card the surface would not place still closes: the engine would place its pane later, blank', async ($, on) => {
+  const w = world({ isPlaced: false, answers: { files: BUILD_SCAN } })
+  stub(on, w)
+  on('ui.render', ENGINE_DRAW)
+  await start($, w)
+  const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  await pass(w, 0)
+  const band = await mountBand($, 'desktop')
+  await band.press({ key: 'cancel' })
+  await pass(w)
+  await call
+
+  expect(w.closed).toMatchObject([{ id: 'blast-radius' }])
+})
+
+test('a delete with nothing to lose opens no pane, so it closes none', async ($, on) => {
+  const w = world()
+  stub(on, w)
+  on('ui.render', ENGINE_DRAW)
+  await start($, w)
+  await ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
+
+  expect(w.opened).toHaveLength(0)
+  expect(w.closed).toHaveLength(0)
+})
+
+test('a tab left by an engine restart is opened once so its close reaches the desktop', async ($, on) => {
+  const w = world()
+  stub(on, w)
+  on('ui.render', ENGINE_DRAW)
+  await start($, w)
+  const ui = await mountPane($, 'desktop')
+  await ui.drawn()
+  await pass(w, 0)
+  expect(w.opened).toHaveLength(1)
+  expect(w.closed).toHaveLength(1)
+
+  await ui.unmount()
+  const again = await mountPane($, 'desktop')
+  await again.drawn()
+  await pass(w, 0)
+  expect(w.opened).toHaveLength(1)
+})
+
+test('a listed pane with nothing held just closes', async ($, on) => {
+  const w = world({ panes: ['blast-radius'] })
+  stub(on, w)
+  on('ui.render', ENGINE_DRAW)
+  await start($, w)
+  const ui = await mountPane($, 'desktop')
+  await ui.drawn()
+  await pass(w, 0)
+
+  expect(w.opened).toHaveLength(0)
+  expect(w.closed).toHaveLength(1)
+})
+
+test('a late draw after a card never reopens the pane, and an open card is left alone', async ($, on) => {
+  const w = world({ answers: { files: BUILD_SCAN } })
+  stub(on, w)
+  on('ui.render', ENGINE_DRAW)
+  await start($, w)
+  const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  await pass(w, 0)
+  const ui = await mountPane($, 'desktop')
+  await ui.drawn()
+  await pass(w, 0)
+  expect(w.closed).toHaveLength(0)
+  await ui.press({ key: 'cancel' })
+  await pass(w)
+  await call
+  expect(w.opened).toHaveLength(1)
+
+  await ui.unmount()
+  const late = await mountPane($, 'desktop')
+  await late.drawn()
+  await pass(w, 0)
+  expect(w.opened).toHaveLength(1)
+  expect(w.closed).toHaveLength(1)
+})
+
 for (const surface of SURFACES) {
   test(`git reset lists the changes it drops; plain commands are never held (${surface})`, async ($, on) => {
     const w = world({ answers: { 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })

@@ -13,6 +13,8 @@ export type World = {
   answers: Record<string, string>
   opened: unknown[]
   closed: unknown[]
+  // The panes the engine lists, as `$.ui.panes` answers.
+  panes: string[]
   ran: unknown[]
   toasts: string[]
   clock: MockClock | null
@@ -41,7 +43,7 @@ export type World = {
 export const SURFACES = ['terminal', 'desktop'] as const
 
 export function world(over: Partial<World> = {}): World {
-  return { cwd: '/work/demo-app', isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], ran: [], toasts: [], clock: null, sessionId: 'chat-a', root: '/work/demo-app', surfaces: ['desktop'], store: {}, links: {}, isToolError: false, logs: [], files: {}, reply: 'allow', asked: [], jevChoice: 'allow', fetched: [], ...over }
+  return { cwd: '/work/demo-app', isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], panes: [], ran: [], toasts: [], clock: null, sessionId: 'chat-a', root: '/work/demo-app', surfaces: ['desktop'], store: {}, links: {}, isToolError: false, logs: [], files: {}, reply: 'allow', asked: [], jevChoice: 'allow', fetched: [], ...over }
 }
 
 const SECOND = 1000
@@ -80,14 +82,17 @@ function keyOf(argv: string[]): string {
 function stubUi(on: any, w: World): void {
   on('ui.open', (_: any, e: any) => {
     w.opened.push(e)
+    if (w.isPlaced && !w.panes.includes(e.id)) w.panes.push(e.id)
 
     return { value: w.isPlaced ? { isPlaced: true } : { isPlaced: false, reason: 'narrow' } }
   })
   on('ui.close', (_: any, e: any) => {
     w.closed.push(e)
+    w.panes = w.panes.filter(id => id !== e.id)
 
     return { value: undefined }
   })
+  on('ui.panes', () => ({ value: w.panes.map(id => ({ id, title: id, plugin: 'blast-radius', isShown: false, isFocused: false })) }))
   on('ui.toast', (_: any, e: any) => {
     w.toasts.push(e.text)
 

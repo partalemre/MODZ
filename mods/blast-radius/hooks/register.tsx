@@ -24,7 +24,7 @@ import type { CardProps } from './card'
 import { classify } from './classify'
 import type { Risk } from './classify'
 import { editHooks } from './collide'
-import { PANE_ID, SLEEP_TIMEOUT_MS, closeHeld, current, hold, take } from './hold'
+import { PANE_ID, SLEEP_TIMEOUT_MS, closeHeld, current, dropStaleTab, hold, take } from './hold'
 import type { Decision, Held, HoldIo } from './hold'
 import { houseHooks, resetHouse } from './house'
 import { setLang } from './lang'
@@ -175,6 +175,14 @@ function holdHooks(on: On): void {
   })
 }
 
+// After the draw: a `$` call beneath this plugin's own hook wouldn't reach its hooks.
+function dropTabSoon($: EngineInterface): void {
+  const isListed = async () => (await $.ui.panes()).some(pane => pane.id === PANE_ID)
+  $.clock.after(0, () => {
+    dropStaleTab(holdIo($), isListed).catch(cause => $.ui.log(`blast-radius: could not drop a stale tab: ${String(cause)}`, { to: 'debug' }))
+  })
+}
+
 function drawHooks(on: On): void {
   on('ui.close', ($, e, next) => {
     // Closing the pane (Esc, its close mark) keeps the work, as Keep my work does.
@@ -185,8 +193,10 @@ function drawHooks(on: On): void {
 
   // Only its own pane waits out a focus flip: every other mod's pane passes through this hook too.
   on('ui.render', { component: 'Pane' }, async ($, e, next) => {
+    if (e.requestId !== PANE_ID) return next(e)
     const mine = current()
-    if (e.requestId !== PANE_ID || !isReady(mine)) return next(e)
+    if (mine === null) dropTabSoon($)
+    if (!isReady(mine)) return next(e)
     const redraw = () => $.ui.invalidate('ui.render')
     const ui = $.ui.resolve(e)
 

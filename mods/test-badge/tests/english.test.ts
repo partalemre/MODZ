@@ -35,10 +35,10 @@ for (const surface of SURFACES) {
 
     const pane = await $.ui.mount(paneOf(surface))
     const text = await shown(pane, surface)
-    expect(text).toMatch(/1 failed\s*· 41 passed/)
-    expect(text).toMatch(surface === 'desktop' ? /Test results: / : /Test results/)
+    expect(text).toMatch(/1 test failing[\s\S]*1 of 42 failed/)
+    expect(text).toMatch(/On this computer[\s\S]*npm run --silent test/)
     expect((await pane.find({ key: 'tb-filter-all' }))?.text).toBe('All 3')
-    expect((await pane.find({ key: 'tb-rerun' }))?.props?.label).toBe('Run again')
+    expect((await pane.find({ key: 'tb-rerun' }))?.props?.label).toBe('Run tests and code check')
     expect(await drawnText(pane)).not.toMatch(TURKISH)
     expect(world.statuses.at(-1)).toBe('tests 41/42 · lint 2 errors · 0s ago')
   })
@@ -47,17 +47,17 @@ for (const surface of SURFACES) {
     const world = newWorld({ ...ENGLISH, surface, outs: { test: ' Tests  42 passed (42)', lint: '' }, code: 0 })
     const clock = await setup($, on, world)
     const empty = await $.ui.mount(paneOf(surface))
-    const sentence = 'No test run yet · runs by itself when a source file changes'
-    if (surface === 'desktop') expect((await empty.find({ type: 'Svg' }))?.props?.alt).toBe(`Tests: ${sentence}`)
-    else expect((await empty.find({ key: 'tb-empty' }))?.text).toBe(sentence)
-    expect((await empty.find({ key: 'tb-rerun' }))?.props?.label).toBe('Run now')
+    const sentence = 'No tests run yet'
+    if (surface === 'desktop') expect((await empty.find({ type: 'Svg' }))?.props?.alt).toBe(sentence)
+    else expect((await empty.find({ key: 'tb-verdict' }))?.text).toBe(sentence)
+    expect((await empty.find({ key: 'tb-rerun' }))?.props?.label).toBe('Run tests and code check')
     await empty.unmount()
 
     await editAndRun($, clock)
     const band = await $.ui.mount(bandOf(surface))
     expect(await shown(band, surface)).toMatch(/✓ 42\/42 passed[\s\S]*lint clean/)
     const pane = await $.ui.mount(paneOf(surface))
-    expect(await shown(pane, surface)).toMatch(/All passed\s*· 42 tests passed · lint clean/)
+    expect(await shown(pane, surface)).toMatch(/All tests pass on this computer[\s\S]*42 tests passed[\s\S]*clean/)
     expect(await drawnText(pane)).not.toMatch(TURKISH)
   })
 }

@@ -1,8 +1,9 @@
 import { failuresOf, isFailing } from './parse'
-import { chipsOf, durationText, groupsOf, headlineOf, runMeta, suiteTag } from './summary'
+import { chipsOf, durationText, groupsOf, runMeta, suiteTag } from './summary'
 import type { Tone } from './summary'
 import { THEME_KEY } from './tidemark'
-import { ciPart } from './ci-view'
+import { GLYPH, ciPart, look } from './ci-view'
+import { localRowsOf, runLabelOf, verdictOf } from './verdict'
 import type { PaneView } from './view'
 import { words } from './words'
 import type { CheckOutcome, Failure } from '../types'
@@ -38,7 +39,7 @@ export function chipRow(ui: Ui, view: PaneView) {
   const { Box, Button } = ui
 
   return (
-    <Box flexDirection="row" columnGap={2} flexWrap="wrap">
+    <Box flexDirection="row" columnGap={1} flexWrap="wrap">
       {chipsOf(view.badge, view.filter).map(chip => (
         <Button key={`tb-filter-${chip.filter}`} label={`${chip.label} ${chip.count}`} plain dimColor={chip.filter !== view.filter} onPress={() => view.onFilter(chip.filter)} />
       ))}
@@ -48,11 +49,9 @@ export function chipRow(ui: Ui, view: PaneView) {
 
 export function rerunRow(ui: Ui, view: PaneView) {
   const { Box, Button } = ui
-  const label = view.badge.finishedAt === null ? words().runNow : words().runAgain
-
   return (
     <Box flexDirection="row">
-      <Button key="tb-rerun" variant="secondary" hotkey="r" label={label} onPress={view.onRerun} />
+      <Button key="tb-rerun" variant="secondary" hotkey="r" label={runLabelOf(view.commands)} onPress={view.onRerun} />
     </Box>
   )
 }
@@ -121,52 +120,45 @@ function tailText(ui: Ui, spec: { name: CheckName; outcome: CheckOutcome | null 
   )
 }
 
-// No run yet: a quiet label, one sentence and the one action.
-function emptyText(ui: Ui, view: PaneView) {
-  const { Box, Text } = ui
-
-  return (
-    <Box flexDirection="column">
-      <Text bold dimColor>{words().eyebrowTests}</Text>
-      <Box key="tb-empty">
-        <Text wrap="wrap">
-          <Text bold>{words().emptyLead}</Text>
-          <Text dimColor>{` · ${words().emptyHow}`}</Text>
-        </Text>
-      </Box>
-      <Text> </Text>
-      {rerunRow(ui, view)}
-      {view.ci !== null && <Text> </Text>}
-      {ciPart(ui, view)}
-    </Box>
-  )
-}
-
+// The same parts as the desktop's: the one sentence, then what happened here, then what GitHub says.
 export function textPane(ui: Ui, view: PaneView) {
   const { Box, Text } = ui
   const { badge } = view
-  if (badge.finishedAt === null && !badge.isRunning) return emptyText(ui, view)
-  const head = headlineOf(badge)
+  const state = { badge, ci: view.ci, commands: view.commands }
+  const verdict = verdictOf(state)
+  const rows = localRowsOf(state)
+  const says = words().local
 
   return (
     <Box flexDirection="column">
+      <Box key="tb-verdict">
+        <Text bold wrap="wrap" {...(verdict.tone === 'neutral' ? {} : colorOf(verdict.tone))}>{verdict.sentence}</Text>
+      </Box>
+      <Text> </Text>
       <Box flexDirection="row" justifyContent="space-between" columnGap={1}>
-        <Text bold dimColor>{`${badge.isRunning ? '◐ ' : ''}${words().eyebrowResults}`}</Text>
+        <Text bold dimColor>{`${badge.isRunning ? '◐ ' : ''}${says.title}`}</Text>
         <Text dimColor>{runMeta(badge, view.now)}</Text>
       </Box>
-      <Box flexDirection="row">
-        <Text bold {...colorOf(head.tone)}>{head.lead}</Text>
-        <Text bold>{head.rest}</Text>
-      </Box>
+      {rows.map(row => (
+        <Box key={`tb-local-${row.name}`} flexDirection="column">
+          <Box flexDirection="row" columnGap={1}>
+            <Text {...look(row.role)}>{GLYPH[row.state]}</Text>
+            <Text>{row.name}</Text>
+            <Text {...look(row.role)}>{row.result}</Text>
+          </Box>
+          {row.command !== null && <Text dimColor wrap="truncate">{`  ${row.command}`}</Text>}
+        </Box>
+      ))}
       {barText(ui, view)}
+      <Text dimColor wrap="wrap">{rows.length === 0 ? says.none : says.when}</Text>
       <Text> </Text>
       {isFailing(badge) && chipRow(ui, view)}
       {isFailing(badge) && failuresText(ui, view)}
       {isFailing(badge) && view.filter === 'all' && tailText(ui, { name: 'tests', outcome: badge.tests })}
       {isFailing(badge) && view.filter === 'all' && tailText(ui, { name: 'lint', outcome: badge.lint })}
-      <Text> </Text>
+      {isFailing(badge) && <Text> </Text>}
       {rerunRow(ui, view)}
-      {view.ci !== null && <Text> </Text>}
+      <Text> </Text>
       {ciPart(ui, view)}
     </Box>
   )

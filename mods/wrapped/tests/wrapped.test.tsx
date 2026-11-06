@@ -9,6 +9,9 @@ import { parseOutput, rootOf, transcriptPaths } from '../hooks/scan'
 import { isWrapped, longestStreak, modelLabel, monthsOf, personaOf, weekdaysOf, wrappedOf } from '../hooks/stats'
 import type { Raw } from '../hooks/scan'
 
+// A film test draws every frame, a few seconds of work that a busy machine stretches past the default limit.
+const FILM_TEST = { timeoutMs: 30_000 }
+
 const OUTPUT = [
   'X\t3\t7\t123.5\t4000\t260000',
   'P\t2026-03-01T12\t10',
@@ -73,7 +76,7 @@ test('agents are ranked by work done, the hardest run named, and each month told
 
 const allHolds = (spec: Parameters<typeof holdsOf>[0]) => [...holdsOf(spec)]
 
-test('the film runs at 60 frames, hides names on every frame when masked, and shows them when on', () => {
+test('the film runs at 60 frames, hides names on every frame when masked, and shows them when on', FILM_TEST, () => {
   setLang('en')
   const w = wrappedOf(rawOf(), SPEC)
   if (w === null) throw new Error('expected a reading')
@@ -93,7 +96,7 @@ test('the film runs at 60 frames, hides names on every frame when masked, and sh
   expect(frameAt({ wrapped: w, isNamed: true }, slides, Math.round(slides.slice(0, 5).reduce((sum, slide) => sum + slide.dur, 0) * FPS) + 240)).toContain('secret-client')
 })
 
-test('a year with no agents drops their pages and still has a film', () => {
+test('a year with no agents drops their pages and still has a film', FILM_TEST, () => {
   const lone = parseOutput('X\t0\t0\t0\t0\t0\nP\t2026-03-01T12\t10\nS\t10\nM\t2026-03\t/w\t10')
   const w = wrappedOf(lone, SPEC)
   if (w === null) throw new Error('expected a reading')
@@ -336,7 +339,7 @@ test('sharing on X copies the image and opens a post with the words filled in, s
   expect(await ui.find({ type: 'Text', text: /Cmd\+V/ })).toBeDefined()
 })
 
-test('the film button draws, encodes, opens the video and removes its frames', async ($: any, on: any) => {
+test('the film button draws, encodes, opens the video and removes its frames', FILM_TEST, async ($: any, on: any) => {
   const { ui, clock, runs, written } = await opened($, on, { awk: READS })
   for (let tick = 0; tick < 5; tick += 1) await clock.advance(1)
   await ui.press({ key: 'film' })
@@ -351,7 +354,7 @@ test('the film button draws, encodes, opens the video and removes its frames', a
   expect(await ui.find({ type: 'Text', text: /Video saved/ })).toBeDefined()
 })
 
-test('a failed encode says why and still removes the frames', async ($: any, on: any) => {
+test('a failed encode says why and still removes the frames', FILM_TEST, async ($: any, on: any) => {
   const { ui, clock, runs } = await opened($, on, { awk: READS, ffmpeg: 1 })
   for (let tick = 0; tick < 5; tick += 1) await clock.advance(1)
   await ui.press({ key: 'film' })

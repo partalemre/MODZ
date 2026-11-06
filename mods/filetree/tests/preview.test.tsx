@@ -67,8 +67,8 @@ function world(on: any, opts: { root: string; dirs: Files; git: Git | null; them
   on('session.messages', () => ({ value: steps.messages }))
 }
 
-// Narrow is the desktop's right panel at ≈400 px, wide ≈600 px (bin/preview --width 400 / 600, 8 px a column).
-const SIZES = [['narrow', 50], ['wide', 75]] as const
+// The desktop's right panel at ≈261, 365 and 560 px (bin/preview --width each, 9 px a column).
+const SIZES = [['slim', 29], ['narrow', 40], ['wide', 62]] as const
 const paneProps = (bodyColumns: number) => ({ title: 'Dosyalar', isFocused: false, bodyColumns, placement: 'dock', scroll: { offset: 0, bodyRows: 64 }, view: {} }) as any
 
 async function snap(ui: any, label: string) {

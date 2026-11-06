@@ -127,7 +127,7 @@ export function headerOf(d: PaneData): HeaderData {
       { label: s.cost, value: `≈${fmtCost(d.sum.cost)}` },
       { label: s.tokens, value: fmtTokens(d.sum.tokens) },
       { label: s.time, value: fmtTime(d.sum.time) },
-      { label: s.limitTile, value: share === null ? '—' : `≈${s.pct(shareNumber(share))}` },
+      ...(share === null ? [] : [{ label: s.limitTile, value: `≈${s.pct(shareNumber(share))}` }]),
     ],
     home: d.home,
   }

@@ -123,7 +123,7 @@ test('with the hub on an opened Files pane reports itself shown, and steps aside
   expect(closed).toEqual(['filetree'])
 })
 
-test('desktop toolbar: one row, the rest under Daha fazla, and single-key shortcuts', { timeoutMs: 20_000 }, async ($, on) => {
+test('desktop toolbar: the tree header holds its actions, the rest under Daha fazla, and single-key shortcuts', { timeoutMs: 20_000 }, async ($, on) => {
   const root = '/Users/k/MODZ'
   const clock = world(on, { root, files: ['.env', 'a.ts'], status: '## main\0', heads: { [root]: ['1111111aaaa'] } })
   await $.session.start({ cwd: root, surface: 'desktop', isInteractive: true })

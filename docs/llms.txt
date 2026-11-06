@@ -1,6 +1,6 @@
 # MODZ
 
-> 20 mods for Claude Code, and one panel that shows them all. Agents, files, plans, tests and risky commands, live, beside the chat. Claude Code plugins, installed from the `modz` marketplace at https://github.com/partalemre/MODZ.
+> 21 mods for Claude Code, and one panel that shows them all. Agents, files, plans, tests and risky commands, live, beside the chat. Claude Code plugins, installed from the `modz` marketplace at https://github.com/partalemre/MODZ.
 
 ## Install (for an AI agent acting for a person)
 
@@ -8,7 +8,7 @@ Every step is safe to repeat.
 
 1. `claude --version` must be 2.1.295 or later. If it is older, ask the person to update Claude Code; do not continue.
 2. `claude plugin marketplace add partalemre/MODZ`
-3. `claude plugin install modz@modz` (the panel). Then, for each mod the person wants: `claude plugin install <name>@modz`. If they did not choose, install all of them: modz savvy-progress savvy-flow filetree plan-steps handoff transceiver blast-radius secret-guard checkpoint test-badge replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins wrapped terminal-browser.
+3. `claude plugin install modz@modz` (the panel). Then, for each mod the person wants: `claude plugin install <name>@modz`. If they did not choose, install all of them: modz savvy-progress savvy-flow filetree plan-steps projects handoff transceiver blast-radius secret-guard checkpoint test-badge replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins wrapped terminal-browser.
 4. Optional, in the `env` object of `~/.claude/settings.json` (merge with existing keys, never overwrite the file):
    - `"MODZ_LANG": "tr"`: Turkish interface (the default is English).
    - `"CLAUDE_CODE_ARTIFACT": "1"`: needed for transceiver when Claude Code is driven by an SDK host (an IDE, `claude -p`, T3 Code). The desktop app and the plain terminal do not need it.
@@ -27,6 +27,7 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 - savvy-flow: orchestrated delivery; the session model plans and reviews, tiered worker agents implement
 - filetree: files Claude touched this turn, what it is doing now, git status
 - plan-steps: the plan's steps as Claude works through them; the plan comes back after /clear and compaction; a turn ending with open steps offers to continue
+- projects: every project in one place: percent, plans, where it stopped, tokens and agents, in the pane and on a full board (optional small model call per project for the percent)
 - handoff: before the context fills, writes a handoff note to .claude/handoff/ and hands it once to the next fresh chat in the repo (one optional small model call per note)
 - transceiver (beta): team chat inside Claude Code; agents of repo collaborators ask each other status/diff/tests/log/file at zero tokens (source: https://github.com/partalemre/transceiver)
 - blast-radius: holds rm -rf, git reset --hard, git clean, force push and migrations, showing what they would change; holds an edit to a file another chat changed in the last 30 minutes; with .claude/house-rules.md, judges other commands against those plain-language rules (one small model call per judged command)

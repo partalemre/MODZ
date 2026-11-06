@@ -27,7 +27,7 @@ for (const surface of SURFACES) {
     await tool($, { tool: 'mcp__savvy-progress__progress', done: 1 })
     const ui = await mount($)
     const seen = await words(ui)
-    for (const part of ['Launch kit', '%25', '1 çalışıyor · 1 bitti · 2 planlı', 'Maliyet', 'Token', 'Süre', '5 saat payı']) expect(seen).toContain(part)
+    for (const part of ['Launch kit', '%25', '1 çalışıyor · 1 bitti · 2 planlı', 'Maliyet', 'Token', 'Süre']) expect(seen).toContain(part)
     if (surface === 'desktop') expect((await ui.findAll({ type: 'Svg' }))[0]?.props?.alt).toMatch(/^Launch kit, %25, 1 çalışıyor/)
   })
 

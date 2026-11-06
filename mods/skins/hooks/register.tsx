@@ -88,6 +88,7 @@ async function refreshUsage($: EngineInterface): Promise<void> {
 // letters typed meant elsewhere never reach its hotkeys.
 async function openSettings($: EngineInterface, isAsked: boolean): Promise<void> {
   const opened = await opening(settingsMotion, () => $.ui.open({ id: SETTINGS, title: settingsTitle(), closeOnEscape: true, ...(isAsked ? { focus: true } : {}) }))
+  await $.ui.close({ id: GALLERY })
   if (isAsked && opened.isPlaced) await reportShown($)
 }
 
@@ -102,7 +103,11 @@ async function reportShown($: EngineInterface): Promise<void> {
   }
 }
 
-const openGallery = ($: EngineInterface) => opening(galleryMotion, () => $.ui.open({ id: GALLERY, title: say().galleryTitle, focus: true, closeOnEscape: true }))
+// The gallery takes the settings' place in the one panel; its way back opens them again.
+async function openGallery($: EngineInterface): Promise<void> {
+  await opening(galleryMotion, () => $.ui.open({ id: GALLERY, title: say().galleryTitle, focus: true, closeOnEscape: true }))
+  await $.ui.close({ id: SETTINGS })
+}
 
 // Runs Claude Code's own /compact, so the person sees its usual progress and result.
 // Work a press starts is abandoned when the press ends, which cancels a compaction
@@ -276,7 +281,7 @@ function onCommands(on: On, live: Live): void {
 
 function onRenders(on: On, live: Live): void {
   on('ui.render', { component: 'Pane', requestId: SETTINGS }, ($, e) => settingsView(paneOf($, e), e))
-  on('ui.render', { component: 'Pane', requestId: GALLERY }, ($, e) => galleryView({ view: viewOf($, e, live), e }))
+  on('ui.render', { component: 'Pane', requestId: GALLERY }, ($, e) => galleryView({ view: viewOf($, e, live), e, back: () => void openSettings($, true) }))
   on('ui.render', { component: 'ToolUse' }, ($, e, next) => toolUseView({ view: viewOf($, e, live), e, pass: next }))
   on('ui.render', { component: 'ToolGroup' }, ($, e, next) => toolGroupView({ view: viewOf($, e, live), e, pass: next }))
   on('ui.render', { component: 'ToolResult' }, ($, e, next) => toolResultView({ view: viewOf($, e, live), e, pass: next }))

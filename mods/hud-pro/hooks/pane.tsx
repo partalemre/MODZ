@@ -88,7 +88,7 @@ function gaugeTile(gauge: GaugeView, view: PaneView): Tile {
     arc: { percent: gauge.percent, pace: gauge.pace === null ? null : Math.round(gauge.pace) },
     series,
     seriesMax: 100,
-    caption: rangeText(series) || words().oneReading,
+    caption: rangeText(series),
   }
 }
 

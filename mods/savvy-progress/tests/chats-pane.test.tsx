@@ -63,7 +63,25 @@ for (const surface of SURFACES) {
     expect(await ui.find({ key: 'chats' })).toBeDefined()
     expect(all).toContain(surface === 'terminal' ? '▸ Diğer sohbetler · 2' : 'Göster')
     // The working one shows while folded; the idle one waits for the press.
-    expect(all).toContain('shop · shop work · çalışıyor')
+    expect(all).toContain(surface === 'terminal' ? 'shop · shop work · çalışıyor' : 'shop · shop work')
     expect(all).not.toContain('blog work')
+  })
+
+  test(`${surface}: another chat's running agents show under it, and the empty pane says this chat has none`, async ($, on) => {
+    const agents = [{ id: 'a1', name: 'Coral', title: 'Write the board lines', startedAt: NOW - 3 * MINUTE, costUsd: 0.28 }]
+    await setup($, on, { store: { 'sessions/X0': { ...beat('game', 'idle'), agents } } })
+    const all = await seen(await mount($))
+    expect(all).toContain('Diğer sohbetlerdeki ajanlar · 1')
+    expect(all).toContain('game · game work')
+    expect(all).toContain('Coral · Write the board lines · 3 dk')
+    expect(all).toContain('Bu sohbette ajan yok')
+    expect(all).not.toContain('Henüz ajan yok')
+  })
+
+  test(`${surface}: a malformed or missing agent list from another session is left out`, async ($, on) => {
+    await setup($, on, { store: { 'sessions/X0': { ...beat('old', 'working'), agents: [{ id: 1 }, 'x'] }, 'sessions/X1': beat('older', 'working') } })
+    const all = await seen(await mount($))
+    expect(all).not.toContain('Diğer sohbetlerdeki ajanlar')
+    expect(all).toContain('Henüz ajan yok')
   })
 }

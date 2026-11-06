@@ -18,7 +18,7 @@ The MODZ panel (`modz`) shows its line here: files changed this turn, uncommitte
 Open the pane with `/filetree`. It does not open by itself; once opened, it comes back when a session restarts.
 
 - **NOW / DONE card** at the top: the file Claude is reading, editing or committing, in one sentence, with the branch, ahead/behind counts, change status, the tokens this turn's reads put into context (and the session's, once an earlier turn read too) and a short colour legend.
-- **Touched by Claude:** the files touched this turn, each with a kind badge, its folder, the tokens its reads put into context and a status label (Reading, Opened, Editing, Edited, Committed).
+- **Touched by Claude:** the files touched this turn, each with its folder, the tokens its reads put into context and a status label (Reading, Opened, Editing, Edited, Committed).
 - **All files:** the full tree for the working folder. The row Claude is in shimmers with a label, and the right column shows the date or the size, after a file's read tokens this turn in blue (`≈1.5k tok`). Reads are blue, writes orange, commits green, uncommitted changes amber.
 - **Git:** per-file status, `+N -N` line counts on modified files, and counts on folders. Commits to another repo (`cd other && git commit`) show as committed there; if git refuses a commit, the reason is shown.
 - **Toolbar:** search (it finds folders you have not opened), Collapse, Refresh, and More (size or date column, hidden files, parent folder, back to project, clear selection). With the tree focused: `r` refresh, `c` collapse, `s` size/date, `.` hidden files, `u` parent folder, `p` project, `x` clear selection, `y` copies the relative path (`Y`, the absolute one), arrow keys or `j`/`k` move, Enter opens a file or toggles a folder.

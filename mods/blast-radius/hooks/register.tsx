@@ -3,14 +3,13 @@
 //
 // Blast Radius: holds a risky Bash command and shows what it would change.
 //
-// tool.call (Bash): if the command is risky, work out its blast radius, open a
-// pane with Run anyway and Keep my work, and hold the call until one is pressed.
+// tool.call (Bash): if the command is risky, work out its blast radius, draw a
+// card with Run anyway and Keep my work, and hold the call until one is pressed.
 // A command that would change nothing (no such file, no changes) runs with no card.
 // Any other command is weighed against the person's house rules, when they wrote
 // some (house.ts). Edits another chat just made are guarded in collide.ts.
-// ui.render (Pane): draws the card. If the surface won't place the pane (a
-// narrow terminal), the same card is drawn in the AbovePrompt band, above the
-// other mods' rows.
+// ui.render (AbovePrompt): draws the card above the other mods' rows. It opens no
+// tab; a tab left by an older copy of this mod closes itself (ui.render, Pane).
 //
 // Anything unexpected while holding a risky command refuses it (hold.ts).
 //
@@ -24,7 +23,7 @@ import type { CardProps } from './card'
 import { classify } from './classify'
 import type { Risk } from './classify'
 import { editHooks } from './collide'
-import { PANE_ID, SLEEP_TIMEOUT_MS, closeHeld, current, hold, take } from './hold'
+import { PANE_ID, SLEEP_TIMEOUT_MS, current, dropStaleTab, hold, take } from './hold'
 import type { Decision, Held, HoldIo } from './hold'
 import { houseHooks, resetHouse } from './house'
 import { setLang } from './lang'
@@ -41,15 +40,12 @@ const theme = { isLight: false }
 
 // The hold loop's calls, spelled here: the engine follows `$` only within one file.
 const holdIo = ($: EngineInterface): HoldIo => ({
-  sleep: seconds => $.process.run(['sleep', seconds], { timeoutMs: SLEEP_TIMEOUT_MS }),
+  run: argv => $.process.run(argv, { timeoutMs: SLEEP_TIMEOUT_MS }),
   now: () => $.clock.now(),
-  open: async rows => (await $.ui.open({ id: PANE_ID, title: 'Blast Radius', focus: true, closeOnEscape: true, rows })).isPlaced,
-  close: () => $.ui.close({ id: PANE_ID }),
   redraw: () => $.ui.invalidate('ui.render'),
 })
 
 const WHY: Record<Exclude<Decision, 'proceed' | 'cancel'>, string> = {
-  closed: 'the user closed the Blast Radius pane',
   timeout: 'no answer within 10 minutes',
   interrupted: 'the turn was interrupted',
   error: 'Blast Radius hit an error while holding it',
@@ -107,7 +103,7 @@ async function refreshTheme($: EngineInterface): Promise<void> {
 }
 
 type Ready = Held & { view: NonNullable<Held['view']> }
-type DrawInput = { ui: Record<string, any>; surface: string; columns: number; place: Held['where']; redraw: () => void }
+type DrawInput = { ui: Record<string, any>; surface: string; columns: number; redraw: () => void }
 
 function draw(mine: Ready, input: DrawInput) {
   // The buttons answer the call this card was drawn for, never whichever one is held now.
@@ -117,7 +113,6 @@ function draw(mine: Ready, input: DrawInput) {
   const props: CardProps = {
     view: mine.view(mine.isExpanded),
     phase: mine.phase,
-    place: input.place,
     isExpanded: mine.isExpanded,
     isLight: theme.isLight,
     columns: input.columns,
@@ -136,7 +131,7 @@ const isReady = (mine: Held | null): mine is Ready => mine !== null && mine.view
 
 /** Once the person kept their work, a line says nothing was lost. */
 function sayKept($: EngineInterface, decision: Decision | null): void {
-  if (decision === 'cancel' || decision === 'closed') $.ui.toast(words().kept)
+  if (decision === 'cancel') $.ui.toast(words().kept)
 }
 
 type On = Parameters<Register>[0]
@@ -175,32 +170,33 @@ function holdHooks(on: On): void {
   })
 }
 
+// After the draw: a `$` call beneath this plugin's own hook wouldn't reach its hooks.
+function dropTabSoon($: EngineInterface): void {
+  $.clock.after(0, () => {
+    dropStaleTab({
+      isListed: async () => (await $.ui.panes()).some(pane => pane.id === PANE_ID),
+      open: rows => $.ui.open({ id: PANE_ID, title: 'Blast Radius', rows }),
+      close: () => $.ui.close({ id: PANE_ID }),
+    }).catch(cause => $.ui.log(`blast-radius: could not drop a stale tab: ${String(cause)}`, { to: 'debug' }))
+  })
+}
+
 function drawHooks(on: On): void {
-  on('ui.close', ($, e, next) => {
-    // Closing the pane (Esc, its close mark) keeps the work, as Keep my work does.
-    if (e.id === PANE_ID && e.origin.kind === 'person') closeHeld()
+  // Only its own pane closes: every other mod's pane passes through this hook too.
+  on('ui.render', { component: 'Pane' }, async ($, e, next) => {
+    if (e.requestId === PANE_ID) dropTabSoon($)
 
     return next(e)
   })
 
-  // Only its own pane waits out a focus flip: every other mod's pane passes through this hook too.
-  on('ui.render', { component: 'Pane' }, async ($, e, next) => {
-    const mine = current()
-    if (e.requestId !== PANE_ID || !isReady(mine)) return next(e)
-    const redraw = () => $.ui.invalidate('ui.render')
-    const ui = $.ui.resolve(e)
-
-    return pinned(e, draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, place: 'pane', redraw }))
-  })
-
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const mine = current()
-    if (!isReady(mine) || mine.where !== 'band' || e.props.hasSurvey) return next(e)
+    if (!isReady(mine) || e.props.hasSurvey) return next(e)
     const theirs = await next(e)
     const ui = $.ui.resolve(e)
     const { Box } = ui
     const redraw = () => $.ui.invalidate('ui.render')
-    const card = pinned(e, draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, place: 'band', redraw }))
+    const card = pinned(e, draw(mine, { ui, surface: e.surface, columns: e.props.bodyColumns, redraw }))
 
     // A decision card goes above the other mods' rows (DESIGN.md §6).
     return (

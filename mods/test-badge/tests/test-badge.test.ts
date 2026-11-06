@@ -1,8 +1,9 @@
 import { expect, test } from 'claude-code/testing'
 
-import { detect, isSource } from '../hooks/detect'
+import { detect, isSource, spawnArgv } from '../hooks/detect'
 import type { RootInfo } from '../hooks/detect'
-import { openCandidates } from '../hooks/open'
+import { openCandidates, pathOf } from '../hooks/open'
+import { relative } from '../hooks/text'
 import { setLang } from '../hooks/lang'
 import { badgeText, parseLint, parseTests } from '../hooks/parse'
 
@@ -77,4 +78,17 @@ test('the badge reads like "testler 41/42 · lint 2 hata · 4 sn önce"', () => 
 test('a failure row opens VS Code at the line, or the configured command, never through a shell', () => {
   expect(openCandidates('', { path: '/w/a.ts', line: 12 })[0]).toEqual(['code', '-g', '/w/a.ts:12'])
   expect(openCandidates('cursor -g {file}:{line}', { path: '/w/my file.ts', line: 3 })).toEqual([['cursor', '-g', '/w/my file.ts:3']])
+})
+
+test('Windows: no nice or /bin/sh, scripts go through cmd, and a path cmd would misread is not handed to it', () => {
+  expect(spawnArgv(['npm', 'test'], false)).toEqual(['nice', '-n', '10', 'npm', 'test'])
+  expect(spawnArgv(['npm', 'run', '--silent', 'test'], true)).toEqual(['cmd', '/c', 'npm', 'run', '--silent', 'test'])
+  expect(spawnArgv(['/bin/sh', '-c', 'make check'], true)).toEqual(['cmd', '/c', 'make check'])
+  expect(spawnArgv(['python3', '-m', 'pytest', '-q'], true)).toEqual(['cmd', '/c', 'python', '-m', 'pytest', '-q'])
+  expect(spawnArgv(['vendor/bin/phpunit'], true)).toEqual(['cmd', '/c', 'vendor\\bin\\phpunit'])
+  expect(openCandidates('', { path: 'C:/w/a.ts', line: 3 }, true)[0]).toEqual(['cmd', '/c', 'code', '-g', 'C:/w/a.ts:3'])
+  expect(openCandidates('', { path: 'C:/w/a&calc.ts', line: 3 }, true)).toEqual([])
+  expect(relative('C:\\w\\src\\a.ts', { root: 'C:\\w', goModule: null })).toBe('src/a.ts')
+  expect(pathOf({ suite: 'unit', file: 'D:/o/a.ts', line: 1, name: 'x', message: '' }, 'C:/w')).toBe('D:/o/a.ts')
+  expect(parseLint('C:\\w\\src\\a.ts\n   3:7  error  bad  rule', 1, { root: 'C:\\w', goModule: null }).failures[0]?.file).toBe('src/a.ts')
 })

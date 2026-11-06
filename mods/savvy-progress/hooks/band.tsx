@@ -4,6 +4,7 @@ import type { EngineInterface, Register, ThemeKey } from 'claude-code'
 import type { CrabMood } from '../types'
 import { bandSvg, BAND_H } from './band-svg'
 import { isOwnOpen } from './hub'
+import { SCAN_MS } from './chats'
 import { isOffStage, shownOf } from './stage'
 import { t } from './i18n'
 import type { JobView } from './job'
@@ -69,6 +70,30 @@ async function openPane($: EngineInterface): Promise<void> {
   motion.reset()
   const opened = await $.ui.open({ id: PANE, title: t().pane, focus: true })
   if (opened.isPlaced) await reportShown($, at)
+}
+
+// Whether the pane was open, in the store as it must outlive the engine. Watched rather than set at each open and close:
+// a person's click on the tab's cross raises no hook. It starts at the first attach, so a pane not yet restored isn't noted.
+let isWatchingPane = false
+const openNoteKey = (id: string): string => `pane-open/${id}`
+
+async function noteOpenPane($: EngineInterface): Promise<void> {
+  try {
+    const key = openNoteKey(await $.session.id())
+    const isOpen = (await $.ui.panes()).some(p => p.id === PANE)
+    if (isOpen === ((await $.store.get(key)) === true)) return
+    if (isOpen) await $.store.set(key, true)
+    else await $.store.delete(key)
+  } catch (cause) {
+    $.ui.log(`savvy-progress: could not note the open pane: ${String(cause)}`, { to: 'debug' })
+  }
+}
+
+async function restorePane($: EngineInterface): Promise<void> {
+  if ((await $.store.get(openNoteKey(await $.session.id()))) !== true) return
+  if ((await $.ui.panes()).some(p => p.id === PANE)) return
+  const opened = await $.ui.open({ id: PANE, title: t().pane })
+  if (opened.isPlaced) await reportShown($, await $.clock.now())
 }
 
 // /agents-info and the crew button: open the pane, or close it when it is up; true when it ends up open.
@@ -172,6 +197,20 @@ function onOpen(on: On): void {
     const isOpen = await togglePane($)
     return { text: isOpen ? t().opened : t().closed }
   })
+
+  // A desktop that comes back (the app restarted, a session resumed) keeps this pane's tab, but the engine's panes are
+  // gone and the tab reads "Nothing to show yet" until the pane opens again. The stage can't say so: the hub writes it
+  // back to itself on every start. So the note the watch below keeps decides.
+  on('session.attach', async ($, e, next) => {
+    const done = await next(e)
+    if (e.surface !== 'desktop') return done
+    await restorePane($)
+    if (!isWatchingPane) {
+      isWatchingPane = true
+      $.clock.every(SCAN_MS, () => void noteOpenPane($))
+    }
+    return done
+  }).catch(($, e, next) => next(e))
 
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
     const done = await next(e)

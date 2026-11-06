@@ -24,7 +24,8 @@ const rootAtom = atom({ plugin: 'hud-pro', key: 'pastRoot' } as const, '')
 type Kept = { log: HudLog | null; isLoaded: boolean; isReading: boolean; isTicking: boolean; triedAt: number }
 const kept: Kept = { log: null, isLoaded: false, isReading: false, isTicking: false, triedAt: Number.NEGATIVE_INFINITY }
 
-const folderOf = (path: string): string => path.slice(0, Math.max(0, path.lastIndexOf('/')))
+// Windows writes the transcript's path with backslashes.
+const folderOf = (path: string): string => path.slice(0, Math.max(0, Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))))
 
 // `<config>/projects/<project>/<session>.jsonl` → `<config>/projects`; '' for no path.
 export const rootOf = (transcript: string): string => (transcript.endsWith('.jsonl') ? folderOf(folderOf(transcript)) : '')

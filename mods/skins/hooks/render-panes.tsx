@@ -24,7 +24,7 @@ export const galleryMotion = paneMotion()
 export const settingsTitle = (): string => say().settingsTitle
 
 // Every element the skin draws, numbered, to point at when asking for a change.
-export async function galleryView({ view, e }: Omit<Drawing<'Pane'>, 'pass'>): Promise<RenderElement> {
+export async function galleryView({ view, e, back }: Omit<Drawing<'Pane'>, 'pass'> & { back: () => void }): Promise<RenderElement> {
   const active = await view.active()
 
   if (active === null) {
@@ -35,7 +35,7 @@ export async function galleryView({ view, e }: Omit<Drawing<'Pane'>, 'pass'>): P
 
   const look = movingLook(view.look(active), galleryMotion)
 
-  return pinned(e, galleryPane(look, e.props.bodyColumns))
+  return pinned(e, galleryPane(look, { columns: e.props.bodyColumns, back }))
 }
 
 // The settings pane's reach, bound in register.tsx.

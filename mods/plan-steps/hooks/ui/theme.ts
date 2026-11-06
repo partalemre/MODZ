@@ -23,20 +23,17 @@ const ROLES = {
   tide: { dark: { fg: '#7FB6E8', tint: '#1E2B37', line: '#2F4A63' }, light: { fg: '#2464A0', tint: '#E7F0F9', line: '#B9D3EC' } },
 } satisfies Record<string, { dark: Tone; light: Tone }>
 
-// The number on the live step's filled circle: dark ink on the light clay of the dark theme, white on the deep one.
-const ON_EDIT = { dark: '#2A140B', light: '#FFFFFF' }
-
 type RoleName = keyof typeof ROLES
 const ROLE_NAMES = Object.keys(ROLES) as RoleName[]
 
-export type Palette = Base & Record<RoleName, Tone> & { onEdit: string }
+export type Palette = Base & Record<RoleName, Tone>
 
 export function palette(isLight: boolean): Palette {
   const mode = isLight ? 'light' : 'dark'
 
   const roles = Object.fromEntries(ROLE_NAMES.map(role => [role, ROLES[role][mode]])) as Record<RoleName, Tone>
 
-  return { ...(isLight ? LIGHT : DARK), ...roles, onEdit: ON_EDIT[mode] }
+  return { ...(isLight ? LIGHT : DARK), ...roles }
 }
 
 // Claude Code's theme names say light or dark (`light-daltonized`, `dark-ansi`); anything else follows the system.
@@ -52,7 +49,7 @@ function vars(p: Palette): string {
 
   return [
     `--sheet:${p.sheet};--card:${p.card};--inset:${p.inset};--line:${p.line};--line2:${p.lineStrong};--track:${p.track}`,
-    `--hi:${p.hi};--mid:${p.mid};--lo:${p.lo};--on-edit:${p.onEdit}`,
+    `--hi:${p.hi};--mid:${p.mid};--lo:${p.lo}`,
     ...tones,
   ].join(';')
 }

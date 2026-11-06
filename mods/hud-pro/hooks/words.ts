@@ -67,7 +67,6 @@ type Words = {
   session: string
   sessionCost: string
   thisSession: string
-  oneReading: string
   noReadings: string
   hidden: string
   shown: string
@@ -120,7 +119,6 @@ const EN: Words = {
   session: 'session',
   sessionCost: 'session cost',
   thisSession: 'this session',
-  oneReading: 'one reading',
   noReadings: 'No readings yet; they come with the first model reply.',
   hidden: 'HUD hidden.',
   shown: 'HUD shown.',
@@ -177,7 +175,6 @@ const TR: Words = {
   session: 'oturum',
   sessionCost: 'oturum maliyeti',
   thisSession: 'bu oturum',
-  oneReading: 'tek okuma',
   noReadings: 'Henüz ölçüm yok; ilk model yanıtıyla gelir.',
   hidden: 'HUD gizlendi.',
   shown: 'HUD gösteriliyor.',

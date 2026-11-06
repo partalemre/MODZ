@@ -4,7 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Draft, Panel } from '../types'
 import { BUILTIN_TYPES, DEFAULT_TYPE, TASK_TITLE_MAX, blankDraft, chosenOf } from './agent-types'
 import { addRun, askedAgain } from './agents'
-import { quietTree, waitingTree } from './chats-tree'
+import { crewTree, quietTree, waitingTree } from './chats-tree'
 import { draftTree } from './dispatch'
 import { HomeButton } from './home'
 import type { DraftView } from './dispatch'
@@ -177,6 +177,7 @@ function withChats(ui: Ui, view: PaneView) {
     <Box flexDirection="column" rowGap={1}>
       {waitingTree(ui, d.chats, layout)}
       {paneTree(ui, view)}
+      {crewTree(ui, d.chats, layout)}
       {quiet}
     </Box>
   )
@@ -218,17 +219,27 @@ export const layoutOf = (isDesktop: boolean, columns: number): Layout => {
   return { isDesktop, W, inner: W - FRAME_PX, cols: columns - FRAME_COLS }
 }
 
+// A drawing that throws costs a plain list, never the tab: an unanswered pane shows the app's "Nothing to show yet".
+async function drawnBody($: EngineInterface, ui: Ui, room: { isDesktop: boolean; columns: number }) {
+  try {
+    const d = await paneData($)
+    return withChats(ui, { d, layout: layoutOf(room.isDesktop, room.columns), on: handlersOf($, d) })
+  } catch (error) {
+    $.ui.log(`savvy-progress: the pane fell back to its plain list (${String(error)})`, { to: 'debug' })
+    const { Box, Text } = ui
+    const list = await read($, agents)
+    return <Box flexDirection="column"><Text dimColor>{t().paneFailed}</Text>{list.map(a => <Text key={a.id} wrap="truncate-end">{`${a.status === 'running' ? '● ' : ''}${a.description || a.type}`}</Text>)}</Box>
+  }
+}
+
 export function onPane(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const table = $.ui.resolve(e)
     const ui = table as Ui
     const isDesktop = e.surface === 'desktop' && 'Svg' in ui
-    const d = await paneData($)
-    const layout = layoutOf(isDesktop, Math.max(MIN_COLS, e.props.bodyColumns || DEFAULT_COLS))
-    const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
-    const body = withChats(ui, { d, layout, on: handlersOf($, d) })
-    if (!isHubOn) return pinned(e, body)
+    const home = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true && HomeButton(ui, () => void goHome($))
     const { Box } = ui
-    return pinned(e, <Box flexDirection="column" rowGap={1}>{HomeButton(ui, () => void goHome($))}{body}</Box>)
+    const body = await drawnBody($, ui, { isDesktop, columns: Math.max(MIN_COLS, e.props.bodyColumns || DEFAULT_COLS) })
+    return pinned(e, <Box flexDirection="column" rowGap={1}>{home}{body}</Box>)
   })
 }

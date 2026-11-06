@@ -67,7 +67,7 @@ for (const surface of SURFACES) {
     await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
-    const ui = await mountPane($, surface)
+    const ui = await mountBand($, surface)
     expect(JSON.stringify(await ui.drawn())).toContain('9 dosyayı sil')
 
     await ui.press({ key: 'cancel' })
@@ -76,7 +76,6 @@ for (const surface of SURFACES) {
 
     expect(result.deny).toMatch(/Vazgeç.*delete 9 files/)
     expect(w.ran).toHaveLength(0)
-    expect(w.closed).toHaveLength(1)
   })
 
   test(`delete runs the command after striking the rows (${surface})`, async ($, on) => {
@@ -85,7 +84,7 @@ for (const surface of SURFACES) {
     await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
-    const ui = await mountPane($, surface)
+    const ui = await mountBand($, surface)
     await ui.press({ key: 'run' })
     await pass(w, 300)
     expect(JSON.stringify(await ui.drawn())).not.toContain('9 dosyayı sil')
@@ -97,9 +96,8 @@ for (const surface of SURFACES) {
   })
 
   test(`the band draws above the other rows and yields to a survey (${surface})`, async ($, on) => {
-    const w = world({ isPlaced: false, answers: { files: BUILD_SCAN } })
+    const w = world({ beneath: { type: 'Text', children: ['other mod row'] }, answers: { files: BUILD_SCAN } })
     stub(on, w)
-    on('ui.render', () => ({ type: 'Text', children: ['other mod row'] }))
     await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
@@ -116,6 +114,86 @@ for (const surface of SURFACES) {
   })
 }
 
+test('a card opens no tab and closes none: it lives in the band', async ($, on) => {
+  const w = world({ answers: { files: BUILD_SCAN } })
+  stub(on, w)
+  await start($, w)
+  const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  await pass(w, 0)
+  const band = await mountBand($, 'desktop')
+  await band.press({ key: 'cancel' })
+  await pass(w)
+  await call
+
+  expect(w.opened).toHaveLength(0)
+  expect(w.closed).toHaveLength(0)
+})
+
+test('with no sleep on the machine, as on Windows, the hold still waits and the card still answers', async ($, on) => {
+  const w = world({ hasNoSleep: true, answers: { files: BUILD_SCAN } })
+  stub(on, w)
+  await start($, w)
+  const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  await pass(w, 0)
+  const band = await mountBand($, 'desktop')
+  await band.press({ key: 'cancel' })
+  await pass(w)
+
+  expect(((await call) as any).deny).toMatch(/did not run it/)
+})
+
+test('a files scan that failed is no reason to run the delete with no card', async ($, on) => {
+  const w = world({ failing: ['files'] })
+  stub(on, w)
+  await start($, w)
+  const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
+  await pass(w, 0)
+  const band = await mountBand($, 'desktop')
+  await band.press({ key: 'cancel' })
+  await pass(w)
+
+  expect(((await call) as any).deny).toMatch(/did not run it/)
+})
+
+test('a delete with nothing to lose opens no pane, so it closes none', async ($, on) => {
+  const w = world()
+  stub(on, w)
+  await start($, w)
+  await ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
+
+  expect(w.opened).toHaveLength(0)
+  expect(w.closed).toHaveLength(0)
+})
+
+test('a tab left by an engine restart is opened once so its close reaches the desktop', async ($, on) => {
+  const w = world()
+  stub(on, w)
+  await start($, w)
+  const ui = await mountPane($, 'desktop')
+  await ui.drawn()
+  await pass(w, 0)
+  expect(w.opened).toHaveLength(1)
+  expect(w.closed).toHaveLength(1)
+
+  await ui.unmount()
+  const again = await mountPane($, 'desktop')
+  await again.drawn()
+  await pass(w, 0)
+  expect(w.opened).toHaveLength(1)
+})
+
+test('a listed pane with nothing held just closes', async ($, on) => {
+  const w = world({ panes: ['blast-radius'] })
+  stub(on, w)
+  await start($, w)
+  const ui = await mountPane($, 'desktop')
+  await ui.drawn()
+  await pass(w, 0)
+
+  expect(w.opened).toHaveLength(0)
+  expect(w.closed).toHaveLength(1)
+})
+
 for (const surface of SURFACES) {
   test(`git reset lists the changes it drops; plain commands are never held (${surface})`, async ($, on) => {
     const w = world({ answers: { 'git status --porcelain': RESET_STATUS, 'git diff --numstat HEAD': RESET_NUMSTAT } })
@@ -126,7 +204,7 @@ for (const surface of SURFACES) {
 
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'git reset --hard' })
     await pass(w, 0)
-    const ui = await mountPane($, surface)
+    const ui = await mountBand($, surface)
     const drawn = JSON.stringify(await ui.drawn())
     expect(drawn).toContain('Değişiklikleri sil')
     expect(drawn).toContain('Komut bekletildi')
@@ -144,7 +222,7 @@ for (const surface of SURFACES) {
     await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf $UNSET' })
     await pass(w, 0)
-    const ui = await mountPane($, surface)
+    const ui = await mountBand($, surface)
     expect(JSON.stringify(await ui.drawn())).toContain('komut çalışırken belirleniyor')
     await ui.press({ key: 'cancel' })
     await pass(w)
@@ -152,15 +230,14 @@ for (const surface of SURFACES) {
     expect(((await call) as any).deny).toMatch(/paths decided at run time/)
   })
 
-  test(`the list opens and closes; the pane says the folder, not who holds it (${surface})`, async ($, on) => {
+  test(`the list opens and closes; the card says who holds it (${surface})`, async ($, on) => {
     const w = world({ answers: { files: BUILD_SCAN } })
     stub(on, w)
     await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
-    const ui = await mountPane($, surface)
+    const ui = await mountBand($, surface)
     expect(JSON.stringify(await ui.drawn())).not.toContain('robots.txt')
-    expect(JSON.stringify(await ui.drawn())).not.toContain('Blast Radius bekletiyor')
     await ui.press({ key: 'toggle' })
     expect(JSON.stringify(await ui.drawn())).toContain('robots.txt')
     expect(JSON.stringify(await ui.drawn())).toContain('Daha az göster')

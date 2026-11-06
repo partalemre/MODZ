@@ -1,7 +1,8 @@
-import type { OtherChat } from '../types'
-import { quietOf, waitingOf } from './chats'
-import { chatsCardSvg } from './chats-svg'
-import type { WaitRow } from './chats-svg'
+import type { OtherAgent, OtherChat } from '../types'
+import { crewedOf, quietOf, waitingOf } from './chats'
+import { chatLinesSvg, chatsCardSvg } from './chats-svg'
+import type { ChatLine, WaitRow } from './chats-svg'
+import { fmtCost } from './format'
 import { t } from './i18n'
 import { picture } from './pane-motion'
 import type { Ui } from './rows'
@@ -53,6 +54,51 @@ export function waitingTree(ui: Ui, chats: OtherChat[], layout: Layout) {
   )
 }
 
+const linesPicture = (ui: Ui, at: string, lines: ChatLine[], W: number) => {
+  const drawn = chatLinesSvg(W, lines)
+  return picture(ui, { key: at, at, pic: { source: drawn.source, alt: drawn.alt, width: W, height: drawn.height } })
+}
+
+const chatLine = (chat: OtherChat): ChatLine => ({
+  kind: 'chat',
+  lead: chat.project,
+  text: chat.title || t().chats.untitled,
+  end: chat.state === 'working' ? spanOf(chat.minutes) : t().chats.states.idle,
+  isLive: chat.state === 'working',
+})
+
+const agentChatLine = (agent: OtherAgent): ChatLine => ({
+  kind: 'agent',
+  lead: agent.name,
+  text: agent.title,
+  end: [spanOf(agent.minutes), agent.costUsd > 0 ? `≈${fmtCost(agent.costUsd)}` : ''].filter(Boolean).join(' · '),
+  isLive: true,
+})
+
+const agentLine = (agent: OtherAgent): string =>
+  [agent.name, agent.title, spanOf(agent.minutes), agent.costUsd > 0 ? `≈${fmtCost(agent.costUsd)}` : ''].filter(Boolean).join(' · ')
+
+/** The agents running in the other chats, under their chat; nothing when none. Read-only: each answers to its own session. */
+export function crewTree(ui: Ui, chats: OtherChat[], layout: Layout) {
+  const { Box, Text } = ui
+  const s = t().chats
+  const crewed = crewedOf(chats)
+  if (!crewed.length) return null
+  const count = crewed.reduce((sum, chat) => sum + (chat.agents?.length ?? 0), 0)
+  return (
+    <Box key="chats-crew" flexDirection="column" rowGap={0}>
+      {sectionHead(ui, layout, { id: 'chats-crew', label: `${s.agentsTitle} · ${count}` })}
+      {layout.isDesktop && linesPicture(ui, 'chats-crew-lines', crewed.flatMap(chat => [chatLine(chat), ...(chat.agents ?? []).map(agentChatLine)]), layout.W)}
+      {!layout.isDesktop && crewed.map(chat => (
+        <Box key={`crew-${chat.id}`} flexDirection="column">
+          <Text wrap="truncate-end"><Text bold>{chat.project}</Text><Text dimColor>{` · ${chat.title || s.untitled}`}</Text></Text>
+          {chat.agents?.map(agent => <Text key={`crew-${chat.id}-${agent.id}`} dimColor wrap="truncate-end">{`  ${agentLine(agent)}`}</Text>)}
+        </Box>
+      ))}
+    </Box>
+  )
+}
+
 export type QuietView = { chats: OtherChat[]; layout: Layout; isOpen: boolean; onToggle: () => void }
 
 /**
@@ -62,14 +108,16 @@ export type QuietView = { chats: OtherChat[]; layout: Layout; isOpen: boolean; o
 export function quietTree(ui: Ui, view: QuietView) {
   const { Box, Text } = ui
   const s = t().chats
-  const quiet = quietOf(view.chats)
+  // A chat with agents already stands above, with them.
+  const quiet = quietOf(view.chats).filter(chat => !chat.agents?.length)
   if (!quiet.length) return null
   const shown = view.isOpen ? quiet : quiet.filter(chat => chat.state === 'working')
   const head = sectionHead(ui, view.layout, { id: 'chats', label: `${s.title} · ${quiet.length}`, toggle: { key: 'chats', isOpen: view.isOpen, onPress: view.onToggle } })
   return (
     <Box key="chats-quiet" flexDirection="column" rowGap={0}>
       {head}
-      {shown.map(chat => (
+      {view.layout.isDesktop && shown.length > 0 && linesPicture(ui, 'chats-quiet-lines', shown.map(chatLine), view.layout.W)}
+      {!view.layout.isDesktop && shown.map(chat => (
         <Text key={`chat-${chat.id}`} wrap="truncate-end"><Text bold>{chat.project}</Text><Text dimColor>{` · ${chat.title || s.untitled} · ${s.states[chat.state === 'working' ? 'working' : 'idle']}`}</Text></Text>
       ))}
     </Box>

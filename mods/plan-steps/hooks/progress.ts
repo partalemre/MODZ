@@ -62,7 +62,7 @@ export function anchorIndex(steps: Step[], tracks: Tracks): number {
   return next >= 0 ? next : Math.max(0, steps.length - 1)
 }
 
-export type Progress = { done: number; total: number; percent: number; isEstimate: boolean }
+export type Progress = { done: number; total: number; percent: number }
 
 export function progressOf(plan: Plan): Progress {
   const total = plan.steps.length
@@ -70,7 +70,7 @@ export function progressOf(plan: Plan): Progress {
   const credit = plan.steps.reduce((sum, step) => sum + step.credit, 0)
   const percent = total === 0 ? 0 : Math.round((credit / total) * PERCENT)
 
-  return { done, total, percent, isEstimate: credit > done }
+  return { done, total, percent }
 }
 
 export function durationOf(track: StepTrack | undefined, now: number): number | null {
@@ -101,10 +101,6 @@ export function formatDuration(ms: number): string {
   const minutes = Math.round((ms % HOUR) / MINUTE)
 
   return minutes === 0 ? `${hours}${unit.hour}` : `${hours}${unit.hour} ${minutes}${unit.minute}`
-}
-
-export function percentText(progress: Progress): string {
-  return words().percent(progress.percent, progress.isEstimate)
 }
 
 export function addFile(track: StepTrack, path: string): StepTrack {

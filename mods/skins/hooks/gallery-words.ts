@@ -2,6 +2,7 @@
 import { pick } from './lang'
 
 const EN = {
+  back: '← Skins',
   prompt: 'Your prompt',
   tools: 'Tool rows: done, running, failed',
   group: 'Folded group of reads and searches',
@@ -21,6 +22,7 @@ const EN = {
 }
 
 const TR: typeof EN = {
+  back: '← Görünüm',
   prompt: 'Senin istemin',
   tools: 'Araç satırları: bitti, çalışıyor, başarısız',
   group: 'Okuma ve aramaların katlanmış grubu',

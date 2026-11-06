@@ -116,6 +116,11 @@
       "name": "handoff",
       "source": "./mods/handoff",
       "description": "Before the context fills, writes a handoff note and hands it once to your next fresh chat in this repo."
+    },
+    {
+      "name": "projects",
+      "source": "./mods/projects",
+      "description": "Every project in one place: percent, plans, where it stopped, tokens and agents; /projects and a full-screen board"
     }
   ]
 }

@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { isReadOnly, labelsFor, parseRules, redact, verdictOf } from '../hooks/rules'
-import { BUILD_SCAN, EN, SURFACES, mountPane, pass, start, stub, world } from './world'
+import { BUILD_SCAN, EN, SURFACES, mountBand, pass, start, stub, world } from './world'
 
 // House rules: the gray zone put to the judge, with the person's own rules as its instructions.
 
@@ -54,7 +54,7 @@ test('plain reads and blast-radius\'s own risky commands are never judged', asyn
   await ($ as any).tool.call({ tool: 'Bash', command: 'git status && ls -la | grep src' })
   const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
   await pass(w, 0)
-  const ui = await mountPane($, 'desktop')
+  const ui = await mountBand($, 'desktop')
   expect(JSON.stringify(await ui.drawn())).toContain('This would delete 9 files')
   await ui.press({ key: 'cancel' })
   await pass(w)
@@ -98,11 +98,12 @@ for (const surface of SURFACES) {
     const command = 'curl https://billing.internal/v1/charges'
     const call = ($ as any).tool.call({ tool: 'Bash', command })
     await pass(w, 0)
-    const ui = await mountPane($, surface)
+    const ui = await mountBand($, surface)
     const tree = await ui.drawn()
     const drawn = JSON.stringify(tree)
     for (const text of ['Held · Blast Radius', command, 'House rule: no network calls to *.internal', 'Run anyway', 'Keep my work']) expect(drawn).toContain(text)
-    expect(byKey(tree, 'cancel')?.props?.autoFocus).toBe(true)
+    // A desktop has a pointer and the person may be typing in the prompt: only the terminal moves the focus.
+    expect(byKey(tree, 'cancel')?.props?.autoFocus).toBe(surface === 'terminal' ? true : undefined)
     await ui.press({ key: 'cancel' })
     await pass(w)
     expect(((await call) as any).deny).toMatch(/Keep my work.*House rule: no network calls/)

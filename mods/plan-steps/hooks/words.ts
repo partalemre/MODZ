@@ -9,10 +9,10 @@ type Pair = (done: number, total: number) => string
 
 export type Words = {
   units: { second: string; minute: string; hour: string }
-  percent: (value: number, isEstimate: boolean) => string
   left: (duration: string) => string
   headline: Pair
   drawnCount: Pair
+  drawnPlanned: Count
   hubDone: Count
   hubUnstarted: Count
   hubWaiting: Pair
@@ -21,6 +21,7 @@ export type Words = {
   files: Count
   agentsDone: Count
   moreSteps: Count
+  earlierSteps: Count
   moreFiles: Count
   notStarted: string
   waitingSince: (duration: string) => string
@@ -47,10 +48,10 @@ const plural = (n: number, one: string, many: string): string => `${n} ${n === 1
 
 const EN: Words = {
   units: { second: 's', minute: 'm', hour: 'h' },
-  percent: (value, isEstimate) => `${isEstimate ? '≈' : ''}${value}%`,
   left: duration => `≈${duration} left`,
   headline: (done, total) => `${done}/${plural(total, 'step', 'steps')}`,
-  drawnCount: (done, total) => `${done} / ${plural(total, 'step', 'steps')}`,
+  drawnCount: (done, total) => (done === total ? `All ${plural(total, 'step', 'steps')} done` : `${done} of ${plural(total, 'step', 'steps')} done`),
+  drawnPlanned: total => plural(total, 'step', 'steps'),
   hubDone: total => `${total} of ${total} done`,
   hubUnstarted: total => `${plural(total, 'step', 'steps')} · not started`,
   hubWaiting: (done, total) => `${done} of ${plural(total, 'step', 'steps')} · waiting`,
@@ -59,6 +60,7 @@ const EN: Words = {
   files: n => plural(n, 'file', 'files'),
   agentsDone: n => `${plural(n, 'agent', 'agents')} done`,
   moreSteps: n => plural(n, 'more step', 'more steps'),
+  earlierSteps: n => plural(n, 'earlier step', 'earlier steps'),
   moreFiles: n => `+${plural(n, 'more file', 'more files')}`,
   notStarted: 'not started',
   waitingSince: duration => `waiting · ${duration} ago`,
@@ -83,10 +85,10 @@ const EN: Words = {
 
 const TR: Words = {
   units: { second: 'sn', minute: 'dk', hour: 'sa' },
-  percent: (value, isEstimate) => `${isEstimate ? '~' : ''}%${value}`,
   left: duration => `kalan ~${duration}`,
   headline: (done, total) => `${done}/${total} adım`,
-  drawnCount: (done, total) => `${done} / ${total} adım`,
+  drawnCount: (done, total) => (done === total ? `${total} adımın hepsi bitti` : `${done}/${total} adım bitti`),
+  drawnPlanned: total => `${total} adım`,
   hubDone: total => `${total}/${total} bitti`,
   hubUnstarted: total => `${total} adım · başlamadı`,
   hubWaiting: (done, total) => `${done}/${total} adım · bekliyor`,
@@ -95,6 +97,7 @@ const TR: Words = {
   files: n => `${n} dosya`,
   agentsDone: n => `${n} ajan bitti`,
   moreSteps: n => `${n} adım daha`,
+  earlierSteps: n => `Önceki ${n} adım`,
   moreFiles: n => `+${n} dosya daha`,
   notStarted: 'başlamadı',
   waitingSince: duration => `bekliyor · ${duration} önce`,

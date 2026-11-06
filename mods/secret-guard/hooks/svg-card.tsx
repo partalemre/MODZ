@@ -66,13 +66,18 @@ function headerSvg(pending: GuardPending, width: number): string {
   ].join('')
 }
 
-function findingSvg(finding: Finding, top: number, width: number): string {
-  const chipText = fit(finding.chip, 120, { size: 11, isBold: true })
-  const chipW = measure(chipText, { size: 11, isBold: true }) + CHIP_PAD * 2
+const chipTextOf = (finding: Finding): string => fit(finding.chip, 120, { size: 11, isBold: true })
+const chipWidthOf = (finding: Finding): number => measure(chipTextOf(finding), { size: 11, isBold: true }) + CHIP_PAD * 2
+
+// `column` is the widest pill of the card, so every row's spot starts at the same x.
+function findingSvg(finding: Finding, spec: { top: number; width: number; column: number }): string {
+  const { top, width } = spec
+  const chipText = chipTextOf(finding)
+  const chipW = chipWidthOf(finding)
   const valueW = measure(finding.value, { size: 12, isMono: true })
   const chipY = top + (ROW_H - CHIP_H) / 2
   const base = top + ROW_H / 2 + 4.5
-  const whereX = chipW + 12
+  const whereX = spec.column + 12
   const where = fitMiddle(finding.where, width - whereX - valueW - 16, { size: 12.5, isMono: true })
   const tone = finding.tone
 
@@ -91,7 +96,8 @@ export function leakSvg(pending: GuardPending, width: number): { source: string;
   const more = findings.length - shown.length
   const top = HEAD_H + ROW_TOP_GAP
   const height = top + shown.length * ROW_H + (more > 0 ? ROW_H - 6 : 0) + 2
-  const rows = shown.map((finding, index) => findingSvg(finding, top + index * ROW_H, width))
+  const column = Math.max(0, ...shown.map(chipWidthOf))
+  const rows = shown.map((finding, index) => findingSvg(finding, { top: top + index * ROW_H, width, column }))
   const moreRow = more > 0 ? `<text x="0" y="${top + shown.length * ROW_H + 18}" font-size="12.5" style="fill:var(--lo)">${escape(words().moreFindings(more))}</text>` : ''
   const head = headlineOf(pending)
   // The alt reads every full spot, even where the drawing says only the line.

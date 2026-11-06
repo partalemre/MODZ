@@ -26,7 +26,7 @@ export type TilesSpec = { title: string; meta: string; tiles: readonly Tile[]; m
 // One tile's place in the grid, and whether its meter is live.
 type TileBox = { x: number; y: number; width: number }
 
-const TILE = { minW: 168, maxW: 260, h: 132, gap: 28, rowGap: 24 } as const
+const TILE = { minW: 168, maxW: 260, h: 132, bareH: 80, gap: 28, rowGap: 24 } as const
 const BAR = { top: 42, height: 6 } as const
 const HEADER_H = 44
 const LIVE = { r: 3, gap: 9 } as const
@@ -54,19 +54,30 @@ function valueAndMeter(tile: Tile, spec: TileBox): string {
   return value + meter({ ...bar, tone: tile.tone, pace: tile.arc.pace })
 }
 
+// A history of one reading draws no chart, so the tile stays compact until there are two to draw.
+const hasChart = (tile: Tile): boolean => tile.series.length >= 2 && tile.seriesMax > 0
+
+function chartSvg(tile: Tile, box: TileBox): string {
+  const { x, y, width } = box
+  const sparkTop = y + 84
+
+  return [
+    sparkline({ x, y: sparkTop, width, height: SPARK_H, values: tile.series, max: tile.seriesMax, tone: tile.tone }),
+    `<rect class="f-line" x="${x}" y="${sparkTop + SPARK_H}" width="${width}" height="1"/>`,
+    textAt({ x, y: y + TILE.h - 4, cls: 'f-lo', size: 10.5, value: tile.caption }),
+  ].join('')
+}
+
 function tileSvg(tile: Tile, box: TileBox): string {
   const { x, y, width } = box
   const right = x + width
-  const sparkTop = y + 84
 
   return [
     groupLabel(tile.label, { x, y: y + 10 }),
     textAt({ x: right, y: y + 10, cls: 'f-lo num', size: 10.5, value: tile.meta, anchor: 'end' }),
     valueAndMeter(tile, { x, y: y + 16, width }),
     textAt({ x, y: y + 76, cls: fillOf(tile.noteTone, 'lo'), size: 11, value: tile.note }),
-    sparkline({ x, y: sparkTop, width, height: SPARK_H, values: tile.series, max: tile.seriesMax, tone: tile.tone }),
-    `<rect class="f-line" x="${x}" y="${sparkTop + SPARK_H}" width="${width}" height="1"/>`,
-    textAt({ x, y: y + TILE.h - 4, cls: 'f-lo', size: 10.5, value: tile.caption }),
+    hasChart(tile) ? chartSvg(tile, box) : '',
   ].join('')
 }
 
@@ -86,13 +97,12 @@ export function tilesSvg(spec: TilesSpec): SvgDoc {
   const { cols, tileW } = columnsFor(spec.tiles.length, spec.maxWidth)
   const rows = Math.ceil(spec.tiles.length / cols)
   const width = cols * tileW + (cols - 1) * TILE.gap
-  const tiles = spec.tiles.map((tile, index) => {
-    const x = (index % cols) * (tileW + TILE.gap)
-    const y = HEADER_H + Math.floor(index / cols) * (TILE.h + TILE.rowGap)
-
-    return tileSvg(tile, { x, y, width: tileW })
-  })
+  const rowHeights = Array.from({ length: rows }, (_, row) =>
+    spec.tiles.slice(row * cols, (row + 1) * cols).some(hasChart) ? TILE.h : TILE.bareH,
+  )
+  const rowTops = rowHeights.map((_, row) => HEADER_H + rowHeights.slice(0, row).reduce((sum, h) => sum + h + TILE.rowGap, 0))
+  const tiles = spec.tiles.map((tile, index) => tileSvg(tile, { x: (index % cols) * (tileW + TILE.gap), y: rowTops[Math.floor(index / cols)], width: tileW }))
   const alt = [spec.title, ...spec.tiles.map(tile => `${tile.label} ${tile.value} · ${tile.note} · ${tile.caption}`)].join('; ')
 
-  return svgDoc({ width, height: HEADER_H + rows * TILE.h + (rows - 1) * TILE.rowGap + 1, body: headerSvg(spec, width) + tiles.join(''), alt, css: BREATHE_CSS })
+  return svgDoc({ width, height: rowTops[rows - 1] + rowHeights[rows - 1] + TILE.rowGap / 2, body: headerSvg(spec, width) + tiles.join(''), alt, css: BREATHE_CSS })
 }

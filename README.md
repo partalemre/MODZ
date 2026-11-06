@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<h3 align="center">21 mods for Claude Code. One panel.</h3>
+<h3 align="center">22 mods for Claude Code. One panel.</h3>
 
 <p align="center">See every move Claude makes: agents, files, plans, tests and risky commands, live, beside the chat.</p>
 
@@ -30,7 +30,7 @@ Or install all of them at once from a terminal:
 ```sh
 claude plugin marketplace add partalemre/MODZ
 for m in modz savvy-progress savvy-flow filetree plan-steps projects handoff transceiver blast-radius secret-guard checkpoint \
-         test-badge replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins wrapped terminal-browser; do
+         test-badge pr-card replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins wrapped terminal-browser; do
   claude plugin install "$m@modz"
 done
 ```
@@ -91,6 +91,7 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 | | `secret-guard` | Stops keys and tokens in writes, edits, `git add` and commits; keeps pasted keys out of the chat as placeholders; `/rec` masks keys, env values and e-mail addresses on screen |
 | | `checkpoint` | A silent git snapshot before each turn's first write; undo a turn |
 | | `test-badge` | Runs tests and lint after edits and shows the result; watches your PR's GitHub CI |
+| | `pr-card` | A card in the conversation for a PR Claude opens: CI checks, review, mergeability and changed files, kept fresh |
 | | `replay-theater` | Replays the last turn's edits step by step, and earlier turns and past sessions |
 | **Meter** | `session-budget` | A spend budget per session, with a stop at 100%; asks before new subagents when the 5-hour window runs low |
 | | `cache-tax` | Keeps the prompt cache warm through breaks and prices a cold send, a model change included |
@@ -99,7 +100,7 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 | **Comfort** | `done-ping` | A notification when a long turn ends or Claude waits on you, with optional sound packs |
 | | `reflect-mod` | Saves corrections worth keeping to your CLAUDE.md; `/mine` turns friction that repeats across past chats into ideas |
 | | `skins` | Themes for the transcript, switched live with `/skin`, and living ASCII scenes above the prompt |
-| | `wrapped` | Your year with Claude Code as a card and a short crab-filled video, read from your own transcripts: which agents did the work, month by month; names off until you turn them on |
+| | `wrapped` | Your year with Claude Code as a story and a video, read from your own transcripts: which agents did the work, month by month; one press hides your project and file names before you share |
 | | `terminal-browser` | A browser inside the terminal that the agent can drive |
 
 Most mods use no model tokens. These can, each with the cheapest model and never more than one call per event:
@@ -132,6 +133,7 @@ Read from the code, not from a promise. "Store" is the mod's own file in `~/.cla
 | `secret-guard` | written files | `.env`, `.gitignore` (on your press) | `git` | | |
 | `checkpoint` | | store, git refs | `git` | | |
 | `test-badge` | project files | store | your test and lint commands, `git`, `gh` | GitHub, through `gh` | |
+| `pr-card` | | | `gh` | GitHub, through `gh` | |
 | `replay-theater` | transcripts | store | | | rarely |
 | `session-budget` | | store | | | |
 | `cache-tax` | | store | | | when warming |

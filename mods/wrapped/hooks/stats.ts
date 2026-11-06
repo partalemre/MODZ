@@ -193,6 +193,7 @@ export function wrappedOf(raw: Raw, spec: { year: number; readAt: number }): Wra
     agents: agentRows(raw),
     hardest: raw.hardest,
     months: monthsOf(raw),
+    projectKinds: {},
     persona: personaOf({ prompts, agentCalls, nightShare, average: prompts / Math.max(1, sessions), stops: raw.stops }),
   }
 }
@@ -201,5 +202,5 @@ export function wrappedOf(raw: Raw, spec: { year: number; readAt: number }): Wra
 export function isWrapped(value: unknown): value is Wrapped {
   const w = value as Wrapped | null
 
-  return typeof w === 'object' && w !== null && typeof w.year === 'number' && typeof w.prompts === 'number' && typeof w.persona === 'string' && typeof w.days === 'object' && w.days !== null && Array.isArray(w.agents) && Array.isArray(w.months) && Array.isArray(w.projects) && Array.isArray(w.hours) && Array.isArray(w.models)
+  return typeof w === 'object' && w !== null && typeof w.year === 'number' && typeof w.prompts === 'number' && typeof w.persona === 'string' && typeof w.days === 'object' && w.days !== null && Array.isArray(w.agents) && Array.isArray(w.months) && Array.isArray(w.projects) && Array.isArray(w.hours) && Array.isArray(w.models) && typeof w.projectKinds === 'object' && w.projectKinds !== null
 }

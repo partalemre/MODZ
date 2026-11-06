@@ -55,7 +55,6 @@ export const storyWords = () =>
       shareProjects: 'Top projects',
       shareTools: 'Top tools',
       stats: { prompts: 'prompts', chats: 'chats', days: 'active days', streak: 'day streak', lines: 'lines added', agents: 'agents' },
-      hiddenFile: 'A secret file',
     },
     tr: {
       intro: 'Claude Code ile',
@@ -98,7 +97,6 @@ export const storyWords = () =>
       shareProjects: 'Başlıca projeler',
       shareTools: 'Başlıca araçlar',
       stats: { prompts: 'mesaj', chats: 'sohbet', days: 'aktif gün', streak: 'gün üst üste', lines: 'satır', agents: 'ajan' },
-      hiddenFile: 'Gizli bir dosya',
     },
   })
 
@@ -110,8 +108,8 @@ export const panelWords = () =>
       back: 'Back',
       next: 'Next',
       page: (at: number, of: number) => `${at} / ${of}`,
-      namesShown: 'Project names show on the pages and in what you share.',
-      namesHidden: 'Project names are masked everywhere, the video and the image too.',
+      namesShown: 'Real project and file names show on the pages and in what you share.',
+      namesHidden: 'Only kinds show, like Game or TypeScript file, in the video and the image too. Real names stay on this computer.',
       copiedImage: (path: string) => `Copied: paste it anywhere. Also at ${path}`,
       copyFailed: (path: string) => `Could not copy; the image is at ${path}`,
       sharedX: 'The post is ready in your browser: press Cmd+V there to add the image.',
@@ -124,8 +122,8 @@ export const panelWords = () =>
       back: 'Geri',
       next: 'İleri',
       page: (at: number, of: number) => `${at} / ${of}`,
-      namesShown: 'Proje adları sayfalarda ve paylaştığında görünür.',
-      namesHidden: 'Proje adları her yerde maskeli, video ve görselde de.',
+      namesShown: 'Gerçek proje ve dosya adları sayfalarda ve paylaştığında görünür.',
+      namesHidden: 'Yalnızca tür görünür, Oyun ya da TypeScript dosyası gibi; video ve görselde de. Gerçek adlar bu bilgisayarda kalır.',
       copiedImage: (path: string) => `Kopyalandı, istediğin yere yapıştır. Ayrıca: ${path}`,
       copyFailed: (path: string) => `Kopyalanamadı; görsel burada: ${path}`,
       sharedX: 'Gönderi tarayıcıda hazır: görseli eklemek için orada Cmd+V yap.',

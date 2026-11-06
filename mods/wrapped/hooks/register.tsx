@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import { cardText } from './card'
 import type { CardSpec } from './card'
 import { makeFilm } from './film'
+import { projectKinds } from './kinds'
 import { filmLine } from './film-run'
 import { linesOf, stateTree } from './states'
 import { withHome } from './kit/home'
@@ -28,8 +29,8 @@ const DEFAULT_COLUMNS = 40
 
 const viewAtom = atom({ plugin: 'wrapped', key: 'view' } as const, IDLE, { shape: 'view-1' })
 const rootAtom = atom({ plugin: 'wrapped', key: 'root' } as const, '')
-// On by default: these pages are the person's own; "Hide names" masks them everywhere before anything is shared.
-const namedAtom = atom({ plugin: 'wrapped', key: 'isNamed' } as const, true)
+// Off by default: these pages are made to be posted, so they say what kind of work it was, not which project.
+const namedAtom = atom({ plugin: 'wrapped', key: 'isNamed' } as const, false, { shape: 'names-2' })
 const pageAtom = atom({ plugin: 'wrapped', key: 'page' } as const, 0)
 const sharedAtom = atom({ plugin: 'wrapped', key: 'shared' } as const, null as Shared | null)
 const filmAtom = atom({ plugin: 'wrapped', key: 'film' } as const, null as Film | null)
@@ -54,7 +55,13 @@ async function scanYear($: EngineInterface, year: number): Promise<Wrapped | nul
   const ran = await $.process.run(['awk', '-v', `YEAR=${year}`, AWK], { stdin: paths.join('\n'), timeoutMs: SCAN_TIMEOUT_MS })
   if (ran.exitCode !== 0) throw new Error(ran.stderr.trim().slice(0, 200) || `awk ended with ${ran.exitCode}`)
 
-  return wrappedOf(parseOutput(ran.stdout), { year, readAt: await $.clock.now() })
+  const raw = parseOutput(ran.stdout)
+  const wrapped = wrappedOf(raw, { year, readAt: await $.clock.now() })
+  if (wrapped === null) return null
+  const shown = new Set([...wrapped.projects.map(row => row.name), ...wrapped.months.flatMap(month => (month.project === null ? [] : [month.project]))])
+  const places = [...new Set([...Object.keys(raw.places), ...raw.monthProjects.map(row => row.name)])]
+
+  return { ...wrapped, projectKinds: await projectKinds(places, shown, { list: dir => $.fs.list(dir), read: path => $.fs.read(path) }) }
 }
 
 // In a dispatch of its own: the walk takes minutes on a big archive and the session must stay free.

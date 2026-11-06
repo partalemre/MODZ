@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { cardText, rowsOf, standalone } from '../hooks/card'
+import { cardText, fileLabel, projectLabels, rowsOf, standalone } from '../hooks/card'
+import { projectKindOf, projectKinds } from '../hooks/kinds'
 import { setLang } from '../hooks/kit/lang'
 import { concatList, FPS, frameAt, frameCount, holdsOf } from '../hooks/film'
 import { postUrl } from '../hooks/share'
@@ -92,7 +93,7 @@ test('the film runs at 60 frames, hides names on every frame when masked, and sh
     expect(hold.source).not.toContain('pricing.ts')
     expect(hold.source).not.toContain('<style>')
   }
-  expect(holds.some(hold => hold.source.includes('Project A'))).toBe(true)
+  expect(holds.some(hold => hold.source.includes('Project'))).toBe(true)
   expect(frameAt({ wrapped: w, isNamed: true }, slides, Math.round(slides.slice(0, 5).reduce((sum, slide) => sum + slide.dur, 0) * FPS) + 240)).toContain('secret-client')
 })
 
@@ -164,7 +165,7 @@ test('a mask takes names off every page, the shared image, the text and the post
     expect(text).not.toContain('pricing.ts')
     expect(text).not.toContain('secret-client')
   }
-  expect(rowsOf(hidden).some(row => row.value === '9 edits')).toBe(true)
+  expect(rowsOf(hidden).some(row => /^TypeScript file, 9 edits$/.test(row.value))).toBe(true)
   const named = { wrapped, isNamed: true }
   expect(cardText(named)).toContain('pricing.ts')
   expect(summaryPic(named).source).toContain('secret-client')
@@ -303,7 +304,7 @@ test('/wrapped refuses a year that is not one, and reads nothing', async ($: any
   expect(edges.runs).toEqual([])
 })
 
-test('desktop: the read shows progress, then pages with names; next moves; masking hides them; copying saves a PNG', async ($: any, on: any) => {
+test('desktop: the read shows progress, then pages that name only kinds; next moves; a press shows real names; copying saves a PNG', async ($: any, on: any) => {
   const { ui, clock, runs, store, written } = await opened($, on, { awk: READS })
   expect(await ui.find({ type: 'Text', text: /Reading your 2026/ })).toBeDefined()
   for (let tick = 0; tick < 5; tick += 1) await clock.advance(1)
@@ -321,13 +322,13 @@ test('desktop: the read shows progress, then pages with names; next moves; maski
   expect((await ui.find({ type: 'Svg' }))?.props.source).toBe(first?.source)
 
   await ui.press({ key: 'copy-image' })
-  expect(String(written.get('/home/me/Downloads/wrapped-2026.svg'))).toContain('secret-client')
+  expect(String(written.get('/home/me/Downloads/wrapped-2026.svg'))).not.toContain('secret-client')
   expect(runs.map(run => run[0])).toEqual(['awk', 'sips', 'osascript'])
   expect(await ui.find({ type: 'Text', text: /Copied: .*wrapped-2026\.png/ })).toBeDefined()
 
   await ui.press({ key: 'names' })
   await ui.press({ key: 'copy-image' })
-  expect(String(written.get('/home/me/Downloads/wrapped-2026.svg'))).not.toContain('secret-client')
+  expect(String(written.get('/home/me/Downloads/wrapped-2026.svg'))).toContain('secret-client')
 })
 
 test('sharing on X copies the image and opens a post with the words filled in, sending nothing itself', async ($: any, on: any) => {
@@ -390,4 +391,55 @@ test('an empty year explains where transcripts go', async ($: any, on: any) => {
   const { ui, clock } = await opened($, on, { awk: { exitCode: 0, stdout: 'X\t0\t0\t0\t0\t0', stderr: '' } })
   for (let tick = 0; tick < 5; tick += 1) await clock.advance(1)
   expect(await ui.find({ type: 'Text', text: /cleanupPeriodDays/ })).toBeDefined()
+})
+
+test('a project is told by what it holds, never by its name', () => {
+  expect(projectKindOf(['.claude-plugin', 'package.json'])).toBe('claude')
+  expect(projectKindOf(['Assets', 'ProjectSettings', 'Packages'])).toBe('game')
+  expect(projectKindOf(['game', 'assets', 'docs'])).toBe('game')
+  expect(projectKindOf(['pubspec.yaml', 'lib'])).toBe('mobile')
+  expect(projectKindOf(['package.json', 'src'], { packageText: '{"dependencies":{"next":"16"}}' })).toBe('web')
+  expect(projectKindOf(['package.json', 'src'], { packageText: '{"dependencies":{"zod":"4"}}' })).toBe('tool')
+  expect(projectKindOf(['NOTES.md', 'report.pdf'])).toBe('writing')
+  expect(projectKindOf(['src', 'README.md'], { readmeText: 'A chess game. The game runs offline. Every game is saved.' })).toBe('game')
+  expect(projectKindOf(['src', 'README.md'], { readmeText: 'A game changer for logs.' })).toBe('tool')
+  expect(projectKindOf(['index.html', 'a.pdf', 'b.pdf'])).toBe('writing')
+  expect(projectKindOf(['index.html', 'styles', 'scripts'])).toBe('web')
+  expect(projectKindOf(['src', 'README.md'], { readmeText: `It is an app, not a game. The game is gone. No game here. ${'x'.repeat(14000)}` })).toBe('tool')
+  expect(projectKindOf([])).toBe('other')
+})
+
+test('a moved folder is other, and a package.json is read only when it is there', async () => {
+  const io = { list: async (dir: string) => { if (dir === '/w/gone') throw new Error('no such folder'); return [{ name: 'package.json' }] }, read: async () => '{"dependencies":{"react":"19"}}' }
+  expect(await projectKinds(['/w/gone', '/w/site', '/w/hidden'], new Set(['gone', 'site']), io)).toEqual({ gone: 'other', site: 'web' })
+})
+
+test('a file says its kind and the language of its code, not its name', () => {
+  setLang('en')
+  expect(fileLabel('pricing.ts', false)).toBe('TypeScript file')
+  expect(fileLabel('pricing.ts', true)).toBe('pricing.ts')
+  expect(fileLabel('pricing.test.ts', false)).toBe('Test file')
+  expect(fileLabel('CLAUDE.md', false)).toBe('Agent instructions')
+  expect(fileLabel('WORK_ORDER.md', false)).toBe('Document')
+  expect(fileLabel('settings.json', false)).toBe('Settings file')
+  expect(fileLabel('mystery', false)).toBe('Code file')
+})
+
+test('two projects of one kind stay apart, and a kind is what the card says', () => {
+  setLang('en')
+  const wrapped = wrappedOf(rawOf(), SPEC)
+  if (wrapped === null) throw new Error('expected a reading')
+  const names = wrapped.projects.map(row => row.name)
+  const kinds = Object.fromEntries(names.map(name => [name, 'game' as const]))
+  const labels = projectLabels({ ...wrapped, projectKinds: kinds }, false)
+  expect(labels.get(names[0] as string)).toBe('Game')
+  if (names[1] !== undefined) expect(labels.get(names[1])).toBe('Game 2')
+  expect(cardText({ wrapped: { ...wrapped, projectKinds: kinds }, isNamed: false })).toContain('Game')
+})
+
+test('a reading from before kinds is read again', () => {
+  const wrapped = wrappedOf(rawOf(), SPEC)
+  const { projectKinds: dropped, ...older } = wrapped as NonNullable<typeof wrapped>
+  expect(dropped).toEqual({})
+  expect(isWrapped(older)).toBe(false)
 })

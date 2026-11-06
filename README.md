@@ -100,7 +100,7 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 | **Comfort** | `done-ping` | A notification when a long turn ends or Claude waits on you, a line when another session waits on you, optional sound packs |
 | | `reflect-mod` | Saves corrections worth keeping to your CLAUDE.md; `/mine` turns friction that repeats across past chats into ideas |
 | | `skins` | Themes for the transcript, switched live with `/skin`, and living ASCII scenes above the prompt |
-| | `wrapped` | Your year with Claude Code as a story and a video, read from your own transcripts: which agents did the work, month by month; one press hides your project and file names before you share |
+| | `wrapped` | Your year with Claude Code as a story and a video, read from your own transcripts: which agents did the work, month by month; it says what kind of work it was (Game, TypeScript file), and real names show only if you press for them |
 | | `terminal-browser` | A browser inside the terminal that the agent can drive |
 
 Most mods use no model tokens. These can, each with the cheapest model and never more than one call per event:

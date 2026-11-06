@@ -1,3 +1,5 @@
+export type ProjectKind = 'claude' | 'game' | 'mobile' | 'web' | 'tool' | 'writing' | 'other'
+
 export type Persona = 'commander' | 'owl' | 'marathoner' | 'director' | 'sprinter' | 'builder'
 
 export type Named = { name: string; count: number }
@@ -45,6 +47,8 @@ export type Wrapped = {
   hardest: Hardest | null
   months: MonthStat[]
   persona: Persona
+  // By a project's short name: what the card says in place of that name.
+  projectKinds: Record<string, ProjectKind>
 }
 
 export type WrappedView =

@@ -1,4 +1,4 @@
-import { projectLabels } from './card'
+import { fileLabel, projectLabels } from './card'
 import { agentCrab, box, C, circle, ease, fitBody, fitSize, H, INNER, PAD, rise, sheet, txt, W } from './film-parts'
 import type { SlideCtx } from './film-parts'
 import { counted, quote } from './story-a'
@@ -95,7 +95,7 @@ export function toolsSlide({ w, t }: SlideCtx): string {
 export function codeSlide({ w, t, isNamed }: SlideCtx): string {
   const s = storyWords()
   const file = w.files[0]
-  const fileName = file === undefined ? '' : isNamed ? file.name : s.hiddenFile
+  const fileName = file === undefined ? '' : fileLabel(file.name, isNamed)
 
   return [
     sheet(C.rose),

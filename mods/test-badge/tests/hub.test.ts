@@ -137,9 +137,9 @@ for (const surface of ['terminal', 'desktop'] as const) {
       plugin: 'test-badge', component: 'Pane', requestId: 'test-badge', surface, viewport: { columns: 60, rows: 30 },
       props: { title: 'Testler', isFocused: true, bodyColumns: 52, placement: 'dock', scroll: { offset: 0, bodyRows: 30 }, view: {} },
     })
-    const sentence = 'Henüz test koşusu yok · kaynak dosya değişince kendiliğinden çalışır'
-    if (surface === 'desktop') expect((await pane.find({ type: 'Svg' }))?.props?.alt).toBe(`Testler: ${sentence}`)
-    else expect((await pane.find({ key: 'tb-empty' }))?.text).toBe(sentence)
-    expect((await pane.find({ key: 'tb-rerun' }))?.props?.label).toBe('Şimdi çalıştır')
+    const sentence = 'Henüz test çalıştırılmadı'
+    if (surface === 'desktop') expect((await pane.find({ type: 'Svg' }))?.props?.alt).toBe(sentence)
+    else expect((await pane.find({ key: 'tb-verdict' }))?.text).toBe(sentence)
+    expect((await pane.find({ key: 'tb-rerun' }))?.props?.label).toBe('Testleri ve kod denetimini çalıştır')
   })
 }

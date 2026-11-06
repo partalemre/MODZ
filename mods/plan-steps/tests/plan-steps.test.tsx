@@ -114,12 +114,12 @@ for (const surface of SURFACES) {
     const pane = await $.ui.mount(paneOf(surface))
     if (surface === 'desktop') {
       const svg = await svgOf(pane)
-      for (const part of ['1 / 4 adım', '~%38', 'görev listesi', 'Tipleri yaz', '4dk', 'Ayrıştırıcı', '3dk', '>parse.test.ts<', '>parse.ts<', 'tests/', 'Testleri yaz', 'çalışıyor', 'Paneli çiz']) expect(svg).toContain(part)
+      for (const part of ['1/4 adım bitti', 'görev listesi', 'Tipleri yaz', '4dk', 'Ayrıştırıcı', '3dk', '>parse.test.ts<', '>parse.ts<', 'tests/', 'Testleri yaz', 'çalışıyor', 'Paneli çiz']) expect(svg).toContain(part)
       expect(svg).not.toContain('kalan')
 
       return
     }
-    expect(await rowText(pane, 'head')).toBe('Plan · 1/4 adım · ~%38görev listesi')
+    expect(await rowText(pane, 'head')).toBe('Plan · 1/4 adımgörev listesi')
     expect(await rowText(pane, 'step-tipleri-yaz')).toBe('✓Tipleri yaz4dk')
     expect(await rowText(pane, 'step-ayristirici')).toBe('◐Ayrıştırıcı3dk')
     expect(await rowText(pane, 'step-paneli-ciz')).toBe('○Paneli çiz')
@@ -149,11 +149,11 @@ for (const surface of SURFACES) {
     const pane = await $.ui.mount(paneOf(surface))
     if (surface === 'desktop') {
       const svg = await svgOf(pane)
-      for (const part of ['1 / 3 adım', '~%50', '2026-10-09-plan-steps.md · görev listesi', 'Ayrıştırıcıyı yaz', '1/2 madde', '>2026-10-09-plan-steps.md<', '>MD<', 'Paneli çiz']) expect(svg).toContain(part)
+      for (const part of ['1/3 adım bitti', '2026-10-09-plan-steps.md · görev listesi', 'Ayrıştırıcıyı yaz', '1/2 madde', '>2026-10-09-plan-steps.md<', '>MD<', 'Paneli çiz']) expect(svg).toContain(part)
 
       return
     }
-    expect(await rowText(pane, 'head')).toBe('Plan · 1/3 adım · ~%50' + '2026-10-09-plan-steps.md · görev listesi')
+    expect(await rowText(pane, 'head')).toBe('Plan · 1/3 adım' + '2026-10-09-plan-steps.md · görev listesi')
     expect(await rowText(pane, 'step-ayristiriciyi-yaz')).toMatch(/^◐Ayrıştırıcıyı yaz/)
     expect(await rowText(pane, 'detail-summary')).toBe('› 1/2 madde · 1 dosya: 2026-10-09-plan-steps.md')
     expect(await rowText(pane, 'step-paneli-ciz')).toBe('○Paneli çiz')
@@ -166,7 +166,7 @@ for (const surface of SURFACES) {
     const pane = await $.ui.mount(paneOf(surface, 12))
     if (surface === 'desktop') {
       const svg = await svgOf(pane)
-      for (const part of ['Adım 21 işi', '✓ ', 'adım daha', '+']) expect(svg).toContain(part)
+      for (const part of ['Adım 21 işi', 'Önceki', 'adım daha']) expect(svg).toContain(part)
       expect(svg).not.toContain('>Adım 1 işi<')
 
       return
@@ -208,7 +208,7 @@ test('ETA appears only after three timed steps and reads kalan ~Ndk', async ($: 
   const pane = await $.ui.mount(paneOf('terminal'))
 
   expect(await rowText(pane, 'bar')).toMatch(/━ {2}kalan ~6dk$/)
-  expect(await rowText(pane, 'head')).toBe('Plan · 3/5 adım · %60görev listesi')
+  expect(await rowText(pane, 'head')).toBe('Plan · 3/5 adımgörev listesi')
 })
 
 test('an approved plan becomes the plan; the status line waits for its first step to start', { plugins: [modz] }, async ($: any, on: any) => {
@@ -236,7 +236,7 @@ for (const surface of SURFACES) {
       expect(svg).toContain('bekliyor · 31dk önce')
       expect(svg).not.toContain('class="breathe"')
     } else {
-      expect(await rowText(pane, 'head')).toBe('Plan · 1/3 adım · ~%50görev listesi · bekliyor · 31dk önce')
+      expect(await rowText(pane, 'head')).toBe('Plan · 1/3 adımgörev listesi · bekliyor · 31dk önce')
     }
 
     await $.tool.call({ tool: 'Edit', file_path: '/w/hooks/parse.ts', old_string: 'a', new_string: 'b' })

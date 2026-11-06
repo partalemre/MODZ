@@ -79,12 +79,12 @@ for (const surface of SURFACES) {
     expect(await drawnText(pane)).not.toMatch(TURKISH)
     if (surface === 'desktop') {
       const svg = String((await pane.find({ type: 'Svg' }))?.props?.source ?? '')
-      for (const part of ['1 / 3 steps', '≈50%', 'task list', '4m', 'Write tests · running', '>parse.ts<']) expect(svg).toContain(part)
-      expect(String((await pane.find({ type: 'Svg' }))?.props?.alt)).toBe('Plan · 1/3 steps · ≈50% · now: Parser')
+      for (const part of ['1 of 3 steps done', 'task list', '4m', 'Write tests · running', '>parse.ts<']) expect(svg).toContain(part)
+      expect(String((await pane.find({ type: 'Svg' }))?.props?.alt)).toBe('Plan · 1/3 steps · now: Parser')
 
       return
     }
-    expect(await rowText(pane, 'head')).toBe('Plan · 1/3 steps · ≈50%task list')
+    expect(await rowText(pane, 'head')).toBe('Plan · 1/3 stepstask list')
     expect(await rowText(pane, 'step-write-types')).toBe('✓Write types4m')
     expect(await rowText(pane, 'detail-summary')).toBe('› 1 file: parse.ts')
   })

@@ -8,8 +8,8 @@ const TITLES = ['Tipleri ve durum sözleşmesini yaz', 'Görev listesi takibi', 
 
 const todos = (current: number) => TITLES.map((content, k) => ({ content, activeForm: content, status: k < current ? 'completed' : k === current ? 'in_progress' : 'pending' }))
 
-// About 400 px and 600 px of the desktop's right pane.
-const WIDTHS = { narrow: 56, wide: 82 }
+// The two ends of the desktop's right pane, 365 px and 560 px, at about 9 px a column.
+const WIDTHS = { narrow: 41, wide: 62 }
 
 const paneOf = (surface: 'desktop' | 'terminal', bodyColumns: number) => ({
   plugin: 'plan-steps', component: 'Pane', requestId: 'plan-steps', surface, viewport: { columns: 160, rows: 40 },
@@ -75,6 +75,18 @@ for (const theme of ['dark', 'light']) {
     await $.tool.call({ tool: 'TodoWrite', todos: TITLES.slice(0, 5).map(content => ({ content, activeForm: content, status: 'pending' })) })
     const fresh = await $.ui.mount(paneOf('desktop', WIDTHS.narrow))
     console.log(`@@TREE@@plan-steps-unstarted-narrow-${theme}@@` + JSON.stringify(await fresh.drawn()))
+  })
+
+  test(`preview ${theme}: all done, and a plan too long to show whole`, async ($: any, on: any) => {
+    await setup($, on, theme)
+    await $.tool.call({ tool: 'TodoWrite', todos: todos(TITLES.length) })
+    const done = await $.ui.mount(paneOf('desktop', WIDTHS.narrow))
+    console.log(`@@TREE@@plan-steps-done-narrow-${theme}@@` + JSON.stringify(await done.drawn()))
+    await done.unmount()
+    const many = Array.from({ length: 26 }, (_, k) => ({ content: `Adım ${k + 1} işi`, activeForm: `Adım ${k + 1} işi`, status: k < 19 ? 'completed' : k === 19 ? 'in_progress' : 'pending' }))
+    await $.tool.call({ tool: 'TodoWrite', todos: many })
+    const pane = await $.ui.mount(paneOf('desktop', WIDTHS.narrow))
+    console.log(`@@TREE@@plan-steps-many-narrow-${theme}@@` + JSON.stringify(await pane.drawn()))
   })
 
   // The finish card above the prompt: an answer that worked on the plan and left 6 of 9 steps open.

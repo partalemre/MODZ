@@ -27,7 +27,8 @@ export type Paths = { config: string; home: string; own: string }
 
 export const pathsOf = (transcript: string, home: string): Paths | null => {
   if (!transcript.endsWith('.jsonl')) return null
-  const config = transcript.split('/').slice(0, -3).join('/')
+  // Cut at either kind of slash: on Windows the engine names the transcript with backslashes.
+  const config = transcript.replace(/([\\/][^\\/]*){3}$/, '')
 
   return { config, home, own: `${config}/modz-projects` }
 }
@@ -82,7 +83,8 @@ async function readLeftOff(io: Io, grown: Grown, cache: Cache): Promise<LeftOff 
   const stamp = leftOffStamp(file)
   const known = cache.leftOff[grown.root]
   if (known?.stamp === stamp) return known.left
-  const tail = await run(io, ['tail', '-c', String(TAIL_BYTES), file.path])
+  // A stock Windows has no tail; the read costs more but says the same.
+  const tail = (await run(io, ['tail', '-c', String(TAIL_BYTES), file.path])) || (await tailOf(io, file.path, TAIL_BYTES))
   const left = leftOffOf(tail, file.title)
   if (isLeftOffEmpty(left)) return known?.left ?? null
   cache.leftOff[grown.root] = { stamp, left }

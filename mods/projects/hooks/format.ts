@@ -1,3 +1,5 @@
+import { fitText } from './kit/svg-metrics'
+import type { Measure } from './kit/svg-metrics'
 import { words } from './words'
 import type { Percent } from '../types'
 
@@ -28,6 +30,18 @@ export function agoText(thenMs: number, nowMs: number): string {
   return ago.day(Math.floor(gap / DAY_MS))
 }
 
+// The same age for a row's narrow column: no "ago", every row reading the same way.
+export function agoShortText(thenMs: number, nowMs: number): string {
+  const { agoShort } = words()
+  const gap = nowMs - thenMs
+  if (thenMs === 0) return '—'
+  if (gap < MIN_MS) return agoShort.now
+  if (gap < HOUR_MS) return agoShort.min(Math.floor(gap / MIN_MS))
+  if (gap < DAY_MS) return agoShort.hour(Math.floor(gap / HOUR_MS))
+
+  return agoShort.day(Math.floor(gap / DAY_MS))
+}
+
 export function spanText(ms: number): string {
   if (ms < MIN_MS) return `${Math.round(ms / 1000)} s`
   if (ms < HOUR_MS) return `${Math.round(ms / MIN_MS)} min`
@@ -40,4 +54,35 @@ export function percentText(percent: Percent): string {
   if (percent.value === null) return '—'
 
   return `${percent.kind === 'estimate' ? '~' : ''}${percent.value}%`
+}
+
+// A folder under the home folder as `~`, with either kind of slash.
+export function shortPath(root: string, home: string): string {
+  if (home === '' || !root.startsWith(home)) return root
+  const rest = root.slice(home.length)
+
+  return rest === '' || rest.startsWith('/') || rest.startsWith('\\') ? `~${rest}` : root
+}
+
+// A path cut in its middle, since its two ends say the most: `~/…/clients/app`.
+export function fitPath(path: string, max: number, measure: Measure): string {
+  if (measure(path) <= max) return path
+  const slash = path.includes('/') ? '/' : '\\'
+  const parts = path.split(slash)
+  for (let kept = parts.length - 2; kept > 0; kept -= 1) {
+    const cut = [parts[0], '…', ...parts.slice(-kept)].join(slash)
+    if (measure(cut) <= max) return cut
+  }
+
+  return fitText(path, max, measure)
+}
+
+const FOLD_SLACK = 1.15
+
+// Text cut at a word near `chars`, or whole when folding would hide next to nothing.
+export function foldText(text: string, chars: number): { text: string; isCut: boolean } {
+  if (text.length <= chars * FOLD_SLACK) return { text, isCut: false }
+  const space = text.lastIndexOf(' ', chars)
+
+  return { text: `${text.slice(0, space > 0 ? space : chars).trimEnd()}…`, isCut: true }
 }

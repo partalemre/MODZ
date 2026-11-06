@@ -1,12 +1,12 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Register, RenderSurface, Timer } from 'claude-code'
 
-import { PROBED_TEXTS, detect, goModuleOf, isSource } from './detect'
-import type { RootInfo } from './detect'
+import { PROBED_TEXTS, detect, goModuleOf, isSource, spawnArgv } from './detect'
+import type { Commands, RootInfo } from './detect'
 import { hookBand } from './band-hook'
 import { hookCi } from './ci'
 import { HUB_PANE, hubCardOf, isOpenFor } from './hub'
-import { DEBOUNCE_MS, DISMISS_AFTER_MS, EMPTY, NICE, OPEN_TIMEOUT_MS, PRIORITY, REFRESH_MS, TIMEOUT_MS, TIMEOUT_SLACK_MS, VENDOR_TOOLS, WRITE_TOOLS } from './limits'
+import { DEBOUNCE_MS, DISMISS_AFTER_MS, EMPTY, OPEN_TIMEOUT_MS, PRIORITY, REFRESH_MS, TIMEOUT_MS, TIMEOUT_SLACK_MS, VENDOR_TOOLS, WRITE_TOOLS } from './limits'
 import { openCandidates, pathOf, placeOf } from './open'
 import { overridesOf, type Overrides } from './options'
 import { badgeText, isFailing, parseLint, parseTests } from './parse'
@@ -27,6 +27,7 @@ const ciAtom = atom({ plugin: 'test-badge', key: 'ci' } as const, null as CiWatc
 const enabledAtom = atom({ plugin: 'test-badge', key: 'isEnabled' } as const, true)
 const filterAtom = atom({ plugin: 'test-badge', key: 'filter' } as const, 'all' as SuiteFilter)
 const noticeAtom = atom({ plugin: 'test-badge', key: 'notice' } as const, null)
+const commandsAtom = atom({ plugin: 'test-badge', key: 'commands' } as const, null as Commands | null)
 const themeAtom = atom({ plugin: 'test-badge', key: 'theme' } as const, AUTO)
 
 const COMMAND = 'test-badge'
@@ -39,7 +40,7 @@ const homeRef = { plugin: 'test-badge', key: 'home' } as const
 const hubRef = { plugin: 'test-badge', key: 'hub' } as const
 
 type Parse = (out: string, code: number, ctx: ParseContext) => CheckOutcome
-const flags = { isDirty: false, isRunning: false, isQueued: false, debounce: null as Timer | null, noticeId: 0 }
+const flags = { isDirty: false, isRunning: false, isQueued: false, debounce: null as Timer | null, noticeId: 0, isWindows: false }
 
 async function rootInfo($: EngineInterface, cwd: string): Promise<RootInfo> {
   const names = new Set((await $.fs.list(cwd)).map(entry => entry.name))
@@ -51,10 +52,16 @@ async function rootInfo($: EngineInterface, cwd: string): Promise<RootInfo> {
   return { names, texts, hasVendorBin: tool => vendor.has(tool) }
 }
 
+// The pane names what a run would do before any run has happened.
+async function learnCommands($: EngineInterface, overrides: Overrides): Promise<void> {
+  const info = await rootInfo($, await $.session.cwd())
+  await update($, commandsAtom, () => detect(info, overrides))
+}
+
 async function check($: EngineInterface, argv: string[], how: { parse: Parse; ctx: ParseContext }): Promise<CheckOutcome> {
   const started = await $.clock.now()
   try {
-    const out = await $.process.run([...NICE, ...argv], { cwd: how.ctx.root, timeoutMs: TIMEOUT_MS, env: { CI: '1', FORCE_COLOR: '0' } })
+    const out = await $.process.run(spawnArgv(argv, flags.isWindows), { cwd: how.ctx.root, timeoutMs: TIMEOUT_MS, env: { CI: '1', FORCE_COLOR: '0' } })
 
     return how.parse(`${out.stdout}\n${out.stderr}`, out.exitCode, how.ctx)
   } catch {
@@ -87,6 +94,7 @@ async function runChecks($: EngineInterface, overrides: Overrides): Promise<void
   const root = await $.session.cwd()
   const info = await rootInfo($, root)
   const commands = detect(info, overrides)
+  await update($, commandsAtom, () => commands)
   if (commands.test === null && commands.lint === null) {
     $.ui.log('test-badge: no test or lint command found here', { to: 'debug' })
 
@@ -133,14 +141,14 @@ async function runAll($: EngineInterface, overrides: Overrides): Promise<void> {
 
 function schedule($: EngineInterface, overrides: Overrides): void {
   flags.debounce?.cancel()
-  flags.debounce = $.clock.after(DEBOUNCE_MS, () => void runAll($, overrides))
+  flags.debounce = $.clock.after(DEBOUNCE_MS, () => void runAll($, overrides).catch(error => $.ui.log(`test-badge: run failed (${String(error)})`, { to: 'debug' })))
 }
 
 // Opens the failure's file at its line; where no opener runs, copies "file:line" instead.
 async function openFailure($: EngineInterface, failure: Failure, where: { root: string; template: string; surface: RenderSurface }): Promise<void> {
   const path = pathOf(failure, where.root)
   if (path === null) return
-  for (const argv of openCandidates(where.template, { path, line: failure.line })) {
+  for (const argv of openCandidates(where.template, { path, line: failure.line }, flags.isWindows)) {
     const out = await $.process.run(argv, { timeoutMs: OPEN_TIMEOUT_MS }).catch(() => null)
     if (out !== null && out.exitCode === 0) return
   }
@@ -197,6 +205,8 @@ async function runCommand($: EngineInterface, arg: string, overrides: Overrides)
 function hookRuns(on: On, overrides: Overrides): void {
   on('session.start', async ($, e, next) => {
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
+    flags.isWindows = (await $.env.get('OS').catch(() => undefined)) === 'Windows_NT'
+    await learnCommands($, overrides).catch(() => $.ui.log('test-badge: could not look for commands', { to: 'debug' }))
     try {
       const saved = await $.store.get(STORE_KEY)
       await update($, enabledAtom, () => saved !== false)
@@ -268,6 +278,7 @@ function hookPane(on: On, overrides: Overrides): void {
       onRerun: () => void runAll($, overrides),
       onFilter: filter => void update($, filterAtom, () => filter),
       ci: await read($, ciAtom),
+      commands: await read($, commandsAtom),
     })
 
     return pinned(e, withHome(ui, tree, isHubOn ? goHome : null))

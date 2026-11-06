@@ -66,6 +66,7 @@ declare module 'claude-code' {
       snapshot: Snapshot | null
       selected: string
       openPlan: string
+      unfolded: string[]
       busy: Busy | null
       error: string
       shown: { pane: string; at: number } | null

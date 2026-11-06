@@ -12,7 +12,7 @@ const eslint: Parser = (lines, ctx) => {
   for (const row of lines) {
     const entry = /^\s+(\d+):\d+\s+error\s+(.+?)(?:\s{2,}(\S+))?\s*$/.exec(row)
     if (entry !== null) out.push(failure({ file, line: lineNumber(entry[1]), name: entry[2] ?? '', message: entry[3] ?? '', suite: 'lint' }, ctx))
-    else if (/^\/?[^\s:]+\.\w+$/.test(row)) file = row
+    else if (/^(?:[A-Za-z]:)?[\\/]?[^\s:]+\.\w+$/.test(row)) file = row
   }
 
   return out

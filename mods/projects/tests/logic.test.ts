@@ -1,9 +1,10 @@
 import { expect, test } from 'claude-code/testing'
 
 import { growProjects, isShown, joinCopies, LIVE_MS, spent, withClearNames, withLiveNow } from '../hooks/build'
-import { rowWidth } from '../hooks/pane'
-import { bigPic, mapPic, rowPic } from '../hooks/svg-rows'
-import { mono, sans } from '../hooks/kit/svg-core'
+import { rowWidth } from '../hooks/view'
+import { headerPic, nextPic, planPic, statsPic } from '../hooks/svg-detail'
+import { mapPic, rowPic } from '../hooks/svg-rows'
+import { sans } from '../hooks/kit/svg-core'
 import { leftOffOf, plainOf } from '../hooks/leftoff'
 import { parseEstimate, percentOf } from '../hooks/percent'
 import { parseCeo, parseMarkdown } from '../hooks/plans'
@@ -182,12 +183,13 @@ const textsOf = (source: string): { x: number; anchor: string; size: number; tex
   text: found[2] ?? '',
 }))
 
-test('a row keeps its token count and age whole, whatever the age says', () => {
+test('a row keeps its age whole, and its token count where there is room', () => {
   for (const days of [3, 30, 365]) {
     const project = rowProject({ lastAt: new Date(NOW - days * 86_400_000).toISOString() })
     const { source } = rowPic(project, { width: 414, nowMs: NOW })
-    expect(source).toContain(`· ${days} d ago`)
-    expect(source).not.toMatch(/· [^<]*…<\/text>/)
+    expect(source).toContain(`>${days} d<`)
+    const wide = rowPic(project, { width: 549, nowMs: NOW }).source
+    expect(wide).toContain(`26.9M · ${days} d<`)
   }
 })
 
@@ -200,7 +202,7 @@ test('a long name stops short of the facts on its right', () => {
   const { source } = rowPic(rowProject({ name: 'a-very-long-project-folder-name-that-would-run-into-the-number', isLive: true }), { width, nowMs: NOW })
   const [name, meta] = textsOf(source)
   expect(name?.text.endsWith('…')).toBe(true)
-  expect((name?.x ?? 0) + sans(13, 560)(name?.text ?? '')).toBeLessThanOrEqual((meta?.x ?? 0) - mono(11)(meta?.text ?? ''))
+  expect((name?.x ?? 0) + sans(13, 560)(name?.text ?? '')).toBeLessThanOrEqual((meta?.x ?? 0) - sans(12)(meta?.text ?? ''))
 })
 
 test('a stale estimate reads dim, a fresh one bright', () => {
@@ -225,7 +227,7 @@ const NO_NUMBER = { kind: 'none', value: null, at: 0, isStale: false, basis: '' 
 
 test('every colour a drawing names is one it declares, so nothing paints as nothing', () => {
   const live = rowProject({ isLive: true, percent: NO_NUMBER })
-  const sources = [rowPic(live, { width: 414, nowMs: NOW }), rowPic(rowProject({}), { width: 414, nowMs: NOW }), bigPic(rowProject({}), 414), mapPic([live, rowProject({})], 414), mapPic([live], 414)].map(pic => pic.source)
+  const sources = [rowPic(live, { width: 414, nowMs: NOW }), rowPic(rowProject({}), { width: 414, nowMs: NOW }), headerPic(live, { width: 414, path: '~/w' }), headerPic(rowProject({}), { width: 414, path: '~/w' }), nextPic('Write the docs', 414), planPic(plan(1, 2), { width: 414, isOpen: true }), planPic(plan(0, 2), { width: 414, isOpen: false }), statsPic([{ label: 'Spent', value: '1M' }], 414), mapPic([live, rowProject({})], 414), mapPic([live], 414)].map(pic => pic.source)
   for (const source of sources) {
     for (const [, name] of source.matchAll(/var\(--([\w-]+)\)/g)) expect(source).toContain(`--${name}:`)
     for (const [, paint] of source.matchAll(/class="[^"]*\b[fs]-(\w+)/g)) expect(source).toContain(`--${paint}:`)

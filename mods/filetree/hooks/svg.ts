@@ -1,5 +1,5 @@
 // Vector pieces for the desktop pane: text measuring, the palette as CSS classes, bare line icons, group
-// labels, badges and pills. Pure strings; the hooks module wraps them in Svg.
+// labels. Pure strings; the hooks module wraps them in Svg.
 
 import type { Look } from '../types'
 import { DARK, LIGHT, type Palette, paletteOf, type Role } from './theme'
@@ -81,30 +81,6 @@ const ICONS: Record<IconName, string> = {
 export function icon(name: IconName, { x, y, size }: Pt & { size: number }): string {
   const scale = size / 24
   return `<g transform="translate(${x} ${y}) scale(${scale})" fill="none" class="s-mid" stroke-width="${1.5 / scale}" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</g>`
-}
-
-export const BADGE_H = 16
-
-export function badgeWidth(label: string): number {
-  return Math.max(26, Math.ceil(measure(label, 9.5, true) + 10))
-}
-
-// A neutral file badge; `role` names what Claude is doing to the file right now, the one time it takes colour.
-export function badge(label: string, { x, y }: Pt, role: Role | null): string {
-  const w = badgeWidth(label)
-  const [fill, ink] = role ? [`t-${role}`, `f-${role}`] : ['track', 'lo']
-  return `<rect x="${x}" y="${y}" width="${w}" height="${BADGE_H}" rx="4" class="${fill}"/><text x="${x + w / 2}" y="${y + 11.5}" text-anchor="middle" font-size="9.5" font-weight="700" class="num ${ink}">${escape(label)}</text>`
-}
-
-export const PILL_H = 20
-
-export const pillWidth = (text: string): number => Math.ceil(measure(text, 11, true) + 18)
-
-// A status pill whose right edge sits at `right`: neutral, its words in the role's ink only while live.
-export function pill(text: string, { right, y }: { right: number; y: number }, role: Role | null): string {
-  const w = pillWidth(text)
-  const x = right - w
-  return `<rect x="${x}" y="${y}" width="${w}" height="${PILL_H}" rx="${PILL_H / 2}" class="track"/><text x="${x + w / 2}" y="${y + 14}" text-anchor="middle" font-size="11" font-weight="600" class="${role ? `f-${role}` : 'mid'}">${escape(text)}</text>`
 }
 
 // A group's label (DESIGN.md §0.2): sentence case, quiet, no notch, rule or letter-spacing.

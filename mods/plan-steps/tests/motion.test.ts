@@ -87,3 +87,30 @@ test('desktop: the empty pane is a frame too', async ($: any, on: any) => {
   expect(svg.props.isInteractive).toBe(true)
   expect(String(svg.props.source)).toContain('class="m-in"')
 })
+
+test('desktop: the header says one true thing in each state, with one meter segment per step and no percent', async ($: any, on: any) => {
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('fs.read', () => ({ value: '' }))
+  await world($, on)
+  const draw = async (statuses: string[]) => {
+    await $.tool.call({ tool: 'TodoWrite', todos: statuses.map((status, n) => ({ content: `Job ${n}`, activeForm: `Job ${n}`, status })) })
+    const pane = await $.ui.mount(paneOf())
+    const [source] = await sources(pane)
+    await pane.unmount()
+
+    return source.replace(/<style>[\s\S]*?<\/style>/g, '')
+  }
+  const unstarted = await draw(['pending', 'pending', 'pending'])
+  expect(unstarted).toContain('>3 steps<')
+  expect(unstarted).toContain('not started')
+
+  const running = await draw(['in_progress', 'pending', 'pending', 'pending'])
+  expect(running).toContain('0 of 4 steps done')
+  expect(running).not.toMatch(/>[^<]*%[^<]*</)
+  expect(running).toContain('class="f-edit breathe"')
+  expect(running.match(/height="3"/g)).toHaveLength(4)
+
+  const done = await draw(['completed', 'completed'])
+  expect(done).toContain('All 2 steps done')
+  expect(done).not.toContain('breathe')
+})

@@ -47,7 +47,7 @@ function ghAnswer(gh: Gh, argv: string[]) {
   return gh.branchPr === null ? out('no pull requests found', 1) : out(JSON.stringify(pr))
 }
 
-export async function setupCi($: any, on: any, spec: { gh: Gh; surface?: string; theme?: string; lang?: string }) {
+export async function setupCi($: any, on: any, spec: { gh: Gh; surface?: string; theme?: string; lang?: string; hasTests?: boolean }) {
   const { gh } = spec
   const clock = mock.clock(on)
   mock.env(on, { MODZ_LANG: spec.lang ?? 'en', ...(spec.theme === undefined ? {} : { MODZ_THEME: spec.theme }) })
@@ -58,7 +58,9 @@ export async function setupCi($: any, on: any, spec: { gh: Gh; surface?: string;
   on('ui.render', () => ({ type: 'engine', ref: 1 }))
   on('session.start', () => ({ cwd: '/w' }))
   on('session.cwd', () => ({ value: '/w' }))
-  on('fs.list', () => ({ value: [] }))
+  on('fs.list', () => ({ value: spec.hasTests === true ? [{ name: 'package.json', kind: 'file', size: 10 }] : [] }))
+  on('fs.exists', () => ({ value: false }))
+  on('fs.read', () => ({ value: JSON.stringify({ scripts: { test: 'vitest run', lint: 'eslint .' } }) }))
   on('tool.call', () => ({ result: { stdout: gh.bashOut, stderr: '' }, text: gh.bashOut, ...(gh.isBashError ? { isError: true } : {}) }))
   on('process.run', async (_: any, e: any) => {
     gh.calls.push([...e.argv])

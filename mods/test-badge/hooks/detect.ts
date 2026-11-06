@@ -1,3 +1,5 @@
+import { NICE } from './limits'
+
 export type Commands = { test: string[] | null; lint: string[] | null }
 
 // What the project root holds: its file names, and the text of the few files detection reads.
@@ -11,7 +13,7 @@ const SOURCE_EXT = new Set([
 export const PROBED_TEXTS = ['package.json', 'pyproject.toml', 'setup.cfg', 'tox.ini', 'go.mod', 'pubspec.yaml']
 
 export function isSource(path: string): boolean {
-  const name = path.split('/').pop() ?? ''
+  const name = path.split(/[\\/]/).pop() ?? ''
   const dot = name.lastIndexOf('.')
 
   return dot > 0 && SOURCE_EXT.has(name.slice(dot + 1).toLowerCase())
@@ -79,4 +81,15 @@ export function detect(root: RootInfo, overrides: { test: string; lint: string }
     test: overrides.test.trim() !== '' ? shell(overrides.test) : detectTest(root, scripts),
     lint: overrides.lint.trim() !== '' ? shell(overrides.lint) : detectLint(root, scripts),
   }
+}
+
+// What is really spawned. Windows has no `nice` and no /bin/sh, calls Python `python`, and runs npm and friends
+// (.cmd scripts) only through cmd, which also takes a path only with backslashes.
+export function spawnArgv(argv: string[], isWindows: boolean): string[] {
+  if (!isWindows) return [...NICE, ...argv]
+  const [head = '', ...rest] = argv
+  if (head === '/bin/sh') return ['cmd', '/c', rest[1] ?? '']
+  const tool = head === 'python3' ? 'python' : head.replace(/\//g, '\\')
+
+  return ['cmd', '/c', tool, ...rest]
 }

@@ -1,6 +1,6 @@
 import { spent } from './build'
-import { agoText, percentText, tokensText } from './format'
-import { escapeXml, mono, num, rectEl, sans, textEl, toPic } from './kit/svg-core'
+import { agoShortText, percentText, tokensText } from './format'
+import { escapeXml, num, rectEl, sans, textEl, toPic } from './kit/svg-core'
 import type { SvgPic } from './kit/svg-core'
 import { fitText } from './kit/svg-metrics'
 import { words } from './words'
@@ -12,17 +12,22 @@ import type { Project } from '../types'
 // One control tall, so the row is one button and lights as one block (kit/press.tsx). Where it stopped is in the map's
 // caption and the project's own page.
 const ROW_H = 28
-const BAR_H = 2
-const BAR_Y = 26
-const NAME_Y = 17
-const PERCENT_W = 48
+const NAME_Y = 18
+// Name, then the facts right-aligned in columns of their own, so rows read straight down.
+const DOT_R = 3
+const NAME_X = 14
+const PERCENT_W = 40
+const METER_W = 40
+const METER_H = 4
+const METER_MID = 14
+const COLUMN_GAP = 12
 // The least room kept between two texts of one line.
 const TEXT_GAP = 12
-const DOT_R = 3
-const DOT_GAP = 12
+// From here a row has room for the tokens as well.
+const WIDE_ROW = 480
 const FULL = 100
 
-const paintOf = (project: Project): string => {
+export const paintOf = (project: Project): string => {
   if (project.isLive) return 'edit'
   if (project.percent.value === FULL) return 'ok'
 
@@ -35,7 +40,7 @@ export const stoppedAt = (project: Project): string => {
   return left?.recap || project.estimate?.next || left?.title || left?.prompt || project.git?.subject || ''
 }
 
-function barOf(project: Project, spec: { y: number; width: number; height: number }): string {
+export function barOf(project: Project, spec: { y: number; width: number; height: number }): string {
   const { value } = project.percent
   if (value === null) return `<line x1="0" x2="${num(spec.width)}" y1="${spec.y + 1}" y2="${spec.y + 1}" class="s-line" stroke-width="1" stroke-dasharray="3 4"/>`
   const track = rectEl({ x: 0, y: spec.y, width: spec.width, height: spec.height, radius: 1, paint: 'track' })
@@ -43,22 +48,39 @@ function barOf(project: Project, spec: { y: number; width: number; height: numbe
   return track + rectEl({ x: 0, y: spec.y, width: Math.max(spec.height, (spec.width * value) / FULL), height: spec.height, radius: 1, paint: paintOf(project) })
 }
 
-// One row, pressed as a whole by the caller.
+// A small meter: a track and its fill, the fill never less than a dot while anything is done.
+export function meterOf(ratio: number, spec: { x: number; y: number; width: number; height: number; paint: string }): string {
+  const { x, y, width, height, paint } = spec
+  const radius = height / 2
+  const track = rectEl({ x, y, width, height, radius, paint: 'track' })
+
+  return ratio <= 0 ? track : track + rectEl({ x, y, width: Math.max(height, width * ratio), height, radius, paint })
+}
+
+function rowMeter(project: Project, x: number): string {
+  const { value } = project.percent
+  const y = METER_MID - METER_H / 2
+  if (value === null) return `<line x1="${x}" x2="${x + METER_W}" y1="${METER_MID}" y2="${METER_MID}" class="s-line" stroke-width="1" stroke-dasharray="3 4"/>`
+
+  return meterOf(value / FULL, { x, y, width: METER_W, height: METER_H, paint: paintOf(project) })
+}
+
+// One row, pressed as a whole by the caller: status dot, name, then tokens when there is room, age, meter and percent.
 export function rowPic(project: Project, spec: { width: number; nowMs: number }): SvgPic {
   const { width, nowMs } = spec
   const say = words()
-  const left = project.isLive ? DOT_GAP : 0
-  const dot = project.isLive ? `<circle cx="${DOT_R}" cy="${NAME_Y - 4}" r="${DOT_R}" class="f-edit"/>` : ''
-  const meta = `${tokensText(spent(project.tokens))} · ${project.isLive ? say.live : agoText(Date.parse(project.lastAt) || 0, nowMs)}`
+  const age = project.isLive ? say.live : agoShortText(Date.parse(project.lastAt) || 0, nowMs)
+  const meta = width >= WIDE_ROW ? `${tokensText(spent(project.tokens))} · ${age}` : age
   const shown = percentText(project.percent)
-  const metaX = width - PERCENT_W
-  const name = fitText(project.name, metaX - mono(11)(meta) - left - TEXT_GAP, sans(13, 560))
+  const meterX = width - PERCENT_W - METER_W
+  const metaX = meterX - COLUMN_GAP
+  const name = fitText(project.name, metaX - sans(12)(meta) - NAME_X - TEXT_GAP, sans(13, 560))
   const body = [
-    dot,
-    textEl({ x: left, y: NAME_Y, text: name, size: 13, weight: 560, paint: 'hi' }),
-    textEl({ x: metaX, y: NAME_Y, text: meta, size: 11, paint: 'lo', anchor: 'end', isMono: true }),
-    textEl({ x: width, y: NAME_Y, text: shown, size: 13, weight: 600, paint: project.percent.value === null || project.percent.isStale ? 'lo' : 'hi', anchor: 'end', isMono: true }),
-    barOf(project, { y: BAR_Y, width, height: BAR_H }),
+    `<circle cx="${DOT_R}" cy="${METER_MID}" r="${DOT_R}" class="f-${project.isLive ? 'edit' : project.percent.value === FULL ? 'ok' : 'track'}"/>`,
+    textEl({ x: NAME_X, y: NAME_Y, text: name, size: 13, weight: 560, paint: 'hi' }),
+    textEl({ x: metaX, y: NAME_Y, text: meta, size: 12, paint: 'lo', anchor: 'end' }),
+    rowMeter(project, meterX),
+    textEl({ x: width, y: NAME_Y, text: shown, size: 12, weight: 500, paint: project.percent.value === null || project.percent.isStale ? 'lo' : 'hi', anchor: 'end', isMono: true }),
   ].join('')
 
   return toPic({ body, width, height: ROW_H, alt: `${project.name}, ${shown}, ${stoppedAt(project)}` })
@@ -76,22 +98,9 @@ export function headPic(text: string, width: number): SvgPic {
   return toPic({ body, width, height: HEAD_H, alt: text })
 }
 
-const BIG_H = 62
-const BIG_BASE = 40
-const BIG_BAR_Y = 54
-const BIG_BAR_H = 3
-
-// One project's number, large, over its gauge.
-export function bigPic(project: Project, width: number): SvgPic {
-  const shown = percentText(project.percent)
-  const body = textEl({ x: 0, y: BIG_BASE, text: shown, size: 40, weight: 300, paint: 'hi' }) + barOf(project, { y: BIG_BAR_Y, width, height: BIG_BAR_H })
-
-  return toPic({ body, width, height: BIG_H, alt: shown })
-}
-
-const MAP_H = 118
+const MAP_H = 84
 const COL_TOP = 40
-const COL_H = 70
+const COL_H = 40
 const MAX_COLS = 24
 const COL_GAP = 4
 const MAX_COL_W = 44

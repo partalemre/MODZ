@@ -1,22 +1,9 @@
-// The desktop pane's drawings: the "Now" card, the list of files Claude touched, and the tree's group label.
+// The desktop pane's drawings: the status lines (what Claude is doing, git), the list of files Claude touched, and
+// the tree's group label. No frames: they rest on the pane, as a file explorer's header does (DESIGN.md §0.7).
 
 import type { Look } from '../types'
 import type { Hero, Part } from './now'
-import {
-  badge,
-  BADGE_H,
-  escape,
-  fitMiddle,
-  groupLabel,
-  icon,
-  measure,
-  pill,
-  type Font,
-  type Pt,
-  PILL_H,
-  pillWidth,
-  svgDoc,
-} from './svg'
+import { escape, fitMiddle, groupLabel, icon, measure, type Font, type Pt, svgDoc } from './svg'
 import type { Role } from './theme'
 import { words } from './words'
 
@@ -27,25 +14,22 @@ export type LegendItem = { role: Role; label: string }
 // earlier turns read too.
 export type CostRow = { turn: string | null; session: string | null }
 
-const PAD = 16
+const PAD = 2
 const GAP = 12
-const TITLE = 16
-const SUB = 13
+const TITLE = 13
+const SUB = 12
 const ROW = 13
-const LINE = 24
-// Baselines of the headline and the line under it; the git and cost lines follow after a little air.
-const TITLE_Y = PAD + 20
-const SUB_Y = TITLE_Y + 21
-const LINES_TOP = SUB_Y + 8
-// Where a line's text starts after its 16px icon.
-const ICON_INDENT = 24
-const ICON = 16
-// The live dot before the headline: its radius, and how far it pushes the headline over.
+const LINE = 22
+// The first line's baseline; the lines under it follow a line apart.
+const TITLE_Y = 15
+const LINES_TOP = TITLE_Y
+// Where a line's text starts after its 14px icon.
+const ICON_INDENT = 20
+const ICON = 14
+const ICON_LIFT = 11.5
 const DOT_R = 3
-const DOT_ROOM = 14
-
-const frame = (w: number, h: number): string =>
-  `<rect x=".5" y=".5" width="${w - 1}" height="${h - 1}" rx="12" class="card"/>`
+// The sentence's second half stays only with this much room for it.
+const MIN_SUB = 56
 
 function fitEnd(text: string, width: number, font: Font): string {
   const { size, isBold = false } = font
@@ -86,7 +70,7 @@ function gitLine(git: GitRow, y: number, w: number): string {
         ...(git.add ? [{ text: `+${git.add} `, cls: 'f-ok', isNum: true }] : []),
         ...(git.del ? [{ text: `−${git.del} `, cls: 'f-danger', isNum: true }] : []),
         ...(git.add || git.del ? [{ text: '· ', cls: 'lo' }] : []),
-        { text: said.changes(git.changed), cls: 'f-warn', isBold: true },
+        { text: said.changes(git.changed), cls: 'f-warn' },
       ]
     : [{ text: said.cleanNoChanges, cls: 'mid' }]
   const statusW = status.reduce((s, p) => s + measure(p.text, ROW, p.isBold), 0)
@@ -97,7 +81,7 @@ function gitLine(git: GitRow, y: number, w: number): string {
   const upstream = git.upstream && upRoom > 40 ? `<tspan dx="8" font-size="12" class="lo">${escape(fitMiddle(git.upstream, upRoom, { size: 12 }))}</tspan>` : ''
   const branch = `<text x="${PAD + ICON_INDENT}" y="${y}" font-size="${ROW}"><tspan font-weight="560" class="hi">${escape(name)}</tspan>${git.ahead ? `<tspan font-weight="650" class="mid"> ↑${git.ahead}</tspan>` : ''}${git.behind ? `<tspan font-weight="650" class="f-warn"> ↓${git.behind}</tspan>` : ''}${upstream}</text>`
   const right = `<text x="${w - PAD}" y="${y}" text-anchor="end" font-size="${ROW}">${spans(status, statusW + 4, ROW)}</text>`
-  return `${icon('branch', { x: PAD, y: y - 12.5, size: ICON })}${branch}${right}`
+  return `${icon('branch', { x: PAD, y: y - ICON_LIFT, size: ICON })}${branch}${right}`
 }
 
 // The session's count gives way first when the line is short of room.
@@ -114,16 +98,18 @@ function costLine(cost: CostRow, y: number, w: number): string {
   const isRightShown = right !== '' && leftW + rightW <= room
   const head = `<text x="${PAD + ICON_INDENT}" y="${y}" font-size="${ROW}">${spans(left, room - (isRightShown ? rightW : 0), ROW)}</text>`
   const tailText = isRightShown ? `<text x="${w - PAD}" y="${y}" text-anchor="end" font-size="12" class="lo">${escape(right)}</text>` : ''
-  return `${icon('eye', { x: PAD, y: y - 12.5, size: ICON })}${head}${tailText}`
+  return `${icon('eye', { x: PAD, y: y - ICON_LIFT, size: ICON })}${head}${tailText}`
 }
 
-function legendLine(items: LegendItem[], y: number): string {
-  let x = PAD
+// Entries that would pass the pane's edge are left out, the last first.
+function legendLine(items: LegendItem[], { y, w }: { y: number; w: number }): string {
+  let x = PAD + ICON_INDENT
   return items
     .map(item => {
-      const dot = `<circle cx="${x + 3.5}" cy="${y - 4}" r="3.5" class="f-${item.role}"/>`
-      const label = `<text x="${x + 12}" y="${y}" font-size="12" class="mid">${escape(item.label)}</text>`
-      x += 12 + measure(item.label, 12) + 18
+      if (x + 11 + measure(item.label, 12) > w - PAD) return ''
+      const dot = `<circle cx="${x + 3}" cy="${y - 4}" r="3" class="f-${item.role}"/>`
+      const label = `<text x="${x + 11}" y="${y}" font-size="12" class="lo">${escape(item.label)}</text>`
+      x += 11 + measure(item.label, 12) + 14
       return dot + label
     })
     .join('')
@@ -131,62 +117,68 @@ function legendLine(items: LegendItem[], y: number): string {
 
 export type Canvas = { look: Look; w: number }
 
-// Before the headline while Claude works, the accent's dot breathing; none once the turn ends.
-const liveDot = (hero: Hero): string =>
-  hero.isLive === true ? `<circle cx="${PAD + DOT_R}" cy="${TITLE_Y - 5.5}" r="${DOT_R}" class="f-edit breathe"/>` : ''
+// Before the sentence, the accent's dot breathing while Claude works; a quiet one once the turn ends.
+const leadDot = (hero: Hero): string =>
+  `<circle cx="${PAD + ICON / 2}" cy="${TITLE_Y - 4.5}" r="${DOT_R}" class="${hero.isLive === true ? 'f-edit breathe' : 'lo'}"/>`
+
+// One line: what Claude is doing, then where, the where only when it fits.
+function nowLine(hero: Hero, w: number): string {
+  const x = PAD + ICON_INDENT
+  const width = w - x - PAD
+  const head = titleLine(hero, { x, y: TITLE_Y, width })
+  const said = `${hero.title.lead}${hero.title.name}${hero.title.tail}`
+  const used = measure(said, TITLE, true) + 8
+  const room = width - used
+  const sub = hero.sub.length && room >= MIN_SUB ? `<text x="${x + used}" y="${TITLE_Y}" font-size="${SUB}">${spans(hero.sub, room, SUB)}</text>` : ''
+  return head + sub
+}
 
 export function heroCard(hero: Hero, { git, cost, legend }: { git: GitRow | null; cost: CostRow | null; legend: LegendItem[] }, { look, w }: Canvas): Drawn {
-  const titleX = PAD + (hero.isLive === true ? DOT_ROOM : 0)
-  const top = [
-    liveDot(hero),
-    titleLine(hero, { x: titleX, y: TITLE_Y, width: w - titleX - PAD }),
-    `<text x="${PAD}" y="${SUB_Y}" font-size="${SUB}">${spans(hero.sub, w - 2 * PAD, SUB)}</text>`,
-  ]
   const rows: string[] = []
   let y = LINES_TOP
   if (git) rows.push(gitLine(git, (y += LINE), w))
   if (cost) rows.push(costLine(cost, (y += LINE), w))
-  if (legend.length) rows.push(legendLine(legend, (y += LINE)))
-  const h = (rows.length ? y : SUB_Y) + PAD
+  if (legend.length) rows.push(legendLine(legend, { y: (y += LINE), w }))
+  const h = y + 8
   const [lead = '', tail = ''] = words().costTurn
   const costAlt = cost?.turn ? ` · ${lead}${cost.turn}${tail}` : ''
   const alt = `${hero.label}: ${hero.title.lead}${hero.title.name}${hero.title.tail}. ${hero.sub.map(p => p.text).join('')}${costAlt}`
-  return { source: svgDoc({ width: w, height: h }, look, frame(w, h) + top.join('') + rows.join('')), width: w, height: h, alt }
+  return { source: svgDoc({ width: w, height: h }, look, leadDot(hero) + nowLine(hero, w) + rows.join('')), width: w, height: h, alt }
 }
 
 // `cost` is what the file's reads put into context this turn, written out ("≈1,157").
-// `pill.role` is set while Claude is on the file: then its badge and pill take the activity's colour.
-export type TouchedRow = { name: string; dir: string; badge: string; pill: { text: string; role: Role | null }; diff?: [number, number]; cost?: string }
+// `pill.role` is set while Claude is on the file: then its word takes the activity's colour.
+export type TouchedRow = { name: string; dir: string; pill: { text: string; role: Role | null }; diff?: [number, number]; cost?: string }
 
-const ROW_H = 30
-const HEAD_H = 26
+const ROW_H = 24
+const HEAD_H = 22
 const MAX_ROWS = 6
+const ROW_BASE = 16
 
 function touchedRow(r: TouchedRow, y: number, w: number): string {
-  const pillW = pillWidth(r.pill.text)
+  const wordW = measure(r.pill.text, 12)
   const diff = r.diff ? `${r.diff[0] ? `+${r.diff[0]}` : ''}${r.diff[0] && r.diff[1] ? ' ' : ''}${r.diff[1] ? `−${r.diff[1]}` : ''}` : ''
   const diffW = diff ? measure(diff, 12) + GAP : 0
   const unit = r.cost ? ` ${words().tokUnit}` : ''
   const costW = r.cost ? measure(`${r.cost}${unit}`, 12) + GAP : 0
-  const nameX = 38
-  const room = w - nameX - 2 - pillW - diffW - costW - GAP
-  const name = fitMiddle(r.name, Math.max(48, room * 0.7), { size: ROW, isBold: true })
-  const dirRoom = room - measure(name, ROW, true) - 8
+  const room = w - 2 * PAD - wordW - diffW - costW - GAP
+  const name = fitMiddle(r.name, Math.max(48, room * 0.7), { size: ROW })
+  const dirRoom = room - measure(name, ROW) - 8
   const dir = r.dir && dirRoom > 24 ? fitMiddle(r.dir, dirRoom, { size: 12 }) : ''
+  const base = y + ROW_BASE
   const parts = [
-    badge(r.badge, { x: 2, y: y + (ROW_H - BADGE_H) / 2 }, r.pill.role),
-    `<text x="${nameX}" y="${y + 19.5}" font-size="${ROW}"><tspan font-weight="560" class="hi">${escape(name)}</tspan>${dir ? `<tspan dx="8" font-size="12" class="lo">${escape(dir)}</tspan>` : ''}</text>`,
-    pill(r.pill.text, { right: w - 2, y: y + (ROW_H - PILL_H) / 2 }, r.pill.role),
+    `<text x="${PAD}" y="${base}" font-size="${ROW}"><tspan class="hi">${escape(name)}</tspan>${dir ? `<tspan dx="8" font-size="12" class="lo">${escape(dir)}</tspan>` : ''}</text>`,
+    `<text x="${w - PAD}" y="${base}" text-anchor="end" font-size="12" class="${r.pill.role ? `f-${r.pill.role}` : 'lo'}">${escape(r.pill.text)}</text>`,
   ]
   if (diff) {
     const [add = 0, del = 0] = r.diff ?? []
     const plus = add ? `<tspan class="f-ok">+${add}</tspan>` : ''
     const minus = del ? `<tspan class="f-danger">${add ? ' ' : ''}−${del}</tspan>` : ''
-    parts.push(`<text x="${w - 2 - pillW - GAP}" y="${y + 19.5}" text-anchor="end" font-size="12" class="num">${plus}${minus}</text>`)
+    parts.push(`<text x="${w - PAD - wordW - GAP}" y="${base}" text-anchor="end" font-size="12" class="num">${plus}${minus}</text>`)
   }
   if (r.cost) {
     const tokens = `<tspan class="num mid">${escape(r.cost)}</tspan><tspan class="lo">${escape(unit)}</tspan>`
-    parts.push(`<text x="${w - 2 - pillW - diffW - GAP}" y="${y + 19.5}" text-anchor="end" font-size="12">${tokens}</text>`)
+    parts.push(`<text x="${w - PAD - wordW - diffW - GAP}" y="${base}" text-anchor="end" font-size="12">${tokens}</text>`)
   }
   return parts.join('')
 }
@@ -203,13 +195,14 @@ export function touchedCard(rows: TouchedRow[], look: Look, w: number): Drawn {
   const listH = shown.length ? HEAD_H + shown.length * ROW_H : HEAD_H + 22
   const moreLine = more > 0 ? `<text x="2" y="${listH + 14}" font-size="12" class="lo">${escape(said.moreFiles(more))}</text>` : ''
   const h = listH + (more > 0 ? 20 : 0)
-  const head = groupLabel(title, { x: 2, y: 15 })
+  const head = groupLabel(title, { x: PAD, y: 15 })
   const alt = `${title}: ${rows.map(r => `${r.name} ${r.pill.text}${r.cost ? ` ${r.cost} ${said.tokUnit}` : ''}`).join(', ') || said.noneYet}`
   return { source: svgDoc({ width: w, height: h }, look, head + body + moreLine), width: w, height: h, alt }
 }
 
-export function sectionLine({ left, right }: { left: string; right: string }, { look, w }: Canvas): Drawn {
+// The folder the tree shows, cut to the room its row leaves beside the actions.
+export function sectionLine({ label, name }: { label: string; name: string }, { look, w }: Canvas): Drawn {
   const h = 22
-  const body = `${groupLabel(left, { x: 2, y: 15 })}${right ? groupLabel(right, { x: w - 2, y: 15, anchor: 'end' }) : ''}`
-  return { source: svgDoc({ width: w, height: h }, look, body), width: w, height: h, alt: right ? `${left} · ${right}` : left }
+  const fitted = fitMiddle(name, w - 2 * PAD, { size: 12, isBold: true })
+  return { source: svgDoc({ width: w, height: h }, look, groupLabel(fitted, { x: PAD, y: 15 })), width: w, height: h, alt: `${label} · ${name}` }
 }

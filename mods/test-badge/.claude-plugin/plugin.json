@@ -9,13 +9,13 @@
     "testCommand": {
       "type": "string",
       "title": "Test command",
-      "description": "Overrides the detected test command (run with /bin/sh -c in the project root); empty = auto-detect",
+      "description": "Overrides the detected test command (run with /bin/sh -c, or cmd /c on Windows, in the project root); empty = auto-detect",
       "default": ""
     },
     "lintCommand": {
       "type": "string",
       "title": "Lint command",
-      "description": "Overrides the detected lint command (run with /bin/sh -c in the project root); empty = auto-detect",
+      "description": "Overrides the detected lint command (run with /bin/sh -c, or cmd /c on Windows, in the project root); empty = auto-detect",
       "default": ""
     },
     "openCommand": {

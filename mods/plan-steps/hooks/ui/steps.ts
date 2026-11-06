@@ -1,49 +1,41 @@
-// The numbered step circle (DESIGN.md §4): current = a filled circle with its number (clay while the work is live,
-// quiet ink while it waits), done = a gray ✓ (Moss where finishing is the point), upcoming = a ring with its number.
+// The quiet status glyphs on the plan's rail: done = a bare gray check, under way = the breathing clay dot in a thin
+// ring (a still dot while the work waits), upcoming = a small hollow ring. No numbers and no fills: order is the list's.
 
 export type DotState = 'done' | 'current' | 'next'
-export type DotTone = 'gray' | 'moss'
 
-export const DOT_RADIUS = 11
-const CHECK = { left: 4.4, low: 3.3, right: 4.6, rise: 3.4, dip: 1.2 }
-const NUMBER_DROP = 4
+export type Dot = { cx: number; cy: number; state: DotState; isLive?: boolean }
 
-export type Dot = { cx: number; cy: number; n: number; state: DotState; tone?: DotTone; isLive?: boolean }
+const CHECK = { left: 4.5, low: 3.5, right: 5, rise: 3.5, dip: 1.5 }
+const SMALL_R = 3.5
+const LIVE_R = 3
+const RING_R = 6.5
+// The rail stops short of a glyph by this much, so a line never touches or shows through one.
+const RAIL_GAP = 9
 
-function check(cx: number, cy: number, stroke: string): string {
-  const path = `M${cx - CHECK.left} ${cy + 0.2}L${cx - CHECK.dip} ${cy + CHECK.low}L${cx + CHECK.right} ${cy - CHECK.rise}`
+export function checkMark(cx: number, cy: number): string {
+  const path = `M${cx - CHECK.left} ${cy + 0.25}L${cx - CHECK.dip} ${cy + CHECK.low}L${cx + CHECK.right} ${cy - CHECK.rise}`
 
-  return `<path d="${path}" fill="none" stroke="${stroke}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>`
+  return `<path d="${path}" fill="none" stroke="var(--lo)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`
 }
 
-function number(dot: Dot, cls: string): string {
-  return `<text x="${dot.cx}" y="${dot.cy + NUMBER_DROP}" text-anchor="middle" class="${cls}">${dot.n}</text>`
+export function hollowRing(cx: number, cy: number): string {
+  return `<circle cx="${cx}" cy="${cy}" r="${SMALL_R}" fill="none" stroke="var(--line2)" stroke-width="1.5"/>`
 }
 
 export function stepDot(dot: Dot): string {
   const { cx, cy, state } = dot
-  const r = DOT_RADIUS
-  if (state === 'current') {
-    return dot.isLive === false
-      ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--line2)"/>${number(dot, 'dot-n hi')}`
-      : `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--edit)"/>${number(dot, 'dot-n on-edit')}`
-  }
-  if (state === 'done' && dot.tone === 'moss') {
-    return `<circle cx="${cx}" cy="${cy}" r="${r - 0.5}" fill="var(--ok-t)" stroke="var(--ok-l)"/>${check(cx, cy, 'var(--ok)')}`
-  }
-  if (state === 'done') return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="var(--track)"/>${check(cx, cy, 'var(--mid)')}`
+  if (state === 'done') return checkMark(cx, cy)
+  if (state === 'next') return hollowRing(cx, cy)
+  if (dot.isLive === false) return `<circle cx="${cx}" cy="${cy}" r="${SMALL_R}" fill="var(--lo)"/>`
 
-  return `<circle cx="${cx}" cy="${cy}" r="${r - 0.75}" fill="none" stroke="var(--line2)" stroke-width="1.5"/>${number(dot, 'dot-n lo')}`
+  return `<circle cx="${cx}" cy="${cy}" r="${RING_R}" fill="none" stroke="var(--edit-l)"/><circle cx="${cx}" cy="${cy}" r="${LIVE_R}" class="f-edit breathe"/>`
 }
 
-// The hairline joining two circles: drawn in the gap only, so it never shows through a ring.
-export function stepRail(cx: number, fromCy: number, toCy: number): string {
-  const top = fromCy + DOT_RADIUS + 1.5
-  const bottom = toCy - DOT_RADIUS - 1.5
+// The hairline joining two glyphs: firmer along the stretch already walked.
+export function stepRail(cx: number, span: { from: number; to: number; isWalked: boolean }): string {
+  const top = span.from + RAIL_GAP
+  const bottom = span.to - RAIL_GAP
   if (bottom <= top) return ''
 
-  return `<line x1="${cx}" y1="${top}" x2="${cx}" y2="${bottom}" stroke="var(--line2)" stroke-width="1.5" stroke-linecap="round"/>`
+  return `<line x1="${cx}" y1="${top}" x2="${cx}" y2="${bottom}" stroke="var(${span.isWalked ? '--line2' : '--line'})"/>`
 }
-
-// The styles the circles use; added once to a drawing's style block.
-export const DOT_CSS = '.dot-n{font-size:11px;font-weight:700}.on-edit{fill:var(--on-edit)}'

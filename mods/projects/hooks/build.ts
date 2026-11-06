@@ -199,5 +199,5 @@ export function withClearNames<T extends { root: string; name: string }>(project
   const counts = new Map<string, number>()
   for (const project of projects) counts.set(project.name, (counts.get(project.name) ?? 0) + 1)
 
-  return projects.map(project => (counts.get(project.name) === 1 ? project : { ...project, name: project.root.split('/').slice(-2).join('/') }))
+  return projects.map(project => (counts.get(project.name) === 1 ? project : { ...project, name: project.root.split(/[\\/]/).slice(-2).join('/') }))
 }

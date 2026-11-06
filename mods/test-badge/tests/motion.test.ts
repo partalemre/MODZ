@@ -52,9 +52,10 @@ test('desktop: the pane cascades in as frames, and a redraw or a tick of its age
 
   await clock.advance(PAST_TICK_MS)
   const later = await draw($)
-  expect(later.slice(1)).toEqual(first.slice(1))
-  expect(later[0]).not.toEqual(first[0])
-  expect(later[0]).not.toContain('m-sweep')
+  // The sentence, then the local part, whose age reads on; everything else holds.
+  expect(later.filter((_, n) => n !== 1)).toEqual(first.filter((_, n) => n !== 1))
+  expect(later[1]).not.toEqual(first[1])
+  expect(later[1]).not.toContain('m-sweep')
 
   await openPane($)
   expect((await draw($)).every(source => source.includes('class="m-in"'))).toBe(true)
@@ -63,9 +64,9 @@ test('desktop: the pane cascades in as frames, and a redraw or a tick of its age
 test('desktop: a run still going breathes one accent dot, with no light running along a bar', async ($: any, on: any) => {
   await editAndRun($, await setup($, on, newWorld({ surface: 'desktop', hold: new Promise<void>(() => undefined) })))
   await openPane($)
-  const [header] = await draw($)
+  const [, header] = await draw($)
 
-  expect(header).toContain('class="breathe" cx="3" cy="9" r="3" style="fill:var(--kiln)"')
+  expect(header).toContain('class="breathe" cx="3" cy="21" r="3" style="fill:var(--kiln)"')
   expect(header).not.toContain('m-shine')
   expect(header).not.toContain('Gradient')
 })

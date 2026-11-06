@@ -7,7 +7,6 @@ import { words } from './words'
 
 export type Tone = Role | 'neutral'
 export type BadgePill = { tone: Tone; glyph?: 'check' | 'x' | 'pulse'; label: string }
-export type Headline = { lead: string; tone: Tone; rest: string }
 export type Chip = { filter: SuiteFilter; label: string; count: number }
 
 const SECOND = 1000
@@ -17,7 +16,7 @@ export const suiteTag = (suite: Suite): string => words().suites[suite]
 
 // How many tests failed, when the runner counted them. A failing run with none counted as failed
 // (a coverage gate, a crash after the last test) has no count to show: it reads "kaldı" alone.
-function failedOf(outcome: CheckOutcome): number | null {
+export function failedOf(outcome: CheckOutcome): number | null {
   if (outcome.passed === null || outcome.total === null) return null
   const failed = outcome.total - outcome.passed
 
@@ -51,42 +50,6 @@ export function bandParts(badge: TestBadge, now: number): { pills: BadgePill[]; 
   if (badge.lint !== null) pills.push(lintPill(badge.lint))
 
   return { pills, meta: badge.finishedAt === null ? '' : ago(now - badge.finishedAt) }
-}
-
-function lintLead(lint: CheckOutcome | null): Headline | null {
-  const says = words()
-  if (lint === null || lint.status === 'pass') return null
-  if (lint.status === 'timeout') return { lead: says.leadLintTimeout, tone: 'amber', rest: '' }
-  if (lint.status === 'error') return { lead: says.leadLintNotStarted, tone: 'amber', rest: '' }
-
-  return { lead: lint.errors !== null && lint.errors > 0 ? says.leadLintErrors(lint.errors) : says.leadLintFailed, tone: 'amber', rest: '' }
-}
-
-function passedRest(tests: CheckOutcome | null): string {
-  if (tests === null) return ''
-
-  return tests.total === null ? words().restTestsPassed : words().restTotalPassed(tests.total)
-}
-
-// "3 başarısız · 39 geçti": the lead carries the outcome's color, the rest stays text.hi.
-export function headlineOf(badge: TestBadge): Headline {
-  const { tests, lint } = badge
-  const says = words()
-  if (badge.isRunning) return { lead: says.leadRunning, tone: 'kiln', rest: '' }
-  if (badge.finishedAt === null) return { lead: says.leadNotRun, tone: 'neutral', rest: '' }
-  if (tests !== null && tests.status === 'timeout') return { lead: says.leadTimeout, tone: 'amber', rest: '' }
-  if (tests !== null && tests.status === 'error') return { lead: says.leadNotStarted, tone: 'amber', rest: '' }
-  if (tests !== null && tests.status === 'fail') {
-    const failed = failedOf(tests)
-
-    const rest = tests.passed === null ? '' : says.restPassed(tests.passed)
-
-    return failed === null ? { lead: says.leadTestsFailed, tone: 'flare', rest } : { lead: says.leadFailed(failed), tone: 'flare', rest }
-  }
-  const linted = lintLead(lint)
-  if (linted !== null) return { ...linted, rest: passedRest(tests) }
-
-  return { lead: says.leadAllPassed, tone: 'moss', rest: `${passedRest(tests)}${lint === null ? '' : says.restLintClean}` }
 }
 
 export function runMeta(badge: TestBadge, now: number): string {

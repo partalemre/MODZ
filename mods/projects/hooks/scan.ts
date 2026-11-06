@@ -1,3 +1,4 @@
+import { plainRows } from './scan-plain'
 import type { FileSum, ModelSum } from '../types'
 
 // Reading every session transcript under `<config>/projects`, the cheap way: awk adds up each file in place and hands
@@ -70,7 +71,8 @@ export function parseOutput(text: string): Map<string, Omit<FileSum, 'size' | 'm
     const cells = line.split(TAB)
     if (cells[0] === 'F' && cells.length === 7) {
       const [, path = '', cwd = '', title = '', first = '', last = '', tools = '0'] = cells
-      sums.set(path, { path, cwd, title, first, last, tools: Number(tools), models: {} })
+      // Rows carry the transcript's raw JSON text, where a Windows path's backslashes are doubled.
+      sums.set(path, { path, cwd: cwd.replaceAll('\\\\', '\\'), title, first, last, tools: Number(tools), models: {} })
     } else if (cells[0] === 'U' && cells.length === 8) {
       const [, path = '', model = '', ...counts] = cells
       const sum = sums.get(path)
@@ -102,25 +104,45 @@ async function allFiles(io: ScanIo, root: string): Promise<Stamp[]> {
   return files
 }
 
-async function runAwk(io: ScanIo, paths: readonly string[]): Promise<{ text: string; isOk: boolean; said: string }> {
-  const stream = io.spawn(['awk', AWK, ...paths])
+type AwkRun = { text: string; isOk: boolean; didStart: boolean; said: string }
+
+// A stream rejects its first pull when the program cannot start.
+async function runAwk(io: ScanIo, paths: readonly string[]): Promise<AwkRun> {
   const out: string[] = []
   const errors: string[] = []
-  for await (const chunk of stream) (chunk.stream === 'stdout' ? out : errors).push(chunk.text)
-  const { code } = await stream.result
+  try {
+    const stream = io.spawn(['awk', AWK, ...paths])
+    for await (const chunk of stream) (chunk.stream === 'stdout' ? out : errors).push(chunk.text)
+    const { code } = await stream.result
 
-  return { text: out.join(''), isOk: code === 0, said: errors.join('').trim() }
+    return { text: out.join(''), isOk: code === 0, didStart: true, said: errors.join('').trim() }
+  } catch (error) {
+    return { text: '', isOk: false, didStart: false, said: error instanceof Error ? error.message : String(error) }
+  }
+}
+
+// The same rows without awk, slower: a file that cannot be read is left out, as awk's batch below leaves it.
+async function readPlain(io: ScanIo, paths: readonly string[], said: string): Promise<string> {
+  const rows: string[] = []
+  for (const path of paths) {
+    const text = await io.read(path).catch(() => null)
+    if (text !== null) rows.push(plainRows(path, text))
+  }
+  if (rows.length === 0) throw new Error(`awk failed and no transcript could be read: ${said}`)
+
+  return rows.join('')
 }
 
 // A transcript can vanish between listing and reading (a live session's temp file), and awk stops at the first it
-// cannot open. So a failed batch is read one by one and only the unreadable file is left out; rejects only when none
-// could be read, since then it is awk itself that fails.
+// cannot open. So a failed batch is read one by one and only the unreadable file is left out. When none could be read
+// or awk cannot start at all (a stock Windows), the files are read here instead; rejects only when that fails too.
 async function readBatch(io: ScanIo, paths: readonly string[]): Promise<string> {
   const whole = await runAwk(io, paths)
   if (whole.isOk) return whole.text
+  if (!whole.didStart) return readPlain(io, paths, whole.said)
   const singles = await Promise.all(paths.map(path => runAwk(io, [path])))
   const read = singles.filter(one => one.isOk)
-  if (read.length === 0) throw new Error(`awk failed: ${whole.said}`)
+  if (read.length === 0) return readPlain(io, paths, whole.said)
 
   return read.map(one => one.text).join('')
 }

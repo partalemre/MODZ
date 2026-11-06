@@ -1,13 +1,16 @@
 import { ciPart } from './ci-view'
 import { failuresOf, isFailing } from './parse'
 import { picture } from './pane-pic'
-import { emptySvg, fileHeadSvg, headerSvg, rowSvg, skeletonSvg, tailHeadSvg } from './pane-svg'
-import { groupsOf } from './summary'
+import { fileHeadSvg, localPartSvg, rowSvg, tailHeadSvg, verdictSvg } from './pane-svg'
+import { groupsOf, runMeta } from './summary'
 import { svgWidth } from './svg'
 import type { Theme } from './tidemark'
 import { PressRow } from './kit/press'
 import { chipRow, rerunRow, textPane, unplacedOf } from './view-text'
 import type { CheckName } from './view-text'
+import { localRowsOf, verdictOf } from './verdict'
+import type { PaneState } from './verdict'
+import type { Commands } from './detect'
 import { words } from './words'
 import type { CheckOutcome, CiWatch, Failure, SuiteFilter, TestBadge } from '../types'
 
@@ -26,6 +29,8 @@ export type PaneView = {
   onFilter: (filter: SuiteFilter) => void
   // The CI watch's last state, or null while no PR is watched.
   ci: CiWatch | null
+  // What this project would run; null until it was looked for.
+  commands: Commands | null
 }
 
 // Columns a failure row is indented by under its file, and so narrower than the pane.
@@ -84,34 +89,48 @@ function tailTree(ui: Ui, view: PaneView, spec: { name: CheckName; outcome: Chec
   )
 }
 
-function bodyTree(ui: Ui, view: PaneView) {
+function failuresTree(ui: Ui, view: PaneView) {
   const { Box } = ui
-  const { badge } = view
-  if (badge.finishedAt === null) return picture(ui, skeletonSvg({ width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }), 'tb-skeleton')
-  if (!isFailing(badge)) return null
+  if (!isFailing(view.badge)) return null
 
   return (
     <Box flexDirection="column" rowGap={1}>
       {chipRow(ui, view)}
-      {groupsOf(badge, view.filter).map(group => groupTree(ui, view, group))}
-      {view.filter === 'all' && tailTree(ui, view, { name: 'tests', outcome: badge.tests })}
-      {view.filter === 'all' && tailTree(ui, view, { name: 'lint', outcome: badge.lint })}
+      {groupsOf(view.badge, view.filter).map(group => groupTree(ui, view, group))}
+      {view.filter === 'all' && tailTree(ui, view, { name: 'tests', outcome: view.badge.tests })}
+      {view.filter === 'all' && tailTree(ui, view, { name: 'lint', outcome: view.badge.lint })}
     </Box>
   )
+}
+
+// How many passed, where the runner counted them and a run is not still going.
+function meterOf({ tests, ...badge }: PaneView['badge']): { passed: number; total: number } | null {
+  if (badge.isRunning || tests === null || tests.total === null || tests.passed === null) return null
+
+  return { passed: tests.passed, total: tests.total }
+}
+
+function localPart(ui: Ui, view: PaneView, state: PaneState) {
+  const frame = { width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }
+  const says = words().local
+  const rows = localRowsOf(state)
+  const part = { title: says.title, meta: runMeta(view.badge, view.now), isLive: view.badge.isRunning, rows, meter: meterOf(view.badge), note: rows.length === 0 ? says.none : says.when }
+
+  // The age ("12 sn önce") ticks on; only what the run says is a change worth a sweep.
+  return picture(ui, localPartSvg(frame, part), 'tb-local', { shows: { frame, part: { ...part, meta: view.badge.finishedAt } } })
 }
 
 export function paneTree(ui: Ui, view: PaneView) {
   const { Box } = ui
   if (!view.isRich) return textPane(ui, view)
+  const state: PaneState = { badge: view.badge, ci: view.ci, commands: view.commands }
   const frame = { width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }
-  const isEmpty = view.badge.finishedAt === null && !view.badge.isRunning
-  // The header's age ("12 sn önce") ticks on; only the run it shows is a change worth a sweep.
-  const header = isEmpty ? emptySvg(frame) : headerSvg(frame, { badge: view.badge, now: view.now })
 
   return (
     <Box flexDirection="column" rowGap={1}>
-      {picture(ui, header, 'tb-header', { shows: { frame, isEmpty, badge: view.badge } })}
-      {!isEmpty && bodyTree(ui, view)}
+      {picture(ui, verdictSvg(frame, verdictOf(state)), 'tb-verdict')}
+      {localPart(ui, view, state)}
+      {failuresTree(ui, view)}
       {rerunRow(ui, view)}
       {ciPart(ui, view)}
     </Box>

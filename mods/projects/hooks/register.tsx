@@ -12,13 +12,14 @@ import { pinned } from './kit/pin'
 import { isOffStage, shownOf } from './kit/stage'
 import { isTextSurface } from './kit/ui'
 import { paneTree } from './pane'
-import type { PaneActions } from './pane'
+import type { PaneActions } from './view'
 import { words } from './words'
 import type { HubCard, Snapshot } from '../types'
 
 const snapshotAtom = atom({ plugin: 'projects', key: 'snapshot' } as const, null)
 const selectedAtom = atom({ plugin: 'projects', key: 'selected' } as const, '')
 const openPlanAtom = atom({ plugin: 'projects', key: 'openPlan' } as const, '')
+const unfoldedAtom = atom({ plugin: 'projects', key: 'unfolded' } as const, [])
 const busyAtom = atom({ plugin: 'projects', key: 'busy' } as const, null)
 const errorAtom = atom({ plugin: 'projects', key: 'error' } as const, '')
 
@@ -56,12 +57,13 @@ function ioOf($: EngineInterface): Io {
   }
 }
 
+// Before the first read there is no snapshot, and still a row: it is the only way to the pane that does that first read.
 async function writeHub($: EngineInterface, snapshot: Snapshot | null): Promise<void> {
-  if (snapshot === null) return
   const say = words()
   const at = await $.clock.now()
-  const live = withLiveNow(snapshot, at).projects.filter(project => project.isLive).length
-  const card: HubCard = { pane: HUB_PANE, detail: say.hubDetail(snapshot.projects.length, live), tone: live > 0 ? 'live' : 'idle', at, title: say.hubTitle, hint: say.hubHint, icon: 'gauge', section: 'work' }
+  const live = snapshot === null ? 0 : withLiveNow(snapshot, at).projects.filter(project => project.isLive).length
+  const detail = snapshot === null ? say.hubHint : say.hubDetail(snapshot.projects.length, live)
+  const card: HubCard = { pane: HUB_PANE, detail, tone: live > 0 ? 'live' : 'idle', at, title: say.hubTitle, hint: say.hubHint, icon: 'gauge', section: 'work' }
   await $.state.set({ plugin: 'projects', key: 'hub' }, card)
 }
 
@@ -130,8 +132,11 @@ function actionsOf($: EngineInterface, snapshot: Snapshot | null): PaneActions {
   const all = snapshot?.projects ?? []
 
   return {
-    select: root => void update($, selectedAtom, () => root),
+    select: root => {
+      void update($, unfoldedAtom, () => []).then(() => update($, selectedAtom, () => root))
+    },
     togglePlan: path => void update($, openPlanAtom, open => (open === path ? '' : path)),
+    toggleFold: name => void update($, unfoldedAtom, open => (open.includes(name) ? open.filter(one => one !== name) : [...open, name])),
     openBoard: () => {
       if (kept.paths === null || snapshot === null) return
       const { own } = kept.paths
@@ -162,7 +167,8 @@ export const register: Register = on => {
   on('classic.SessionStart', async ($, e, next) => {
     // This hook writes the hub's line, and on the desktop it can run before session.start has read the language.
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
-    const home = await $.env.get('HOME').catch(() => undefined)
+    // A stock Windows names the home folder only in USERPROFILE.
+    const home = (await $.env.get('HOME').catch(() => undefined)) || (await $.env.get('USERPROFILE').catch(() => undefined))
     kept.platform = (await $.env.get('OS').catch(() => undefined)) === 'Windows_NT' ? 'win32' : (await $.process.run(['uname', '-s'], { timeoutMs: 3000 }).catch(() => ({ stdout: '' }))).stdout.trim() === 'Darwin' ? 'darwin' : 'linux'
     kept.paths = pathsOf(typeof e.transcript_path === 'string' ? e.transcript_path : '', home ?? '')
     if (kept.paths !== null && (await read($, snapshotAtom)) === null) {
@@ -212,6 +218,7 @@ export const register: Register = on => {
       snapshot,
       selected: await read($, selectedAtom),
       openPlan: await read($, openPlanAtom),
+      unfolded: await read($, unfoldedAtom),
       busy: await read($, busyAtom),
       error: await read($, errorAtom),
       nowMs,
@@ -220,6 +227,7 @@ export const register: Register = on => {
       acts: actionsOf($, snapshot),
       missing: (snapshot?.projects ?? []).filter(needsEstimate).length,
       home: isHubOn ? HomeButton(ui, () => void goHome($)) : null,
+      homeDir: kept.paths?.home ?? '',
     })
 
     return pinned(e, tree)

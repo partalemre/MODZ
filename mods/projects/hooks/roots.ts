@@ -10,27 +10,28 @@ export type RootIo = {
 
 export type RootInfo = { root: string; isGit: boolean; isOnDisk: boolean }
 
-const WORKTREE_CUTS = ['/.claude/worktrees/', '/.worktrees/']
+// Either kind of slash: on Windows a working folder is named with backslashes.
+const WORKTREE_CUT = /[\\/](?:\.claude[\\/]worktrees|\.worktrees)[\\/]/
 const GITDIR = /^gitdir:\s*(.+?)\/\.git\/worktrees\//m
 
-const parentOf = (path: string): string => path.slice(0, Math.max(0, path.lastIndexOf('/')))
-export const baseOf = (path: string): string => path.slice(path.lastIndexOf('/') + 1)
+const lastSlash = (path: string): number => Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
+const parentOf = (path: string): string => path.slice(0, Math.max(0, lastSlash(path)))
+export const baseOf = (path: string): string => path.slice(lastSlash(path) + 1)
 
 export function cutWorktree(cwd: string): string {
-  for (const cut of WORKTREE_CUTS) {
-    const at = cwd.indexOf(cut)
-    if (at > 0) return cwd.slice(0, at)
-  }
+  const at = cwd.search(WORKTREE_CUT)
 
-  return cwd
+  return at > 0 ? cwd.slice(0, at) : cwd
 }
 
 // Folders that are machinery rather than work: the home folder itself, app data and temp space.
-export function isMachinery(path: string, home: string): boolean {
+export function isMachinery(raw: string, rawHome: string): boolean {
+  const path = raw.replaceAll('\\', '/')
+  const home = rawHome.replaceAll('\\', '/')
   if (path === '' || path === '/' || path === home) return true
   if (path.startsWith('/tmp/') || path.startsWith('/private/') || path.startsWith('/var/')) return true
 
-  return path.startsWith(`${home}/Library/`) || path.startsWith(`${home}/.claude`) || path.startsWith(`${home}/.`)
+  return path.startsWith(`${home}/Library/`) || path.startsWith(`${home}/AppData/`) || path.startsWith(`${home}/.claude`) || path.startsWith(`${home}/.`)
 }
 
 // The nearest folder at or above `path` that holds `.git`; '' when there is none.

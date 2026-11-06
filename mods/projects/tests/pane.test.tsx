@@ -199,3 +199,17 @@ test('USERPROFILE names the home folder where HOME is not set', async ($: any, o
   await pane.press({ key: 'row:C:\\Users\\me\\code\\app:b' })
   expect(JSON.stringify(await pane.drawn())).toContain('~\\\\code\\\\app')
 })
+
+test('a person with no snapshot yet still gets a hub row: the pane is what does the first read', async ($: any, on: any) => {
+  mock.clock(on)
+  mock.env(on, {})
+  for (const name of ['command.register', 'ui.log', 'ui.status']) on(name, () => ({ value: undefined }))
+  on('session.start', () => ({ cwd: '/w' }))
+  on('classic.SessionStart', () => ({}))
+  on('process.run', () => ({ value: { exitCode: 0, stdout: 'Darwin', stderr: '' } }))
+  on('fs.read', () => ({ value: '' }))
+  await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/w' })
+  await $.classic.SessionStart({ transcript_path: '/c/projects/x/s.jsonl' })
+
+  expect((await $.state.get({ plugin: 'projects', key: 'hub' })).value).toMatchObject({ pane: 'projects' })
+})

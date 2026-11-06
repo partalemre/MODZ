@@ -10,6 +10,8 @@ const COUNT_S = 1.3
 const DAY_MS = 86_400_000
 const CELL_MAX = 30
 const DAYS = 7
+// Inside the page's edges, with room for its breathing.
+const INTRO_RADIUS = 250
 
 /** A figure that counts up to its real value and stops there, written in full so it reads as the number it is. */
 export function counted(value: number, t: number, span = COUNT_S): string {
@@ -33,7 +35,7 @@ export function introSlide({ w, t, step }: SlideCtx): string {
 
   return [
     sheet(C.ink),
-    circle(MID, 370, 320 * ease(t, 0, 0.9) + Math.sin(t * 1.1) * 8, C.clay),
+    circle(MID, 370, INTRO_RADIUS * ease(t, 0, 0.9) + Math.sin(t * 1.1) * 8, C.clay),
     rise(txt(String(w.year), { x: MID, y: 420, size: fitSize(String(w.year), 190, INNER), fill: C.ink, isDisplay: true, anchor: 'middle' }), ease(t, 0.25)),
     rise(txt(s.intro, { x: MID, y: 480, size: 38, fill: C.ink, isBold: true, anchor: 'middle' }), ease(t, 0.5)),
     rise(quote(s.introSub(w.sessions), { y: 720, fill: C.cream, anchor: 'middle' }), ease(t, 0.8)),

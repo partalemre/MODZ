@@ -135,6 +135,24 @@ export function segments(slides: readonly Slide[], at: number, share: number): s
 
 export type PageSpec = { wrapped: Wrapped; isNamed: boolean }
 
+// A desktop pane reports about 9 px a column; rows are not measured, so a row is taken short and the page errs small.
+const PX_PER_COLUMN = 9
+const PX_PER_ROW = 18
+// The pane's height where it says no rows: the Code tab's in a small window.
+const UNSAID_ROOM_PX = 590
+// The way back, the page's buttons (a narrow pane wraps the share row in two) and the gaps between them.
+const CONTROLS_PX = 190
+const PAGE_MIN = 180
+const PAGE_MAX = 400
+
+/** How wide a page may be drawn so all of it, and the buttons under it, show without scrolling. Never wider than the pane. */
+export function pageWidth(columns: number, rows: number): number {
+  const across = Math.min(PAGE_MAX, columns * PX_PER_COLUMN)
+  const room = (rows > 0 ? rows * PX_PER_ROW : UNSAID_ROOM_PX) - CONTROLS_PX
+
+  return Math.round(Math.min(across, Math.max(PAGE_MIN, (room * W) / H)))
+}
+
 /** One page at rest, for the pane: its `width` px across, its height the story's 9:16. */
 export function pagePic(spec: PageSpec, index: number, width: number): SvgPic {
   const slides = slidesFor(spec.wrapped)
@@ -143,7 +161,10 @@ export function pagePic(spec: PageSpec, index: number, width: number): SvgPic {
   const body = slide.draw({ w: spec.wrapped, isNamed: spec.isNamed, t: SETTLED, step: 0 }) + segments(slides, at, 1)
   const pic = toPic({ body, width: W, height: H, alt: words().title(spec.wrapped.year) })
 
-  return { ...pic, width, height: Math.round((width * H) / W) }
+  const height = Math.round((width * H) / W)
+
+  // A frame draws the markup at its own size and clips the rest: the markup says the size the page is drawn at.
+  return { ...pic, width, height, source: pic.source.replace(`width="${W}" height="${H}"`, `width="${width}" height="${height}"`) }
 }
 
 /** The image people share. */

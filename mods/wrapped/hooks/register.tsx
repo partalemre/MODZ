@@ -11,7 +11,7 @@ import { setLang } from './kit/lang'
 import { isAskedFor, isOffStage, shownOf } from './kit/stage'
 import { copyImage, sharedLine, shareOnX } from './share'
 import type { ShareIo } from './share'
-import { pagePic, slidesFor } from './story'
+import { pagePic, pageWidth, slidesFor } from './story'
 import { panelWords } from './story-words'
 import { AWK, parseOutput, rootOf, transcriptPaths } from './scan'
 import { dayKey, isWrapped, wrappedOf } from './stats'
@@ -23,10 +23,6 @@ const IDLE: WrappedView = { status: 'idle' }
 const SCAN_TIMEOUT_MS = 600_000
 const FILM_STEP_TIMEOUT_MS = 180_000
 const YEAR = /^20\d\d$/
-// A desktop pane reports about 9 px a column; a page wider than this would not fit the pane's height at 9:16.
-const PX_PER_COLUMN = 9
-const PAGE_MIN = 260
-const PAGE_MAX = 400
 const DEFAULT_COLUMNS = 40
 
 const viewAtom = atom({ plugin: 'wrapped', key: 'view' } as const, IDLE, { shape: 'view-1' })
@@ -156,10 +152,11 @@ async function startFilm($: EngineInterface, spec: CardSpec): Promise<void> {
 }
 
 type Table = Record<string, any>
-type ReadyView = { spec: CardSpec; page: number; shared: Shared | null; film: Film | null; surface: string; columns: number }
+type ReadyView = { spec: CardSpec; page: number; shared: Shared | null; film: Film | null; surface: string; columns: number; rows: number }
 
-// A page comes in as one, in its own frame so the move survives the pane's redraws.
-const ENTER = '<style>:root{color-scheme:dark}svg{animation:page .32s cubic-bezier(.22,1,.36,1)}@keyframes page{from{opacity:0;transform:translateY(10px)}}@media (prefers-reduced-motion: reduce){svg{animation:none}}</style>'
+// A page comes in as one, in its own frame so the move survives the pane's redraws. A frame's own margin would push
+// the page out past its edge.
+const ENTER = '<style>:root{color-scheme:dark}body{margin:0}svg{display:block;animation:page .32s cubic-bezier(.22,1,.36,1)}@keyframes page{from{opacity:0;transform:translateY(10px)}}@media (prefers-reduced-motion: reduce){svg{animation:none}}</style>'
 
 function navTree($: EngineInterface, ui: Table, view: ReadyView, count: number) {
   const { Box, Text, Button } = ui
@@ -211,11 +208,10 @@ function shareTree($: EngineInterface, ui: Table, view: ReadyView) {
 
 function readyTree($: EngineInterface, ui: Table, view: ReadyView) {
   const { Box, Text, Svg } = ui
-  const { spec, surface, columns } = view
+  const { spec, surface, columns, rows } = view
   const canDraw = Svg !== undefined && surface !== 'terminal'
   const count = slidesFor(spec.wrapped).length
-  const width = Math.max(PAGE_MIN, Math.min(PAGE_MAX, (columns || DEFAULT_COLUMNS) * PX_PER_COLUMN))
-  const pic = pagePic(spec, view.page, width)
+  const pic = pagePic(spec, view.page, pageWidth(columns || DEFAULT_COLUMNS, rows))
 
   return (
     <Box flexDirection="column" rowGap={1}>
@@ -285,7 +281,7 @@ export const register: Register = on => {
     const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' } as any).catch(() => ({ value: false }))).value === true
     const tree =
       view.status === 'ready'
-        ? readyTree($, ui, { spec: { wrapped: view.wrapped, isNamed: await read($, namedAtom) }, page: await read($, pageAtom), shared: await read($, sharedAtom), film: await read($, filmAtom), surface: e.surface, columns: e.props.bodyColumns })
+        ? readyTree($, ui, { spec: { wrapped: view.wrapped, isNamed: await read($, namedAtom) }, page: await read($, pageAtom), shared: await read($, sharedAtom), film: await read($, filmAtom), surface: e.surface, columns: e.props.bodyColumns, rows: e.props.scroll?.bodyRows ?? 0 })
         : stateTree(ui, linesOf(view))
 
     return withHome(ui, tree, isHubOn ? () => goHome($) : null)

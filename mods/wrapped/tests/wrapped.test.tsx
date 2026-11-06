@@ -4,7 +4,7 @@ import { cardText, rowsOf, standalone } from '../hooks/card'
 import { setLang } from '../hooks/kit/lang'
 import { concatList, FPS, frameAt, frameCount, holdsOf } from '../hooks/film'
 import { postUrl } from '../hooks/share'
-import { pagePic, slidesFor, summaryPic } from '../hooks/story'
+import { pagePic, pageWidth, slidesFor, summaryPic } from '../hooks/story'
 import { parseOutput, rootOf, transcriptPaths } from '../hooks/scan'
 import { isWrapped, longestStreak, modelLabel, monthsOf, personaOf, weekdaysOf, wrappedOf } from '../hooks/stats'
 import type { Raw } from '../hooks/scan'
@@ -175,6 +175,20 @@ test('a page takes the width it is given, at 9:16', () => {
   const pic = pagePic({ wrapped, isNamed: true }, 99, 360)
   expect([pic.width, pic.height]).toEqual([360, 640])
   expect(pic.source).toContain('viewBox="0 0 540 960"')
+  // A frame clips markup bigger than itself, so the markup says the size it is drawn at.
+  expect(pic.source).toContain('width="360" height="640"')
+})
+
+test('a page fits the pane both ways and leaves the buttons on screen', () => {
+  const heightOf = (width: number) => (width * 16) / 9
+  // A small window that says no rows: the height decides, and the page and its buttons stay within it.
+  expect(heightOf(pageWidth(32, 0)) + 190).toBeLessThanOrEqual(591)
+  // A tall pane: the width decides, never past the pane.
+  expect(pageWidth(32, 80)).toBe(288)
+  expect(pageWidth(80, 200)).toBe(400)
+  // A very short pane keeps the page readable, a very narrow one keeps it inside.
+  expect(pageWidth(32, 5)).toBe(180)
+  expect(pageWidth(15, 0)).toBe(135)
 })
 
 test('the shared file stands alone: no style, no theme class, its colours on it', () => {
@@ -294,6 +308,8 @@ test('desktop: the read shows progress, then pages with names; next moves; maski
   expect(runs[0]).toContain('YEAR=2026')
   expect(isWrapped(store.get('wrapped.2026'))).toBe(true)
   const first = (await ui.find({ type: 'Svg' }))?.props
+  // A frame's own margin would push the page out past its edge.
+  expect(first?.source).toContain('body{margin:0}')
   expect(first?.isInteractive).toBe(true)
   await ui.press({ key: 'next' })
   expect((await ui.find({ type: 'Svg' }))?.props.source).not.toBe(first?.source)

@@ -63,7 +63,7 @@ async function writeHub($: EngineInterface, snapshot: Snapshot | null): Promise<
   const at = await $.clock.now()
   const live = snapshot === null ? 0 : withLiveNow(snapshot, at).projects.filter(project => project.isLive).length
   const detail = snapshot === null ? say.hubHint : say.hubDetail(snapshot.projects.length, live)
-  const card: HubCard = { pane: HUB_PANE, detail, tone: live > 0 ? 'live' : 'idle', at, title: say.hubTitle, hint: say.hubHint, icon: 'gauge', section: 'work' }
+  const card: HubCard = { pane: HUB_PANE, detail, tone: live > 0 ? 'live' : 'idle', at, title: say.hubTitle, hint: say.hubHint, icon: 'layers', section: 'work' }
   await $.state.set({ plugin: 'projects', key: 'hub' }, card)
 }
 

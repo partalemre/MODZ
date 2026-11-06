@@ -102,6 +102,32 @@ test('with the hub on the opened pane reports itself shown, and steps aside when
   expect(world.closed).toEqual(['savvy-agents'])
 })
 
+const backOnDesktop = async ($: any, world: any) => {
+  // The app restarted: the session resumes with no panes up.
+  world.panes = []
+  world.opened.length = 0
+  await $.session.attach({ surface: 'desktop', clientId: 'desktop:default' })
+}
+
+test('a desktop that comes back gets the pane again only while the stage still names it', WITH_HUB, async ($, on) => {
+  on('session.attach', (_: any, e: any) => ({ clientId: e.clientId }))
+  const { world } = await setup($, on)
+  await $.command.run({ command: 'hub-on', args: '' })
+  await openFromHub($, 'agents')
+  await stageFromHub($, 'agents')
+  await backOnDesktop($, world)
+  expect(world.opened).toEqual(['savvy-agents'])
+
+  await stageFromHub($, 'modz')
+  await stageFromHub($, 'files')
+  await backOnDesktop($, world)
+  expect(world.opened).toEqual([])
+
+  await stageFromHub($, 'modz')
+  await backOnDesktop($, world)
+  expect(world.opened).toEqual([])
+})
+
 const waitingElsewhere = (at: number) => ({ project: 'shop', title: 'Fix checkout', state: 'waiting', since: 0, at })
 
 test('a chat elsewhere adds itself to the card while it waits or works, and leaves once idle', WITH_HUB, async ($, on) => {

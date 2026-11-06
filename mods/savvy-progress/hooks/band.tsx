@@ -174,10 +174,11 @@ function onOpen(on: On): void {
   })
 
   // A desktop that comes back (the app restarted, a session resumed) keeps this pane's tab, but the engine's panes are
-  // gone and the tab reads "Nothing to show yet" until the pane opens again.
+  // gone and the tab reads "Nothing to show yet" until the pane opens again. Only while the stage still names this
+  // pane: `shown` is never cleared, so it would bring the pane back after the person moved on.
   on('session.attach', async ($, e, next) => {
     const done = await next(e)
-    if (e.surface !== 'desktop' || paneOf((await $.state.get({ plugin: 'savvy-progress', key: 'shown' })).value) !== HUB_PANE) return done
+    if (e.surface !== 'desktop' || paneOf((await $.state.get({ plugin: 'modz', key: 'stage' })).value) !== HUB_PANE) return done
     if (!(await $.ui.panes()).some(p => p.id === PANE)) await $.ui.open({ id: PANE, title: t().pane })
     return done
   }).catch(($, e, next) => next(e))

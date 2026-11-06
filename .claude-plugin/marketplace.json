@@ -37,8 +37,8 @@
     {
       "name": "transceiver",
       "source": {
-        "source": "github",
-        "repo": "partalemre/transceiver"
+        "source": "url",
+        "url": "https://github.com/partalemre/transceiver.git"
       },
       "description": "Beta. Your team, inside Claude. Chat with teammates and let your agents ask theirs about the repo, at zero tokens."
     },

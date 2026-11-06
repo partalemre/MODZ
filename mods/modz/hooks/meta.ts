@@ -28,6 +28,7 @@ export const META: Record<string, Meta> = {
   'effort-router': { group: 'meter', summary: { en: "Each turn's effort; can lower it for light asks", tr: "Her turun eforu; hafif işte düşürebilir" } },
   handoff: { group: 'flow', summary: { en: 'A handoff note before the context fills', tr: "Bağlam dolmadan bir devir notu" } },
   'test-badge': { group: 'meter', summary: { en: 'Runs tests and lint when source changes', tr: "Kaynak değişince test ve lint çalıştırır" } },
+  'pr-card': { group: 'meter', summary: { en: 'A PR card with CI, review and merge state', tr: 'CI, inceleme ve birleştirme durumlu PR kartı' } },
   'savvy-progress': { group: 'meter', summary: { en: 'Task band and Agents pane: progress, cost', tr: "Görev bandı ve Ajanlar paneli: ilerleme, maliyet" } },
   'savvy-flow': { group: 'flow', summary: { en: 'A planning model and five tiers of worker agents', tr: "Planlayan model ve beş katmanlı işçi ajan akışı" } },
   projects: { group: 'flow', summary: { en: 'Every project: percent, plans, tokens, agents', tr: "Tüm projeler: yüzde, plan, token, ajan" } },

@@ -1,0 +1,8 @@
+{
+  "name": "pr-card",
+  "description": "Under a Bash run that opened a pull request, draws a card in the conversation with its CI checks, review decision, mergeability and changed files, kept fresh through gh",
+  "author": {
+    "name": "Faik Emre Partal"
+  },
+  "types": "./types/index.d.ts"
+}

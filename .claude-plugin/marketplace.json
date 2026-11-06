@@ -113,6 +113,11 @@
       "description": "Before the context fills, writes a handoff note and hands it once to your next fresh chat in this repo."
     },
     {
+      "name": "pr-card",
+      "source": "./mods/pr-card",
+      "description": "Under a Bash run that opened a pull request, draws a card in the conversation with its CI checks, review decision, mergeability and changed files, kept fresh through gh"
+    },
+    {
       "name": "projects",
       "source": "./mods/projects",
       "description": "Every project in one place: percent, plans, where it stopped, tokens and agents; /projects and a full-screen board"

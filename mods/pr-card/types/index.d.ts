@@ -1,0 +1,42 @@
+export type PrState = 'open' | 'merged' | 'closed'
+export type Review = 'approved' | 'changes' | 'required' | 'none'
+// `unknown` is honest: GitHub answers it until it has worked mergeability out.
+export type Merge = 'ready' | 'conflict' | 'blocked' | 'behind' | 'draft' | 'unknown'
+
+export type ChangedFile = { path: string; additions: number; deletions: number }
+export type Checks = { passed: number; failed: number; pending: number; skipped: number; failing: string[] }
+
+export type PrView = {
+  title: string
+  state: PrState
+  isDraft: boolean
+  additions: number
+  deletions: number
+  changedFiles: number
+  files: ChangedFile[]
+  checks: Checks
+  review: Review
+  merge: Merge
+}
+
+// `no-gh`: the command would not start, so polling stops until a press; `failed`: gh answered with an error.
+export type Problem = 'no-gh' | 'failed'
+
+export type PrEntry = {
+  url: string
+  repo: string
+  number: number
+  // The tool call that opened it: a Bash result that merely mentions the link draws no card.
+  callId: string | null
+  // Null until gh first answers. Kept when a later refresh fails, which the card says.
+  view: PrView | null
+  problem: Problem | null
+  checkedAt: number | null
+  nextAt: number
+}
+
+declare module 'claude-code' {
+  interface PluginState {
+    'pr-card': { prs: Record<string, PrEntry> }
+  }
+}

@@ -70,6 +70,7 @@ function stubEngine(on: On, theme: Theme) {
     return { value: undefined }
   })
   on('ui.toast', () => ({ value: undefined }))
+  on('ui.close', () => ({ value: undefined }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.render', () => ({ type: 'Text', props: {}, children: [''] }))
   on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200000, percent: CONTEXT_FULL }, rateLimits: [{ kind: 'five_hour', percentUsed: 61 }] } }))

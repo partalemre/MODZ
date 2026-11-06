@@ -77,6 +77,7 @@ function stubEngine(on: On, own: { env?: boolean; store?: boolean } = {}) {
     on('store.set', () => ({ value: undefined }))
   }
   on('ui.toast', () => ({ value: undefined }))
+  on('ui.close', () => ({ value: undefined }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('session.usage', () => ({ value: { startedAt: 0, context: { window: 200000, percent: 42 }, rateLimits: [{ kind: 'five_hour', percentUsed: 18 }] } }))
   // The dialog must hold Claude Code's own drawing, which a real engine hands back by reference.

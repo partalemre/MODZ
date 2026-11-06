@@ -10,13 +10,18 @@ const themeRow = (value: string) => [{ key: 'theme', label: 'Theme', kind: 'enum
 
 export function stubEngine(on: On, theme = 'dark') {
   const clock = mock.clock(on, { now: 10_000 })
-  const world = { opens: [] as Opened[], cards: [] as unknown[], clock }
+  const world = { opens: [] as Opened[], closes: [] as string[], cards: [] as unknown[], clock }
   on('session.cwd', () => ({ value: '/work' }))
   on('env.get', ($, e) => ({ value: e.name === 'MODZ_LANG' ? 'tr' : undefined }))
   on('store.get', () => ({ value: undefined }))
   on('store.set', () => ({ value: undefined }))
   on('config.list', () => ({ value: themeRow(theme) as never }))
   on('ui.toast', () => ({ value: undefined }))
+  on('ui.close', ($, e) => {
+    world.closes.push(e.id)
+
+    return { value: undefined }
+  })
   on('ui.open', ($, e) => {
     world.opens.push(e as Opened)
 

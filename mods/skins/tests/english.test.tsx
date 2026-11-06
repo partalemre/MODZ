@@ -32,6 +32,7 @@ async function english($: Engine, on: On, surface: Surface) {
 
     return { value: undefined }
   })
+  on('ui.close', () => ({ value: undefined }))
   on('ui.open', ($, e) => {
     world.opened.push(e)
 

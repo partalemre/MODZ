@@ -18,6 +18,7 @@ modz <command>
   new <name> [desc]    make a mod from templates/blank and add it to the marketplace
   check [name]         validate + test on the CLI and the desktop engine (all mods without a name)
   desk                 end to end on the desktop engine: hub rows, panes, the band and presses
+  tour [row ...]       click tour on the desktop engine: every panel's buttons pressed, opened and closed
   shot [--pane] [--title t] [out]
                        a PNG of the Claude window, covered or not (--pane: the right panel; --title: the
                        pop-out window whose title holds t, e.g. a session opened in its own window)
@@ -119,6 +120,7 @@ cmd_check() {
 
 # The real desktop engine over the Code tab's control protocol: presses every hub row from an older tree.
 cmd_desk() { python3 -I "$ROOT/tools/desk/check.py" "$ROOT"; }
+cmd_tour() { python3 -I "$ROOT/tools/desk/tour.py" "$ROOT" "$@"; }
 
 # Agents cannot see the desktop app; this hands them its window. The panel crop is the right PANE_PT points.
 PANE_PT=540
@@ -210,6 +212,7 @@ case "${1:-}" in
   new) shift; cmd_new "$@" ;;
   check) shift; cmd_check "$@" ;;
   desk) cmd_desk ;;
+  tour) shift; cmd_tour "$@" ;;
   shot) shift; cmd_shot "$@" ;;
   sync) cmd_sync ;;
   import) shift; cmd_import "$@" ;;

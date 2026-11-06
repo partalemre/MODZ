@@ -38,6 +38,20 @@ function topOf(table: Record<string, number>): Named | null {
 
 const baseName = (path: string): string => path.split(/[\\/]+/).filter(Boolean).pop() ?? path
 
+const foldName = (name: string): string => name.normalize('NFKD').replace(/\p{M}/gu, '').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase()
+
+// One project under two spellings (`Satranç 2`, `Satranc2`) is one project, called what it was called most.
+function projectNamer(places: Record<string, number>): (path: string) => string {
+  const best = new Map<string, Named>()
+  for (const [path, count] of Object.entries(places)) {
+    const name = baseName(path)
+    const held = best.get(foldName(name))
+    if (held === undefined || count > held.count) best.set(foldName(name), { name, count })
+  }
+
+  return path => best.get(foldName(baseName(path)))?.name ?? baseName(path)
+}
+
 function namedFrom(table: Record<string, number>, isKept: (path: string) => boolean): Named | null {
   const top = topOf(Object.fromEntries(Object.entries(table).filter(([path]) => isKept(path))))
 
@@ -135,12 +149,13 @@ function topIn(rows: Raw['monthProjects'], month: string): string | null {
 // Each month's prompts and agent runs, with its top project and its busiest agent type.
 export function monthsOf(raw: Raw): MonthStat[] {
   const months = [...new Set([...raw.monthProjects, ...raw.monthAgents].map(row => row.month))].sort()
+  const nameOf = projectNamer(raw.places)
 
   return months.map(month => {
     const project = topIn(raw.monthProjects, month)
     const inMonth = (rows: Raw['monthProjects']) => sumOf(rows.filter(row => row.month === month).map(row => row.count))
 
-    return { month, prompts: inMonth(raw.monthProjects), runs: inMonth(raw.monthAgents), project: project === null ? null : baseName(project), agent: topIn(raw.monthAgents, month) }
+    return { month, prompts: inMonth(raw.monthProjects), runs: inMonth(raw.monthAgents), project: project === null ? null : nameOf(project), agent: topIn(raw.monthAgents, month) }
   })
 }
 
@@ -176,14 +191,14 @@ export function wrappedOf(raw: Raw, spec: { year: number; readAt: number }): Wra
     agentCalls,
     topTool: topOf(raw.tools),
     topFile: namedFrom(raw.files, path => !SCRATCH.test(path)),
-    topProject: namedFrom(raw.places, () => true),
+    topProject: topRows(raw.places, projectNamer(raw.places))[0] ?? null,
     longestChat: Math.max(0, ...raw.chats),
     linesAdded: raw.linesAdded,
     costUsd: raw.costUsd,
     days,
     hours,
     weekdays: weekdaysOf(days),
-    projects: topRows(raw.places, baseName),
+    projects: topRows(raw.places, projectNamer(raw.places)),
     tools: topRows(raw.tools),
     files: topRows(Object.fromEntries(Object.entries(raw.files).filter(([path]) => !SCRATCH.test(path))), baseName),
     models: topRows(raw.models, modelLabel),

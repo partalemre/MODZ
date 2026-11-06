@@ -149,6 +149,15 @@ test('a folded group is one node, an expanded one keeps its rows', async ($, on)
   expect(await expanded.find({ type: 'Text', text: 'stock row' })).toBeDefined()
 })
 
+test('a folded group keeps what a mod beneath it draws, and adds nothing to the engine\u2019s own row', async ($, on) => {
+  stubEngine(on)
+
+  const calls = [call('Read', {})]
+  const ui = await $.ui.mount({ ...SITE, surface: 'terminal', component: 'ToolGroup', requestId: 'g2', props: { calls, isActive: false, isExpanded: false } })
+  expect(await ui.find({ type: 'Text', text: /Read 1/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'stock row' })).toBeDefined()
+})
+
 test('a typed prompt sits in an outline sized to its text in the terminal, other senders keep their row', async ($, on) => {
   stubEngine(on)
 

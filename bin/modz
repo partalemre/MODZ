@@ -118,7 +118,7 @@ cmd_check() {
 }
 
 # The real desktop engine over the Code tab's control protocol: presses every hub row from an older tree.
-cmd_desk() { python3 -I "$ROOT/tools/desk/check.py" "$ROOT"; }
+cmd_desk() { python3 -I "$ROOT/tools/desk/check.py" "$ROOT" && python3 -I "$ROOT/tools/desk/check_pr_card.py" "$ROOT"; }
 
 # Agents cannot see the desktop app; this hands them its window. The panel crop is the right PANE_PT points.
 PANE_PT=540

@@ -1,6 +1,6 @@
 # MODZ
 
-> 19 mods for Claude Code, and one panel that shows them all. Agents, files, plans, tests and risky commands, live, beside the chat. Claude Code plugins, installed from the `modz` marketplace at https://github.com/partalemre/MODZ.
+> 20 mods for Claude Code, and one panel that shows them all. Agents, files, plans, tests and risky commands, live, beside the chat. Claude Code plugins, installed from the `modz` marketplace at https://github.com/partalemre/MODZ.
 
 ## Install (for an AI agent acting for a person)
 
@@ -8,7 +8,7 @@ Every step is safe to repeat.
 
 1. `claude --version` must be 2.1.295 or later. If it is older, ask the person to update Claude Code; do not continue.
 2. `claude plugin marketplace add partalemre/MODZ`
-3. `claude plugin install modz@modz` (the panel). Then, for each mod the person wants: `claude plugin install <name>@modz`. If they did not choose, install all of them: modz savvy-progress savvy-flow filetree plan-steps handoff transceiver blast-radius secret-guard checkpoint test-badge replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins terminal-browser.
+3. `claude plugin install modz@modz` (the panel). Then, for each mod the person wants: `claude plugin install <name>@modz`. If they did not choose, install all of them: modz savvy-progress savvy-flow filetree plan-steps handoff transceiver blast-radius secret-guard checkpoint test-badge pr-card replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins terminal-browser.
 4. Optional, in the `env` object of `~/.claude/settings.json` (merge with existing keys, never overwrite the file):
    - `"MODZ_LANG": "tr"`: Turkish interface (the default is English).
    - `"CLAUDE_CODE_ARTIFACT": "1"`: needed for transceiver when Claude Code is driven by an SDK host (an IDE, `claude -p`, T3 Code). The desktop app and the plain terminal do not need it.
@@ -33,6 +33,7 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 - secret-guard: stops keys and tokens in writes, edits, git add and commit; blocks committing .env; pasted keys reach the model as placeholders; /rec masks keys, env values and e-mail addresses on screen
 - checkpoint: silent git snapshot before each turn's first write; /checkpoints undoes a turn
 - test-badge: runs tests and lint after edits and shows a badge; watches the open PR's GitHub CI through gh
+- pr-card: draws a card in the conversation for a PR Claude opens, with CI checks, review, mergeability and changed files, kept fresh through gh
 - replay-theater: replays the last turn's edits step by step, and earlier turns and past sessions
 - session-budget: per-session spend budget; notice at 80%, stop at 100%; spawn brake asks before subagents when the 5-hour window runs low
 - cache-tax: keeps the one-hour prompt cache warm through breaks (uses tokens when on); prices a cold send, a model change included

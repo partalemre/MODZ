@@ -168,7 +168,7 @@ If a person asks you to install MODZ, do exactly this. Every step is safe to rep
 
 1. Check the version: `claude --version` must print 2.1.295 or later. If it is older, ask the person to update Claude Code first.
 2. Add the marketplace: `claude plugin marketplace add partalemre/MODZ`.
-3. Install the panel: `claude plugin install modz@modz`. Then install each mod the person wants, by the names in the table above, as `claude plugin install <name>@modz`. If they did not choose, install all twenty with the loop under [Install](#install).
+3. Install the panel: `claude plugin install modz@modz`. Then install each mod the person wants, by the names in the table above, as `claude plugin install <name>@modz`. If they did not choose, install all of them with the loop under [Install](#install).
 4. Optional settings: put them in the `env` block of `~/.claude/settings.json`, merging with what is already there and never overwriting it:
    - `"MODZ_LANG": "tr"` for a Turkish interface.
    - `"CLAUDE_CODE_ARTIFACT": "1"` if Transceiver is installed and this Claude Code is driven by an SDK host.

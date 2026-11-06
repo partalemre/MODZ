@@ -54,6 +54,9 @@ let held: Held | null = null
 
 export const current = (): Held | null => held
 
+// Reopening only reaches a tab older than this engine: once a card has opened here, a tab is this engine's to close.
+let canReopen = true
+
 /** Waits for any earlier card to be answered, then claims the hold; null when the turn was interrupted meanwhile. */
 export async function take(io: HoldIo, input: { command: string; signal: AbortSignal; canStrike: boolean }): Promise<Held | null> {
   while (held !== null) {
@@ -88,7 +91,7 @@ function paneRows(mine: Held): number {
 
 /** Opens the card, waits for the answer and lets the hold go, whatever happens. */
 export async function hold(io: HoldIo, mine: Held, options: HoldOptions): Promise<void> {
-  let isPlaced = false
+  let isOpened = false
   try {
     if (!(await options.prepare())) {
       mine.decision = 'proceed'
@@ -97,8 +100,9 @@ export async function hold(io: HoldIo, mine: Held, options: HoldOptions): Promis
     }
     // Every card's pane opens anew, so its drawings cascade in each time (kit/moving.ts).
     motion.reset()
-    isPlaced = await io.open(paneRows(mine))
-    if (!isPlaced) mine.where = 'band'
+    isOpened = true
+    canReopen = false
+    if (!(await io.open(paneRows(mine)))) mine.where = 'band'
     io.redraw()
     await waitForDecision(io, mine, options.signal)
     if (mine.decision === 'proceed' && mine.canStrike) {
@@ -111,7 +115,8 @@ export async function hold(io: HoldIo, mine: Held, options: HoldOptions): Promis
     mine.decision = 'error'
   } finally {
     // Close this call's pane before releasing the hold, so the next call's pane can't be the one closed.
-    if (isPlaced) await io.close().catch(() => undefined)
+    // An unplaced pane too: the engine keeps it, and places it blank when a surface that docks panes attaches.
+    if (isOpened) await io.close().catch(() => undefined)
     if (held === mine) held = null
     io.redraw()
   }
@@ -120,4 +125,18 @@ export async function hold(io: HoldIo, mine: Held, options: HoldOptions): Promis
 /** Closing the pane (Esc, its close mark) answers as the safe button does. */
 export function closeHeld(): void {
   if (held !== null && held.decision === null) held.decision = 'closed'
+}
+
+/**
+ * The pane drawn with no card held. A pane the engine still lists just closes. A desktop keeps a tab across an engine
+ * restart though the new engine lists no such pane, and only a change to the list reaches it: so open, then close.
+ */
+export async function dropStaleTab(io: HoldIo, isListed: () => Promise<boolean>): Promise<void> {
+  const isKnown = await isListed()
+  if (!isKnown) {
+    if (held !== null || !canReopen) return
+    canReopen = false
+    await io.open(PANE_ROWS_CHROME)
+  }
+  if (held === null) await io.close()
 }

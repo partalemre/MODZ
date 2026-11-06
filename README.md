@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<h3 align="center">21 mods for Claude Code. One panel.</h3>
+<h3 align="center">22 mods for Claude Code. One panel.</h3>
 
 <p align="center">See every move Claude makes: agents, files, plans, tests and risky commands, live, beside the chat.</p>
 
@@ -30,7 +30,7 @@ Or install all of them at once from a terminal:
 ```sh
 claude plugin marketplace add partalemre/MODZ
 for m in modz savvy-progress savvy-flow filetree plan-steps projects handoff transceiver blast-radius secret-guard checkpoint \
-         test-badge pr-card replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins terminal-browser; do
+         test-badge pr-card replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins wrapped terminal-browser; do
   claude plugin install "$m@modz"
 done
 ```
@@ -100,6 +100,7 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 | **Comfort** | `done-ping` | A notification when a long turn ends or Claude waits on you, a line when another session waits on you, optional sound packs |
 | | `reflect-mod` | Saves corrections worth keeping to your CLAUDE.md; `/mine` turns friction that repeats across past chats into ideas |
 | | `skins` | Themes for the transcript, switched live with `/skin`, and living ASCII scenes above the prompt |
+| | `wrapped` | Your year with Claude Code as a story and a video, read from your own transcripts: which agents did the work, month by month; one press hides your project and file names before you share |
 | | `terminal-browser` | A browser inside the terminal that the agent can drive |
 
 Most mods use no model tokens. These can, each with the cheapest model and never more than one call per event:

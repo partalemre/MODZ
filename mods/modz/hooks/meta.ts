@@ -17,6 +17,7 @@ export const META: Record<string, Meta> = {
   skins: { group: 'look', summary: { en: 'Themes the transcript; /skin switches it', tr: "Transkripti temalarla çizer; /skin ile değişir" } },
   filetree: { group: 'look', summary: { en: 'Files Claude touches and their git status', tr: "Claude'un dokunduğu dosyalar ve git durumu" } },
   'replay-theater': { group: 'look', upstream: 'anthropics/claude-code-playground', summary: { en: "Replays the last turn's edits step by step", tr: "Son turun düzenlemelerini adım adım oynatır" } },
+  wrapped: { group: 'look', summary: { en: 'Your year with Claude Code: a card and a video', tr: "Claude Code ile yılın: kart ve video" } },
   'terminal-browser': { group: 'look', surfaces: ['terminal'], summary: { en: 'A browser that runs in the terminal', tr: "Terminalde çalışan tarayıcı" } },
   modz: { group: 'look', summary: { en: 'This pane: the hub and a catalog of every mod', tr: "Bu panel: ana sayfa ve tüm modların kataloğu" } },
   'blast-radius': { group: 'safety', upstream: 'anthropics/claude-code-playground', summary: { en: "Holds risky commands, shows what they'd delete", tr: "Riskli komutları tutar, neyi sileceğini gösterir" } },

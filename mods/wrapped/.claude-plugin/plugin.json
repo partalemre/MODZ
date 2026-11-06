@@ -1,0 +1,6 @@
+{
+  "name": "wrapped",
+  "author": { "name": "Faik Emre Partal" },
+  "description": "Your year with Claude Code as a story and a video, from your own transcripts: persona, which agents did the work, month by month. /wrapped; Hide names masks project and file names before you share. Uses no model tokens.",
+  "types": "./types/index.d.ts"
+}

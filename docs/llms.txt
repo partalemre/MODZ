@@ -40,7 +40,7 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 - cache-tax: keeps the one-hour prompt cache warm through breaks (uses tokens when on); prices a cold send, a model change included
 - hud-pro: one line with the 5-hour and 7-day limits, context and session cost; when the 5-hour window fills; a context breakdown with turns left and Compact now; 7/30-day usage history (active days, sessions, tokens, heatmap)
 - effort-router: shows each turn's effort and model; in auto mode sends light prompts at low effort (one small model call per prompt)
-- done-ping: notification when a long turn ends or Claude waits on you; optional sound packs (soundPack)
+- done-ping: notification when a long turn ends or Claude waits on you; a line above the prompt when another session on this computer waits on you (terminal); optional sound packs (soundPack)
 - reflect-mod: saves corrections worth keeping to a CLAUDE.md (one small model check per correction); /mine turns friction that repeats across past chats into rule, hook, skill or mod ideas (one small call)
 - skins: transcript themes; /skin switches live; /skin scene puts a living ASCII scene above the prompt (desktop)
 - terminal-browser: a browser inside the terminal the agent can drive (terminal only)

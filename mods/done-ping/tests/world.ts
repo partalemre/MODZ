@@ -22,6 +22,9 @@ export type Spy = {
   isPlayFailing?: boolean
   // MODZ_LANG as $.env.get answers it: Turkish unless a test asks for the English default (null).
   lang?: string | null
+  // The status files other sessions keep in ~/.claude/sessions, and the pids ps says still run.
+  sessions?: Record<string, unknown>[]
+  alive?: number[]
 }
 
 export function spyOf(over: Partial<Spy> = {}): Spy {
@@ -36,6 +39,7 @@ export const decisionOf = (e: any) => (e.tool === 'PushNotification' || e.input?
 const ok = (stdout: string, exitCode = 0) => ({ value: { exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
 
 function processAnswer(spy: Spy, argv: string[]) {
+  if (argv[0] === 'ps') return ok((spy.alive ?? []).join('\n'), spy.alive?.length ? 0 : 1)
   if (argv[0] === 'lsappinfo') return argv[1] === 'front' ? ok('ASN:0x0-0x1:\n') : ok(`"CFBundleIdentifier"="${spy.front}"\n`)
 
   return ok('', spy.exitCode)
@@ -68,6 +72,13 @@ export async function setup($: any, on: any, spy: Spy) {
   on('ui.render', () => ({ type: 'Text', props: {}, children: ['engine'] }))
   on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
   on('turn.complete', (_: any, e: any) => ({ text: e.answer }))
+  on('session.id', () => ({ value: 'me' }))
+  on('fs.list', () => {
+    if (spy.sessions === undefined) throw new Error('ENOENT')
+
+    return { value: spy.sessions.map((_, index) => ({ name: `${index + 100}.json`, kind: 'file', size: 1, mtimeMs: 1, isLink: false })) }
+  })
+  on('fs.read', (_: any, e: any) => ({ value: JSON.stringify(spy.sessions?.[Number(/(\d+)\.json$/.exec(e.path)?.[1]) - 100]) }))
   on('fs.exists', (_: any, e: any) => ({ value: spy.files.has(e.path) }))
   on('tool.list', () => ({ value: spy.push === null ? [] : [{ name: 'PushNotification', description: '', mcp: false }] }))
   on('tool.call', (_: any, e: any) => toolAnswer(spy, e))

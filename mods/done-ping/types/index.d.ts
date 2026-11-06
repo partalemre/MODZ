@@ -8,6 +8,9 @@ export type PingNotice = {
   expiresAt: number
 }
 
+// Another session on this computer that waits on you: its folder (and given name), and whether it asks an approval or an answer.
+export type OtherNeed = { key: string; where: string; isApproval: boolean }
+
 export type PingTheme = { mode: 'dark' | 'light' | 'auto'; isLight: boolean }
 
 declare module 'claude-code' {
@@ -18,6 +21,7 @@ declare module 'claude-code' {
       thresholdSeconds: number | null
       notice: PingNotice | null
       theme: PingTheme
+      others: readonly OtherNeed[]
     }
   }
 }

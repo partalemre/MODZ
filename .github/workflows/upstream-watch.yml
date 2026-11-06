@@ -21,7 +21,9 @@ jobs:
           for mod in $(jq -r 'keys[]' upstreams.json); do
             repo=$(jq -r --arg m "$mod" '.[$m].repo' upstreams.json)
             synced=$(jq -r --arg m "$mod" '.[$m].synced' upstreams.json)
-            commits=$(gh api "repos/$repo/commits?since=${synced}T23:59:59Z&per_page=50" \
+            # An optional `path` follows only the folder the mod came from, in a repo that holds more.
+            path=$(jq -r --arg m "$mod" '.[$m].path // empty | "&path=" + @uri' upstreams.json)
+            commits=$(gh api "repos/$repo/commits?since=${synced}T23:59:59Z&per_page=50$path" \
               --jq '.[] | "- [`\(.sha[:7])`](\(.html_url)) \(.commit.author.date[:10]) \(.commit.message | split("\n")[0])"')
             title="Upstream updates: $mod"
             issue=$(gh issue list --label upstream --state open --search "in:title \"$title\"" --json number --jq '.[0].number // empty')

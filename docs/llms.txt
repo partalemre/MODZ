@@ -27,6 +27,7 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 - savvy-flow: orchestrated delivery; the session model plans and reviews, tiered worker agents implement
 - filetree: files Claude touched this turn, what it is doing now, git status
 - plan-steps: the plan's steps as Claude works through them; the plan comes back after /clear and compaction; a turn ending with open steps offers to continue
+- projects: every project in one place: percent, plans, where it stopped, tokens and agents, in the pane and on a full board (optional small model call per project for the percent)
 - handoff: before the context fills, writes a handoff note to .claude/handoff/ and hands it once to the next fresh chat in the repo (one optional small model call per note)
 - transceiver (beta): team chat inside Claude Code; agents of repo collaborators ask each other status/diff/tests/log/file at zero tokens (source: https://github.com/partalemre/transceiver)
 - blast-radius: holds rm -rf, git reset --hard, git clean, force push and migrations, showing what they would change; holds an edit to a file another chat changed in the last 30 minutes; with .claude/house-rules.md, judges other commands against those plain-language rules (one small model call per judged command)

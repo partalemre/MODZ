@@ -8,6 +8,7 @@ import { filmLine } from './film-run'
 import { linesOf, stateTree } from './states'
 import { withHome } from './kit/home'
 import { setLang } from './kit/lang'
+import { pinned } from './kit/pin'
 import { isAskedFor, isOffStage, shownOf } from './kit/stage'
 import { copyImage, sharedLine, shareOnX } from './share'
 import type { ShareIo } from './share'
@@ -41,7 +42,7 @@ async function writeHub($: EngineInterface, wrapped: Wrapped | null): Promise<vo
   const t = words()
   await $.state.set(
     { plugin: 'wrapped', key: 'hub' },
-    { pane: PANE, detail: wrapped === null ? '' : t.hubDetail(wrapped), tone: wrapped === null ? 'idle' : 'ok', at: await $.clock.now(), title: t.paneTitle, hint: t.hubHint, icon: 'sparkle', section: 'meter' },
+    { pane: PANE, detail: wrapped === null ? '' : t.hubDetail(wrapped), tone: wrapped === null ? 'idle' : 'ok', at: await $.clock.now(), title: t.paneTitle, hint: t.hubHint, icon: 'star', section: 'meter' },
   )
 }
 
@@ -156,7 +157,7 @@ type ReadyView = { spec: CardSpec; page: number; shared: Shared | null; film: Fi
 
 // A page comes in as one, in its own frame so the move survives the pane's redraws. A frame's own margin would push
 // the page out past its edge.
-const ENTER = '<style>:root{color-scheme:dark}body{margin:0}svg{display:block;animation:page .32s cubic-bezier(.22,1,.36,1)}@keyframes page{from{opacity:0;transform:translateY(10px)}}@media (prefers-reduced-motion: reduce){svg{animation:none}}</style>'
+const ENTER = '<style>:root{color-scheme:dark}body{margin:0}svg{display:block;animation:m-in .32s cubic-bezier(.22,1,.36,1)}@keyframes m-in{from{opacity:0;transform:translateY(10px)}}@media (prefers-reduced-motion: reduce){svg{animation:none}}</style>'
 
 function navTree($: EngineInterface, ui: Table, view: ReadyView, count: number) {
   const { Box, Text, Button } = ui
@@ -284,6 +285,6 @@ export const register: Register = on => {
         ? readyTree($, ui, { spec: { wrapped: view.wrapped, isNamed: await read($, namedAtom) }, page: await read($, pageAtom), shared: await read($, sharedAtom), film: await read($, filmAtom), surface: e.surface, columns: e.props.bodyColumns, rows: e.props.scroll?.bodyRows ?? 0 })
         : stateTree(ui, linesOf(view))
 
-    return withHome(ui, tree, isHubOn ? () => goHome($) : null)
+    return pinned(e, withHome(ui, tree, isHubOn ? () => goHome($) : null))
   })
 }

@@ -13,8 +13,8 @@ type Ui = ElementTable
 // blank braille cell is drawn as dots from weight 500). The run is longer than the drawing could ever be drawn, in
 // a line box wider still, so the button is never squeezed into "…" whatever width the pane really has; the cover
 // clips it at the drawing's edges, the left one a cell in so its rounded end is cut too: the light is one straight
-// band across the row. One button per control-height line: a button never grows taller (measured 2026-11-05), so a
-// row that must light as one block is one control tall, or covers only its first line.
+// band across the row. A button never grows taller (measured 2026-11-05) and stacked buttons light piece by piece, so
+// a row gets one, centred; only a card with room for two whole controls per button takes a stack.
 const BLANK = '\u3164'
 const CELL_PX = 11.9
 const BUTTON_PX = 28
@@ -25,12 +25,12 @@ const LINE_SPAN = '400%'
 export type CoverOpts = { key: string; width: number; height: number; hotkey?: string; onPress: () => unknown }
 
 // The buttons alone, laid over whatever their parent holds; the parent must hug the drawing (`width` × `height` px).
-// A drawing one control tall takes one button; a taller one a stack, centred.
+// A row takes one button; a card a stack, centred.
 // shortcut: the labels are blank, so the drawing's alt names the row; name the button when the element set gains an
 // accessible-name prop.
 export function PressCover(ui: Ui, o: CoverOpts): RenderElement {
   const { Box, Button } = ui
-  const lines = Math.max(1, Math.round(o.height / BUTTON_PX))
+  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX * 2)))
   const label = BLANK.repeat(Math.ceil((o.width * RUN_SPAN) / CELL_PX))
   const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey }
 

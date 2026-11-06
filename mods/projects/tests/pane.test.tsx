@@ -208,8 +208,10 @@ test('a person with no snapshot yet still gets a hub row: the pane is what does 
   on('classic.SessionStart', () => ({}))
   on('process.run', () => ({ value: { exitCode: 0, stdout: 'Darwin', stderr: '' } }))
   on('fs.read', () => ({ value: '' }))
+  const cards: unknown[] = []
+  on('state.set', { plugin: 'projects', key: 'hub' }, (_: any, e: any, next: any) => (cards.push(e.value), next(e)))
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/w' })
   await $.classic.SessionStart({ transcript_path: '/c/projects/x/s.jsonl' })
 
-  expect((await $.state.get({ plugin: 'projects', key: 'hub' })).value).toMatchObject({ pane: 'projects' })
+  expect(cards).toEqual([expect.objectContaining({ pane: 'projects' })])
 })

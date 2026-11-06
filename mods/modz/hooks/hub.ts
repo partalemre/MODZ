@@ -30,6 +30,9 @@ export const SECTIONS: Section[] = ['work', 'safety', 'meter']
 // The catalog is this mod's own second pane, a tab beside the hub.
 export const MODS_PANE = 'modz-mods'
 
+// A blank pane of the hub's that stands in while a person's click on the hub holds the panel (register.tsx: openPane).
+export const HOLD_PANE = 'modz-hold'
+
 type EntryBase = Omit<HubEntry, 'title' | 'hint' | 'badge' | 'isGuest'> & { isBeta?: true }
 
 const BASES: EntryBase[] = [

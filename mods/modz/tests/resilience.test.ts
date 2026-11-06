@@ -22,6 +22,7 @@ function stubWorld(on: any, files: Files) {
   on('command.register', () => ({ value: undefined }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.close', () => ({ value: undefined }))
+  on('ui.panes', () => ({ value: [] }))
   on('session.start', () => ({ cwd: '/work' }))
   on('config.list', () => ({ value: [] }))
   on('command.run', () => ({ text: '' }))

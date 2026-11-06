@@ -17,8 +17,9 @@ export function firstLine(text: string): string {
 }
 
 export function relative(path: string, ctx: ParseContext): string {
-  const bare = path.replace(/^file:\/\//, '').replace(/^\.\//, '')
-  const prefix = `${ctx.root.replace(/\/$/, '')}/`
+  // Windows runners print backslashes; the pane and the openers read forward ones.
+  const bare = path.replace(/\\/g, '/').replace(/^file:\/\//, '').replace(/^\.\//, '')
+  const prefix = `${ctx.root.replace(/\\/g, '/').replace(/\/$/, '')}/`
 
   return bare.startsWith(prefix) ? bare.slice(prefix.length) : bare
 }

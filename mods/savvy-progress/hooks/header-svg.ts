@@ -95,9 +95,11 @@ export const headerSvg = (W: number, data: HeaderData): Drawing => {
   const eyebrowX = left + (isLive ? DOT_R * 2 + 7 : 0)
   const eyebrowEnd = eyebrowX + textWidth(data.eyebrow, LABEL.size) * BOLD
   const home = homeParts(data, eyebrowEnd)
-  const percentW = Math.ceil(data.percent.length * PERCENT.size * MONO_EM)
-  const counts = fitText(data.counts, LABEL.size, W - PAD - eyebrowEnd - home.room - 24)
-  const headline = fitText(data.headline, HEADLINE.size * 1.06, W - PAD - left - percentW - GAP)
+  const isKnown = data.percent !== UNKNOWN
+  const percentW = isKnown ? Math.ceil(data.percent.length * PERCENT.size * MONO_EM) : 0
+  // A cut count ("1 çalı…") says less than none: the rows under the card count them anyway.
+  const isCountShown = textWidth(data.counts, LABEL.size) <= W - PAD - eyebrowEnd - home.room - GAP
+  const headline = fitText(data.headline, HEADLINE.size * 1.06, W - PAD - left - percentW - (isKnown ? GAP : 0))
   const stats = statsSvg(data.stats, inner)
   // Only while the crew runs does a dot stand before the label, breathing.
   const dot = isLive ? `<circle class="f-edit live" cx="${left + DOT_R}" cy="${LABEL.y - 4}" r="${DOT_R}"/>` : ''
@@ -106,9 +108,9 @@ export const headerSvg = (W: number, data: HeaderData): Drawing => {
     home.body,
     dot,
     `<text class="m" x="${eyebrowX}" y="${LABEL.y}" font-family="${FONT}" font-size="${LABEL.size}" font-weight="${LABEL.weight}">${xml(data.eyebrow)}</text>`,
-    `<text class="m" x="${W - PAD}" y="${LABEL.y}" text-anchor="end" font-family="${FONT}" font-size="${LABEL.size}" font-variant-numeric="tabular-nums">${xml(counts)}</text>`,
+    isCountShown ? `<text class="m" x="${W - PAD}" y="${LABEL.y}" text-anchor="end" font-family="${FONT}" font-size="${LABEL.size}" font-variant-numeric="tabular-nums">${xml(data.counts)}</text>` : '',
     `<text class="t" x="${left}" y="${HEADLINE.y}" font-family="${FONT}" font-size="${HEADLINE.size}" font-weight="620">${xml(headline)}</text>`,
-    `<text class="${data.percent === UNKNOWN ? 'm' : PERCENT_CLASS[data.tone]}" x="${W - PAD}" y="${PERCENT.y}" text-anchor="end" font-family="${MONO}" font-size="${PERCENT.size}" font-weight="650">${xml(data.percent)}</text>`,
+    isKnown ? `<text class="${PERCENT_CLASS[data.tone]}" x="${W - PAD}" y="${PERCENT.y}" text-anchor="end" font-family="${MONO}" font-size="${PERCENT.size}" font-weight="650">${xml(data.percent)}</text>` : '',
     meterSvg(data.meter ?? { units: 0, done: 0, failed: 0, active: 0 }, { x: PAD, y: METER.y, w: inner, h: METER.h }),
     `<line class="ln" x1="${PAD}" x2="${W - PAD}" y1="${DIVIDER_Y}" y2="${DIVIDER_Y}" stroke-width="1"/>`,
     stats.body,

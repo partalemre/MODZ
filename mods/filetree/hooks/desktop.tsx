@@ -9,19 +9,17 @@ import type { Host } from './host'
 import { paneMotion } from './kit/moving'
 import { heroOf, touchedRows } from './now'
 import type { RowsProps } from './rows'
-import { desktopRow } from './rowspec'
+import { desktopRow, PX_PER_COL } from './rowspec'
 import { heroInput, type Room, rowCtx, type Scene, treeWindow } from './scene'
 import { jump, search } from './search'
 import { mem } from './session'
 import { unsized, wantSizes } from './sizes'
-import { paletteOf, roleOfTone, shimmerTones } from './theme'
-import { drawToolbar } from './toolbar'
+import { mix, paletteOf, roleOfTone, shimmerTones } from './theme'
+import { drawActions, drawFind, drawMore } from './toolbar'
 import { words } from './words'
 
 type Ui = ElementTable<'desktop'>
 
-// A desktop pane reports about 9 px a column (a 365 px body reads 40), wider than the reply column.
-const PX_PER_COL = 9
 const ROW_PX = 18
 const MIN_SVG_W = 240
 const MAX_SVG_W = 900
@@ -30,6 +28,9 @@ const TOOLBAR_ROWS = 3
 const TOOLBAR_OPEN_ROWS = 9
 const FOOTER_ROWS = 2
 const MIN_BODY = 5
+// What the tree header's three actions take, in either language, so the folder's name fits beside them; short of room they wrap under it.
+const ACTIONS_PX = 260
+const MIN_NAME_W = 90
 
 function gitRowOf(t: FileTree): GitRow | null {
   if (!t.top || !t.branch) return null
@@ -78,7 +79,7 @@ function cardsOf(s: Scene, w: number) {
   const hero = heroOf(input)
   const legend = legendOf(s, git)
   const touchedList = touchedRows(input)
-  const section = sectionLine({ left: words().allFiles, right: (t.top ? t.top : t.root).split('/').pop() ?? '' }, { look, w })
+  const section = sectionLine({ label: words().allFiles, name: (t.top ? t.top : t.root).split('/').pop() ?? '' }, { look, w: w - ACTIONS_PX >= MIN_NAME_W ? w - ACTIONS_PX : w })
   return {
     hero: { drawn: heroCard(hero, { git, cost, legend }, { look, w }), shows: { hero, git, legend, isCounted: Boolean(cost?.turn), isSummed: Boolean(cost?.session), look, w } },
     touched: touchedList.length ? { drawn: touchedCard(touchedList, look, w), shows: { rows: touchedList.map(({ cost: c, ...row }) => ({ ...row, isCounted: c !== undefined })), look, w } } : null,
@@ -97,6 +98,7 @@ export function drawDesktop(host: Host, ui: Ui, frame: { s: Scene; room: Room; h
   const fixed = lines(hero.drawn.height) + (touched ? lines(touched.drawn.height) : 0) + lines(section.drawn.height) + toolRows + FOOTER_ROWS
   const ctx = rowCtx(s, room.width - 1, true)
   const win = treeWindow(s, Math.max(MIN_BODY, room.bodyRows - fixed), { toSpec: r => desktopRow(ctx, r), colors: { thumb: pal.lineStrong, track: pal.line, note: pal.lo } })
+  const bar = win.bar ? { ...win.bar, isOverlay: true } : null
   if (t.showSize) wantSizes(host, unsized(t, win.rows))
   const chip = s.latest ? activityChip(ui, s.latest, { unicode: true, colorOf: tone => pal.roles[roleOfTone(tone)].fg }) : null
   // The full body width, so the cards end where the tree's right column does. A frame needs its box, so the
@@ -104,15 +106,20 @@ export function drawDesktop(host: Host, ui: Ui, frame: { s: Scene; room: Room; h
   // drawing's viewBox scales it down inside instead of cutting it.
   const svg = (key: string, card: { drawn: Drawn; shows?: unknown }) => <Svg key={key} {...motion.pic(key, card.drawn, { shows: card.shows })} />
   const find = { onInput: (v: string) => void search(host, v), onSubmit: (v: string) => void jump(host, v) }
-  const rows = { rows: win.specs, active: t.cursor, activeBg: pal.line, hoverBg: pal.inset, tones: shimmerTones(pal, look.isLight), pointer: mem.pointer, ...(win.bar ? { bar: win.bar } : {}) } satisfies RowsProps
+  const rows = { rows: win.specs, active: t.cursor, activeBg: pal.line, hoverBg: mix(pal.line, pal.sheet, 0.5), tones: shimmerTones(pal, look.isLight), pointer: mem.pointer, ...(bar ? { bar } : {}) } satisfies RowsProps
+  const tools = { t, act: actionsOf(host, t), search: find }
   return (
     <Box flexDirection="column" gap={1} minHeight={Math.max(1, room.bodyRows)}>
       {home}
       {svg('ft-hero', hero)}
-      {drawToolbar(ui, { t, act: actionsOf(host, t), search: find })}
+      {drawFind(ui, tools)}
       {touched ? svg('ft-touched', touched) : null}
       <Box flexDirection="column">
-        {svg('ft-section', section)}
+        <Box flexDirection="row" flexWrap="wrap" alignItems="center" justifyContent="space-between">
+          {svg('ft-section', section)}
+          {drawActions(ui, tools)}
+        </Box>
+        {drawMore(ui, tools)}
         <Client key="rows" module="./rows.tsx" props={rows} />
       </Box>
       <Box flexGrow={1} />

@@ -90,25 +90,24 @@ const HEADER: HeaderData = {
   stats: [{ label: 'Maliyet', value: '≈$1,68' }, { label: 'Token', value: '387k' }, { label: 'Süre', value: '0:56' }, { label: '5 saat payı', value: '≈%5,9' }],
 }
 
-test('the header lays its four figures in a row when they fit, two by two when not; an unknown percent is quiet', () => {
+test('the header lays its four figures in a row when they fit, two by two when not; an unknown percent is not drawn', () => {
   const wide = headerSvg(600, HEADER)
   const narrow = headerSvg(300, HEADER)
   expect(narrow.height).toBeGreaterThan(wide.height)
   expect(wide.source).toContain('5 saat payı')
   expect(wide.source).not.toContain('letter-spacing')
   expect(narrow.source).not.toContain('…')
-  expect(wide.source).toMatch(/<text class="m"[^>]*>—<\/text>/)
+  expect(wide.source).not.toContain('>—<')
   expect(headerSvg(600, { ...HEADER, percent: '%40' }).source).toMatch(/<text class="t"[^>]*>%40<\/text>/)
   expect(headerSvg(600, { ...HEADER, percent: '%40', tone: 'warn' }).source).toMatch(/<text class="f-warn"[^>]*>%40<\/text>/)
 })
 
-test('a card head keeps the task whole when it fits and gives way in the model first', () => {
-  const head = { name: 'Nori', tierWord: 'light', model: 'Opus 5.5 · low', title: 'Build the landing page', pill: { text: 'çalışıyor', role: 'run' as const } }
+test('a card head keeps the task whole when it fits and gives way in the task', () => {
+  const head = { name: 'Nori', title: 'Build the landing page', pill: { text: 'çalışıyor', role: 'run' as const } }
   expect(cardHeadSvg(400, head)).toContain('Build the landing page')
-  expect(cardHeadSvg(400, head)).toContain(' · Opus 5.5 · low')
   const tight = cardHeadSvg(200, head)
   expect(tight).toContain('Nori')
-  expect(tight).not.toContain(' · Opus 5.5 · low')
+  expect(tight).not.toContain('Build the landing page')
   // The pill rests on the neutral track; only its state's ink colours it, and live work breathes in the accent.
   expect(pillPart({ text: 'sessiz 3 dk', role: 'warn' }, 0, 0).body).toContain('<rect class="k"')
   expect(pillPart({ text: 'sessiz 3 dk', role: 'warn' }, 0, 0).body).toContain('class="f-warn"')

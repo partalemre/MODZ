@@ -31,6 +31,7 @@ export const META: Record<string, Meta> = {
   'pr-card': { group: 'meter', summary: { en: 'A PR card with CI, review and merge state', tr: 'CI, inceleme ve birleştirme durumlu PR kartı' } },
   'savvy-progress': { group: 'meter', summary: { en: 'Task band and Agents pane: progress, cost', tr: "Görev bandı ve Ajanlar paneli: ilerleme, maliyet" } },
   'savvy-flow': { group: 'flow', summary: { en: 'A planning model and five tiers of worker agents', tr: "Planlayan model ve beş katmanlı işçi ajan akışı" } },
+  projects: { group: 'flow', summary: { en: 'Every project: percent, plans, tokens, agents', tr: "Tüm projeler: yüzde, plan, token, ajan" } },
   'plan-steps': { group: 'flow', summary: { en: "The plan's steps and where the work is", tr: "Planın adımları ve işin nerede olduğu" } },
   'reflect-mod': { group: 'flow', summary: { en: 'Turns your corrections into CLAUDE.md rules', tr: "Düzeltmelerini CLAUDE.md kuralına çevirir" } },
   'done-ping': { group: 'flow', summary: { en: 'A ping when a long turn ends or Claude waits', tr: "Uzun tur bitince ya da Claude beklerken bildirim" } },

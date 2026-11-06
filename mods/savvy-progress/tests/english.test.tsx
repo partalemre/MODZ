@@ -33,7 +33,7 @@ for (const surface of SURFACES) {
     await finish($, 'a1')
     await progress($, { done: 1 })
     const seen = await words(await pane($))
-    const figures = surface === 'desktop' ? ['Agents', 'Cost', 'Tokens', 'Time', '5h share'] : ['Cost', 'Tokens', 'Time', '5h share']
+    const figures = surface === 'desktop' ? ['Agents', 'Cost', 'Tokens', 'Time'] : ['Cost', 'Tokens', 'Time']
     expectAll(seen, ['Checkout migration', '25%', '1 running · 1 done · 2 planned', ...figures])
   })
 

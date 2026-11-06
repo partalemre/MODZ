@@ -13,7 +13,7 @@ const MIN = 60_000
 setLang('tr')
 
 function step(key: string, status: StepStatus, credit?: number): Step {
-  const fallback = status === 'completed' ? 1 : status === 'in_progress' ? 0.5 : 0
+  const fallback = status === 'completed' ? 1 : 0
 
   return { key, title: key, status, credit: credit ?? fallback, checksDone: 0, checksTotal: 0 }
 }
@@ -43,12 +43,12 @@ test('re-entering in progress keeps the first start', () => {
   expect(tracks.s1?.startedAt).toBe(MIN)
 })
 
-test('progress counts done steps plus partial credit, marked as an estimate', () => {
+test('progress counts done steps only: a running step without a checklist adds nothing', () => {
   expect(progressOf(planOf(['completed', 'completed', 'completed', 'in_progress', 'pending', 'pending', 'pending', 'pending']))).toEqual({
-    done: 3, total: 8, percent: 44, isEstimate: true,
+    done: 3, total: 8, percent: 38,
   })
-  expect(headline(planOf(['completed', 'pending']))).toBe('Plan · 1/2 adım · %50')
-  expect(headline(planOf(['completed', 'in_progress', 'pending']))).toBe('Plan · 1/3 adım · ~%50')
+  expect(headline(planOf(['completed', 'pending']))).toBe('Plan · 1/2 adım')
+  expect(headline(planOf(['completed', 'in_progress', 'pending']))).toBe('Plan · 1/3 adım')
 })
 
 test('ETA shows only once three finished steps have measured times', () => {
@@ -122,7 +122,7 @@ test('in English, durations, counts and the headline read short and plural', () 
   try {
     expect(formatDuration(12_000)).toBe('12s')
     expect(formatDuration(95 * MIN)).toBe('1h 35m')
-    expect(headline(planOf(['completed', 'in_progress', 'pending']))).toBe('Plan · 1/3 steps · ≈50%')
+    expect(headline(planOf(['completed', 'in_progress', 'pending']))).toBe('Plan · 1/3 steps')
     expect(filesText(['src/x.ts'])).toBe('1 file: x.ts')
     expect(statusText(planOf(['completed', 'completed']), {})).toBe('plan 2/2 · done')
   } finally {

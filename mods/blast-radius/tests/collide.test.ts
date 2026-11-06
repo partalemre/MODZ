@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
 import { EDITS_CAP, EDIT_WINDOW_MS, parseLog, withEdit } from '../hooks/edits'
-import { EN, MINUTE, NOW, SURFACES, mountPane, pass, start, stub, world } from './world'
+import { EN, MINUTE, NOW, SURFACES, mountBand, pass, start, stub, world } from './world'
 
 // The collision guard: two chats on one machine, told apart by their session ids.
 
@@ -46,7 +46,7 @@ test('one chat records its edit under its own key; the other chat is asked, the 
   await pass(w, 5 * MINUTE)
   const call = ($ as any).tool.call({ tool: 'Write', file_path: CLIENT, content: 'y' })
   await pass(w, 0)
-  const ui = await mountPane($, 'desktop')
+  const ui = await mountBand($, 'desktop')
   const drawn = JSON.stringify(await ui.drawn())
   expect(drawn).toContain('Another chat edited client.ts 5 min ago')
   expect(drawn).toContain('demo-app · Waiting for you')
@@ -63,11 +63,12 @@ for (const surface of SURFACES) {
     await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Edit', file_path: CLIENT, old_string: 'a', new_string: 'b' })
     await pass(w, 0)
-    const ui = await mountPane($, surface)
+    const ui = await mountBand($, surface)
     const tree = await ui.drawn()
     const drawn = JSON.stringify(tree)
     for (const text of ['Held · Blast Radius', 'Another chat edited client.ts 12 min ago', 'billing-api · Waiting for you', 'src/api/client.ts', 'Edit anyway', 'Skip this edit']) expect(drawn).toContain(text)
-    expect(byKey(tree, 'cancel')?.props?.autoFocus).toBe(true)
+    // A desktop has a pointer and the person may be typing in the prompt: only the terminal moves the focus.
+    expect(byKey(tree, 'cancel')?.props?.autoFocus).toBe(surface === 'terminal' ? true : undefined)
     expect(byKey(tree, 'run')?.props?.autoFocus).toBeUndefined()
     await ui.press({ key: 'cancel' })
     await pass(w)
@@ -127,7 +128,7 @@ test('the Turkish card says it in Turkish', async ($, on) => {
   await start($, w)
   const call = ($ as any).tool.call({ tool: 'Write', file_path: CLIENT, content: 'x' })
   await pass(w, 0)
-  const ui = await mountPane($, 'terminal')
+  const ui = await mountBand($, 'terminal')
   const drawn = JSON.stringify(await ui.drawn())
   for (const text of ['Düzenleme bekletildi', 'Başka bir sohbet client.ts dosyasını az önce düzenledi', 'Bu düzenlemeyi atla']) expect(drawn).toContain(text)
   await ui.press({ key: 'cancel' })

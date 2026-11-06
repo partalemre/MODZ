@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { BUILD_SCAN, EN, RESET_NUMSTAT, RESET_STATUS, SURFACES, hasTurkish, mountBand, mountPane, pass, start, stub, world } from './world'
+import { BUILD_SCAN, EN, RESET_NUMSTAT, RESET_STATUS, SURFACES, hasTurkish, mountBand, pass, start, stub, world } from './world'
 
 // With no MODZ_LANG the card reads like the film: English words, nothing only Turkish has.
 
@@ -13,7 +13,7 @@ for (const surface of SURFACES) {
     await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'git reset --hard' })
     await pass(w, 0)
-    const ui = await mountPane($, surface)
+    const ui = await mountBand($, surface)
     const tree = await ui.drawn()
     const drawn = JSON.stringify(tree)
 
@@ -35,7 +35,7 @@ for (const surface of SURFACES) {
     await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
-    const ui = await mountPane($, surface)
+    const ui = await mountBand($, surface)
     const drawn = JSON.stringify(await ui.drawn())
 
     expect(drawn).toContain('This would delete 9 files (286 KB). None of them are in git, so they can\'t be brought back.')
@@ -58,7 +58,6 @@ for (const surface of SURFACES) {
   test(`the band says who holds the command (${surface})`, async ($, on) => {
     const w = world({ ...EN, isPlaced: false, answers: { files: BUILD_SCAN } })
     stub(on, w)
-    on('ui.render', () => ({ type: 'Text', children: ['other mod row'] }))
     await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf build' })
     await pass(w, 0)
@@ -79,7 +78,7 @@ for (const surface of SURFACES) {
     await start($, w, surface)
     const call = ($ as any).tool.call({ tool: 'Bash', command: 'rm -rf $UNSET' })
     await pass(w, 0)
-    const ui = await mountPane($, surface)
+    const ui = await mountBand($, surface)
     const tree = await ui.drawn()
 
     expect(JSON.stringify(tree)).toContain('$UNSET is set while the command runs')

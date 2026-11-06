@@ -22,22 +22,22 @@ const ESLINT = ['/w/src/api/user.ts', "   3:7  error  'x' is assigned a value bu
 const PASS = ' Tests  42 passed (42)'
 const pkg = JSON.stringify({ scripts: { test: 'vitest run', lint: 'eslint .' } })
 const result = (stdout: string, exitCode: number) => ({ value: { exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
-// About 400 px (the desktop's right pane) and 600 px.
-const WIDTHS = { narrow: 52, wide: 84 }
+// The desktop's right pane at its narrowest and widest: 365 and 560 px, about 9 px a column.
+const WIDTHS = { narrow: 40, wide: 62 }
 const bandOf = { plugin: 'test-badge', component: 'AbovePrompt', requestId: 'band', surface: 'desktop', viewport: { columns: 110, rows: 40 }, props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 100, scroll: { offset: 0, bodyRows: 10 }, view: {} } }
 const paneOf = (bodyColumns: number) => ({ plugin: 'test-badge', component: 'Pane', requestId: 'test-badge', surface: 'desktop', viewport: { columns: 110, rows: 40 }, props: { title: 'Testler', isFocused: true, bodyColumns, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} } })
 const narrowBand = { ...bandOf, requestId: 'band-narrow', props: { ...bandOf.props, bodyColumns: WIDTHS.narrow } }
 
 type Run = { test: string; lint: string; code: number; hold?: Promise<void> }
 
-async function setup($: any, on: any, spec: { theme: string; run: Run; isIdle?: boolean }) {
+async function setup($: any, on: any, spec: { theme: string; run: Run; isIdle?: boolean; lang?: string; hasNoTests?: boolean }) {
   const clock = mock.clock(on)
-  mock.env(on, { MODZ_THEME: spec.theme, MODZ_LANG: 'tr' })
+  mock.env(on, { MODZ_THEME: spec.theme, MODZ_LANG: spec.lang ?? 'tr' })
   for (const name of ['store.get', 'store.set', 'command.register', 'ui.log', 'ui.status', 'ui.toast', 'ui.open']) on(name, () => ({ value: undefined }))
   on('session.start', () => ({ cwd: '/w' }))
   on('session.cwd', () => ({ value: '/w' }))
   on('ui.render', () => ({ type: 'Box', props: {}, children: [] }))
-  on('fs.list', () => ({ value: [{ name: 'package.json', kind: 'file', size: 10 }] }))
+  on('fs.list', () => ({ value: spec.hasNoTests === true ? [] : [{ name: 'package.json', kind: 'file', size: 10 }] }))
   on('fs.read', () => ({ value: pkg }))
   on('fs.exists', () => ({ value: false }))
   on('tool.call', () => ({ result: 'ok' }))
@@ -85,6 +85,16 @@ for (const theme of ['dark', 'light']) {
     await dumpPanes($, `pane-empty-${theme}`)
   })
 
+  test(`preview ${theme}: no test command in this project`, async ($: any, on: any) => {
+    await setup($, on, { theme, run: { test: PASS, lint: '', code: 0 }, isIdle: true, hasNoTests: true })
+    await dumpPanes($, `pane-nocommand-${theme}`)
+  })
+
+  test(`preview ${theme}: the failing pane in English`, async ($: any, on: any) => {
+    await setup($, on, { theme, lang: 'en', run: { test: VITEST, lint: ESLINT, code: 1 } })
+    await dumpPanes($, `pane-fail-en-${theme}`)
+  })
+
   test(`preview ${theme}: running band and details pane`, async ($: any, on: any) => {
     await setup($, on, { theme, run: { test: PASS, lint: '', code: 0, hold: new Promise<void>(() => undefined) } })
     await dump(`band-running-${theme}`, await $.ui.mount(bandOf))
@@ -103,7 +113,7 @@ for (const theme of ['dark', 'light']) {
   for (const [name, checks] of Object.entries(CI_RUNS)) {
     test(`preview ${theme}: CI ${name} in the pane${name === 'fail' ? ' and the band card' : ''}`, async ($: any, on: any) => {
       const gh = newGh({ talk: 0 })
-      const clock = await setupCi($, on, { gh, surface: 'desktop', theme, lang: 'tr' })
+      const clock = await setupCi($, on, { gh, surface: 'desktop', theme, lang: 'tr', hasTests: true })
       gh.checks = checks
       gh.talk = 2
       await clock.advance(60_000)
@@ -112,6 +122,18 @@ for (const theme of ['dark', 'light']) {
         await dump(`band-ci-fail-${theme}`, await $.ui.mount(bandOf))
         await dump(`band-ci-fail-narrow-${theme}`, await $.ui.mount(narrowBand))
       }
+    })
+  }
+}
+
+// GitHub has no checks at all for the PR: what the owner's screenshot showed, in both languages.
+for (const theme of ['dark', 'light']) {
+  for (const lang of ['tr', 'en']) {
+    test(`preview ${theme} ${lang}: a PR with no checks`, async ($: any, on: any) => {
+      const gh = newGh({ checks: null })
+      const clock = await setupCi($, on, { gh, surface: 'desktop', theme, lang, hasTests: true })
+      for (let poll = 0; poll < 5; poll += 1) await clock.advance(60_000)
+      await dumpPanes($, `pane-ci-none-${lang}-${theme}`)
     })
   }
 }

@@ -7,7 +7,7 @@ import { detailTree } from './detail'
 import { agentProgress } from './estimate'
 import type { Progress } from './estimate'
 import type { Planned } from './flow'
-import { clip, fitText, fmtCost, textWidth } from './format'
+import { clip, fitText, fmtCost } from './format'
 import { t } from './i18n'
 import { lookOf } from './identity'
 import { stuckOf } from './insight'
@@ -20,8 +20,8 @@ import { CARD_CRAB, CRAB, activityOf, cardCrabSvg, clockOf, crabSvg, modelLine, 
 import { costumeOf, plannedTierOf, tierWordOf } from './tiers'
 
 // One agent as a row. The desktop draws who it is and its task as the row's head beside its crab, the bar
-// under them and one native line of what it does now; the whole row is the press that opens it (a plain
-// button spread over it, kit/press.tsx), its head drawing the chevron and the hover wash. No frame: the rows
+// under them and two native lines of what it does now; the head is the press that opens it (a plain
+// button spread over it, kit/press.tsx), and draws the chevron. No frame: the rows
 // rest on spacing. The terminal keeps native text, its title the button that opens it. Either way the button
 // is a real one: the focus ring and Enter reach it.
 
@@ -47,8 +47,6 @@ export const FRAME_PX = 34
 export const FRAME_COLS = 4
 // The gap between the row's parts.
 const GAP_PX = 8
-// Narrower than this beside the meta, the now line takes a row of its own rather than shrink to "ba…".
-const LINE_MIN_PX = 120
 const TERM_BAR_MAX = 24
 // Room the percent and the cost beside the bar take on the terminal: "~%100" and "≈$12.34".
 const PCT_COLS = 6
@@ -60,6 +58,12 @@ const BODY_PX = 14
 const GLYPH: Record<string, string> = { running: '●', done: '✓', failed: '✗' }
 // Claude's accent while running, quiet once done, red after a failure (DESIGN.md §0), as the bar beside it.
 const STATUS_KEY: Record<string, ThemeKey> = { running: 'claude', done: 'subtle', failed: 'error' }
+
+// The tier and the model, the effort said once ("medium · Sonnet 5.5", not "medium · Sonnet 5.5 · medium").
+const whoLine = (a: AgentRun): string => {
+  const tier = tierWordOf(a)
+  return [tier, ...modelLine(a).split(' · ').filter(part => part !== tier)].join(' · ')
+}
 
 const statusWord = (a: AgentRun): string => {
   const s = t()
@@ -78,8 +82,6 @@ const pillOf = (a: AgentRun, stuck: Stuck | null): Pill => {
 
 const headOf = (a: AgentRun, stuck: Stuck | null): CardHead => ({
   name: lookOf(a).name,
-  tierWord: tierWordOf(a),
-  model: modelLine(a),
   title: a.description || a.type,
   pill: pillOf(a, stuck),
 })
@@ -175,41 +177,24 @@ function deskHead(ui: Ui, a: AgentRun, ctx: RowContext) {
   const headW = ctx.inner - CARD_CRAB.w - GAP_PX
   // A stuck crab stands still: the calm row says it before the pill does.
   const crab = cardCrabSvg({ costume: costumeOf(a), look, isWalking: a.status === 'running' && !stuck })
-  const alt = `${head.title}: ${head.name} · ${head.tierWord} · ${head.model} · ${head.pill.text} (${isOpen ? t().hide : t().details})`
+  const alt = `${head.title}: ${head.name} · ${whoLine(a)} · ${head.pill.text} (${isOpen ? t().hide : t().details})`
   return (
     <Box flexDirection="row" alignItems="center" columnGap={1}>
       {picture(ui, { key: 'crab', at: `crab-${a.id}`, pic: { source: crab, alt: `${look.name}, ${tierWordOf(a)}`, width: CARD_CRAB.w, height: CARD_CRAB.h } })}
-      {picture(ui, { key: 'head', at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head), alt, width: headW, height: HEAD_H }, opts: { isRow: true } })}
+      {picture(ui, { key: 'head', at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head), alt, width: headW, height: HEAD_H } })}
     </Box>
   )
 }
 
-// The now line and the meta in one row; the line gives way. A row too narrow for a readable line sets it above
-// the meta instead.
+// What it does now, then who it is and what it took so far: two quiet lines, each cut to its room, never wrapped.
 function deskFoot(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box, Text } = ui
   const isOpen = ctx.selected === a.id
-  const meta = `${t().tools(a.toolCount || 0)} · ${clockOf(a, ctx.at)} · ≈${fmtCost(a.costUsd)}`
-  const room = ctx.inner - textWidth(meta, BODY_PX) - GAP_PX * 2
-  const isStacked = room < LINE_MIN_PX
-  const line = (
-    <Box flexShrink={1} flexGrow={1}>
-      <Text wrap="truncate-end" dimColor={a.status !== 'running'}>{fitText(nowLine(a, isOpen), BODY_PX, isStacked ? ctx.inner : room)}</Text>
-    </Box>
-  )
-  const tail = <Box key="meta" flexShrink={0}><Text dimColor>{meta}</Text></Box>
-  if (isStacked) {
-    return (
-      <Box flexDirection="column">
-        {line}
-        <Box flexDirection="row" justifyContent="flex-end" alignItems="center" columnGap={1}>{tail}</Box>
-      </Box>
-    )
-  }
+  const meta = [t().tools(a.toolCount || 0), clockOf(a, ctx.at), `≈${fmtCost(a.costUsd)}`, whoLine(a)].join(' · ')
   return (
-    <Box flexDirection="row" justifyContent="space-between" alignItems="center" columnGap={1}>
-      {line}
-      {tail}
+    <Box key="foot" flexDirection="column">
+      <Text wrap="truncate-end" dimColor={a.status !== 'running'}>{fitText(nowLine(a, isOpen), BODY_PX, ctx.inner)}</Text>
+      <Text wrap="truncate-end" dimColor>{fitText(meta, BODY_PX, ctx.inner)}</Text>
     </Box>
   )
 }
@@ -222,21 +207,20 @@ function deskBar(ui: Ui, a: AgentRun, ctx: RowContext) {
   return picture(ui, { key: 'bar', at: `bar-${a.id}`, pic, opts: { shows: { status: a.status, isEstimate: progress.isEstimate } } })
 }
 
-// Taller than any row, so the cover's stack of buttons reaches its foot; the cover clips the rest.
-const ROW_COVER_PX = 160
-
-// The row (head, bar, now line) is one press that opens or closes it; what opens sits under it, outside the press,
-// since it holds its own field and buttons.
+// The head is the press that opens or closes the row, and exactly one control tall, so the pointer lights it as one
+// block (a button cannot grow taller). What opens sits outside the press, since it holds its own field and buttons.
 function deskCard(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box } = ui
   const isOpen = ctx.selected === a.id
   return (
     <Box key={a.id} flexDirection="column">
       <Box key="row" flexDirection="column" alignSelf="flex-start">
-        {deskHead(ui, a, ctx)}
+        <Box key="head-row" alignSelf="flex-start">
+          {deskHead(ui, a, ctx)}
+          {PressCover(ui, { key: `open-${a.id}`, width: ctx.inner, height: HEAD_H, onPress: () => ctx.onToggle(a.id) })}
+        </Box>
         {deskBar(ui, a, ctx)}
         {deskFoot(ui, a, ctx)}
-        {PressCover(ui, { key: `open-${a.id}`, width: ctx.inner, height: ROW_COVER_PX, onPress: () => ctx.onToggle(a.id) })}
       </Box>
       {isOpen && detailTree(ui, a, ctx)}
     </Box>

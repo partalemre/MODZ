@@ -49,5 +49,6 @@ test('a detail that would pass 40 chars folds its smallest groups into "+N"', ()
 test('a snippet is the first line, masked and at most 40 chars', () => {
   expect(snippetOf('\n  Fix the login bug\nsecond line')).toBe('Fix the login bug')
   expect([...snippetOf('a'.repeat(10) + ' ' + 'word '.repeat(20))].length).toBeLessThanOrEqual(40)
+  expect(snippetOf('Add a retry with backoff to the fetch call in the client')).toBe('Add a retry with backoff to the fetch…')
   expect(snippetOf('set GITHUB_TOKEN=ghp_abcdef')).toBe('set GITHUB_TOKEN=****')
 })

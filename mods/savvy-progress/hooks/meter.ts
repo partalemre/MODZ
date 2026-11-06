@@ -19,6 +19,9 @@ const classOf = (view: Units, i: number): string => {
 
 type Span = { x: number; w: number; cls: string }
 
+// How much of a running unit its dash takes. A run's end is unknown, so nothing here may read as filled.
+const RUN_SHARE = 0.34
+
 const rect = (track: Track, { x, w, cls }: Span): string =>
   `<rect class="${cls}" x="${x.toFixed(1)}" y="${track.y}" width="${Math.max(0, w).toFixed(1)}" height="${track.h}" rx="${track.h / 2}"/>`
 
@@ -32,10 +35,18 @@ const solid = (view: Units, track: Track): string => {
   return parts.join('')
 }
 
+// The neutral track with a short dash in the accent, breathing (DESIGN.md §0.4): it reads "started", not "full".
+const running = (track: Track, x: number, w: number): string =>
+  rect(track, { x, w, cls: 'k' }) + rect(track, { x, w: w * RUN_SHARE, cls: 'f-edit live' })
+
 export const meterSvg = (view: Units, track: Track): string => {
   const units = view.units
   if (units < 1) return rect(track, { x: track.x, w: track.w, cls: 'k' })
   const seg = (track.w - GAP * (units - 1)) / units
   if (seg < MIN_SEG) return solid(view, track)
-  return Array.from({ length: units }, (_, i) => rect(track, { x: track.x + i * (seg + GAP), w: seg, cls: classOf(view, i) })).join('')
+  return Array.from({ length: units }, (_, i) => {
+    const x = track.x + i * (seg + GAP)
+    const cls = classOf(view, i)
+    return cls === 'f-edit' ? running(track, x, seg) : rect(track, { x, w: seg, cls })
+  }).join('')
 }

@@ -1,6 +1,15 @@
 import { expect, test } from 'claude-code/testing'
 
+import { SCAN_MS } from '../hooks/chats'
 import { PANE, SECOND, SURFACES, finish, measure, setup, spawn, svgOf, threeRunning, tool } from './fixtures'
+
+// Chats the drawing cannot read, so the pane's drawing throws.
+const CHATS_BREAKER = {
+  name: 'chats-breaker',
+  register(on: any) {
+    on('state.set', { plugin: 'savvy-progress', key: 'chats' }, ($: any, e: any, next: any) => next({ ...e, value: 5 }))
+  },
+}
 
 for (const surface of SURFACES) {
   const mount = ($: any) => $.ui.mount({ ...PANE, surface })
@@ -41,6 +50,15 @@ for (const surface of SURFACES) {
     if (surface === 'terminal') expect(await text(ui)).toMatch(metrics)
     else expect(await svgOf(ui)).toMatch(metrics)
     expect(await hasHead(ui, 'Çalışıyor · 3')).toBe(true)
+  })
+
+  test(`${surface}: a drawing that throws leaves the plain list, not a blank tab`, { plugins: [CHATS_BREAKER] }, async ($, on) => {
+    const { clock } = await setup($, on, { store: { 'sessions/X0': { project: 'other', title: 'other work', state: 'idle', since: 0, at: 0 } } })
+    await threeRunning($)
+    await clock.advance(SCAN_MS)
+    const seen = await text(await mount($))
+    expect(seen).toContain('Panel çizilemedi, düz liste gösteriliyor.')
+    expect(seen).toContain('● Build the landing page')
   })
 
   test(`${surface}: finished rows show the total time and fold under Bitti`, async ($, on) => {

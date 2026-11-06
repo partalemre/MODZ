@@ -25,6 +25,7 @@ function stubEngine(on: On): { opened: string[] } {
   on('store.get', () => ({ value: undefined }))
   on('store.set', () => ({ value: undefined }))
   on('ui.toast', () => ({ value: undefined }))
+  on('ui.close', () => ({ value: undefined }))
   on('ui.open', ($, e) => {
     opened.push(e.id)
 

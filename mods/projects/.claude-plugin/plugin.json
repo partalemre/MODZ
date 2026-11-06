@@ -1,0 +1,9 @@
+{
+  "name": "projects",
+  "description": "Every project in one place: percent, plans, where it stopped, tokens and agents; /projects and a full-screen board",
+  "author": {
+    "name": "Faik Emre Partal",
+    "url": "https://github.com/partalemre"
+  },
+  "types": "./types/index.d.ts"
+}

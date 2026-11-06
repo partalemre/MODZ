@@ -24,6 +24,7 @@ const METER = { h: 6, min: 36, max: 360 } as const
 const PERCENT_SIZE = 12.5
 const MONO_EM = 0.6
 const CRAB = { w: 24, y: 2, scale: 0.8 } as const
+const UNKNOWN = '—'
 
 type Role = 'run' | 'ok' | 'warn' | 'danger'
 export type BandDrawing = { source: string; width: number }
@@ -47,7 +48,7 @@ type Plan = { title: string; titleW: number; meterW: number; pillW: number; pctW
 // The meter shrinks to its minimum before the title gives up a pixel; below that the meter goes.
 const planOf = (view: JobView, maxW: number): Plan => {
   const pillW = Math.ceil(textWidth(view.label, PILL.size) * BOLD + PILL.padX * 2)
-  const pctW = Math.ceil(percentText(view).length * PERCENT_SIZE * MONO_EM)
+  const pctW = percentText(view) === UNKNOWN ? 0 : Math.ceil(percentText(view).length * PERCENT_SIZE * MONO_EM)
   const avail = maxW - TITLE_X - pillW - pctW - CRAB.w - GAP * 4
   const natural = Math.ceil(textWidth(view.title, TITLE_SIZE) * BOLD)
   if (avail - natural >= METER.min) return { title: view.title, titleW: natural, meterW: Math.min(METER.max, avail - natural), pillW, pctW }
@@ -70,13 +71,13 @@ export const bandSvg = (view: JobView, maxW: number, mood?: CrabMood): BandDrawi
   const pillX = TITLE_X + plan.titleW + GAP
   const meterX = pillX + plan.pillW + GAP
   const pctX = meterX + (plan.meterW ? plan.meterW + GAP : 0)
-  const crabX = pctX + plan.pctW + GAP
+  const crabX = pctX + (plan.pctW ? plan.pctW + GAP : 0)
   const width = Math.ceil(crabX + CRAB.w)
   const body = [
     `<text class="t" x="${TITLE_X}" y="${BASELINE}" font-family="${FONT}" font-size="${TITLE_SIZE}" font-weight="600">${xml(plan.title)}</text>`,
     pillSvg({ label: view.label, role: pillRole(view), x: pillX, w: plan.pillW }),
     plan.meterW ? meterSvg(view, { x: meterX, y: (BAND_H - METER.h) / 2, w: plan.meterW, h: METER.h }) : '',
-    `<text class="t" x="${pctX}" y="${BASELINE}" font-family="${MONO}" font-size="${PERCENT_SIZE}" font-weight="650">${xml(percentText(view))}</text>`,
+    plan.pctW ? `<text class="t" x="${pctX}" y="${BASELINE}" font-family="${MONO}" font-size="${PERCENT_SIZE}" font-weight="650">${xml(percentText(view))}</text>` : '',
     bandCrab(crabX, view, mood),
   ]
   return { source: paneSvg(width, BAND_H, body.join('\n')), width }

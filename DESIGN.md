@@ -98,7 +98,7 @@ Text ile: başlık = bold text.hi · gövde = text.mid · meta = text.lo · vurg
 - **Halka (segmentli yay):** 270°, 20 segment, 44px (band) / 72px (pane); ortada değer.
 - **Adım noktaları:** 8px noktalar ince çizgiyle bağlı: bitti Moss dolu ✓, aktif Iris/Orchid halka + nefes alan
   çekirdek, bekleyen line.strong halka, hata Flare ✕.
-- **Numaralı adım dairesi** (replay/plan): 22px daire; şimdiki = rol dolgu + beyaz sayı, biten = gri ✓, gelecek = halka.
+- **Numaralı adım dairesi** (replay): 22px daire; şimdiki = rol dolgu + beyaz sayı, biten = gri ✓, gelecek = halka. Plan ekranı numara kullanmaz: ince çizgi üstünde ✓, nefes alan nokta, boş halka.
 - **Dosya rozeti:** Svg 26×16 rx 4, nötr track zemin + text.lo 9.5/700 mono ("TS", "PDF"); okuma/düzenleme anında rengi.
 - **Basılabilir satır:** Svg satır (hover yıkaması `m-wash`, sağda `›` ok) + `kit/press.tsx` kaplaması (§0.5).
 - **Boyut çubuğu:** 96×6 rx 3, toplam üzerinden oran (en büyük satır değil).

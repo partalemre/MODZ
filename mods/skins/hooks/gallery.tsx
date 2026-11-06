@@ -102,13 +102,16 @@ function bandSections(look: Look): Section[] {
   ]
 }
 
-export function galleryPane(look: Look, columns: number) {
-  const { Box, Text } = look.ui
+export function galleryPane(look: Look, { columns, back }: { columns: number; back: () => void }) {
+  const { Box, Button, Text } = look.ui
   const width = Math.max(40, columns - 4)
   const cards = look.svg === undefined ? terminalSections(look, width) : desktopSections(look, look.svg, width)
 
   return (
     <Box flexDirection="column">
+      <Box key="back" flexDirection="row" marginLeft={-1} marginBottom={1}>
+        <Button key="gallery-back" label={galleryWords().back} plain dimColor onPress={back} />
+      </Box>
       {[...rowSections(look), ...cards, ...bandSections(look)].map(([title, ...items], i) => (
         <Box flexDirection="column" marginBottom={1}>
           <Text dimColor bold>{`${i + 1}  ${title}`}</Text>

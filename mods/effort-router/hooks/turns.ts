@@ -22,7 +22,13 @@ export function snippetOf(text: string): string {
   const line = redact(text.split('\n').find(part => part.trim() !== '')?.trim() ?? '')
   const chars = [...line]
 
-  return chars.length <= SNIPPET_MAX ? line : `${chars.slice(0, SNIPPET_MAX - 1).join('').trimEnd()}${ELLIPSIS}`
+  if (chars.length <= SNIPPET_MAX) return line
+  const head = chars.slice(0, SNIPPET_MAX - 1).join('')
+  // Drop a word the cut would split, unless that leaves too little to read.
+  const wordEnd = chars[SNIPPET_MAX - 1] === ' ' ? head.length : head.lastIndexOf(' ')
+  const kept = wordEnd > SNIPPET_MAX / 2 ? head.slice(0, wordEnd) : head
+
+  return `${kept.trimEnd()}${ELLIPSIS}`
 }
 
 // "claude-opus-5-5" reads as "opus-5-5"; a dated id keeps its date off.

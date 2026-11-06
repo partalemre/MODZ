@@ -1,9 +1,8 @@
-// The confirm card, drawn the same in the pane and in the band: Svg parts on desktop,
-// the same words as text on the terminal. The safe answer (Keep my work) holds the focus.
+// The confirm card, drawn in the band above the prompt: Svg parts on desktop, the same words
+// as text on the terminal, where the safe answer (Keep my work) holds the focus; a desktop
+// has a pointer, and the person may be typing in the prompt.
 // A danger card has a single Flare frame; a caution card a round Amber one (DESIGN.md §4).
 
-import { paneMotion } from './kit/moving'
-import type { MoveOpts, Pic } from './kit/moving'
 import { headerSvg, bannerSvg, listSvg } from './svg-card'
 import { palette, role, TERMINAL_KEY } from './theme'
 import type { Row, View } from './view'
@@ -15,7 +14,6 @@ export type CardProps = {
   view: View
   // `striking`: Delete was pressed; the rows are struck and the command is about to run.
   phase: 'asking' | 'striking'
-  place: 'pane' | 'band'
   isExpanded: boolean
   isLight: boolean
   columns: number
@@ -26,8 +24,6 @@ export type CardProps = {
 
 const CARD_CHROME = 6
 const PX_PER_COLUMN = 8
-// A desktop pane reports about 9 px a column (a 365 px body reads 40), wider than the reply column.
-const PANE_PX_PER_COLUMN = 9
 const MIN_WIDTH = 300
 const MAX_WIDTH = 720
 const BAND_ROWS = 3
@@ -35,11 +31,11 @@ const TERMINAL_BAR = 10
 const FRAME: Record<View['tone'], string> = { danger: 'single', warn: 'round' }
 const STATUS_KEY: Record<string, keyof typeof TERMINAL_KEY> = { A: 'ok', M: 'warn', D: 'danger', R: 'read', C: 'read', U: 'danger' }
 
-export const svgWidth = (columns: number, place: CardProps['place'] = 'band'): number =>
-  Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, (columns - CARD_CHROME) * (place === 'pane' ? PANE_PX_PER_COLUMN : PX_PER_COLUMN)))
+export const svgWidth = (columns: number): number =>
+  Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, (columns - CARD_CHROME) * PX_PER_COLUMN))
 
-/** The band shows the first rows only, and says how many it left for the pane. */
-function bandRows(rows: Row[]): Row[] {
+/** The first rows only, until the person asks for the rest: the band is short. */
+function foldedRows(rows: Row[]): Row[] {
   if (rows.length <= BAND_ROWS + 1) return rows
   const last = rows[rows.length - 1]
   const more = last?.kind === 'more' ? last.name : words().moreRows(rows.length - BAND_ROWS)
@@ -49,7 +45,7 @@ function bandRows(rows: Row[]): Row[] {
 
 function toggleOf(ui: Ui, props: CardProps) {
   const { Box, Button } = ui
-  if (props.place === 'band' || props.view.toggleCount <= 0 || props.phase === 'striking') return null
+  if (props.view.toggleCount <= 0 || props.phase === 'striking') return null
   const label = props.isExpanded ? words().showLess : words().showMore
 
   return (
@@ -59,7 +55,7 @@ function toggleOf(ui: Ui, props: CardProps) {
   )
 }
 
-function actions(ui: Ui, props: CardProps, lo: string | undefined) {
+function actions(ui: Ui, props: CardProps, look: { lo: string | undefined; hasFocus: boolean }) {
   const { Box, Button, Text } = ui
   const said = words()
   if (props.phase === 'striking') {
@@ -71,29 +67,18 @@ function actions(ui: Ui, props: CardProps, lo: string | undefined) {
   return (
     <Box key="actions" flexDirection="row" flexWrap="wrap" gap={1} alignItems="center">
       <Button key="run" label={props.view.action.label} hotkey={props.view.action.hotkey} variant="secondary" onPress={props.onRun} />
-      <Button key="cancel" label={props.view.cancel.label} hotkey={props.view.cancel.hotkey} variant="secondary" autoFocus onPress={props.onCancel} />
-      {props.place === 'pane' ? null : <Box key="holder" marginLeft={1}><Text {...(lo === undefined ? { dimColor: true } : { color: lo })}>{said.holder}</Text></Box>}
+      <Button key="cancel" label={props.view.cancel.label} hotkey={props.view.cancel.hotkey} variant="secondary" {...(look.hasFocus ? { autoFocus: true } : {})} onPress={props.onCancel} />
+      <Box key="holder" marginLeft={1}><Text {...(look.lo === undefined ? { dimColor: true } : { color: look.lo })}>{said.holder}</Text></Box>
     </Box>
   )
 }
 
-// The pane's drawings on the desktop (kit/moving.ts): reset as the pane opens, so they cascade in each time. The
-// band above the prompt is no pane, so its drawings stay plain.
-export const motion = paneMotion()
-
-function picture(ui: Ui, props: CardProps, drawing: { key: string; pic: Pic & { isInteractive?: boolean }; opts?: MoveOpts }) {
-  const { Svg } = ui
-  const { key, pic, opts } = drawing
-
-  return props.place === 'pane' ? <Svg key={key} {...motion.pic(key, pic, opts)} /> : <Svg key={key} {...pic} />
-}
-
 export function desktopCard(ui: Ui, props: CardProps) {
-  const { Box } = ui
-  const width = svgWidth(props.columns, props.place)
+  const { Box, Svg } = ui
+  const width = svgWidth(props.columns)
   const { view } = props
   const neutral = palette(props.isLight)
-  const rows = props.place === 'band' ? bandRows(view.rows) : view.rows
+  const rows = props.isExpanded ? view.rows : foldedRows(view.rows)
   const head = headerSvg(view, width)
   const banner = view.banner === null ? null : bannerSvg(view.banner, width)
   // The strike plays its own motion as Delete runs, so the list sweeps only when its rows change (Show more).
@@ -104,11 +89,11 @@ export function desktopCard(ui: Ui, props: CardProps) {
 
   return (
     <Box flexDirection="column" borderStyle={FRAME[view.tone]} borderColor={role(view.tone, props.isLight).line} backgroundColor={neutral.card} paddingX={2} paddingY={1} gap={1}>
-      {picture(ui, props, { key: 'head', pic: { source: head.source, alt: headAlt, width, height: head.height } })}
-      {banner === null ? null : picture(ui, props, { key: 'banner', pic: { source: banner.source, alt: view.banner?.text ?? '', width, height: banner.height } })}
-      {rows.length === 0 ? null : picture(ui, props, { key: 'list', pic: { source: list.source, alt, width, height: list.height, isInteractive: isStruck ? true : undefined }, opts: { shows: { rows, width } } })}
+      <Svg key="head" source={head.source} alt={headAlt} width={width} height={head.height} />
+      {banner === null ? null : <Svg key="banner" source={banner.source} alt={view.banner?.text ?? ''} width={width} height={banner.height} />}
+      {rows.length === 0 ? null : <Svg key="list" source={list.source} alt={alt} width={width} height={list.height} isInteractive={isStruck ? true : undefined} />}
       {toggleOf(ui, props)}
-      {actions(ui, props, neutral.lo)}
+      {actions(ui, props, { lo: neutral.lo, hasFocus: false })}
     </Box>
   )
 }
@@ -185,9 +170,9 @@ function headlineText(ui: Ui, view: View) {
 export function terminalCard(ui: Ui, props: CardProps) {
   const { Box, Text } = ui
   const { view } = props
-  const rows = props.place === 'band' ? bandRows(view.rows) : view.rows
+  const rows = props.isExpanded ? view.rows : foldedRows(view.rows)
   const tone = TERMINAL_KEY[view.tone]
-  const frame = props.place === 'band' ? { borderStyle: FRAME[view.tone], borderColor: tone } : {}
+  const frame = { borderStyle: FRAME[view.tone], borderColor: tone }
 
   return (
     <Box flexDirection="column" paddingX={1} {...frame}>
@@ -200,7 +185,7 @@ export function terminalCard(ui: Ui, props: CardProps) {
       {view.banner === null ? null : <Text color={TERMINAL_KEY[view.banner.tone]}>{`! ${view.banner.text}`}</Text>}
       <Box flexDirection="column" marginTop={1}>{rows.map((row, i) => terminalRow(ui, row, { index: i, isStruck: props.phase === 'striking' }))}</Box>
       {toggleOf(ui, props)}
-      <Box marginTop={1}>{actions(ui, props, undefined)}</Box>
+      <Box marginTop={1}>{actions(ui, props, { lo: undefined, hasFocus: true })}</Box>
     </Box>
   )
 }

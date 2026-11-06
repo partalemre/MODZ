@@ -54,11 +54,11 @@ for (const surface of SURFACES) {
 
     const pane = await $.ui.mount(paneOf(surface))
     const text = await shown(pane, surface)
-    expect(text).toContain('1 başarısız')
+    expect(text).toContain('1 test başarısız')
     expect(text).toContain('src/auth/login.test.ts')
     expect(text).toContain('src/api/user.ts')
     expect(text).toMatch(/AssertionError: expected 200 to be 401/)
-    expect((await pane.find({ key: 'tb-filter-lint' }))?.text).toBe('Lint 2')
+    expect((await pane.find({ key: 'tb-filter-lint' }))?.text).toBe('Kod denetimi 2')
     expect(await pane.find({ key: 'tb-filter-e2e' })).toBeUndefined()
     expect(await pane.find({ key: 'tb-filter-typecheck' })).toBeUndefined()
     expect(await pane.find({ key: 'tb-open-0' })).toBeDefined()
@@ -113,7 +113,7 @@ for (const surface of SURFACES) {
     expect(await shown(band, surface)).toMatch(/✓ 42\/42 geçti[\s\S]*lint temiz/)
     expect(await band.find({ key: 'tb-details' })).toBeUndefined()
     const pane = await $.ui.mount(paneOf(surface))
-    expect(await shown(pane, surface)).toMatch(/Hepsi geçti\s*· 42 test geçti · lint temiz/)
+    expect(await shown(pane, surface)).toMatch(/Bu bilgisayarda tüm testler geçti[\s\S]*42 test geçti/)
   })
 }
 
@@ -123,12 +123,12 @@ for (const surface of SURFACES) {
     await editAndRun($, await setup($, on, world))
 
     const pane = await $.ui.mount(paneOf(surface))
-    expect(await shown(pane, surface)).toMatch(/2 lint hatası\s*· 42 test geçti/)
+    expect(await shown(pane, surface)).toMatch(/2 kod sorunu[\s\S]*42 test geçti/)
     expect(await pane.find({ key: 'tb-filter-unit' })).toBeUndefined()
     if (surface === 'terminal') {
-      expect((await pane.find({ type: 'Text', text: /TEST SONUÇLARI/ }))).toBeUndefined()
-      expect((await pane.find({ type: 'Text', text: 'Test sonuçları' }))?.props?.dimColor).toBe(true)
-      expect((await pane.find({ type: 'Text', text: /lint hatası/ }))?.props?.color).toBe('warning')
+      expect((await pane.find({ type: 'Text', text: /BU BİLGİSAYARDA/ }))).toBeUndefined()
+      expect((await pane.find({ type: 'Text', text: 'Bu bilgisayarda' }))?.props?.dimColor).toBe(true)
+      expect((await pane.find({ type: 'Text', text: /kod sorunu/ }))?.props?.color).toBe('warning')
 
       return
     }
@@ -146,7 +146,7 @@ for (const surface of SURFACES) {
     const band = await $.ui.mount(bandOf(surface))
     expect(await shown(band, surface)).toMatch(/✕ test kaldı/)
     const text = await shown(await $.ui.mount(paneOf(surface)), surface)
-    expect(text).toMatch(/Testler kaldı\s*· 42 geçti/)
+    expect(text).toMatch(/Testler başarısız[\s\S]*başarısız · 42 geçti/)
     expect(text).not.toContain('0 başarısız')
   })
 }

@@ -12,7 +12,7 @@ test('a session that opens on a branch with an open PR polls its checks at once,
 
   expect(ghCalls(gh, 'view')[0]).toEqual(['gh', 'pr', 'view', '--json', 'number,url,headRefName,state,title'])
   expect(ghCalls(gh, 'checks')).toEqual([['gh', 'pr', 'checks', '7', '--json', 'name,state,bucket,link']])
-  expect((await hubOf($)).detail).toBe('CI 0/2 · 2 running')
+  expect((await hubOf($)).detail).toBe('GitHub 0/2 · 2 running')
   await clock.advance(MINUTE)
   expect(ghCalls(gh, 'checks')).toHaveLength(2)
 })
@@ -71,10 +71,10 @@ for (const surface of SURFACES) {
 
     gh.checks = [passed('test'), failed('lint')]
     await clock.advance(MINUTE)
-    expect(gh.notes).toEqual(['CI failed: lint · #7'])
-    expect((await hubOf($))).toMatchObject({ detail: 'CI 1/2 · 1 failing', tone: 'bad' })
+    expect(gh.notes).toEqual(['GitHub checks failed: lint · #7'])
+    expect((await hubOf($))).toMatchObject({ detail: 'GitHub 1/2 · 1 failing', tone: 'bad' })
     await band.redraw()
-    expect(shownText(await band.drawn())).toContain('CI failed: lint')
+    expect(shownText(await band.drawn())).toContain('GitHub checks failed: lint')
     expect(await hrefsOf(band)).toEqual([PR_URL])
     expect(await band.find({ key: 'tb-ci-dismiss' })).toBeDefined()
     expect((await band.drawn() as any).children.at(-1)).toEqual({ type: 'engine', ref: 1 })
@@ -97,8 +97,8 @@ for (const surface of SURFACES) {
     gh.checks = [passed('lint'), passed('test')]
     await clock.advance(MINUTE)
 
-    expect(gh.notes).toEqual(['CI passed · #7 · 2/2'])
-    expect(await hubOf($)).toMatchObject({ detail: 'CI 2/2 passed', tone: 'ok' })
+    expect(gh.notes).toEqual(['GitHub checks passed · #7 · 2/2'])
+    expect(await hubOf($)).toMatchObject({ detail: 'GitHub 2/2 passed', tone: 'ok' })
     const band = await $.ui.mount(bandOf(surface))
     expect(await band.find({ key: 'tb-ci-ask' })).toBeUndefined()
     expect(gh.prompts).toEqual([])
@@ -114,7 +114,7 @@ for (const surface of SURFACES) {
 
     expect(text).toContain('#7')
     expect(text).toContain('Add the checkout page')
-    expect(text).toContain('CI 1/3 · 1 failing · 2 new reviews or comments')
+    expect(text).toContain('1 of 3 checks failed. 2 new reviews or comments.')
     expect(text).toMatch(/lint[\s\S]*passed/)
     expect(text).toMatch(/test[\s\S]*running/)
     // e2e gave no link: it gets none.
@@ -127,13 +127,13 @@ for (const surface of SURFACES) {
     gh.checks = [failed('lint'), failed('test'), failed('e2e')]
     await clock.advance(MINUTE)
     const band = await $.ui.mount(bandOf(surface))
-    expect(shownText(await band.drawn())).toContain('CI failed: lint, test +1')
+    expect(shownText(await band.drawn())).toContain('GitHub checks failed: lint, test +1')
 
     await band.press({ key: 'tb-ci-dismiss' })
     await band.redraw()
     expect(await band.find({ key: 'tb-ci-ask' })).toBeUndefined()
     expect(gh.prompts).toEqual([])
-    expect((await hubOf($)).detail).toBe('CI 0/3 · 3 failing')
+    expect((await hubOf($)).detail).toBe('GitHub 0/3 · 3 failing')
   })
 }
 

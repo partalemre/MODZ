@@ -1,4 +1,4 @@
-import { splitReply } from './markdown'
+import { hardBreaks, splitReply } from './markdown'
 import type { Segment } from './markdown'
 
 // Markdown takes at most 10000 characters a block; a longer prompt keeps Claude Code's
@@ -21,7 +21,8 @@ export function cardSegments(text: string): Segment[] | null {
   }
 
   const segments = splitReply(text)
-  const fits = segments.every(segment => segment.kind === 'table' || (segment.kind === 'text' ? segment.text : segment.raw).length <= MAX_MARKDOWN)
+  // Measured as Markdown will take it: hard breaks add two characters a line.
+  const fits = segments.every(segment => segment.kind === 'table' || (segment.kind === 'text' ? hardBreaks(segment.text) : segment.raw).length <= MAX_MARKDOWN)
 
   return fits && segments.some(segment => segment.kind !== 'text') ? segments : null
 }

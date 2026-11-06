@@ -49,6 +49,8 @@ export type Strings = {
   planned: string
   empty: string
   emptyTitle: string
+  /** Above the plain list, when the pane's drawing failed. */
+  paneFailed: string
   round: string
   failed: string
   aborted: string

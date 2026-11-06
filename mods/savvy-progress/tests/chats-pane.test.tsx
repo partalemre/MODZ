@@ -63,7 +63,7 @@ for (const surface of SURFACES) {
     expect(await ui.find({ key: 'chats' })).toBeDefined()
     expect(all).toContain(surface === 'terminal' ? '▸ Diğer sohbetler · 2' : 'Göster')
     // The working one shows while folded; the idle one waits for the press.
-    expect(all).toContain('shop · shop work · çalışıyor')
+    expect(all).toContain(surface === 'terminal' ? 'shop · shop work · çalışıyor' : 'shop · shop work')
     expect(all).not.toContain('blog work')
   })
 

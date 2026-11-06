@@ -134,7 +134,7 @@ const drawnByKey = (node: any, key: string): any => {
   return undefined
 }
 
-test('desktop: the whole row is one plain press, its head washing under the pointer with a chevron', async ($, on) => {
+test('desktop: the head is one plain press, one control tall, with a chevron', async ($, on) => {
   await setup($, on)
   await spawn($, 'Build the landing page')
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
@@ -142,7 +142,7 @@ test('desktop: the whole row is one plain press, its head washing under the poin
   expect(drawnByKey(tree, 'a1')?.borderStyle).toBeUndefined()
   expect((await ui.find({ key: 'open-a1' }))?.props?.plain).toBe(true)
   const head = (await ui.findAll({ type: 'Svg' })).find((s: any) => String(s.props.alt).startsWith('Build the landing page: Pip'))
-  expect(head?.props?.source).toContain('m-wash')
+  expect(head?.props?.height).toBe(28)
   expect(head?.props?.source).toContain('class="chev"')
 })
 

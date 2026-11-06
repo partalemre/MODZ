@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { HEARTBEAT_MS } from '../hooks/chats'
+import { HEARTBEAT_MS, SCAN_MS } from '../hooks/chats'
 import { isOwnOpen } from '../hooks/hub'
 import { SECOND, finish, setup, spawn, tool } from './fixtures'
 
@@ -100,6 +100,32 @@ test('with the hub on the opened pane reports itself shown, and steps aside when
   expect(world.closed).toEqual([])
   await stageFromHub($, 'files')
   expect(world.closed).toEqual(['savvy-agents'])
+})
+
+const backOnDesktop = async ($: any, world: any) => {
+  // The app restarted: the session resumes with no panes up.
+  world.panes = []
+  world.opened.length = 0
+  await $.session.attach({ surface: 'desktop', clientId: 'desktop:default' })
+}
+
+test('a desktop that comes back gets the pane again only if it was open when the session stopped', WITH_HUB, async ($, on) => {
+  on('session.attach', (_: any, e: any) => ({ clientId: e.clientId }))
+  const { world, clock } = await setup($, on)
+  await $.command.run({ command: 'hub-on', args: '' })
+  await $.session.attach({ surface: 'desktop', clientId: 'desktop:default' })
+  await openFromHub($, 'agents')
+  await clock.advance(SCAN_MS)
+  // The hub writes the stage back to itself on every start, so the stage must not decide.
+  world.panes = []
+  await backOnDesktop($, world)
+  expect(world.opened).toEqual(['savvy-agents'])
+
+  // Moved on, or the tab's cross: the watch sees it gone and the pane stays closed next time.
+  await stageFromHub($, 'files')
+  await clock.advance(SCAN_MS)
+  await backOnDesktop($, world)
+  expect(world.opened).toEqual([])
 })
 
 const waitingElsewhere = (at: number) => ({ project: 'shop', title: 'Fix checkout', state: 'waiting', since: 0, at })

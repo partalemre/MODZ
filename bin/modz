@@ -160,6 +160,9 @@ cmd_status() {
   for m in $(mod_names); do
     local target="$SKILLS/$m" state="off" cloud="cloud: no"
     if [[ -L "$target" && "$(readlink "$target")" == "$MODS/$m" ]]; then state="on"
+    elif [[ -L "$target" ]] && behind="$(git -C "$(readlink "$target")" rev-list --count HEAD..main 2>/dev/null)" && [[ "$behind" -gt 0 ]]; then
+      # A link left on a worktree stops getting what lands on main: this hid merged fixes from every new session.
+      state="behind main by $behind: $(readlink "$target")"
     elif [[ -e "$target" ]]; then state="conflict: $target is not linked to MODZ"; fi
     if is_local_only "$m"; then cloud="cloud: local"
     elif [[ -L "$PROJECT_SKILLS/$m" ]]; then cloud="cloud: yes"; fi

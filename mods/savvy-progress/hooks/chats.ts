@@ -20,6 +20,9 @@ export const TITLE_MAX = 40
 // A word this long of letters and digits mixed reads like a key or a token: it never leaves the session.
 const SECRET_LIKE = /\b(?=[A-Za-z0-9_\-]*\d)(?=[A-Za-z0-9_\-]*[A-Za-z])[A-Za-z0-9_\-]{20,}\b/g
 const MASK = '•••'
+// What the app wraps around a prompt (`<system-reminder>…</system-reminder>`), and any tag left over.
+const WRAPPED = /<([a-z][\w-]*)[^>]*>[\s\S]*?<\/\1>/gi
+const TAG = /<\/?[a-z][\w-]*[^>]*>/gi
 const STATES: readonly ChatState[] = ['working', 'waiting', 'idle']
 // Waiting first, the longest wait on top; then working, then idle.
 const RANK: Record<ChatState, number> = { waiting: 0, working: 1, idle: 2 }
@@ -33,7 +36,8 @@ export const stateOf = (self: Pick<SelfChat, 'asks' | 'isWorking'>): ChatState =
 
 /** The chat's name for the others: its first prompt's first line, anything key-like masked, cut short. */
 export const titleOf = (text: string): string => {
-  const line = text.split('\n').map(part => part.trim()).find(Boolean) ?? ''
+  const said = text.replace(WRAPPED, ' ').replace(TAG, ' ')
+  const line = said.split('\n').map(part => part.trim()).find(Boolean) ?? ''
   return clip(line.replace(/\s+/g, ' ').replace(SECRET_LIKE, MASK), TITLE_MAX)
 }
 

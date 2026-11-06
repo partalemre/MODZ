@@ -1,8 +1,8 @@
 import { fitText, textWidth, xml } from './format'
 import { FONT, paneSvg } from './theme'
 
-// The agent row's drawn parts on the desktop: its head (who it is, the task as the headline, the status as a
-// pill and a chevron, since the whole row opens it) and the label that opens each section of the panel. Colour
+// The agent row's drawn parts on the desktop: its head (who it is, the task, the status as a pill and a chevron,
+// since it opens the row) and the label that opens each section of the panel. Colour
 // is kept for state (DESIGN.md §0): live work takes Claude's clay, a warning amber, a failure red; the rest is
 // ink. Still drawings: a row's head keeps one source while its agent's state holds.
 
@@ -13,13 +13,11 @@ export type Pill = { text: string; role: PillRole }
 const PILL = { h: 20, padX: 9, size: 11, dot: 3, dotGap: 6 } as const
 const BOLD = 1.06
 const LABEL = { size: 12, weight: 600 } as const
-const HEAD = { h: 44, eyebrowY: 15, titleY: 37, titleSize: 15, gap: 10 } as const
+const HEAD = { h: 28, size: 13.5, gap: 10, nameGap: 7 } as const
 // The chevron's room at a row's right edge, and its half-height.
 export const CHEVRON_ROOM = 22
 const CHEVRON = 4.5
 const STROKE = 1.5
-// The who line keeps each word's own case: names and models are not labels ("Nori · light · Opus 5.5").
-const WHO = { size: 12, weight: 500, nameWeight: 650 } as const
 const SECTION_H = 18
 
 export const HEAD_H = HEAD.h
@@ -53,34 +51,22 @@ export const chevronSvg = (x: number, y: number): string =>
 
 export type CardHead = {
   name: string
-  tierWord: string
-  model: string
   title: string
   pill: Pill
 }
 
-// "Nori · light · Opus 5.5 · low": the name bright, the tier and the model quiet (the crab wears the tier); the
-// model gives way first.
-const whoSvg = (head: CardHead, room: number): string => {
-  const tier = ` · ${head.tierWord}`
-  const used = textWidth(head.name, WHO.size) * BOLD + textWidth(tier, WHO.size)
-  // A model the engine has not named yet is left out until its first request names it.
-  const model = head.model ? fitText(` · ${head.model}`, WHO.size, Math.max(0, room - used)) : ''
-  const span = (cls: string, text: string) => `<tspan class="${cls}">${xml(text)}</tspan>`
-  const name = `<tspan class="t" font-weight="${WHO.nameWeight}">${xml(head.name)}</tspan>`
-  const words = name + span('m', tier) + (model === '…' ? '' : span('m', model))
-  return `<text x="0" y="${HEAD.eyebrowY}" font-family="${FONT}" font-size="${WHO.size}" font-weight="${WHO.weight}">${words}</text>`
-}
-
+/** "Nori  the task  ● running ›": one line, one control tall, so the row's button lights it whole. */
 export const cardHeadSvg = (W: number, head: CardHead): string => {
   const right = W - CHEVRON_ROOM
   const probe = pillPart(head.pill, 0, 0)
-  const pill = pillPart(head.pill, right - probe.width, 2)
-  const title = fitText(head.title, HEAD.titleSize * BOLD, right)
+  const pill = pillPart(head.pill, right - probe.width, (HEAD.h - PILL.h) / 2)
+  const nameW = textWidth(head.name, HEAD.size) * BOLD
+  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap)
+  const titleSpan = title === '…' ? '' : `<tspan class="s" dx="${HEAD.nameGap}">${xml(title)}</tspan>`
+  const y = HEAD.h / 2 + HEAD.size * 0.35
   const body = [
-    whoSvg(head, right - probe.width - HEAD.gap),
+    `<text x="0" y="${y}" font-family="${FONT}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
     pill.body,
-    `<text class="t" x="0" y="${HEAD.titleY}" font-family="${FONT}" font-size="${HEAD.titleSize}" font-weight="620">${xml(title)}</text>`,
     chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, HEAD.h / 2),
   ]
   return paneSvg(W, HEAD.h, body.join(''))

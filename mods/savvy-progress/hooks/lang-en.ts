@@ -14,6 +14,7 @@ export const en: Strings = {
   finished: 'Finished',
   planned: 'Planned',
   emptyTitle: 'No agents yet',
+  paneFailed: 'The pane could not be drawn; here is the plain list.',
   empty: 'Hand out a task and a crab gets to work: its status, progress and cost show here live.',
   round: 'round',
   failed: 'failed',

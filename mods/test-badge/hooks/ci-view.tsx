@@ -1,16 +1,17 @@
 import { newTalkOf } from './ci-state'
-import { cardHeadSvg, checkRowSvg, ciHeadSvg } from './ci-svg'
+import { cardHeadSvg, checkRowSvg, ciHeadSvg, noPrSvg } from './ci-svg'
 import type { Drawing } from './ci-svg'
-import { CHECK_ROLE, cardHeadline, ciLine } from './ci-text'
+import { CHECK_ROLE, cardHeadline } from './ci-text'
 import { picture } from './pane-pic'
 import { ago } from './parse'
 import { svgWidth } from './svg'
 import { THEME_KEY, cardColors } from './tidemark'
 import type { Role, Theme } from './tidemark'
+import { githubSentence } from './verdict'
 import { words } from './words'
 import type { CiCard, CiCheck, CiWatch } from '../types'
 
-// The Tests pane's CI section and the band's one-time card for a red finish, on the desktop (Svg) and the
+// The Tests pane's GitHub part and the band's one-time card for a red finish, on the desktop (Svg) and the
 // terminal (text in theme colors). Check links and the PR are Links: a click opens them, nothing runs here.
 type Ui = Record<string, any>
 
@@ -22,9 +23,9 @@ const WIDTH = { min: 300, max: 880 }
 const ROW_WIDTH = { min: 220, max: 860, reserve: 8 }
 // Columns the card's border and padding take.
 const CARD_WIDTH = { min: 260, max: 1200, reserve: 8 }
-const GLYPH: Record<CiCheck['state'], string> = { pending: '◐', pass: '✓', fail: '✕', skipped: '–' }
+export const GLYPH: Record<CiCheck['state'], string> = { pending: '◐', pass: '✓', fail: '✕', skipped: '–' }
 
-const look = (role: Role | 'lo') => (role === 'lo' ? { dimColor: true } : { color: THEME_KEY[role] })
+export const look = (role: Role | 'lo') => (role === 'lo' ? { dimColor: true } : { color: THEME_KEY[role] })
 
 // The band's card sits above the prompt, not in the pane, so its head stays a plain drawing.
 function plainPicture(ui: Ui, drawing: Drawing, key: string) {
@@ -71,17 +72,17 @@ function richSection(ui: Ui, view: CiView) {
 function textSection(ui: Ui, view: CiView) {
   const { Box, Text, Link } = ui
   const { ci } = view
-  const talk = newTalkOf(ci)
-  const summary = [ciLine(ci) || words().ci.noChecks, talk > 0 ? words().ci.newTalk(talk) : ''].filter(part => part !== '').join(' · ')
+  const says = words().github
 
   return (
     <Box key="tb-ci" flexDirection="column">
       <Box flexDirection="row" justifyContent="space-between" columnGap={1}>
-        <Text bold dimColor>{`${ci.phase === 'watching' ? '◐ ' : ''}${words().ci.eyebrow} · #${ci.number}`}</Text>
-        <Text dimColor>{ci.checkedAt === null ? '' : ago(view.now - ci.checkedAt)}</Text>
+        <Text bold dimColor>{`${ci.phase === 'watching' ? '◐ ' : ''}${says.title}`}</Text>
+        <Text dimColor>{ci.checkedAt === null ? '' : says.checked(ago(view.now - ci.checkedAt))}</Text>
       </Box>
-      <Text bold wrap="truncate">{ci.title}</Text>
-      <Text dimColor wrap="truncate">{summary}</Text>
+      <Text bold>{says.pr(ci.number)}</Text>
+      <Text wrap="truncate">{ci.title}</Text>
+      <Text dimColor wrap="wrap">{githubSentence(ci)}</Text>
       {ci.checks.map((check, index) => (
         <Box key={`tb-ci-row-${index}`} flexDirection="row" columnGap={1} paddingLeft={2}>
           <Text {...look(CHECK_ROLE[check.state])}>{GLYPH[check.state]}</Text>
@@ -99,12 +100,19 @@ function textSection(ui: Ui, view: CiView) {
   )
 }
 
-// The CI section closes the Tests pane on both surfaces, below the local checks it does not replace.
+// The GitHub part closes the Tests pane on both surfaces, below the local checks it does not replace.
 export function ciPart(ui: Ui, view: Omit<CiView, 'ci'> & { ci: CiWatch | null }) {
   const { ci } = view
-  if (ci === null) return null
+  if (ci !== null) return view.isRich ? richSection(ui, { ...view, ci }) : textSection(ui, { ...view, ci })
+  const { Box, Text } = ui
+  if (view.isRich) return picture(ui, noPrSvg({ width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }), 'tb-ci-none')
 
-  return view.isRich ? richSection(ui, { ...view, ci }) : textSection(ui, { ...view, ci })
+  return (
+    <Box key="tb-ci" flexDirection="column">
+      <Text bold dimColor>{words().github.title}</Text>
+      <Text dimColor wrap="wrap">{words().github.noPr}</Text>
+    </Box>
+  )
 }
 
 // Ask Claude to fix (the suggested way), Open PR (a link), Dismiss last.

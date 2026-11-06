@@ -1,7 +1,7 @@
 import { paneMotion } from './kit/moving'
 import type { Plan, Step } from './match'
 import { baseName } from './parse'
-import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, percentText, progressOf, windowOf } from './progress'
+import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, progressOf, windowOf } from './progress'
 import type { Tracks } from './progress'
 import type { StepTrack } from '../types'
 import { planState, stateNote } from './freshness'
@@ -19,7 +19,8 @@ export type PaneView = { plan: Plan | null; tracks: Tracks; now: number; theme: 
 export type Layout = { columns: number; rows: number; surface: string }
 
 const SVG_RANGE = { min: 280, max: 640 }
-const GUTTER_COLUMNS = 3
+// The pane's padding on both sides, so the drawing fills it edge to edge without running off.
+const GUTTER_COLUMNS = 6
 
 const GLYPH_CELLS = 2
 const PAD = 1
@@ -171,7 +172,7 @@ function stepList(ui: Ui, view: PaneView & { plan: Plan }, rows: number) {
 export function headline(plan: Plan): string {
   const progress = progressOf(plan)
 
-  return `Plan · ${words().headline(progress.done, progress.total)} · ${percentText(progress)}`
+  return `Plan · ${words().headline(progress.done, progress.total)}`
 }
 
 function emptyPane(ui: Ui) {

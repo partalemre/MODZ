@@ -205,6 +205,11 @@ export function eyebrow(spec: { x: number; y: number; width: number; label: stri
   return dot + text({ ...LABEL_FONT, x: spec.x + (isLive ? LIVE_DOT * 2 + LIVE_GAP : 0), y: spec.y, text: spec.label, ink: 'lo' }) + right
 }
 
+// Where one part of a pane starts: a hairline across, then its label and meta. Below it, drawings start at PART_H.
+export const PART_H = 36
+export const partHead = (spec: { width: number; label: string; meta?: string; isLive?: boolean }): string =>
+  line({ x1: 0, y1: 0.5, x2: spec.width, y2: 0.5, ink: 'line' }) + eyebrow({ x: 0, y: 25, width: spec.width, label: spec.label, meta: spec.meta, isLive: spec.isLive })
+
 // 26×16 file-type badge: the extension in mono capitals, neutral (DESIGN.md §0.3): its type is no state.
 export function fileBadge(spec: { x: number; y: number; path: string }): string {
   const name = spec.path.split('/').pop() ?? spec.path

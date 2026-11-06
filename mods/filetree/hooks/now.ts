@@ -1,7 +1,6 @@
 // What the "Now" card says: the turn's file activity told as one sentence in the session's language.
 
 import type { Touch, TouchRole, TurnLog } from '../types'
-import { badgeOf } from './badges'
 import type { TouchedRow } from './cards'
 import { costText } from './costtext'
 import type { Role } from './theme'
@@ -143,7 +142,6 @@ export function touchedRows(input: NowInput): TouchedRow[] {
     return {
       name: baseName(t.id),
       dir: relDir(t.id, root),
-      badge: badgeOf(baseName(t.id)),
       pill: { text: (isLive ? w.pillLive : w.pillDone)[t.role], role: isLive ? ROLE[t.role] : null },
       ...(diff && (diff[0] || diff[1]) ? { diff } : {}),
       ...(cost ? { cost: costText(cost) } : {}),

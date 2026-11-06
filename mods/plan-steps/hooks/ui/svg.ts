@@ -9,8 +9,8 @@ const CAPITAL_EM = 0.64
 const LOWER_EM = 0.55
 export const MONO_EM = 0.6
 
-// About 7.6 CSS px per cell the desktop reports; it errs small so a drawing never runs off the edge.
-const PX_PER_COLUMN = 7.6
+// A desktop pane reports about 9 CSS px per cell.
+const PX_PER_COLUMN = 9
 
 export function escape(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')

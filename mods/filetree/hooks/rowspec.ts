@@ -1,14 +1,13 @@
-// One tree row as the rows Client draws it: upstream's terminal row, and the desktop row
-// with a neutral file-type badge, the activity's colour while Claude touches the file and a status pill.
+// One tree row as the rows Client draws it: upstream's terminal row, and the desktop row with indent guides, the
+// activity's colour while Claude touches the file and a word for what it is doing.
 
 import type { FileNode, FileTree, Theme } from '../types'
-import { badgeOf } from './badges'
 import { TONES } from './git'
 import { CHEVRON_CLOSED, CHEVRON_OPEN, fileIcon, GIT_COLOR } from './icons'
 import type { RowSpec, Seg } from './rows'
+import { fitMiddle, measure } from './svg'
 import { type Palette, type Role, roleOfTone } from './theme'
 import { dirname, formatSize, type Row, stamp, underAny } from './tree'
-import { words } from './words'
 
 export type RowCtx = {
   t: FileTree
@@ -21,7 +20,7 @@ export type RowCtx = {
   unicode: boolean
   theme: Theme
   pal: Palette
-  // The pill a live row shows in place of its meta: "reading", "editing", ...
+  // The word a live row shows in place of its meta: "reading", "editing", ...
   pillOf: (id: string, role: Role) => string
   // What the file's reads put into context this turn ("≈1.2k tok"), or "".
   costOf: (id: string) => string
@@ -29,7 +28,13 @@ export type RowCtx = {
 
 const ADD_COLOR = '#98c379'
 const DEL_COLOR = '#e06c75'
-const ICON_CELLS = 6
+// A desktop pane reports about 9 px a column; its text is 14 px.
+export const PX_PER_COL = 9
+const NAME_PX = 14
+const LEVEL_CELLS = 2
+const RIGHT_GAP_PX = 10
+// A row keeps at least this much for its name: what sits beside it goes first.
+const MIN_NAME_PX = 72
 
 export function clean(segs: Seg[]): Seg[] {
   for (const seg of segs) for (const k of Object.keys(seg) as (keyof Seg)[]) if (seg[k] === undefined) delete seg[k]
@@ -129,45 +134,46 @@ export function terminalRow(ctx: RowCtx, r: Row): RowSpec {
   return { id: n.id, left: clean(left), right: clean(right) }
 }
 
-function folderGlyphColor(pal: Palette, n: FileNode, changes: number): string {
-  if (n.hidden) return pal.lo
-  return changes ? pal.roles.warn.fg : pal.lo
-}
+const changesIn = (ctx: RowCtx, n: FileNode): number => (n.kind === 'dir' ? (ctx.t.counts[n.id] ?? [0, 0, 0]).reduce((a, b) => a + b, 0) : 0)
 
-function desktopIcon(ctx: RowCtx, r: Row, role: Role | null): Seg[] {
+// Indent guides and the folder's chevron in boxes of fixed cells, so every name at one depth starts on one line in
+// the desktop's proportional face. A file keeps the chevron's cell empty. No file or folder glyph: the chevron and the name say which is which.
+function desktopPrefix(ctx: RowCtx, r: Row, role: Role | null): Seg[] {
   const { pal } = ctx
-  const n = r.node
-  if (n.kind === 'dir') {
-    const changes = (ctx.t.counts[n.id] ?? [0, 0, 0]).reduce((a, b) => a + b, 0)
-    const color = folderGlyphColor(pal, n, changes)
-    const glyph = { t: '■', c: role ? pal.roles[role].fg : color }
-    return [{ t: r.open ? '▾ ' : '▸ ', c: pal.lo }, glyph, { t: ' '.repeat(ICON_CELLS - 3) }]
-  }
-  const colors = role ? { fg: pal.roles[role].fg, bg: pal.roles[role].line } : { fg: pal.lo, bg: pal.track }
-  const label = ` ${badgeOf(n.name)} `
-  return [{ t: label, c: colors.fg, bg: colors.bg, b: true }, { t: ' '.repeat(Math.max(1, ICON_CELLS - label.length)) }]
+  const chevron = r.node.kind === 'dir' ? (r.open ? '⌄' : '›') : ''
+  const guides = Array.from({ length: r.depth }, (): Seg => ({ t: '│', c: pal.lineStrong, cells: LEVEL_CELLS }))
+  return [...guides, { t: chevron, c: role ? pal.roles[role].fg : pal.lo, cells: LEVEL_CELLS }]
 }
 
-function desktopRight(ctx: RowCtx, r: Row, role: Role | null): Seg[] {
+// What the row must say beside the name, and what it says only with room to spare.
+function desktopRight(ctx: RowCtx, r: Row, role: Role | null): { must: Seg[]; may: Seg[] } {
   const { t, pal } = ctx
   const n = r.node
-  if (role) {
-    const text = ctx.pillOf(n.id, role)
-    if (text) return [{ t: ' ' }, { t: ` ${text} `, c: pal.roles[role].fg, bg: pal.roles[role].line, b: true }]
-  }
-  const changes = n.kind === 'dir' ? (t.counts[n.id] ?? [0, 0, 0]).reduce((a, b) => a + b, 0) : 0
-  if (changes && !t.showSize) return [{ t: ` ${words().changes(changes)}`, c: pal.roles.warn.fg, b: true }]
+  const live = role ? ctx.pillOf(n.id, role) : ''
+  if (role && live) return { must: [{ t: ` ${live}`, c: pal.roles[role].fg }], may: [] }
+  const changes = changesIn(ctx, n)
+  if (changes && !t.showSize) return { must: [{ t: ` ${changes}`, c: pal.roles.warn.fg }], may: [] }
   const loc = t.diff[n.id]
-  const out: Seg[] = []
+  const must: Seg[] = []
   if (loc && !t.showSize) {
-    if (loc[0] > 0) out.push({ t: ` +${loc[0]}`, c: pal.roles.ok.fg })
-    if (loc[1] > 0) out.push({ t: ` −${loc[1]}`, c: pal.roles.danger.fg })
+    if (loc[0] > 0) must.push({ t: ` +${loc[0]}`, c: pal.roles.ok.fg })
+    if (loc[1] > 0) must.push({ t: ` −${loc[1]}`, c: pal.roles.danger.fg })
   }
   const cost = ctx.costOf(n.id)
-  if (cost) out.push({ t: ` ${cost}`, c: pal.mid })
   const meta = metaOf(ctx, r)
-  if (meta) out.push({ t: ` ${meta}`, c: pal.lo })
-  return out
+  return { must, may: [...(cost ? [{ t: ` ${cost}`, c: pal.mid }] : []), ...(meta ? [{ t: ` ${meta}`, c: pal.lo }] : [])] }
+}
+
+const widthOf = (segs: Seg[]): number => measure(segs.map(x => x.t).join(''), NAME_PX)
+
+// Names get the room: dates and sizes stay only beside a whole name, and the middle of a name goes last.
+function fitRow(ctx: RowCtx, r: Row, right: { must: Seg[]; may: Seg[] }, isBold: boolean): { name: string; right: Seg[] } {
+  const room = (ctx.width - (r.depth + 1) * LEVEL_CELLS) * PX_PER_COL
+  const whole = measure(r.node.name, NAME_PX, isBold)
+  const must = room - widthOf(right.must) < MIN_NAME_PX ? [] : right.must
+  const kept = [...must]
+  for (const seg of right.may) if (whole + widthOf([...kept, seg]) + RIGHT_GAP_PX <= room) kept.push(seg)
+  return { name: fitMiddle(r.node.name, Math.max(MIN_NAME_PX, room - widthOf(kept) - RIGHT_GAP_PX), { size: NAME_PX, isBold }), right: kept }
 }
 
 function nameColor(ctx: RowCtx, id: string, isHidden: boolean): string {
@@ -185,14 +191,11 @@ export function desktopRow(ctx: RowCtx, r: Row): RowSpec {
   const isDim = !isBright && ctx.dimmed.has(n.id)
   const tone = t.flashTones[n.id] ?? 'orange'
   const role = isBright ? roleOfTone(tone) : null
-  const right = desktopRight(ctx, r, role)
-  const rightLen = right.reduce((s, x) => s + x.t.length, 0)
-  const cols = Math.max(4, ctx.width - r.depth * 2 - ICON_CELLS - rightLen - 2)
-  const name = fit(n.name, cols)
+  const isBold = isBright || isDim || n.id === t.selected
+  const { name, right } = fitRow(ctx, r, desktopRight(ctx, r, role), isBold)
   const status = statusOf(ctx, n.id)
   const label: Seg = isBright || isDim
     ? { t: name, sh: tone, dim: isDim, b: true }
-    : { t: name, c: nameColor(ctx, n.id, n.hidden), b: n.id === t.selected || Boolean(status && n.kind !== 'dir'), s: status === 'D' && n.kind !== 'dir' }
-  const left: Seg[] = [{ t: '  '.repeat(r.depth) }, ...desktopIcon(ctx, r, role), label]
-  return { id: n.id, left: clean(left), right: clean(right), ...(role ? { bg: ctx.pal.roles[role].tint } : {}) }
+    : { t: name, c: nameColor(ctx, n.id, n.hidden), b: n.id === t.selected, s: status === 'D' && n.kind !== 'dir' }
+  return { id: n.id, left: clean([...desktopPrefix(ctx, r, role), label]), right: clean(right), ...(role ? { bg: ctx.pal.roles[role].tint } : {}) }
 }

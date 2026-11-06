@@ -13,7 +13,8 @@ type Ui = ElementTable
 // blank braille cell is drawn as dots from weight 500). The run is longer than the drawing could ever be drawn, in
 // a line box wider still, so the button is never squeezed into "…" whatever width the pane really has; the cover
 // clips it at the drawing's edges, the left one a cell in so its rounded end is cut too: the light is one straight
-// band across the row. One button per control-height line: its own light is the row's hover.
+// band across the row. One button per control-height line: a button never grows taller (measured 2026-11-05), so a
+// row that must light as one block is one control tall, or covers only its first line.
 const BLANK = '\u3164'
 const CELL_PX = 11.9
 const BUTTON_PX = 28

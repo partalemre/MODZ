@@ -57,10 +57,8 @@ test('a MODZ hub press for skins opens the settings asking for the keyboard, so 
 
 test('with the hub on the opened settings report themselves shown, and both panes step aside when another takes the panel', { plugins: [MODZ] } as never, async ($: any, on: any) => {
   const shown: unknown[] = []
-  const closed: unknown[] = []
   on('state.set', { plugin: 'skins', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
-  on('ui.close', (_: any, e: any) => (closed.push(e.id), { value: undefined }))
-  stubEngine(on)
+  const world = stubEngine(on)
   await start($)
   await runSkin($, '')
   // The hub is off: nothing to step aside for.
@@ -68,10 +66,11 @@ test('with the hub on the opened settings report themselves shown, and both pane
   await $.command.run({ command: 'modz-on', args: '' })
   await $.command.run({ command: 'modz-press', args: 'skins' })
   expect(shown).toEqual(['skins'])
+  const closedBefore = world.closes.length
   await $.command.run({ command: 'modz-stage', args: 'skins' })
-  expect(closed).toEqual([])
+  expect(world.closes.slice(closedBefore)).toEqual([])
   await $.command.run({ command: 'modz-stage', args: 'usage' })
-  expect(closed).toEqual(['skins-settings', 'skins-gallery'])
+  expect(world.closes.slice(closedBefore)).toEqual(['skins-settings', 'skins-gallery'])
 })
 
 test('the MODZ card names the skin and its background, once per change', async ($, on) => {

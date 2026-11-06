@@ -1,6 +1,6 @@
 import type { ClientModule, ClientPointerEvent, ClientSurface, RenderElement } from 'claude-code'
 
-export type Seg = { t: string; c?: string; b?: boolean; s?: boolean; i?: boolean; sh?: string; dim?: boolean; one?: boolean; spin?: boolean; bg?: string; tab?: string }
+export type Seg = { t: string; c?: string; b?: boolean; s?: boolean; i?: boolean; sh?: string; dim?: boolean; one?: boolean; spin?: boolean; bg?: string; tab?: string; cells?: number }
 // `bg` tints the whole row while Claude is on that file.
 export type RowSpec = { id: string; left: Seg[]; right: Seg[]; bg?: string }
 export type RowsProps = {
@@ -11,7 +11,8 @@ export type RowsProps = {
   tones: Record<string, { bright: string[]; dim: string[] }>
   spinner?: string[]
   pointer?: boolean
-  bar?: { pos: number; size: number; thumb: string; track: string }
+  // `isOverlay`: no track, and the thumb only while the pointer is over the tree, as a system overlay scrollbar.
+  bar?: { pos: number; size: number; thumb: string; track: string; isOverlay?: boolean }
 }
 type Local = { hover: number; phase: number; drag: boolean; ref: { stop?: () => void; unpoint?: () => void } }
 
@@ -105,7 +106,7 @@ function paletteOf(props: RowsProps, s: Seg): string[] | undefined {
 }
 
 function drawer(props: RowsProps, state: Local, surface: Surface): (s: Seg) => RenderElement {
-  const { Text } = surface.elements
+  const { Box, Text } = surface.elements
   const frames = props.spinner?.length ? props.spinner : FRAMES
   return s => {
     if (s.spin) {
@@ -116,6 +117,14 @@ function drawer(props: RowsProps, state: Local, surface: Surface): (s: Seg) => R
       )
     }
     const palette = paletteOf(props, s)
+    // A fixed box of cells: its text lines up whatever face the surface draws it in.
+    if (s.cells !== undefined) {
+      return (
+        <Box width={s.cells} flexShrink={0}>
+          <Text color={s.c}>{s.t}</Text>
+        </Box>
+      )
+    }
     if (!palette) {
       return (
         <Text color={s.c} backgroundColor={s.bg} bold={s.b} strikethrough={s.s} italic={s.i}>
@@ -152,6 +161,10 @@ const Rows: ClientModule<RowsProps, Local> = (props, surface) => {
   surface.onKey(e => surface.post({ key: e.key, ctrl: Boolean(e.ctrl), shift: Boolean(e.shift) }))
   const draw = drawer(props, state, surface)
   const isThumb = (i: number) => Boolean(props.bar) && i >= (props.bar?.pos ?? 0) && i < (props.bar?.pos ?? 0) + (props.bar?.size ?? 0)
+  const barCell = (i: number) => {
+    if (!props.bar?.isOverlay) return isThumb(i) ? '┃' : '│'
+    return isThumb(i) && (state.hover !== -1 || state.drag) ? '┃' : ' '
+  }
   return (
     <Box flexDirection="column">
       {props.rows.map((r, i) => (
@@ -161,7 +174,7 @@ const Rows: ClientModule<RowsProps, Local> = (props, surface) => {
           </Box>
           <Box flexGrow={1} />
           {r.right.map(draw)}
-          {props.bar && <Text color={isThumb(i) ? props.bar.thumb : props.bar.track}>{isThumb(i) ? '┃' : '│'}</Text>}
+          {props.bar && <Text color={isThumb(i) ? props.bar.thumb : props.bar.track}>{barCell(i)}</Text>}
         </Box>
       ))}
     </Box>

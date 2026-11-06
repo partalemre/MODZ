@@ -9,7 +9,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { ruleView } from './caution'
 import { classify } from './classify'
-import { PANE_ID, SLEEP_TIMEOUT_MS, hold, take } from './hold'
+import { SLEEP_TIMEOUT_MS, hold, take } from './hold'
 import type { Decision, Held, HoldIo } from './hold'
 import { judge } from './kit/judge'
 import type { JudgeIo } from './kit/judge'
@@ -20,7 +20,6 @@ import { words } from './words'
 type On = Parameters<Register>[0]
 
 const WHY: Record<Exclude<Decision, 'proceed' | 'cancel' | 'error'>, string> = {
-  closed: 'the user closed the Blast Radius pane',
   timeout: 'no answer within 10 minutes',
   interrupted: 'the turn was interrupted',
 }
@@ -30,10 +29,8 @@ const cache = { rules: '', verdicts: new Map<string, Verdict>() }
 
 // The hold loop's calls, spelled here: the engine follows `$` only within one file.
 const holdIo = ($: EngineInterface): HoldIo => ({
-  sleep: seconds => $.process.run(['sleep', seconds], { timeoutMs: SLEEP_TIMEOUT_MS }),
+  run: argv => $.process.run(argv, { timeoutMs: SLEEP_TIMEOUT_MS }),
   now: () => $.clock.now(),
-  open: async rows => (await $.ui.open({ id: PANE_ID, title: 'Blast Radius', focus: true, closeOnEscape: true, rows })).isPlaced,
-  close: () => $.ui.close({ id: PANE_ID }),
   redraw: () => $.ui.invalidate('ui.render'),
 })
 
@@ -77,7 +74,7 @@ async function ask($: EngineInterface, input: Ask): Promise<{ deny: string } | n
   const decision = mine?.decision ?? 'interrupted'
   // A card that broke lets the command through: a house rule is a caution, not a lock.
   if (decision === 'proceed' || decision === 'error') return null
-  if (decision === 'cancel' || decision === 'closed') $.ui.toast(words().kept)
+  if (decision === 'cancel') $.ui.toast(words().kept)
   const why = decision === 'cancel' ? words().cancelWhy : WHY[decision]
 
   return { deny: `Blast Radius held this command and did not run it: ${why}. House rule: ${input.rule}. Do not retry it unless the user asks you to.` }

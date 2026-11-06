@@ -29,7 +29,7 @@ Or install all of them at once from a terminal:
 
 ```sh
 claude plugin marketplace add partalemre/MODZ
-for m in modz savvy-progress savvy-flow filetree plan-steps handoff transceiver blast-radius secret-guard checkpoint \
+for m in modz savvy-progress savvy-flow filetree plan-steps projects handoff transceiver blast-radius secret-guard checkpoint \
          test-badge replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins terminal-browser; do
   claude plugin install "$m@modz"
 done
@@ -84,6 +84,7 @@ Transceiver lets you chat with teammates without leaving Claude Code. Your agent
 | | `savvy-flow` | Orchestrated delivery: the session model plans, tiered worker agents build |
 | | `filetree` | Files Claude touched this turn, what it is doing now, git status |
 | | `plan-steps` | The plan's steps as Claude works through them; the plan comes back after `/clear` and compaction, and a turn that ends with steps open offers to go on |
+| | `projects` | Every project in one place: percent, plans, where it stopped, tokens and agents, in the pane and on a full board |
 | | `handoff` | Before the context fills, writes a handoff note and hands it once to your next fresh chat |
 | | `transceiver` | Team chat and zero-token agent questions between teammates (beta) |
 | **Safety** | `blast-radius` | Holds destructive shell commands and shows what they would change; holds an edit to a file another chat just changed; checks other commands against your `.claude/house-rules.md` |
@@ -123,6 +124,7 @@ Read from the code, not from a promise. "Store" is the mod's own file in `~/.cla
 | `savvy-flow` | | | | | its worker agents |
 | `filetree` | project files | | `git`, `open` | | |
 | `plan-steps` | task list, plan file | store | | | |
+| `projects` | transcripts, plan files, README | `<config>/modz-projects/`, store | `awk`, `tail`, `git`, `open` | | optional, per project on press |
 | `transceiver` | repo, git | its room | `git` | claude.ai | free-form `ask` |
 | `handoff` | transcript, plan | `.claude/handoff/*.md`, store | `git status`, `rm` (own notes) | | optional |
 | `blast-radius` | `.claude/house-rules.md` | store | `git`, a read-only look at what a held command would touch | Jev, opt-in | with house rules |

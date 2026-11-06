@@ -13,7 +13,6 @@ export type Step = {
 
 export type Plan = { steps: Step[]; source: string }
 
-const IN_PROGRESS_CREDIT = 0.5
 const MATCH_MIN = 0.6
 const MIN_WORD = 3
 const FOLD: Record<string, string> = { ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u', â: 'a', î: 'i', û: 'u' }
@@ -107,10 +106,9 @@ function docStatus(step: DocStep): StepStatus {
 
 function creditOf(status: StepStatus, step: { checksDone: number; checksTotal: number }): number {
   if (status === 'completed') return 1
-  if (status === 'pending') return 0
-  if (step.checksTotal > 0 && step.checksDone > 0) return step.checksDone / step.checksTotal
 
-  return IN_PROGRESS_CREDIT
+  // A running step earns only what its ticked items prove: no checklist, no credit.
+  return status === 'in_progress' && step.checksTotal > 0 ? step.checksDone / step.checksTotal : 0
 }
 
 function fromTasks(tasks: PlanTask[]): Plan {

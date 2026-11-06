@@ -24,7 +24,7 @@ export const PIXEL_GLYPHS: Record<string, readonly string[]> = {
   flag: ['...X...', '....X..', 'XXXXXX.', '....X..', '...X...'],
   eye: ['..XXX..', '.X...X.', 'X..X..X', '.X...X.', '..XXX..'],
   cube: ['XX.XX', 'XX.XX', '.....', 'XX.XX', 'XX.XX'],
-  layers: ['...X...', '.XX.XX.', '...X...', 'X.....X', '.XX.XX.', '...X...'],
+  layers: ['..XXXXX', '.......', '.XXXXX.', '.......', 'XXXXX..'],
   star: ['...X...', '...X...', 'XXXXXXX', '..XXX..', '.XX.XX.'],
 }
 

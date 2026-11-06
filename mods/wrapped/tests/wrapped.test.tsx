@@ -443,3 +443,10 @@ test('a reading from before kinds is read again', () => {
   expect(dropped).toEqual({})
   expect(isWrapped(older)).toBe(false)
 })
+
+test('one project under two spellings is one row, under the name it had most', () => {
+  const w = wrappedOf(parseOutput('X\t0\t0\t0\t0\t0\nP\t2026-03-01T12\t10\nC\t/w/Satranç 2\t7\nC\t/w/Satranc2\t5\nC\t/w/other\t9\nM\t2026-03\t/w/Satranc2\t5'), SPEC)
+  expect(w?.projects).toEqual([{ name: 'Satranç 2', count: 12 }, { name: 'other', count: 9 }])
+  expect(w?.topProject).toEqual({ name: 'Satranç 2', count: 12 })
+  expect(w?.months[0]?.project).toBe('Satranç 2')
+})

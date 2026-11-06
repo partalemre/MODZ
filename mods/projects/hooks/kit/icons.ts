@@ -30,6 +30,8 @@ const PATHS = {
   gauge: 'M5.6 18.4a9 9 0 1 1 12.8 0M12 13.5l3.5-4.5M13 13.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z',
   rewind: 'M11.5 6.5v11L4 12zM20 6.5v11L12.5 12z',
   plug: 'M9 3.5v4M15 3.5v4M6.5 7.5h11v3a5.5 5.5 0 0 1-11 0zM12 16v4.5',
+  layers: 'M12 3.5l8.5 4.5L12 12.5 3.5 8zM3.5 12l8.5 4.5 8.5-4.5M3.5 16l8.5 4.5 8.5-4.5',
+  star: 'M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 17l-5.4 3 1.2-6-4.5-4.2 6.1-.7z',
 } as const
 
 export type IconName = keyof typeof PATHS
@@ -50,6 +52,8 @@ export const GLYPH: Record<IconName, string> = {
   x: '✕',
   clock: '◷',
   cube: '▣',
+  layers: '≡',
+  star: '★',
   bookmark: '❏',
   bulb: '✧',
   play: '▸',

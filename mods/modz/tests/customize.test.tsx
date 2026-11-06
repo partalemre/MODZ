@@ -3,6 +3,8 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { cardOf, rowsOf } from '../hooks/hub'
+import { ICON_NAMES } from '../hooks/kit/icons'
+import { PIXEL_GLYPHS } from '../hooks/kit/pixels'
 import { arrange, EMPTY_LAYOUT, layoutOf, moveUp, setHidden } from '../hooks/layout'
 import type { HubCard } from '../types'
 import { stubWorld } from './world'
@@ -130,4 +132,8 @@ test('the catalog tab has its own way back to the hub', async ($: any, on: any) 
   expect((await ui.find({ key: 'modz-home' }))?.props.label).toBe('← MODZ')
   await ui.press({ key: 'modz-home' })
   expect(world.opened.slice(before)).toContain('modz')
+})
+
+test('a row drawn with a pixel glyph can also be asked for by a mod card, so it never falls back to the cube', () => {
+  for (const name of Object.keys(PIXEL_GLYPHS)) expect(ICON_NAMES as string[]).toContain(name)
 })

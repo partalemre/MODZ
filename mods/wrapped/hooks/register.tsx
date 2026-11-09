@@ -70,15 +70,15 @@ function readYear($: EngineInterface, year: number): void {
     try {
       const wrapped = await scanYear($, year)
       if (wrapped === null) {
-        await update($, viewAtom, () => ({ status: 'empty', year }))
+        await update($, viewAtom, (): WrappedView => ({ status: 'empty', year }))
 
         return
       }
       await $.store.set(keyOf(year), wrapped).catch((error: unknown) => $.ui.log(`wrapped: reading not kept (${why(error)})`, { to: 'debug' }))
-      await update($, viewAtom, () => ({ status: 'ready', wrapped }))
+      await update($, viewAtom, (): WrappedView => ({ status: 'ready', wrapped }))
       await writeHub($, wrapped)
     } catch (error) {
-      await update($, viewAtom, () => ({ status: 'failed', year, reason: why(error) }))
+      await update($, viewAtom, (): WrappedView => ({ status: 'failed', year, reason: why(error) }))
     }
   })
 }
@@ -106,11 +106,11 @@ async function showYear($: EngineInterface, year: number): Promise<void> {
   await clearNotes($)
   const wrapped = await kept($, year)
   if (wrapped !== null) {
-    await update($, viewAtom, () => ({ status: 'ready', wrapped }))
+    await update($, viewAtom, (): WrappedView => ({ status: 'ready', wrapped }))
 
     return
   }
-  await update($, viewAtom, () => ({ status: 'reading', year }))
+  await update($, viewAtom, (): WrappedView => ({ status: 'reading', year }))
   readYear($, year)
 }
 
@@ -128,7 +128,7 @@ function filmIo($: EngineInterface) {
   return {
     write: (path: string, text: string) => $.fs.write(path, text),
     run: (argv: string[]) => $.process.run(argv, { timeoutMs: FILM_STEP_TIMEOUT_MS }),
-    progress: (made: number, total: number) => update($, filmAtom, () => ({ status: 'making', made, total })),
+    progress: (made: number, total: number) => update($, filmAtom, (): Film => ({ status: 'making', made, total })),
   }
 }
 
@@ -144,10 +144,10 @@ async function runFilm($: EngineInterface, spec: CardSpec): Promise<void> {
       throw new Error(words().filmNoFfmpeg)
     })
     await makeFilm(filmIo($), spec, { dir, out })
-    await update($, filmAtom, () => ({ status: 'ready', path: out }))
+    await update($, filmAtom, (): Film => ({ status: 'ready', path: out }))
     await $.process.run(['open', out]).catch(() => $.ui.log('wrapped: the video did not open by itself', { to: 'debug' }))
   } catch (error) {
-    await update($, filmAtom, () => ({ status: 'failed', reason: why(error) }))
+    await update($, filmAtom, (): Film => ({ status: 'failed', reason: why(error) }))
   } finally {
     await $.process.run(['rm', '-rf', dir]).catch(() => $.ui.log('wrapped: film frames not removed', { to: 'debug' }))
   }
@@ -155,7 +155,7 @@ async function runFilm($: EngineInterface, spec: CardSpec): Promise<void> {
 
 async function startFilm($: EngineInterface, spec: CardSpec): Promise<void> {
   if ((await read($, filmAtom))?.status === 'making') return
-  await update($, filmAtom, () => ({ status: 'making', made: 0, total: 1 }))
+  await update($, filmAtom, (): Film => ({ status: 'making', made: 0, total: 1 }))
   $.clock.after(1, () => runFilm($, spec))
 }
 
@@ -233,7 +233,7 @@ function readyTree($: EngineInterface, ui: Table, view: ReadyView) {
 
 async function rereadYear($: EngineInterface, year: number): Promise<void> {
   await clearNotes($)
-  await update($, viewAtom, () => ({ status: 'reading', year }))
+  await update($, viewAtom, (): WrappedView => ({ status: 'reading', year }))
   readYear($, year)
 }
 

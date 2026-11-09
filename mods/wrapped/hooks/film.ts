@@ -46,7 +46,7 @@ export function frameAt(spec: CardSpec, slides: Slide[], frame: number): string 
 export type FilmIo = {
   write: (path: string, text: string) => Promise<void>
   run: (argv: string[]) => Promise<{ exitCode: number; stderr: string }>
-  progress: (made: number, total: number) => Promise<void>
+  progress: (made: number, total: number) => Promise<unknown>
 }
 
 const BATCH = 120

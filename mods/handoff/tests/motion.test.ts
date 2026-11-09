@@ -30,7 +30,7 @@ test('desktop: the drawings cascade in as frames, and a new reading moves only t
   await pane.unmount()
   await $.command.run({ command: 'handoff', args: 'show' })
   const again = await $.ui.mount(paneOf('desktop'))
-  expect((await sources(again)).every(source => source.includes('class="m-in"'))).toBe(true)
+  expect((await sources(again)).every((source: string) => source.includes('class="m-in"'))).toBe(true)
 })
 
 test('desktop: the band above the prompt keeps plain drawings', async ($: any, on: any) => {

@@ -24,7 +24,7 @@ test('a savvy worker gets the step request at the end of its brief, once', async
   const { world } = await setup($, on)
   await spawn($, 'Plain')
   await spawn($, 'Careful', 'savvy-flow:savvy-careful')
-  await $.agent.spawn({ prompt: `already asks for ${STEP}`, description: 'Briefed', subagentType: 'savvy-light' })
+  await $.agent.spawn({ prompt: `already asks for ${STEP}`, description: 'Briefed', subagentType: 'savvy-light' } as any)
   const prompts = world.spawns.map(s => String(s.prompt))
   expect(prompts[0]).toBe('do it')
   expect(prompts[1]).toContain(`call \`${STEP}\``)

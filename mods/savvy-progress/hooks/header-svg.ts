@@ -38,7 +38,7 @@ export type HeaderData = {
   percent: string
   tone: Tone
   meter: Units | null
-  stats: Stat[]
+  stats: readonly Stat[]
   home?: HomeMark
 }
 
@@ -53,7 +53,7 @@ const needOf = (stat: Stat): number =>
   Math.max(textWidth(stat.label, STATS.labelSize), textWidth(stat.value, STATS.valueSize) * BOLD) + GAP * 2
 
 // All figures in one row when each fits its column, else two by two, else one a row: never cut.
-const columnsOf = (inner: number, stats: Stat[]): number => {
+const columnsOf = (inner: number, stats: readonly Stat[]): number => {
   const need = Math.max(0, ...stats.map(needOf))
   const fits = (cols: number) => inner / cols >= need
   if (fits(stats.length)) return stats.length
@@ -67,7 +67,7 @@ const statSvg = (stat: Stat, { x, y, w }: Slot): string =>
 <text class="t" x="${x}" y="${y + STATS.value}" font-family="${FONT}" font-size="${STATS.valueSize}" font-weight="650" font-variant-numeric="tabular-nums">${xml(fitText(stat.value, STATS.valueSize, w))}</text>`
 
 // Four figures in one row, or two by two; the columns' spacing keeps them apart.
-const statsSvg = (stats: Stat[], inner: number): { body: string; height: number } => {
+const statsSvg = (stats: readonly Stat[], inner: number): { body: string; height: number } => {
   const cols = columnsOf(inner, stats)
   const rows = Math.ceil(stats.length / cols)
   const colW = inner / cols

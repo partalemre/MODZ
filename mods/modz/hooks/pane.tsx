@@ -15,7 +15,7 @@ import { withHome } from './kit/home'
 type Ui = Record<string, any>
 
 // `stable`: the catalog's drawings kept since it was put in the panel (stable.ts).
-export type View = { market: Market; surface: string; columns: number; theme: Theme; onHome: () => void; stable: Stable }
+export type View = { market: Market; surface: string; columns: number; theme: Theme; onHome: () => void; stable: Stable<Drawing> }
 
 // A desktop pane reports about 9 px a column (a 365 px body reads 40), wider than the reply column.
 const PX_PER_COLUMN = 9

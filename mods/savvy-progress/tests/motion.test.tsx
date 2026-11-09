@@ -7,7 +7,7 @@ import { pulseSvg } from '../hooks/pane-svg'
 import { test, PANE, SECOND, setup, threeRunning, tool } from './fixtures'
 
 const mount = ($: any) => $.ui.mount({ ...PANE, surface: 'desktop' })
-const sources = async (ui: any) => (await ui.findAll({ type: 'Svg' })).map((svg: any) => svg.props.source as string)
+const sources = async (ui: any): Promise<string[]> => (await ui.findAll({ type: 'Svg' })).map((svg: any) => svg.props.source as string)
 const texts = async (ui: any) => (await ui.findAll({ type: 'Text' })).map((t: any) => t.text ?? '').join('\n')
 
 test('desktop: the drawings cascade in as frames, live work moves, and the one-second tick leaves them as they were', async ($: any, on: any) => {

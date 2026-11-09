@@ -101,8 +101,8 @@ export function tilesSvg(spec: TilesSpec): SvgDoc {
     spec.tiles.slice(row * cols, (row + 1) * cols).some(hasChart) ? TILE.h : TILE.bareH,
   )
   const rowTops = rowHeights.map((_, row) => HEADER_H + rowHeights.slice(0, row).reduce((sum, h) => sum + h + TILE.rowGap, 0))
-  const tiles = spec.tiles.map((tile, index) => tileSvg(tile, { x: (index % cols) * (tileW + TILE.gap), y: rowTops[Math.floor(index / cols)], width: tileW }))
+  const tiles = spec.tiles.map((tile, index) => tileSvg(tile, { x: (index % cols) * (tileW + TILE.gap), y: rowTops[Math.floor(index / cols)] ?? HEADER_H, width: tileW }))
   const alt = [spec.title, ...spec.tiles.map(tile => `${tile.label} ${tile.value} · ${tile.note} · ${tile.caption}`)].join('; ')
 
-  return svgDoc({ width, height: rowTops[rows - 1] + rowHeights[rows - 1] + TILE.rowGap / 2, body: headerSvg(spec, width) + tiles.join(''), alt, css: BREATHE_CSS })
+  return svgDoc({ width, height: (rowTops[rows - 1] ?? HEADER_H) + (rowHeights[rows - 1] ?? 0) + TILE.rowGap / 2, body: headerSvg(spec, width) + tiles.join(''), alt, css: BREATHE_CSS })
 }

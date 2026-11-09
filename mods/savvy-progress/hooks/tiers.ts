@@ -41,7 +41,7 @@ export const savvyTierOf = (type: string): string | null => {
   return bare.startsWith('savvy-') && Object.hasOwn(TIER_MODEL, tier) ? tier : null
 }
 
-const effortTierOf = (effort = ''): string | null => (Object.hasOwn(EFFORT_TIER, effort) ? EFFORT_TIER[effort] : null)
+const effortTierOf = (effort = ''): string | null => (Object.hasOwn(EFFORT_TIER, effort) ? EFFORT_TIER[effort] ?? null : null)
 
 export const tierOf = (a: Who): string => savvyTierOf(a.type) ?? effortTierOf(a.effort) ?? 'other'
 

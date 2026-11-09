@@ -6,7 +6,7 @@ import { clippedOutput, metaOf, resultCard } from './tool-result'
 import { kindOf, summarize } from './tools'
 import { DEFAULT_COLUMNS } from './view'
 import type { Drawing } from './view'
-import type { Look } from './row-tool'
+import type { Look } from './look'
 
 // A skin redraws the engine's row, not another mod's: what a mod beneath it draws (a PR card) stays, under the row.
 function withBeneath(look: Look, row: RenderElement, beneath: RenderElement): RenderElement {

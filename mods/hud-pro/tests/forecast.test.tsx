@@ -129,6 +129,19 @@ for (const surface of SURFACES) {
     expect(await textOf(await $.ui.mount({ ...PANE, surface }))).not.toContain('kaldı')
   })
 
+  test(`a turn the engine could not measure adds no sample to the turns forecast (${surface})`, async ($, on) => {
+    setLang('tr')
+    const usage = withBreakdown()
+    stubSession(on, usage)
+    await start($, surface)
+    await endTurns($, usage, [100_000, 105_000, 110_000])
+    usage.context = { ...usage.context, tokens: undefined }
+    await $.turn.complete({ answer: 'ok', durationMs: 1, isAborted: false, turnId: 'unmeasured', reason: 'answer' })
+    const drawn = await textOf(await $.ui.mount({ ...PANE, surface }))
+    expect(drawn).toContain('son 3 tur')
+    expect(drawn).not.toContain('NaN')
+  })
+
   test(`the context card: a summary breakdown read once while the pane draws, the turns up to compaction (${surface})`, async ($, on) => {
     setLang('tr')
     const usage = withBreakdown()

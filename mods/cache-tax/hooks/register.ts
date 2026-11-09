@@ -5,7 +5,7 @@ import { pinned } from './pin'
 import type { Prefs } from './band'
 import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, TTL_MS, freshState, isFullMiss, parseDuration, priceOf, resetForClear } from './core'
 import type { State } from './core'
-import { NAME, onPrompt } from './guard'
+import { NAME, ackedKey, onPrompt } from './guard'
 import type { GuardIo } from './guard'
 import type { HoldActions } from './hold'
 import { bandKey } from './row'
@@ -44,6 +44,9 @@ function guardIo($: EngineInterface): GuardIo {
     model: () => $.session.model(),
     log: text => $.ui.log(text),
     redraw: () => $.ui.invalidate('ui.render'),
+    get: key => $.store.get(key),
+    set: (key, value) => $.store.set(key, value),
+    del: key => $.store.delete(key),
   }
 }
 
@@ -157,6 +160,7 @@ async function onTurnComplete($: EngineInterface, s: State, e: TurnCompleteInput
   if (s.deadline && now >= s.deadline) await stop(io($), s, null)
   // turn.step stamps the exact request time; when no step of this turn did, the turn's end is the floor.
   if (now - s.lastRequestAt > e.durationMs) s.lastRequestAt = now
+  if (e.usage || (!e.isAborted && e.reason !== 'error')) s.lastResponseAt = now
   s.compacted = false
   s.waitForTurn = false
   s.ackedAt = 0
@@ -234,6 +238,7 @@ function wireSession(on: On, c: Ctx) {
     const r = await next(e)
     if (e.source === 'clear') {
       await stop(io($), s, null)
+      await $.store.delete(ackedKey(s))
       resetForClear(s)
       s.sid = await $.session.id()
       // /clear raises no session.start, so always arms the new conversation here.

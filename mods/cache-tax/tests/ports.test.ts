@@ -1,8 +1,12 @@
 // Fixes and features ported from upstream karanb192/cache-tax after 2026-10-29.
 import { describe, expect, mock, test, tier } from 'claude-code/testing'
-import type { ModelForkResult } from 'claude-code'
+import type { ModelForkResult, PromptSubmitInput } from 'claude-code'
 
-import { MIN, START, run, session, step, turn, usage, warm, world } from './world'
+import { freshState, seedFromResume } from '../hooks/register'
+import { onPrompt } from '../hooks/guard'
+import type { GuardIo } from '../hooks/guard'
+
+import { HOUR, MIN, START, prompt, run, session, step, turn, usage, warm, world } from './world'
 
 tier('user')
 
@@ -114,5 +118,57 @@ describe('the countdown moves while idle (upstream 0f432b0)', () => {
     await $.turn.complete(turn())
     await clock.advance(10 * MIN)
     expect(w.status).toEqual([])
+  })
+})
+
+describe('the hold survives a new process (upstream 7d933e8)', () => {
+  /** The guard as a fresh process sees it: a store shared with the last one, and nothing in memory. */
+  function nextProcess(store: Map<string, unknown>, now: number) {
+    const sent: string[] = []
+    const io: GuardIo = {
+      now: async () => now, model: async () => 'claude-fable-5-1', log: () => {}, redraw: () => {},
+      get: async key => store.get(key), set: async (key, value) => store.set(key, value), del: async key => store.delete(key),
+    }
+    const s = freshState()
+    s.sid = 'S1'
+    seedFromResume(s, { source: 'resume', model: 'claude-fable-5-1', context_tokens: 200502, seconds_since_last_response: Math.round((now - START) / 1000) }, now)
+    const submit = (e: PromptSubmitInput) => onPrompt(io, s, { e, next: async x => { sent.push(x.text); return { text: x.text } } })
+    return { s, sent, submit }
+  }
+
+  test('a resend from the next process goes through, once, and clears the stored hold', async ($, on) => {
+    const clock = mock.clock(on, { now: START })
+    const store = new Map<string, unknown>()
+    world(on, [], { store })
+    await $.session.start(session)
+    await $.turn.complete(turn())
+    await clock.advance(3 * HOUR)
+    expect((await $.prompt.submit(prompt('hi'))).drop).toBeDefined()
+    expect(store.get('acked:S1')).toBe(START)
+    const next = nextProcess(store, START + 3 * HOUR)
+    expect((await next.submit(prompt('hi'))).drop).toBe(undefined)
+    expect(next.sent).toEqual(['hi'])
+    expect(next.s.coldWritePending).toBe(true)
+    expect(store.has('acked:S1')).toBe(false)
+  })
+
+  test('a hold stored for an older response does not let this one through', async () => {
+    const store = new Map<string, unknown>([['acked:S1', START - 2 * HOUR]])
+    const next = nextProcess(store, START + 3 * HOUR)
+    expect((await next.submit(prompt('hi'))).drop).toBeDefined()
+    expect(next.sent).toEqual([])
+    expect(store.get('acked:S1')).toBe(START)
+  })
+
+  test('a resend in the same process clears the stored hold too', async ($, on) => {
+    const clock = mock.clock(on, { now: START })
+    const store = new Map<string, unknown>()
+    world(on, [], { store })
+    await $.session.start(session)
+    await $.turn.complete(turn())
+    await clock.advance(3 * HOUR)
+    await $.prompt.submit(prompt('hi'))
+    await $.prompt.submit(prompt('hi'))
+    expect(store.has('acked:S1')).toBe(false)
   })
 })

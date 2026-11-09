@@ -19,7 +19,7 @@ Or in one step: `/plugin install cache-tax --marketplace partalemre/MODZ`.
 - **Start fresh** (`n`) runs `/clear` and puts the held message back in the prompt box.
 - **Cache status** (`s`) runs `/cache-tax`.
 
-Sending the same message again also pays. Slash commands are never held. Without a band to draw in, the hold is a one-line refusal instead.
+Sending the same message again also pays, even from a new process (`claude -p` starts one per turn): the hold is also stored under the session's id, as the time of the last response, and deleted by that resend or `/clear`. Slash commands are never held. Without a band to draw in, the hold is a one-line refusal instead.
 
 **A model change.** A prompt cache belongs to the model that wrote it, so switching models (Opus 5 to Sonnet 5, say) makes the next send rewrite the whole context even when the clock says warm. When the session's model differs from the one the last request used, the same card holds the send with the reason "Model changed (Opus 5 → Sonnet 5): the cache will be rewritten" and the rewrite priced at the new model. The same rules apply: 50,000 tokens or more, held once, `/cache-tax guard warn` only shows the price. Switching back before sending takes the card down. The first prompt of a session has no earlier request to compare with, so only the clock guards it. A model name the mod cannot read as a family and version (an alias such as `default`) never counts as a change.
 

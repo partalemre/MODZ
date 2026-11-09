@@ -76,7 +76,7 @@ function meterBar(o: MeterOpts, g: MeterGeometry, centerY: number): string {
 
   return [
     rectEl({ ...bar, width: g.track, paint: 'track' }),
-    g.fill > 0 ? rectEl({ ...bar, width: g.fill, paint: g.tone }) : '',
+    g.fill > 0 ? rectEl({ ...bar, width: g.fill, paint: g.tone }, ' data-m-fill') : '',
     tick,
   ].join('')
 }

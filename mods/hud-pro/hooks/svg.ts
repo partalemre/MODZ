@@ -54,7 +54,7 @@ export function meter(spec: MeterSpec): string {
   const filled = filledOf(spec)
   const parts = [
     `<rect class="f-track" x="${x}" y="${y}" width="${width}" height="${height}" rx="${height / 2}"/>`,
-    filled > 0 ? `<rect class="${fillOf(spec.tone, 'mid')}" x="${x}" y="${y}" width="${filled.toFixed(1)}" height="${height}" rx="${height / 2}"/>` : '',
+    filled > 0 ? `<rect data-m-fill class="${fillOf(spec.tone, 'mid')}" x="${x}" y="${y}" width="${filled.toFixed(1)}" height="${height}" rx="${height / 2}"/>` : '',
   ]
   if (spec.pace !== null) {
     const tickX = x + (clampPercent(spec.pace) / PERCENT) * width

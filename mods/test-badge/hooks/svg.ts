@@ -227,5 +227,6 @@ export function bar(spec: { x: number; y: number; width: number; height: number;
   if (spec.value <= 0) return track
   const width = Math.max(spec.height, (spec.width * Math.min(spec.value, spec.total)) / Math.max(1, spec.total))
 
-  return track + rect({ x: spec.x, y: spec.y, w: width, h: spec.height, rx: radius, fill: spec.ink })
+  // data-m-fill: the kit slides it from its last width when the count changes (kit/changes.ts).
+  return track + rect({ x: spec.x, y: spec.y, w: width, h: spec.height, rx: radius, fill: spec.ink }).replace('<rect', '<rect data-m-fill')
 }

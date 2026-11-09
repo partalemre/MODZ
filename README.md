@@ -40,7 +40,7 @@ Or ask your coding agent: *Install MODZ for me. Follow https://partalemre.github
 Start a new session. The MODZ panel opens on the right with a line from every mod you installed.
 
 - **Where it draws.** The Claude desktop app's Code tab draws everything. The terminal draws the same panels as text.
-- **Requirements.** Claude Code 2.1.295 or later, tested on 2.1.295 and 2.1.296. `terminal-browser` draws in the terminal only. Outside the desktop app, `done-ping` falls back to a macOS banner.
+- **Requirements.** Claude Code 2.1.295 or later, tested on 2.1.296 (terminal) and 2.1.317 (desktop app). `terminal-browser` draws in the terminal only. Outside the desktop app, `done-ping` falls back to a macOS banner.
 - **Updates.** Automatic and free. The first session after you install turns on Claude Code's own auto-update for the `modz` marketplace, so every mod you installed, `transceiver` from its own repo included, updates itself in the background a few minutes into a session and loads fresh at the next start. No model call, no command to run. If you already chose under `/plugin` > Marketplaces, that choice stays; to turn it off, choose **Disable auto-update** there.
 - **Language.** The interface is in English. Set `MODZ_LANG=tr` for Turkish.
 - **Transceiver** needs a claude.ai login. If Claude Code runs inside another app (an IDE, `claude -p`, an SDK host), also set `CLAUDE_CODE_ARTIFACT=1`.

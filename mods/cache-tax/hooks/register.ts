@@ -7,6 +7,7 @@ import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, TT
 import type { State } from './core'
 import { NAME, ackedKey, onPrompt } from './guard'
 import type { GuardIo } from './guard'
+import { guardFromStore, parseGuard, storedGuard } from './guard-mode'
 import type { HoldActions } from './hold'
 import { bandKey } from './row'
 import { seedFromResume } from './session'
@@ -14,7 +15,7 @@ import { isLightTheme } from './theme'
 import { KEY_ALWAYS, KEY_GUARD, arm, deadlineKey, everyKey, prune, startWindow, stop, stopForGood, updateStatus } from './warm'
 import type { Io } from './warm'
 import { setLang } from './lang'
-import { alwaysText, armedText, cardText, commands, paidText, say, statusText } from './words'
+import { alwaysText, armedText, cardText, commands, guardSetText, paidText, say, statusText } from './words'
 
 export { fmtDuration } from './fmt'
 export { freshState, parseDuration, resetForClear } from './core'
@@ -91,7 +92,7 @@ async function restore($: EngineInterface, s: State, now: number) {
   const savedEvery = await $.store.get(everyKey(s))
   s.deadline = typeof saved === 'number' && saved > now ? saved : 0
   s.every = isPingPeriod(savedEvery) ? savedEvery : PING_AFTER_MS
-  s.guard = (await $.store.get(KEY_GUARD)) === 'warn' ? 'warn' : 'refuse'
+  Object.assign(s, guardFromStore(await $.store.get(KEY_GUARD)))
   const stored = alwaysWindow(await $.store.get(KEY_ALWAYS))
   s.always = stored > 0
   if (stored) s.alwaysMs = stored
@@ -146,10 +147,11 @@ async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<s
 async function onCacheTax($: EngineInterface, s: State, args: string): Promise<string> {
   const words = args.trim().split(/\s+/).filter(Boolean)
   if (words[0] !== 'guard') return cardText(s, await $.clock.now())
-  if (words[1] !== 'warn' && words[1] !== 'refuse') return say().guardMode.usage
-  s.guard = words[1]
-  await $.store.set(KEY_GUARD, s.guard)
-  return s.guard === 'refuse' ? say().guardMode.refuse : say().guardMode.warn
+  const setting = parseGuard(words.slice(1))
+  if (!setting) return say().guardMode.usage
+  Object.assign(s, setting)
+  await $.store.set(KEY_GUARD, storedGuard(s))
+  return guardSetText(s)
 }
 
 async function onTurnComplete($: EngineInterface, s: State, e: TurnCompleteInput) {

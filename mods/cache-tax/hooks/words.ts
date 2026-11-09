@@ -45,6 +45,19 @@ export function dropText(s: State, now: number): string {
 
 export const warnText = (s: State, cause: Cause): string => say().warn(guardText(s, cause), autoWarm(s))
 
+export const floorText = (s: State): string => say().underFloor(fmtUsd(s.guardFloor))
+
+/** The reply to `/cache-tax guard ...`. */
+export function guardSetText(s: State): string {
+  if (s.guard === 'warn') return say().guardMode.warn
+  return s.guardFloor ? say().guardMode.floor(fmtUsd(s.guardFloor)) : say().guardMode.refuse
+}
+
+function guardRow(s: State): string {
+  if (s.guard === 'warn') return say().guardWarn
+  return s.guardFloor ? say().guardFloor(fmtUsd(s.guardFloor)) : say().guardRefuse
+}
+
 export const paidText = (s: State, tokens: number, usd: number | null): string =>
   say().paid({ tokens: fmtTok(tokens), usd: fmtUsd(usd), auto: autoWarm(s) })
 
@@ -95,7 +108,7 @@ export const commands = (): Record<'keepwarm' | 'cacheTax', CommandSpec> => ({
   cacheTax: {
     name: 'cache-tax',
     description: say().cacheTaxCommand,
-    argumentHint: '[status | guard warn | guard refuse]',
+    argumentHint: '[status | guard warn | guard refuse [dollars]]',
     immediate: true,
   },
 })
@@ -126,7 +139,7 @@ export function cardText(s: State, now: number): string {
   if (pings != null) {
     lines.push(row(labels.even, say().even(pings, { every: fmtDuration(s.every), span: fmtDuration(pings * s.every) })))
   }
-  lines.push(row(labels.guard, s.guard === 'refuse' ? say().guardRefuse : say().guardWarn))
+  lines.push(row(labels.guard, guardRow(s)))
   const paid = s.misses.reduce((a, m) => a + (m.usd ?? 0), 0)
   lines.push(row(labels.session, say().session(s.misses.length, fmtUsd(paid))))
   return lines.join('\n')

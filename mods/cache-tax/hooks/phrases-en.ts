@@ -53,7 +53,8 @@ export const EN = {
     alwaysUsage: 'always takes one window from 1h to 168h, such as always 24h',
   },
   guardMode: {
-    usage: '/cache-tax guard takes warn or refuse',
+    usage: '/cache-tax guard takes warn, refuse, or refuse with a dollar floor such as refuse 5',
+    floor: (usd: string): string => `guard: hold once at ${usd} or more. A cheaper cold send goes through with its price shown`,
     refuse: 'guard: hold once. A cold send waits with its price, sending it again goes through',
     warn: 'guard: warn only. A cold send goes through with its price shown',
   },
@@ -74,6 +75,8 @@ export const EN = {
     `≈${t.span} idle`,
   guardRefuse: 'hold once (/cache-tax guard warn only shows the price)',
   guardWarn: 'warn only (/cache-tax guard refuse holds once)',
+  guardFloor: (usd: string): string => `hold once at ${usd} or more, warn below (/cache-tax guard refuse holds any)`,
+  underFloor: (floor: string): string => ` It is under your ${floor} floor, so it was not held.`,
   session: (count: number, usd: string): string => `${plural(count, 'cold write', 'cold writes')} paid, ${usd}`,
 }
 

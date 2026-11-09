@@ -39,12 +39,13 @@ Sending the same message again also pays, even from a new process (`claude -p` s
 /keepwarm off           stop, and turn always off
 /cache-tax              model, cache state, cold price, keepwarm, guard and this session's cold writes
 /cache-tax guard refuse hold a cold send once (default)
+/cache-tax guard refuse 5  hold only a cold send priced at $5 or more; a cheaper one is sent with its price shown
 /cache-tax guard warn   show the price and send
 ```
 
 ## Settings
 
-There are no plugin options. The guard mode and the `always` switch are set with the commands above and remembered across sessions.
+There are no plugin options. The guard mode with its dollar floor, and the `always` switch with its window, are set with the commands above and remembered across sessions.
 
 ## Cost
 

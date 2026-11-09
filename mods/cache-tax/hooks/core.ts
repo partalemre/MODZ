@@ -67,6 +67,8 @@ export type State = {
   ctx: number
   compacted: boolean
   guard: GuardMode
+  /** With refuse, a cold send priced under this many dollars goes through with its price shown; 0 holds any. */
+  guardFloor: number
   ackedAt: number
   coldWritePending: boolean
   /** The most one main request of this turn wrote to the cache; null while no step of it reported usage. */
@@ -88,7 +90,7 @@ export type State = {
 export function freshState(): State {
   return {
     hasBand: false, hasStatus: false, sid: '', deadline: 0, every: PING_AFTER_MS, always: false, alwaysMs: DEFAULT_WINDOW_MS, lastRequestAt: 0, lastResponseAt: 0,
-    lastModel: null, cacheModel: null, ctx: 0, compacted: false, guard: 'refuse', ackedAt: 0, coldWritePending: false, largestWrite: null, misses: [],
+    lastModel: null, cacheModel: null, ctx: 0, compacted: false, guard: 'refuse', guardFloor: 0, ackedAt: 0, coldWritePending: false, largestWrite: null, misses: [],
     pending: null, refresh: null, last: null, stopped: null, held: null, resend: null, waitForTurn: false, retries: 0,
   }
 }

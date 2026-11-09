@@ -4,11 +4,11 @@
 
 import type { PromptSubmitInput, PromptSubmitResult } from 'claude-code'
 
-import { BIG_TOKENS, isCold } from './core'
+import { BIG_TOKENS, coldUsd, isCold } from './core'
 import type { State } from './core'
 import { switchOf } from './model-switch'
 import type { ModelSwitch } from './model-switch'
-import { dropText, warnText } from './words'
+import { dropText, floorText, warnText } from './words'
 
 export const NAME = 'cache-tax'
 
@@ -74,8 +74,12 @@ export async function onPrompt(io: GuardIo, s: State, { e, next }: Submit): Prom
     return next(e)
   }
   const isUnattended = UNATTENDED.has(e.origin.kind)
-  if (s.guard === 'warn' || isUnattended || await isAcked(io, s)) {
-    if (s.guard === 'warn' || isUnattended) io.log(warnText(s, { now, switched }))
+  // A model with no price row has no estimate to compare, so the floor never lets it through.
+  const usd = coldUsd(s, switched?.to ?? s.lastModel)
+  const isUnderFloor = s.guard === 'refuse' && usd !== null && usd < s.guardFloor
+  const isShown = s.guard === 'warn' || isUnattended || isUnderFloor
+  if (isShown || await isAcked(io, s)) {
+    if (isShown) io.log(warnText(s, { now, switched }) + (isUnderFloor ? floorText(s) : ''))
     s.ackedAt = 0
     s.coldWritePending = true
     release(io, s)

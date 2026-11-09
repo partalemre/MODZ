@@ -49,7 +49,8 @@ export const TR: Phrases = {
     alwaysUsage: 'always 1h ile 168h arası tek bir pencere alır, örneğin always 24h',
   },
   guardMode: {
-    usage: '/cache-tax guard warn ya da refuse alır',
+    usage: '/cache-tax guard warn, refuse ya da refuse 5 gibi dolar sınırlı bir refuse alır',
+    floor: (usd: string): string => `koruma: ${usd} ve üstünde bir kez durdur. Daha ucuz soğuk gönderim fiyatı gösterilerek geçer`,
     refuse: 'koruma: bir kez durdur. Soğuk gönderim fiyatıyla bekletilir, yeniden gönderim geçer',
     warn: 'koruma: yalnızca uyar. Soğuk gönderim fiyatı gösterilerek geçer',
   },
@@ -69,5 +70,7 @@ export const TR: Phrases = {
     `${pings} tazeleme, önbelleği baştan yazmakla aynı tutar; ${t.every} arayla tazelersen yaklaşık ${t.span} boşta kalabilirsin`,
   guardRefuse: 'bir kez durdur (/cache-tax guard warn ile yalnızca fiyat göster)',
   guardWarn: 'yalnızca uyar (/cache-tax guard refuse ile bir kez durdur)',
+  guardFloor: (usd: string): string => `${usd} ve üstünde bir kez durdur, altında uyar (/cache-tax guard refuse her birini durdurur)`,
+  underFloor: (floor: string): string => ` ${floor} sınırının altında olduğu için bekletilmedi.`,
   session: (count: number, usd: string): string => `önbellek ${count} kez baştan yazıldı, ${usd}`,
 }

@@ -1,8 +1,8 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
 import { HEARTBEAT_MS } from '../hooks/chats'
 import { REST_MS, TURNS_KEY, ended, levelOf, rested, restingCrab } from '../hooks/mood'
-import { BAND, PANE, SURFACES, finish, mainEnd, mainStart, setup, spawn, svgOf } from './fixtures'
+import { test, BAND, PANE, SURFACES, finish, mainEnd, mainStart, setup, spawn, svgOf } from './fixtures'
 
 // The home crab: asleep until a turn runs, working through it, happy after an answer, worried
 // after an error or a stop, asleep again once rested; its level counts answered turns machine-wide.

@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './fixtures'
 
 import { CRAB_CSS, crab } from '../hooks/crabs'
 import { lookAt } from '../hooks/identity'

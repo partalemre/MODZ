@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
-import { BAND, PANE, SECOND, SURFACES, finish, setup, spawn, svgOf, threeRunning, tool } from './fixtures'
+import { test, BAND, PANE, SECOND, SURFACES, finish, setup, spawn, svgOf, threeRunning, tool } from './fixtures'
 
 // Without MODZ_LANG the band, the Agents pane, its cards, timeline, warning and "New task" form, and
 // the hub card read English, in the film's words ("Every agent gets a face.").

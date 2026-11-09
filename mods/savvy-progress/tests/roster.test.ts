@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './fixtures'
 
 import { lookAt, nextLook } from '../hooks/identity'
 import { reconcile } from '../hooks/roster'

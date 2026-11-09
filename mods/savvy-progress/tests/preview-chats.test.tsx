@@ -1,7 +1,7 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
 import { TURNS_KEY } from '../hooks/mood'
-import { BAND, PANE, SECOND, finish, mainEnd, mainStart, setup, spawn } from './fixtures'
+import { test, BAND, PANE, SECOND, finish, mainEnd, mainStart, setup, spawn } from './fixtures'
 
 /** The test runner's console: bin/preview reads the trees it prints. */
 declare const console: { log: (text: string) => void }

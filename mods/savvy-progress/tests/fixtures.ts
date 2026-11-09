@@ -1,4 +1,9 @@
-import { mock } from 'claude-code/testing'
+import { mock, test as engineTest } from 'claude-code/testing'
+
+// Each engine test boots a session; on a loaded machine (a full `modz check`) the 5 s default trips. Same budget as filetree.
+const TEST_BUDGET = { timeoutMs: 20_000 }
+export const test = ((name: string, a: any, b?: any) =>
+  b ? engineTest(name, { ...TEST_BUDGET, ...a }, b) : engineTest(name, TEST_BUDGET, a)) as unknown as typeof engineTest
 
 export const SURFACES = ['terminal', 'desktop'] as const
 export const SECOND = 1000

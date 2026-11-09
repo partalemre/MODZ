@@ -1,9 +1,9 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
 import { setLang } from '../hooks/i18n'
 import { modelLine } from '../hooks/pane-svg'
 import type { AgentRun } from '../types'
-import { PANE, SECOND, SURFACES, setup, spawn, tool } from './fixtures'
+import { test, PANE, SECOND, SURFACES, setup, spawn, tool } from './fixtures'
 
 // Asking an agent from the panel reads as a conversation: the question, the agent on it, its
 // answer under it, and a follow-up from the same card that picks the finished agent up again.

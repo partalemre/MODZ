@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
-import { setup, spawn, tool } from './fixtures'
+import { test, setup, spawn, tool } from './fixtures'
 
 const PROGRESS = 'mcp__savvy-progress__progress'
 const STEP = 'mcp__savvy-progress__step'

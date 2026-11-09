@@ -1,8 +1,8 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
 import { HEARTBEAT_MS, SCAN_MS } from '../hooks/chats'
 import { isOwnOpen } from '../hooks/hub'
-import { SECOND, finish, setup, spawn, tool } from './fixtures'
+import { test, SECOND, finish, setup, spawn, tool } from './fixtures'
 
 // The MODZ data path (DESIGN.md §9): the hub card this mod keeps, and the hub's open request.
 

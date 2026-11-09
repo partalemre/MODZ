@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
-import { PANE, SECOND, SURFACES, finish, setup, spawn, svgOf, threeRunning, tool } from './fixtures'
+import { test, PANE, SECOND, SURFACES, finish, setup, spawn, svgOf, threeRunning, tool } from './fixtures'
 
 // The Ajanlar panel's parts around and inside the cards, on both surfaces: the header card, the
 // cards' heads, talking to an agent and stopping it, the quiet-agent warning, the timeline.

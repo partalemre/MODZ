@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
-import { BAND, OTHERS, SURFACES, finish, modelStep, prompt, setup, spawn, svgOf, threeRunning, tool } from './fixtures'
+import { test, BAND, OTHERS, SURFACES, finish, modelStep, prompt, setup, spawn, svgOf, threeRunning, tool } from './fixtures'
 
 for (const surface of SURFACES) {
   let last: any

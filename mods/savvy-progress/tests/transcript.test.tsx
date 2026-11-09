@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
-import { OTHERS, SURFACES, setup } from './fixtures'
+import { test, OTHERS, SURFACES, setup } from './fixtures'
 
 // The `progress` and `step` rows fold away in the transcript; anything else, or a failed call, stays.
 

@@ -129,6 +129,19 @@ for (const surface of SURFACES) {
     expect(await textOf(await $.ui.mount({ ...PANE, surface }))).not.toContain('kaldı')
   })
 
+  test(`a turn the engine could not measure adds no sample to the turns forecast (${surface})`, async ($, on) => {
+    setLang('tr')
+    const usage = withBreakdown()
+    stubSession(on, usage)
+    await start($, surface)
+    await endTurns($, usage, [100_000, 105_000, 110_000])
+    usage.context = { ...usage.context, tokens: undefined }
+    await $.turn.complete({ answer: 'ok', durationMs: 1, isAborted: false, turnId: 'unmeasured', reason: 'answer' })
+    const drawn = await textOf(await $.ui.mount({ ...PANE, surface }))
+    expect(drawn).toContain('son 3 tur')
+    expect(drawn).not.toContain('NaN')
+  })
+
   test(`the context card: a summary breakdown read once while the pane draws, the turns up to compaction (${surface})`, async ($, on) => {
     setLang('tr')
     const usage = withBreakdown()
@@ -161,6 +174,25 @@ for (const surface of SURFACES) {
     expect(compactions.count).toBe(1)
     expect(await pane.find({ type: 'Text', text: 'Sıkıştırıldı: 152k → 38k' })).toBeDefined()
     expect(await pane.find({ key: 'compact-now' })).toBeDefined()
+  })
+
+  test(`a compaction drops the kept breakdown: the next draw reads it again (${surface})`, async ($, on) => {
+    setLang('tr')
+    const clock = stubSession(on, withBreakdown())
+    await start($, surface)
+    const pane = await $.ui.mount({ ...PANE, surface })
+    await pane.redraw(PANE.props)
+    expect(breakdowns).toEqual(['summary'])
+
+    await pane.press({ key: 'compact-now' })
+    await clock.advance(1)
+    await pane.redraw(PANE.props)
+    expect(breakdowns).toEqual(['summary', 'summary'])
+
+    // The person's own /compact, not the button.
+    await $.session.compact({ trigger: 'manual', messages: [{ role: 'user', text: 'summary', toolUses: [] }] } as any)
+    await pane.redraw(PANE.props)
+    expect(breakdowns).toEqual(['summary', 'summary', 'summary'])
   })
 }
 

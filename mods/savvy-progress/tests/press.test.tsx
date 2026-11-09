@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
-import { BAND, PANE, setup, threeRunning } from './fixtures'
+import { test, BAND, PANE, setup, threeRunning } from './fixtures'
 
 // A desktop clicks the tree it last painted. Every redraw keeps each button's press handle, so a click
 // on an earlier tree still lands.

@@ -60,7 +60,7 @@ export async function projectKinds(paths: readonly string[], shown: ReadonlySet<
   for (const path of paths) {
     const name = baseOf(path)
     if (!shown.has(name) || kinds[name] !== undefined) continue
-    const names = await io.list(path).then(entries => entries.map(entry => entry.name)).catch(() => [])
+    const names = await io.list(path).then(entries => entries.map(entry => entry.name)).catch((): string[] => [])
     const textOf = (file: string) => (names.includes(file) ? io.read(`${path}/${file}`).catch(() => '') : Promise.resolve(''))
     kinds[name] = projectKindOf(names, { packageText: await textOf('package.json'), readmeText: await textOf(README) })
   }

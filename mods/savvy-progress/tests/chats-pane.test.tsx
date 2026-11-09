@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
-import { PANE, SECOND, SURFACES, setup, spawn, svgOf } from './fixtures'
+import { test, PANE, SECOND, SURFACES, setup, spawn, svgOf } from './fixtures'
 
 // The Agents pane and the other chats: a card at the top only while one of them waits on the
 // person, the rest folded at the foot, and nothing at all when this is the only chat.

@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
-import { PANE, SECOND, SURFACES, setup, threeRunning } from './fixtures'
+import { test, PANE, SECOND, SURFACES, setup, threeRunning } from './fixtures'
 
 // "Yeni görev": the empty panel's one action, the form, the start, a refusal, and where the agent
 // types come from (built-ins, the engine's offers, the project's agent files).

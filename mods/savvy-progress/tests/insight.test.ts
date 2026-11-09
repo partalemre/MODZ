@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './fixtures'
 
 import { setLang } from '../hooks/i18n'
 import { LONG_TOOL_MS, QUIET_MS, attentionOf, roughSpan, stuckOf } from '../hooks/insight'

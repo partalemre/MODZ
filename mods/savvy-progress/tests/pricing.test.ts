@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './fixtures'
 
 import { costOf, windowOf } from '../hooks/pricing'
 import type { Usage } from '../hooks/pricing'

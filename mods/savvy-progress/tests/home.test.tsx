@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
-import { PANE, SURFACES, setup, threeRunning } from './fixtures'
+import { test, PANE, SURFACES, setup, threeRunning } from './fixtures'
 
 // The Agents pane opens with a "← MODZ" button while the hub runs; pressing it writes this mod's own `home` value.
 

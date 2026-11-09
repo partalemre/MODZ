@@ -46,7 +46,7 @@ export function createdId(result: unknown, tasks: PlanTask[]): string {
 
 // The desktop Code tab keeps its own task list (mcp__ccd_turn__update_plan) in place of TodoWrite: the whole
 // list with `items`, else `advance` (finish the step under way, start the next) or 1-based `done`/`start`.
-type DeskPlan = { items?: unknown; advance?: unknown; done?: unknown; start?: unknown }
+type DeskPlan = { items?: unknown; advance?: unknown; done?: unknown; start?: unknown; [field: string]: unknown }
 
 function steps(value: unknown): Set<number> {
   return new Set(Array.isArray(value) ? value.filter(Number.isInteger).map(n => (n as number) - 1) : [])

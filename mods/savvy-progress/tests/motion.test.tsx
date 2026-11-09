@@ -1,13 +1,13 @@
 // The pane in motion on the desktop (kit/moving.ts): every drawing is an interactive frame that enters as the pane
 // opens, keeps its very source while what it shows is unchanged (the once-a-second tick included), and enters again
 // when the pane opens anew. Live work only breathes: a running pill's dot and the open call's dot; no bar shines.
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
 import { pulseSvg } from '../hooks/pane-svg'
-import { PANE, SECOND, setup, threeRunning, tool } from './fixtures'
+import { test, PANE, SECOND, setup, threeRunning, tool } from './fixtures'
 
 const mount = ($: any) => $.ui.mount({ ...PANE, surface: 'desktop' })
-const sources = async (ui: any) => (await ui.findAll({ type: 'Svg' })).map((svg: any) => svg.props.source as string)
+const sources = async (ui: any): Promise<string[]> => (await ui.findAll({ type: 'Svg' })).map((svg: any) => svg.props.source as string)
 const texts = async (ui: any) => (await ui.findAll({ type: 'Text' })).map((t: any) => t.text ?? '').join('\n')
 
 test('desktop: the drawings cascade in as frames, live work moves, and the one-second tick leaves them as they were', async ($: any, on: any) => {

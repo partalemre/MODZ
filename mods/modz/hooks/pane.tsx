@@ -5,7 +5,6 @@ import { groupSvg, headSvg, rowSvg } from './draw'
 import type { Drawing } from './draw'
 import type { Cue } from './kit/motion'
 import type { Stable } from './kit/stable'
-import { upper } from './kit/lang'
 import { GROUPS } from './meta'
 import type { Group } from './meta'
 import type { Theme } from './theme'
@@ -16,7 +15,7 @@ import { withHome } from './kit/home'
 type Ui = Record<string, any>
 
 // `stable`: the catalog's drawings kept since it was put in the panel (stable.ts).
-export type View = { market: Market; surface: string; columns: number; theme: Theme; onHome: () => void; stable: Stable }
+export type View = { market: Market; surface: string; columns: number; theme: Theme; onHome: () => void; stable: Stable<Drawing> }
 
 // A desktop pane reports about 9 px a column (a 365 px body reads 40), wider than the reply column.
 const PX_PER_COLUMN = 9
@@ -70,7 +69,7 @@ function terminalTree(ui: Ui, view: View) {
       </Box>
       {groupsOf(view.market.mods).map(([group, list]) => (
         <Box key={`group-${group}`} flexDirection="column">
-          <Text bold dimColor>{`${upper(words.groups[group])} · ${list.length}`}</Text>
+          <Text bold dimColor>{`${words.groups[group]} · ${list.length}`}</Text>
           {list.map(mod => terminalRow(ui, mod))}
         </Box>
       ))}

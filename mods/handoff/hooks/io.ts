@@ -4,7 +4,7 @@ import type { HandoffNote, HubCard } from '../types'
 
 // The engine calls the rest of the mod needs, as closures: only register.tsx holds `$`.
 
-export type Values = Omit<PluginState['handoff'], 'hub' | 'home'>
+export type Values = Omit<PluginState['handoff'], 'hub' | 'home' | 'shown'>
 export type ValueKey = keyof Values
 
 export type RunOut = { exitCode: number; stdout: string }

@@ -30,6 +30,11 @@ export function keepBreakdown(nowMs: number, breakdown: SessionContextBreakdown 
   return view
 }
 
+// A compaction changed the window: the next draw reads the breakdown again instead of the kept one.
+export function forgetBreakdown(): void {
+  cached = null
+}
+
 // A failed read keeps the last view until the next try.
 export function keepLast(nowMs: number): ContextView | null {
   cached = { at: nowMs, view: cached?.view ?? null }

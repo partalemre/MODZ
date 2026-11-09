@@ -1,11 +1,11 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
 import { toolDetail } from '../hooks/format'
 import { setLang } from '../hooks/i18n'
 import { nowOf } from '../hooks/now'
 import { filesShown, touchFile } from '../hooks/touched'
 import type { AgentRun } from '../types'
-import { PANE, SECOND, SURFACES, finish, setup, spawn, svgOf, tool } from './fixtures'
+import { test, PANE, SECOND, SURFACES, finish, setup, spawn, svgOf, tool } from './fixtures'
 
 // The pure checks below read the Turkish words (MODZ_LANG=tr), as the mounted ones do.
 setLang('tr')

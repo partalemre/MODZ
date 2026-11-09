@@ -157,7 +157,10 @@ export function paneTree(ui: Ui, view: CheckpointView, opts: PaneOpts) {
   const said = words()
   const turns = view.entries.filter(entry => titleOf(entry, opts.meta).title !== said.beforeUndo).length
   const lead = count === 0 ? { lead: said.emptyLead, rest: said.emptyRest, joiner: ' · ' } : { lead: said.turnsSaved(turns), rest: '' }
-  const head = headSvg(frame, { label: said.title, meta: headerMeta(view, opts.now), ...lead })
+  // The lead already counts the turns; when every entry is a turn the meta need not count them again.
+  const newest = view.entries[0]
+  const meta = newest !== undefined && turns === count ? said.newest(ago(opts.now - newest.at)) : headerMeta(view, opts.now)
+  const head = headSvg(frame, { label: said.title, meta, ...lead })
 
   return (
     <Box flexDirection="column" rowGap={1}>

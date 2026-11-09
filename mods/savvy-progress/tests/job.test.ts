@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './fixtures'
 
 import { setLang } from '../hooks/i18n'
 import { deriveJob, joinJob, percentText, sealJob } from '../hooks/job'

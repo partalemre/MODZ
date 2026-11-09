@@ -39,7 +39,7 @@ const MAX_ORDER = 12
 export function animate(source: string, spec: { cue: Cue; isRow?: boolean }): string {
   const parts = SVG.exec(source)
   if (parts === null) return source
-  const [, open, inner, close] = parts
+  const [, open, inner = '', close] = parts
   const scheme = SAYS_SCHEME.test(inner) ? '' : SCHEME
   const lit = `${spec.isRow === true ? WASH : ''}${spec.cue.phase === 'change' ? FLASH : ''}${inner}`
   const body = entering(lit, spec.cue)

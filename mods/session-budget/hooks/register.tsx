@@ -14,7 +14,7 @@ const TOGGLE = 'session-budget'
 const STORE_KEY = 'session-budget.enabled'
 const BRAKE_KEY = 'session-budget.brake'
 // Agent is today's name of the subagent tool; Task the older one.
-const SPAWN_TOOLS = ['Agent', 'Task']
+const SPAWN_TOOLS = /^(Agent|Task)$/
 const PRIORITY = 1
 const DISMISS_AFTER_MS = 20_000
 // After "Dur" the dropped prompt goes back in the box once the dialog has given it back.

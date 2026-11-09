@@ -1,8 +1,8 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
 import { noticeSvg } from '../hooks/card-svg'
 import { HEARTBEAT_MS, SCAN_MS, STALE_MS, TITLE_MAX, isHeartbeat, scanOf, titleOf } from '../hooks/chats'
-import { SECOND, finish, mainEnd, mainStart, setup, spawn, tool } from './fixtures'
+import { test, SECOND, finish, mainEnd, mainStart, setup, spawn, tool } from './fixtures'
 
 // Other chats on this machine: each session's heartbeat in the shared store, who waits on the
 // person, and the gone pruned. The store stands for the machine: a test writes the others' keys.

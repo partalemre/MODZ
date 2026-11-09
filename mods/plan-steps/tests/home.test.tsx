@@ -1,9 +1,13 @@
 import { expect, mock, test } from 'claude-code/testing'
+import type { CommandRunInput } from 'claude-code'
 
 // The Plan pane opens with a "← MODZ" button while the hub runs; pressing it writes this mod's own `home` value.
 // While the hub runs the pane also takes turns in its one panel (kit/stage.ts).
 
 const SURFACES = ['terminal', 'desktop'] as const
+
+// A slash command as the person types it.
+const run = (command: string, args = ''): CommandRunInput => ({ command, args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
 
 // Stands for the MODZ hub: it says it runs, and records the home values it hears.
 const modz = {
@@ -85,14 +89,14 @@ test('with the hub on the opened Plan pane reports itself shown, and steps aside
   on('state.set', { plugin: 'plan-steps', key: 'shown' }, (_: any, e: any, next: any) => (shown.push(e.value?.pane), next(e)))
   on('ui.close', (_: any, e: any) => (closed.push(e.id), { value: undefined }))
   await setup($, on, { isHubOn: false })
-  await $.command.run({ command: 'steps', args: '' })
+  await $.command.run(run('steps'))
   // The hub is off: nothing to step aside for.
   expect(shown).toEqual([])
-  await $.command.run({ command: 'hub-on', args: '' })
-  await $.command.run({ command: 'hub-open', args: 'plan' })
+  await $.command.run(run('hub-on'))
+  await $.command.run(run('hub-open', 'plan'))
   expect(shown).toEqual(['plan'])
-  await $.command.run({ command: 'hub-stage', args: 'plan' })
+  await $.command.run(run('hub-stage', 'plan'))
   expect(closed).toEqual([])
-  await $.command.run({ command: 'hub-stage', args: 'tests' })
+  await $.command.run(run('hub-stage', 'tests'))
   expect(closed).toEqual(['plan-steps'])
 })

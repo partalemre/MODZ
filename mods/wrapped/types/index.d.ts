@@ -67,9 +67,10 @@ export type Saved = { path: string; isImage: boolean } | { error: string }
 declare module 'claude-code' {
   interface PluginState {
     'wrapped': {
-      view: WrappedView
+      // Kept under a shape tag (the atom's `shape`), so a value an older build stored reads as absent.
+      view: Shaped<WrappedView>
       root: string
-      isNamed: boolean
+      isNamed: Shaped<boolean>
       saved: Saved | null
       copied: boolean
       film: Film | null
@@ -80,5 +81,7 @@ declare module 'claude-code' {
       home: { at: number }
       shown: { pane: string; at: number }
     }
+    // The MODZ hub's value this mod reads (kit/home.tsx); modz owns and writes it.
+    modz: { isOn: boolean }
   }
 }

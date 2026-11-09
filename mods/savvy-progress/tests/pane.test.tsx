@@ -1,7 +1,7 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
 import { SCAN_MS } from '../hooks/chats'
-import { PANE, SECOND, SURFACES, finish, measure, setup, spawn, svgOf, threeRunning, tool } from './fixtures'
+import { test, PANE, SECOND, SURFACES, finish, measure, setup, spawn, svgOf, threeRunning, tool } from './fixtures'
 
 // Chats the drawing cannot read, so the pane's drawing throws.
 const CHATS_BREAKER = {

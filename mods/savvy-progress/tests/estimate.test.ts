@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './fixtures'
 
 import type { AgentRun, ToolEvent } from '../types'
 import { agentProgress } from '../hooks/estimate'

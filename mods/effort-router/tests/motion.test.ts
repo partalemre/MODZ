@@ -30,5 +30,5 @@ test('desktop: the drawings cascade in as frames, and a new turn moves only the 
   await pane.unmount()
   await $.command.run({ command: 'effort-router', args: '' })
   const again = await $.ui.mount(paneOf('desktop'))
-  expect((await sources(again)).every(source => source.includes('class="m-in"'))).toBe(true)
+  expect((await sources(again)).every((source: string) => source.includes('class="m-in"'))).toBe(true)
 })

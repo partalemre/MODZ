@@ -3,9 +3,10 @@
 // The drawing under them is a plain, still Svg (an image: a frame would sit over the buttons and take the click,
 // and an image restarts its animations on every draw).
 // Terminal surfaces keep their own buttons; this is for the desktop.
-import type { ElementTable, RenderElement } from 'claude-code'
+import type { RenderElement } from 'claude-code'
 
-type Ui = ElementTable
+// The resolved element table of the surface that draws the pane, as kit/home.tsx and the mods hold it.
+type Ui = Record<string, any>
 
 // A native button is as wide as its label, one control tall, and lights on its own under the pointer; a label too
 // long for its box is cut to "…" (measured on the desktop, 2026-10-29: 14 px type, 28 px of padding, ~28 px tall).
@@ -70,7 +71,7 @@ export type PressRowOpts = { box: string; key: string; drawing: RenderElement; h
 // A drawing and its cover in one keyed box: the row is the control, its hover and its press one surface.
 export function PressRow(ui: Ui, o: PressRowOpts): RenderElement {
   const { Box } = ui
-  const props = o.drawing.type === 'Svg' ? (o.drawing.props as SvgProps) : {}
+  const props: Partial<SvgProps> = o.drawing.type === 'Svg' ? (o.drawing.props as SvgProps) : {}
   const width = props.width ?? FALLBACK_WIDTH_PX
   const height = props.height ?? FALLBACK_PX
 

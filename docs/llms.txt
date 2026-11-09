@@ -53,7 +53,7 @@ Remove: `claude plugin uninstall <name>@modz`; everything: also `claude plugin m
 
 ## Facts
 
-- Draws in the Claude desktop app's Code tab (rich) and in the terminal (text). Tested on Claude Code 2.1.295 and 2.1.296.
+- Draws in the Claude desktop app's Code tab (rich) and in the terminal (text). Tested on Claude Code 2.1.296 (terminal) and 2.1.317 (desktop app).
 - Most mods use no model tokens. Token use: reflect-mod (one small check per correction, one per /mine), cache-tax warming (only when turned on), handoff (one optional summary per note), effort-router (auto mode only), blast-radius (only with .claude/house-rules.md), replay-theater (rarely), transceiver free-form `ask` (small model on the other side, at most 10 a day per room).
 - Optional Jev judge: MODZ_JUDGE=jev and TYPESAFE_API_KEY send the masked text that blast-radius and effort-router judge to TypeSafe instead of the person's own model account.
 - License: MIT; adapted mods keep their original license in their folder.

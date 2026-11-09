@@ -2,7 +2,7 @@
 // row per idea (framed on the terminal, set apart by space on the desktop), or per local candidate when the
 // model's answer was unusable. A rule row saves through reflect's own card; the other kinds copy their text.
 
-import type { Elements, RenderElement, RenderSurface } from 'claude-code'
+import type { ElementConstructor, Elements, RenderElement, RenderSurface, SvgProps } from 'claude-code'
 
 import type { Candidate, Idea, IdeasView } from '../types'
 import type { Look } from './card'
@@ -19,7 +19,8 @@ export type PaneActions = { save: (i: number) => void; copy: (i: number, surface
 
 export type PaneInput = { view: IdeasView; states: RowState[]; copied: string | null; on: PaneActions }
 
-type Ui = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button'> & { Svg?: Elements['desktop']['Svg'] }
+// Called as a function, not through JSX, the Svg takes its `key` among its props as Box and Button do.
+type Ui = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button'> & { Svg?: ElementConstructor<SvgProps & { key?: string }> }
 type Level = 'hi' | 'mid' | 'lo'
 // A pane has no card frame of its own: its head is as wide as the body. A desktop pane reports about 9 px a
 // column (a 365 px body reads 40), wider than the reply column.

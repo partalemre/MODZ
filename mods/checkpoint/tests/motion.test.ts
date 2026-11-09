@@ -8,7 +8,7 @@ const TWO = { refs: 'refs/checkpoints/s/2\tc2\t200\tadd tests\nrefs/checkpoints/
 
 const STILL = '<style>*{animation:none!important;transition:none!important}</style></svg>'
 
-const sources = async (pane: any) => (await pane.findAll({ type: 'Svg' })).map((svg: any) => svg.props.source as string)
+const sources = async (pane: any): Promise<string[]> => (await pane.findAll({ type: 'Svg' })).map((svg: any) => svg.props.source as string)
 
 test('desktop: the drawings cascade in as frames and keep their sources across a redraw', async ($: any, on: any) => {
   stub(on, newFake(TWO))
@@ -23,7 +23,7 @@ test('desktop: the drawings cascade in as frames and keep their sources across a
 
   expect(svgs.filter(isPressed).length).toBeGreaterThan(1)
   expect(svgs.filter(isPressed).every((svg: any) => svg.props.isInteractive !== true)).toBe(true)
-  expect(svgs.filter(svg => !isPressed(svg)).every((svg: any) => svg.props.isInteractive === true)).toBe(true)
+  expect(svgs.filter((svg: any) => !isPressed(svg)).every((svg: any) => svg.props.isInteractive === true)).toBe(true)
   expect(first.every(source => source.includes(':root{color-scheme:light dark}') && source.includes('class="m-in"'))).toBe(true)
   expect(first.filter(source => source.includes('class="m-wash"'))).toHaveLength(2)
 

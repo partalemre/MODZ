@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './fixtures'
 
 import { BUILTIN_TYPES, blankDraft, chosenOf, describe, mergeTypes, offered, parseAgentFile, sourceWord } from '../hooks/agent-types'
 import { headerSvg } from '../hooks/header-svg'

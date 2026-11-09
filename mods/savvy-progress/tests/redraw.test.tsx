@@ -1,6 +1,6 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
 
-import { measure, setup } from './fixtures'
+import { test, measure, setup } from './fixtures'
 
 test('a measure that moves nothing writes no limit, so the band and pane do not redraw for it', async ($: any, on: any) => {
   const writes: unknown[] = []

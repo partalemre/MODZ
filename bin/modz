@@ -16,7 +16,7 @@ usage() {
 modz <command>
   list                 list the mods (version, when pinned, + description)
   new <name> [desc]    make a mod from templates/blank and add it to the marketplace
-  check [name]         validate + test on the CLI and the desktop engine (all mods without a name)
+  check [name]         validate + test on the CLI and the desktop engine, then tsc (all mods without a name)
   desk                 end to end on the desktop engine: hub rows, panes, the band and presses
   tour [row ...]       click tour on the desktop engine: every panel's buttons pressed, opened and closed
   shot [--pane] [--title t] [out]
@@ -100,6 +100,17 @@ check_with() {
   return $failed
 }
 
+# Types: the engine lays .claude-plugin/types once it has loaded a mod (gitignored); a mod without them is skipped.
+TSC_VERSION="5.6.3"
+check_types() {
+  local mod="$1" out
+  [[ -f "$mod/tsconfig.json" && -d "$mod/.claude-plugin/types" ]] || { echo "  tsc skipped: no engine types yet (load the mod once)"; return 0; }
+  command -v bunx >/dev/null || { echo "  tsc skipped: bunx not found"; return 0; }
+  out="$(cd "$mod" && bunx -p "typescript@$TSC_VERSION" tsc --noEmit -p . 2>&1)" && { echo "  tsc ✔"; return 0; }
+  echo "  tsc ✘ $(grep -c 'error TS' <<<"$out") errors"; grep 'error TS' <<<"$out" | head -5 | sed 's/^/    /'
+  return 1
+}
+
 cmd_check() {
   local targets=("${1:-}") desktop
   [[ -z "${1:-}" ]] && targets=($(mod_names))
@@ -114,6 +125,7 @@ cmd_check() {
     echo "== $m"
     check_with claude "$MODS/$m" cli || failed=1
     [[ -n "$desktop" ]] && { check_with "$desktop" "$MODS/$m" desktop || failed=1; }
+    check_types "$MODS/$m" || failed=1
   done
   return $failed
 }

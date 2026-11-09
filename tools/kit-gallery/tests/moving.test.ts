@@ -6,6 +6,8 @@ import { motionCss, rings, shine, SWEEP } from '../hooks/kit/motion'
 import { animate, paneMotion } from '../hooks/kit/moving'
 import { pill } from '../hooks/kit/svg'
 
+declare const setTimeout: (done: (value: unknown) => void, ms: number) => unknown
+
 const svg = (text: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40"><text>${text}</text></svg>`
 const pic = (text: string) => ({ source: svg(text), width: 200, height: 40, alt: text })
 

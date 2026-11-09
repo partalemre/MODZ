@@ -1,3 +1,5 @@
+import type { RenderElement } from 'claude-code'
+
 import { dateText } from './age'
 import { headSvg, noteSvg, sessionFacts, sessionRowSvg, turnMeta, turnRowSvg, turnTitle } from './lists-svg'
 import type { Drawing, ListHead } from './lists-svg'
@@ -99,7 +101,7 @@ const hotkeyOf = (k: number) => (k < HOTKEYS ? { hotkey: String(k + 1) } : {})
 
 // A row that opens something is one press over its drawing; one that does not is the drawing alone.
 // No digit on the desktop (as the hub's rows): a cover's hint would float in the middle of the row.
-function desktopRow(ui: Ui, row: Row, at: { draw: (drawing: Drawing, key: string, opts: MoveOpts) => unknown }) {
+function desktopRow(ui: Ui, row: Row, at: { draw: (drawing: Drawing, key: string, opts: MoveOpts) => RenderElement }) {
   const { Box } = ui
   const isPressable = row.button !== null
   const drawing = at.draw(row.drawing(), `${row.key}-svg`, { isRow: isPressable, shows: row.shows })

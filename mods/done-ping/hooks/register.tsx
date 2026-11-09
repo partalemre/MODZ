@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { EngineInterface, Register, RenderElement } from 'claude-code'
 
 import { othersRow, pingRow } from './band'
 import { othersWatcher, POLL_MS } from './others'
@@ -276,7 +276,7 @@ function registerBand(on: On): void {
 }
 
 // Another session's wait takes the line only while this one has no notice of its own and the ping is on.
-async function othersBand($: EngineInterface, e: Parameters<typeof pinned>[0], theirs: unknown) {
+async function othersBand($: EngineInterface, e: Parameters<EngineInterface['ui']['resolve']>[0], theirs: RenderElement) {
   const list = await read($, othersAtom)
   if (list.length === 0 || !(await read($, enabledAtom))) return theirs
   const onDismiss = () => {

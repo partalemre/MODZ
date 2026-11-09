@@ -4,7 +4,7 @@
 import { delayOf, entering, isEntering } from './kit/motion'
 import type { Cue } from './kit/motion'
 
-const M = ['X...X', 'XX.XX', 'X.X.X', 'X...X', 'X...X']
+const M = ['X...X', 'XX.XX', 'X.X.X', 'X...X', 'X...X'] as const
 const NAME = 'MODZ'
 const TILE = 30
 const TILE_RADIUS = 9

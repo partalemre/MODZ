@@ -1,8 +1,9 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import type { CommandRunInput } from 'claude-code'
 
 import { HEARTBEAT_MS, SCAN_MS } from '../hooks/chats'
 import { isOwnOpen } from '../hooks/hub'
-import { SECOND, finish, setup, spawn, tool } from './fixtures'
+import { test, SECOND, finish, setup, spawn, tool } from './fixtures'
 
 // The MODZ data path (DESIGN.md §9): the hub card this mod keeps, and the hub's open request.
 
@@ -36,6 +37,9 @@ const reading = async ($: any) => JSON.parse((await $.command.run({ command: 'hu
 const card = async ($: any) => (await reading($)).value
 const openFromHub = ($: any, pane: string) => $.command.run({ command: 'hub-open', args: pane })
 const stageFromHub = ($: any, pane: string) => $.command.run({ command: 'hub-stage', args: pane })
+
+// A slash command as the person types it.
+const run = (command: string, args = ''): CommandRunInput => ({ command, args, origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 80 } })
 
 test('the card stands from session start: idle, nothing to say', WITH_HUB, async ($, on) => {
   await setup($, on)
@@ -93,7 +97,7 @@ test('with the hub on the opened pane reports itself shown, and steps aside when
   await openFromHub($, 'agents')
   // The hub is off: nothing to step aside for.
   expect(shown).toEqual([])
-  await $.command.run({ command: 'hub-on', args: '' })
+  await $.command.run(run('hub-on'))
   await openFromHub($, 'agents')
   expect(shown).toEqual(['agents'])
   await stageFromHub($, 'agents')
@@ -112,7 +116,7 @@ const backOnDesktop = async ($: any, world: any) => {
 test('a desktop that comes back gets the pane again only if it was open when the session stopped', WITH_HUB, async ($, on) => {
   on('session.attach', (_: any, e: any) => ({ clientId: e.clientId }))
   const { world, clock } = await setup($, on)
-  await $.command.run({ command: 'hub-on', args: '' })
+  await $.command.run(run('hub-on'))
   await $.session.attach({ surface: 'desktop', clientId: 'desktop:default' })
   await openFromHub($, 'agents')
   await clock.advance(SCAN_MS)

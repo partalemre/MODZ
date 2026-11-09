@@ -45,7 +45,7 @@ test('desktop: the pane cascades in as frames, and a redraw or a tick of its age
   const isPressed = (svg: any) => (svg.props.source as string).endsWith(STILL)
   expect(svgs.filter(isPressed).length).toBeGreaterThan(0)
   expect(svgs.filter(isPressed).every((svg: any) => svg.props.isInteractive !== true)).toBe(true)
-  expect(svgs.filter(svg => !isPressed(svg)).every((svg: any) => svg.props.isInteractive === true)).toBe(true)
+  expect(svgs.filter((svg: any) => !isPressed(svg)).every((svg: any) => svg.props.isInteractive === true)).toBe(true)
   expect(first.every(source => source.includes(':root{color-scheme:light dark}') && source.includes('class="m-in"'))).toBe(true)
   expect(first.filter(source => source.includes('class="m-wash"'))).toHaveLength(3)
   expect(await draw($)).toEqual(first)
@@ -82,7 +82,7 @@ test('desktop: a pending CI check breathes, with no rings, and its row follows t
   expect(before['unit tests']).not.toContain('m-ripple')
   expect(before.lint).not.toContain('class="breathe"')
 
-  gh.checks = [pending('build'), ...gh.checks]
+  gh.checks = [pending('build'), ...(gh.checks ?? [])]
   await clock.advance(PAST_POLL_MS)
   const after = await rowsOf($)
   expect(after['unit tests']).toEqual(before['unit tests'])

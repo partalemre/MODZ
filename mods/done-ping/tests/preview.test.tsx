@@ -5,7 +5,8 @@ import { decisionOf } from './world'
 /** The test runner's console: bin/preview reads the trees it prints. */
 declare const console: { log: (text: string) => void }
 
-// Draws the in-app fallback row (done and waiting) on the desktop for bin/preview, per pinned theme.
+// Draws the in-app fallback row (done and failed) on the desktop for bin/preview, per pinned theme.
+// A wait is not drawn: on the desktop the app's own sidebar marks a session that waits.
 const ok = (exitCode: number) => ({ value: { exitCode, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
 const band = (columns: number) => ({
   plugin: 'done-ping', component: 'AbovePrompt', requestId: `band-${columns}`, surface: 'desktop', viewport: { columns: 110, rows: 30 },
@@ -57,12 +58,5 @@ for (const theme of ['dark', 'light']) {
     await $.turn.complete({ answer: 'ok', durationMs: 412_000, isAborted: false, turnId: 't', reason: 'answer' })
     await clock.advance(5)
     await dumpSizes($, `fallback-fail-${theme}`)
-  })
-
-  test(`preview ${theme}: waiting on the person`, async ($: any, on: any) => {
-    const clock = await setup($, on, theme)
-    await $.tool.check({ tool: 'Edit', input: { file_path: '/w/src/app.ts' }, tool_use_id: 'u1' })
-    await clock.advance(5)
-    await dumpSizes($, `fallback-wait-${theme}`)
   })
 }

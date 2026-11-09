@@ -14,7 +14,7 @@ const sources = async (pane: any): Promise<string[]> => (await pane.findAll({ ty
 async function openPane($: any, on: any) {
   const clock = stubSession(on, withBreakdown())
   await start($, 'desktop')
-  await $.command.run({ command: 'hud', args: 'full' })
+  await $.command.run({ command: 'hud', args: 'full' } as any)
 
   return { clock, pane: await $.ui.mount({ ...PANE, surface: 'desktop' }) }
 }
@@ -32,7 +32,7 @@ test('desktop: the tiles and the context card cascade in as frames and keep thei
   await pane.redraw()
   expect(await sources(pane)).toEqual(first)
 
-  await $.command.run({ command: 'hud', args: 'full' })
+  await $.command.run({ command: 'hud', args: 'full' } as any)
   expect((await sources(pane)).every(source => source.includes('class="m-in"'))).toBe(true)
 })
 
@@ -59,7 +59,7 @@ test('a running turn breathes a dot by the title, its end puts it out; nothing s
   const [tiles, card] = await sources(pane)
   expect(tiles).toContain('class="f-edit breathe"')
   expect(card).not.toContain('breathe')
-  expect([tiles, card].some(source => source.includes('m-shine'))).toBe(false)
+  expect([tiles, card].some(source => source!.includes('m-shine'))).toBe(false)
 
   await $.turn.complete({ answer: 'ok', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' } as any)
   expect((await sources(pane)).some(source => source.includes('class="f-edit breathe"'))).toBe(false)

@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { bandRow } from './band'
 import type { ContextView } from './breakdown'
-import { compactedOf, forecastsFrom, freshBreakdown, keepBreakdown, keepLast, reasonOf } from './context'
+import { compactedOf, forecastsFrom, forgetBreakdown, freshBreakdown, keepBreakdown, keepLast, reasonOf } from './context'
 import { addSample, isHistory } from './history'
 import { EMPTY_HUB, HUB_PANE, hubOf, isOwnOpen } from './hub'
 import { setLang } from './lang'
@@ -93,6 +93,7 @@ function compactNow($: EngineInterface): void {
     $.session
       .compact()
       .then(async result => {
+        forgetBreakdown()
         const done = compactedOf(result, await $.clock.now())
         if (done !== null) await update($, lastCompactAtom, () => done)
       })
@@ -166,6 +167,14 @@ function onUsage(on: On) {
     await setup($).catch(() => $.ui.log('hud-pro: start failed', { to: 'debug' }))
 
     return next(e)
+  })
+
+  // Any compaction of the main conversation (/compact, auto, the button); a precompute installs nothing.
+  on('session.compact', async ($, e, next) => {
+    const result = await next(e)
+    if (e.agentId === undefined && e.trigger !== 'precompute') forgetBreakdown()
+
+    return result
   })
 
   on('session.measure', async ($, e, next) => {

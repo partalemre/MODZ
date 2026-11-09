@@ -35,3 +35,12 @@ test('looks are handed out in order and 32 of them are all different', () => {
   const seen = new Set(Array.from({ length: 32 }, (_, i) => JSON.stringify(lookAt(i))))
   expect(seen.size).toBe(32)
 })
+
+test('a subagent waiting on its background command runs on; one the person stopped stays stopped', () => {
+  const done = run('a1', { status: 'done', endedAt: 4 })
+  expect(reconcile([done], [info('a1', 'waiting')], 6)[0]).toMatchObject({ status: 'running', endedAt: undefined })
+  const list = [done]
+  expect(reconcile(list, [info('a1', 'completed')], 6)).toBe(list)
+  const stopped = [run('a2', { status: 'failed', endReason: 'aborted', endedAt: 4 })]
+  expect(reconcile(stopped, [info('a2', 'waiting')], 6)).toBe(stopped)
+})

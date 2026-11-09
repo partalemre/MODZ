@@ -78,7 +78,7 @@ test('hub card: written at start, live during a turn, then what git leaves', { t
   await $.turn.start({ text: 'go', turnId: 't1' })
   await $.tool.call({ tool: 'Read', file_path: `${root}/a.ts` } as any)
   await clock.settle()
-  expect(await hub($)).toMatchObject({ detail: '1 dosya bu tur', tone: 'live' })
+  expect(await hub($)).toMatchObject({ detail: '1 dosya okundu', tone: 'live' })
   w.status = '## main\0'
   await $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
   await $.tool.call({ tool: 'Bash', command: 'touch c' } as any)
@@ -156,5 +156,5 @@ test('hub card: after a turn that committed, the commit and a clean tree', { tim
   await clock.settle()
   await $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
   await clock.settle()
-  expect(await hub($)).toMatchObject({ detail: 'commit 2222222 · temiz', tone: 'ok' })
+  expect(await hub($)).toMatchObject({ detail: 'son commit · temiz', tone: 'ok' })
 })

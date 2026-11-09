@@ -29,7 +29,7 @@ type Ui = Record<string, any>
 
 // About 8 CSS px per reported column; the crew count, the dismiss and their gaps sit beside the Svg.
 const PX_PER_COL = 8
-const BUTTONS_PX = 96
+const BUTTONS_PX = 128
 const DEFAULT_COLS = 100
 // Terminal cells: the dot and its space, the two buttons, the gaps between the row's parts.
 const TERM = { dot: 2, buttons: 12, gaps: 5, titleMin: 8, meterMin: 8, meterMax: 40, segMin: 3 } as const
@@ -126,7 +126,7 @@ async function dismiss($: EngineInterface): Promise<void> {
 function buttons(ui: Ui, $: EngineInterface, view: JobView) {
   const { Button } = ui
   return [
-    <Button key="savvy-agents" label={`×${view.crew}`} plain onPress={() => void togglePane($)} />,
+    <Button key="savvy-agents" label={t().crew(view.crew)} plain onPress={() => void togglePane($)} />,
     <Button key="savvy-dismiss" label="✕" plain role="dismiss" onPress={() => dismiss($)} />,
   ]
 }

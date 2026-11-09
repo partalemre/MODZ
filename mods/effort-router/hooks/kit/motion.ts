@@ -28,6 +28,9 @@ const RULES: Record<string, string> = {
   'm-from': `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
   // A done mark draws its stroke once (pathLength 1). At rest it is whole, so reduced motion shows it drawn.
   'm-draw': `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
+  // Live work only: the mark breathes, and a dot sends out a soft ring, until the work stops and the source changes.
+  'm-breathe': '.m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}',
+  'm-ring': '.m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}',
   // Hover inside the frame: a row's wash comes up and its tile lifts (a press stays on the native button).
   'm-wash': `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE}}svg:hover .m-wash{opacity:.12}`,
   'm-tile': `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`,

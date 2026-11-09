@@ -98,7 +98,7 @@ const reporters = [
     name: 'hud-pro',
     register(on: any) {
       on('command.run', { command: 'report' }, async ($: any, e: any, next: any) => {
-        await $.state.set({ plugin: 'hud-pro', key: 'hub' }, { pane: 'usage', detail: '5s %44 · 7g %17', tone: 'idle', at: 1 })
+        await $.state.set({ plugin: 'hud-pro', key: 'hub' }, { pane: 'usage', detail: '5 saat %44 · 7 gün %17', tone: 'idle', at: 1 })
 
         return next(e)
       })

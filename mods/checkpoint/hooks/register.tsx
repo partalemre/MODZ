@@ -44,19 +44,26 @@ function runnerOf($: EngineInterface): Run {
   return (argv, init) => $.process.run(argv, { timeoutMs: GIT_TIMEOUT_MS, ...init })
 }
 
+// A folder's repository does not move during a session, so rev-parse runs once per cwd.
+const repos = new Map<string, Repo>()
+
 async function repoOf($: EngineInterface, isProbeOnly = false): Promise<Repo | null> {
-  const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE')) || ''
   const cwd = await $.session.cwd()
+  const known = repos.get(cwd)
+  if (known !== undefined) return known
+  const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE')) || ''
   turn.bin ??= await gitBinary(runnerOf($), cwd)
   if (turn.bin === null) return null
+  const repo = await locate(runnerOf($), { cwd, home, bin: turn.bin, isProbeOnly })
+  if (repo !== null) repos.set(cwd, repo)
 
-  return locate(runnerOf($), { cwd, home, bin: turn.bin, isProbeOnly })
+  return repo
 }
 
 // The main panel's card (DESIGN.md §9), written only when what it shows changes so the panel does not redraw for nothing.
 async function writeHub($: EngineInterface, entries: CheckpointEntry[]): Promise<void> {
   const now = await $.clock.now()
-  const shown = hubOf(entries, now)
+  const shown = hubOf(entries)
   const { value } = await $.state.get(HUB)
   if (value !== undefined && value.detail === shown.detail && value.tone === shown.tone) return
   const card: HubCard = { pane: HUB_PANE, ...shown, at: now }

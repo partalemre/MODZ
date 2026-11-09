@@ -1,10 +1,10 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
 
-import { plansOf, signatureOf, STORE_KEY, withoutPlan } from './carry'
+import { plansOf, STORE_KEY, withoutPlan } from './carry'
 import { finishCard } from './finish-card'
 import type { FinishActions } from './finish-card'
-import { finishCall, heldCount, nextStep, noticeOf } from './finish'
+import { finishCall, heldCount, heldKey, nextStep, noticeOf } from './finish'
 import { resolveLight } from './kit/tokens'
 import { resolvePlan } from './match'
 import type { Plan } from './match'
@@ -91,7 +91,7 @@ async function guard($: EngineInterface, ctx: FinishCtx): Promise<void> {
 
     return
   }
-  const signature = signatureOf(plan.steps)
+  const signature = heldKey(plan)
   await update($, heldAtom, held => ({ signature, count: heldCount(held, signature) + 1 }))
   submit($, nextStep(plan))
 }

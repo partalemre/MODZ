@@ -120,16 +120,27 @@ function baseName(path: string): string {
   return path.split('/').filter(part => part !== '').pop() ?? path
 }
 
+// A tool as a person reads it: a built-in by what it does, an MCP tool ("mcp__server__do_thing") by its own
+// words ("do thing"); anything else as it is named.
+export function toolName(tool: string): string {
+  const known = words().tools[tool]
+  if (known !== undefined) return known
+  const mcp = /^mcp__.+?__(.+)$/.exec(tool)?.[1]
+
+  return mcp === undefined ? tool : mcp.replace(/[_-]+/g, ' ').trim() || tool
+}
+
 // What the tool wants, without its input: a command is never shown, a file by its name, a page by its host.
 export function toolDetail(tool: string, input: Record<string, unknown>): string {
   if (tool === 'Bash') return words().bashCommand
+  const name = toolName(tool)
   for (const key of FILE_KEYS) {
     const value = input[key]
-    if (typeof value === 'string' && value.trim() !== '') return `${tool} · ${clip(baseName(value), BODY_CHARS)}`
+    if (typeof value === 'string' && value.trim() !== '') return `${name} · ${clip(baseName(value), BODY_CHARS)}`
   }
   const host = typeof input.url === 'string' ? /^https?:\/\/([^/?#]+)/.exec(input.url)?.[1] : undefined
 
-  return host === undefined ? words().toolPermission(tool) : `${tool} · ${host}`
+  return host === undefined ? words().toolPermission(name) : `${name} · ${host}`
 }
 
 export function questionOf(input: Record<string, unknown>): string {

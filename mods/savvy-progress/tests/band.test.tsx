@@ -21,7 +21,7 @@ for (const surface of SURFACES) {
     await shows(ui, '—')
     if (surface === 'desktop') expect((await ui.find({ type: 'Svg' }))?.props?.alt).toBe('Research competitors +2: Ajanlar 0/3, —')
     else expect(await ui.find({ type: 'Text', text: /%0\b/ })).toBeUndefined()
-    expect((await ui.find({ key: 'savvy-agents' }))?.props?.label).toBe('×3')
+    expect((await ui.find({ key: 'savvy-agents' }))?.props?.label).toBe('3 ajan')
   })
 
   test(`${surface}: finished agents move the count, the last one closes it as Bitti`, async ($, on) => {

@@ -6,7 +6,7 @@ import { pick } from './lang'
 export type Words = {
   title: string
   ago: (ms: number) => string
-  hubDetail: (count: number, ago: string) => string
+  hubDetail: (count: number) => string
   headerMeta: (count: number, ago: string) => string
   newest: (ago: string) => string
   emptyLead: string
@@ -74,7 +74,7 @@ function agoTr(ms: number): string {
 const EN: Words = {
   title: 'Checkpoints',
   ago: agoEn,
-  hubDetail: (count, ago) => `${count} saved · ${ago}`,
+  hubDetail: count => `${count} saved`,
   headerMeta: (count, ago) => `${count} saved · newest ${ago}`,
   newest: ago => `newest ${ago}`,
   emptyLead: 'No checkpoints yet',
@@ -115,7 +115,7 @@ const EN: Words = {
 const TR: Words = {
   title: 'Kontrol noktaları',
   ago: agoTr,
-  hubDetail: (count, ago) => `${count} nokta · son ${ago}`,
+  hubDetail: count => `${count} kayıt`,
   headerMeta: (count, ago) => `${count} kayıt · en yenisi ${ago}`,
   newest: ago => `en yenisi ${ago}`,
   emptyLead: 'Henüz kontrol noktası yok',

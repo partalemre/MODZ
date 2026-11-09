@@ -78,11 +78,18 @@ export async function locate(run: Run, opts: { cwd: string; home: string; bin: s
   return repo
 }
 
-async function bigFiles(run: Run, repo: Repo): Promise<string[]> {
-  const argv = ['find', '.', '(', '-name', '.git', '-o', '-name', 'node_modules', ')', '-prune', '-o', '-type', 'f', '-size', BIG_FILE, '-print']
-  const out = await run(argv, { cwd: repo.root })
+// Only files git would add can bloat a snapshot: untracked and not ignored. Sizes come from
+// find on just those paths, so the walk never enters ignored trees (node_modules, build output).
+async function bigFiles(run: Run, repo: Repo, env: Record<string, string>): Promise<string[]> {
+  const listed = await run(argvOf(repo, ['ls-files', '-o', '--exclude-standard', '-z']), { cwd: repo.root, env })
+  const untracked = listed.stdout.split('\0').filter(path => path !== '')
+  const big: string[] = []
+  for (const part of chunks(untracked)) {
+    const out = await run(['find', ...part.map(path => `./${path}`), '-maxdepth', '0', '-type', 'f', '-size', BIG_FILE, '-print'], { cwd: repo.root })
+    big.push(...out.stdout.split('\n').filter(line => line !== '').map(line => line.replace(/^\.\//, '')))
+  }
 
-  return out.stdout.split('\n').filter(line => line !== '').map(line => line.replace(/^\.\//, ''))
+  return big
 }
 
 // Writes the work tree as git sees it (ignores respected, big files left out) to a tree object,
@@ -92,7 +99,7 @@ export async function writeTree(run: Run, repo: Repo): Promise<string> {
   const env = { GIT_INDEX_FILE: index }
   await run(['rm', '-f', index], { cwd: repo.root })
   if (!repo.isShadow) await run(['cp', `${repo.gitDir}/index`, index], { cwd: repo.root })
-  const big = await bigFiles(run, repo)
+  const big = await bigFiles(run, repo, env)
   await gitWith(run, repo, { args: ['add', '-A', '--', '.', ...big.map(path => `:(exclude,literal)${path}`)], init: { env } })
   for (const part of chunks(big)) {
     await gitWith(run, repo, { args: ['rm', '--cached', '-q', '--ignore-unmatch', '--', ...part.map(literal)], init: { env } })

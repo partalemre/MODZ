@@ -180,7 +180,7 @@ function onUsage(on: On) {
   on('session.measure', async ($, e, next) => {
     try {
       const fresh = toUsage(e)
-      await update($, usageAtom, () => fresh)
+      if (!isSame(await read($, usageAtom), fresh)) await update($, usageAtom, () => fresh)
       await writeHub($, fresh)
       await noticeHigh($, fresh)
       await record($, fresh)

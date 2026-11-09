@@ -61,11 +61,15 @@ function nextPingText(s: State, now: number): string {
 
 export const lastPingText = (s: State): string => (s.last ? say().lastPing(fmtTok(s.last.read), fmtUsd(s.last.usd)) : '')
 
-/** The keepwarm line: the status fallback, `/keepwarm status` and the card's keepwarm row. */
+/** Time left, the next refresh and the last one: what the keepwarm line and the card's row share. */
+const heldText = (s: State, now: number): string =>
+  `${say().left(fmtDuration(s.deadline - now))}${nextPingText(s, now)}${lastPingText(s)}`
+
+/** The keepwarm line: the status fallback and `/keepwarm status`. */
 export function statusText(s: State, now: number): string | undefined {
   if (s.stopped) return say().stopped(s.stopped)
   if (!s.deadline) return undefined
-  return `${say().left(fmtDuration(s.deadline - now))}${nextPingText(s, now)}${lastPingText(s)}`
+  return say().warmFor(heldText(s, now))
 }
 
 const coldNowText = (s: State): string => say().coldNow(fmtDuration(s.every))
@@ -107,7 +111,7 @@ function stateRow(s: State, now: number): string {
 
 function keepwarmRow(s: State, now: number): string {
   const always = s.always ? ' (always)' : ''
-  if (s.deadline) return `${say().on((statusText(s, now) ?? '').replace(/^keepwarm /, ''))}${always}`
+  if (s.deadline) return `${say().on(heldText(s, now))}${always}`
   if (s.stopped) return `${say().stoppedRow(s.stopped)}${always}`
   const window = fmtDuration(DEFAULT_WINDOW_MS)
   return s.always ? say().offUntilNext(window) : say().off(window)

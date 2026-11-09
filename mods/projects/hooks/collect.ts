@@ -61,20 +61,50 @@ async function run(io: Io, argv: readonly string[]): Promise<string> {
   return done.exitCode === 0 ? done.stdout : ''
 }
 
-export async function readGit(io: Io, root: string): Promise<Git | null> {
+type GitFacts = Omit<Git, 'dirty'> & { firstCommit: string }
+
+// Per folder, the git facts that move only when HEAD does, so a timed read runs one `git status` and not five commands.
+const gitKept = new Map<string, { stamp: string; facts: GitFacts | null }>()
+
+// shortcut: a `.git` file (a linked worktree) has no stamp and is read whole every time.
+async function gitStamp(io: Io, root: string): Promise<string> {
+  const mtimes = async (dir: string, names: readonly string[]) => (await io.list(dir).catch(() => [])).filter(entry => names.includes(entry.name)).map(entry => `${entry.name}:${entry.mtimeMs}`)
+  const stamp = [...(await mtimes(`${root}/.git`, ['HEAD', 'index'])), ...(await mtimes(`${root}/.git/logs`, ['HEAD']))]
+
+  return stamp.join(' ')
+}
+
+async function readFacts(io: Io, root: string): Promise<GitFacts | null> {
   const git = (...args: string[]) => run(io, ['git', '-C', root, ...args])
   const log = (await git('log', '-1', '--format=%h%x09%ct%x09%s')).trim()
   if (log === '') return null
   const [head = '', at = '0', ...subject] = log.split('\t')
+  // The commit a repository began with: every clone of it shares this, whatever its folder is called. With several,
+  // the oldest listed, so one clone's extra history root does not split it.
+  const firstCommit = (await git('rev-list', '--max-parents=0', 'HEAD')).trim().split('\n').at(-1) ?? ''
+  const commits = Number((await git('rev-list', '--count', 'HEAD')).trim()) || 0
 
-  return {
-    branch: (await git('branch', '--show-current')).trim(),
-    head,
-    subject: subject.join('\t'),
-    commitAt: Number(at) * 1000,
-    dirty: (await git('--no-optional-locks', 'status', '--porcelain')).split('\n').filter(line => line !== '').length,
-    commits: Number((await git('rev-list', '--count', 'HEAD')).trim()) || 0,
-  }
+  return { branch: (await git('branch', '--show-current')).trim(), head, subject: subject.join('\t'), commitAt: Number(at) * 1000, commits, firstCommit }
+}
+
+async function factsOf(io: Io, root: string): Promise<GitFacts | null> {
+  const stamp = await gitStamp(io, root)
+  const known = gitKept.get(root)
+  if (stamp !== '' && known?.stamp === stamp) return known.facts
+  const facts = await readFacts(io, root)
+  if (stamp !== '') gitKept.set(root, { stamp, facts })
+
+  return facts
+}
+
+export async function readGit(io: Io, root: string): Promise<Git | null> {
+  const facts = await factsOf(io, root)
+  if (facts === null) return null
+  const { firstCommit: _first, ...rest } = facts
+  // Edits to files move no stamp, so the working tree is always read.
+  const dirty = (await run(io, ['git', '-C', root, '--no-optional-locks', 'status', '--porcelain'])).split('\n').filter(line => line !== '').length
+
+  return { ...rest, dirty }
 }
 
 async function readLeftOff(io: Io, grown: Grown, cache: Cache): Promise<LeftOff | null> {
@@ -99,13 +129,8 @@ function bestEstimate(grown: Grown, estimates: Record<string, Estimate>): Estima
   return estimates[grown.root] ?? others[0] ?? null
 }
 
-// The commit a repository began with: every clone of it shares this, whatever its folder is called. With several, the
-// oldest listed, so one clone's extra history root does not split it.
 async function firstCommitOf(io: Io, grown: Grown): Promise<string> {
-  if (!grown.isGit) return ''
-  const roots = (await run(io, ['git', '-C', grown.root, 'rev-list', '--max-parents=0', 'HEAD'])).trim().split('\n')
-
-  return roots.at(-1) ?? ''
+  return grown.isGit ? ((await factsOf(io, grown.root))?.firstCommit ?? '') : ''
 }
 
 async function complete(io: Io, grown: Grown, spec: { plans: PlanRow[]; estimates: Record<string, Estimate>; cache: Cache }): Promise<Project> {

@@ -139,17 +139,18 @@ test('macOS Claude Code app: desktop pane draws, selects, opens with open', { ti
   expect(await texts(ui)).toContain('"seçili: ","README.md"')
   const sent = await $.prompt.submit({ text: 'what is this?', wait: false } as any)
   expect(JSON.stringify(sent)).toContain(`${root}/README.md`)
+  // Named once: a later prompt with no new pick does not carry the old selection.
+  const later = await $.prompt.submit({ text: 'and now?', wait: false } as any)
+  expect(JSON.stringify(later)).not.toContain(`${root}/README.md`)
   await ui.post({ press: `${root}/README.md` }, { in: 'rows' })
   await clock.settle()
   expect(ran).toContainEqual(['open', '--', `${root}/README.md`])
   expect(ran.some(a => a[0] === 'setsid' || a[0] === 'gio')).toBe(false)
   await $.tool.call({ tool: 'Bash', command: 'echo hi >> src/a.ts' } as any)
   await clock.settle()
-  const finds = ran.filter(a => a[0] === 'find')
-  expect(finds.length).toBeGreaterThan(0)
-  expect(finds.every(f => f.includes('-newer') && !f.includes('-newermt'))).toBe(true)
-  expect(ran.some(a => a[0] === 'touch' && a[1]?.startsWith('/var/folders/x/T/filetree-'))).toBe(true)
-  expect(ran.some(a => a[0] === 'rm')).toBe(true)
+  // Inside a repo git status names the changed files: no marker, no find over the project.
+  expect(await texts(ui)).toContain(shimmer('a.ts', 'orange'))
+  expect(ran.some(a => ['find', 'touch', 'rm'].includes(a[0] ?? ''))).toBe(false)
   await ui.unmount()
 })
 
@@ -655,7 +656,8 @@ test('unknown git verbs count as writers and read-only commands skip git work', 
   await $.tool.call({ tool: 'Bash', command: 'git clean -fd' } as any)
   await clock.settle()
   expect(statuses()).toBeGreaterThan(before)
-  expect(ran.some(a => a[0] === 'find')).toBe(true)
+  // A writer in a repo: git status names its changes, so still no find.
+  expect(ran.some(a => a[0] === 'find')).toBe(false)
   expect(await texts(ui)).not.toContain('gone.txt')
   await ui.unmount()
 })

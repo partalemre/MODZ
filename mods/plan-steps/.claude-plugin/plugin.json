@@ -9,7 +9,7 @@
     "holdFinish": {
       "type": "boolean",
       "title": "Hold the finish",
-      "description": "When an answer leaves plan steps open, ask Claude to go on by itself (at most twice per plan) before showing the card",
+      "description": "When an answer leaves plan steps open, ask Claude to go on by itself (at most twice in a row without a finished step) before showing the card",
       "default": false
     }
   }

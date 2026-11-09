@@ -34,7 +34,14 @@ type Timer = { cancel: () => void }
 
 // Session-local facts. `isSettled`: a finished plan's status line was cleared. `touchedAt`: the last
 // time the plan or the step under way moved; `quiet` re-checks the status line once that goes stale.
-const flags = { cwd: '', isSettled: false, touchedAt: 0, quiet: null as Timer | null }
+const flags = { cwd: '', isSettled: false, touchedAt: 0, quiet: null as Timer | null, status: null as string | undefined | null }
+
+// Every sync recomputes the status line; it is sent only when its words change.
+function showStatus($: EngineInterface, text: string | undefined): void {
+  if (text === flags.status) return
+  flags.status = text
+  $.ui.status(text)
+}
 
 type Ran = { deny?: unknown; isError?: unknown; result?: unknown }
 type Call = { tool: string; tool_use_id: string; agentId?: string } & Record<string, unknown>
@@ -68,7 +75,7 @@ async function sync($: EngineInterface): Promise<void> {
   const progress = plan === null ? null : progressOf(plan)
   const state = planState(plan, { now, touchedAt: flags.touchedAt })
   if (progress === null || progress.done < progress.total) flags.isSettled = false
-  $.ui.status(flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks))
+  showStatus($, flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks))
   await writeHub($, hubOf(progress, state))
 }
 
@@ -173,7 +180,7 @@ async function reset($: EngineInterface): Promise<void> {
   flags.isSettled = false
   flags.quiet?.cancel()
   flags.quiet = null
-  $.ui.status(undefined)
+  showStatus($, undefined)
   await writeHub($, hubOf(null, 'none'))
 }
 
@@ -182,6 +189,7 @@ function lifecycle(on: On): void {
     // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     flags.cwd = e.cwd.replace(/\/$/, '')
+    flags.status = null
     const plan = await currentPlan($)
     const state = planState(plan, { now: await $.clock.now(), touchedAt: flags.touchedAt })
     await writeHub($, hubOf(plan === null ? null : progressOf(plan), state))

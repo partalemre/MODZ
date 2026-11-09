@@ -40,7 +40,7 @@ const homeRef = { plugin: 'test-badge', key: 'home' } as const
 const hubRef = { plugin: 'test-badge', key: 'hub' } as const
 
 type Parse = (out: string, code: number, ctx: ParseContext) => CheckOutcome
-const flags = { isDirty: false, isRunning: false, isQueued: false, debounce: null as Timer | null, noticeId: 0, isWindows: false }
+const flags = { isDirty: false, isRunning: false, isQueued: false, debounce: null as Timer | null, noticeId: 0, isWindows: false, status: null as string | undefined | null }
 
 async function rootInfo($: EngineInterface, cwd: string): Promise<RootInfo> {
   const names = new Set((await $.fs.list(cwd)).map(entry => entry.name))
@@ -75,7 +75,11 @@ async function check($: EngineInterface, argv: string[], how: { parse: Parse; ct
 async function showStatus($: EngineInterface): Promise<void> {
   const badge = await read($, badgeAtom)
   const isShown = (await read($, enabledAtom)) && isFailing(badge)
-  $.ui.status(isShown ? badgeText(badge, await $.clock.now()) : undefined)
+  const text = isShown ? badgeText(badge, await $.clock.now()) : undefined
+  // The 15 s refresh mostly finds the same words; the status line is told only when they change.
+  if (text === flags.status) return
+  flags.status = text
+  $.ui.status(text)
 }
 
 async function notify($: EngineInterface, badge: TestBadge): Promise<void> {
@@ -206,6 +210,7 @@ function hookRuns(on: On, overrides: Overrides): void {
   on('session.start', async ($, e, next) => {
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     flags.isWindows = (await $.env.get('OS').catch(() => undefined)) === 'Windows_NT'
+    flags.status = null
     await learnCommands($, overrides).catch(() => $.ui.log('test-badge: could not look for commands', { to: 'debug' }))
     try {
       const saved = await $.store.get(STORE_KEY)

@@ -61,7 +61,7 @@ test('the hub card counts the checkpoints there at session start, and is rewritt
   const world = worldOf({ refs: refsOf(12) })
   await start($, on, world)
   const first = await hub($)
-  expect(first).toMatchObject({ pane: 'checkpoints', detail: '12 nokta · son 3 dk önce', tone: 'ok' })
+  expect(first).toMatchObject({ pane: 'checkpoints', detail: '12 kayıt', tone: 'ok' })
 
   await $.command.run({ command: 'checkpoints', args: '' })
   expect((await hub($)).at).toBe(first.at)
@@ -104,8 +104,8 @@ test('with the hub on the opened pane reports itself shown, and steps aside when
 
 test('the card and the open match are pure', () => {
   setLang('tr')
-  expect(hubOf([], 0)).toEqual({ detail: '', tone: 'idle' })
-  expect(hubOf([{ ref: 'r', commit: 'c', at: 0, label: 'x' }], 45 * 1000)).toEqual({ detail: '1 nokta · son 45 sn önce', tone: 'ok' })
+  expect(hubOf([])).toEqual({ detail: '', tone: 'idle' })
+  expect(hubOf([{ ref: 'r', commit: 'c', at: 0, label: 'x' }])).toEqual({ detail: '1 kayıt', tone: 'ok' })
   expect(isOpenFor({ pane: 'checkpoints', at: 1 }, 'checkpoints')).toBe(true)
   expect(isOpenFor({ pane: 'replay' }, 'checkpoints')).toBe(false)
   expect(isOpenFor(null, 'checkpoints')).toBe(false)

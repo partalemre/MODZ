@@ -30,7 +30,7 @@ const REFRESH_MS = 120_000
 const DEFAULT_COLUMNS = 48
 
 type Timer = { cancel: () => void }
-const kept = { paths: null as Paths | null, isReading: false, timer: null as Timer | null, platform: 'darwin' }
+const kept = { paths: null as Paths | null, isReading: false, hasReadError: false, timer: null as Timer | null, platform: 'darwin' }
 const motion = paneMotion()
 
 const why = (error: unknown): string => (error instanceof Error ? error.message : String(error))
@@ -63,7 +63,11 @@ async function writeHub($: EngineInterface, snapshot: Snapshot | null): Promise<
   const at = await $.clock.now()
   const live = snapshot === null ? 0 : withLiveNow(snapshot, at).projects.filter(project => project.isLive).length
   const detail = snapshot === null ? say.hubHint : say.hubDetail(snapshot.projects.length, live)
-  const card: HubCard = { pane: HUB_PANE, detail, tone: live > 0 ? 'live' : 'idle', at, title: say.hubTitle, hint: say.hubHint, icon: 'layers', section: 'work' }
+  const tone = live > 0 ? 'live' : 'idle'
+  // A fresh `at` alone would redraw the hub on every timed read.
+  const { value } = await $.state.get({ plugin: 'projects', key: 'hub' })
+  if (value?.detail === detail && value?.tone === tone) return
+  const card: HubCard = { pane: HUB_PANE, detail, tone, at, title: say.hubTitle, hint: say.hubHint, icon: 'layers', section: 'work' }
   await $.state.set({ plugin: 'projects', key: 'hub' }, card)
 }
 
@@ -74,20 +78,25 @@ async function publish($: EngineInterface, snapshot: Snapshot, paths: Paths): Pr
   await writeData(ioOf($), paths.own, snapshot)
 }
 
-// One read at a time; a failure keeps the last good list on screen and says what went wrong.
-async function refresh($: EngineInterface): Promise<void> {
+// One read at a time; a failure keeps the last good list on screen and says what went wrong. A timed read is quiet:
+// no "scanning" line every two minutes.
+async function refresh($: EngineInterface, isQuiet = false): Promise<void> {
   const { paths } = kept
   if (paths === null || kept.isReading) return
   kept.isReading = true
   try {
-    await update($, busyAtom, () => ({ label: 'scan', done: 0, total: 1 }))
+    if (!isQuiet) await update($, busyAtom, () => ({ label: 'scan', done: 0, total: 1 }))
     await publish($, await collect(ioOf($), paths, () => undefined), paths)
+    // Only the read's own failure: an estimate's, shown until the next estimate, stays.
+    if (kept.hasReadError) await update($, errorAtom, () => '')
+    kept.hasReadError = false
   } catch (error) {
+    kept.hasReadError = true
     await update($, errorAtom, () => why(error))
     $.ui.log(`projects: read failed (${why(error)})`, { to: 'debug' })
   } finally {
     kept.isReading = false
-    await update($, busyAtom, () => null)
+    if (!isQuiet) await update($, busyAtom, () => null)
   }
 }
 
@@ -125,7 +134,7 @@ async function openPane($: EngineInterface): Promise<void> {
     await $.state.set({ plugin: 'projects', key: 'shown' }, shownOf(HUB_PANE, await $.clock.now()))
   }
   void refresh($)
-  kept.timer ??= $.clock.every(REFRESH_MS, () => void refresh($))
+  kept.timer ??= $.clock.every(REFRESH_MS, () => void refresh($, true))
 }
 
 function actionsOf($: EngineInterface, snapshot: Snapshot | null): PaneActions {

@@ -20,7 +20,7 @@ export const EN = {
     'Or start over with /clear and a note.',
   warn: (guard: string, auto: string): string => `${guard} Sending anyway; keepwarm then keeps the cache warm for ${auto}.`,
   paid: (g: { tokens: string; usd: string; auto: string }): string =>
-    `Paid a cold write of ${g.tokens} tokens (${g.usd}). The cache stays warm for ${g.auto} so it is not paid again ` +
+    `Rewrote ${g.tokens} tokens into the cache (${g.usd}). The cache stays warm for ${g.auto} so it is not paid again ` +
     'today; /keepwarm off stops it.',
   resume: (tokens: string, usd: string): string =>
     `Resuming cold. The first message rewrites ${tokens} tokens, ≈${usd}. ` +
@@ -29,14 +29,15 @@ export const EN = {
     'held twice. Remove it, or run /cache-tax guard warn here.',
   firstTurn: ' · waiting for the first turn',
   afterCompact: ' · waiting for the first turn after compaction',
-  coldPing: (every: string): string => ` · cold now, first ping ${every} after the next turn`,
-  pingIn: (left: string): string => ` · ping in ${left}`,
-  lastPing: (read: string, usd: string): string => ` · last ping read ${read} for ${usd}`,
-  stopped: (why: string): string => `keepwarm stopped: ${why}`,
-  left: (left: string): string => `keepwarm ${left} left`,
-  coldNow: (every: string): string => `. The cache is cold now; the first ping comes ${every} after the next turn`,
-  armedCold: (span: string): string => `keepwarm on for ${span}`,
-  armed: (t: Times): string => `keepwarm on for ${t.span}: ${t.every} into every idle stretch, a ping reads the cache ` +
+  coldPing: (every: string): string => ` · cold now; first refresh ${every} after the next turn`,
+  pingIn: (left: string): string => ` · refresh in ${left}`,
+  lastPing: (read: string, usd: string): string => ` · last refresh read ${read} tokens for ${usd}`,
+  stopped: (why: string): string => `stopped keeping the cache warm: ${why}`,
+  warmFor: (rest: string): string => `keep warm: ${rest}`,
+  left: (left: string): string => `${left} left`,
+  coldNow: (every: string): string => `. The cache is cold now; the first refresh comes ${every} after the next turn`,
+  armedCold: (span: string): string => `the cache stays warm for ${span}`,
+  armed: (t: Times): string => `the cache stays warm for ${t.span}: ${t.every} into every pause, a small refresh reads it ` +
     'without rewriting it',
   always: (span: string): string =>
     `keepwarm always on: every session starts with a ${span} window; /keepwarm off turns it off for good`,

@@ -47,6 +47,11 @@ const sameWords = (a: AgentRun, info: AgentInfo): boolean =>
 
 const adopt = (a: AgentRun, info: AgentInfo): AgentRun => ({ ...a, agentId: info.id, parentId: a.parentId ?? info.parentId })
 
+// A subagent that started a command in the background ends its turn and waits for it, then works on: its turn's end is not
+// its end. Reopened when the roster says it waits or a new turn of its starts; one the person stopped stays stopped.
+export const reopen = (a: AgentRun): AgentRun =>
+  a.status === 'running' || a.endReason === 'aborted' ? a : { ...a, status: 'running', endReason: undefined, endedAt: undefined }
+
 /** The list with the roster folded in; the same array when nothing moved. */
 export function reconcile(list: AgentRun[], roster: AgentInfo[], at: number): AgentRun[] {
   let next = list
@@ -56,6 +61,7 @@ export function reconcile(list: AgentRun[], roster: AgentInfo[], at: number): Ag
     if (waiting) next = next.map(a => (a === waiting ? adopt(a, info) : a))
     else if (!known && !isEnded(info)) next = [...next, arrival(info, next, at)].slice(-MAX_RUNS)
     else if (known?.status === 'running' && isEnded(info)) next = next.map(a => (a === known ? settled(a, info, at) : a))
+    else if (known && info.status === 'waiting' && reopen(known) !== known) next = next.map(a => (a === known ? reopen(a) : a))
   }
   return next
 }

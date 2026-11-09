@@ -231,14 +231,14 @@ test('the MODZ card reads both plan windows, the 5-hour one sets its tone, a sam
   const cards = watchHub(on)
   await start($, 'desktop')
 
-  expect(cards).toEqual([expect.objectContaining({ pane: 'usage', detail: '5s %32 · 7g %91', tone: 'idle' })])
+  expect(cards).toEqual([expect.objectContaining({ pane: 'usage', detail: '5 saat %32 · 7 gün %91', tone: 'idle' })])
   await $.session.measure(MEASURE)
   expect(cards).toHaveLength(1)
   await $.session.measure(fiveAt(85))
   await $.session.measure(fiveAt(96))
   expect(cards.slice(1)).toEqual([
-    expect.objectContaining({ detail: '5s %85 · 7g %91', tone: 'warn' }),
-    expect.objectContaining({ detail: '5s %96 · 7g %91', tone: 'bad' }),
+    expect.objectContaining({ detail: '5 saat %85 · 7 gün %91', tone: 'warn' }),
+    expect.objectContaining({ detail: '5 saat %96 · 7 gün %91', tone: 'bad' }),
   ])
   expect(hubOf(null)).toEqual({ detail: '', tone: 'idle' })
 })

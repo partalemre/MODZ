@@ -303,3 +303,16 @@ test('the desktop task list (update_plan, wrap_up) is the plan, as TodoWrite is'
   await $.tool.call({ tool: 'mcp__ccd_turn__wrap_up', recap: 'Bitti.' })
   expect(lastStatus()).toBe('plan 3/3 · tamam')
 })
+
+test('a sync that leaves the status words the same does not send them again', async ($: any, on: any) => {
+  await setup($, on)
+  const plan = todos([['A', 'in_progress'], ['B', 'pending']])
+  await $.tool.call(plan)
+  const sent = statuses.length
+  await $.tool.call(plan)
+  await $.tool.call({ tool: 'Read', file_path: '/w/a.ts' })
+
+  expect(statuses.length).toBe(sent)
+  await $.tool.call(todos([['A', 'completed'], ['B', 'in_progress']]))
+  expect(statuses.length).toBe(sent + 1)
+})

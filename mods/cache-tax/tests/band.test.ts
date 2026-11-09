@@ -114,7 +114,7 @@ describe('status row', () => {
       expect((await ui.find(ROW))?.text).toMatch(/bilinmiyor.*ilk tur bekleniyor/)
       await $.turn.complete(turn())
       expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(MOSS_OF[surface])
-      expect((await ui.find(ROW))?.text).toMatch(/sıcak.*ping 50 dk sonra/)
+      expect((await ui.find(ROW))?.text).toMatch(/sıcak.*tazeleme 50 dk sonra/)
       await clock.advance(HOUR)
       expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(AMBER_OF[surface])
       expect((await ui.find(ROW))?.text).toMatch(/soğuk.*şimdi soğuk/)
@@ -187,7 +187,7 @@ describe('status row', () => {
       await $.session.start({ ...session, surface })
       await $.turn.complete(turn())
       await $.command.run(run('keepwarm', '90m'))
-      expect(w.status.at(-1)).toBe('keepwarm 1 sa 30 dk kaldı · ping 50 dk sonra')
+      expect(w.status.at(-1)).toBe('sıcak tutma: 1 sa 30 dk kaldı · tazeleme 50 dk sonra')
       expect(w.status.at(-1)).not.toMatch(/\x1b/)
       expect(w.forks.length).toBe(0)
     })
@@ -202,10 +202,10 @@ describe('status row', () => {
     const ui = await $.ui.mount({ plugin: 'cache-tax', surface: 'terminal', component: 'AbovePrompt', props: bandProps })
     await clock.advance(50 * MIN)
     expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe('success')
-    expect((await ui.find(ROW))?.text).toMatch(/son ping 200k okudu/)
+    expect((await ui.find(ROW))?.text).toMatch(/son tazeleme 200k token okudu/)
     await clock.advance(50 * MIN)
     expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(undefined)
-    expect((await ui.find(ROW))?.text).toMatch(/durdu.*önbellek zaten gitmişti/)
+    expect((await ui.find(ROW))?.text).toMatch(/durdu.*önbellek zaten soğumuştu/)
     await clock.advance(HOUR)
     expect(w.forks.length).toBe(2)
   })
@@ -246,7 +246,7 @@ describe('keepwarm survives a restart and a busy API', () => {
     await $.turn.complete(turn())
     await clock.advance(MIN)
     expect(w.forks.length).toBe(2)
-    expect((await ui.find(ROW))?.text).toMatch(/son ping 200k okudu/)
+    expect((await ui.find(ROW))?.text).toMatch(/son tazeleme 200k token okudu/)
   })
 
   test('a busy API is retried after 1, 2 and 4 minutes, then the window stops', async ($, on) => {
@@ -305,7 +305,7 @@ describe('status row visibility', () => {
     await $.turn.complete(turn())
     await $.command.run(run('keepwarm', '90m'))
     const ui = await $.ui.mount({ plugin: 'cache-tax', surface: 'terminal', component: 'AbovePrompt', props: { ...bandProps, bodyColumns: 50 } })
-    expect((await ui.find(ROW))?.text).toBe(' Önbellek · sıcak · keepwarm 1 sa 30 dk kaldı')
+    expect((await ui.find(ROW))?.text).toBe(' Önbellek · sıcak · sıcak tutma: 1 sa 30 dk kaldı')
   })
 })
 
@@ -342,7 +342,7 @@ describe('hold card', () => {
       expect(w.origins.at(-1)).toMatchObject({ kind: 'plugin', name: 'cache-tax', asUser: true })
       expect(await ui.find({ key: 'cache-tax:hold' })).toBe(undefined)
       await $.turn.complete(turn({ usage: usage({ cache_read_input_tokens: 0, cache_creation_input_tokens: 200502 }) }))
-      expect(w.logs.at(-1)).toMatch(/201k token soğuk yazım ödendi \(\$4,01\)/)
+      expect(w.logs.at(-1)).toMatch(/201k token önbelleğe baştan yazıldı \(\$4,01\)/)
     })
   }
 

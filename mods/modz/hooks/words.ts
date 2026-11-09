@@ -50,7 +50,7 @@ export function paneWords(pane: string): PaneWords {
 
 const HUB = {
   en: {
-    sections: { work: 'Work', safety: 'Safety', meter: 'Meter' } as Record<Section, string>,
+    sections: { work: 'Work', safety: 'Safety', meter: 'Meters & settings' } as Record<Section, string>,
     idleTitle: 'All quiet',
     idleLine: 'Agents, tests and plans show here when they move.',
     now: 'Now',
@@ -70,7 +70,7 @@ const HUB = {
     editLine: 'Move a row up or hide it. Hidden rows wait here.',
   },
   tr: {
-    sections: { work: 'Çalışma', safety: 'Güvence', meter: 'Ayarlar' } as Record<Section, string>,
+    sections: { work: 'Çalışma', safety: 'Güvence', meter: 'Ölçüm ve ayarlar' } as Record<Section, string>,
     idleTitle: 'Sakin',
     idleLine: 'Ajan, test ya da plan hareketlenince burada görünür.',
     now: 'Şu an',

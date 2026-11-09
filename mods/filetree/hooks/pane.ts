@@ -83,6 +83,7 @@ export async function copyPath(h: Host, id: string, how: { isAbsolute: boolean; 
 
 export async function toggle(h: Host, n: FileNode): Promise<void> {
   if (n.kind === 'dir' && !(await h.tree()).expanded.includes(n.id)) await loadDirs(h, [n.id])
+  else if (n.kind !== 'dir') mem.freshPick = n.id
   await patch(h, t => {
     const open = new Set(t.expanded)
     if (n.kind === 'dir') open.has(n.id) ? open.delete(n.id) : open.add(n.id)

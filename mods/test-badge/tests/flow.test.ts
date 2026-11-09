@@ -217,3 +217,15 @@ test('/test-badge details opens the pane', async ($: any, on: any) => {
   expect(await $.command.run({ command: 'test-badge', args: 'details' })).toMatchObject({ text: 'test-badge: ayrıntılar açıldı' })
   expect(world.opened).toEqual(['test-badge'])
 })
+
+test('the 15 s refresh tells the status line only when its words change', async ($: any, on: any) => {
+  const world = newWorld()
+  const clock = await setup($, on, world)
+  await editAndRun($, clock)
+  await clock.advance(60_000)
+  const sent = world.statuses.length
+  // Two refreshes land inside the same minute: the words change once, so they are sent once.
+  await clock.advance(30_000)
+
+  expect(world.statuses.slice(sent)).toEqual(['testler 41/42 · lint 2 hata · 1 dk önce'])
+})

@@ -1,4 +1,3 @@
-import { ago } from './pane'
 import type { CheckpointEntry, HubTone } from '../types'
 import { words } from './words'
 
@@ -9,12 +8,11 @@ export const HUB_PANE = 'checkpoints'
 
 export type HubShown = { detail: string; tone: HubTone }
 
-// "12 saved · 3m ago"; nothing to say while no checkpoint exists.
-export function hubOf(entries: CheckpointEntry[], now: number): HubShown {
-  const newest = entries[0]
-  if (newest === undefined) return { detail: '', tone: 'idle' }
+// "12 saved"; no "3m ago", since the card is written once per checkpoint and an age would go stale.
+export function hubOf(entries: CheckpointEntry[]): HubShown {
+  if (entries.length === 0) return { detail: '', tone: 'idle' }
 
-  return { detail: words().hubDetail(entries.length, ago(now - newest.at)), tone: 'ok' }
+  return { detail: words().hubDetail(entries.length), tone: 'ok' }
 }
 
 export function isOpenFor(value: unknown, pane: string): boolean {

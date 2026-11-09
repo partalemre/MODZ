@@ -57,6 +57,8 @@ async function showNotice($: EngineInterface, ping: Ping): Promise<void> {
 const others = { watcher: null as ReturnType<typeof othersWatcher> | null }
 
 async function lookAtOthers($: EngineInterface): Promise<void> {
+  // Off: the band hides the row anyway, so the sessions folder and `ps` are left alone.
+  if (!(await read($, enabledAtom))) return
   const shown = await others.watcher?.look()
   if (shown == null) return
   await update($, othersAtom, current => (JSON.stringify(current) === JSON.stringify(shown) ? current : shown))

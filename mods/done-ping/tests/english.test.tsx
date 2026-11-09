@@ -19,7 +19,7 @@ test('English: the banner, the permission ping and the app notification', async 
   await spy.clock.advance(20_000)
   await $.tool.check({ tool: 'Bash', input: { command: 'npm publish' }, tool_use_id: 'u1' })
   await spy.clock.advance(5)
-  expect(banners(spy)[1]?.slice(-4)).toEqual(['Bash command', 'Waiting for approval', 'eliti', 'Glass'])
+  expect(banners(spy)[1]?.slice(-4)).toEqual(['command permission', 'Waiting for approval', 'eliti', 'Glass'])
 })
 
 test('English: the desktop app notification', async ($, on) => {

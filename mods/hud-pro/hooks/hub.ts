@@ -1,4 +1,4 @@
-import { FIVE_HOUR, labelOf, valueText } from './format'
+import { FIVE_HOUR, longLabelOf, valueText } from './format'
 import type { HubCard, HubTone, HudUsage } from '../types'
 
 // The MODZ main panel's view of this mod (DESIGN.md §9): a one-line card under `hub`, and the
@@ -18,10 +18,10 @@ function hubTone(fivePercent: number): HubTone {
   return fivePercent >= WARN_PERCENT ? 'warn' : 'idle'
 }
 
-// "5s %44 · 7g %17"; the 5-hour window alone sets the tone, as it is the one that stops work.
+// "5 saat %44 · 7 gün %17": the long names, as a person reads them; the 5-hour window alone sets the tone, as it is the one that stops work.
 export function hubOf(usage: HudUsage | null): Pick<HubCard, 'detail' | 'tone'> {
   const gauges = HUB_GAUGES.flatMap(id => usage?.gauges.filter(gauge => gauge.id === id) ?? [])
-  const detail = gauges.map(gauge => `${labelOf(gauge.id)} ${valueText(gauge.percent)}`).join(' · ')
+  const detail = gauges.map(gauge => `${longLabelOf(gauge.id)} ${valueText(gauge.percent)}`).join(' · ')
   const five = gauges.find(gauge => gauge.id === FIVE_HOUR)?.percent ?? 0
 
   return { detail, tone: hubTone(five) }

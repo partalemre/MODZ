@@ -16,6 +16,7 @@ export function fakeFor(fake: Fake) {
     if (line.startsWith('git rev-parse --show-toplevel')) return fake.isRepo ? ok('/w\n/w/.git\n') : ok('', 128)
     if (line.startsWith('git rev-parse --git-dir')) return ok('', 128)
     if (line.startsWith('git rev-parse --verify')) return ok('head1\n')
+    if (line.startsWith('git ls-files -o')) return ok(fake.big.split('\n').filter(Boolean).map(path => path.replace(/^\.\//, '')).join('\0'))
     if (argv[0] === 'find') return ok(fake.big)
     if (line.startsWith('git write-tree')) return ok('tree1\n')
     if (line.startsWith('git commit-tree')) return ok('commit1\n')

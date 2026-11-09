@@ -47,13 +47,14 @@ test('a commit is a failure only with proof, and the reason is said plainly', ()
 
 test('hub card: live files this turn, then uncommitted work, then clean', () => {
   setLang('tr')
-  expect(hubOf({ isRunning: true, touched: 4, hasRepo: true, changed: 3 })).toEqual({ detail: '4 dosya bu tur', tone: 'live' })
+  expect(hubOf({ isRunning: true, touched: 4, hasRepo: true, changed: 3 })).toEqual({ detail: '4 dosya okundu', tone: 'live' })
   expect(hubOf({ isRunning: false, touched: 4, hasRepo: true, changed: 3 })).toEqual({ detail: '3 değişiklik commit edilmedi', tone: 'warn' })
   expect(hubOf({ isRunning: true, touched: 0, hasRepo: true, changed: 0 })).toEqual({ detail: 'temiz', tone: 'ok' })
   expect(hubOf({ isRunning: false, touched: 0, hasRepo: false, changed: 0 }).tone).toBe('idle')
   for (const n of [1, 999_999]) expect(hubOf({ isRunning: false, touched: 0, hasRepo: true, changed: n }).detail.length).toBeLessThanOrEqual(40)
   // After the turn: its commit on a clean tree, or what it edited where there is no git.
-  expect(hubOf({ isRunning: false, touched: 2, hasRepo: true, changed: 0, edited: 2, sha: 'b7d2e91c3a' })).toEqual({ detail: 'commit b7d2e91 · temiz', tone: 'ok' })
+  expect(hubOf({ isRunning: false, touched: 2, hasRepo: true, changed: 0, edited: 2, sha: 'b7d2e91c3a' })).toEqual({ detail: 'son commit · temiz', tone: 'ok' })
+  expect(hubOf({ isRunning: true, touched: 4, hasRepo: true, changed: 3, edited: 2 })).toEqual({ detail: '2 dosya değişti', tone: 'live' })
   expect(hubOf({ isRunning: false, touched: 4, hasRepo: false, changed: 0, edited: 1 })).toEqual({ detail: 'son tur 1 dosya düzenlendi', tone: 'idle' })
   expect(hubOf({ isRunning: false, touched: 3, hasRepo: false, changed: 0, edited: 0 })).toEqual({ detail: 'git deposu yok', tone: 'idle' })
   expect(hubOf({ isRunning: false, touched: 0, hasRepo: false, changed: 0, edited: 999_999 }).detail.length).toBeLessThanOrEqual(40)

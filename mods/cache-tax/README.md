@@ -67,4 +67,4 @@ The interface is English. Set `MODZ_LANG=tr` in the `env` block of `~/.claude/se
 
 ## Credits
 
-Adapted from [karanb192/cache-tax](https://github.com/karanb192/cache-tax) (v2.2.1), licensed MIT. The license file is in this folder.
+Adapted from [karanb192/cache-tax](https://github.com/karanb192/cache-tax) (v2.4.0), licensed MIT. The license file is in this folder.

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MODZ film</title>
+<style>
+/* DESIGN.md tokens, dark theme: the film shows the desktop Code tab as people see it at night. */
+:root {
+  --host: #151515; --sheet: #191917; --card: #1F1F1C; --inset: #171715; --line: #2E2E2A; --line-strong: #45443F;
+  --track: #34332F; --hi: #F0EEE8; --mid: #C2BEB4; --lo: #8E8A80;
+  --read: #7FB6E8; --read-tint: #1E2B37; --edit: #E58A5F; --edit-tint: #38251D; --edit-line: #6A3E2D;
+  --run: #B19CF3; --run-tint: #29243D; --ok: #6FC593; --ok-tint: #1B2F25; --warn: #E9B949; --warn-tint: #332D19;
+  --warn-line: #66552A; --danger: #F2727F; --danger-tint: #3B2023; --danger-line: #74343C; --plan: #E07BC0;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --serif: ui-serif, "New York", Georgia, serif;
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--host); }
+body { font: 13px/1.45 var(--sans); color: var(--mid); -webkit-font-smoothing: antialiased; font-feature-settings: "tnum"; }
+::selection { background: var(--edit-tint); color: var(--hi); }
+
+#stage { position: absolute; inset: 0; perspective: 2600px; perspective-origin: 50% 50%; overflow: hidden;
+  background: radial-gradient(120% 90% at 50% 45%, #1A1917 0%, #141413 60%, #0F0F0E 100%); }
+#world { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+#dots { position: absolute; left: -20000px; top: -20000px; width: 60000px; height: 40000px; opacity: .55;
+  background-image: radial-gradient(circle at 1px 1px, #2A2926 1.2px, transparent 1.6px); background-size: 48px 48px; }
+.obj { position: absolute; transform-origin: 0 0; }
+#overlay { position: absolute; inset: 0; pointer-events: none; }
+/* A soft floor under the captions, so a line never sits on busy UI. */
+#overlay::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 300px;
+  background: linear-gradient(to top, rgba(14,14,13,.92) 0%, rgba(14,14,13,.7) 45%, rgba(14,14,13,0) 100%); opacity: var(--scrim, 1); }
+
+/* Captions: one line, the product's own voice, set large in the system serif. */
+.cap { position: absolute; left: 0; right: 0; bottom: 92px; text-align: center; font: 600 60px/1.1 var(--serif);
+  color: var(--hi); letter-spacing: -0.02em; text-wrap: balance; text-shadow: 0 2px 18px rgba(0,0,0,.55); }
+.cap .w { display: inline-block; white-space: pre; }
+.cap em { font-style: normal; color: var(--edit); }
+
+/* Surfaces */
+.win { position: absolute; background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 28px 70px -10px rgba(0,0,0,.62), 0 8px 22px -6px rgba(0,0,0,.42); }
+.bar { height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-bottom: 1px solid var(--line);
+  color: var(--lo); font-size: 12.5px; }
+.bar i { width: 12px; height: 12px; border-radius: 50%; background: #3A3936; display: inline-block; }
+.bar .t { flex: 1; text-align: center; margin-right: 52px; }
+.pane { position: absolute; background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 28px 70px -10px rgba(0,0,0,.62), 0 8px 22px -6px rgba(0,0,0,.42); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+.h1 { font: 650 24px/1.2 var(--sans); color: var(--hi); letter-spacing: -0.01em; }
+.h2 { font: 620 17px/1.3 var(--sans); color: var(--hi); }
+.title { font: 600 14px/1.35 var(--sans); color: var(--hi); }
+.row-t { font: 560 13px/1.35 var(--sans); color: var(--hi); }
+.lbl { font: 600 12px/1.3 var(--sans); color: var(--lo); }
+.meta { font: 12px/1.35 var(--sans); color: var(--lo); }
+.mono { font-family: var(--mono); font-size: 12px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; background: var(--edit); }
+.btn { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 8px;
+  font: 600 12.5px/1 var(--sans); color: var(--hi); background: var(--track); border: 1px solid var(--line-strong); }
+.btn.primary { background: var(--hi); color: #1C1B19; border-color: var(--hi); }
+.btn.plain { background: none; border-color: transparent; color: var(--lo); }
+.btn kbd { font: 500 11px var(--mono); opacity: .55; }
+.meter { position: relative; height: 4px; border-radius: 2px; background: var(--track); overflow: hidden; }
+.meter > b { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: var(--mid); transform-origin: 0 50%; }
+.add { color: var(--ok); } .del { color: var(--danger); }
+.ic { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.px rect { fill: currentColor; }
+.crab { position: absolute; transform-origin: 50% 100%; }
+.crab svg { display: block; overflow: visible; }
+.shadow { position: absolute; border-radius: 50%; background: rgba(0,0,0,.45); filter: blur(6px); }
+.chip { position: absolute; display: flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 9px;
+  background: var(--card); border: 1px solid var(--line); font: 13px var(--mono); color: var(--mid); white-space: nowrap;
+  box-shadow: 0 14px 30px -12px rgba(0,0,0,.6); }
+.chip b { font-family: var(--sans); color: var(--hi); font-weight: 650; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="world"><div id="dots"></div></div><div id="overlay"></div></div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

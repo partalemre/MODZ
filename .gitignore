@@ -8,3 +8,5 @@ node_modules/
 .verify/
 __pycache__/
 .playwright-mcp/
+tools/film/src/assets.gen.js
+tools/film/out/

@@ -35,6 +35,8 @@ export function onTurns(on: On) {
     if (e.agentId !== undefined) return done
     await update($, liveAtom, () => false)
     const tokens = (await $.session.usage()).context.tokens
+    // An unmeasured turn adds no sample: the forecast counts only what was read.
+    if (tokens === undefined) return done
     await update($, contextTurnsAtom, turns => addTurn(turns, tokens))
 
     return done

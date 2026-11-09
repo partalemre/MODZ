@@ -162,6 +162,25 @@ for (const surface of SURFACES) {
     expect(await pane.find({ type: 'Text', text: 'Sıkıştırıldı: 152k → 38k' })).toBeDefined()
     expect(await pane.find({ key: 'compact-now' })).toBeDefined()
   })
+
+  test(`a compaction drops the kept breakdown: the next draw reads it again (${surface})`, async ($, on) => {
+    setLang('tr')
+    const clock = stubSession(on, withBreakdown())
+    await start($, surface)
+    const pane = await $.ui.mount({ ...PANE, surface })
+    await pane.redraw(PANE.props)
+    expect(breakdowns).toEqual(['summary'])
+
+    await pane.press({ key: 'compact-now' })
+    await clock.advance(1)
+    await pane.redraw(PANE.props)
+    expect(breakdowns).toEqual(['summary', 'summary'])
+
+    // The person's own /compact, not the button.
+    await $.session.compact({ trigger: 'manual', messages: [{ role: 'user', text: 'summary', toolUses: [] }] } as any)
+    await pane.redraw(PANE.props)
+    expect(breakdowns).toEqual(['summary', 'summary', 'summary'])
+  })
 }
 
 for (const surface of SURFACES) {

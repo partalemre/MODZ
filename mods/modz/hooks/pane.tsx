@@ -5,7 +5,6 @@ import { groupSvg, headSvg, rowSvg } from './draw'
 import type { Drawing } from './draw'
 import type { Cue } from './kit/motion'
 import type { Stable } from './kit/stable'
-import { upper } from './kit/lang'
 import { GROUPS } from './meta'
 import type { Group } from './meta'
 import type { Theme } from './theme'
@@ -70,7 +69,7 @@ function terminalTree(ui: Ui, view: View) {
       </Box>
       {groupsOf(view.market.mods).map(([group, list]) => (
         <Box key={`group-${group}`} flexDirection="column">
-          <Text bold dimColor>{`${upper(words.groups[group])} · ${list.length}`}</Text>
+          <Text bold dimColor>{`${words.groups[group]} · ${list.length}`}</Text>
           {list.map(mod => terminalRow(ui, mod))}
         </Box>
       ))}

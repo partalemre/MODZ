@@ -4,12 +4,12 @@
 // at their right edge, and lists the hidden rows with Show. The catalog ("Mods") is a pane of its own (register.tsx).
 import type { Drawing } from './draw'
 import type { Cue } from './kit/motion'
+import type { HubTone } from '../types'
 import type { Focus, HubRow, Section } from './hub'
-import { ROLE_OF_TONE, SECTIONS } from './hub'
+import { SECTIONS } from './hub'
 import { hubHeadSvg, hubRowSvg, sectionSvg } from './hub-draw'
 import { GLYPH } from './kit/icons'
 import { PressRow } from './kit/press'
-import { upper } from './kit/lang'
 import type { Theme } from './theme'
 import type { Stable } from './kit/stable'
 import { hubWords } from './words'
@@ -195,21 +195,27 @@ function terminalButtons(ui: Ui, view: HubView, opts: { row: HubRow; panes: stri
   return [...up, <Button key={`hide-${pane}`} label={words.hide} variant="secondary" onPress={() => view.actions.onHide({ pane, isHidden: true })} />]
 }
 
-const TONE_COLOR: Record<string, string> = { run: 'permission', ok: 'success', warn: 'warning', danger: 'error' }
+// As the desktop draws it (hub-draw.ts): the words plain unless failing; the glyph lit only for live, warn or bad.
+const GLYPH_COLOR: Partial<Record<HubTone, string>> = { live: 'claude', warn: 'warning', bad: 'error' }
+function detailText(ui: Ui, tone: HubTone, detail: string) {
+  const { Text } = ui
+
+  return tone === 'bad' ? <Text color="error" wrap="truncate">{detail}</Text> : <Text dimColor wrap="truncate">{detail}</Text>
+}
 
 function terminalRow(ui: Ui, view: HubView, opts: { row: HubRow; panes: string[] | null }) {
   const { Box, Text } = ui
   const { row } = opts
   const card = row.card
-  const role = card === null ? null : ROLE_OF_TONE[card.tone]
   const hasDetail = card !== null && card.detail !== ''
+  const glyphColor = hasDetail ? GLYPH_COLOR[card.tone] : undefined
 
   return (
     <Box key={`row-${row.entry.pane}`} flexDirection="row" columnGap={1}>
-      <Text color="claude">{GLYPH[row.entry.icon]}</Text>
+      {glyphColor === undefined ? <Text dimColor>{GLYPH[row.entry.icon]}</Text> : <Text color={glyphColor}>{GLYPH[row.entry.icon]}</Text>}
       <Text bold>{row.entry.title}</Text>
       {row.entry.badge === null ? null : <Text color="permission">{row.entry.badge}</Text>}
-      {hasDetail ? <Text color={role === null ? undefined : TONE_COLOR[role]} wrap="truncate">{card.detail}</Text> : <Text dimColor wrap="truncate">{row.entry.hint}</Text>}
+      {hasDetail ? detailText(ui, card.tone, card.detail) : <Text dimColor wrap="truncate">{row.entry.hint}</Text>}
       <Box flexGrow={1} />
       {terminalButtons(ui, view, opts)}
     </Box>
@@ -226,7 +232,7 @@ function terminalTree(ui: Ui, view: HubView) {
       <Box flexDirection="row" columnGap={2}>
         <Text color="claude" bold>MODZ</Text>
         {focus === null ? <Text dimColor>{words.idleTitle}</Text> : <Text dimColor>{`${words.now} · ${focus.row.entry.title}`}</Text>}
-        {focus === null ? null : <Text color={TONE_COLOR[ROLE_OF_TONE[focus.tone] ?? '']} wrap="truncate">{focus.row.card?.detail ?? ''}</Text>}
+        {focus === null ? null : detailText(ui, focus.tone, focus.row.card?.detail ?? '')}
         <Box flexGrow={1} />
         <Text dimColor>{view.meta}</Text>
       </Box>
@@ -236,7 +242,7 @@ function terminalTree(ui: Ui, view: HubView) {
 
         return (
           <Box key={`section-${group.key}`} flexDirection="column">
-            <Text bold dimColor>{upper(group.label)}</Text>
+            <Text bold dimColor>{group.label}</Text>
             {group.rows.map(row => terminalRow(ui, view, { row, panes }))}
           </Box>
         )

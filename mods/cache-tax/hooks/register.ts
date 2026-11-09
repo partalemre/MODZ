@@ -168,9 +168,12 @@ async function onTurnComplete($: EngineInterface, s: State, e: TurnCompleteInput
     const write = u.cache_creation_input_tokens
     const live = (await $.session.usage()).context.tokens
     s.ctx = live && live > 0 ? live : u.input_tokens + u.cache_read_input_tokens + write
-    if (isFullMiss(prev, write) || s.coldWritePending) await scoreMiss($, s, { now, write })
+    // The sum also holds each request's new tool output, so a long warm turn can write half the context in all; when
+    // the steps reported usage, a cold write is one request writing half of it again.
+    if (isFullMiss(prev, s.largestWrite ?? write) || s.coldWritePending) await scoreMiss($, s, { now, write })
   }
   s.coldWritePending = false
+  s.largestWrite = null
   if (s.always) await openAlways($, s)
   else await arm(io($), s)
 }
@@ -257,7 +260,9 @@ function wireTurns(on: On, s: State) {
       // The request writes the cache under its model; a send on another one finds it empty.
       s.cacheModel = e.model
     }
-    yield* next(e)
+    const r = yield* next(e)
+    if (!e.agentId && r.usage) s.largestWrite = Math.max(s.largestWrite ?? 0, r.usage.cache_creation_input_tokens)
+    return r
   })
 
   on('turn.complete', async ($, e, next) => {

@@ -34,11 +34,15 @@ test('desktop: the drawings cascade in as frames, live work moves, and the one-s
 test('desktop: a change redraws in place, and opening the pane again brings every drawing in again', async ($: any, on: any) => {
   await setup($, on)
   await threeRunning($)
+  const toggle = () => $.command.run({ command: 'agents-info', args: '' })
+  await toggle()
   const ui = await mount($)
   await tool($, { tool: 'Read', file_path: '/w/site/README.md', agentId: 'a1' })
   expect((await sources(ui)).some(source => !source.includes('class="m-in"'))).toBe(true)
 
   await ui.unmount()
-  await $.command.run({ command: 'agents-info', args: '' })
+  // Closed, then opened again.
+  await toggle()
+  await toggle()
   expect((await sources(await mount($))).every(source => source.includes('class="m-in"'))).toBe(true)
 })

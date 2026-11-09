@@ -12,6 +12,7 @@ import { deriveJob, percentText } from './job'
 import { isIdleMood, restingCrab } from './mood'
 import { FACES } from './mood-svg'
 import { motion } from './pane-motion'
+import { paneHeld } from './pane-held'
 import { pinned } from './pin'
 import { HUB_PANE, PANE } from './state'
 
@@ -65,6 +66,7 @@ async function reportShown($: EngineInterface, at: number): Promise<void> {
 
 // Opens the İlerleme pane, or brings it forward when it is up already; never closes it.
 async function openPane($: EngineInterface): Promise<void> {
+  paneHeld.isHeld = true
   const at = await $.clock.now()
   await update($, now, () => at)
   motion.reset()
@@ -81,6 +83,7 @@ async function noteOpenPane($: EngineInterface): Promise<void> {
   try {
     const key = openNoteKey(await $.session.id())
     const isOpen = (await $.ui.panes()).some(p => p.id === PANE)
+    paneHeld.isHeld ||= isOpen
     if (isOpen === ((await $.store.get(key)) === true)) return
     if (isOpen) await $.store.set(key, true)
     else await $.store.delete(key)
@@ -91,15 +94,22 @@ async function noteOpenPane($: EngineInterface): Promise<void> {
 
 async function restorePane($: EngineInterface): Promise<void> {
   if ((await $.store.get(openNoteKey(await $.session.id()))) !== true) return
+  await reopenPane($)
+}
+
+async function reopenPane($: EngineInterface): Promise<void> {
+  paneHeld.isHeld = true
   if ((await $.ui.panes()).some(p => p.id === PANE)) return
   const opened = await $.ui.open({ id: PANE, title: t().pane })
   if (opened.isPlaced) await reportShown($, await $.clock.now())
 }
 
+
 // /agents-info and the crew button: open the pane, or close it when it is up; true when it ends up open.
 async function togglePane($: EngineInterface): Promise<boolean> {
   const isOpen = (await $.ui.panes()).some(p => p.id === PANE)
   if (isOpen) {
+    paneHeld.isHeld = true
     await $.ui.close({ id: PANE })
     return false
   }
@@ -221,7 +231,10 @@ function onOpen(on: On): void {
   // Another pane took the MODZ panel: this one steps aside rather than wait as a tab.
   on('state.set', { plugin: 'modz', key: 'stage' }, async ($, e, next) => {
     const done = await next(e)
-    if (isOffStage(e.value, HUB_PANE)) await $.ui.close({ id: PANE })
+    if (isOffStage(e.value, HUB_PANE)) {
+      paneHeld.isHeld = true
+      await $.ui.close({ id: PANE })
+    }
     return done
   }).catch(($, e, next) => next(e))
 }

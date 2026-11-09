@@ -27,6 +27,8 @@ export const EN = {
     'If you only need the results, start with /clear and paste a summary.',
   hookTwice: 'The hook version (cache-tax@claude-code-hooks) is installed too, so a cold send is warned about or ' +
     'held twice. Remove it, or run /cache-tax guard warn here.',
+  forkWaits: 'keepwarm is on, but there is no conversation to refresh yet, so no refresh goes out until your next ' +
+    'message. Send one more message and the refreshes start.',
   firstTurn: ' · waiting for the first turn',
   afterCompact: ' · waiting for the first turn after compaction',
   coldPing: (every: string): string => ` · cold now; first refresh ${every} after the next turn`,

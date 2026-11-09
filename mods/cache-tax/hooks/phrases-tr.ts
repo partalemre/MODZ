@@ -23,6 +23,8 @@ export const TR: Phrases = {
     'Yalnızca sonuçlar gerekiyorsa /clear ile başlayıp bir özet yapıştır.',
   hookTwice: 'hook sürümü (cache-tax@claude-code-hooks) da kurulu; soğuk gönderim iki kez uyarılır ya da ' +
     'durdurulur. Onu kaldır ya da burada /cache-tax guard warn.',
+  forkWaits: 'keepwarm açık, ama henüz tazelenecek bir konuşma yok; sonraki mesajına kadar tazeleme gitmez. ' +
+    'Bir mesaj daha gönder, tazelemeler başlasın.',
   firstTurn: ' · ilk tur bekleniyor',
   afterCompact: ' · sıkıştırmadan sonraki ilk tur bekleniyor',
   coldPing: (every: string): string => ` · şimdi soğuk; ilk tazeleme sonraki turdan ${every} sonra`,

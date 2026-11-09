@@ -33,6 +33,7 @@ function io($: EngineInterface): Io {
     del: key => $.store.delete(key),
     redraw: () => $.ui.invalidate('ui.render'),
     status: text => $.ui.status(text),
+    log: text => $.ui.log(text),
   }
 }
 

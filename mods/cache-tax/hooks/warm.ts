@@ -6,7 +6,7 @@ import { MIN_PING_MS, PING_AFTER_MS, PING_PROMPT, TTL_MS, disarm, isCold, pingUs
 import type { State } from './core'
 import { fmtTok, fmtUsd } from './fmt'
 import { bandWords } from './ui-words'
-import { statusText } from './words'
+import { say, statusText } from './words'
 
 const KEY_DEADLINE = 'deadline'
 const KEY_EVERY = 'every'
@@ -27,6 +27,7 @@ export type Io = {
   del: (key: string) => Promise<unknown>
   redraw: () => void
   status: (text: string | undefined) => void
+  log: (text: string) => void
 }
 
 // The window and its ping period belong to the session that armed them, so a
@@ -103,6 +104,8 @@ function failureText(reply: ForkReply): string | null {
 /** A restarted process has nothing to fork until its first turn, and a busy API is usually brief: neither ends the window. */
 async function isRetried(io: Io, s: State, reply: Extract<ModelForkResult, { isAnswered: false }>): Promise<boolean> {
   if (reply.reason === 'nothing-to-fork') {
+    // Said once per wait: /keepwarm already answered "on", and the status row alone does not tell anyone to act.
+    if (!s.waitForTurn) io.log(say().forkWaits)
     s.waitForTurn = true
     await arm(io, s)
     return true

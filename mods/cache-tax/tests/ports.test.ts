@@ -80,3 +80,39 @@ describe('keepwarm with nothing to fork yet (upstream 1cbbc79)', () => {
     expect(w.logs).toContain('keepwarm is on, but there is no conversation to refresh yet, so no refresh goes out until your next message. Send one more message and the refreshes start.')
   })
 })
+
+describe('the countdown moves while idle (upstream 0f432b0)', () => {
+  test('without a band the status line is rewritten as the minutes pass, with no model request', async ($, on) => {
+    const clock = mock.clock(on, { now: START })
+    const w = world(on, [])
+    await $.session.start(session)
+    await $.turn.complete(turn())
+    await $.command.run(run('keepwarm', '3h'))
+    expect(w.status.at(-1)).toMatch(/^sıcak tutma: 3 sa kaldı/)
+    await clock.advance(5 * MIN)
+    expect(w.status.at(-1)).toMatch(/^sıcak tutma: 2 sa 55 dk kaldı · tazeleme 45 dk sonra/)
+    expect(w.forks.length).toBe(0)
+  })
+
+  test('the rewriting stops with the window', async ($, on) => {
+    const clock = mock.clock(on, { now: START })
+    const w = world(on, [])
+    await $.session.start(session)
+    await $.turn.complete(turn())
+    await $.command.run(run('keepwarm', '30m'))
+    await clock.advance(31 * MIN)
+    expect(w.status.at(-1)).toBe(undefined)
+    const written = w.status.length
+    await clock.advance(10 * MIN)
+    expect(w.status.length).toBe(written)
+  })
+
+  test('without a window nothing is written', async ($, on) => {
+    const clock = mock.clock(on, { now: START })
+    const w = world(on, [])
+    await $.session.start(session)
+    await $.turn.complete(turn())
+    await clock.advance(10 * MIN)
+    expect(w.status).toEqual([])
+  })
+})

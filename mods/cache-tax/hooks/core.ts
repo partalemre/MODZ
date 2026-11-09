@@ -68,6 +68,8 @@ export type State = {
   largestWrite: number | null
   misses: Miss[]
   pending: { cancel: () => void } | null
+  /** The minute timer that rewrites the status line's countdown while a window is open. */
+  refresh: { cancel: () => void } | null
   last: PingRecord | null
   stopped: string | null
   held: Held | null
@@ -82,7 +84,7 @@ export function freshState(): State {
   return {
     hasBand: false, hasStatus: false, sid: '', deadline: 0, every: PING_AFTER_MS, always: false, lastRequestAt: 0,
     lastModel: null, cacheModel: null, ctx: 0, compacted: false, guard: 'refuse', ackedAt: 0, coldWritePending: false, largestWrite: null, misses: [],
-    pending: null, last: null, stopped: null, held: null, resend: null, waitForTurn: false, retries: 0,
+    pending: null, refresh: null, last: null, stopped: null, held: null, resend: null, waitForTurn: false, retries: 0,
   }
 }
 

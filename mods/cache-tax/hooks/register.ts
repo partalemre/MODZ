@@ -27,6 +27,7 @@ function io($: EngineInterface): Io {
   return {
     now: () => $.clock.now(),
     after: (ms, fn) => $.clock.after(ms, fn),
+    every: (ms, fn) => $.clock.every(ms, fn),
     fork: prompt => $.model.fork({ prompt }),
     get: key => $.store.get(key),
     set: (key, value) => $.store.set(key, value),

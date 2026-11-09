@@ -43,7 +43,7 @@ export const progressBarSvg = (W: number, a: AgentRun, opts: { progress: Progres
   const uid = a.id.replace(/\W/g, '')
   const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`
-  const bar = `<rect data-m-fill class="${FILL[a.status] ?? 'f-edit'}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`
+  const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? 'f-edit'}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`
   const isRunning = a.status === 'running'
   const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : ''
   const label = `<text class="${LABEL[a.status] ?? 's'}" x="${barW + PCT_GAP}" y="${BAR_H / 2 + PCT_SIZE * 0.34}" font-family="${MONO}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`

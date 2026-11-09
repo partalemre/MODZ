@@ -35,7 +35,8 @@ for (const surface of SURFACES) {
     const pane = await openPane($, on, { fake: english(ONE), surface })
     const list = await shown(pane)
     expect(list).toContain('Checkpoints')
-    expect(list).toContain('1 saved · newest ')
+    expect(list).toContain(surface === 'desktop' ? 'newest ' : '1 saved · newest ')
+    if (surface === 'desktop') expect(list).toContain('1 turn saved')
     expect(list).toContain('Undo')
     expect(TURKISH_ONLY.test(list)).toBe(false)
 

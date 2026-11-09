@@ -8,6 +8,7 @@ export type Words = {
   ago: (ms: number) => string
   hubDetail: (count: number, ago: string) => string
   headerMeta: (count: number, ago: string) => string
+  newest: (ago: string) => string
   emptyLead: string
   emptyRest: string
   turnsSaved: (turns: number) => string
@@ -75,6 +76,7 @@ const EN: Words = {
   ago: agoEn,
   hubDetail: (count, ago) => `${count} saved · ${ago}`,
   headerMeta: (count, ago) => `${count} saved · newest ${ago}`,
+  newest: ago => `newest ${ago}`,
   emptyLead: 'No checkpoints yet',
   emptyRest: 'one is taken quietly before the first file write',
   turnsSaved: turns => `${plural(turns, 'turn', 'turns')} saved`,
@@ -115,6 +117,7 @@ const TR: Words = {
   ago: agoTr,
   hubDetail: (count, ago) => `${count} nokta · son ${ago}`,
   headerMeta: (count, ago) => `${count} kayıt · en yenisi ${ago}`,
+  newest: ago => `en yenisi ${ago}`,
   emptyLead: 'Henüz kontrol noktası yok',
   emptyRest: 'ilk dosya yazımından önce sessizce alınır',
   turnsSaved: turns => `${turns} tur kayıtlı`,

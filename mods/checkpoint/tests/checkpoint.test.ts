@@ -146,7 +146,9 @@ for (const surface of SURFACES) {
     const fake = newFake({ ...ONE, numstat: '12\t3\ta.ts\0' + '0\t20\tnew.ts\0' })
     const pane = await openPane($, on, { fake, surface })
     expect(await shown(pane)).toContain('Kontrol noktaları')
-    expect(await shown(pane)).toMatch(/1 kayıt · en yenisi /)
+    // Desktop's lead already reads "1 tur kayıtlı", so its meta does not count again.
+    expect(await shown(pane)).toMatch(surface === 'desktop' ? /1 tur kayıtlı[\s\S]*en yenisi / : /1 kayıt · en yenisi /)
+    if (surface === 'desktop') expect(await shown(pane)).not.toContain('1 kayıt ·')
     expect(await shown(pane)).toContain('fix login')
 
     await pane.press({ key: 'cp-undo-0' })

@@ -39,13 +39,14 @@ export const TR: Phrases = {
     'önbelleği okur, baştan yazdırmaz',
   always: (span: string): string =>
     `keepwarm hep açık: her oturum ${span} pencereyle başlar; /keepwarm off kalıcı olarak kapatır`,
-  keepwarmCommand: 'Önbelleği sıcak tut: tek başına 6 saat, 90m gibi bir süre, always, off ya da status (cache-tax)',
+  keepwarmCommand: 'Önbelleği sıcak tut: tek başına 6 saat, 90m gibi bir süre, always (ya da always 24h), off ya da status (cache-tax)',
   cacheTaxCommand: 'Önbellek durumu, soğuyunca ödenen fiyat ve bu oturumda kaç kez baştan yazıldığı; guard warn|refuse (cache-tax)',
   keepwarm: {
     off: 'keepwarm kapalı',
     offAlways: 'keepwarm kapalı; oturum başında artık kendiliğinden açılmayacak',
     usage: 'keepwarm bir süre alır (6h, 90m) ya da always, off, status',
     every: 'every 1m ile 59m arası bir süre alır',
+    alwaysUsage: 'always 1h ile 168h arası tek bir pencere alır, örneğin always 24h',
   },
   guardMode: {
     usage: '/cache-tax guard warn ya da refuse alır',

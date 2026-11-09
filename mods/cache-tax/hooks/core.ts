@@ -9,6 +9,7 @@ export const PING_AFTER_MS = 50 * MIN_MS
 export const MIN_PING_MS = MIN_MS
 export const AUTO_WARM_MS = 3 * HOUR_MS
 export const DEFAULT_WINDOW_MS = 6 * HOUR_MS
+export const MAX_ALWAYS_MS = 168 * HOUR_MS
 /** The status row also shows a warm cache this close to going cold. */
 export const SOON_MS = 10 * MIN_MS
 export const BIG_TOKENS = 50000
@@ -55,6 +56,8 @@ export type State = {
   deadline: number
   every: number
   always: boolean
+  /** The window always opens: six hours unless /keepwarm always <window> set another. */
+  alwaysMs: number
   lastRequestAt: number
   /** When the last main turn's response ended: what a resumed process's seconds_since_last_response counts from. */
   lastResponseAt: number
@@ -84,7 +87,7 @@ export type State = {
 
 export function freshState(): State {
   return {
-    hasBand: false, hasStatus: false, sid: '', deadline: 0, every: PING_AFTER_MS, always: false, lastRequestAt: 0, lastResponseAt: 0,
+    hasBand: false, hasStatus: false, sid: '', deadline: 0, every: PING_AFTER_MS, always: false, alwaysMs: DEFAULT_WINDOW_MS, lastRequestAt: 0, lastResponseAt: 0,
     lastModel: null, cacheModel: null, ctx: 0, compacted: false, guard: 'refuse', ackedAt: 0, coldWritePending: false, largestWrite: null, misses: [],
     pending: null, refresh: null, last: null, stopped: null, held: null, resend: null, waitForTurn: false, retries: 0,
   }
@@ -138,6 +141,21 @@ export function untilCold(s: State, now: number): number | null {
   if (!s.lastRequestAt || s.compacted || isCold(s, now)) return null
   return s.lastRequestAt + TTL_MS - now
 }
+
+/** The always switch as stored: true is the default window (all an older store holds), a number the window /keepwarm always <window> set. Anything else is off. */
+export function alwaysWindow(value: unknown): number {
+  if (value === true) return DEFAULT_WINDOW_MS
+  return typeof value === 'number' && value >= TTL_MS && value <= MAX_ALWAYS_MS ? value : 0
+}
+
+/** The window of `/keepwarm always [window]`; null unless it is one window from 1h to 168h and nothing after it, since a dropped trailing word would arm something other than what was typed. */
+export function parseAlways(rest: string[]): number | null {
+  if (!rest.length) return DEFAULT_WINDOW_MS
+  return rest.length === 1 ? alwaysWindow(parseDuration(rest[0] ?? '')) || null : null
+}
+
+/** How long keepwarm holds the cache after a paid cold write: the always window when always is on. */
+export const holdMs = (s: State): number => (s.always ? s.alwaysMs : AUTO_WARM_MS)
 
 export function parseDuration(text: string): number | null {
   const m = /^(?:(\d+)h)?(?:(\d+)m)?$/.exec(text.trim())

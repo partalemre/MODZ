@@ -43,13 +43,14 @@ export const EN = {
     'without rewriting it',
   always: (span: string): string =>
     `keepwarm always on: every session starts with a ${span} window; /keepwarm off turns it off for good`,
-  keepwarmCommand: 'Keep the cache warm: 6 hours on its own, a span like 90m, always, off or status (cache-tax)',
+  keepwarmCommand: 'Keep the cache warm: 6 hours on its own, a span like 90m, always (or always 24h), off or status (cache-tax)',
   cacheTaxCommand: 'Cache state, cold price and this session’s cold writes; guard warn|refuse (cache-tax)',
   keepwarm: {
     off: 'keepwarm off',
     offAlways: 'keepwarm off; it no longer turns on by itself when a session starts',
     usage: 'keepwarm takes a span (6h, 90m) or always, off, status',
     every: 'every takes a span from 1m to 59m',
+    alwaysUsage: 'always takes one window from 1h to 168h, such as always 24h',
   },
   guardMode: {
     usage: '/cache-tax guard takes warn or refuse',

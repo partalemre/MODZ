@@ -15,7 +15,7 @@ Or in one step: `/plugin install cache-tax --marketplace partalemre/MODZ`.
 
 **A held send.** If the cache has gone cold and the context is at least 50,000 tokens, your next ordinary message is held once. A card above the prompt shows when the cache went cold, what sending now would cost (the rewrite, as an upper bound) against what a warm turn would have cost, and the held message. Three buttons:
 
-- **Pay and send** (`p`) sends your held message as written and turns keepwarm on for 3 hours.
+- **Pay and send** (`p`) sends your held message as written and turns keepwarm on for 3 hours, or for the always window when always is on.
 - **Start fresh** (`n`) runs `/clear` and puts the held message back in the prompt box.
 - **Cache status** (`s`) runs `/cache-tax`.
 
@@ -33,6 +33,7 @@ Sending the same message again also pays, even from a new process (`claude -p` s
 /keepwarm               keep warm for six hours
 /keepwarm 90m           a window of your own (also 2h30m, 6h)
 /keepwarm always        any break up to six hours: each turn and /clear rolls the window on, remembered
+/keepwarm always 24h    the same with a window of your own, 1h to 168h
 /keepwarm 6h every 2m   ping every two minutes (testing knob, 1m to 59m, this window only)
 /keepwarm status        the window, next ping and last receipt
 /keepwarm off           stop, and turn always off

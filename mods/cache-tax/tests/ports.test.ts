@@ -172,3 +172,49 @@ describe('the hold survives a new process (upstream 7d933e8)', () => {
     expect(store.has('acked:S1')).toBe(false)
   })
 })
+
+describe('/keepwarm always takes a window of its own (upstream 90bcd45)', () => {
+  test('always 24h stores the window, arms it, and a turn rolls it on', async ($, on) => {
+    const clock = mock.clock(on, { now: START })
+    const store = new Map<string, unknown>()
+    const w = world(on, [], { store })
+    await $.session.start(session)
+    await $.turn.complete(turn())
+    const r = await $.command.run(run('keepwarm', 'always 24h'))
+    expect(r.text).toBe('keepwarm hep açık: her oturum 24 sa pencereyle başlar; /keepwarm off kalıcı olarak kapatır')
+    expect(store.get('always')).toBe(24 * HOUR)
+    expect(w.status.at(-1)).toMatch(/^sıcak tutma: 24 sa kaldı/)
+    await clock.advance(30 * MIN)
+    await $.turn.complete(turn())
+    expect(w.status.at(-1)).toMatch(/^sıcak tutma: 24 sa kaldı/)
+  })
+
+  test('a bare always is still stored as true; a window out of range or with more after it is refused', async ($, on) => {
+    mock.clock(on, { now: START })
+    const store = new Map<string, unknown>()
+    world(on, [], { store })
+    await $.session.start(session)
+    for (const args of ['always 30m', 'always 169h', 'always 24h now', 'always soon']) {
+      expect((await $.command.run(run('keepwarm', args))).text).toBe('always 1h ile 168h arası tek bir pencere alır, örneğin always 24h')
+    }
+    expect(store.has('always')).toBe(false)
+    await $.command.run(run('keepwarm', 'always'))
+    expect(store.get('always')).toBe(true)
+  })
+
+  test('a stored window opens at session start, and the held send promises it', async ($, on) => {
+    const clock = mock.clock(on, { now: START })
+    const store = new Map<string, unknown>()
+    const w = world(on, [], { store })
+    await $.session.start(session)
+    await $.turn.complete(turn())
+    await clock.advance(2 * HOUR)
+    store.set('always', 12 * HOUR)
+    await $.session.start(session)
+    expect(w.status.at(-1)).toMatch(/^sıcak tutma: 12 sa kaldı/)
+    const r = await $.prompt.submit(prompt('hi'))
+    expect(r.drop).toMatch(/keepwarm sonra önbelleği 12 sa tutar/)
+    const card = await $.command.run(run('cache-tax', ''))
+    expect(card.text).toMatch(/keepwarm    açık, 12 sa kaldı.*\(always\)/)
+  })
+})

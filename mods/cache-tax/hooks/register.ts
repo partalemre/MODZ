@@ -3,7 +3,7 @@ import type { EngineInterface, On, Register, TurnCompleteInput } from 'claude-co
 import { composeBand } from './band'
 import { pinned } from './pin'
 import type { Prefs } from './band'
-import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, TTL_MS, freshState, isFullMiss, parseDuration, priceOf, resetForClear } from './core'
+import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, TTL_MS, alwaysWindow, freshState, isFullMiss, parseAlways, parseDuration, priceOf, resetForClear } from './core'
 import type { State } from './core'
 import { NAME, ackedKey, onPrompt } from './guard'
 import type { GuardIo } from './guard'
@@ -38,17 +38,7 @@ function io($: EngineInterface): Io {
   }
 }
 
-function guardIo($: EngineInterface): GuardIo {
-  return {
-    now: () => $.clock.now(),
-    model: () => $.session.model(),
-    log: text => $.ui.log(text),
-    redraw: () => $.ui.invalidate('ui.render'),
-    get: key => $.store.get(key),
-    set: (key, value) => $.store.set(key, value),
-    del: key => $.store.delete(key),
-  }
-}
+const guardIo = ($: EngineInterface): GuardIo => ({ ...io($), model: () => $.session.model() })
 
 type Ctx = { s: State; prefs: Prefs; drawn: string }
 
@@ -92,8 +82,8 @@ async function readPrefs($: EngineInterface, prefs: Prefs) {
 /** A period of the cache's whole hour or more would fire only once the cache is already cold. */
 const isPingPeriod = (ms: unknown): ms is number => typeof ms === 'number' && ms >= MIN_PING_MS && ms < TTL_MS
 
-/** Always means any break up to six hours: each session start, /clear and main turn opens a fresh default window. */
-const openAlways = ($: EngineInterface, s: State): Promise<void> => startWindow(io($), s, { windowMs: DEFAULT_WINDOW_MS, every: PING_AFTER_MS })
+/** Always means any break up to its window (six hours unless set): each session start, /clear and main turn opens it afresh. */
+const openAlways = ($: EngineInterface, s: State): Promise<void> => startWindow(io($), s, { windowMs: s.alwaysMs, every: PING_AFTER_MS })
 
 async function restore($: EngineInterface, s: State, now: number) {
   await prune(io($), s, now)
@@ -102,7 +92,9 @@ async function restore($: EngineInterface, s: State, now: number) {
   s.deadline = typeof saved === 'number' && saved > now ? saved : 0
   s.every = isPingPeriod(savedEvery) ? savedEvery : PING_AFTER_MS
   s.guard = (await $.store.get(KEY_GUARD)) === 'warn' ? 'warn' : 'refuse'
-  s.always = (await $.store.get(KEY_ALWAYS)) === true
+  const stored = alwaysWindow(await $.store.get(KEY_ALWAYS))
+  s.always = stored > 0
+  if (stored) s.alwaysMs = stored
   if (s.always) await openAlways($, s)
   const usage = await $.session.usage()
   if (usage.context.tokens) s.ctx = usage.context.tokens
@@ -116,6 +108,17 @@ async function registerCommands($: EngineInterface) {
   if ((await $.command.list()).some(cmd => cmd.name === 'cache-tax:status')) $.ui.log(say().hookTwice)
 }
 
+async function onAlways($: EngineInterface, s: State, { words, now }: { words: string[]; now: number }): Promise<string> {
+  const windowMs = parseAlways(words.slice(1))
+  if (!windowMs) return say().keepwarm.alwaysUsage
+  s.always = true
+  s.alwaysMs = windowMs
+  // The default window is still stored as true, which every version reads.
+  await $.store.set(KEY_ALWAYS, windowMs === DEFAULT_WINDOW_MS ? true : windowMs)
+  await openAlways($, s)
+  return alwaysText(s, now)
+}
+
 async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<string> {
   const words = args.trim().split(/\s+/).filter(Boolean)
   const now = await $.clock.now()
@@ -124,12 +127,7 @@ async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<s
     await stopForGood(io($), s)
     return wasAlways ? say().keepwarm.offAlways : say().keepwarm.off
   }
-  if (words[0] === 'always') {
-    s.always = true
-    await $.store.set(KEY_ALWAYS, true)
-    await openAlways($, s)
-    return alwaysText(s, now)
-  }
+  if (words[0] === 'always') return onAlways($, s, { words, now })
   if (words[0] === 'status') return statusText(s, now) ?? say().keepwarm.off
   const window = words.length ? parseDuration(words[0] ?? '') : DEFAULT_WINDOW_MS
   // A zero window would be off as soon as it was on.
@@ -188,9 +186,10 @@ async function scoreMiss($: EngineInterface, s: State, { now, write }: { now: nu
   const price = priceOf(s.lastModel, s.ctx)
   const usd = price ? write * price[1] / 1e6 : null
   s.misses.push({ at: now, tokens: write, usd })
-  if (s.deadline >= now + AUTO_WARM_MS) return
+  // With always on, its own window, which the turn opens next, governs renewal, shorter than three hours or not.
+  if (s.always || s.deadline >= now + AUTO_WARM_MS) return
   await startWindow(io($), s, { windowMs: AUTO_WARM_MS, every: s.every })
-  $.ui.log(paidText(write, usd))
+  $.ui.log(paidText(s, write, usd))
 }
 
 function wireBand(on: On, c: Ctx) {

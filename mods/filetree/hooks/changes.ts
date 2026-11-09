@@ -58,11 +58,10 @@ export async function changedSince(h: Host, scan: Scan): Promise<string[]> {
   }
 }
 
-// On Windows there is no `find`: git's own list of changed files, by their mtimes, stands in for it.
+// Inside a repo git status already lists what changed: those files, by their mtimes, need no `find` over the project.
 export async function changedInRepo(h: Host, scan: Scan, before: Record<string, Change>): Promise<{ hits: string[]; gone: string[] }> {
   const { root, since } = scan
-  if (since.os !== 'win32') return { hits: await changedSince(h, { root, since, depth: 0, ignored: scan.ignored ?? [] }), gone: [] }
-  if (mem.dirty.root !== root) return { hits: [], gone: [] }
+  if (mem.dirty.root !== root) return { hits: since.os === 'win32' ? [] : await changedSince(h, { root, since, depth: 0, ignored: scan.ignored ?? [] }), gone: [] }
   const entries = Object.entries(mem.dirty.files)
   const gone = entries.filter(([p, c]) => c === 'del' && before[p] !== 'del').map(([p]) => p)
   const live = entries.filter(([, c]) => c !== 'del').map(([p]) => p)

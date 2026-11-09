@@ -16,7 +16,7 @@ export const TR: Phrases = {
     'Ya da /clear ile bir notla baştan başla.',
   warn: (guard: string, auto: string): string => `${guard} Yine de gönderiliyor; keepwarm sonra önbelleği ${auto} tutar.`,
   paid: (g: { tokens: string; usd: string; auto: string }): string =>
-    `${g.tokens} token soğuk yazım ödendi (${g.usd}). Bugün yeniden ödenmesin diye önbellek ${g.auto} ` +
+    `${g.tokens} token önbelleğe baştan yazıldı (${g.usd}). Bugün yeniden ödenmesin diye önbellek ${g.auto} ` +
     'sıcak tutuluyor; durdurmak için /keepwarm off.',
   resume: (tokens: string, usd: string): string =>
     `soğuk devam ediliyor. İlk mesaj ${tokens} token'ı yeniden yazar, yaklaşık ${usd}. ` +
@@ -25,19 +25,20 @@ export const TR: Phrases = {
     'durdurulur. Onu kaldır ya da burada /cache-tax guard warn.',
   firstTurn: ' · ilk tur bekleniyor',
   afterCompact: ' · sıkıştırmadan sonraki ilk tur bekleniyor',
-  coldPing: (every: string): string => ` · şimdi soğuk, ilk ping sonraki turdan ${every} sonra`,
-  pingIn: (left: string): string => ` · ping ${left} sonra`,
-  lastPing: (read: string, usd: string): string => ` · son ping ${read} okudu ${usd}`,
-  stopped: (why: string): string => `keepwarm durdu: ${why}`,
-  left: (left: string): string => `keepwarm ${left} kaldı`,
-  coldNow: (every: string): string => `. Önbellek şu an soğuk; ilk ping sonraki turdan ${every} sonra gelir`,
-  armedCold: (span: string): string => `keepwarm ${span} açık`,
-  armed: (t: Times): string => `keepwarm ${t.span} açık: her boşta kalışın ${t.every} sonrasında bir ping ` +
-    'önbelleği okur, yeniden yazdırmaz',
+  coldPing: (every: string): string => ` · şimdi soğuk; ilk tazeleme sonraki turdan ${every} sonra`,
+  pingIn: (left: string): string => ` · tazeleme ${left} sonra`,
+  lastPing: (read: string, usd: string): string => ` · son tazeleme ${read} token okudu, ${usd}`,
+  stopped: (why: string): string => `sıcak tutma durdu: ${why}`,
+  warmFor: (rest: string): string => `sıcak tutma: ${rest}`,
+  left: (left: string): string => `${left} kaldı`,
+  coldNow: (every: string): string => `. Önbellek şu an soğuk; ilk tazeleme sonraki turdan ${every} sonra yapılır`,
+  armedCold: (span: string): string => `önbellek ${span} sıcak tutulacak`,
+  armed: (t: Times): string => `önbellek ${t.span} sıcak tutulacak: her duraklamada ${t.every} sonra küçük bir tazeleme ` +
+    'önbelleği okur, baştan yazdırmaz',
   always: (span: string): string =>
     `keepwarm hep açık: her oturum ${span} pencereyle başlar; /keepwarm off kalıcı olarak kapatır`,
   keepwarmCommand: 'Önbelleği sıcak tut: tek başına 6 saat, 90m gibi bir süre, always, off ya da status (cache-tax)',
-  cacheTaxCommand: 'Önbellek durumu, soğuk fiyatı ve bu oturumun soğuk yazımları; guard warn|refuse (cache-tax)',
+  cacheTaxCommand: 'Önbellek durumu, soğuyunca ödenen fiyat ve bu oturumda kaç kez baştan yazıldığı; guard warn|refuse (cache-tax)',
   keepwarm: {
     off: 'keepwarm kapalı',
     offAlways: 'keepwarm kapalı; oturum başında artık kendiliğinden açılmayacak',
@@ -62,8 +63,8 @@ export const TR: Phrases = {
   offUntilNext: (span: string): string => `sonraki oturum başına dek kapalı, sonra ${span} açılır (always)`,
   off: (span: string): string => `kapalı (/keepwarm ile ${span} aç)`,
   even: (pings: number, t: Times): string =>
-    `okuma fiyatıyla en fazla ${pings} ping bir soğuk yazıma eder; ${t.every} başına bir pingle yaklaşık ${t.span} boşta`,
+    `${pings} tazeleme, önbelleği baştan yazmakla aynı tutar; ${t.every} arayla tazelersen yaklaşık ${t.span} boşta kalabilirsin`,
   guardRefuse: 'bir kez durdur (/cache-tax guard warn ile yalnızca fiyat göster)',
   guardWarn: 'yalnızca uyar (/cache-tax guard refuse ile bir kez durdur)',
-  session: (count: number, usd: string): string => `${count} soğuk yazım ödendi, ${usd}`,
+  session: (count: number, usd: string): string => `önbellek ${count} kez baştan yazıldı, ${usd}`,
 }

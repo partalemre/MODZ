@@ -99,6 +99,8 @@ export type AgentRun = {
   files?: TouchedFile[]
   /** When it was last heard from: a tool call opened or closed, a model request answered. */
   heardAt?: number
+  /** When its model request now in flight went out; unset between requests. */
+  stepAt?: number
 }
 
 /** The agents the main loop launched for the current request. */

@@ -32,6 +32,8 @@ export const mem = {
   home: '',
   dirty: { root: '', files: {} } as { root: string; files: Record<string, Change> },
   lastRoot: '',
+  // The file picked in the tree since the last prompt: the next prompt names it once.
+  freshPick: '',
   sizeDefault: false,
   sizeEpoch: 0,
   sizeQueue: [] as string[],

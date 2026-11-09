@@ -21,6 +21,9 @@ test('a snapshot goes through a private index and a checkpoint ref, never the re
   const add = fake.calls.find(call => call.argv[1] === 'add')!
   expect(add.env.GIT_INDEX_FILE).toBe('/w/.git/checkpoint.index')
   expect(add.argv).toContain(':(exclude,literal)assets/video.mp4')
+  // Sizes are checked only on what git would add (untracked, not ignored), never by a walk of the whole tree.
+  expect(lines(fake)).toContain('git ls-files -o --exclude-standard -z')
+  expect(lines(fake)).toContain('find ./assets/video.mp4 -maxdepth 0 -type f -size +5M -print')
   expect(fake.calls.find(call => call.argv[1] === 'write-tree')!.env.GIT_INDEX_FILE).toBe('/w/.git/checkpoint.index')
   expect(lines(fake)).toContain('git commit-tree tree1 -p head1 -m fix the bug')
   expect(lines(fake)).toContain('git update-ref refs/checkpoints/s1/100 commit1')
@@ -85,6 +88,18 @@ test('the first write of a turn takes one snapshot; later writes and other tools
   await $.tool.call({ tool: 'Edit', file_path: '/w/a.ts', old_string: 'x', new_string: 'y' })
   await $.tool.call({ tool: 'Write', file_path: '/w/b.ts', content: 'z' })
   expect(commits(fake)).toEqual(['git commit-tree tree1 -p head1 -m add a feature'])
+})
+
+test('the repository is looked up once per folder, not again on every snapshot', async ($: any, on: any) => {
+  const fake = newFake()
+  stub(on, fake)
+  await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/w' })
+  for (const text of ['one', 'two']) {
+    await $.prompt.submit({ text, ...PROMPT })
+    await $.tool.call({ tool: 'Write', file_path: '/w/a.ts', content: text })
+  }
+  expect(commits(fake)).toHaveLength(2)
+  expect(lines(fake).filter(line => line.startsWith('git rev-parse --show-toplevel')).length).toBeLessThanOrEqual(1)
 })
 
 test('zero tokens: the prompt, tool results and commands reach the model untouched, and no row is appended', async ($: any, on: any) => {

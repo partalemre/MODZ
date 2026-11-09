@@ -77,6 +77,18 @@ async function skillLinks($: EngineInterface): Promise<(name: string) => Promise
 
 // A catalog that cannot be read is an empty one: the hub still draws (the engine closes a pane whose drawing
 // throws, and the person would lose the way back to every other pane).
+// Every card a mod writes redraws the hub; the catalog (some twenty files, settings and links) is read again only
+// after MARKET_TTL_MS, so a busy session does not reread it on each redraw. The catalog pane always reads it fresh.
+const MARKET_TTL_MS = 15_000
+let marketKept: { at: number; market: Promise<Market> } | null = null
+
+function marketSoon($: EngineInterface): Promise<Market> {
+  const now = Date.now()
+  if (marketKept === null || now - marketKept.at > MARKET_TTL_MS) marketKept = { at: now, market: marketOf($) }
+
+  return marketKept.market
+}
+
 async function marketOf($: EngineInterface): Promise<Market> {
   try {
     const stat = await $.fs.stat($.plugin.root, { resolve: true }).catch(() => undefined)
@@ -300,7 +312,7 @@ function hubHooks(on: On, options: Options): void {
 function paneHooks(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const ui = $.ui.resolve(e)
-    const market = await marketOf($)
+    const market = await marketSoon($)
     const theme = await themeNow($)
     const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS
     const [cards, layout, isEditing] = [await read($, cardsAtom), await read($, layoutAtom), await read($, editingAtom)]
@@ -323,7 +335,10 @@ function paneHooks(on: On): void {
 
     const onHome = () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not be opened: ${String(cause)}`, { to: 'debug' }))
 
-    return pinned(e, modzTree(ui, { market: await marketOf($), surface: e.surface, columns, theme: await themeNow($), onHome, stable: catalogDrawings }))
+    const market = await marketOf($)
+    marketKept = { at: Date.now(), market: Promise.resolve(market) }
+
+    return pinned(e, modzTree(ui, { market, surface: e.surface, columns, theme: await themeNow($), onHome, stable: catalogDrawings }))
   })
 }
 

@@ -107,6 +107,16 @@ test('strict mode goes on by itself twice per plan, then shows the card', { opti
   expect(await drawnText(band)).toContain('2 of 3 steps still open')
 })
 
+test('strict mode keeps going while steps get done', { options: { holdFinish: true } }, async ($: any, on: any) => {
+  await world($, on)
+  const band = await mountBand($, 'terminal')
+  await turn($, () => $.tool.call(UNDER_WAY))
+  await turn($, () => $.tool.call(UNDER_WAY))
+  await turn($, () => $.tool.call(todos([['Write the types', 'completed'], ['Draw the band', 'completed'], ['Write the README', 'in_progress']])))
+  expect(seen.submitted).toHaveLength(3)
+  expect(await drawnText(band)).not.toContain('still open')
+})
+
 test('without the setting nothing is submitted on its own', async ($: any, on: any) => {
   await world($, on)
   await turn($, () => $.tool.call(UNDER_WAY))

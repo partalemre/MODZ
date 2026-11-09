@@ -96,7 +96,7 @@ If both a plan document and a task list exist, the document's steps lead and the
 
 ## Settings
 
-- **Hold the finish** (`holdFinish`, off by default). When an answer leaves steps open, the mod asks Claude to go on by itself instead of showing the card, at most 2 times per plan; after that the card shows as usual. This sends prompts without a press, so it is opt-in. Set it in the plugin's options (`/plugin`), or under `pluginConfigs` in `settings.json`.
+- **Hold the finish** (`holdFinish`, off by default). When an answer leaves steps open, the mod asks Claude to go on by itself instead of showing the card, at most 2 times in a row without a step getting done (each finished step starts the count again); after that the card shows as usual. This sends prompts without a press, so it is opt-in. Set it in the plugin's options (`/plugin`), or under `pluginConfigs` in `settings.json`.
 
 Makes no model calls. The only thing it adds to the context is the carried-plan section above: at most 600 characters (about 150 input tokens) on each request while it rides, after a compaction, a `/clear` or a new session with an open plan; nothing otherwise. With **Hold the finish** on, each automatic continue is one more turn. Its only timers are a 30-second tick while the pane is open and one 30-minute timer that takes a quiet plan off the status line. The only file reads are re-reads of markdown files Claude has just read or written; the only writes are the saved plan in the plugin's store.
 

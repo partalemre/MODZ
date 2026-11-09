@@ -77,9 +77,8 @@ test('/checkpoint off says so in English', async ($: any, on: any) => {
   expect(fake.asked).toEqual(['toast:checkpoint off'])
 })
 
-test('the hub line reads like the film', () => {
+test('the hub line counts checkpoints and carries no age that would go stale', () => {
   setLang('en')
   const entries = Array.from({ length: 13 }, (_, i) => ({ ref: `r${i}`, commit: `c${i}`, at: 0, label: 'x' }))
-  expect(hubOf(entries, 30 * 1000).detail).toBe('13 saved · just now')
-  expect(hubOf(entries, 41 * 60 * 1000).detail).toBe('13 saved · 41m ago')
+  expect(hubOf(entries).detail).toBe('13 saved')
 })

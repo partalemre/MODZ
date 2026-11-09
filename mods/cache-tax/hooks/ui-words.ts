@@ -29,14 +29,14 @@ const EN = {
   nextUpTo: (usd: string): string => `next message up to ${usd}`,
   goesCold: (left: string): string => `goes cold in ${left}`,
   keepWarm: 'keep it warm with /keepwarm',
-  noPing: 'the engine did not send the ping: either the snapshot was cold or the API call failed',
+  noPing: 'could not keep the cache warm: it had already gone cold, or Claude could not be reached',
   nothingToFork: 'no conversation to warm yet',
-  apiError: (status: string): string => `the API call failed${status}`,
-  aborted: 'the ping was cut off',
-  noText: 'the ping returned no text',
-  pingFailed: (why: string): string => `ping failed: ${why}`,
+  apiError: (status: string): string => `Claude could not be reached${status}`,
+  aborted: 'the refresh was cut off',
+  noText: 'the refresh got no reply',
+  pingFailed: (why: string): string => `the refresh failed: ${why}`,
   gone: (g: { read: string; wrote: string; usd: string }): string =>
-    `ping read ${g.read} tokens, wrote ${g.wrote} tokens (${g.usd}); the cache was already gone`,
+    `the refresh read ${g.read} tokens and rewrote ${g.wrote} tokens (${g.usd}); the cache had already gone cold`,
 }
 
 const TR: typeof EN = {
@@ -63,14 +63,14 @@ const TR: typeof EN = {
   nextUpTo: (usd: string): string => `sonraki mesaj en fazla ${usd}`,
   goesCold: (left: string): string => `${left} içinde soğuyacak`,
   keepWarm: '/keepwarm ile sıcak tut',
-  noPing: 'motor pingi göndermedi: ya anlık görüntü soğuktu ya da API çağrısı başarısız oldu',
-  nothingToFork: 'ısıtılacak konuşma henüz yok',
-  apiError: (status: string): string => `API çağrısı başarısız${status}`,
-  aborted: 'ping yarıda kesildi',
-  noText: 'ping metin döndürmedi',
-  pingFailed: (why: string): string => `ping başarısız: ${why}`,
+  noPing: 'önbellek sıcak tutulamadı: ya zaten soğumuştu ya da Claude\'a ulaşılamadı',
+  nothingToFork: 'sıcak tutulacak konuşma henüz yok',
+  apiError: (status: string): string => `Claude'a ulaşılamadı${status}`,
+  aborted: 'tazeleme yarıda kesildi',
+  noText: 'tazeleme yanıt almadı',
+  pingFailed: (why: string): string => `tazeleme başarısız: ${why}`,
   gone: (g: { read: string; wrote: string; usd: string }): string =>
-    `ping ${g.read} token okudu, ${g.wrote} token yazdı (${g.usd}); önbellek zaten gitmişti`,
+    `tazeleme ${g.read} token okudu, ${g.wrote} token baştan yazdı (${g.usd}); önbellek zaten soğumuştu`,
 }
 
 export const bandWords = (): typeof EN => pick({ en: EN, tr: TR })

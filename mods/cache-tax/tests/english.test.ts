@@ -66,8 +66,8 @@ describe('in English', () => {
     await $.turn.complete(turn())
 
     expect((await $.command.run(run('keepwarm', '90m')))?.text).toBe(
-      'keepwarm on for 1h 30m: 50m into every idle stretch, a ping reads the cache without rewriting it')
-    expect((await $.command.run(run('keepwarm', 'status')))?.text).toBe('keepwarm 1h 30m left · ping in 50m')
+      'the cache stays warm for 1h 30m: 50m into every pause, a small refresh reads it without rewriting it')
+    expect((await $.command.run(run('keepwarm', 'status')))?.text).toBe('keep warm: 1h 30m left · refresh in 50m')
     expect((await $.command.run(run('keepwarm', 'soon')))?.text).toBe('keepwarm takes a span (6h, 90m) or always, off, status')
     expect((await $.command.run(run('keepwarm', 'off')))?.text).toBe('keepwarm off')
     expect((await $.command.run(run('cache-tax', 'guard warn')))?.text).toBe('guard: warn only. A cold send goes through with its price shown')

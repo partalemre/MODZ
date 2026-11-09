@@ -32,7 +32,8 @@ export async function beforeCall(h: Host, e: Args<'tool.call'>): Promise<Call> {
   const cwd = e.tool === 'Bash' ? await cwdOf(h) : ''
   const actions = gitActions(command)
   const quiet = !actions.length && readOnly(command)
-  const since = await sinceNow(h, e.tool === 'Bash' && !quiet)
+  // In a repo the scan reads git status, not `find -newer`, so no marker file is needed.
+  const since = await sinceNow(h, e.tool === 'Bash' && !quiet && !(await h.tree()).top)
   const pending = actions.length ? await pendingOf(h, { command, actions, cwd: e.agentId ? '' : cwd }) : null
   return { tool: e.tool, command, cwd, file: fileOf(e), actions, quiet, since, pending }
 }

@@ -57,15 +57,17 @@ const HUB_CSS = [
   '@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}',
 ].join('')
 
-const doc = (spec: { width: number; height: number; theme: Theme; body: string }) => svgDoc({ ...spec, css: HUB_CSS })
+// Each drawing carries the motion rules its body uses (the entrance, a live mark's breath), reduced motion last.
+const doc = (spec: { width: number; height: number; theme: Theme; body: string }) => svgDoc({ ...spec, css: motionCss(spec.body) || HUB_CSS })
 
-type Value = { text: string; ink: string }
+type Value = { text: string; ink: string; isLive: boolean }
+const LIVE_DOT = { r: 3, gap: 9 }
 
 // What the right edge says: the card's words, plain unless failing. "ok" and "idle" are just information.
 function valueOf(card: HubCard | null): Value | null {
   if (card === null || card.detail === '') return null
 
-  return { text: card.detail, ink: card.tone === 'bad' ? 'fg-danger' : 'lo' }
+  return { text: card.detail, ink: card.tone === 'bad' ? 'fg-danger' : 'lo', isLive: card.tone === 'live' }
 }
 
 // The glyph's paint: the state worth a glance, else the quiet ink.
@@ -99,9 +101,14 @@ export function sectionSvg(spec: { width: number; theme: Theme; label: string; c
   return { source: doc({ width: spec.width, height: z.section, theme: spec.theme, body: entering(body, spec.cue, 'fade') }), alt: spec.label, height: z.section }
 }
 
+// A row whose work is running breathes its glyph, so live work is seen at a glance without reading.
 function rowIcon(row: HubRow, z: Sizes): string {
-  return pixelGlyph(row.entry.icon, { x: z.inset, y: (z.row - z.icon) / 2, box: z.icon, ...z.glyph, className: glyphInk(row.card) })
+  const glyph = pixelGlyph(row.entry.icon, { x: z.inset, y: (z.row - z.icon) / 2, box: z.icon, ...z.glyph, className: glyphInk(row.card) })
+
+  return isLive(row.card) ? `<g class="m-breathe">${glyph}</g>` : glyph
 }
+
+const isLive = (card: HubCard | null): boolean => card !== null && card.detail !== '' && card.tone === 'live'
 
 // The title and, after it, a lowercase word such as "beta" in the quiet ink: a tag, not a pill.
 function titleOf(row: HubRow, z: Sizes): { svg: string; end: number } {
@@ -141,7 +148,14 @@ function valueSvg(value: Value | null, room: { from: number; to: number; z: Size
   const text = shortValue(value.text, room.to - room.from, room.z.value)
   if (text === '') return ''
 
-  return `<text x="${room.to}" y="${room.z.baseline}" text-anchor="end" style="font-size:${room.z.value.size}px;font-variant-numeric:tabular-nums" class="${value.ink}">${esc(text)}</text>`
+  const words = `<text x="${room.to}" y="${room.z.baseline}" text-anchor="end" style="font-size:${room.z.value.size}px;font-variant-numeric:tabular-nums" class="${value.ink}">${esc(text)}</text>`
+  if (!value.isLive) return words
+  // Live work: a clay dot before the words sends out a soft ring while the work runs.
+  const x = room.to - measure(text, room.z.value.size, room.z.value.weight) - LIVE_DOT.gap
+  const y = room.z.row / 2
+  const dot = (cls: string) => `<circle cx="${x}" cy="${y}" r="${LIVE_DOT.r}" class="fg-edit${cls}"/>`
+
+  return dot(' m-ring') + dot('') + words
 }
 
 // `buttonRoom`: the width native buttons take over the row's right edge while customizing, the value then left out.
@@ -153,9 +167,10 @@ export function hubRowSvg(spec: { width: number; theme: Theme; row: HubRow; butt
   const body = [
     rowIcon(row, z),
     title.svg,
-    valueSvg(value, { from: title.end + VALUE_GAP, to: width - z.inset, z }),
+    valueSvg(value, { from: title.end + VALUE_GAP + (value?.isLive ? LIVE_DOT.gap + LIVE_DOT.r * 2 : 0), to: width - z.inset, z }),
   ].join('')
   const alt = `${row.entry.title}${row.entry.badge === null ? '' : ` (${row.entry.badge})`}${value === null ? '' : `: ${value.text}`}`
 
   return { source: doc({ width, height: z.row, theme: spec.theme, body: entering(body, spec.cue) }), alt, height: z.row }
 }
+

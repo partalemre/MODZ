@@ -81,7 +81,7 @@ const EN = {
   hubEditedLast: (n: number) => `${files(n)} edited last turn`,
   hubNoRepo: 'no git repo',
   hubUncommitted: (n: number) => `${count(n, 'uncommitted change', 'uncommitted changes')}`,
-  hubCommit: (sha: string) => `commit ${sha} · clean`,
+  hubCommit: 'last commit · clean',
   hubClean: 'clean',
 }
 
@@ -155,11 +155,11 @@ const TR: Words = {
   costTurn: ['Bu turda okunanlar ', ' token'],
   costNone: 'Bu turda okuma yok',
   costSession: n => `oturum ${n}`,
-  hubLive: touched => `${touched} dosya bu tur`,
+  hubLive: (touched, edited) => (edited > 0 ? `${edited} dosya değişti` : `${touched} dosya okundu`),
   hubEditedLast: n => `son tur ${n} dosya düzenlendi`,
   hubNoRepo: 'git deposu yok',
   hubUncommitted: n => `${n} değişiklik commit edilmedi`,
-  hubCommit: sha => `commit ${sha} · temiz`,
+  hubCommit: 'son commit · temiz',
   hubClean: 'temiz',
 }
 

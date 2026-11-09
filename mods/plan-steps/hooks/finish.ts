@@ -3,7 +3,7 @@ import type { Plan } from './match'
 import type { FinishNotice, HeldFinish } from '../types'
 
 // The finish guard: an answer that ends a turn which worked on the plan, while steps are still open,
-// gets a card (or, in strict mode, up to MAX_AUTO_CONTINUES prompts to go on before the card).
+// gets a card (or, in strict mode, prompts to go on: up to MAX_AUTO_CONTINUES in a row without a step done, then the card).
 
 export const MAX_AUTO_CONTINUES = 2
 
@@ -29,6 +29,9 @@ function isGuarded(facts: FinishFacts): facts is FinishFacts & { plan: Plan } {
   return facts.dismissed !== signatureOf(plan.steps)
 }
 
+// Counted per plan and steps done, so each finished step earns fresh pushes; a stuck plan still stops.
+export const heldKey = (plan: Plan) => `${signatureOf(plan.steps)}:${plan.steps.length - openSteps(plan).length}`
+
 export function heldCount(held: HeldFinish | null, signature: string): number {
   return held !== null && held.signature === signature ? held.count : 0
 }
@@ -37,7 +40,7 @@ export function finishCall(facts: FinishFacts): FinishCall {
   if (!isGuarded(facts)) return 'none'
   if (!facts.isStrict) return 'card'
 
-  return heldCount(facts.held, signatureOf(facts.plan.steps)) < MAX_AUTO_CONTINUES ? 'continue' : 'card'
+  return heldCount(facts.held, heldKey(facts.plan)) < MAX_AUTO_CONTINUES ? 'continue' : 'card'
 }
 
 // The step to go on with: the one under way, else the first not begun.

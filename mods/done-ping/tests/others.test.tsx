@@ -53,3 +53,16 @@ test('on the desktop nothing is read: the app marks waiting sessions itself', as
   expect(drawn).not.toMatch(/web-shop/)
   expect(spy.runs.some(argv => argv[0] === 'ps')).toBe(false)
 })
+
+test('/done-ping turned off stops looking at other sessions: no ps, until it is turned on again', async ($, on) => {
+  const spy = spyOf({ lang: null, alive: [11], sessions: [waiting({})] })
+  await setup($, on, spy)
+  await $.command.run({ command: 'done-ping', args: '' } as any)
+  const before = spy.runs.length
+  await spy.clock.advance(POLL_MS * 3)
+  expect(spy.runs.slice(before).some(argv => argv[0] === 'ps')).toBe(false)
+
+  await $.command.run({ command: 'done-ping', args: '' } as any)
+  await spy.clock.advance(POLL_MS)
+  expect(spy.runs.slice(before).some(argv => argv[0] === 'ps')).toBe(true)
+})

@@ -91,3 +91,9 @@ test('the timeline drawing names every lane, marks a quiet one, and colours no k
   expect(drawing.source).toContain('class="f-warn"')
   expect(drawing.source).toContain('şimdi')
 })
+
+test('a model request still streaming is not quiet, until it has run as long as a long tool call', () => {
+  const streaming = run('a1', { heardAt: 0, stepAt: MINUTE })
+  expect(stuckOf(streaming, MINUTE + 5 * MINUTE)).toBeNull()
+  expect(stuckOf(streaming, MINUTE + LONG_TOOL_MS)).toMatchObject({ reason: 'sessiz 15 dk', since: MINUTE })
+})

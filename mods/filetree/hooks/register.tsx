@@ -176,7 +176,7 @@ function onTools(on: On): void {
       throw err
     }
     return afterCall(host, call, result)
-  })
+  }).catch(($, e, next) => next(e))
   on('tool.call', { tool: 'Read' }, async ($, e, next) => {
     const result = await next(e)
     if (result.deny || result.isError || e.tool !== 'Read') return result
@@ -252,7 +252,7 @@ function onPane(on: On): void {
   on('prompt.submit', async ($, e, next) => {
     const context = await promptContext(hostOf($), e)
     return next(context.length ? { ...e, context } : e)
-  })
+  }).catch(($, e, next) => next(e))
   on('prompt.attachment', async ($, e, next) => {
     void settleBackground(hostOf($), e.text)
     return next(e)

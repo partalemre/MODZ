@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { HomeCrab, SelfChat } from '../types'
 import { hubCardOf } from './hub'
-import { HEARTBEAT_MS, SCAN_MS, beatOf, blankSelf, bodyOf, keyOf, projectOf, scanOf, settle, sharedOf, titleOf, withAsk, withoutAsk } from './chats'
+import { HEARTBEAT_MS, KEY_PREFIX, SCAN_MS, beatOf, blankSelf, bodyOf, keyOf, projectOf, scanOf, settle, sharedOf, titleOf, withAsk, withoutAsk } from './chats'
 import { TURNS_KEY, ended, rested, restingCrab, started, turnsFrom } from './mood'
 import type { TurnEnd } from './mood'
 import { isSame } from './same'
@@ -74,7 +74,7 @@ async function changeAndPublish($: EngineInterface, fn: (prev: SelfChat) => Self
 async function scan($: EngineInterface): Promise<void> {
   const own = keyOf(await $.session.id())
   const entries: [string, unknown][] = []
-  for (const key of await $.store.keys()) if (key !== own) entries.push([key, await $.store.get(key)])
+  for (const key of await $.store.keys()) if (key.startsWith(KEY_PREFIX) && key !== own) entries.push([key, await $.store.get(key)])
   const found = scanOf(entries, own, await $.clock.now())
   for (const key of found.gone) await $.store.delete(key)
   const prev = await read($, chats)

@@ -130,20 +130,25 @@ function onActivity(on: On): void {
     if (agentId) await update($, agents, list => patchRun(list, agentId, a => ownTasks(a, call, result.result)))
     else await update($, tasks, list => applyTaskTool(list, call, result.result))
     return result
-  })
+  }).catch(($, e, next) => next(e))
 }
 
 // Each loop's model requests and its end.
 function onSteps(on: On): void {
   // Each model request of a subagent: live context, tokens and cost.
   on('turn.step', async function* ($, e, next) {
-    const result = yield* next(e)
     const agentId = e.agentId
+    // A request in flight is heard from as it goes out: a long stream is not a quiet agent.
+    if (agentId) {
+      const sent = await $.clock.now()
+      await update($, agents, list => patchRun(list, agentId, a => ({ ...heard(a, sent), stepAt: sent })))
+    }
+    const result = yield* next(e)
+    if (!agentId) return result
     const usage = result.usage
-    if (!agentId || !usage) return result
-    const facts = { model: usage.model || e.model, effort: e.effort, usage }
+    const facts = usage && { model: usage.model || e.model, effort: e.effort, usage }
     const at = await $.clock.now()
-    await update($, agents, list => patchRun(list, agentId, a => heard(stepUsage(a, facts), at)))
+    await update($, agents, list => patchRun(list, agentId, a => heard({ ...(facts ? stepUsage(a, facts) : a), stepAt: undefined }, at)))
     return result
   })
 

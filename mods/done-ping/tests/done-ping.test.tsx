@@ -52,7 +52,7 @@ test('a permission ask pings once per burst and never shows the command', async 
   await spy.clock.advance(5)
 
   expect(banners(spy)).toHaveLength(1)
-  expect(banners(spy)[0]?.slice(-4)).toEqual(['Bash komutu', 'Onay bekliyor', 'eliti', 'Glass'])
+  expect(banners(spy)[0]?.slice(-4)).toEqual(['komut izni', 'Onay bekliyor', 'eliti', 'Glass'])
 })
 
 test('on the desktop a permission ask sends nothing: the app notifies on its own', async ($, on) => {

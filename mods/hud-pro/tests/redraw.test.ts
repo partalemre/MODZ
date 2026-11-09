@@ -26,3 +26,18 @@ test('a minute that moves nothing on the line redraws nothing', async ($, on) =>
 
   expect(invalidations.count).toBe(0)
 })
+
+test('a measure that brings the same usage writes no state, so nothing redraws', async ($, on) => {
+  stubSession(on)
+  const writes: unknown[] = []
+  on('state.set', { plugin: 'hud-pro', key: 'usage' }, async (_: any, e: any, next: any) => (writes.push(e.value), next(e)))
+  await start($, 'terminal')
+  const measure: any = { ...USAGE, changed: ['rateLimits'] }
+  await $.session.measure(measure)
+  const afterFirst = writes.length
+  await $.session.measure(measure)
+
+  expect(writes.length).toBe(afterFirst)
+  await $.session.measure({ ...measure, rateLimits: [] })
+  expect(writes.length).toBe(afterFirst + 1)
+})

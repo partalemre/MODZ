@@ -72,7 +72,7 @@ for (const surface of SURFACES) {
     await start($, surface)
     await $.session.measure(MEASURE)
 
-    expect(cards[0]?.detail).toBe('5h 32% · 7d 91%')
+    expect(cards[0]?.detail).toBe('5-hour 32% · 7-day 91%')
     expect(toasts).toEqual(['7-day limit 91% used · ↻ 3d 22h'])
     expect((await $.command.run({ command: 'hud', args: '' } as any)).text).toBe('HUD hidden.')
     expect((await $.command.run({ command: 'hud', args: '' } as any)).text).toBe('HUD shown.')

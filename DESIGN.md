@@ -17,7 +17,7 @@ v3 (2026-10-29) v2'nin şablon görünümünü söktü: renkli ikon kutuları, b
 3. **İkon kutusu yok.** İkonlar çıplak 16px çizgi ikon (stroke 1.5, text.mid). Monogram ve dosya rozetleri nötr
    (track zemin, text.lo); okuma/düzenleme rengi yalnızca o an anlam taşıyorsa.
 4. **Efekt yok.** Işıma (radial glow), parlak süpürme, ışık şeridi, gradyan, halka dalgası yok. Değişiklik: satıra bir
-   kez solan `m-flash` (track). Canlı: nefes alan nokta (opaklık), dalga değil.
+   kez solan `m-flash` (track). Canlı: nefes alan nokta (opaklık) ve hub satırında yumuşak bir halka (`m-breathe`, `m-ring`), yalnızca iş sürerken.
 5. **Satırın tamamı basılır.** Bir şey açan satırın sonunda "Aç" düğmesi olmaz: satır çizimi sağda `›` ok ve
    hover yıkaması çizer, üstüne `kit/press.tsx` `PressRow`/`PressCover` tam kaplayan `plain` düğme koyar.
    Masaüstü düğmenin etiketini boyar (motor çocukları da etikete çevirir), bu yüzden etiket boşluktur ve satırın

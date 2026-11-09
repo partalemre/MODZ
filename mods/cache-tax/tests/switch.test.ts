@@ -45,7 +45,7 @@ describe('model switch', () => {
     expect(w.entered).toEqual(['hi'])
     await step($, SONNET)
     await $.turn.complete(turn({ usage: usage({ model: SONNET, cache_read_input_tokens: 0, cache_creation_input_tokens: 200502 }) }))
-    expect(w.logs.at(-1)).toMatch(/201k token soğuk yazım ödendi \(\$0,80\)/)
+    expect(w.logs.at(-1)).toMatch(/201k token önbelleğe baştan yazıldı \(\$0,80\)/)
     await $.prompt.submit(prompt('again'))
     expect(w.entered).toEqual(['hi', 'again'])
   })

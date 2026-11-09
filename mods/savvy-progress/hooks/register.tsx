@@ -33,6 +33,8 @@ const chats = atom({ plugin: 'savvy-progress', key: 'chats' } as const, [])
 type On = Parameters<Register>[0]
 
 const TICK_MS = 1000
+// With nothing running, the engine's roster is asked every this many beats: an agent this mod missed still shows within seconds.
+const IDLE_ROSTER_BEATS = 5
 // The project's agents folder (from the working directory), and the same folder under $HOME.
 const AGENTS_DIR = '.claude/agents'
 
@@ -160,10 +162,17 @@ async function syncRoster($: EngineInterface): Promise<void> {
 }
 
 // One beat a second: the roster is folded in, and the running agents' clocks tick while any runs.
+// Idle, the roster is asked only every few beats; a spawn seen here makes a run at once, so the next beat is busy.
 function startBeat($: EngineInterface): void {
+  let idleBeats = 0
   $.clock.every(TICK_MS, () => {
     void (async () => {
-      await syncRoster($)
+      const isBusy = (await read($, agents)).some(isRunning)
+      idleBeats = isBusy ? 0 : idleBeats + 1
+      if (isBusy || idleBeats >= IDLE_ROSTER_BEATS) {
+        idleBeats = 0
+        await syncRoster($)
+      }
       const list = await read($, agents)
       if (!list.some(isRunning)) return
       const at = await $.clock.now()

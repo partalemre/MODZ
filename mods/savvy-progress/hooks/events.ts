@@ -12,6 +12,7 @@ import { deriveJob, joinJob, sealJob } from './job'
 import { STEP_TOOL, TOOL } from './state'
 import { TASK_TOOLS, applyTaskTool, openTasks } from './tasks'
 import { isSame } from './same'
+import { reopen } from './roster'
 import { savvyTierOf } from './tiers'
 import { touchFile } from './touched'
 
@@ -143,7 +144,7 @@ function onSteps(on: On): void {
     if (!agentId || !usage) return result
     const facts = { model: usage.model || e.model, effort: e.effort, usage }
     const at = await $.clock.now()
-    await update($, agents, list => patchRun(list, agentId, a => heard(stepUsage(a, facts), at)))
+    await update($, agents, list => patchRun(list, agentId, a => heard(stepUsage(reopen(a), facts), at)))
     return result
   })
 

@@ -115,7 +115,10 @@ Döngü yalnızca canlı işte (nefes alan nokta); iş bitince durur, sakin yüz
 panenin Svg'si `isInteractive` ile kendi çerçevesinde çizilir; çerçeve, kaynağı bayt bayt aynı kaldıkça korunur ve
 döngüleri kesilmez. Bu yüzden her çizimin kaynağı gösterdiği şeye göre bir kez kurulur (`kit/moving.ts`,
 `kit/stable.ts`, `kit/motion.ts`): panel açıldıktan sonraki ilk çizim kademeli girer (45 ms arayla, yukarıdan aşağı),
-gösterdiği şey değişince bir kez solan bir track yıkaması (`m-flash`) alır, değişmeyen çizim aynı kaynağı korur. İşleyen saat ("2 dk
+gösterdiği şey değişince bir kez solan bir track yıkaması (`m-flash`) alır, değişmeyen çizim aynı kaynağı korur.
+Değişimde yalnızca gerçekten değişen kıpırdar (`kit/changes.ts`): ölçer dolgusu eski genişliğinden yenisine kayar
+(`m-from`, 320ms; `data-m-fill`), daha önce tiki olmayan bir çizimde beliren ✓ bir kez kendini çizer (`m-draw`). Aynı
+dolgu ve işaretlerle yeniden çizilen hiçbir şey hareket etmez. İşleyen saat ("2 dk
 önce", saniyeler) tek başına değişiklik sayılmaz: süpürmesiz çizilir ya da Svg dışında kalır. Liste satırı hover'da
 yıkanır. Her Svg `:root{color-scheme:light dark}` söyler, yoksa çerçeve opak beyaz bir sayfaya oturur. Basışın
 altındaki çizim düz Svg kalır (çerçeve tıklamayı yutar); bant (AbovePrompt) düz kalır. Her Svg `<style>` sonu:

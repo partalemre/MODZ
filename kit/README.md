@@ -105,18 +105,19 @@ cube, bookmark, bulb, play, pause, folder, file, branch, terminal, bell, sparkle
 On the desktop an `isInteractive` Svg is a sandboxed frame the surface keeps while its source is byte-identical and
 rebuilds when it changes; a plain Svg is a new `<img>` on every redraw, so its loops restart. `paneMotion()` keeps
 each drawing's source per what it shows: its first draw since the pane opened cascades in (45 ms apart, top to
-bottom), a changed one sweeps once, an unchanged one keeps its frame and loops. Every source says
+bottom), a changed one flashes once, an unchanged one keeps its frame and loops. A change also moves what moved
+(`changes.ts`, against the source it replaces): a fill tagged `data-m-fill` slides from its last width (the kit meter
+tags its own), and a check (`data-m-done`, every kit `check` icon) draws itself when the drawing had none before. Every source says
 `:root{color-scheme:light dark}`, else the frame is painted on an opaque white sheet. A frame swallows clicks, so a
 drawing under a press stays a plain Svg. Keep time that ticks (seconds, "2 dk önce" refreshed each tick) out of a
-moving drawing unless it really changed: every new source rebuilds the frame and sweeps.
+moving drawing unless it really changed: every new source rebuilds the frame and flashes.
 
 | Export | Example |
 |---|---|
 | `paneMotion()` | `const motion = paneMotion()` once per pane; `motion.reset()` right before `$.ui.open(...)` |
 | `motion.pic(key, pic, opts)` | `<Svg key="head" {...motion.pic('head', pic)} />`; `{ isRow: true }` adds the hover wash |
 | `DrawCtx.motion` | `Card({ ui, surface, isLight, motion }, …)`: kit elements move their own Svgs |
-| `rings({ cx, cy, r, className })` | under a live dot: rings going out of it, forever |
-| `shine({ id, x, y, width, height })` | over a live bar: a light running along it, clipped to the bar |
+| `data-m-fill` on a fill `<rect>` | `<rect data-m-fill width="…"/>`: a mod's own meter slides when its value changes |
 | `entering`, `delayOf`, `motionCss`, `MOTION_CSS` | a drawing that stages its own pieces (the hub's wordmark) |
 | `stableDrawings<T>()` | `kept.draw(key, what, phase => build(phase))`: built again only when `what` changes |
 

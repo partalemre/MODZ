@@ -19,7 +19,9 @@ import type { RowContext, Ui } from './rows'
 import { attentionTree, compactTree, emptyTree, headTree, sectionHead, timelineTree, toolbarTree } from './sections'
 import type { Layout, PaneHandlers, PaneView } from './sections'
 import { pinned } from './pin'
-import { PANE } from './state'
+import { HUB_PANE, PANE } from './state'
+import { shownOf } from './stage'
+import { paneHeld } from './pane-held'
 import { deliveryText } from './steer'
 import type { StopNoun } from './steer'
 
@@ -232,8 +234,21 @@ async function drawnBody($: EngineInterface, ui: Ui, room: { isDesktop: boolean;
   }
 }
 
+// The desktop kept this pane's tab across an engine restart and asks it to draw while the engine lists no such pane
+// (the tab reads "Nothing to show yet"; the note band.tsx restores from may be missing): reopened once, unless this
+// engine already opened, closed or saw the pane, so a tab the person closed or the hub swapped stays as it is.
+async function reopenStaleTab($: EngineInterface): Promise<void> {
+  if (paneHeld.isHeld) return
+  paneHeld.isHeld = true
+  if ((await $.ui.panes()).some(p => p.id === PANE)) return
+  const opened = await $.ui.open({ id: PANE, title: t().pane })
+  if (!opened.isPlaced || (await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
+  await $.state.set({ plugin: 'savvy-progress', key: 'shown' }, shownOf(HUB_PANE, await $.clock.now()))
+}
+
 export function onPane(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    void reopenStaleTab($).catch(cause => $.ui.log(`savvy-progress: could not reopen the pane: ${String(cause)}`, { to: 'debug' }))
     const table = $.ui.resolve(e)
     const ui = table as Ui
     const isDesktop = e.surface === 'desktop' && 'Svg' in ui

@@ -2,7 +2,9 @@
 // enters on its first draw since the pane opened, flashes once when it changes, and always says its colour scheme.
 import { expect, test } from 'claude-code/testing'
 
-import { motionCss, rings, shine, SWEEP } from '../hooks/kit/motion'
+import { motionCss } from '../hooks/kit/motion'
+import { meter } from '../hooks/kit/svg-meters'
+import { iconEl } from '../hooks/kit/svg-core'
 import { animate, paneMotion } from '../hooks/kit/moving'
 import { pill } from '../hooks/kit/svg'
 
@@ -82,23 +84,60 @@ test('a drawing drawn at a new width reflowed, it did not change: no flash', () 
   expect(wider.source).not.toContain('m-flash')
 })
 
-test('live loops come only with the drawings that use them', () => {
-  const live = `${rings({ cx: 4, cy: 4, r: 3, className: 'f-run' })}${shine({ id: 'bar', x: 0, y: 0, width: 100, height: 6 })}`
-
-  expect(motionCss(live)).toContain('@keyframes m-ripple')
-  expect(motionCss(live)).toContain('@keyframes m-shine')
-  expect(motionCss(live)).not.toContain('m-flash')
+test('motion rules come only with the drawings that use them', () => {
+  expect(motionCss('<rect class="m-flash"/>')).toContain('@keyframes m-flash')
+  expect(motionCss('<rect class="m-flash"/>')).not.toContain('m-from')
   expect(motionCss('<rect/>')).toBe('')
 })
 
-// Reduced motion drops every animation, so a piece rests at its own rule: the sweep and the flash must rest unseen.
+// Reduced motion drops every animation, so a piece rests at its own rule: the flash must rest unseen.
 const restingRule = (css: string, name: string): string => new RegExp(`\\.${name}\\{([^}]*)\\}`).exec(css)?.[1] ?? ''
 
-test('under reduced motion a changed drawing keeps no sweep or flash over it', () => {
-  const css = motionCss(`${SWEEP}<rect class="m-flash"/>`)
+test('under reduced motion a changed drawing keeps no flash over it, and a done mark rests drawn', () => {
+  const css = motionCss('<rect class="m-flash"/><path class="m-draw"/>')
 
   expect(css).toContain('@media (prefers-reduced-motion: reduce){*{animation:none!important')
-  expect(restingRule(css, 'm-sweep')).toContain('opacity:0')
   expect(restingRule(css, 'm-flash')).toContain('opacity:0')
-  expect(css).toMatch(/@keyframes m-sweep\{from\{opacity:1;/)
+  // At rest the dash is the whole path (pathLength 1, offset 0): the mark shows in full.
+  expect(restingRule(css, 'm-draw')).not.toContain('dashoffset')
+})
+
+const wrap = (body: string) => `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40">${body}</svg>`
+const meterAt = (value: number) => meter({ value, width: 200 }).source
+const check = (x: number) => iconEl({ name: 'check', x, y: 0, size: 16, paint: 'ok' })
+const change = (before: string, now: string) => animate(now, { cue: { phase: 'change', order: 0 }, before })
+
+test('a changed meter slides from the width it had, under any style it already holds', () => {
+  const moved = change(meterAt(0.4), meterAt(0.8))
+  const styled = change(wrap('<rect data-m-fill x="0" width="50" style="fill:red"/>'), wrap('<rect data-m-fill x="0" width="100" style="fill:red"/>'))
+
+  expect(moved).toMatch(/data-m-fill[^>]*style="--m-from:0\.500"/)
+  expect(moved).toContain('@keyframes m-from')
+  expect(styled).toContain('style="--m-from:0.500;fill:red"')
+  expect(styled.match(/style=/g)?.length).toBe(1)
+})
+
+test('a meter that did not move, came from empty, or was first drawn does not slide', () => {
+  expect(change(meterAt(0.5), meterAt(0.505))).not.toContain('m-from')
+  expect(change(meterAt(0), meterAt(0.5))).not.toContain('m-from')
+  expect(animate(meterAt(0.5), { cue: { phase: 'enter', order: 0 } })).not.toContain('m-from')
+  expect(animate(meterAt(0.8), { cue: { phase: 'still', order: 0 }, before: meterAt(0.4) })).not.toContain('m-from')
+})
+
+test('a done mark draws itself only when the drawing turns done', () => {
+  const turned = change(wrap('<text>3/4</text>'), wrap(`${check(0)}<text>4/4</text>`))
+  const stayed = change(wrap(`${check(0)}<text>4/4</text>`), wrap(`${check(0)}${check(20)}<text>5/5</text>`))
+
+  expect(turned).toMatch(/<path [^>]*data-m-done[^>]*class="m-draw" pathLength="1"/)
+  expect(turned).toContain('@keyframes m-draw')
+  expect(stayed).not.toContain('m-draw')
+})
+
+test('the pane keeps what it drew last, so its next change can move from it', () => {
+  const motion = paneMotion()
+  motion.pic('m', { source: meterAt(0.25), alt: 'm' })
+  const next = motion.pic('m', { source: meterAt(0.75), alt: 'm' })
+
+  expect(next.source).toContain('m-from')
+  expect(next.source).toContain('m-flash')
 })

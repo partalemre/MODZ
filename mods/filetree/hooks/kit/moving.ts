@@ -3,6 +3,7 @@
 // what it shows does (stable.ts), so the desktop keeps its frame and its loops run on. The first draw of a key since
 // the pane opened cascades in with the other new ones, a changed one flashes once, a row's drawing answers hover, and
 // every source says its colour scheme, else the frame is painted on an opaque white sheet.
+import { markChanges } from './changes'
 import { entering, FLASH, motionCss, WASH } from './motion'
 import type { Cue } from './motion'
 import { stableDrawings } from './stable'
@@ -35,9 +36,11 @@ const PASS_MS = 120
 // The cascade stops lengthening here, so a long list is in place soon.
 const MAX_ORDER = 12
 
-// `source` with its scheme said and, per its cue, its entrance or its flash; the hover wash for a row.
-export function animate(source: string, spec: { cue: Cue; isRow?: boolean }): string {
-  const parts = SVG.exec(source)
+// `source` with its scheme said and, per its cue, its entrance or its flash; the hover wash for a row. A change
+// given the source it replaces (`before`) also moves what moved: its meters slide, a new done mark draws itself.
+export function animate(source: string, spec: { cue: Cue; isRow?: boolean; before?: string }): string {
+  const moved = spec.cue.phase === 'change' && spec.before !== undefined ? markChanges(spec.before, source) : source
+  const parts = SVG.exec(moved)
   if (parts === null) return source
   const [, open, inner = '', close] = parts
   const scheme = SAYS_SCHEME.test(inner) ? '' : SCHEME
@@ -50,7 +53,7 @@ export function animate(source: string, spec: { cue: Cue; isRow?: boolean }): st
 
 export function paneMotion(): PaneMotion {
   const drawings = stableDrawings<string>()
-  const shown = new Map<string, { shows: string; width: string }>()
+  const shown = new Map<string, { shows: string; width: string; source: string }>()
   const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 }
   const begin = () => {
     const now = Date.now()
@@ -66,7 +69,7 @@ export function paneMotion(): PaneMotion {
     pic: (key, pic, opts = {}) => {
       begin()
       const what = `${opts.isRow === true ? 'row:' : ''}${pic.source}`
-      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH.exec(pic.source)?.[1]) }
+      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH.exec(pic.source)?.[1]), source: pic.source }
       const source = drawings.draw(key, what, built => {
         const order = built === 'enter' ? Math.min(MAX_ORDER, pass.entered++) : 0
         const before = shown.get(key)
@@ -74,7 +77,7 @@ export function paneMotion(): PaneMotion {
         const phase = built === 'change' && isQuiet ? 'still' : built
         shown.set(key, now)
 
-        return animate(pic.source, { cue: { phase, order }, isRow: opts.isRow })
+        return animate(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source })
       })
 
       return { ...pic, source, isInteractive: true }

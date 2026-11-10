@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { MINUTE, buttonsOf, modz, newWorld, paneOf, said, start, stub } from './stubs'
+import { MINUTE, buttonsOf, modz, newWorld, nextChat, paneOf, said, start, stub, takeNote } from './stubs'
 
 // The Handoff pane: empty, with a note (preview, age, handing on), toggled, deleted; the way back to MODZ.
 
@@ -79,8 +79,8 @@ test('a note a later chat took says so, and offers no toggle', async ($: any, on
   stub(on, world)
   await start($, 'terminal')
   await $.command.run({ command: 'handoff', args: '' })
-  world.sessionId = 's2'
-  await $.prompt.compose({ model: 'm', promptModel: 'm', surfaces: [], tools: [], outputStyle: null, traits: [] })
+  await nextChat($, world, 's2')
+  await takeNote($)
   const pane = await $.ui.mount(paneOf('terminal'))
 
   expect(await pane.find({ text: /A later chat already took it in/ })).toBeDefined()

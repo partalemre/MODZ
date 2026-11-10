@@ -43,6 +43,8 @@ export const HUB_DETAIL_MAX = 40
 // The notice's place on the shared line; 0 never expires (the card stays until it is answered).
 export const NOTICE_PRIORITY = 3
 export const NOTICE_FOREVER = 0
+// How long the card waits behind another mod's notice before it takes the band anyway.
+export const LOUDER_WAIT_MS = 10 * 60_000
 
 export const MS_PER_MINUTE = 60_000
 export const MINUTES_PER_HOUR = 60

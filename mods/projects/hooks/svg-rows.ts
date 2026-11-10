@@ -1,5 +1,5 @@
 import { spent } from './build'
-import { agoShortText, percentText, tokensText } from './format'
+import { agoShortText, agoText, isFaded, percentText, tokensText } from './format'
 import { escapeXml, num, rectEl, sans, textEl, toPic } from './kit/svg-core'
 import type { SvgPic } from './kit/svg-core'
 import { fitText } from './kit/svg-metrics'
@@ -80,10 +80,11 @@ export function rowPic(project: Project, spec: { width: number; nowMs: number })
     textEl({ x: NAME_X, y: NAME_Y, text: name, size: 13, weight: 560, paint: 'hi' }),
     textEl({ x: metaX, y: NAME_Y, text: meta, size: 12, paint: 'lo', anchor: 'end' }),
     rowMeter(project, meterX),
-    textEl({ x: width, y: NAME_Y, text: shown, size: 12, weight: 500, paint: project.percent.value === null || project.percent.isStale ? 'lo' : 'hi', anchor: 'end', isMono: true }),
+    textEl({ x: width, y: NAME_Y, text: shown, size: 12, weight: 500, paint: project.percent.value === null || isFaded(project.percent, nowMs) ? 'lo' : 'hi', anchor: 'end', isMono: true }),
   ].join('')
+  const judged = project.percent.kind === 'estimate' && project.percent.at > 0 ? ` (${say.estimatedAgo(agoText(project.percent.at, nowMs))})` : ''
 
-  return toPic({ body, width, height: ROW_H, alt: `${project.name}, ${shown}, ${stoppedAt(project)}` })
+  return toPic({ body, width, height: ROW_H, alt: `${project.name}, ${shown}${judged}, ${stoppedAt(project)}` })
 }
 
 const HEAD_H = 28

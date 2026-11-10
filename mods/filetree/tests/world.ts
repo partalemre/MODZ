@@ -3,7 +3,8 @@ import { mock } from 'claude-code/testing'
 // The engine stand-ins the filetree tests share: one repo folder, its git, and the session around it.
 
 // `env` is what $.env.get answers: Turkish unless a test gives its own, as the English ones do.
-export type World = { root: string; files: string[]; status: string; heads: Record<string, string[]>; tool?: (e: any) => unknown; env?: Record<string, string> }
+// `calls`, when given, collects every process argv and every listed folder (as `list <path>`).
+export type World = { root: string; files: string[]; status: string; heads: Record<string, string[]>; tool?: (e: any) => unknown; env?: Record<string, string>; calls?: string[] }
 export const opens: any[] = []
 
 export function world(on: any, w: World) {
@@ -23,15 +24,17 @@ export function world(on: any, w: World) {
     throw new Error('no file')
   })
   on('fs.list', (_$: any, e: any) => {
+    w.calls?.push(`list ${e.path}`)
     if (e.path !== w.root) throw new Error(`ENOENT ${e.path}`)
-    return { value: w.files.map(name => ({ name, kind: 'file', size: 1, mtimeMs: 1_700_000_000_000, isLink: false })) }
+    // A name ending in a slash is a folder.
+    return { value: w.files.map(name => ({ name: name.replace(/\/$/, ''), kind: name.endsWith('/') ? 'dir' : 'file', size: 1, mtimeMs: 1_700_000_000_000, isLink: false })) }
   })
   on('fs.stat', (_$: any, e: any) => {
     if (e.path === w.root) return { value: { kind: 'dir', size: 1, mtimeMs: 1, isLink: false } }
     if (w.files.some(f => `${w.root}/${f}` === e.path)) return { value: { kind: 'file', size: 1, mtimeMs: 1, isLink: false } }
     throw new Error(`ENOENT ${e.path}`)
   })
-  on('process.run', (_$: any, e: any) => gitAnswer(w, [...e.argv]))
+  on('process.run', (_$: any, e: any) => (w.calls?.push(e.argv.join(' ')), gitAnswer(w, [...e.argv])))
   on('tool.call', (_$: any, e: any) => (w.tool?.(e) ?? { result: { stdout: '', stderr: '' } }) as any)
   on('turn.start', (_$: any, e: any) => ({ turnId: e.turnId }))
   on('turn.complete', (_$: any, e: any) => ({ text: e.answer }))

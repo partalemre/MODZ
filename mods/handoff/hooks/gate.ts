@@ -1,4 +1,4 @@
-import { SNOOZE_POINTS } from './limits'
+import { LOUDER_WAIT_MS, SNOOZE_POINTS } from './limits'
 import type { HandoffStage } from '../types'
 
 // When the band asks, and what "Not now" waits for. Pure, so the rules are tested alone.
@@ -38,10 +38,18 @@ export type BandFacts = { isWorking: boolean; hasSurvey: boolean }
 export const isBandQuiet = (facts: BandFacts): boolean => facts.isWorking || facts.hasSurvey
 
 // What the card draws now: the ask, a stage of its own, or nothing.
-export type CardKind = 'ask' | 'writing' | 'saved' | 'failed' | null
+export type CardKind = 'ask' | 'offer' | 'writing' | 'saved' | 'failed' | null
 
 export function cardOf(facts: AskFacts): CardKind {
   if (facts.stage === 'writing' || facts.stage === 'saved' || facts.stage === 'failed') return facts.stage
 
   return isAskDue(facts) ? 'ask' : null
+}
+
+// Whether a louder notice, known by `key`, still holds the slot: for a while from when it was first seen, then not.
+export function isLouderNow(since: Map<string, number>, seen: { key: string; now: number }): boolean {
+  const first = since.get(seen.key) ?? seen.now
+  since.set(seen.key, first)
+
+  return seen.now - first < LOUDER_WAIT_MS
 }

@@ -30,7 +30,7 @@ const REFRESH_MS = 120_000
 const DEFAULT_COLUMNS = 48
 
 type Timer = { cancel: () => void }
-const kept = { paths: null as Paths | null, isReading: false, hasReadError: false, timer: null as Timer | null, platform: 'darwin' }
+const kept = { paths: null as Paths | null, isReading: false, hasReadError: false, timer: null as Timer | null, platform: 'darwin', written: '' }
 const motion = paneMotion()
 
 const why = (error: unknown): string => (error instanceof Error ? error.message : String(error))
@@ -74,8 +74,12 @@ async function writeHub($: EngineInterface, snapshot: Snapshot | null): Promise<
 async function publish($: EngineInterface, snapshot: Snapshot, paths: Paths): Promise<void> {
   await update($, snapshotAtom, () => snapshot)
   await writeHub($, snapshot)
+  // The read time alone changing is no reason to rewrite two 100 KB files.
+  const written = JSON.stringify({ ...snapshot, at: 0 })
+  if (written === kept.written) return
   await $.fs.write(`${paths.own}/snapshot.json`, JSON.stringify(snapshot))
   await writeData(ioOf($), paths.own, snapshot)
+  kept.written = written
 }
 
 // One read at a time; a failure keeps the last good list on screen and says what went wrong. A timed read is quiet:
@@ -160,6 +164,11 @@ function actionsOf($: EngineInterface, snapshot: Snapshot | null): PaneActions {
   }
 }
 
+function stopTimer(): void {
+  kept.timer?.cancel()
+  kept.timer = null
+}
+
 const goHome = async ($: EngineInterface): Promise<void> => {
   await $.state.set({ plugin: 'projects', key: 'home' }, { at: await $.clock.now() })
 }
@@ -204,14 +213,17 @@ export const register: Register = on => {
 
   on('state.set', { plugin: 'modz', key: 'stage' }, async ($, e, next) => {
     const done = await next(e)
-    if (isOffStage(e.value, HUB_PANE)) await $.ui.close({ id: PANE })
+    if (isOffStage(e.value, HUB_PANE)) {
+      // The ui.close this raises is beneath this hook's own call, so this mod's ui.close hook never sees it.
+      stopTimer()
+      await $.ui.close({ id: PANE })
+    }
 
     return done
   }).catch(($, e, next) => next(e))
 
   on('ui.close', { id: PANE }, ($, e, next) => {
-    kept.timer?.cancel()
-    kept.timer = null
+    stopTimer()
 
     return next(e)
   }).catch(($, e, next) => next(e))

@@ -1,7 +1,7 @@
 # handoff
 
-Before the context window fills, writes a handoff note and hands it once to your next fresh chat in this repo, so
-you can start clean without losing the thread.
+Before the context window fills, writes a handoff note and offers it to your next chat in this repo, so you can
+start clean without losing the thread.
 
 ## Install
 
@@ -20,18 +20,22 @@ Or in one step: `/plugin install handoff --marketplace partalemre/MODZ`.
   points. Once the fill drops back under the threshold (after a compaction), the next climb asks again.
 - **After writing:** the card says `Handoff saved`, where the file is, and to start fresh with `/clear`. The mod never
   runs `/clear` for you. **Show note** opens the Handoff pane.
-- **The next fresh chat in the same repo** (after `/clear`, or a new `claude` in that folder) gets the note in its
-  system prompt, once: the first conversation that has no reply yet takes it and keeps it for each of its requests;
-  no other conversation sees it after that. The chat that wrote the note never gets it, and a note older than a day
-  is not handed on.
+- **The next chat in the same repo** (after `/clear`, a new `claude` in that folder, or a desktop session in any
+  worktree of it) shows `A handoff note is waiting` with **Continue from handoff** and **Not now**. Only a press of
+  **Continue from handoff** puts the note in that chat's system prompt, kept for each of its requests; no other
+  conversation sees it after that, so an unrelated side chat never takes it. The chat that wrote the note never gets
+  it, and a note older than a day is not offered.
+- **Another mod's notice** (cache-tax, you-should-know, reflect, session-budget) takes the band first; after ten
+  minutes of the same notice the handoff card shows anyway, so a notice left behind cannot hide it for ever.
 - **The Handoff pane** (from the MODZ hub's row, the card's **Show note**, or `/handoff show`; it never opens by
-  itself): the latest note's preview and age, whether the next chat gets it, and **Don't hand it on** /
+  itself): the latest note's preview and age, whether the next chat is offered it, and **Don't hand it on** /
   **Hand it to the next chat**, **Write handoff now** and **Delete note** (removes the file and the kept copy).
 - **The MODZ hub:** a row "Handoff" with `Context 42% · note ready`.
 
 ## What a note holds
 
-Written to `.claude/handoff/<yyyy-mm-dd-hhmm>.md` in the repo (add `.claude/handoff/` to `.gitignore` if you do not
+Written to `.claude/handoff/<yyyy-mm-dd-hhmm>.md` in the main repository, even from a worktree, so the note
+outlives the worktree (add `.claude/handoff/` to `.gitignore` if you do not
 want the notes committed):
 
 - the last three prompts you typed (the goal), trimmed;

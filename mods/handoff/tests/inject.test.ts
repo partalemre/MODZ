@@ -1,8 +1,8 @@
 import { expect, test } from 'claude-code/testing'
 
-import { COMPOSE, MINUTE, hubCardOf, measure, modz, newWorld, paneOf, said, start, stub } from './stubs'
+import { COMPOSE, MINUTE, hubCardOf, measure, modz, newWorld, nextChat, paneOf, said, start, stub, takeNote } from './stubs'
 
-// The note reaches the system prompt of one fresh conversation in the repo, from its first request on, and no other.
+// The note reaches the system prompt of the one conversation whose person chose to continue from it, and no other.
 
 const SECTION = 'handoff:note'
 const idsOf = async ($: any) => (await $.prompt.compose(COMPOSE)).sections.map((section: any) => section.id)
@@ -21,11 +21,13 @@ test('the conversation that wrote the note never gets it', async ($: any, on: an
   expect(await idsOf($)).not.toContain(SECTION)
 })
 
-test('the next fresh conversation gets it once, and keeps it for each of its requests', async ($: any, on: any) => {
+test('the next conversation gets it once its person continues, and keeps it for each of its requests', async ($: any, on: any) => {
   const world = newWorld({ messages: [said('user', 'go'), said('assistant', 'done')] })
   await written($, on, world)
-  world.sessionId = 's2'
+  await nextChat($, world, 's2')
   world.messages = [said('user', 'carry on')]
+  expect(await idsOf($)).not.toContain(SECTION)
+  await takeNote($)
 
   const sections = (await $.prompt.compose(COMPOSE)).sections
   expect(sections.map((section: any) => section.id)).toEqual(['intro', SECTION])
@@ -36,7 +38,7 @@ test('the next fresh conversation gets it once, and keeps it for each of its req
   world.messages = [said('user', 'carry on'), said('assistant', 'ok')]
   expect(await idsOf($)).toContain(SECTION)
 
-  world.sessionId = 's3'
+  await nextChat($, world, 's3')
   world.messages = []
   expect(await idsOf($)).not.toContain(SECTION)
 })
@@ -71,9 +73,9 @@ test('the hub line says a note is ready until a conversation takes it', { plugin
   expect(card).toMatchObject({ pane: 'handoff', detail: 'Context 42% · note ready', tone: 'ok', title: 'Handoff', icon: 'flag', section: 'meter' })
   expect(card.detail.length).toBeLessThanOrEqual(40)
 
-  world.sessionId = 's2'
-  world.messages = []
-  await idsOf($)
+  await nextChat($, world, 's2')
+  await measure($, 42)
+  await takeNote($)
   expect((await hubCardOf($)).detail).toBe('Context 42%')
 })
 

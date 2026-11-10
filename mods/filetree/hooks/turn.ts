@@ -2,6 +2,7 @@ import type { TouchRole, TurnLog } from '../types'
 import type { Host } from './host'
 import { HUB_PANE, hubOf, isSameCard } from './hub'
 import { type Attributed, merge, NO_COST } from './readcost'
+import { mem } from './session'
 
 export const NO_TURN: TurnLog = { isRunning: false, hasRun: false, touches: [], sha: '', committed: 0, costs: {} }
 const TOUCH_RANK: Record<TouchRole, number> = { read: 0, edit: 1, commit: 2 }
@@ -11,9 +12,11 @@ const TOUCH_LIMIT = 200
 export async function syncHub(h: Host): Promise<void> {
   const t = await h.tree()
   const turn = await h.turn()
-  const changed = (t.counts[t.root] ?? [0, 0, 0]).reduce((a, b) => a + b, 0)
+  // Until the pane is opened there is no tree: the hub reads the one counted status instead.
+  const changed = mem.isLooked ? (t.counts[t.root] ?? [0, 0, 0]).reduce((a, b) => a + b, 0) : mem.quick.changed
+  const hasRepo = mem.isLooked ? Boolean(t.top) : mem.quick.hasRepo
   const edited = turn.touches.filter(x => x.role !== 'read').length
-  const shown = hubOf({ isRunning: turn.isRunning, touched: turn.touches.length, hasRepo: Boolean(t.top), changed, edited, sha: turn.sha })
+  const shown = hubOf({ isRunning: turn.isRunning, touched: turn.touches.length, hasRepo, changed, edited, sha: turn.sha })
   if (isSameCard(await h.hubCard(), shown)) return
   await h.setHubCard({ pane: HUB_PANE, ...shown, at: await h.now() })
 }

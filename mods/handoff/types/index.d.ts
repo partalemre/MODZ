@@ -60,6 +60,8 @@ declare module 'claude-code' {
       // The last failed tool call of this conversation, as "<tool>: <first line>"; null when none failed.
       lastError: string | null
       notice: HandoffNotice | null
+      // "Not now" on the offer to continue: the `at` of the note this conversation passed over; null when none.
+      declined: number | null
       hub: HubCard
       // The person pressed "← MODZ" in the Handoff pane; the hub hears it and comes forward.
       home: { at: number }

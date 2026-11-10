@@ -68,7 +68,8 @@ export async function pendingOf(h: Host, call: GitCall): Promise<Pending> {
   const dir = gitDirOf(call.command, { cwd: call.cwd, home: mem.home })
   const isCommit = call.actions.some(a => a.verb === 'commit')
   const head = isCommit && dir !== null ? await headOf(h, dir) : ''
-  const place = placeOf(dir, { top: t.top || t.root, isAgent: !call.cwd })
+  // Before the pane is opened there is no tree: the session's own folder stands for it.
+  const place = placeOf(dir, { top: t.top || t.root || call.cwd, isAgent: !call.cwd })
   return { actions: call.actions, ids: await startGit(h, call.actions), command: call.command, dir, head, place }
 }
 

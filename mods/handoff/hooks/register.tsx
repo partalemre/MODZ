@@ -1,9 +1,9 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Register } from 'claude-code'
 
-import { compact, dismiss, measured, noteSection, remove, resetConversation, snooze, toggleInject, write, writeHub } from './actions'
+import { compact, decline, dismiss, isOffered, measured, noteSection, remove, resetConversation, snooze, take, toggleInject, write, writeHub } from './actions'
 import { bandCard, withTheirs } from './band'
-import { cardOf, isBandQuiet } from './gate'
+import { cardOf, isBandQuiet, isLouderNow } from './gate'
 import { isOpenFor } from './hub'
 import { reasonOf } from './io'
 import type { Io, ValueKey, Values } from './io'
@@ -17,7 +17,7 @@ import type { DrawCtx } from './kit/ui'
 import { COMMAND, PANE, settingsOf } from './limits'
 import type { Settings } from './limits'
 import { motion, paneTree } from './pane'
-import { loadNote } from './state'
+import { loadNote, repoOf } from './state'
 import { errorLine, touchedPath, withFile } from './track'
 import { words } from './words'
 
@@ -32,6 +32,7 @@ const latestAtom = atom({ plugin: 'handoff', key: 'latest' } as const, null)
 const filesAtom = atom({ plugin: 'handoff', key: 'files' } as const, [])
 const errorAtom = atom({ plugin: 'handoff', key: 'lastError' } as const, null)
 const noticeAtom = atom({ plugin: 'handoff', key: 'notice' } as const, null)
+const declinedAtom = atom({ plugin: 'handoff', key: 'declined' } as const, null)
 const hubRef = { plugin: 'handoff', key: 'hub' } as const
 const homeRef = { plugin: 'handoff', key: 'home' } as const
 const hubOnRef = { plugin: 'modz', key: 'isOn' } as const
@@ -55,6 +56,7 @@ function cellsOf($: EngineInterface): Cells {
     files: { get: () => read($, filesAtom), set: value => update($, filesAtom, () => value) },
     lastError: { get: () => read($, errorAtom), set: value => update($, errorAtom, () => value) },
     notice: { get: () => read($, noticeAtom), set: value => update($, noticeAtom, () => value) },
+    declined: { get: () => read($, declinedAtom), set: value => update($, declinedAtom, () => value) },
   }
 }
 
@@ -110,7 +112,7 @@ function hookSession(on: On, settings: Settings): void {
     const io = ioOf($)
     try {
       await $.command.register({ name: COMMAND, description: words().commandHelp, argumentHint: '[show]' })
-      await loadNote(io, await $.session.root())
+      await loadNote(io, await repoOf(io))
       await writeHub(io, settings)
     } catch (error) {
       io.log(`could not start (${reasonOf(error)})`)
@@ -183,21 +185,26 @@ function hookCommands(on: On, settings: Settings): void {
 
   on('prompt.compose', async ($, e, next) => {
     const composed = await next(e)
-    const section = await noteSection(ioOf($), settings)
+    const section = await noteSection(ioOf($))
 
     return section === null ? composed : { sections: [...composed.sections, section] }
   }).catch(($, e, next) => next(e))
 }
 
+// When each louder notice was first seen, by its value: one left set for ever must not hold the card back for ever.
+const louderSince = new Map<string, number>()
+
 async function hasLouderNotice($: EngineInterface): Promise<boolean> {
+  const now = await $.clock.now()
   const others: { value?: unknown }[] = [
     await $.state.get(cacheTaxNotice as never),
     await $.state.get(knowNotice as never),
     await $.state.get(reflectNotice as never),
     await $.state.get(budgetNotice as never),
   ]
+  const values = others.map(other => other.value)
 
-  return others.some(other => other.value !== undefined && other.value !== null)
+  return values.some((value, index) => value !== undefined && value !== null && isLouderNow(louderSince, { key: `${index}:${JSON.stringify(value)}`, now }))
 }
 
 // A press runs its action in the background; a failure only goes to the debug log.
@@ -207,11 +214,12 @@ function hookBand(on: On, settings: Settings): void {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const theirs = await next(e)
     if (isBandQuiet({ isWorking: e.props.isWorking, hasSurvey: e.props.hasSurvey })) return theirs
-    if (await hasLouderNotice($)) return theirs
     const io = ioOf($)
     const percent = await io.get('percent')
-    const kind = cardOf({ percent, threshold: settings.threshold, snoozeUntil: await io.get('snoozeUntil'), stage: await io.get('stage') })
-    if (kind === null) return theirs
+    const asked = cardOf({ percent, threshold: settings.threshold, snoozeUntil: await io.get('snoozeUntil'), stage: await io.get('stage') })
+    const kind = asked ?? ((await isOffered(io)) ? 'offer' : null)
+    // Read after the card's own values, so the next measurement draws again and a stuck notice times out.
+    if (kind === null || (await hasLouderNotice($))) return theirs
     const draw: DrawCtx = { ui: $.ui.resolve(e), surface: e.surface, isLight: await isLightNow($) }
     const card = bandCard(draw, {
       kind, percent, threshold: settings.threshold, note: await io.get('latest'), failure: await io.get('failure'), columns: e.props.bodyColumns,
@@ -221,7 +229,10 @@ function hookBand(on: On, settings: Settings): void {
         onSnooze: pressed(io, () => snooze(io, settings)),
         onShow: pressed(io, () => io.openPane()),
         onDismiss: pressed(io, () => dismiss(io, settings)),
+        onContinue: pressed(io, () => take(io, settings)),
+        onDecline: pressed(io, () => decline(io)),
       },
+      now: await io.now(),
     })
 
     return pinned(e, withTheirs(draw, card, theirs))

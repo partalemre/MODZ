@@ -4,6 +4,7 @@ import { ButtonRow, Card, Meter, cardInnerWidth } from './kit/ui'
 import type { ButtonSpec, DrawCtx } from './kit/ui'
 import type { CardKind } from './gate'
 import { relativeTo } from './note'
+import { ageText } from './pane'
 import { words } from './words'
 import type { HandoffNote } from '../types'
 
@@ -18,6 +19,8 @@ export type BandActions = {
   onSnooze: () => void
   onShow: () => void
   onDismiss: () => void
+  onContinue: () => void
+  onDecline: () => void
 }
 
 export type BandView = {
@@ -28,6 +31,7 @@ export type BandView = {
   failure: string | null
   columns: number
   actions: BandActions
+  now: number
 }
 
 function askCard(draw: DrawCtx, view: BandView, width: number): RenderElement {
@@ -47,6 +51,21 @@ function askCard(draw: DrawCtx, view: BandView, width: number): RenderElement {
       Meter(draw, { value: percent / PERCENT, width }),
       ButtonRow(draw, { buttons }),
     ],
+  })
+}
+
+// A note another conversation left: it reaches this one only if the person says so.
+function offerCard(draw: DrawCtx, view: BandView, width: number): RenderElement {
+  const says = words()
+  const buttons: ButtonSpec[] = [
+    { key: 'handoff-continue', label: says.continueFrom, variant: 'primary', onPress: view.actions.onContinue },
+    { key: 'handoff-decline', label: says.notNow, variant: 'plain', onPress: view.actions.onDecline },
+  ]
+  const age = view.note === null ? '' : ageText(view.now - view.note.at)
+
+  return Card(draw, {
+    header: { icon: 'flag', eyebrow: says.eyebrow, meta: age, headline: says.offerHeadline, sub: says.offerSub, width },
+    children: [ButtonRow(draw, { buttons })],
   })
 }
 
@@ -87,6 +106,7 @@ function writingCard(draw: DrawCtx, width: number): RenderElement {
 export function bandCard(draw: DrawCtx, view: BandView): RenderElement {
   const width = cardInnerWidth(view.columns)
   if (view.kind === 'ask') return askCard(draw, view, width)
+  if (view.kind === 'offer') return offerCard(draw, view, width)
   if (view.kind === 'saved') return savedCard(draw, view, width)
   if (view.kind === 'failed') return failedCard(draw, view, width)
 

@@ -66,8 +66,8 @@ function actionsRow(ui: TextUi, c: CardInput): RenderElement {
     ] })
   }
   return Box({ flexDirection: 'row', gap: 1, flexWrap: 'wrap', alignItems: 'center', children: [
-    Button({ key: `save:${id}`, label: says.saveLabel[c.picked], variant: 'primary', hotkey: says.saveKey, onPress: () => c.on.save(c.picked) }),
-    Button({ key: `other:${id}`, label: says.saveLabel[other(c.picked)], variant: 'secondary', onPress: () => c.on.save(other(c.picked)) }),
+    Button({ key: `save:${id}`, label: `${says.saveLabel[c.picked]} → ${c.paths[c.picked]}`, variant: 'primary', hotkey: says.saveKey, onPress: () => c.on.save(c.picked) }),
+    Button({ key: `other:${id}`, label: `${says.saveLabel[other(c.picked)]} → ${c.paths[other(c.picked)]}`, variant: 'secondary', onPress: () => c.on.save(other(c.picked)) }),
     Button({ key: `edit:${id}`, label: says.reword, plain: true, dimColor: true, hotkey: says.rewordKey, onPress: c.on.reword }),
     Button({ key: `skip:${id}`, label: says.skip, plain: true, dimColor: true, onPress: c.on.skip }),
   ] })

@@ -42,7 +42,7 @@ test('a Turkish correction: the card shows the rule, its confidence and the word
   expect((await ui.find({ type: 'Text', text: /^Kural olarak kaydedilsin mi\?/ }))?.text).toBe('Kural olarak kaydedilsin mi?  %95 emin')
   expect((await ui.find({ type: 'Text', text: /^Söylediğin: / }))?.text).toBe(`Söylediğin: “${TR}”`)
   await ui.unmount()
-  expect(await buttons($)).toEqual(['Sadece bu proje', 'Tüm projelerin', '*Bu projeye kaydet', 'Tüm projelere kaydet', 'Yeniden yaz', 'Kaydetme'])
+  expect(await buttons($)).toEqual(['Sadece bu proje', 'Tüm projelerin', '*Bu projeye kaydet → repo/CLAUDE.md', 'Tüm projelere kaydet → ~/.claude/CLAUDE.md', 'Yeniden yaz', 'Kaydetme'])
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
@@ -50,9 +50,9 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const w = world(on, { verdicts: { [TR]: PNPM_TR } })
     await start($)
     await say($, w, TR)
-    expect((await buttons($, surface)).filter(label => label.startsWith('*'))).toEqual(['*Bu projeye kaydet'])
+    expect((await buttons($, surface)).filter(label => label.startsWith('*'))).toEqual(['*Bu projeye kaydet → repo/CLAUDE.md'])
     await pressKey($, 'pick-global:', surface)
-    expect((await buttons($, surface)).filter(label => label.startsWith('*'))).toEqual(['*Tüm projelere kaydet'])
+    expect((await buttons($, surface)).filter(label => label.startsWith('*'))).toEqual(['*Tüm projelere kaydet → ~/.claude/CLAUDE.md'])
   })
 }
 
@@ -61,7 +61,7 @@ test('picking the global row moves the recommended button, and saving writes the
   await start($)
   await say($, w, TR)
   await pressKey($, 'pick-global:')
-  expect(await buttons($)).toEqual(['Sadece bu proje', 'Tüm projelerin', '*Tüm projelere kaydet', 'Bu projeye kaydet', 'Yeniden yaz', 'Kaydetme'])
+  expect(await buttons($)).toEqual(['Sadece bu proje', 'Tüm projelerin', '*Tüm projelere kaydet → ~/.claude/CLAUDE.md', 'Bu projeye kaydet → repo/CLAUDE.md', 'Yeniden yaz', 'Kaydetme'])
   await pressKey($, 'save:')
   expect(w.files['/home/u/.claude/CLAUDE.md']).toContain(`- ${PNPM_TR.rule}\n<!-- end claude-reflect -->`)
   expect(w.files['/repo/CLAUDE.md']).toBeUndefined()

@@ -34,7 +34,7 @@ for (const surface of SURFACES) {
     // The desktop's destination rows are pressed whole: their buttons carry a blank label (Hangul fillers), the drawing's alt the words.
     const blank = (label: string) => (/^\u3164+$/.test(label) ? '~' : label)
     const picks = surface === 'desktop' ? ['~', '~'] : ['This project only', 'All your projects']
-    expect((await buttons($, surface)).map(blank)).toEqual([...picks, '[s]Save to this project', 'Save to all projects', 'Rewrite', "Don't save"])
+    expect((await buttons($, surface)).map(blank)).toEqual([...picks, '[s]Save to this project → repo/CLAUDE.md', 'Save to all projects → ~/.claude/CLAUDE.md', 'Rewrite', "Don't save"])
     const ui = await mountOn($, surface)
     const card = JSON.stringify(await ui.drawn())
     for (const part of ['Save as a rule?', '92% sure', 'You said: ', 'Where']) expect(card).toContain(part)
@@ -42,7 +42,7 @@ for (const surface of SURFACES) {
     await ui.unmount()
 
     await pressOn($, surface, 'pick-global:')
-    expect((await buttons($, surface)).filter(label => label.startsWith('['))).toEqual(['[s]Save to all projects'])
+    expect((await buttons($, surface)).filter(label => label.startsWith('['))).toEqual(['[s]Save to all projects → ~/.claude/CLAUDE.md'])
     await pressOn($, surface, 'other:')
     const saved = JSON.stringify(await (await mountOn($, surface)).drawn())
     for (const part of ['Rule saved', 'Saved to this project', 'Added to: ']) expect(saved).toContain(part)

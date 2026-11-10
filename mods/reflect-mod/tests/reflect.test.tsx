@@ -66,7 +66,7 @@ test('a project rule saved in one repo stays out of another repo\'s prompt', asy
   expect((await compose($)).sections).toEqual([])
 })
 
-test('"This repo instead" writes the repo the session is in now, not the one the rule was heard in', async ($, on) => {
+test('a rule the model calls global still saves to the repo the session is in now, not the one it was heard in', async ($, on) => {
   let root = '/a'
   const w = world(on, {
     verdicts: { 'always answer in English': { is_rule: true, rule: 'Answer in English', scope: 'global', confidence: 0.9 } },
@@ -75,7 +75,7 @@ test('"This repo instead" writes the repo the session is in now, not the one the
   await start($)
   await say($, w, 'always answer in English')
   root = '/b'
-  await press($, 'other:')
+  await press($, 'save:')
   expect(w.files['/b/CLAUDE.md']).toContain('- Answer in English')
   expect(w.files['/a/CLAUDE.md']).toBeUndefined()
 })
@@ -142,14 +142,14 @@ test('known rules, weak or broken verdicts and failing calls leave no row, and l
     files: { '/repo/CLAUDE.md': '# Repo\n- Use pnpm, not npm, in this repo\n' },
     verdicts: {
       'нет, используй pnpm': PNPM,
-      'maybe use tabs?': { is_rule: true, rule: 'Use tabs', scope: 'project', confidence: 0.4 },
+      'maybe use tabs instead?': { is_rule: true, rule: 'Use tabs', scope: 'project', confidence: 0.4 },
       'no, the other way': 'error',
       'no, the model is blocked now': 'throw',
       'always answer in English': { is_rule: true, rule: 'Answer in English', scope: 'global', confidence: 0.9 },
     },
   })
   await start($)
-  for (const t of ['нет, используй pnpm', 'maybe use tabs?', 'no, the other way', 'no, the model is blocked now', 'always answer in English']) await say($, w, t)
+  for (const t of ['нет, используй pnpm', 'maybe use tabs instead?', 'no, the other way', 'no, the model is blocked now', 'always answer in English']) await say($, w, t)
   expect(w.asked).toHaveLength(5)
   expect(await rows($)).toEqual(['“Answer in English”'])
 })

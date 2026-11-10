@@ -17,13 +17,25 @@ const TRIVIAL = new RegExp('^(y|yes|yep|ok|okay|k|go|go on|go ahead|continue|pro
   'cool|lgtm|tamam|tamamdır|tmm|evet|olur|peki|devam|devam et|sağol|sağ ol|teşekkürler|teşekkür ederim|eyvallah|harika|' +
   'süper|güzel|anladım|aynen|okey|да|ок|окей|ага|го|давай|дальше|продолжай|спасибо|отлично|\\d{1,3})[\\s.!)]*$', 'i')
 
-/** Words a correction or a standing preference is said with. English and Russian as whole words. */
-const TRIGGER_WORDS = new RegExp('(?<![\\p{L}\\p{N}])(no|not|don\'?t|do not|never|always|instead|wrong|stop|prefer|should|' +
-  'must|use|avoid|remember|rather|actually|from now on|i wish|in this (repo|project)|нет|не|используй|всегда|никогда|' +
-  'вместо)(?![\\p{L}\\p{N}])', 'iu')
-/** Turkish ones as stems, so their suffixes match too: kullanma, kullanın, yapmayın, değildi. */
-const TRIGGER_STEMS = new RegExp('(?<![\\p{L}\\p{N}])(hayır|değil|yapma|etme|kullan|yerine|asla|hiçbir zaman|her zaman|hep|' +
-  'daima|bundan sonra|artık|yanlış|olmaz|istemiyorum|tercih|keşke|lütfen|unutma|hatırla|sakın|bu repo|bu proje)', 'iu')
+// The shape of a correction aimed at Claude, not a lone word: a "no," that opens the prompt, a negated order
+// ("don't add", "kullanma"), or a standing preference ("always", "from now on", "instead"). Every word stands
+// whole (Unicode letters, so "hep" never matches "hepsini"); plain words like "use", "not" or "lütfen" never fire.
+const W = (body: string) => `(?<![\\p{L}\\p{N}])(${body})(?![\\p{L}\\p{N}])`
+const SHAPES = [
+  // An opening refusal followed by its correction: "no, use pnpm", "hayır pnpm", "нет, используй".
+  /^(no|nope|nah|hayır|нет)\s*[,.!:;—–-]/u,
+  /^(hayır|нет)\s/u,
+  new RegExp(`^${W('actually|wrong|yanlış|öyle değil')}`, 'u'),
+  // A negated order to Claude; "I don't know" is the person talking about themselves.
+  new RegExp(`(?<!(^|\\s)(i|we|it|they|that|this)\\s)${W("don'?t|do not|never|stop|quit|avoid|no more")}\\s+\\p{L}`, 'u'),
+  new RegExp(W('always|from now on|going forward|next time|in (the )?future|instead( of)?|rather than|prefer'), 'u'),
+  new RegExp(W("i (told you|said|asked you|want you to|'d rather|would rather)|you (keep|always|never|forgot|should|shouldn'?t|must)"), 'u'),
+  new RegExp(W('remember (that|to)|keep in mind'), 'u'),
+  // Turkish negative imperatives keep their plural suffix: yapma, yapmayın, dokunmayınız.
+  new RegExp(W('(yapma|etme|kullanma|ekleme|yazma|silme|değiştirme|dokunma|koyma|bırakma|çalıştırma|gönderme)(y[ıi]n([ıi]z)?)?'), 'u'),
+  new RegExp(W('asla|hiçbir zaman|her zaman|hep|daima|bundan sonra|sakın|yerine|tercih|istemiyorum|kaç kere|söylemiştim|demiştim|unutma'), 'u'),
+  new RegExp(W('никогда|всегда|вместо|не (надо|нужно|делай|используй|пиши|трогай)'), 'u'),
+]
 
 const SECRET = [
   /\b(sk|pk|rk|ghp|gho|ghs|github_pat|xox[abprs]|glpat)[-_][A-Za-z0-9_-]{8,}/i,
@@ -41,14 +53,17 @@ export const isTrivial = (text: string): boolean => TRIVIAL.test(text.trim())
 
 /** Turkish lower case first (İ → i, I → ı), then the plain one, so both spellings meet the lists. */
 export const hasTrigger = (text: string): boolean =>
-  [text.toLocaleLowerCase('tr'), text.toLowerCase()].some(t => TRIGGER_WORDS.test(t) || TRIGGER_STEMS.test(t))
+  [text.toLocaleLowerCase('tr'), text.toLowerCase()].some(t => SHAPES.some(re => re.test(t.trim())))
 
 export const remembered = (text: string): string | undefined =>
   /^\s*(remember|hatırla|unutma)\s*:\s*([\s\S]+)$/i.exec(text)?.[2]?.trim()
 
+/** Turkish words differ by their suffixes (projede, projelerde): their first five letters stand for them. */
+const STEM = 5
+
 /** Ordered word pairs, short words kept: "pnpm, not npm" and "npm, not pnpm" share none. */
 export function pairs(s: string): Set<string> {
-  const words = s.toLowerCase().replace(/[^\p{L}\p{N}+#.\s]/gu, ' ').split(/\s+/).filter(Boolean)
+  const words = s.toLocaleLowerCase('tr').replace(/[^\p{L}\p{N}+#.\s]/gu, ' ').split(/\s+/).filter(Boolean).map(w => w.slice(0, STEM))
   const out = new Set<string>()
   if (words.length === 1) out.add(words[0] ?? '')
   for (let i = 0; i + 1 < words.length; i += 1) out.add(`${words[i]} ${words[i + 1]}`)

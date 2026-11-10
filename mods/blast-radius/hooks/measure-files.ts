@@ -11,6 +11,13 @@ const GROUPS_MAX = 8
 const FILES_PER_GROUP = 30
 const CLEAN_PATHS_MAX = 2000
 const TIMEOUT_MS = 15000
+// Folders a build or an install makes again; deleting them while git ignores them loses nothing.
+export const REBUILDABLE = new Set([
+  'node_modules', 'dist', 'build', 'out', '.next', '.nuxt', '.svelte-kit', '.turbo', '.parcel-cache', '.cache', 'coverage',
+  'target', '__pycache__', '.pytest_cache', '.mypy_cache', '.ruff_cache', '.gradle', 'DerivedData', '.dart_tool',
+])
+// find actions with effects of their own: a dry run would run them too.
+const FIND_ACTIONS = new Set(['-exec', '-execdir', '-ok', '-okdir', '-delete', '-fprint', '-fprint0', '-fprintf', '-fls'])
 
 // The paths are passed to bash as arguments, never as source, so nothing in
 // them runs. compgen -G expands a glob without command substitution.
@@ -102,11 +109,22 @@ function filesReport(scan: Scan, summary: string, note: string | null): Report {
   return { ...emptyReport('files', summary, note), count: scan.files, bytes: scan.bytes, groups: scan.groups, more: Math.max(0, scan.files - listed), tracked: scan.tracked }
 }
 
+/** Every target is build output git ignores (node_modules, dist, …): the next build or install makes it again. */
+async function isRebuildable(run: Run, targets: string[], cwd: string): Promise<boolean> {
+  const isNamed = (path: string) => !/[*?[]/.test(path) && path.split('/').some(part => REBUILDABLE.has(part))
+  if (!targets.every(isNamed)) return false
+  const ignored = await run(['git', 'check-ignore', '--', ...targets], { cwd, timeoutMs: TIMEOUT_MS })
+  const listed = new Set(lines(ignored.stdout))
+
+  return ignored.exitCode === 0 && targets.every(path => listed.has(path))
+}
+
 export async function measureRm(run: Run, risk: Extract<Risk, { kind: 'rm' }>, cwd: string): Promise<Report> {
   const targets = risk.targets.join(' ')
   if (risk.targets.length === 0) return emptyReport('files', 'rm with no paths', words().notes.noPaths)
   const unknown = risk.targets.filter(isUnresolved)
   if (unknown.length > 0) return emptyReport('files', `${risk.label} ${targets} (paths decided at run time)`, words().notes.decidedAtRun(unknown.join(' ')))
+  if (await isRebuildable(run, risk.targets, cwd)) return nothingReport('files', `delete only git-ignored build output: ${targets}`)
   const ran = await run(['bash', '-c', FILES_SCRIPT, 'blast-radius', ...risk.targets], { cwd, timeoutMs: TIMEOUT_MS })
   // A scan that failed (no such shell, as on some Windows) knows nothing: never read that as "nothing to delete".
   if (ran.exitCode !== 0) throw new Error(`the files scan exited ${ran.exitCode}`)
@@ -150,13 +168,30 @@ export async function measureClean(run: Run, risk: GitRisk, cwd: string): Promis
   const gone = lines(dry.stdout).filter(l => l.startsWith('Would remove ')).map(l => l.slice('Would remove '.length))
   const summary = gone.length === 0 ? 'remove nothing: no untracked files match' : `remove ${plural(gone.length, 'untracked path', 'untracked paths')}`
   if (gone.length === 0) return nothingReport('files', summary)
-  const ran = await run(['bash', '-c', FILES_SCRIPT, 'blast-radius', ...gone.slice(0, CLEAN_PATHS_MAX)], { cwd, timeoutMs: TIMEOUT_MS })
+
+  return { ...(await pathsReport(run, { paths: gone, summary }, cwd)), tracked: 0 }
+}
+
+/** The files under paths a dry run listed, or the paths themselves when the scan finds no file. */
+async function pathsReport(run: Run, found: { paths: string[]; summary: string }, cwd: string): Promise<Report> {
+  const { paths, summary } = found
+  const ran = await run(['bash', '-c', FILES_SCRIPT, 'blast-radius', ...paths.slice(0, CLEAN_PATHS_MAX)], { cwd, timeoutMs: TIMEOUT_MS })
   const scan = parseScan(ran.stdout)
-  if (!scan.files) {
-    const items = gone.slice(0, LIST_MAX).map(name => ({ name, tag: '', meta: '', weight: 0 }))
+  if (scan.files) return filesReport(scan, summary, null)
+  const items = paths.slice(0, LIST_MAX).map(name => ({ name, tag: '', meta: '', weight: 0 }))
 
-    return { ...emptyReport('files', summary, null), count: gone.length, items, more: Math.max(0, gone.length - LIST_MAX), tracked: 0 }
-  }
+  return { ...emptyReport('files', summary, null), count: paths.length, items, more: Math.max(0, paths.length - LIST_MAX), tracked: null }
+}
 
-  return { ...filesReport(scan, summary, null), tracked: 0 }
+/** `find … -delete`: the same find with -print in place of the delete lists what it would take. */
+export async function measureFind(run: Run, risk: Extract<Risk, { kind: 'find' }>, cwd: string): Promise<Report> {
+  // Another action (-exec, -fprint…) would run during the dry run too, so it isn't run.
+  if (risk.args.some(arg => FIND_ACTIONS.has(arg))) return emptyReport('files', `${risk.label} (could not dry-run it)`, words().notes.findUnmeasured)
+  if (risk.args.some(isUnresolved)) return emptyReport('files', `${risk.label} (paths decided at run time)`, words().notes.decidedAtRun(risk.args.filter(isUnresolved).join(' ')))
+  const dry = await run(['find', ...risk.args], { cwd, timeoutMs: TIMEOUT_MS })
+  if (dry.exitCode !== 0 && dry.stdout === '') throw new Error(`find exited ${dry.exitCode}: ${dry.stderr.trim().slice(0, 120)}`)
+  const gone = lines(dry.stdout).filter(path => path !== '.' && path !== './')
+  if (gone.length === 0) return nothingReport('files', 'delete nothing: find matches no file')
+
+  return pathsReport(run, { paths: gone, summary: `delete ${plural(gone.length, 'path', 'paths')} find matches` }, cwd)
 }

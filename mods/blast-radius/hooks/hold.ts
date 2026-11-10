@@ -58,6 +58,16 @@ let held: Held | null = null
 
 export const current = (): Held | null => held
 
+// Commands the person just ran from a card, so the house rules don't ask about them a second time.
+const answered = new Set<string>()
+export const markAnswered = (command: string): void => {
+  answered.add(command)
+}
+export const takeAnswered = (command: string): boolean => answered.delete(command)
+
+/** A Held for a measurement no card will show (a call nobody can answer). */
+export const unheld = (command: string): Held => ({ command, view: null, decision: null, phase: 'asking', isExpanded: false, canStrike: false })
+
 let hasNoSleep = false
 let canReopen = true
 

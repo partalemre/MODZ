@@ -8,8 +8,7 @@
 import type { EngineInterface, Register } from 'claude-code'
 
 import { ruleView } from './caution'
-import { classify } from './classify'
-import { SLEEP_TIMEOUT_MS, hold, take } from './hold'
+import { SLEEP_TIMEOUT_MS, hold, take, takeAnswered } from './hold'
 import type { Decision, Held, HoldIo } from './hold'
 import { judge } from './kit/judge'
 import type { JudgeIo } from './kit/judge'
@@ -56,7 +55,7 @@ async function judged($: EngineInterface, input: { command: string; rules: strin
   return verdict
 }
 
-type Ask = { command: string; rule: string; signal: AbortSignal }
+type Ask = { command: string; rule: string; signal: AbortSignal; isSubagent?: boolean }
 
 async function prepare($: EngineInterface, mine: Held, input: Ask): Promise<boolean> {
   const card = { command: input.command, rule: input.rule, cwd: await $.session.cwd() }
@@ -68,7 +67,8 @@ async function prepare($: EngineInterface, mine: Held, input: Ask): Promise<bool
 /** Holds the command on the card; a deny unless the person runs it. */
 async function ask($: EngineInterface, input: Ask): Promise<{ deny: string } | null> {
   const noAnswer = `Blast Radius held this command and did not run it: a house rule (${input.rule}) asks the user first`
-  if ((await $.session.surfaces()).length === 0) return { deny: `${noAnswer}, and nobody is here to answer. Do not retry it.` }
+  // A subagent's loop, like a run with no screen, has nobody to answer the card.
+  if (input.isSubagent === true || (await $.session.surfaces()).length === 0) return { deny: `${noAnswer}, and nobody is here to answer. Do not retry it.` }
   const mine = await take(holdIo($), { command: input.command, signal: input.signal, canStrike: false })
   if (mine !== null) await hold(holdIo($), mine, { signal: input.signal, prepare: () => prepare($, mine, input) })
   const decision = mine?.decision ?? 'interrupted'
@@ -86,10 +86,11 @@ export function resetHouse(): void {
 }
 
 export function houseHooks(on: On): void {
-  // Risky commands are blast-radius's own (register.tsx); plain reads are never judged.
+  // A risky command blast-radius held never gets here unless the person ran it; plain reads are never judged.
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const command = String(e.command ?? '')
-    if (classify(command) !== null || isReadOnly(command)) return next(e)
+    // Run from blast-radius's own card a moment ago (register.tsx nests outside this hook): asked once is enough.
+    if (takeAnswered(command) || isReadOnly(command)) return next(e)
     const rules = await rulesOf($)
     if (rules.length === 0) return next(e)
     const verdict = await judged($, { command, rules })
@@ -99,7 +100,7 @@ export function houseHooks(on: On): void {
     if (verdict.kind === 'block') {
       return { deny: `Blast Radius blocked this command: it breaks a house rule in ${RULES_FILE} (${rule}). Do not retry it or work around it; ask the user if it is needed.` }
     }
-    const refused = await ask($, { command, rule, signal: next.signal })
+    const refused = await ask($, { command, rule, signal: next.signal, isSubagent: e.agentId !== undefined })
 
     return refused ?? next(e)
   }).catch(($, e, next) => next(e))

@@ -25,29 +25,44 @@ function filesBanner(report: Report): Banner | null {
 function banner(report: Report): Banner | null {
   if (report.note !== null && report.count === 0) return { tone: 'warn', text: report.note }
   if (report.kind === 'files') return filesBanner(report)
-  if (report.kind === 'changes') return { tone: 'danger', text: `Commit edilmemiş değişiklikler (+${report.added} −${report.removed} satır) geri getirilemez.` }
-  if (report.kind === 'commits') return { tone: 'danger', text: 'Bu commit\'ler uzak daldan silinir; yerelde kopyası yoksa geri gelmez.' }
+  if (report.kind === 'changes') {
+    const lines = report.added + report.removed === 0 ? '' : ` (+${report.added} −${report.removed} satır)`
+
+    return { tone: 'danger', text: `Commit edilmemiş değişiklikler${lines} geri getirilemez.${report.note === null ? '' : ` ${report.note}`}` }
+  }
+  // Only a push lands on a remote branch; branch -D and reset drop commits locally.
+  if (report.kind === 'commits') return { tone: 'danger', text: report.where?.includes('/') ? 'Bu commit\'ler uzak daldan silinir; yerelde kopyası yoksa geri gelmez.' : `Bu commit'ler ${report.where ?? 'daldan'} dalından düşer; başka bir dalda yoksa geri gelmez.` }
   if (report.kind === 'migrations') return { tone: 'danger', text: 'Migration\'lar veritabanını değiştirir; geri almak ayrı bir iş.' }
+  if (report.kind === 'overwrites') return { tone: 'danger', text: 'Bu dosyaların şimdiki içeriği git\'te yok; üzerine yazılırsa geri getirilemez.' }
+  if (report.kind === 'stashes') return { tone: 'danger', text: 'Silinen bir stash\'i geri getirmek zordur.' }
+  if (report.kind === 'removals') return { tone: 'danger', text: 'Listelenenler kaldırılır; buradan geri getirilemez.' }
 
   return report.note === null ? null : { tone: 'warn', text: report.note }
 }
 
+const HEADLINES: Partial<Record<Report['kind'], (report: Report) => { payload: string; tail: string }>> = {
+  files: report => ({ payload: report.bytes === null ? `${report.count} yol` : `${report.count} dosya · ${trSize(report.bytes)}`, tail: ' silinecek' }),
+  changes: report => ({ payload: `${report.count} dosyadaki değişiklik`, tail: ' silinecek' }),
+  commits: report => ({ payload: `${report.count} commit`, tail: ' düşecek' }),
+  overwrites: report => ({ payload: `${report.count} dosya · ${trSize(report.bytes ?? 0)}`, tail: ' üzerine yazılacak' }),
+  stashes: report => ({ payload: `${report.count} stash`, tail: ' silinecek' }),
+  removals: report => ({ payload: `${report.count} öğe`, tail: ' kaldırılacak' }),
+}
+
 function headline(report: Report): { payload: string; tail: string } {
   if (report.count === 0) return { payload: 'önceden ölçülemedi', tail: '' }
-  if (report.kind === 'files') return { payload: report.bytes === null ? `${report.count} yol` : `${report.count} dosya · ${trSize(report.bytes)}`, tail: ' silinecek' }
-  if (report.kind === 'changes') return { payload: `${report.count} dosyadaki değişiklik`, tail: ' silinecek' }
-  if (report.kind === 'commits') return { payload: `${report.count} commit`, tail: ' düşecek' }
 
-  return { payload: `${report.count} migration`, tail: ' uygulanacak' }
+  return HEADLINES[report.kind]?.(report) ?? { payload: `${report.count} migration`, tail: ' uygulanacak' }
 }
 
 function action(report: Report): View['action'] {
   if (report.count === 0) return { label: 'Yine de çalıştır', hotkey: 'c' }
   if (report.kind === 'files') return { label: `${report.count} dosyayı sil`, hotkey: 's' }
   if (report.kind === 'changes') return { label: 'Değişiklikleri sil', hotkey: 's' }
-  if (report.kind === 'commits') return { label: 'Zorla gönder', hotkey: 'z' }
+  if (report.kind === 'commits' && report.where?.includes('/')) return { label: 'Zorla gönder', hotkey: 'z' }
+  if (report.kind === 'migrations') return { label: `${report.count} migration'ı uygula`, hotkey: 'u' }
 
-  return { label: `${report.count} migration'ı uygula`, hotkey: 'u' }
+  return { label: 'Yine de çalıştır', hotkey: 'c' }
 }
 
 const notes: Notes = {
@@ -61,6 +76,12 @@ const notes: Notes = {
   migrationsFailed: argv => `Bekleyen migration'lar listelenemedi (${argv} başarısız).`,
   unmeasured: reason => `Ölçülemedi: ${reason}`,
   missingFolder: dir => `${dir} klasörü bulunamadı, bu yüzden ne değişeceği ölçülemedi.`,
+  fromInput: label => `${label} girdisindeki yollara uygulanıyor; neyi değiştireceği önceden ölçülemiyor.`,
+  findUnmeasured: 'Bu find silmenin yanında başka bir işlem de yapıyor; ne sileceğini görmek için denenemez.',
+  device: path => `Bu komut doğrudan ${path} aygıtına yazıyor; bütün bir diski silebilir.`,
+  database: statement => `Bu komut veritabanında ${statement} çalıştırıyor. İçindekiler buradan ölçülemiyor ve buradan geri alınamaz.`,
+  toolFailed: argv => `Neyin kaldırılacağı listelenemedi (${argv} başarısız).`,
+  alsoDrops: (count, branch) => `Ayrıca ${branch} dalı ${count} commit geri gider.`,
 }
 
 const edit: EditWords = {

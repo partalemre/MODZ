@@ -17,6 +17,7 @@ const PACE_MIN_SAMPLES = 3
 const PACE_MIN_SPAN_MS = 10 * 60_000
 const PACE_LOOKBACK_MS = 60 * 60_000
 const DAY_MS = 24 * 60 * 60_000
+const WEEK_MS = 7 * DAY_MS
 const TWO_DIGITS = 2
 // A reset time that moves less than this is the same window: the engine's text shifts by seconds.
 const SAME_WINDOW_MS = 10 * 60_000
@@ -58,7 +59,7 @@ function slopeOf(points: readonly PacePoint[]): number {
 }
 
 // When the window reaches 100% at the recent pace; null without a basis, or when the reset comes first.
-export function fullAtOf(points: readonly PacePoint[], resetsAt: string | null): number | null {
+export function fullAtOf(points: readonly PacePoint[], resetsAt: string | null, isWeekly = false): number | null {
   const first = points[0]
   const last = points[points.length - 1]
   const resetMs = resetsAt === null ? Number.NaN : Date.parse(resetsAt)
@@ -66,7 +67,10 @@ export function fullAtOf(points: readonly PacePoint[], resetsAt: string | null):
   if (points.length < PACE_MIN_SAMPLES || last.t - first.t < PACE_MIN_SPAN_MS) return null
   const slope = slopeOf(points)
   if (slope <= 0) return null
-  const fullAt = last.t + (MAX_PERCENT - last.value) / slope
+  // Nobody works around the clock: the week's own average, idle hours included, caps the last hour's pace.
+  const elapsed = last.t - (resetMs - WEEK_MS)
+  const pace = isWeekly && elapsed > 0 ? Math.min(slope, last.value / elapsed) : slope
+  const fullAt = last.t + (MAX_PERCENT - last.value) / pace
 
   return fullAt < resetMs ? fullAt : null
 }
@@ -79,11 +83,11 @@ export function brakeWhy(spec: BrakeSpec): string | null {
   if (spec.at === null || last === undefined) return null
   const { ack } = spec
   if (ack !== null && !isNewWindow(ack.window, spec.resetsAt) && last.value < ack.percent + ACK_POINTS) return null
-  const fullAt = last.value < PACE_FLOOR ? null : fullAtOf(spec.points, spec.resetsAt)
+  const fullAt = last.value < PACE_FLOOR ? null : fullAtOf(spec.points, spec.resetsAt, spec.isWeekly === true)
   if (last.value < spec.at && fullAt === null) return null
   const says = words()
   const percent = says.percent(says.decimal(String(last.value)))
-  const pace = fullAt === null ? '' : says.brakePace(clockOf(fullAt))
+  const pace = fullAt === null ? '' : says.brakePace(clockOf(fullAt, last.t))
   const reset = spec.resetsAt === null ? '' : says.brakeReset(clockOf(Date.parse(spec.resetsAt), last.t))
 
   return (spec.isWeekly === true ? says.brakeWhyWeekly : says.brakeWhy)(percent, pace, reset)

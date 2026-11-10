@@ -7,7 +7,8 @@ import type { Theme } from './ui/theme'
 import { words } from './words'
 
 // `ask` is the prompt that started the turn and `age` how long ago it ended ("3m ago"); '' when unknown.
-export type PaneModel = { steps: ReplayStep[]; index: number; explain: ReplayExplain; theme: Theme; width: number; ask?: string; age?: string }
+// byCommands: Bash calls of the turn that may have changed files, which no step shows.
+export type PaneModel = { steps: ReplayStep[]; index: number; explain: ReplayExplain; theme: Theme; width: number; ask?: string; age?: string; byCommands?: number }
 
 const ROW = 32
 const ROWS_MAX = 8

@@ -27,12 +27,9 @@ export async function openReplay(io: PaneIo): Promise<{ hasEdits: boolean; isPla
   const steps = replay?.steps ?? []
   const hasEdits = steps.length > 0
   await io.browse.set(() => ({ mode: 'replay', source: 'live', shown: LIST_PAGE }))
-  if (hasEdits) {
-    await io.index.set(() => 0)
-    await io.offered.set(() => false)
-  }
+  if (hasEdits) await io.index.set(() => 0)
   await io.view.set(view => ({ ...view, isOpen: true, inBand: false }))
-  // The pane takes the keys only while nothing else holds them: the band's button held them, so wait a beat.
+  // The pane takes the keys only while nothing else holds them (a band button, the hub's row): so wait a beat.
   await io.sleep(BAND_RELEASE_MS)
   const isPlaced = await io.open(hasEdits ? paneRows(steps) : EMPTY_ROWS)
   // The band shows a replay when the pane has no room; an empty one has nothing to show there.

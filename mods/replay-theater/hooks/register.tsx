@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Replay Theater: records the file edits Claude makes in a turn, then lets you step through them in a pane,
-// one diff at a time. Modified 2026 (MODZ): Tidemark drawing, an offer card that stacks with the band, what each
-// change does (Claude's own words first, one Haiku call at most), and the plan step each edit served.
+// one diff at a time. Modified 2026 (MODZ): Tidemark drawing, no card nobody asked for (/replay and the hub's row
+// open it), what each change does (Claude's own words first, one Haiku call at most), the plan step each edit
+// served, the file around each edit, and a plain word on changes made by commands.
 
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
@@ -18,7 +19,6 @@ import { hookEdits } from './edits-hook'
 import { withHome } from './home'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { setLang } from './lang'
-import { offerCard } from './offer'
 import { motion } from './pane'
 import { LIST_PAGE, PANE_ROWS_MAX } from './pane-io'
 import type { PaneIo } from './pane-io'
@@ -33,7 +33,7 @@ import type { HubCard } from '../types'
 const pendingAtom = atom({ plugin: 'replay-theater', key: 'pending' } as const, [])
 const replayAtom = atom({ plugin: 'replay-theater', key: 'replay' } as const, null)
 const indexAtom = atom({ plugin: 'replay-theater', key: 'index' } as const, 0)
-const offeredAtom = atom({ plugin: 'replay-theater', key: 'isOffered' } as const, false)
+const commandsAtom = atom({ plugin: 'replay-theater', key: 'commands' } as const, 0)
 const viewAtom = atom({ plugin: 'replay-theater', key: 'view' } as const, { isOpen: false, inBand: false, theme: 'auto' })
 const planAtom = atom({ plugin: 'replay-theater', key: 'plan' } as const, [])
 const browseAtom = atom({ plugin: 'replay-theater', key: 'browse' } as const, { mode: 'replay', source: 'live', shown: LIST_PAGE })
@@ -87,7 +87,6 @@ function paneIo($: EngineInterface): PaneIo {
     browse: { get: () => read($, browseAtom), set: change => update($, browseAtom, change) },
     view: { get: () => read($, viewAtom), set: change => update($, viewAtom, change) },
     index: { get: () => read($, indexAtom), set: change => update($, indexAtom, change) },
-    offered: { get: () => read($, offeredAtom), set: change => update($, offeredAtom, change) },
     replay: { get: () => read($, replayAtom), set: change => update($, replayAtom, change) },
     past: { get: () => read($, pastAtom), set: change => update($, pastAtom, change) },
     turns: { get: () => read($, turnsAtom), set: change => update($, turnsAtom, change) },
@@ -134,7 +133,8 @@ async function writeHub($: EngineInterface): Promise<void> {
   const shown = hubOf(await read($, replayAtom))
   const { value } = await $.state.get(HUB)
   if (value !== undefined && value.detail === shown.detail && value.tone === shown.tone) return
-  const card: HubCard = { pane: HUB_PANE, ...shown, at: await $.clock.now() }
+  // Under Work: a replay looks back at what happened, it guards nothing.
+  const card: HubCard = { pane: HUB_PANE, ...shown, section: 'work', at: await $.clock.now() }
   await $.state.set(HUB, card)
 }
 
@@ -207,22 +207,24 @@ function hookRecording(on: On): void {
     if ((e as { agentId?: string }).agentId === undefined) {
       flags.ask = typeof (e as { text?: unknown }).text === 'string' ? (e as { text: string }).text : ''
       await update($, pendingAtom, () => [])
-      await update($, offeredAtom, () => false)
+      await update($, commandsAtom, () => 0)
     }
 
     return next(e)
   })
 
-  // At the end of a main-loop turn the pending edits become the replay and the offer card shows.
+  // At the end of a main-loop turn the pending edits, and the commands that may have changed files, become the
+  // replay; nothing is shown until /replay or the hub's row asks.
   on('turn.complete', async ($, e, next) => {
     const r = await next(e)
     const pending = await read($, pendingAtom)
-    if (e.agentId !== undefined || pending.length === 0) return r
-    const turn = { quote: shortLine(e.answer ?? ''), ask: shortLine(flags.ask), at: await $.clock.now() }
+    const byCommands = await read($, commandsAtom)
+    if (e.agentId !== undefined || (pending.length === 0 && byCommands === 0)) return r
+    const turn = { quote: shortLine(e.answer ?? ''), ask: shortLine(flags.ask), at: await $.clock.now(), ...(byCommands > 0 ? { byCommands } : {}) }
     await update($, replayAtom, () => ({ id: e.turnId, steps: pending, explain: 'none' as const, ...turn }))
     await update($, pendingAtom, () => [])
+    await update($, commandsAtom, () => 0)
     await update($, indexAtom, () => 0)
-    await update($, offeredAtom, () => true)
     await refreshTheme($)
     await writeHub($)
 
@@ -230,25 +232,17 @@ function hookRecording(on: On): void {
   })
 }
 
+// A terminal with no room for the pane draws the replay above the other band lines; a survey holds the band alone.
 function hookBand(on: On): void {
-  // The offer stacks above the other band lines; a survey holds the band alone.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
     const theirs = await next(e)
     const view = await read($, viewAtom)
-    const replay = await read($, replayAtom)
+    if (!view.isOpen || !view.inBand) return theirs
     const ui = $.ui.resolve(e)
-    const { Box } = ui
-    if (view.isOpen && view.inBand) {
-      const body = await drawn($, ui, { surface: e.surface, columns: e.props.bodyColumns, inBand: true, maxRows: e.props.maxRows })
+    const body = await drawn($, ui, { surface: e.surface, columns: e.props.bodyColumns, inBand: true, maxRows: e.props.maxRows })
 
-      return pinned(e, <Box flexDirection="column">{body}{theirs}</Box>)
-    }
-    if (!(await read($, offeredAtom)) || e.props.isWorking || view.isOpen || replay === null) return theirs
-    const offer = { steps: replay.steps, quote: replay.quote, theme: view.theme, columns: e.props.bodyColumns, surface: e.surface }
-    const actions = { onOpen: () => void openReplay(paneIo($)), onDismiss: () => void update($, offeredAtom, () => false) }
-
-    return pinned(e, <Box flexDirection="column">{offerCard(ui, offer, actions)}{theirs}</Box>)
+    return pinned(e, <ui.Box flexDirection="column">{body}{theirs}</ui.Box>)
   })
 }
 

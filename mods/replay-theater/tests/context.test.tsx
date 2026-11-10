@@ -1,10 +1,10 @@
 // Which turn is on screen: the prompt that started it and how long ago it ended, kept across a later
-// turn without edits; and the one primary button on the card and in the pane.
+// turn without edits; and the one primary button in the pane.
 import { expect, test } from 'claude-code/testing'
 
 import { ageText } from '../hooks/age'
 import { setLang } from '../hooks/lang'
-import { SURFACES, bandOf, newWorld, paneOf, plannedTurn, setup, svgText, texts } from './fixtures'
+import { SURFACES, newWorld, paneOf, plannedTurn, setup, svgText, texts } from './fixtures'
 
 const OPEN_WAIT_MS = 200
 const MINUTE_MS = 60_000
@@ -41,13 +41,4 @@ for (const surface of SURFACES) {
     expect((await pane.find({ key: 'rt-prev' }))?.props?.variant).toBe('secondary')
   })
 
-  test(`${surface}: watching the edits is the card's one primary action`, async ($: any, on: any) => {
-    const world = newWorld()
-    await setup($, on, world)
-    await plannedTurn($, world)
-    const band = await $.ui.mount(bandOf(surface))
-
-    expect((await band.find({ key: 'rt-open' }))?.props?.variant).toBe('primary')
-    expect((await band.find({ key: 'rt-dismiss' }))?.props?.plain).toBe(true)
-  })
 }

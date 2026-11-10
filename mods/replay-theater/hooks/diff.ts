@@ -32,7 +32,7 @@ function lcsTable(a: string[], b: string[]): number[][] {
 }
 
 // Small inputs get an LCS diff, so unchanged lines show as context; large ones are all removed, then all added.
-export function diffLines(oldText: unknown, newText: unknown): DiffLine[] {
+export function diffLines(oldText: unknown, newText: unknown, around = 1): DiffLine[] {
   const a = splitLines(oldText)
   const b = splitLines(newText)
   if (a.length > MAX_LCS_LINES || b.length > MAX_LCS_LINES) {
@@ -53,18 +53,18 @@ export function diffLines(oldText: unknown, newText: unknown): DiffLine[] {
   while (i < a.length) out.push({ op: '-', t: a[i++] as string })
   while (j < b.length) out.push({ op: '+', t: b[j++] as string })
 
-  return withSpans(trimContext(out))
+  return withSpans(trimContext(out, around))
 }
 
 const isChange = (line: DiffLine | undefined): boolean => line !== undefined && line.op !== ' '
 
-// One line of context around each change, so a long file's Write shows the changed lines, not the whole file.
-export function trimContext(lines: DiffLine[]): DiffLine[] {
+// `around` lines of context about each change (one by default), so a long file's Write shows the changed lines, not the whole file.
+export function trimContext(lines: DiffLine[], around = 1): DiffLine[] {
   if (!lines.some(isChange)) return lines
   const out: DiffLine[] = []
   let skipped = false
   lines.forEach((line, k) => {
-    if (isChange(line) || isChange(lines[k - 1]) || isChange(lines[k + 1])) {
+    if (lines.slice(Math.max(0, k - around), k + around + 1).some(isChange)) {
       if (skipped && out.length > 0) out.push({ op: '~', t: '⋯' })
       out.push(line)
       skipped = false

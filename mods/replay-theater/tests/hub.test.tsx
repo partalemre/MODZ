@@ -45,7 +45,7 @@ test('the hub card is idle at start, counts the last turn\'s edits, and is rewri
 
   await editTurn($, 't1')
   const first = await hub($)
-  expect(first).toMatchObject({ pane: 'replay', detail: '2 düzenleme · 2 dosya', tone: 'ok' })
+  expect(first).toMatchObject({ pane: 'replay', detail: '2 düzenleme · 2 dosya', tone: 'ok', section: 'work' })
 
   await clock.advance(60_000)
   await $.turn.start({ text: 'sadece oku', turnId: 't2' })

@@ -1,7 +1,7 @@
 import { ageText } from './age'
 import type { Handlers } from './actions'
 import { sessionsView, turnsView } from './lists'
-import type { Ui } from './offer'
+import type { Ui } from './facts'
 import { paneWidth, replayView } from './pane'
 import { words } from './words'
 import type { Replay, ReplayBrowse, ReplaySessions, ReplayTurns, ReplayView } from '../types'
@@ -42,7 +42,7 @@ export function bodyView(ui: Ui, snap: Snapshot, view: { site: Site; on: Handler
     return turnsView(ui, snap.turns ?? NO_TURNS, { shown: browse.shown, now, site: listSite })
   }
   const replay = browse.source === 'past' ? snap.past : snap.replay
-  const model = { steps: replay?.steps ?? [], index: snap.index, explain: replay?.explain ?? 'none', theme, ask: replay?.ask ?? '', age: ageOf(replay, now) }
+  const model = { steps: replay?.steps ?? [], index: snap.index, explain: replay?.explain ?? 'none', theme, ask: replay?.ask ?? '', age: ageOf(replay, now), byCommands: replay?.byCommands ?? 0 }
 
   return replayView(ui, model, { ...site, on })
 }

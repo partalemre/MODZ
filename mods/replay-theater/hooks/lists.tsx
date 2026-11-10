@@ -5,7 +5,7 @@ import { headSvg, noteSvg, sessionFacts, sessionRowSvg, turnMeta, turnRowSvg, tu
 import type { Drawing, ListHead } from './lists-svg'
 import type { MoveOpts } from './kit/moving'
 import { PressRow } from './kit/press'
-import type { Ui } from './offer'
+import type { Ui } from './facts'
 import { motion } from './pane'
 import type { Theme } from './ui/theme'
 import { words } from './words'

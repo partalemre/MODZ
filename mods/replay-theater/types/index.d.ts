@@ -15,6 +15,8 @@ export type ReplayStep = {
   // One short line on what the change does; absent until found, or when nothing explains it.
   said?: string
   plan?: ReplayPlanStep
+  // An Edit drawn with lines of its file around it: the file before it was known.
+  hasContext?: boolean
 }
 
 // 'none' until first opened; 'done' caches the lines (one model call at most).
@@ -32,6 +34,8 @@ export type Replay = {
   at?: number
   // A turn read back from a transcript: which session and which of its turns.
   origin?: ReplayOrigin
+  // Bash calls in the turn that may have changed files: their changes cannot be replayed.
+  byCommands?: number
 }
 
 export type ReplayOrigin = { session: string; turn: number; title: string }
@@ -78,7 +82,7 @@ export type ReplayView = { isOpen: boolean; inBand: boolean; theme: 'light' | 'd
 
 // The one-line card the MODZ main panel collects from every mod (DESIGN.md §9).
 export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
-export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number; section?: 'work' | 'safety' | 'meter' }
 
 declare module 'claude-code' {
   interface PluginState {
@@ -87,8 +91,8 @@ declare module 'claude-code' {
       pending: ReplayStep[]
       replay: Replay | null
       index: number
-      // The offer card above the prompt: shown after a turn with edits, until the next turn or a dismissal.
-      isOffered: boolean
+      // Bash calls of the turn under way that may have changed files.
+      commands: number
       view: ReplayView
       plan: ReplayPlanItem[]
       browse: ReplayBrowse

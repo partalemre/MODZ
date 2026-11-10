@@ -5,12 +5,13 @@ import type { Surface, World } from './fixtures'
 
 const OPEN_WAIT_MS = 200
 
+// /replay opens the pane; a terminal with no room for it draws the replay in the band, returned here.
 async function openFromBand($: any, clock: any, surface: Surface) {
-  const band = await $.ui.mount(bandOf(surface))
-  await band.press({ key: 'rt-open' })
+  const opening = $.command.run({ command: 'replay', args: '' })
   await clock.advance(OPEN_WAIT_MS)
+  await opening
 
-  return band
+  return $.ui.mount(bandOf(surface))
 }
 
 async function shown(pane: any, surface: Surface): Promise<string> {
@@ -18,24 +19,6 @@ async function shown(pane: any, surface: Surface): Promise<string> {
 }
 
 for (const surface of SURFACES) {
-  test(`${surface}: the offer stacks above the other band lines and opens the pane`, async ($: any, on: any) => {
-    const world = newWorld()
-    const clock = await setup($, on, world)
-    await plannedTurn($, world)
-
-    const band = await $.ui.mount(bandOf(surface))
-    const before = await texts(band)
-    expect(before[before.length - 1]).toBe('engine')
-    expect((await band.find({ key: 'rt-open' }))?.props?.label).toBe('Düzenlemeleri izle')
-    if (surface === 'terminal') expect(before).toEqual(expect.arrayContaining(['Tekrar', '2 düzenleme · 2 dosya']))
-    else expect(await svgText(band)).toContain('2 düzenleme · 2 dosya')
-
-    await band.press({ key: 'rt-open' })
-    await clock.advance(OPEN_WAIT_MS)
-    expect(world.opened).toEqual(['replay-theater'])
-    expect(await texts(band)).toEqual(['engine'])
-  })
-
   test(`${surface}: each step says what it does and which plan step it served`, async ($: any, on: any) => {
     const world = newWorld()
     const clock = await setup($, on, world)
@@ -64,7 +47,7 @@ for (const surface of SURFACES) {
     expect(world.closed).toEqual(['replay-theater'])
   })
 
-  test(`${surface}: a survey holds the band alone and a running turn hides the offer`, async ($: any, on: any) => {
+  test(`${surface}: a survey holds the band alone and a running turn adds nothing`, async ($: any, on: any) => {
     const world = newWorld()
     await setup($, on, world)
     await plannedTurn($, world)
@@ -142,20 +125,6 @@ test('with no room for the pane and nothing to replay, /replay says so in one li
   expect(await texts(await $.ui.mount(bandOf('terminal')))).toEqual(['engine'])
 })
 
-test('Şimdi değil dismisses the offer; /replay still opens the last edits', async ($: any, on: any) => {
-  const world = newWorld()
-  const clock = await setup($, on, world)
-  await oneEdit($, world, {})
-  const band = await $.ui.mount(bandOf('desktop'))
-  await band.press({ key: 'rt-dismiss' })
-
-  expect(await texts(band)).toEqual(['engine'])
-  const opening = $.command.run({ command: 'replay', args: '' })
-  await clock.advance(OPEN_WAIT_MS)
-  await opening
-  expect(world.opened).toEqual(['replay-theater'])
-})
-
 test('a terminal with no room for the pane draws the replay in the band, above the other lines', async ($: any, on: any) => {
   const world = newWorld()
   world.isPlaced = false
@@ -170,13 +139,12 @@ test('a terminal with no room for the pane draws the replay in the band, above t
   expect(await texts(band)).toEqual(['engine'])
 })
 
-test('the light theme draws light: the card and every drawing follow it', async ($: any, on: any) => {
+test('the light theme draws light: every drawing follows it', async ($: any, on: any) => {
   const world = newWorld()
   world.theme = 'light'
-  await setup($, on, world)
+  const clock = await setup($, on, world)
   await oneEdit($, world, {})
-  const band = await $.ui.mount(bandOf('desktop'))
+  await openFromBand($, clock, 'desktop')
 
-  expect((await band.find({ key: 'rt-offer' }))?.props?.backgroundColor).toBe('#FFFFFF')
-  expect(await svgText(band)).toContain('class="t-light"')
+  expect(await svgText(await $.ui.mount(paneOf('desktop')))).toContain('class="t-light"')
 })

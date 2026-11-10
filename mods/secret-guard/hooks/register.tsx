@@ -1,9 +1,10 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
+import { bashWriteHits, isGuarded, isRiskyAsIs } from './bash-writes'
 import { HEADER, cardTree, described } from './card'
 import { findSecrets } from './detect'
-import { blockedDeny, isMovable, moveYourselfDeny, pendingOf, unattendedDeny } from './findings'
+import { blockedDeny, failedDeny, isMovable, moveYourselfDeny, pendingOf, unattendedDeny } from './findings'
 import type { Found } from './findings'
 import { gitSteps, isEnvFile, scanStep } from './git'
 import type { GitHost } from './git'
@@ -30,7 +31,8 @@ const pendingAtom = atom({ plugin: 'secret-guard', key: 'pending' } as const, nu
 const enabledAtom = atom({ plugin: 'secret-guard', key: 'isEnabled' } as const, true)
 // Recording mode is the session's: off at start, kept across a reload of the mod.
 const recordingAtom = atom({ plugin: 'secret-guard', key: 'isRecording' } as const, false)
-const session = { cwd: '', isLight: false }
+// `isEnabled` mirrors the atom for the fail-closed handler, which may run where `$` calls reject.
+const session = { cwd: '', isLight: false, isEnabled: true }
 
 async function scanFile($: EngineInterface, path: string): Promise<string> {
   try {
@@ -63,6 +65,7 @@ async function inspect($: EngineInterface, input: Record<string, unknown>): Prom
     found.secrets = [...findSecrets(text, path), ...tokenHits(sessionVault, text)].map(secret => ({ ...secret, where: `${path}:${secret.line}` }))
   } else if (input.tool === 'Bash' && typeof input.command === 'string') {
     for (const step of gitSteps(input.command)) await scanStep(gitHost($), step, found)
+    found.secrets.push(...bashWriteHits(input.command, sessionVault))
   }
   found.envFiles = [...new Set(found.envFiles)]
   found.secrets = [...new Map(found.secrets.map(secret => [secret.token ?? secret.value, secret])).values()]
@@ -128,7 +131,8 @@ function hookSession(on: On): void {
     try {
       session.cwd = e.cwd
       const saved = await $.store.get(STORE_KEY)
-      await update($, enabledAtom, () => saved !== false)
+      session.isEnabled = saved !== false
+      await update($, enabledAtom, () => session.isEnabled)
       await $.command.register({ name: COMMAND, description: words().commandLine })
       await $.command.register({ name: REC_COMMAND, description: words().recCommandLine })
       await showStatus($)
@@ -153,6 +157,7 @@ function hookSession(on: On): void {
 function hookCommand(on: On): void {
   on('command.run', { command: COMMAND }, async $ => {
     const isOn = !(await read($, enabledAtom))
+    session.isEnabled = isOn
     await update($, enabledAtom, () => isOn)
     await $.store.set(STORE_KEY, isOn)
 
@@ -171,14 +176,14 @@ function hookCall(on: On): void {
   on('tool.call', async ($, e, next) => {
     if (!(await read($, enabledAtom))) return next(e)
     const input = e as unknown as Record<string, unknown>
-    let found: Found | null = null
-    try {
-      found = await inspect($, input)
-    } catch {
-      $.ui.log('secret-guard: scan failed, call passed through', { to: 'debug' })
-    }
+    const found = await inspect($, input)
     if (found === null) return withTokenNote(input, await next(e))
-    if (await isUnattended($, e)) return { deny: unattendedDeny(found) }
+    if (await isUnattended($, e)) {
+      // A placeholder alone puts no secret in the file, and only the card could offer to move the value behind it.
+      if (found.envFiles.length > 0 || found.secrets.some(secret => secret.token === undefined)) return { deny: unattendedDeny(found) }
+
+      return withTokenNote(input, await next(e))
+    }
 
     const answer = await askUser($, found)
     if (answer === words().allow) return withTokenNote(input, await next(e))
@@ -191,6 +196,18 @@ function hookCall(on: On): void {
     const note = `secret-guard moved ${entries.length} secret(s) from ${path} into ${envPath} as ${entries.map(entry => entry.name).join(', ')}; the file now reads them from the environment. Make sure the program loads .env.`
 
     return ran.deny === undefined ? { ...ran, context: [...(ran.context ?? []), note] } : ran
+  }).catch(($, e, next) => {
+    // Fail closed: a guard that threw or overran refuses the write it could not check (the engine would run it).
+    if (next.error.kind !== 're-entry' && next.called) return next(e)
+    const input = e as unknown as Record<string, unknown>
+    let isRisky = true
+    try {
+      isRisky = session.isEnabled && (next.error.kind === 're-entry' ? isRiskyAsIs(input, sessionVault) : isGuarded(input))
+    } catch {
+      // Not even the text could be read: refuse.
+    }
+
+    return isRisky ? { deny: failedDeny(next.error.message ?? next.error.kind) } : next(e)
   })
 }
 

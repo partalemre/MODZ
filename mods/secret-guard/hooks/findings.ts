@@ -19,7 +19,10 @@ function relative(path: string, cwd: string): string {
 function sourceOf(found: Found): GuardPending['source'] {
   if (found.path !== null) return 'write'
 
-  return gitSteps(found.command).some(step => step.kind === 'commit') ? 'commit' : 'add'
+  const steps = gitSteps(found.command)
+  if (steps.some(step => step.kind === 'commit')) return 'commit'
+
+  return steps.length > 0 ? 'add' : 'write'
 }
 
 // Moving to .env rewrites the call itself only for a file write with no private key. A test file's keys are
@@ -57,3 +60,6 @@ export const blockedDeny = (found: Found): string =>
 
 export const moveYourselfDeny = (found: Found): string =>
   `The user chose "Move to .env" for ${summary(found)}. Move each secret into the project's .env (git-ignored), reference it from the environment, then retry.`
+
+export const failedDeny = (why: string): string =>
+  `secret-guard could not check this call for secrets (${why}), so it was blocked to keep a key from leaking. Retry it; if this keeps happening, the user can turn the scan off with /secret-guard.`

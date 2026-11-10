@@ -46,6 +46,40 @@ test('the card stands from session start: idle, nothing to say', WITH_HUB, async
   expect(await card($)).toMatchObject({ pane: 'agents', detail: '', tone: 'idle' })
 })
 
+test('the card lists the running agents for the hub: each one\'s task and start, a few shown and the rest counted', WITH_HUB, async ($, on) => {
+  await setup($, on)
+  for (const task of ['Task 1', 'Task 2', 'Task 3', 'Task 4', 'Task 5']) await spawn($, task)
+  const live = (await card($)).live
+
+  expect(live.lines.map((line: any) => line.label)).toEqual(['Task 1', 'Task 2', 'Task 3'])
+  expect(live.lines.every((line: any) => typeof line.since === 'number' && line.value === undefined)).toBe(true)
+  expect(live.more).toBe(2)
+
+  for (const id of ['a1', 'a2', 'a3']) await finish($, id)
+  expect((await card($)).live).toEqual({ lines: [expect.objectContaining({ label: 'Task 4' }), expect.objectContaining({ label: 'Task 5' })] })
+  for (const id of ['a4', 'a5']) await finish($, id)
+  expect((await card($)).live).toBeUndefined()
+})
+
+test('an agent the engine\'s own list says is done leaves the card on the next beat', WITH_HUB, async ($, on) => {
+  const { world, clock } = await setup($, on)
+  await spawn($, 'Task 1')
+  expect((await card($)).live.lines).toHaveLength(1)
+  world.roster.push({ id: 'a1', type: 'general-purpose', description: 'Task 1', status: 'completed' })
+  await clock.advance(SECOND)
+
+  expect((await card($)).live).toBeUndefined()
+})
+
+test('a running clock alone never rewrites the card: it is written when its words change', WITH_HUB, async ($, on) => {
+  const { clock } = await setup($, on)
+  await spawn($, 'Task 1')
+  const { at } = await card($)
+  await clock.advance(30 * SECOND)
+
+  expect((await card($)).at).toBe(at)
+})
+
 test('a reported flow reads "Görevler 3/4 · 2 ajan" while two agents run, then Bitti', WITH_HUB, async ($, on) => {
   await setup($, on)
   await tool($, { tool: 'mcp__savvy-progress__progress', title: 'Launch kit', tasks: TASKS, phase: 'delegate' })

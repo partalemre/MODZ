@@ -13,7 +13,7 @@ It was built for [savvy-flow](../savvy-flow) and works with any subagent.
 
 Or in one step: `/plugin install savvy-progress --marketplace partalemre/MODZ`.
 
-The MODZ panel (`modz`) shows its line here, for example `Tasks 3/4 · 2 running`.
+The MODZ panel (`modz`) shows its line here, for example `Tasks 3/4 · 2 running`. While agents run, the panel also lists them on its own face without opening this pane: each one's task, how long it has run and its cost once it has one, three by name and the rest as `+2 more`. The mod writes that only when its words change (an agent starts or ends, a cost moves by a cent); the running time is told by the panel, so it costs no write.
 
 ## What you see
 

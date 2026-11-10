@@ -201,7 +201,11 @@ export type HomeCrab = { mood: CrabMood; turns: number; endedAt: number }
 export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
 
 /** This mod's one-line summary on the MODZ hub; `pane` is the key the hub's open request names. */
-export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+/** One running thing on the hub: what runs, when it began (ms; the hub tells the elapsed time) and a short fact. */
+export type HubLine = { label: string; since?: number; value?: string }
+/** What runs now, a few lines, and how many more there are than the lines say. */
+export type HubLive = { lines: HubLine[]; more?: number }
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number; live?: HubLive }
 
 declare module 'claude-code' {
   interface PluginState {

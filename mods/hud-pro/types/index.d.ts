@@ -31,16 +31,18 @@ export type HudSample = {
 // What the last "Compact now" press came to: the context's size before and after, when the engine recorded them.
 export type HudCompacted = { before: number | null; after: number | null; at: number }
 
-// One local day of past usage, read from the session transcripts: tokens, replies per model, the sessions active
-// that day, and the hashed id of every reply counted, so a repeated reply (a fork's copy, a rescan) counts once.
-export type HudDay = { tokens: number; models: Record<string, number>; sessions: string[]; seen: string[] }
+// One local day of past usage, read from the session transcripts: input + output tokens, cache reads and writes
+// apart (they dwarf the rest), replies per model, the sessions active that day, and the hashed id of every reply
+// counted, so a repeated reply (a fork's copy, a rescan) counts once.
+export type HudDay = { tokens: number; cache: number; models: Record<string, number>; sessions: string[]; seen: string[] }
 // What the transcripts came to by day (`YYYY-MM-DD`, local), when they were read, and each file's size and mtime then.
-export type HudLog = { at: number; days: Record<string, HudDay>; files: Record<string, number[]> }
+// `version` 2 counts cache apart; an older log is read again from the transcripts.
+export type HudLog = { version: number; at: number; days: Record<string, HudDay>; files: Record<string, number[]> }
 
 export type HudRange = 7 | 30
 // One cell of the history heatmap: its day, weekday (0 = Sunday), tokens and shade (0 none … 4 the busiest day).
 export type HudCell = { day: string; weekday: number; tokens: number; level: number }
-export type HudPast = { range: HudRange; activeDays: number; sessions: number; tokens: number; model: string | null; cells: HudCell[] }
+export type HudPast = { range: HudRange; activeDays: number; sessions: number; tokens: number; cache: number; model: string | null; cells: HudCell[] }
 
 // The MODZ main panel's card for this mod (DESIGN.md §9).
 export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'

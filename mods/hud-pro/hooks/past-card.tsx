@@ -18,7 +18,7 @@ export type PastCard = PastView & { width?: number; svg?: PaneSvg }
 const LEVEL_GLYPHS = ['·', '░', '▒', '▓', '█'] as const
 
 const lineOf = (past: HudPast): string =>
-  words().pastLine({ active: past.activeDays, range: past.range, sessions: past.sessions, tokens: compact(past.tokens), model: past.model })
+  words().pastLine({ active: past.activeDays, range: past.range, sessions: past.sessions, tokens: compact(past.tokens), cache: compact(past.cache), model: past.model })
 
 const stripOf = (past: HudPast): string => past.cells.map(cell => LEVEL_GLYPHS[cell.level] ?? LEVEL_GLYPHS[0]).join('')
 

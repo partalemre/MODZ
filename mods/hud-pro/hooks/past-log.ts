@@ -4,21 +4,21 @@ import type { HudDay, HudLog } from '../types'
 // adds to. The lines are external input: every field is checked here and a line that does not read is dropped.
 // A reply counts once by its id, however many lines, files or rescans repeat it (a fork copies its parent's).
 
-export type LogRow = { session: string; model: string; id: string; atMs: number; tokens: number }
+export type LogRow = { session: string; model: string; id: string; atMs: number; tokens: number; cache: number }
 
 // The longest range the pane shows; older days are dropped.
 export const DAYS_KEPT = 30
-export const EMPTY_LOG: HudLog = { at: 0, days: {}, files: {} }
+// 2: input + output counted apart from cache reads and writes. A log of another version is read afresh.
+export const LOG_VERSION = 2
+export const EMPTY_LOG: HudLog = { version: LOG_VERSION, at: 0, days: {}, files: {} }
 
-// What the extractor prints per reply, tab-separated: the file, then three fragments of the reply's own record.
-const HEAD = /^"model":"([^"]+)","id":"(msg_[A-Za-z0-9]+)"$/
-const USAGE = /^"usage":\{"input_tokens":(\d+),"cache_creation_input_tokens":(\d+),"cache_read_input_tokens":(\d+),"output_tokens":(\d+)$/
-const STAMP = /^"timestamp":"([^"]+)"$/
+// What the extractor prints per reply: the file, a tab, and a small JSON object of the reply's own model, id, usage
+// and timestamp, each taken from the record wherever it stood (usage whole, whatever order its counts come in).
+const MESSAGE_ID = /^msg_[A-Za-z0-9]+$/
 // `<project>/<session>.jsonl`, or a subagent's `<project>/<session>/subagents/agent-<id>.jsonl`: its session's.
 const SESSION = /\/([^/]+?)(?:\/subagents\/[^/]+)?\.jsonl$/
 // Placeholder replies the engine writes itself (an interrupt, an error) carry no real usage.
 const SYNTHETIC = '<synthetic>'
-const FIELDS = 4
 const PAD = 2
 const FNV_OFFSET = 0x811c9dc5
 const FNV_PRIME = 0x01000193
@@ -32,20 +32,34 @@ export function hashOf(text: string): string {
   return hash.toString(BASE36)
 }
 
-export function parseLine(line: string): LogRow | null {
-  const parts = line.split('\t')
-  if (parts.length !== FIELDS) return null
-  const [path, head, usage, stamp] = parts as [string, string, string, string]
-  const reply = HEAD.exec(head)
-  const counts = USAGE.exec(usage)
-  const atMs = Date.parse(STAMP.exec(stamp)?.[1] ?? '')
-  const session = SESSION.exec(path)?.[1]
-  if (reply === null || counts === null || Number.isNaN(atMs) || session === undefined) return null
-  const tokens = counts.slice(1).reduce((sum, count) => sum + Number(count), 0)
-  const model = reply[1] as string
-  if (model === SYNTHETIC || tokens === 0) return null
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 
-  return { session, model, id: reply[2] as string, atMs, tokens }
+const count = (value: unknown): number => (typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0)
+
+function recordOf(json: string): Record<string, unknown> | null {
+  try {
+    const value: unknown = JSON.parse(json)
+
+    return isRecord(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
+export function parseLine(line: string): LogRow | null {
+  const tab = line.indexOf('\t')
+  const session = SESSION.exec(line.slice(0, Math.max(0, tab)))?.[1]
+  const record = tab < 0 ? null : recordOf(line.slice(tab + 1))
+  const usage = record?.usage
+  if (record === null || session === undefined || !isRecord(usage)) return null
+  const { model, id } = record
+  const atMs = Date.parse(typeof record.timestamp === 'string' ? record.timestamp : '')
+  if (typeof model !== 'string' || typeof id !== 'string' || !MESSAGE_ID.test(id) || Number.isNaN(atMs)) return null
+  const tokens = count(usage.input_tokens) + count(usage.output_tokens)
+  const cache = count(usage.cache_creation_input_tokens) + count(usage.cache_read_input_tokens)
+  if (model === SYNTHETIC || tokens + cache === 0) return null
+
+  return { session, model, id, atMs, tokens, cache }
 }
 
 const pad = (value: number): string => String(value).padStart(PAD, '0')
@@ -67,13 +81,13 @@ export function dayStart(ms: number, back: number): number {
 }
 
 // The days as sets while rows are added; `closeLog` turns them back into plain data.
-type OpenDay = { tokens: number; models: Map<string, number>; sessions: Set<string>; seen: Set<string> }
+type OpenDay = { tokens: number; cache: number; models: Map<string, number>; sessions: Set<string>; seen: Set<string> }
 export type OpenLog = Map<string, OpenDay>
 
 export function openLog(days: HudLog['days']): OpenLog {
   const open: OpenLog = new Map()
   for (const [key, day] of Object.entries(days)) {
-    open.set(key, { tokens: day.tokens, models: new Map(Object.entries(day.models)), sessions: new Set(day.sessions), seen: new Set(day.seen) })
+    open.set(key, { tokens: day.tokens, cache: day.cache, models: new Map(Object.entries(day.models)), sessions: new Set(day.sessions), seen: new Set(day.seen) })
   }
 
   return open
@@ -81,12 +95,13 @@ export function openLog(days: HudLog['days']): OpenLog {
 
 export function addRow(open: OpenLog, row: LogRow): void {
   const key = dayKey(row.atMs)
-  const day = open.get(key) ?? { tokens: 0, models: new Map(), sessions: new Set(), seen: new Set() }
+  const day = open.get(key) ?? { tokens: 0, cache: 0, models: new Map(), sessions: new Set(), seen: new Set() }
   open.set(key, day)
   const id = hashOf(row.id)
   if (day.seen.has(id)) return
   day.seen.add(id)
   day.tokens += row.tokens
+  day.cache += row.cache
   day.models.set(row.model, (day.models.get(row.model) ?? 0) + 1)
   day.sessions.add(hashOf(row.session))
 }
@@ -96,17 +111,18 @@ export function closeLog(open: OpenLog, oldest: string): HudLog['days'] {
   const days: Record<string, HudDay> = {}
   for (const [key, day] of open) {
     if (key < oldest) continue
-    days[key] = { tokens: day.tokens, models: Object.fromEntries(day.models), sessions: [...day.sessions], seen: [...day.seen] }
+    days[key] = { tokens: day.tokens, cache: day.cache, models: Object.fromEntries(day.models), sessions: [...day.sessions], seen: [...day.seen] }
   }
 
   return days
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+const isDay = (day: unknown): boolean =>
+  isRecord(day) && typeof day.tokens === 'number' && typeof day.cache === 'number' && isRecord(day.models) && Array.isArray(day.sessions) && Array.isArray(day.seen)
 
 // A log as the store gives it back: the shape is checked, not trusted.
 export function isLog(value: unknown): value is HudLog {
-  if (!isRecord(value) || typeof value.at !== 'number' || !isRecord(value.files) || !isRecord(value.days)) return false
+  if (!isRecord(value) || value.version !== LOG_VERSION || typeof value.at !== 'number' || !isRecord(value.files) || !isRecord(value.days)) return false
 
-  return Object.values(value.days).every(day => isRecord(day) && typeof day.tokens === 'number' && isRecord(day.models) && Array.isArray(day.sessions) && Array.isArray(day.seen))
+  return Object.values(value.days).every(isDay)
 }

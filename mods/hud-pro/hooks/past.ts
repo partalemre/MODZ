@@ -1,7 +1,8 @@
 import { dayKey, dayStart } from './past-log'
 import type { HudCell, HudLog, HudPast, HudRange } from '../types'
 
-// The history card's figures over the last 7 or 30 local days, today included: active days, sessions, tokens,
+// The history card's figures over the last 7 or 30 local days, today included: active days, sessions, input +
+// output tokens (cache reads and writes apart: they would drown the rest),
 // the model that answered most replies, and a heatmap cell per day shaded against the range's busiest day.
 
 export const RANGES: readonly HudRange[] = [7, 30]
@@ -47,6 +48,7 @@ export function pastOf(days: HudLog['days'], spec: { range: HudRange; nowMs: num
     activeDays: cells.filter(cell => cell.tokens > 0).length,
     sessions: sessions.size,
     tokens: cells.reduce((sum, cell) => sum + cell.tokens, 0),
+    cache: found.reduce((sum, entry) => sum + (entry.day?.cache ?? 0), 0),
     model: topModel(models),
     cells,
   }

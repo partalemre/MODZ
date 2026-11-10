@@ -20,12 +20,13 @@ const NOW = Date.parse('2026-10-29T12:00:00Z')
 
 type Reply = { path?: string; model?: string; id: string; atMs: number; counts?: [number, number, number, number] }
 
-// One line as the extractor prints it.
+// One line as the extractor prints it: the file, a tab, the reply's model, id, timestamp and usage as JSON.
 function line(reply: Reply): string {
   const [input, create, readCache, output] = reply.counts ?? [10, 20, 30, 40]
-  const usage = `"usage":{"input_tokens":${input},"cache_creation_input_tokens":${create},"cache_read_input_tokens":${readCache},"output_tokens":${output}`
+  const usage = { input_tokens: input, cache_creation_input_tokens: create, cache_read_input_tokens: readCache, output_tokens: output }
+  const record = { model: reply.model ?? 'claude-opus-5-5', id: reply.id, timestamp: new Date(reply.atMs).toISOString(), usage }
 
-  return [reply.path ?? `${PROJECT}/${SESSION_A}.jsonl`, `"model":"${reply.model ?? 'claude-opus-5-5'}","id":"${reply.id}"`, usage, `"timestamp":"${new Date(reply.atMs).toISOString()}"`].join('\t')
+  return `${reply.path ?? `${PROJECT}/${SESSION_A}.jsonl`}\t${JSON.stringify(record)}`
 }
 
 function daysOf(lines: readonly string[]) {
@@ -38,8 +39,8 @@ function daysOf(lines: readonly string[]) {
   return closeLog(open, '0000-00-00')
 }
 
-test('a line reads into its session, model, id, time and the four token counts summed', () => {
-  expect(parseLine(line({ id: 'msg_1', atMs: NOW }))).toEqual({ session: SESSION_A, model: 'claude-opus-5-5', id: 'msg_1', atMs: NOW, tokens: 100 })
+test('a line reads into its session, model, id, time, input + output tokens and cache apart', () => {
+  expect(parseLine(line({ id: 'msg_1', atMs: NOW }))).toEqual({ session: SESSION_A, model: 'claude-opus-5-5', id: 'msg_1', atMs: NOW, tokens: 50, cache: 50 })
   // A subagent's transcript belongs to its session.
   expect(parseLine(line({ path: `${PROJECT}/${SESSION_B}/subagents/agent-x1.jsonl`, id: 'msg_2', atMs: NOW }))?.session).toBe(SESSION_B)
 })
@@ -63,7 +64,7 @@ test('a reply counts once, however many lines or files repeat it; sessions and m
   ])
   const today = days[dayKey(NOW)]
 
-  expect(today?.tokens).toBe(200)
+  expect(today?.tokens).toBe(100)
   expect(today?.models).toEqual({ 'claude-opus-5-5': 1, 'claude-sonnet-5-5': 1 })
   expect(today?.sessions.length).toBe(2)
 })
@@ -79,8 +80,8 @@ test('7 and 30 days: active days, sessions, tokens, the most used model; older d
   const week = pastOf(days, { range: 7, nowMs: NOW })
   const month = pastOf(days, { range: 30, nowMs: NOW })
 
-  expect({ active: week.activeDays, sessions: week.sessions, tokens: week.tokens }).toEqual({ active: 2, sessions: 1, tokens: 200 })
-  expect({ active: month.activeDays, sessions: month.sessions, tokens: month.tokens }).toEqual({ active: 3, sessions: 2, tokens: 400 })
+  expect({ active: week.activeDays, sessions: week.sessions, tokens: week.tokens }).toEqual({ active: 2, sessions: 1, tokens: 100 })
+  expect({ active: month.activeDays, sessions: month.sessions, tokens: month.tokens }).toEqual({ active: 3, sessions: 2, tokens: 200 })
   expect(month.model).toBe('Haiku 4.5')
   expect(pastOf({}, { range: 7, nowMs: NOW }).model).toBeNull()
 })
@@ -153,7 +154,7 @@ test('a read takes only recent transcripts, subagents included, and reads again 
   const { io, runs } = stubIo({ out: [line({ id: 'msg_1', atMs: NOW })] })
   const first = await scanLog(io, { root: ROOT, log: EMPTY_LOG, nowMs: NOW })
   expect(runs).toEqual([[`${PROJECT}/${SESSION_A}.jsonl`, `${PROJECT}/${SESSION_A}/subagents/agent-x1.jsonl`]])
-  expect(first.days[dayKey(NOW)]?.tokens).toBe(100)
+  expect(first.days[dayKey(NOW)]?.tokens).toBe(50)
 
   const again = await scanLog(io, { root: ROOT, log: first, nowMs: NOW + HOUR_MS })
   expect(runs.length).toBe(1)
@@ -216,7 +217,7 @@ test('terminal: two lines, the figures and a strip of one cell per day', async (
   const ui = await openPane($, on, { surface: 'terminal', isReadable: true })
 
   expect(await ui.find({ type: 'Text', text: 'Geçmiş' })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: '1/7 aktif gün · 1 oturum · 100 token · çoğunlukla Opus 5.5' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: '1/7 aktif gün · 1 oturum · 50 giriş + çıkış token · 50 önbellek · çoğunlukla Opus 5.5' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: '······█' })).toBeDefined()
 })
 

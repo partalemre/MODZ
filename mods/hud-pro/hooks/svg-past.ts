@@ -31,7 +31,7 @@ function statsOf(past: HudPast): Array<{ value: string; label: string }> {
   return [
     { value: `${past.activeDays}/${past.range}`, label: words().activeDays },
     { value: String(past.sessions), label: words().sessions },
-    { value: compact(past.tokens), label: words().tokens },
+    { value: compact(past.tokens), label: words().tokensApart(compact(past.cache)) },
     { value: past.model ?? '—', label: words().topModel },
   ]
 }

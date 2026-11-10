@@ -88,7 +88,10 @@ async function survey($: EngineInterface, risky: Risky): Promise<boolean> {
   const run: Run = (argv, options) => $.process.run(argv, options)
   for (const risk of risky.risks) {
     const dir = risk.dir ? await resolveDir($, sessionCwd, risk.dir) : sessionCwd
-    const report: Report = dir === null ? missingFolder(risk) : await measure(run, risk, dir)
+    // A write under a folder that is not there yet (`mkdir -p out && cd out && … > file`) lands in a new
+    // folder or, if the cd fails, here: measure it here.
+    const where = dir ?? (risk.kind === 'overwrite' ? sessionCwd : null)
+    const report: Report = where === null ? missingFolder(risk) : await measure(run, risk, where)
     if (report.isEmpty) continue
     const cwd = dir ?? sessionCwd
     risky.summary = report.summary
@@ -100,7 +103,8 @@ async function survey($: EngineInterface, risky: Risky): Promise<boolean> {
   return false
 }
 
-// No card can be answered in a subagent's loop or a run with no screen (`claude -p`).
+// No card can be answered in a subagent's loop or where no screen is attached: a `claude -p` run, but
+// also a desktop chat left in the background or driven over Remote Control.
 const isUnattended = async ($: EngineInterface, agentId: string | undefined): Promise<boolean> =>
   agentId !== undefined || (await $.session.surfaces()).length === 0
 
@@ -110,11 +114,16 @@ async function refuseUnattended($: EngineInterface, input: { command: string; ri
   // A measurement that broke can't say it is harmless: refuse.
   const isLossy = await survey($, risky).catch(() => true)
   if (!isLossy) return null
-  const who = input.isSubagent ? 'it came from a subagent, and only the main chat can answer its card' : 'this run has no screen (claude -p), so nobody can answer its card'
+  const who = input.isSubagent
+    ? 'it came from a subagent, and only the main chat can answer its card'
+    : 'no screen is attached to this chat right now (it is in the background, driven remotely, or a claude -p run), so nobody can answer its card'
+  const then = input.isSubagent
+    ? 'ask the user to run it, or run it from the main chat'
+    : 'Tell the user what you wanted to run and why, and run it again only when they ask'
   const command = input.command.length > COMMAND_CHARS ? `${input.command.slice(0, COMMAND_CHARS)}…` : input.command
 
   return {
-    deny: `Blast Radius refused this command without running it: ${who}. Command: ${command}. It would have: ${risky.summary}. Do not retry it or work around it; ask the user to run it, or run it from the main chat.`,
+    deny: `Blast Radius refused this command without running it: ${who}. Command: ${command}. It would have: ${risky.summary}. Do not retry it or work around it; ${then}.`,
   }
 }
 

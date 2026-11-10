@@ -100,12 +100,34 @@ test('a subagent\'s risky call is refused at once, naming the command and why; a
   expect(w.ran).toHaveLength(1)
 })
 
-test('a run with no screen (claude -p) refuses a risky command at once', async ($, on) => {
+test('a chat with no screen attached is refused at once and told why, not called a claude -p run', async ($, on) => {
   const w = world({ ...EN, surfaces: [], answers: { files: BUILD_SCAN } })
   stub(on, w)
   await start($, w)
   const result: any = await call($, 'bash -c "rm -rf build"')
 
-  expect(result.deny).toMatch(/no screen \(claude -p\).*Command: bash -c "rm -rf build"/)
+  expect(result.deny).toMatch(/no screen is attached to this chat right now.*Command: bash -c "rm -rf build"/)
+  expect(result.deny).toMatch(/Tell the user what you wanted to run and why/)
+  expect(result.deny).not.toMatch(/run it from the main chat/)
   expect(w.ran).toHaveLength(0)
+})
+
+test('a write under a folder the command itself creates is measured where a failed cd would leave it', async ($, on) => {
+  const w = world({ ...EN })
+  stub(on, w)
+  await start($, w)
+
+  expect(((await call($, 'mkdir -p out && cd out && echo hi > notes.md')) as any)?.deny).toBeUndefined()
+  expect(w.ran).toHaveLength(1)
+  w.answers.writes = 'P\t2048\tother\tnotes.md\n'
+  expect((await heldCard($, w, 'mkdir -p out && cd out && echo hi > notes.md')).deny).toMatch(/overwrite 1 file git can't bring back: notes.md/)
+})
+
+test('a write to a path only known at run time runs: nothing says it would lose work', async ($, on) => {
+  const w = world({ ...EN, answers: { writes: 'P\t2048\tother\tnotes.md\n' } })
+  stub(on, w)
+  await start($, w)
+  for (const command of ['cp "$SRC" "$DST"', 'echo hi > "$OUT"', 'for f in a b; do cp x "$f"; done']) {
+    expect([command, ((await call($, command)) as any)?.deny]).toEqual([command, undefined])
+  }
 })

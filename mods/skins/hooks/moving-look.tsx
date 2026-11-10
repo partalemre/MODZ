@@ -28,7 +28,7 @@ function movingSvg(Svg: SvgElement, motion: PaneMotion): SvgElement {
 }
 
 // `look` for one draw of a pane: its Svg, where the surface has one, moving with the pane's motion.
-export const movingLook = (look: Look, motion: PaneMotion): Look => (look.svg === undefined ? look : { ...look, svg: movingSvg(look.svg, motion) })
+export const movingLook = (look: Look, motion: PaneMotion): Look => (look.svg === undefined ? look : { ...look, isFramed: true, svg: movingSvg(look.svg, motion) })
 
 // Opens a pane anew: its drawings cascade in again.
 export function opening<T>(motion: PaneMotion, open: () => T): T {

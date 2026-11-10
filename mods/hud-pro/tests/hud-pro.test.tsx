@@ -3,7 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { costText, filledCells, paceOf, toneOf, untilReset } from '../hooks/format'
 import { hubOf, isOwnOpen } from '../hooks/hub'
 import { setLang } from '../hooks/lang'
-import { BAND, MS_PER_HOUR, PANE, USAGE, compactions, opens, start, stubSession, toasts } from './stubs'
+import { ALWAYS, BAND, MS_PER_HOUR, PANE, USAGE, compactions, opens, start, stubSession, toasts } from './stubs'
 
 const SURFACES = ['terminal', 'desktop'] as const
 
@@ -42,7 +42,7 @@ test('terminal: one text line under what others drew, 5s with reset, 7g, bağlam
   expect((await ui.find({ type: 'Text', text: '%91' }))?.props?.color).toBe('warning')
 })
 
-test('desktop: one transparent Svg line of pills with meters and pace ticks, under what others drew', async ($, on) => {
+test('desktop: one transparent Svg line of pills with meters and pace ticks, under what others drew', ALWAYS, async ($, on) => {
   stubSession(on)
   await start($, 'desktop')
 
@@ -137,7 +137,7 @@ for (const surface of SURFACES) {
     expect(await hidden.find({ type: 'Text', text: 'theirs' })).toBeDefined()
   })
 
-  test(`from 70% context a Sıkıştır button compacts once, hidden while it runs and while working (${surface})`, async ($, on) => {
+  test(`from 70% context a Sıkıştır button compacts once, hidden while it runs and while working (${surface})`, ALWAYS, async ($, on) => {
     const clock = stubSession(on, { ...USAGE, context: { window: 200_000, tokens: 168_000, percent: 84 } })
     await start($, surface)
 

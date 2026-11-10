@@ -2,27 +2,25 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import { bandRow } from './band'
+import { BAND_KEY, band, isAlertsOnly, isBandMode } from './band-mode'
 import type { ContextView } from './breakdown'
+import { HIDDEN_KEY, PANE, onCommand } from './command'
 import { compactedOf, forecastsFrom, forgetBreakdown, freshBreakdown, keepBreakdown, keepLast, reasonOf } from './context'
-import { addSample, isHistory } from './history'
-import { EMPTY_HUB, HUB_PANE, hubOf, isOwnOpen } from './hub'
+import { accountHistory, addSample, hasLimitsMoved, isHistory, mergeHistory } from './history'
+import { EMPTY_HUB, HUB_PANE, hubOf } from './hub'
 import { setLang } from './lang'
 import { gaugeViews } from './model'
 import type { Forecasts } from './model'
 import { paneTree, withHome } from './pane'
 import type { CardData } from './pane'
 import { onPast, pastViewOf } from './past-hook'
-import { motion } from './pane-motion'
 import { isSame } from './same'
 import { pinned } from './pin'
-import { isOffStage, shownOf } from './stage'
 import { EMPTY_TURN, onTurns } from './turns-hook'
 import { newNotices, toUsage } from './usage'
 import { words } from './words'
 import type { HudUsage } from '../types'
 
-const PANE = 'hud-pro'
-const HIDDEN_KEY = 'hud-pro.hidden'
 const HISTORY_KEY = 'hud-pro.history'
 // Reset countdowns move by the minute, so the idle line redraws once a minute.
 const REFRESH_MS = 60_000
@@ -44,13 +42,17 @@ const noticed = new Set<string>()
 // What the minute clock last moved on screen: the gauges' countdowns, pace marks and estimates.
 let shownGauges: unknown = null
 
+// The session's own history takes every new sample; the store only a moved limit, merged into what other sessions
+// stored meanwhile.
 async function record($: EngineInterface, fresh: HudUsage): Promise<void> {
   const nowMs = await $.clock.now()
   const before = await read($, historyAtom)
   const after = addSample(before, fresh, nowMs)
   if (after === before) return
   await update($, historyAtom, () => after)
-  await $.store.set(HISTORY_KEY, after)
+  if (!hasLimitsMoved(before.at(-1), after.at(-1))) return
+  const stored = await $.store.get(HISTORY_KEY)
+  await $.store.set(HISTORY_KEY, mergeHistory(isHistory(stored) ? stored : [], after))
 }
 
 // The MODZ card: written once at the start, then only when what it shows changes.
@@ -102,39 +104,6 @@ function compactNow($: EngineInterface): void {
   )
 }
 
-async function toggle($: EngineInterface): Promise<{ text: string }> {
-  await update($, hiddenAtom, isHidden => !isHidden)
-  const isHidden = await read($, hiddenAtom)
-  await $.store.set(HIDDEN_KEY, isHidden)
-
-  return { text: isHidden ? words().hidden : words().shown }
-}
-
-// Placed, the pane takes a running MODZ hub's panel, so the hub and every other pane step aside (kit/stage.ts).
-// A failed note of that is only logged: the pane is open either way.
-async function reportShown($: EngineInterface): Promise<void> {
-  try {
-    if ((await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
-    await $.state.set({ plugin: 'hud-pro', key: 'shown' }, shownOf(HUB_PANE, await $.clock.now()))
-  } catch {
-    $.ui.log('hud-pro: could not tell the hub the pane is shown', { to: 'debug' })
-  }
-}
-
-// Opens the pane, or brings it forward when it is open already; never closes it.
-async function openPane($: EngineInterface): Promise<void> {
-  motion.reset()
-  const opened = await $.ui.open({ id: PANE, title: words().paneTitle, focus: true, closeOnEscape: true })
-  if (opened.isPlaced) await reportShown($)
-}
-
-async function runCommand($: EngineInterface, args: string): Promise<{ text?: string }> {
-  if (args.trim().toLowerCase() !== 'full') return toggle($)
-  await openPane($)
-
-  return {}
-}
-
 // The minute clock moves only the gauges' countdowns, pace marks and estimates; a minute that moves
 // none of them redraws nothing, since every redraw also hands out new press handles.
 async function redrawIfMoved($: EngineInterface): Promise<void> {
@@ -153,7 +122,9 @@ async function setup($: EngineInterface): Promise<void> {
   await update($, hiddenAtom, () => false)
   if ((await $.store.get(HIDDEN_KEY)) === true) await update($, hiddenAtom, () => true)
   const saved = await $.store.get(HISTORY_KEY)
-  if (isHistory(saved)) await update($, historyAtom, () => saved)
+  if (isHistory(saved)) await update($, historyAtom, () => accountHistory(saved))
+  const chosen = await $.store.get(BAND_KEY)
+  band.chosen = isBandMode(chosen) ? chosen : null
   $.clock.every(REFRESH_MS, () => void redrawIfMoved($))
   await $.command.register({ name: 'hud', description: words().commandDescription })
 }
@@ -192,24 +163,6 @@ function onUsage(on: On) {
   })
 }
 
-// The MODZ main panel asks for this pane by writing `{ pane: 'usage' }` to `modz.open`. modz's
-// contract is not this mod's to import, so its address stays untyped here.
-function onOpen(on: On) {
-  on('state.set', { plugin: 'modz', key: 'open' } as any, async ($: EngineInterface, e: any, next: any) => {
-    const done = await next(e)
-    if (isOwnOpen(e.value)) await openPane($)
-
-    return done
-  }).catch(($: EngineInterface, e: any, next: any) => next(e))
-  // Another pane took the hub's one panel: this one steps aside rather than wait as a tab.
-  on('state.set', { plugin: 'modz', key: 'stage' } as any, async ($: EngineInterface, e: any, next: any) => {
-    const done = await next(e)
-    if (isOffStage(e.value, HUB_PANE)) await $.ui.close({ id: PANE })
-
-    return done
-  }).catch(($: EngineInterface, e: any, next: any) => next(e))
-}
-
 // The way back to the MODZ hub: written to this mod's own `home` value, which the hub hears. A press
 // never throws out of the handler, so a failed write is logged and the pane stays as it is.
 async function goHome($: EngineInterface): Promise<void> {
@@ -231,14 +184,6 @@ async function cardData($: EngineInterface): Promise<CardData> {
 }
 
 function onRender(on: On) {
-  on('command.run', { command: 'hud' }, async ($, e) => {
-    try {
-      return await runCommand($, e.args)
-    } catch {
-      return { text: words().commandFailed }
-    }
-  })
-
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const turn = await read($, turnAtom)
     const ui = $.ui.resolve(e)
@@ -262,7 +207,7 @@ function onRender(on: On) {
   })
 }
 
-function onBand(on: On, isAlertsOnly: boolean) {
+function onBand(on: On) {
   // The bottom row of the band, right above the prompt: what the plugins beneath drew stays above it.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const theirs = await next(e)
@@ -270,15 +215,16 @@ function onBand(on: On, isAlertsOnly: boolean) {
       const usage = await read($, usageAtom)
       if (e.props.hasSurvey || usage === null || (await read($, hiddenAtom))) return theirs
       const ui = $.ui.resolve(e)
+      const isDesktop = e.surface !== 'terminal' && 'Svg' in ui
       const row = bandRow(ui, {
         usage,
         columns: e.props.bodyColumns,
         nowMs: await $.clock.now(),
         forecasts: await forecastsOf($, usage),
-        isDesktop: e.surface !== 'terminal' && 'Svg' in ui,
+        isDesktop,
         canCompact: !e.props.isWorking && !(await read($, compactingAtom)),
         compact: () => compactNow($),
-        isAlertsOnly,
+        isAlertsOnly: isAlertsOnly(band.chosen ?? band.setting, isDesktop),
       })
       if (row === null) return theirs
       const { Box } = ui
@@ -301,7 +247,8 @@ export const register: Register = (on, options) => {
   onUsage(on)
   onTurns(on)
   onPast(on)
-  onOpen(on)
+  onCommand(on)
   onRender(on)
-  onBand(on, options?.band === 'alerts')
+  band.setting = isBandMode(options?.band) ? options.band : 'auto'
+  onBand(on)
 }

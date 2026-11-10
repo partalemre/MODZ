@@ -19,6 +19,9 @@ export type Words = {
   lastTurns: (count: number) => string
   latest: (effort: string, model: string) => string
   lowered: (from: string) => string
+  // The band's line after a lowered turn, and its button.
+  loweredBand: (sent: string, asked: string) => string
+  resend: (asked: string) => string
   ago: (ms: number) => string
   off: string
 }
@@ -53,6 +56,8 @@ const EN: Words = {
   lastTurns: count => `Last ${count} turns`,
   latest: (effort, model) => `${effort} · ${model}`,
   lowered: from => `from ${from}`,
+  loweredBand: (sent, asked) => `Sent at ${sent} effort (yours: ${asked}): the judge called it light`,
+  resend: asked => `Re-send at ${asked}`,
   ago: agoOf({ now: 'now', min: 'min', hour: 'h' }),
   off: 'off',
 }
@@ -77,6 +82,8 @@ const TR: Words = {
   lastTurns: count => `Son ${count} tur`,
   latest: (effort, model) => `${effort} · ${model}`,
   lowered: from => `${from} yerine`,
+  loweredBand: (sent, asked) => `${sent} eforla gönderildi (seninki: ${asked}): yargıç hafif dedi`,
+  resend: asked => `${asked} ile yeniden gönder`,
   ago: agoOf({ now: 'şimdi', min: 'dk', hour: 'sa' }),
   off: 'kapalı',
 }

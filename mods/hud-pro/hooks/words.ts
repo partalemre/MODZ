@@ -58,7 +58,7 @@ const nouns = (count: number, one: string): string => (count === 1 ? one : `${on
 type TurnSpec = { input: string; output: string; cache: string; requests: number }
 type FreeSpec = { tokens: string; count: number }
 type CompactedSpec = { before: string; after: string }
-type PastSpec = { active: number; range: number; sessions: number; tokens: string; model: string | null }
+type PastSpec = { active: number; range: number; sessions: number; tokens: string; cache: string; model: string | null }
 
 type Words = {
   paneTitle: string
@@ -72,6 +72,8 @@ type Words = {
   shown: string
   commandFailed: string
   commandDescription: string
+  bandSet: (mode: string) => string
+  bandUsage: string
   timeToCompact: string
   readings: (count: number) => string
   sessionAt: (cost: string) => string
@@ -105,6 +107,8 @@ type Words = {
   activeDays: string
   sessions: string
   tokens: string
+  // Input + output tokens' label, with the cache reads and writes beside them.
+  tokensApart: (cache: string) => string
   topModel: string
   rangeLabel: (days: number) => string
   lastDays: (days: number) => string
@@ -123,7 +127,9 @@ const EN: Words = {
   hidden: 'HUD hidden.',
   shown: 'HUD shown.',
   commandFailed: 'The HUD command failed.',
-  commandDescription: 'Show or hide the HUD line; "/hud full" opens the limit details',
+  commandDescription: 'Show or hide the HUD line; "/hud full" opens the limit details; "/hud band auto|always|alerts" picks the band',
+  bandSet: mode => `HUD band: ${mode}${mode === 'auto' ? ' (alerts only on the desktop, which shows the limits itself; the full line in the terminal)' : ''}.`,
+  bandUsage: 'Usage: /hud band auto | always | alerts',
   timeToCompact: 'time to compact',
   readings: count => plural(count, 'reading', 'readings'),
   sessionAt: cost => `session ${cost}`,
@@ -158,11 +164,12 @@ const EN: Words = {
   activeDays: 'active days',
   sessions: 'sessions',
   tokens: 'tokens',
+  tokensApart: cache => `tokens in + out · ${cache} cache`,
   topModel: 'most used',
   rangeLabel: days => `${days} days`,
   lastDays: days => `last ${days} days`,
   pastLine: spec =>
-    [`${spec.active}/${spec.range} active days`, plural(spec.sessions, 'session', 'sessions'), `${spec.tokens} tokens`, spec.model === null ? '' : `mostly ${spec.model}`]
+    [`${spec.active}/${spec.range} active days`, plural(spec.sessions, 'session', 'sessions'), `${spec.tokens} tokens in + out`, `${spec.cache} cache`, spec.model === null ? '' : `mostly ${spec.model}`]
       .filter(part => part !== '')
       .join(' · '),
   dayTokens: (day, tokens) => `${day}: ${tokens} tokens`,
@@ -179,7 +186,9 @@ const TR: Words = {
   hidden: 'HUD gizlendi.',
   shown: 'HUD gösteriliyor.',
   commandFailed: 'HUD komutu çalışmadı.',
-  commandDescription: 'HUD satırını aç/kapat; "/hud full" limit ayrıntılarını açar',
+  commandDescription: 'HUD satırını aç/kapat; "/hud full" limit ayrıntılarını açar; "/hud band auto|always|alerts" bandı seçer',
+  bandSet: mode => `HUD bandı: ${mode}${mode === 'auto' ? ' (masaüstünde yalnızca uyarılar, limitleri uygulama zaten gösteriyor; terminalde tam satır)' : ''}.`,
+  bandUsage: 'Kullanım: /hud band auto | always | alerts',
   timeToCompact: 'sıkıştırmak iyi olur',
   readings: count => `${count} okuma`,
   sessionAt: cost => `oturum ${cost}`,
@@ -213,11 +222,12 @@ const TR: Words = {
   activeDays: 'aktif gün',
   sessions: 'oturum',
   tokens: 'token',
+  tokensApart: cache => `giriş + çıkış token · ${cache} önbellek`,
   topModel: 'en çok',
   rangeLabel: days => `${days} gün`,
   lastDays: days => `son ${days} gün`,
   pastLine: spec =>
-    [`${spec.active}/${spec.range} aktif gün`, `${spec.sessions} oturum`, `${spec.tokens} token`, spec.model === null ? '' : `çoğunlukla ${spec.model}`]
+    [`${spec.active}/${spec.range} aktif gün`, `${spec.sessions} oturum`, `${spec.tokens} giriş + çıkış token`, `${spec.cache} önbellek`, spec.model === null ? '' : `çoğunlukla ${spec.model}`]
       .filter(part => part !== '')
       .join(' · '),
   dayTokens: (day, tokens) => `${day}: ${tokens} token`,

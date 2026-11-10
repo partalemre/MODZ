@@ -66,7 +66,7 @@ describe('in English', () => {
     await $.turn.complete(turn())
 
     expect((await $.command.run(run('keepwarm', '90m')))?.text).toBe(
-      'the cache stays warm for 1h 30m: 50m into every pause, a small refresh reads it without rewriting it')
+      'the cache stays warm for 1h 30m: 50m into every pause, a small refresh reads it without rewriting it; at most 12 refreshes, and one that writes over 1000 output tokens ends it')
     expect((await $.command.run(run('keepwarm', 'status')))?.text).toBe('keep warm: 1h 30m left · refresh in 50m')
     expect((await $.command.run(run('keepwarm', 'soon')))?.text).toBe('keepwarm takes a span (6h, 90m) or always, off, status')
     expect((await $.command.run(run('keepwarm', 'off')))?.text).toBe('keepwarm off')

@@ -131,6 +131,7 @@ describe('the hold survives a new process (upstream 7d933e8)', () => {
     }
     const s = freshState()
     s.sid = 'S1'
+    s.guard = 'refuse'
     seedFromResume(s, { source: 'resume', model: 'claude-fable-5-1', context_tokens: 200502, seconds_since_last_response: Math.round((now - START) / 1000) }, now)
     const submit = (e: PromptSubmitInput) => onPrompt(io, s, { e, next: async x => { sent.push(x.text); return { text: x.text } } })
     return { s, sent, submit }
@@ -138,7 +139,7 @@ describe('the hold survives a new process (upstream 7d933e8)', () => {
 
   test('a resend from the next process goes through, once, and clears the stored hold', async ($, on) => {
     const clock = mock.clock(on, { now: START })
-    const store = new Map<string, unknown>()
+    const store = new Map<string, unknown>([['guard', 'refuse']])
     world(on, [], { store })
     await $.session.start(session)
     await $.turn.complete(turn())
@@ -181,7 +182,7 @@ describe('/keepwarm always takes a window of its own (upstream 90bcd45)', () => 
     await $.session.start(session)
     await $.turn.complete(turn())
     const r = await $.command.run(run('keepwarm', 'always 24h'))
-    expect(r.text).toBe('keepwarm hep açık: her oturum 24 sa pencereyle başlar; /keepwarm off kalıcı olarak kapatır')
+    expect(r.text).toBe('keepwarm hep açık: her oturum 24 sa pencereyle başlar; /keepwarm off kalıcı olarak kapatır; en fazla 12 tazeleme, 1000 çıktı tokenından fazlasını yazan tazeleme pencereyi kapatır')
     expect(store.get('always')).toBe(24 * HOUR)
     expect(w.status.at(-1)).toMatch(/^sıcak tutma: 24 sa kaldı/)
     await clock.advance(30 * MIN)
@@ -204,7 +205,7 @@ describe('/keepwarm always takes a window of its own (upstream 90bcd45)', () => 
 
   test('a stored window opens at session start, and the held send promises it', async ($, on) => {
     const clock = mock.clock(on, { now: START })
-    const store = new Map<string, unknown>()
+    const store = new Map<string, unknown>([['guard', 'refuse']])
     const w = world(on, [], { store })
     await $.session.start(session)
     await $.turn.complete(turn())
@@ -213,7 +214,7 @@ describe('/keepwarm always takes a window of its own (upstream 90bcd45)', () => 
     await $.session.start(session)
     expect(w.status.at(-1)).toMatch(/^sıcak tutma: 12 sa kaldı/)
     const r = await $.prompt.submit(prompt('hi'))
-    expect(r.drop).toMatch(/keepwarm sonra önbelleği 12 sa tutar/)
+    expect(r.drop).toMatch(/sonra \/keepwarm önbelleği sıcak tutar/)
     const card = await $.command.run(run('cache-tax', ''))
     expect(card.text).toMatch(/keepwarm    açık, 12 sa kaldı.*\(always\)/)
   })

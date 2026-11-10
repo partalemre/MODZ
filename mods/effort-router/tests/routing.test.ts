@@ -33,7 +33,7 @@ test('auto: a light prompt\'s main-loop steps go at low; normal and deep keep th
   world.reply = 'normal'
   await turn($, { text: 'Add a retry to the fetch client', turnId: 'normal', effort: 'high' })
   world.reply = 'deep'
-  await turn($, { text: 'Find why the cache corrupts under load', turnId: 'deep', effort: 'high' })
+  await turn($, { text: 'Find why the cache corrupts under load when two workers write the same key at once', turnId: 'deep', effort: 'high' })
 
   expect(sentTo(world, 'light')).toEqual(['low', 'low'])
   expect(sentTo(world, 'normal')).toEqual(['high'])
@@ -77,7 +77,7 @@ test('a subagent\'s steps go on as they came and are not listed, even under a li
   expect((await stateOf($, 'turns')).map((t: any) => t.sent)).toEqual(['low'])
 })
 
-test('slash commands, follow-ups in both languages and non-person prompts ask no judge and keep the last routing', AUTO, async ($: any, on: any) => {
+test('slash commands, follow-ups in both languages and non-person prompts ask no judge and go at the person\'s effort', AUTO, async ($: any, on: any) => {
   const world = worldOf({ reply: 'light' })
   stub(on, world)
   await begin($)
@@ -89,7 +89,7 @@ test('slash commands, follow-ups in both languages and non-person prompts ask no
   }
 
   expect(world.judged).toHaveLength(1)
-  expect(skipped.map((_, i) => sentTo(world, `s${i}`)[0])).toEqual(skipped.map(() => 'low'))
+  expect(skipped.map((_, i) => sentTo(world, `s${i}`)[0])).toEqual(skipped.map(() => 'high'))
 })
 
 test('a prompt delivered into a running turn asks no judge', AUTO, async ($: any, on: any) => {

@@ -54,6 +54,7 @@ function desktopInfo(ui: Elements['desktop'], view: HoldView, p: Palette): Rende
     infoRow(ui, { paths: ICONS.pauseCircle, color: p.mid }, [
       Text({ color: p.mid, wrap: 'truncate-end', children: [words().held, Text({ color: p.hi, children: [heldQuote(view)] })] }),
     ]),
+    view.share === null ? null : infoRow(ui, { paths: ICONS.pauseCircle, color: p.mid }, [Text({ color: p.hi, children: [words().share(view.share)] })]),
     infoRow(ui, { paths: ICONS.shieldCheck, color: p.mid }, [Text({ color: p.mid, children: [keepText(view)] })]),
   ] })
 }
@@ -110,6 +111,7 @@ export function holdTerminal(ui: Elements['terminal'], o: HoldOptions): RenderEl
     priceLine(ui, { label: said.sendNow, usd: fmtUsd(v.coldUsd), color: warn, bar: textBar(1, cells) }),
     priceLine(ui, { label: said.warmTurn, usd: fmtUsd(v.warmUsd), color: undefined, bar: `${textBar(share, cells)} ${warmCaptions(v).at(-1) ?? ''}` }),
     Text({ dimColor: true, children: [`${said.tokens(v.tokens)} ${said.rewritten(v.rate)[0]}`] }),
+    v.share === null ? null : Text({ bold: true, children: [said.share(v.share)] }),
     Text({ wrap: 'truncate-end', children: [Text({ dimColor: true, children: [`⏸ ${said.held}`] }), heldQuote(v)] }),
     Text({ dimColor: true, children: [`✓ ${keepText(v)}`] }),
     buttons(ui, o.actions),

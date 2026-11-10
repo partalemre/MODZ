@@ -49,6 +49,12 @@ const TURN_USAGE = {
 export const TURKISH = { MODZ_LANG: 'tr' } as const
 export const ENGLISH = {} as const
 
+// The full band line on every surface; by default the desktop shows only alerts.
+export const ALWAYS = { options: { band: 'always' } } as const
+
+// The mod's store: empty at each stubSession; a test seeds `saved` after it, before the session starts.
+export const store: { saved: Record<string, unknown>; writes: Array<{ key: string; value: any }> } = { saved: {}, writes: [] }
+
 export const toasts: string[] = []
 export const opens: Array<{ id: string; title?: string; focus?: boolean }> = []
 // How many times the mod asked for a redraw.
@@ -73,8 +79,15 @@ export function stubSession(on: any, usage: any = USAGE, env: Record<string, str
     return { value: usage }
   })
   on('command.register', () => ({ value: undefined }))
-  on('store.get', () => ({ value: undefined }))
-  on('store.set', () => ({ value: undefined }))
+  store.saved = {}
+  store.writes.length = 0
+  on('store.get', (_: any, e: any) => ({ value: store.saved[e.key] }))
+  on('store.set', (_: any, e: any) => {
+    store.writes.push({ key: e.key, value: e.value })
+    store.saved[e.key] = e.value
+
+    return { value: undefined }
+  })
   on('ui.toast', (_: any, e: any) => {
     toasts.push(e.text)
 

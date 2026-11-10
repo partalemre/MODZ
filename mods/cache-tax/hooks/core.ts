@@ -13,24 +13,38 @@ export const MAX_ALWAYS_MS = 168 * HOUR_MS
 /** The status row also shows a warm cache this close to going cold. */
 export const SOON_MS = 10 * MIN_MS
 export const BIG_TOKENS = 50000
-export const PING_PROMPT = 'Reply with the single word: warm'
+// $.model.fork takes a prompt alone (no effort or output limit), so the prompt asks for the shortest reply.
+export const PING_PROMPT = 'Reply with the single word: warm. No reasoning, no tools, nothing else.'
+/** A window's refreshes: at most this many, and one that writes more output than this ends it. */
+export const MAX_PINGS = 12
+// A one-word reply plus the thinking a model cannot turn off stays well under this; over it, a ping costs double.
+export const MAX_PING_OUTPUT = 1000
 
-// $ per million tokens, [cache read, 1h cache write, output], list prices October 2026.
-// More specific families first: a model id takes the first row it matches.
+// Claude 5 and later, $ per million tokens, [cache read, 1h cache write (2× input), output]: the published list
+// prices (claude-api skill model table, cached 2026-11-03). Keyed by family and version, matched exactly, so a
+// release not listed here has no price rather than a neighbour's.
+const PRICES_5: Record<string, Price> = {
+  'fable-5-2': [0.2, 16, 40],
+  'mythos-5-2': [0.2, 16, 40],
+  'fable-5-1': [0.25, 20, 50],
+  'mythos-5-1': [0.25, 20, 50],
+  'fable-5': [1, 20, 50],
+  'mythos-5': [1, 20, 50],
+  'opus-5-5': [0.2, 8, 20],
+  'opus-5': [0.5, 10, 25],
+  'sonnet-5-5': [0.1, 4, 10],
+  'sonnet-5': [0.2, 4, 10],
+  'haiku-5-5': [0.01, 0.2, 0.5],
+}
+// "opus-5-5" in claude-opus-5-5, claude-opus-5-5[1m] or us.anthropic.claude-opus-5-5-v1:0; a date suffix is not a minor.
+const GEN_5 = /(fable|mythos|opus|sonnet|haiku)-((?:[5-9]|\d{2,})(?:-\d{1,2})?)(?!\d)/
+
+// Earlier models, more specific families first: a model id takes the first row it matches.
 const PRICES: Array<[string | RegExp, number, number, number]> = [
-  ['fable-5-1', 0.25, 20, 50],
-  ['mythos-5-1', 0.25, 20, 50],
-  ['fable-5', 1, 20, 50],
-  ['mythos-5', 1, 20, 50],
-  ['opus-5-5', 0.2, 8, 20],
-  ['opus-5', 0.5, 10, 25],
   // Opus 4 and 4.1 in every spelling (claude-opus-4-1-20250805, claude-opus-4@20250514), never Opus 4.5 and later.
   [/opus-4(?:-[01])?(?:$|[^-\d]|-20\d{6})/, 1.5, 30, 75],
   ['opus-4', 0.5, 10, 25],
-  ['sonnet-5-5', 0.1, 4, 10],
-  ['sonnet-5', 0.2, 4, 10],
   ['sonnet', 0.3, 6, 15],
-  ['haiku-5-5', 0.01, 0.2, 0.5],
   ['3-5-haiku', 0.08, 1.6, 4],
   ['haiku-3-5', 0.08, 1.6, 4],
   ['haiku', 0.1, 2, 5],
@@ -85,20 +99,35 @@ export type State = {
   waitForTurn: boolean
   /** Ping retries spent on a busy API since the last answered ping. */
   retries: number
+  /** Refreshes this window has sent: a window stops at MAX_PINGS. */
+  pings: number
+  /** The card's pay button was pressed: its paid write opens a keepwarm window. A typed resend opens none. */
+  isWarmAfterPay: boolean
+  /** Limit percent per list-price dollar, from this session's own readings; null until they show one. */
+  rate: Rate | null
 }
+
+/** Two readings of the limit window and the session's cost: the first of this window, and the latest. */
+export type Rate = { kind: string; firstPercent: number; firstUsd: number; percent: number; usd: number }
 
 export function freshState(): State {
   return {
     hasBand: false, hasStatus: false, sid: '', deadline: 0, every: PING_AFTER_MS, always: false, alwaysMs: DEFAULT_WINDOW_MS, lastRequestAt: 0, lastResponseAt: 0,
-    lastModel: null, cacheModel: null, ctx: 0, compacted: false, guard: 'refuse', guardFloor: 0, ackedAt: 0, coldWritePending: false, largestWrite: null, misses: [],
-    pending: null, refresh: null, last: null, stopped: null, held: null, resend: null, waitForTurn: false, retries: 0,
+    lastModel: null, cacheModel: null, ctx: 0, compacted: false, guard: 'warn', guardFloor: 0, ackedAt: 0, coldWritePending: false, largestWrite: null, misses: [],
+    pending: null, refresh: null, last: null, stopped: null, held: null, resend: null, waitForTurn: false, retries: 0, pings: 0, isWarmAfterPay: false, rate: null,
   }
 }
 
 export function priceOf(model: string | null, promptTokens: number): Price | null {
   const m = (model ?? '').toLowerCase().replace(/[\s.]+/g, '-')
-  const rows = promptTokens > LONG_PROMPT_TOKENS ? [...LONG_PRICES, ...PRICES] : PRICES
-  for (const [family, read, write, output] of rows) {
+  const isLong = promptTokens > LONG_PROMPT_TOKENS
+  const gen5 = GEN_5.exec(m)
+  if (gen5) {
+    const key = `${gen5[1]}-${gen5[2]}`
+    const long = isLong ? LONG_PRICES.find(([family]) => family === key) : undefined
+    return long ? [long[1], long[2], long[3]] : PRICES_5[key] ?? null
+  }
+  for (const [family, read, write, output] of PRICES) {
     if (typeof family === 'string' ? m.includes(family) : family.test(m)) return [read, write, output]
   }
   return null
@@ -190,5 +219,6 @@ export function resetForClear(s: State) {
   s.held = null
   s.resend = null
   s.waitForTurn = false
+  s.isWarmAfterPay = false
   disarm(s)
 }

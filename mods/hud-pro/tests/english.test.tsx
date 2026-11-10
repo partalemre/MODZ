@@ -2,7 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { costText, untilReset } from '../hooks/format'
 import { setLang } from '../hooks/lang'
-import { BAND, ENGLISH, MS_PER_HOUR, PANE, USAGE, opens, start, stubSession, toasts } from './stubs'
+import { ALWAYS, BAND, ENGLISH, MS_PER_HOUR, PANE, USAGE, opens, start, stubSession, toasts } from './stubs'
 
 // Without MODZ_LANG every text reads English, on both surfaces; Turkish letters never show up.
 
@@ -37,7 +37,7 @@ test('band in English on the terminal: 5h with reset, 7d, context, cost', async 
   await expectNoTurkish(ui)
 })
 
-test('band in English on the desktop: the pills read the long labels and the session cost', async ($, on) => {
+test('band in English on the desktop: the pills read the long labels and the session cost', ALWAYS, async ($, on) => {
   stubSession(on, USAGE, ENGLISH)
   await start($, 'desktop')
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
@@ -50,7 +50,7 @@ test('band in English on the desktop: the pills read the long labels and the ses
 })
 
 for (const surface of SURFACES) {
-  test(`the Compact button and a full window read English (${surface})`, async ($, on) => {
+  test(`the Compact button and a full window read English (${surface})`, ALWAYS, async ($, on) => {
     stubSession(on, { ...FULL_CONTEXT, rateLimits: [{ ...USAGE.rateLimits[0], percentUsed: 104 }] }, ENGLISH)
     await start($, surface)
     const ui = await $.ui.mount({ ...BAND, surface })

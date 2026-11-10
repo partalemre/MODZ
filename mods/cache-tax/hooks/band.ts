@@ -12,7 +12,7 @@ import type { HoldView } from './hold-svg'
 import { modelName } from './model-switch'
 import { rowDesktop, rowOf, rowTerminal } from './row'
 import { bandWords } from './ui-words'
-import { autoWarm, coldFor, rateText } from './words'
+import { autoWarm, coldFor, rateText, shareText } from './words'
 
 export type Prefs = { isLight: boolean; noColor: boolean }
 
@@ -33,6 +33,7 @@ export function holdView(s: State, now: number): HoldView {
     warmUsd: warmUsd(s, model),
     rate: rateText(s, model),
     autoWarm: autoWarm(s),
+    share: shareText(s, coldUsd(s, model)),
   }
 }
 

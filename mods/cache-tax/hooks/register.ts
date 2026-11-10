@@ -3,7 +3,7 @@ import type { EngineInterface, On, Register, TurnCompleteInput } from 'claude-co
 import { composeBand } from './band'
 import { pinned } from './pin'
 import type { Prefs } from './band'
-import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, TTL_MS, alwaysWindow, freshState, isFullMiss, parseAlways, parseDuration, priceOf, resetForClear } from './core'
+import { DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, TTL_MS, alwaysWindow, freshState, isFullMiss, parseAlways, parseDuration, resetForClear } from './core'
 import type { State } from './core'
 import { NAME, ackedKey, onPrompt } from './guard'
 import type { GuardIo } from './guard'
@@ -11,11 +11,12 @@ import { guardFromStore, parseGuard, storedGuard } from './guard-mode'
 import type { HoldActions } from './hold'
 import { bandKey } from './row'
 import { seedFromResume } from './session'
+import { trackRate } from './share'
 import { isLightTheme } from './theme'
-import { KEY_ALWAYS, KEY_GUARD, arm, deadlineKey, everyKey, prune, startWindow, stop, stopForGood, updateStatus } from './warm'
+import { KEY_ALWAYS, KEY_GUARD, arm, deadlineKey, everyKey, prune, scoreMiss, startWindow, stop, stopForGood, updateStatus } from './warm'
 import type { Io } from './warm'
 import { setLang } from './lang'
-import { alwaysText, armedText, cardText, commands, guardSetText, paidText, say, statusText } from './words'
+import { alwaysText, armedText, cardText, commands, guardSetText, say, statusText } from './words'
 
 export { fmtDuration } from './fmt'
 export { freshState, parseDuration, resetForClear } from './core'
@@ -31,6 +32,7 @@ function io($: EngineInterface): Io {
     every: (ms, fn) => $.clock.every(ms, fn),
     fork: prompt => $.model.fork({ prompt }),
     get: key => $.store.get(key),
+    keys: () => $.store.keys(),
     set: (key, value) => $.store.set(key, value),
     del: key => $.store.delete(key),
     redraw: () => $.ui.invalidate('ui.render'),
@@ -63,6 +65,7 @@ function actions($: EngineInterface, s: State): HoldActions {
       const held = release()
       if (!held) return
       s.resend = held.text
+      s.isWarmAfterPay = true
       await $.prompt.submit({ text: held.text, asUser: true })
     })(),
     fresh: () => void (async () => {
@@ -172,26 +175,19 @@ async function onTurnComplete($: EngineInterface, s: State, e: TurnCompleteInput
     // A turn's usage is its responses summed, so a ten-step turn reports ten reads of the context. The live window
     // is the engine's figure; the sum is only the fallback for a host that reports no tokens.
     const write = u.cache_creation_input_tokens
-    const live = (await $.session.usage()).context.tokens
+    const reading = await $.session.usage()
+    s.rate = trackRate(s.rate, reading.rateLimits, reading.cost?.usd)
+    const live = reading.context.tokens
     s.ctx = live && live > 0 ? live : u.input_tokens + u.cache_read_input_tokens + write
     // The sum also holds each request's new tool output, so a long warm turn can write half the context in all; when
     // the steps reported usage, a cold write is one request writing half of it again.
-    if (isFullMiss(prev, s.largestWrite ?? write) || s.coldWritePending) await scoreMiss($, s, { now, write })
+    if (isFullMiss(prev, s.largestWrite ?? write) || s.coldWritePending) await scoreMiss(io($), s, { now, write })
   }
   s.coldWritePending = false
+  s.isWarmAfterPay = false
   s.largestWrite = null
   if (s.always) await openAlways($, s)
   else await arm(io($), s)
-}
-
-async function scoreMiss($: EngineInterface, s: State, { now, write }: { now: number; write: number }) {
-  const price = priceOf(s.lastModel, s.ctx)
-  const usd = price ? write * price[1] / 1e6 : null
-  s.misses.push({ at: now, tokens: write, usd })
-  // With always on, its own window, which the turn opens next, governs renewal, shorter than three hours or not.
-  if (s.always || s.deadline >= now + AUTO_WARM_MS) return
-  await startWindow(io($), s, { windowMs: AUTO_WARM_MS, every: s.every })
-  $.ui.log(paidText(s, write, usd))
 }
 
 function wireBand(on: On, c: Ctx) {

@@ -1,7 +1,8 @@
 // Every line the mod says, in English. The words come here already formatted; words.ts decides which.
 // Command names and their arguments stay as typed.
 
-export type Guard = { lead: string; tokens: string; rate: string; usd: string; warm: string | null }
+/** `share`: on a subscription, the limit share the send takes, already worded; dollars then follow it. */
+export type Guard = { lead: string; tokens: string; rate: string; usd: string; warm: string | null; share: string | null }
 export type Times = { span: string; every: string }
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`
@@ -9,19 +10,25 @@ const plural = (n: number, one: string, many: string): string => `${n} ${n === 1
 export const EN = {
   rateUnknown: 'the cache write price',
   guard: (g: Guard): string =>
-    `${g.lead} This send rewrites up to ${g.tokens} tokens at ${g.rate} = ${g.usd}` +
+    (g.share === null
+      ? `${g.lead} This send rewrites up to ${g.tokens} tokens at ${g.rate} = ${g.usd}`
+      : `${g.lead} This send rewrites up to ${g.tokens} tokens: ${g.share} (${g.usd} at list price)`) +
     (g.warm === null ? '' : ` (a warm turn would be ${g.warm})`) + '.',
+  share: (percent: string, isWeekly: boolean): string => `≈${percent}% of the ${isWeekly ? 'weekly' : '5-hour'} limit`,
+  noPrice: 'no price for this model',
   coldLead: (ago: string): string => `The cache went cold ${ago} ago.`,
   switchLead: (from: string, to: string): string => `Model changed (${from} → ${to}): the cache will be rewritten.`,
   dropHeld: (usd: string): string => `cache-tax: your message is on hold, choose on the card (cold cache, up to ${usd}).`,
   dropSwitched: (usd: string): string => `cache-tax: your message is on hold, choose on the card (model changed, up to ${usd}).`,
-  drop: (guard: string, auto: string): string =>
-    `cache-tax: ${guard} Send again to pay; keepwarm then keeps the cache warm for ${auto}. ` +
-    'Or start over with /clear and a note.',
-  warn: (guard: string, auto: string): string => `${guard} Sending anyway; keepwarm then keeps the cache warm for ${auto}.`,
+  drop: (guard: string): string =>
+    `cache-tax: ${guard} Send again to pay; /keepwarm then keeps the cache warm. Or start over with /clear and a note.`,
+  warn: (guard: string): string => `${guard} Sending anyway; /keepwarm keeps the cache warm from here.`,
   paid: (g: { tokens: string; usd: string; auto: string }): string =>
     `Rewrote ${g.tokens} tokens into the cache (${g.usd}). The cache stays warm for ${g.auto} so it is not paid again ` +
     'today; /keepwarm off stops it.',
+  paidCold: (g: { tokens: string; usd: string }): string =>
+    `Rewrote ${g.tokens} tokens into the cache (${g.usd}). /keepwarm keeps it warm so it is not paid again today.`,
+  cap: (pings: number, output: number): string => `; at most ${pings} refreshes, and one that writes over ${output} output tokens ends it`,
   resume: (tokens: string, usd: string): string =>
     `Resuming cold. The first message rewrites ${tokens} tokens, ≈${usd}. ` +
     'If you only need the results, start with /clear and paste a summary.',

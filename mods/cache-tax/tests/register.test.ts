@@ -72,7 +72,7 @@ describe('guard', () => {
     expect(w.logs.at(-1)).toMatch(/Yine de gönderiliyor/)
   })
 
-  test('a paid cold write is scored and arms keepwarm for three hours', async ($, on) => {
+  test('a cold write paid by typing again is scored and offers keepwarm, without starting it', async ($, on) => {
     const clock = mock.clock(on, { now: START })
     const w = world(on, [warm, warm, warm, warm])
     await $.session.start(session)
@@ -81,13 +81,13 @@ describe('guard', () => {
     await $.prompt.submit(prompt('hi'))
     await $.prompt.submit(prompt('hi'))
     await $.turn.complete(turn({ usage: usage({ cache_read_input_tokens: 0, cache_creation_input_tokens: 200502 }) }))
-    expect(w.logs.at(-1)).toMatch(/201k token önbelleğe baştan yazıldı \(\$4,01\)\. Bugün yeniden ödenmesin diye önbellek 3 sa/)
-    expect(w.status.at(-1)).toMatch(/^sıcak tutma: 3 sa kaldı · tazeleme 50 dk sonra/)
+    expect(w.logs.at(-1)).toBe('201k token önbelleğe baştan yazıldı ($4,01). Bugün yeniden ödenmesin diye /keepwarm önbelleği sıcak tutar.')
+    expect(w.status.at(-1)).toBe(undefined)
     await clock.advance(50 * MIN)
-    expect(w.forks.length).toBe(1)
+    expect(w.forks.length).toBe(0)
     const card = await $.command.run(run('cache-tax', 'status'))
     expect(card.text).toMatch(/oturum      önbellek 1 kez baştan yazıldı, \$4,01/)
-    expect(card.text).toMatch(/keepwarm    açık, 2 sa 10 dk kaldı/)
+    expect(card.text).toMatch(/keepwarm    kapalı/)
   })
 
   test('context comes from the live window, not the turn\'s summed usage', async ($, on) => {
@@ -129,7 +129,7 @@ describe('guard', () => {
     await $.turn.complete(turn({ usage: usage({ cache_read_input_tokens: 0, cache_creation_input_tokens: 200502 }) }))
     const card = await $.command.run(run('cache-tax', 'status'))
     expect(card.text).toMatch(/önbellek 1 kez baştan yazıldı/)
-    expect(w.status.at(-1)).toMatch(/^sıcak tutma: 3 sa kaldı/)
+    expect(w.status.at(-1)).toBe(undefined)
   })
 
   test('stays quiet after a compaction until the first new turn', async ($, on) => {
@@ -380,7 +380,7 @@ describe('keepwarm', () => {
     await $.turn.complete(turn())
     await clock.advance(15 * 24 * HOUR)
     const r = await $.command.run(run('keepwarm', ''))
-    expect(r.text).toBe('önbellek 6 sa sıcak tutulacak. Önbellek şu an soğuk; ilk tazeleme sonraki turdan 50 dk sonra yapılır')
+    expect(r.text).toBe('önbellek 6 sa sıcak tutulacak; en fazla 12 tazeleme, 1000 çıktı tokenından fazlasını yazan tazeleme pencereyi kapatır. Önbellek şu an soğuk; ilk tazeleme sonraki turdan 50 dk sonra yapılır')
     expect(w.status.at(-1)).toBe('sıcak tutma: 6 sa kaldı · şimdi soğuk; ilk tazeleme sonraki turdan 50 dk sonra')
     await clock.advance(1 * MIN)
     expect(w.forks.length).toBe(0)
@@ -411,7 +411,7 @@ describe('keepwarm', () => {
     await clock.advance(1 * MIN)
     expect(w.forks.length).toBe(0)
     const r = await $.command.run(run('keepwarm', 'always'))
-    expect(r.text).toBe('keepwarm hep açık: her oturum 6 sa pencereyle başlar; /keepwarm off kalıcı olarak kapatır. Önbellek şu an soğuk; ilk tazeleme sonraki turdan 50 dk sonra yapılır')
+    expect(r.text).toBe('keepwarm hep açık: her oturum 6 sa pencereyle başlar; /keepwarm off kalıcı olarak kapatır; en fazla 12 tazeleme, 1000 çıktı tokenından fazlasını yazan tazeleme pencereyi kapatır. Önbellek şu an soğuk; ilk tazeleme sonraki turdan 50 dk sonra yapılır')
     await clock.advance(60 * MIN)
     expect(w.forks.length).toBe(0)
     await $.turn.complete(turn())
@@ -419,7 +419,7 @@ describe('keepwarm', () => {
     expect(w.forks.length).toBe(1)
   })
 
-  test('a cold window expires and its testing period does not reach the next auto-window', async ($, on) => {
+  test('a cold window expires and its testing period does not reach the next window', async ($, on) => {
     const clock = mock.clock(on, { now: START })
     const store = new Map<string, unknown>()
     const w = world(on, [warm], { store })
@@ -434,6 +434,7 @@ describe('keepwarm', () => {
     expect(w.status.at(-1)).toBe(undefined)
     expect((await $.command.run(run('keepwarm', 'status'))).text).toBe('keepwarm kapalı')
     await $.turn.complete(turn({ usage: usage({ cache_read_input_tokens: 0, cache_creation_input_tokens: 200000 }) }))
+    await $.command.run(run('keepwarm', '3h'))
     await clock.advance(49 * MIN)
     expect(w.forks.length).toBe(0)
     await clock.advance(MIN)
@@ -454,8 +455,7 @@ describe('keepwarm', () => {
     expect(store.get('every:S1')).toBe(MIN)
     await $.turn.complete(turn({ usage: usage({ cache_read_input_tokens: 0, cache_creation_input_tokens: 200000 }) }))
     expect(store.has('every:S1')).toBe(false)
-    expect(store.get('deadline:S1')).toBe(now + 3 * HOUR)
-    expect(w.status.at(-1)).toBe('sıcak tutma: 3 sa kaldı · tazeleme 50 dk sonra')
+    expect(store.has('deadline:S1')).toBe(false)
     expect(w.forks.length).toBe(0)
   })
 
@@ -499,7 +499,7 @@ describe('store per session', () => {
     expect(w.forks.length).toBe(1)
   })
 
-  test('a window that lapsed less than a week ago is left for its own session', async ($, on) => {
+  test('a window that lapsed less than a day ago is left for its own session', async ($, on) => {
     const now = START + 30 * 24 * HOUR
     mock.clock(on, { now })
     const store = new Map<string, unknown>([['deadline:recent', now - HOUR], ['every:recent', MIN]])
@@ -525,7 +525,7 @@ describe('store per session', () => {
     expect(store.get('guard')).toBe('warn')
   })
 
-  test('legacy bare keys are cleared on start; other sessions\' keys, live or dead, and the global switches stay', async ($, on) => {
+  test('legacy bare keys and other sessions\' windows a day dead are cleared on start; live ones and the global switches stay', async ($, on) => {
     mock.clock(on, { now: START })
     const store = new Map<string, unknown>([
       ['deadline:old1', START - 8 * 24 * HOUR], ['every:old1', MIN],
@@ -536,7 +536,7 @@ describe('store per session', () => {
     ])
     world(on, [], { store, sid: 'mine' })
     await $.session.start(session)
-    expect([...store.keys()]).toEqual(['deadline:old1', 'every:old1', 'deadline:old2', 'deadline:live', 'every:live', 'guard'])
+    expect([...store.keys()]).toEqual(['deadline:live', 'every:live', 'guard'])
   })
 
   test('this session\'s own dead window is cleared on start', async ($, on) => {

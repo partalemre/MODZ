@@ -32,7 +32,9 @@ const FOLLOW_UPS = new Set([
 // The origins that are a person's own words; any other prompt (a notification, a peer, a plugin) keeps the routing.
 const PERSON_ORIGINS = new Set(['composer', 'bridge', 'sdk', 'slack-ping'])
 
-export const modeOf = (value: unknown): EffortMode | undefined =>
+export const isPerson = (origin: string): boolean => PERSON_ORIGINS.has(origin)
+
+export const modeOf =(value: unknown): EffortMode | undefined =>
   MODES.includes(value as EffortMode) ? (value as EffortMode) : undefined
 
 // The person's own pick (kept in `$.store`) wins over the plugin option, which wins over the default.
@@ -45,11 +47,20 @@ export const isFollowUp = (text: string): boolean => FOLLOW_UPS.has(normalized(t
 
 export const isSlashCommand = (text: string): boolean => text.trimStart().startsWith('/')
 
-export type PromptFacts = { text: string; origin: string; isMidTurn: boolean }
+// A prompt this short inside a task carries it on ("fix it", "now do the other 12 files"): the judge sees the words
+// alone and would call it light, so it is never lowered.
+export const SHORT_WORDS = 12
 
-// A prompt the judge never reads: empty, a slash command, a follow-up, not a person's, or delivered into a running turn.
+const isShort = (text: string): boolean => normalized(text).split(' ').length <= SHORT_WORDS
+
+// `isInTask`: the last prompt the judge read was normal or deep work, and no light one came after it.
+export type PromptFacts = { text: string; origin: string; isMidTurn: boolean; isInTask: boolean }
+
+// A prompt the judge never reads, and so never lowers: empty, a slash command, a follow-up, a short prompt inside a
+// task, not a person's, or delivered into a running turn.
 export function isSkipped(facts: PromptFacts): boolean {
-  if (facts.isMidTurn || !PERSON_ORIGINS.has(facts.origin)) return true
+  if (facts.isMidTurn || !isPerson(facts.origin)) return true
+  if (facts.isInTask && isShort(facts.text)) return true
 
   return normalized(facts.text) === '' || isSlashCommand(facts.text) || isFollowUp(facts.text)
 }

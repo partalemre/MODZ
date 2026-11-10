@@ -1,9 +1,9 @@
-import { addRow, closeLog, dayKey, dayStart, DAYS_KEPT, openLog, parseLine } from './past-log'
+import { addRow, closeLog, dayKey, dayStart, DAYS_KEPT, LOG_VERSION, openLog, parseLine } from './past-log'
 import type { LogRow } from './past-log'
 import type { HudLog } from '../types'
 
 // Reading the session transcripts under `<config>/projects`, the cheap way: only files touched within the range,
-// only those changed since the last read (size or mtime), and through `awk`, which hands back three short fragments
+// only those changed since the last read (size or mtime), and through `awk`, which hands back a short JSON object
 // per reply instead of the reply's whole record (a month of transcripts runs to gigabytes). Read only.
 
 export type ScanEntry = { name: string; kind: string; size: number; mtimeMs: number }
@@ -20,17 +20,19 @@ type Stamp = { path: string; size: number; mtimeMs: number }
 const JSONL = '.jsonl'
 // Files per awk run: the argument list stays far below any system's limit.
 const BATCH = 200
-// An assistant record's model and id, its usage counts and its timestamp, in the order the record holds them;
-// the timestamp is the first after the usage, which follows the reply's content.
+// An assistant record cut to a small JSON object that parseLine reads as JSON: the message's model and id (its
+// first keys), its whole usage object whatever order the counts come in, and the record's timestamp. The usage and
+// timestamp are the last of their keys in the line: the reply's content comes before them and a tool call's input
+// in it may hold the same keys. A line of gigabytes of transcripts is never handed over whole.
 export const AWK = [
+  'function last(s, key,   at, i) { at = 0; while ((i = index(substr(s, at + 1), key)) > 0) at += i; return at }',
   'index($0, "\\"type\\":\\"assistant\\"") {',
-  '  u = index($0, "\\"usage\\":{\\"input_tokens\\":"); if (u == 0) next',
-  '  if (!match($0, /"model":"[^"]*","id":"msg_[A-Za-z0-9]+"/)) next; head = substr($0, RSTART, RLENGTH)',
-  '  rest = substr($0, u)',
-  '  if (!match(rest, /"usage":\\{"input_tokens":[0-9]+,"cache_creation_input_tokens":[0-9]+,"cache_read_input_tokens":[0-9]+,"output_tokens":[0-9]+/)) next',
-  '  use = substr(rest, RSTART, RLENGTH)',
-  '  if (!match(rest, /"timestamp":"[^"]*"/)) next',
-  '  print FILENAME "\\t" head "\\t" use "\\t" substr(rest, RSTART, RLENGTH)',
+  '  if (!match($0, /"message":\\{"model":"[^"]*","id":"msg_[A-Za-z0-9]+"/)) next; head = substr($0, RSTART + 11, RLENGTH - 11)',
+  '  u = last($0, "\\"usage\\":{"); t = last($0, "\\"timestamp\\":\\""); if (u == 0 || t == 0) next',
+  '  rest = substr($0, u + 8); depth = 0; n = length(rest)',
+  '  for (i = 1; i <= n; i++) { c = substr(rest, i, 1); if (c == "{") depth++; else if (c == "}" && --depth == 0) break }',
+  '  if (depth != 0 || !match(substr($0, t), /^"timestamp":"[^"]*"/)) next',
+  '  print FILENAME "\\t{" head "," substr($0, t, RLENGTH) ",\\"usage\\":" substr(rest, 1, i) "}"',
   '}',
 ].join('\n')
 
@@ -96,5 +98,5 @@ export async function scanLog(io: ScanIo, spec: { root: string; log: HudLog; now
     await extract(io, changed.slice(index, index + BATCH).map(file => file.path), row => addRow(open, row))
   }
 
-  return { at: spec.nowMs, days: closeLog(open, dayKey(sinceMs)), files: Object.fromEntries(files.map(file => [file.path, [file.size, file.mtimeMs]])) }
+  return { version: LOG_VERSION, at: spec.nowMs, days: closeLog(open, dayKey(sinceMs)), files: Object.fromEntries(files.map(file => [file.path, [file.size, file.mtimeMs]])) }
 }

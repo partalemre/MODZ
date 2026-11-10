@@ -5,7 +5,7 @@
     "url": "https://github.com/partalemre"
   },
   "metadata": {
-    "description": "19 mods for Claude Code. One panel.",
+    "description": "23 mods for Claude Code. One panel.",
     "version": "1.2.0"
   },
   "plugins": [
@@ -27,7 +27,7 @@
     {
       "name": "filetree",
       "source": "./mods/filetree",
-      "description": "A file tree of what Claude touches: what it is doing now, the files touched this turn and their git status."
+      "description": "A file tree of what Claude touches: what it is doing now, the files touched this turn and their git status. Does nothing until its pane is opened."
     },
     {
       "name": "plan-steps",
@@ -40,72 +40,72 @@
         "source": "url",
         "url": "https://github.com/partalemre/transceiver.git"
       },
-      "description": "Beta. Your team, inside Claude. Chat with teammates and let your agents ask theirs about the repo, at zero tokens."
+      "description": "Beta. Chat and zero-token agent questions between your own computers; team rooms across accounts are experimental."
     },
     {
       "name": "blast-radius",
       "source": "./mods/blast-radius",
-      "description": "Risky commands wait for your OK. rm -rf, git reset --hard, force pushes and migrations are held with exactly what they would change; so is an edit to a file another chat just changed."
+      "description": "Holds a shell command that would lose work (rm -rf, find -delete, git reset/checkout/clean/stash drop/branch -D, force pushes, writes over files, docker, terraform, kubectl and database drops) and shows exactly what it would lose. A command that loses nothing runs; one nobody can answer is refused. Also holds an edit to a file another chat just changed."
     },
     {
       "name": "secret-guard",
       "source": "./mods/secret-guard",
-      "description": "Stops keys and tokens before they land: scans writes, edits, git add and commit, and blocks committing .env. Pasted keys reach the model as placeholders; /rec masks the screen."
+      "description": "Stops keys and tokens before they land: scans writes, edits, text a Bash command writes, git add and commit, and blocks committing .env. If the guard fails, the write is blocked. Pasted keys reach the model as placeholders; /rec masks the screen."
     },
     {
       "name": "checkpoint",
       "source": "./mods/checkpoint",
-      "description": "A silent git snapshot before each turn's first write. /checkpoints lists the turns and undoes one."
+      "description": "A silent git snapshot before each turn's first write, from a file tool or a Bash command that may write. /checkpoints lists the turns and undoes one; each session in each worktree sees only its own. Git-ignored files are not covered."
     },
     {
       "name": "test-badge",
       "source": "./mods/test-badge",
-      "description": "After a turn that edited source, runs tests and lint in the background and shows the result as a badge. Watches your PR's GitHub CI too."
+      "description": "After you allow it once per folder, runs tests and lint in the package you edited and shows the result as a badge; a failed run is offered to your next prompt. Watches your PR's GitHub CI too."
     },
     {
       "name": "replay-theater",
       "source": "./mods/replay-theater",
-      "description": "Replays the last turn's edits step by step, each tied to its plan step, with a coloured diff; earlier turns and past sessions too."
+      "description": "Replays the last turn's edits step by step, each tied to its plan step, with a coloured diff; earlier turns and past sessions too. Opens from /replay."
     },
     {
       "name": "session-budget",
       "source": "./mods/session-budget",
-      "description": "A spend budget per session, as a share of the 5-hour limit or in dollars: a notice at 80%, a stop at 100%, and a question before new subagents when the 5-hour window runs low."
+      "description": "A spend budget per session, as a share of the 5-hour limit (or the weekly one without it) or in dollars: a notice at 80%, a stop at 100%, and a question before new subagents when the window runs low."
     },
     {
       "name": "cache-tax",
       "source": "./mods/cache-tax",
-      "description": "Keeps the one-hour prompt cache warm through breaks and shows what a cold send would cost, after a break or a model change. Warming uses tokens."
+      "description": "Shows what a cold send would cost, after a break or a model change, and can keep the one-hour prompt cache warm. Keepwarm starts only on request, stops after 12 pings, and uses tokens."
     },
     {
       "name": "hud-pro",
       "source": "./mods/hud-pro",
-      "description": "One quiet line above the prompt: the 5-hour limit and its reset, 7-day use, context and session cost. The Usage pane shows what fills the context and 7 or 30 days of usage history."
+      "description": "One quiet line above the prompt: the 5-hour limit and its reset, 7-day use, context and session cost; alerts only on the desktop by default (/hud band). The Usage pane shows what fills the context and 7 or 30 days of usage history."
     },
     {
       "name": "done-ping",
       "source": "./mods/done-ping",
-      "description": "A notification when a long turn finishes or Claude is waiting on you, with optional sound packs."
+      "description": "A notification when a long turn finishes or Claude is waiting on you, with optional sound packs. On the desktop it stays quiet unless tests failed or the turn ended on an error."
     },
     {
       "name": "reflect-mod",
       "source": "./mods/reflect-mod",
-      "description": "Spots corrections in your prompts worth keeping and saves them to the CLAUDE.md you choose. /mine turns friction that repeats across past chats into ideas."
+      "description": "Spots corrections in your prompts worth keeping and saves them to the CLAUDE.md you choose (this project by default); /reflect-undo takes the last one back. /mine turns friction that repeats across past chats into ideas."
     },
     {
       "name": "skins",
       "source": "./mods/skins",
-      "description": "Themes for the transcript: tool rows, reply gutters and spinner words, and living ASCII scenes above the prompt. /skin switches them live."
+      "description": "Themes for the transcript: tool rows, reply gutters and spinner words, and living ASCII scenes above the prompt. /skin switches them live. It never cuts output short."
     },
     {
       "name": "terminal-browser",
       "source": "./mods/terminal-browser",
-      "description": "A browser inside the terminal: preview sites and HTML files and let the agent drive it. Terminal only."
+      "description": "A browser inside the terminal: preview sites and HTML files and let the agent drive it. Terminal only; needs the external terminal-browser CLI."
     },
     {
       "name": "effort-router",
       "source": "./mods/effort-router",
-      "description": "Shows each turn's effort and model. In auto mode, light prompts go at low effort."
+      "description": "Shows each turn's effort and model. In auto mode, light prompts go at low effort; a short follow-up goes at your own effort, and a lowered turn has a re-send button."
     },
     {
       "name": "wrapped",
@@ -115,12 +115,12 @@
     {
       "name": "handoff",
       "source": "./mods/handoff",
-      "description": "Before the context fills, writes a handoff note and hands it once to your next fresh chat in this repo."
+      "description": "Before the context fills, writes a handoff note; your next chat in this repo is offered it (Continue from handoff). Notes live in the main repository."
     },
     {
       "name": "pr-card",
       "source": "./mods/pr-card",
-      "description": "Under a Bash run that opened a pull request, draws a card in the conversation with its CI checks, review decision, mergeability and changed files, kept fresh through gh"
+      "description": "A card in the conversation for a PR Claude opens or the branch already has: files with the largest changes on the desktop, checks, review and merge state in the terminal. No poller of its own."
     },
     {
       "name": "projects",

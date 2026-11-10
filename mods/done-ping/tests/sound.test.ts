@@ -63,7 +63,7 @@ describe('sound packs', () => {
 
   for (const surface of ['terminal', 'desktop'] as const) {
     test(`${surface}: a host that cannot play keeps the banner, draws nothing and writes one debug line`, { options: { soundPack: 'soft' } }, async ($, on) => {
-      const spy = spyOf({ isPlayFailing: true, surface, files: new Set([NOTIFIER]) })
+      const spy = spyOf({ isPlayFailing: true, surface, files: new Set([NOTIFIER]), isTestFailing: surface === 'desktop' })
       await setup($, on, spy)
 
       await turn($, spy, LONG_MS)

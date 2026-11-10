@@ -19,6 +19,8 @@ export type RingIo = {
   run: (argv: readonly string[], init?: ProcessRunInit) => Promise<ProcessRunResult>
   exists: (path: string) => Promise<boolean>
   log: (text: string) => void
+  // terminal-notifier ran and failed: its notifications are off in System Settings.
+  notifierOff: () => void
 }
 
 type AppAnswer = 'sent' | 'present' | 'unavailable'
@@ -97,6 +99,7 @@ async function banner(io: RingIo, note: Banner): Promise<boolean> {
     const argv = terminalNotifierArgv({ path: notifier, ping, sound, sender: host })
     const shown = await io.run(argv, { timeoutMs: RUN_TIMEOUT_MS })
     if (shown.exitCode === 0) return true
+    io.notifierOff()
   }
   // An osascript banner belongs to Script Editor and a click opens it; the desktop shows its own row instead.
   if (note.isDesktop) return false

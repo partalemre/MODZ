@@ -25,6 +25,8 @@ export type Spy = {
   // The status files other sessions keep in ~/.claude/sessions, and the pids ps says still run.
   sessions?: Record<string, unknown>[]
   alive?: number[]
+  // terminal-notifier's own exit code, as when its notifications are turned off; others use exitCode.
+  notifierExit?: number
 }
 
 export function spyOf(over: Partial<Spy> = {}): Spy {
@@ -41,6 +43,8 @@ const ok = (stdout: string, exitCode = 0) => ({ value: { exitCode, stdout, stder
 function processAnswer(spy: Spy, argv: string[]) {
   if (argv[0] === 'ps') return ok((spy.alive ?? []).join('\n'), spy.alive?.length ? 0 : 1)
   if (argv[0] === 'lsappinfo') return argv[1] === 'front' ? ok('ASN:0x0-0x1:\n') : ok(`"CFBundleIdentifier"="${spy.front}"\n`)
+
+  if (argv[0]?.endsWith('terminal-notifier') && spy.notifierExit !== undefined) return ok('', spy.notifierExit)
 
   return ok('', spy.exitCode)
 }
@@ -94,12 +98,12 @@ export async function setup($: any, on: any, spy: Spy) {
 // Every test turn ends with the same answer; only how long it ran matters to the ping.
 const ANSWER = 'Testler geçti, sürüm hazır.'
 
-export async function turn($: any, spy: Spy, durationMs: number) {
+export async function turn($: any, spy: Spy, durationMs: number, end: { reason?: string; answer?: string } = {}) {
   await $.turn.start({ text: 'go', turnId: 't' })
   await $.tool.call({ tool: 'Bash', command: 'npm test' })
   await $.tool.call({ tool: 'Write', file_path: 'a.ts', content: 'x' })
   await $.tool.call({ tool: 'Edit', file_path: 'b.ts', old_string: 'a', new_string: 'b' })
-  await $.turn.complete({ answer: ANSWER, durationMs, isAborted: false, turnId: 't', reason: 'answer' })
+  await $.turn.complete({ answer: end.answer ?? ANSWER, durationMs, isAborted: false, turnId: 't', reason: end.reason ?? 'answer' })
   await spy.clock.advance(5)
 }
 

@@ -6,6 +6,7 @@ export const PR_URL = 'https://github.com/acme/shop/pull/7'
 export const CALL_ID = 'call-1'
 
 export const openPr = (over: Record<string, unknown> = {}) => ({
+  url: PR_URL,
   title: 'Add the checkout page',
   state: 'OPEN',
   isDraft: false,
@@ -23,10 +24,12 @@ export const openPr = (over: Record<string, unknown> = {}) => ({
   ...over,
 })
 
-export type Gh = { calls: string[][]; hasGh: boolean; answer: unknown; exitCode: number; bashOut: string }
-export const newGh = (over: Partial<Gh> = {}): Gh => ({ calls: [], hasGh: true, answer: openPr(), exitCode: 0, bashOut: `Creating pull request\n${PR_URL}\n`, ...over })
+// `onBranch`: the session's branch already has this PR open, so a `gh pr view` that names none finds it.
+export type Gh = { calls: string[][]; hasGh: boolean; answer: unknown; exitCode: number; bashOut: string; onBranch: boolean }
+export const newGh = (over: Partial<Gh> = {}): Gh => ({ calls: [], hasGh: true, answer: openPr(), exitCode: 0, bashOut: `Creating pull request\n${PR_URL}\n`, onBranch: false, ...over })
 
-export async function setup($: any, on: any, spec: { gh: Gh; surface?: string; lang?: string }) {
+// `ci`: what test-badge's CI watch holds, read through $.state; absent when test-badge is not installed.
+export async function setup($: any, on: any, spec: { gh: Gh; surface?: string; lang?: string; ci?: { value: unknown } }) {
   const { gh } = spec
   const clock = mock.clock(on)
   mock.env(on, { MODZ_LANG: spec.lang ?? 'en' })
@@ -34,10 +37,14 @@ export async function setup($: any, on: any, spec: { gh: Gh; surface?: string; l
   on('ui.render', () => ({ type: 'engine', ref: 1 }))
   on('session.start', () => ({ cwd: '/w' }))
   on('session.cwd', () => ({ value: '/w' }))
+  on('classic.SessionStart', () => ({}))
+  if (spec.ci !== undefined) on('state.get', { plugin: 'test-badge', key: 'ci' }, () => ({ value: { value: spec.ci?.value ?? null, version: 1 } }))
   on('tool.call', () => ({ result: { stdout: gh.bashOut, stderr: '' }, text: gh.bashOut }))
   on('process.run', async (_: any, e: any) => {
     gh.calls.push([...e.argv])
     if (!gh.hasGh) return { deny: 'gh: not found' }
+    const namesPr = e.argv.some((arg: string) => arg.startsWith('https://'))
+    if (!namesPr && !gh.onBranch) return { value: { exitCode: 1, stdout: '', stderr: 'no pull requests found for branch' } }
 
     return { value: { exitCode: gh.exitCode, stdout: JSON.stringify(gh.answer), stderr: '' } }
   })

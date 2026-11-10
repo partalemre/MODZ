@@ -6,6 +6,8 @@ export type PrRef = { url: string; repo: string; number: number }
 
 const PR_URL = /https:\/\/github\.com\/([\w.-]+\/[\w.-]+)\/pull\/(\d+)/
 const PR_CREATE = /(^|[\s;&|(])gh\s+pr\s+create\b/
+// The GitHub MCP server's tool, under whatever name the session mounted the server.
+const MCP_CREATE = /(^|__)create_pull_request$/
 const STATES: Record<string, PrState> = { OPEN: 'open', MERGED: 'merged', CLOSED: 'closed' }
 const REVIEWS: Record<string, Review> = { APPROVED: 'approved', CHANGES_REQUESTED: 'changes', REVIEW_REQUIRED: 'required' }
 const MERGE_STATES: Record<string, Merge> = {
@@ -23,9 +25,14 @@ const MAX_NAME = 80
 const MAX_FAILING = 5
 const MAX_FILES = 100
 
-export const VIEW_FIELDS = 'title,state,isDraft,additions,deletions,changedFiles,files,statusCheckRollup,reviewDecision,mergeable,mergeStateStatus'
+export const VIEW_FIELDS = 'url,title,state,isDraft,additions,deletions,changedFiles,files,statusCheckRollup,reviewDecision,mergeable,mergeStateStatus'
 
 export const isPrCreate = (command: string): boolean => PR_CREATE.test(command)
+
+const commandOf = (input: unknown): string => String((input as { command?: unknown } | null | undefined)?.command ?? '')
+
+// A call that opens a PR: `gh pr create` in Bash, or the GitHub MCP tool.
+export const isPrCall = (tool: string, input: unknown): boolean => (tool === 'Bash' && isPrCreate(commandOf(input))) || MCP_CREATE.test(tool)
 
 // The last PR link in the output: gh prints the new PR's URL last, after any warnings that may hold others.
 export function prRefOf(output: string): PrRef | null {
@@ -35,12 +42,14 @@ export function prRefOf(output: string): PrRef | null {
   return last === undefined ? null : { url: last[0], repo: last[1] ?? '', number: Number(last[2]) }
 }
 
-// A Bash result reaches a drawing as its record on one surface and as plain text on another.
+// A Bash result reaches a drawing as its record on one surface and as plain text on another; an MCP result as
+// its content, read as JSON text.
 export function outputText(output: unknown): string {
   if (typeof output === 'string') return output
-  const stdout = (output as { stdout?: unknown } | null | undefined)?.stdout
+  if (output === null || output === undefined) return ''
+  const stdout = (output as { stdout?: unknown }).stdout
 
-  return typeof stdout === 'string' ? stdout : ''
+  return typeof stdout === 'string' ? stdout : JSON.stringify(output)
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)

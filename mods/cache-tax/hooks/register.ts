@@ -3,10 +3,11 @@ import type { EngineInterface, On, Register, TurnCompleteInput } from 'claude-co
 import { composeBand } from './band'
 import { pinned } from './pin'
 import type { Prefs } from './band'
-import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, TTL_MS, freshState, isFullMiss, parseDuration, priceOf, resetForClear } from './core'
+import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, TTL_MS, alwaysWindow, freshState, isFullMiss, parseAlways, parseDuration, priceOf, resetForClear } from './core'
 import type { State } from './core'
-import { NAME, onPrompt } from './guard'
+import { NAME, ackedKey, onPrompt } from './guard'
 import type { GuardIo } from './guard'
+import { guardFromStore, parseGuard, storedGuard } from './guard-mode'
 import type { HoldActions } from './hold'
 import { bandKey } from './row'
 import { seedFromResume } from './session'
@@ -14,7 +15,7 @@ import { isLightTheme } from './theme'
 import { KEY_ALWAYS, KEY_GUARD, arm, deadlineKey, everyKey, prune, startWindow, stop, stopForGood, updateStatus } from './warm'
 import type { Io } from './warm'
 import { setLang } from './lang'
-import { alwaysText, armedText, cardText, commands, paidText, say, statusText } from './words'
+import { alwaysText, armedText, cardText, commands, guardSetText, paidText, say, statusText } from './words'
 
 export { fmtDuration } from './fmt'
 export { freshState, parseDuration, resetForClear } from './core'
@@ -27,23 +28,18 @@ function io($: EngineInterface): Io {
   return {
     now: () => $.clock.now(),
     after: (ms, fn) => $.clock.after(ms, fn),
+    every: (ms, fn) => $.clock.every(ms, fn),
     fork: prompt => $.model.fork({ prompt }),
     get: key => $.store.get(key),
     set: (key, value) => $.store.set(key, value),
     del: key => $.store.delete(key),
     redraw: () => $.ui.invalidate('ui.render'),
     status: text => $.ui.status(text),
+    log: text => $.ui.log(text),
   }
 }
 
-function guardIo($: EngineInterface): GuardIo {
-  return {
-    now: () => $.clock.now(),
-    model: () => $.session.model(),
-    log: text => $.ui.log(text),
-    redraw: () => $.ui.invalidate('ui.render'),
-  }
-}
+const guardIo = ($: EngineInterface): GuardIo => ({ ...io($), model: () => $.session.model() })
 
 type Ctx = { s: State; prefs: Prefs; drawn: string }
 
@@ -87,8 +83,8 @@ async function readPrefs($: EngineInterface, prefs: Prefs) {
 /** A period of the cache's whole hour or more would fire only once the cache is already cold. */
 const isPingPeriod = (ms: unknown): ms is number => typeof ms === 'number' && ms >= MIN_PING_MS && ms < TTL_MS
 
-/** Always means any break up to six hours: each session start, /clear and main turn opens a fresh default window. */
-const openAlways = ($: EngineInterface, s: State): Promise<void> => startWindow(io($), s, { windowMs: DEFAULT_WINDOW_MS, every: PING_AFTER_MS })
+/** Always means any break up to its window (six hours unless set): each session start, /clear and main turn opens it afresh. */
+const openAlways = ($: EngineInterface, s: State): Promise<void> => startWindow(io($), s, { windowMs: s.alwaysMs, every: PING_AFTER_MS })
 
 async function restore($: EngineInterface, s: State, now: number) {
   await prune(io($), s, now)
@@ -96,8 +92,10 @@ async function restore($: EngineInterface, s: State, now: number) {
   const savedEvery = await $.store.get(everyKey(s))
   s.deadline = typeof saved === 'number' && saved > now ? saved : 0
   s.every = isPingPeriod(savedEvery) ? savedEvery : PING_AFTER_MS
-  s.guard = (await $.store.get(KEY_GUARD)) === 'warn' ? 'warn' : 'refuse'
-  s.always = (await $.store.get(KEY_ALWAYS)) === true
+  Object.assign(s, guardFromStore(await $.store.get(KEY_GUARD)))
+  const stored = alwaysWindow(await $.store.get(KEY_ALWAYS))
+  s.always = stored > 0
+  if (stored) s.alwaysMs = stored
   if (s.always) await openAlways($, s)
   const usage = await $.session.usage()
   if (usage.context.tokens) s.ctx = usage.context.tokens
@@ -111,6 +109,17 @@ async function registerCommands($: EngineInterface) {
   if ((await $.command.list()).some(cmd => cmd.name === 'cache-tax:status')) $.ui.log(say().hookTwice)
 }
 
+async function onAlways($: EngineInterface, s: State, { words, now }: { words: string[]; now: number }): Promise<string> {
+  const windowMs = parseAlways(words.slice(1))
+  if (!windowMs) return say().keepwarm.alwaysUsage
+  s.always = true
+  s.alwaysMs = windowMs
+  // The default window is still stored as true, which every version reads.
+  await $.store.set(KEY_ALWAYS, windowMs === DEFAULT_WINDOW_MS ? true : windowMs)
+  await openAlways($, s)
+  return alwaysText(s, now)
+}
+
 async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<string> {
   const words = args.trim().split(/\s+/).filter(Boolean)
   const now = await $.clock.now()
@@ -119,12 +128,7 @@ async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<s
     await stopForGood(io($), s)
     return wasAlways ? say().keepwarm.offAlways : say().keepwarm.off
   }
-  if (words[0] === 'always') {
-    s.always = true
-    await $.store.set(KEY_ALWAYS, true)
-    await openAlways($, s)
-    return alwaysText(s, now)
-  }
+  if (words[0] === 'always') return onAlways($, s, { words, now })
   if (words[0] === 'status') return statusText(s, now) ?? say().keepwarm.off
   const window = words.length ? parseDuration(words[0] ?? '') : DEFAULT_WINDOW_MS
   // A zero window would be off as soon as it was on.
@@ -143,10 +147,11 @@ async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<s
 async function onCacheTax($: EngineInterface, s: State, args: string): Promise<string> {
   const words = args.trim().split(/\s+/).filter(Boolean)
   if (words[0] !== 'guard') return cardText(s, await $.clock.now())
-  if (words[1] !== 'warn' && words[1] !== 'refuse') return say().guardMode.usage
-  s.guard = words[1]
-  await $.store.set(KEY_GUARD, s.guard)
-  return s.guard === 'refuse' ? say().guardMode.refuse : say().guardMode.warn
+  const setting = parseGuard(words.slice(1))
+  if (!setting) return say().guardMode.usage
+  Object.assign(s, setting)
+  await $.store.set(KEY_GUARD, storedGuard(s))
+  return guardSetText(s)
 }
 
 async function onTurnComplete($: EngineInterface, s: State, e: TurnCompleteInput) {
@@ -155,6 +160,7 @@ async function onTurnComplete($: EngineInterface, s: State, e: TurnCompleteInput
   if (s.deadline && now >= s.deadline) await stop(io($), s, null)
   // turn.step stamps the exact request time; when no step of this turn did, the turn's end is the floor.
   if (now - s.lastRequestAt > e.durationMs) s.lastRequestAt = now
+  if (e.usage || (!e.isAborted && e.reason !== 'error')) s.lastResponseAt = now
   s.compacted = false
   s.waitForTurn = false
   s.ackedAt = 0
@@ -168,9 +174,12 @@ async function onTurnComplete($: EngineInterface, s: State, e: TurnCompleteInput
     const write = u.cache_creation_input_tokens
     const live = (await $.session.usage()).context.tokens
     s.ctx = live && live > 0 ? live : u.input_tokens + u.cache_read_input_tokens + write
-    if (isFullMiss(prev, write) || s.coldWritePending) await scoreMiss($, s, { now, write })
+    // The sum also holds each request's new tool output, so a long warm turn can write half the context in all; when
+    // the steps reported usage, a cold write is one request writing half of it again.
+    if (isFullMiss(prev, s.largestWrite ?? write) || s.coldWritePending) await scoreMiss($, s, { now, write })
   }
   s.coldWritePending = false
+  s.largestWrite = null
   if (s.always) await openAlways($, s)
   else await arm(io($), s)
 }
@@ -179,9 +188,10 @@ async function scoreMiss($: EngineInterface, s: State, { now, write }: { now: nu
   const price = priceOf(s.lastModel, s.ctx)
   const usd = price ? write * price[1] / 1e6 : null
   s.misses.push({ at: now, tokens: write, usd })
-  if (s.deadline >= now + AUTO_WARM_MS) return
+  // With always on, its own window, which the turn opens next, governs renewal, shorter than three hours or not.
+  if (s.always || s.deadline >= now + AUTO_WARM_MS) return
   await startWindow(io($), s, { windowMs: AUTO_WARM_MS, every: s.every })
-  $.ui.log(paidText(write, usd))
+  $.ui.log(paidText(s, write, usd))
 }
 
 function wireBand(on: On, c: Ctx) {
@@ -229,6 +239,7 @@ function wireSession(on: On, c: Ctx) {
     const r = await next(e)
     if (e.source === 'clear') {
       await stop(io($), s, null)
+      await $.store.delete(ackedKey(s))
       resetForClear(s)
       s.sid = await $.session.id()
       // /clear raises no session.start, so always arms the new conversation here.
@@ -257,7 +268,9 @@ function wireTurns(on: On, s: State) {
       // The request writes the cache under its model; a send on another one finds it empty.
       s.cacheModel = e.model
     }
-    yield* next(e)
+    const r = yield* next(e)
+    if (!e.agentId && r.usage) s.largestWrite = Math.max(s.largestWrite ?? 0, r.usage.cache_creation_input_tokens)
+    return r
   })
 
   on('turn.complete', async ($, e, next) => {

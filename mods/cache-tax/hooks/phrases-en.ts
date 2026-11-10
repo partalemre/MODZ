@@ -27,6 +27,8 @@ export const EN = {
     'If you only need the results, start with /clear and paste a summary.',
   hookTwice: 'The hook version (cache-tax@claude-code-hooks) is installed too, so a cold send is warned about or ' +
     'held twice. Remove it, or run /cache-tax guard warn here.',
+  forkWaits: 'keepwarm is on, but there is no conversation to refresh yet, so no refresh goes out until your next ' +
+    'message. Send one more message and the refreshes start.',
   firstTurn: ' · waiting for the first turn',
   afterCompact: ' · waiting for the first turn after compaction',
   coldPing: (every: string): string => ` · cold now; first refresh ${every} after the next turn`,
@@ -41,16 +43,18 @@ export const EN = {
     'without rewriting it',
   always: (span: string): string =>
     `keepwarm always on: every session starts with a ${span} window; /keepwarm off turns it off for good`,
-  keepwarmCommand: 'Keep the cache warm: 6 hours on its own, a span like 90m, always, off or status (cache-tax)',
+  keepwarmCommand: 'Keep the cache warm: 6 hours on its own, a span like 90m, always (or always 24h), off or status (cache-tax)',
   cacheTaxCommand: 'Cache state, cold price and this session’s cold writes; guard warn|refuse (cache-tax)',
   keepwarm: {
     off: 'keepwarm off',
     offAlways: 'keepwarm off; it no longer turns on by itself when a session starts',
     usage: 'keepwarm takes a span (6h, 90m) or always, off, status',
     every: 'every takes a span from 1m to 59m',
+    alwaysUsage: 'always takes one window from 1h to 168h, such as always 24h',
   },
   guardMode: {
-    usage: '/cache-tax guard takes warn or refuse',
+    usage: '/cache-tax guard takes warn, refuse, or refuse with a dollar floor such as refuse 5',
+    floor: (usd: string): string => `guard: hold once at ${usd} or more. A cheaper cold send goes through with its price shown`,
     refuse: 'guard: hold once. A cold send waits with its price, sending it again goes through',
     warn: 'guard: warn only. A cold send goes through with its price shown',
   },
@@ -71,6 +75,8 @@ export const EN = {
     `≈${t.span} idle`,
   guardRefuse: 'hold once (/cache-tax guard warn only shows the price)',
   guardWarn: 'warn only (/cache-tax guard refuse holds once)',
+  guardFloor: (usd: string): string => `hold once at ${usd} or more, warn below (/cache-tax guard refuse holds any)`,
+  underFloor: (floor: string): string => ` It is under your ${floor} floor, so it was not held.`,
   session: (count: number, usd: string): string => `${plural(count, 'cold write', 'cold writes')} paid, ${usd}`,
 }
 

@@ -2,11 +2,11 @@
 
 import type { ModelForkResult } from 'claude-code'
 
-import { MIN_PING_MS, PING_AFTER_MS, PING_PROMPT, TTL_MS, disarm, isCold, pingUsd, priceOf } from './core'
+import { MIN_MS, MIN_PING_MS, PING_AFTER_MS, PING_PROMPT, TTL_MS, disarm, isCold, pingUsd, priceOf } from './core'
 import type { State } from './core'
 import { fmtTok, fmtUsd } from './fmt'
 import { bandWords } from './ui-words'
-import { statusText } from './words'
+import { say, statusText } from './words'
 
 const KEY_DEADLINE = 'deadline'
 const KEY_EVERY = 'every'
@@ -21,12 +21,14 @@ const BROKEN_SHARE = 0.1
 export type Io = {
   now: () => Promise<number>
   after: (ms: number, fn: () => void) => { cancel: () => void }
+  every: (ms: number, fn: () => void) => { cancel: () => void }
   fork: (prompt: string) => Promise<ModelForkResult | null>
   get: (key: string) => Promise<unknown>
   set: (key: string, value: unknown) => Promise<unknown>
   del: (key: string) => Promise<unknown>
   redraw: () => void
   status: (text: string | undefined) => void
+  log: (text: string) => void
 }
 
 // The window and its ping period belong to the session that armed them, so a
@@ -35,9 +37,21 @@ export type Io = {
 export const deadlineKey = (s: State): string => `${KEY_DEADLINE}:${s.sid}`
 export const everyKey = (s: State): string => `${KEY_EVERY}:${s.sid}`
 
+/** The band ticks on its own; a status line's countdown is rewritten each minute while a window is open, idle or not. */
+function refreshLine(io: Io, s: State, now: number) {
+  if (s.deadline > now && !s.refresh) {
+    const refresh = io.every(MIN_MS, () => void io.now().then(at => { if (s.refresh === refresh) updateStatus(io, s, at) }))
+    s.refresh = refresh
+  } else if (s.deadline <= now && s.refresh) {
+    s.refresh.cancel()
+    s.refresh = null
+  }
+}
+
 /** Redraws the band, or on a surface without one pins the keepwarm line; never clears a line it did not set. */
 export function updateStatus(io: Io, s: State, now: number) {
   if (s.hasBand) return io.redraw()
+  refreshLine(io, s, now)
   const text = statusText(s, now)
   if (text === undefined && !s.hasStatus) return
   s.hasStatus = text !== undefined
@@ -103,6 +117,8 @@ function failureText(reply: ForkReply): string | null {
 /** A restarted process has nothing to fork until its first turn, and a busy API is usually brief: neither ends the window. */
 async function isRetried(io: Io, s: State, reply: Extract<ModelForkResult, { isAnswered: false }>): Promise<boolean> {
   if (reply.reason === 'nothing-to-fork') {
+    // Said once per wait: /keepwarm already answered "on", and the status row alone does not tell anyone to act.
+    if (!s.waitForTurn) io.log(say().forkWaits)
     s.waitForTurn = true
     await arm(io, s)
     return true

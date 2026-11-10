@@ -65,11 +65,11 @@ export function world(on: On, forkAnswers: ForkAnswer[], opts: { store?: Map<str
   const ran: string[] = []
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   on('session.id', () => ({ value: opts.sid ?? 'S1' }))
-  // The model `/model` shows now; a test switches it by writing here.
-  const current = { model: opts.model ?? 'claude-fable-5-1' }
+  // The model `/model` shows now, and what each request writes to the cache; a test changes them by writing here.
+  const current = { model: opts.model ?? 'claude-fable-5-1', stepWrite: 500 }
   on('session.model', () => ({ value: current.model }))
   on('turn.step', async function* ($, e) {
-    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: usage({ model: e.model }) }
+    return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: usage({ model: e.model, cache_creation_input_tokens: current.stepWrite }) }
   })
   on('session.usage', () => ({ value: { startedAt: START, context: { window: 1000000, tokens: opts.live?.tokens }, rateLimits: [] } }))
   on('command.register', ($, e) => ({ value: { command: e.name } }))

@@ -23,6 +23,8 @@ export const TR: Phrases = {
     'Yalnızca sonuçlar gerekiyorsa /clear ile başlayıp bir özet yapıştır.',
   hookTwice: 'hook sürümü (cache-tax@claude-code-hooks) da kurulu; soğuk gönderim iki kez uyarılır ya da ' +
     'durdurulur. Onu kaldır ya da burada /cache-tax guard warn.',
+  forkWaits: 'keepwarm açık, ama henüz tazelenecek bir konuşma yok; sonraki mesajına kadar tazeleme gitmez. ' +
+    'Bir mesaj daha gönder, tazelemeler başlasın.',
   firstTurn: ' · ilk tur bekleniyor',
   afterCompact: ' · sıkıştırmadan sonraki ilk tur bekleniyor',
   coldPing: (every: string): string => ` · şimdi soğuk; ilk tazeleme sonraki turdan ${every} sonra`,
@@ -37,16 +39,18 @@ export const TR: Phrases = {
     'önbelleği okur, baştan yazdırmaz',
   always: (span: string): string =>
     `keepwarm hep açık: her oturum ${span} pencereyle başlar; /keepwarm off kalıcı olarak kapatır`,
-  keepwarmCommand: 'Önbelleği sıcak tut: tek başına 6 saat, 90m gibi bir süre, always, off ya da status (cache-tax)',
+  keepwarmCommand: 'Önbelleği sıcak tut: tek başına 6 saat, 90m gibi bir süre, always (ya da always 24h), off ya da status (cache-tax)',
   cacheTaxCommand: 'Önbellek durumu, soğuyunca ödenen fiyat ve bu oturumda kaç kez baştan yazıldığı; guard warn|refuse (cache-tax)',
   keepwarm: {
     off: 'keepwarm kapalı',
     offAlways: 'keepwarm kapalı; oturum başında artık kendiliğinden açılmayacak',
     usage: 'keepwarm bir süre alır (6h, 90m) ya da always, off, status',
     every: 'every 1m ile 59m arası bir süre alır',
+    alwaysUsage: 'always 1h ile 168h arası tek bir pencere alır, örneğin always 24h',
   },
   guardMode: {
-    usage: '/cache-tax guard warn ya da refuse alır',
+    usage: '/cache-tax guard warn, refuse ya da refuse 5 gibi dolar sınırlı bir refuse alır',
+    floor: (usd: string): string => `koruma: ${usd} ve üstünde bir kez durdur. Daha ucuz soğuk gönderim fiyatı gösterilerek geçer`,
     refuse: 'koruma: bir kez durdur. Soğuk gönderim fiyatıyla bekletilir, yeniden gönderim geçer',
     warn: 'koruma: yalnızca uyar. Soğuk gönderim fiyatı gösterilerek geçer',
   },
@@ -66,5 +70,7 @@ export const TR: Phrases = {
     `${pings} tazeleme, önbelleği baştan yazmakla aynı tutar; ${t.every} arayla tazelersen yaklaşık ${t.span} boşta kalabilirsin`,
   guardRefuse: 'bir kez durdur (/cache-tax guard warn ile yalnızca fiyat göster)',
   guardWarn: 'yalnızca uyar (/cache-tax guard refuse ile bir kez durdur)',
+  guardFloor: (usd: string): string => `${usd} ve üstünde bir kez durdur, altında uyar (/cache-tax guard refuse her birini durdurur)`,
+  underFloor: (floor: string): string => ` ${floor} sınırının altında olduğu için bekletilmedi.`,
   session: (count: number, usd: string): string => `önbellek ${count} kez baştan yazıldı, ${usd}`,
 }

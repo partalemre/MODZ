@@ -40,7 +40,7 @@ export const ICON_NAMES = Object.keys(PATHS) as IconName[]
 
 // The path markup of an icon; the caller wraps it in a stroked, scaled group.
 // A check marks something done: changes.ts draws it once when a drawing turns done.
-export const icon = (name: IconName): string => `<path d="${PATHS[name]}"${name === 'check' ? ' data-m-done' : ''}/>`
+export const icon = (name: IconName): string => `<path d="${PATHS[name]}"${name === 'check' ? ' data-m-done=""' : ''}/>`
 
 // One terminal cell per icon, chosen from glyphs every common monospace font carries.
 export const GLYPH: Record<IconName, string> = {

@@ -32,7 +32,7 @@ export function holdView(s: State, now: number): HoldView {
     coldUsd: coldUsd(s, model),
     warmUsd: warmUsd(s, model),
     rate: rateText(s, model),
-    autoWarm: autoWarm(),
+    autoWarm: autoWarm(s),
   }
 }
 

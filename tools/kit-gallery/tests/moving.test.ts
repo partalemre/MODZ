@@ -109,9 +109,9 @@ const change = (before: string, now: string) => animate(now, { cue: { phase: 'ch
 
 test('a changed meter slides from the width it had, under any style it already holds', () => {
   const moved = change(meterAt(0.4), meterAt(0.8))
-  const styled = change(wrap('<rect data-m-fill x="0" width="50" style="fill:red"/>'), wrap('<rect data-m-fill x="0" width="100" style="fill:red"/>'))
+  const styled = change(wrap('<rect data-m-fill="" x="0" width="50" style="fill:red"/>'), wrap('<rect data-m-fill="" x="0" width="100" style="fill:red"/>'))
 
-  expect(moved).toMatch(/data-m-fill[^>]*style="--m-from:0\.500"/)
+  expect(moved).toMatch(/data-m-fill=""[^>]*style="--m-from:0\.500"/)
   expect(moved).toContain('@keyframes m-from')
   expect(styled).toContain('style="--m-from:0.500;fill:red"')
   expect(styled.match(/style=/g)?.length).toBe(1)
@@ -128,9 +128,16 @@ test('a done mark draws itself only when the drawing turns done', () => {
   const turned = change(wrap('<text>3/4</text>'), wrap(`${check(0)}<text>4/4</text>`))
   const stayed = change(wrap(`${check(0)}<text>4/4</text>`), wrap(`${check(0)}${check(20)}<text>5/5</text>`))
 
-  expect(turned).toMatch(/<path [^>]*data-m-done[^>]*class="m-draw" pathLength="1"/)
+  expect(turned).toMatch(/<path [^>]*data-m-done=""[^>]*class="m-draw" pathLength="1"/)
   expect(turned).toContain('@keyframes m-draw')
   expect(stayed).not.toContain('m-draw')
+})
+
+test('meters and done marks give every data-m attribute a value, so the svg parses as xml', () => {
+  const valueless = /\sdata-m-(fill|done)(?!=)/
+  const drawings = [meterAt(0.4), wrap(check(0)), change(meterAt(0.4), meterAt(0.8)), change(wrap('<text>3/4</text>'), wrap(check(0)))]
+
+  for (const svg of drawings) expect(svg).not.toMatch(valueless)
 })
 
 test('the pane keeps what it drew last, so its next change can move from it', () => {

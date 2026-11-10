@@ -3,7 +3,7 @@
 
 import type { CommandSpec } from 'claude-code'
 
-import { AUTO_WARM_MS, DEFAULT_WINDOW_MS, TTL_MS, breakEvenPings, coldUsd, heldModel, isCold, priceOf, warmUsd } from './core'
+import { DEFAULT_WINDOW_MS, TTL_MS, breakEvenPings, coldUsd, heldModel, holdMs, isCold, priceOf, warmUsd } from './core'
 import type { State } from './core'
 import { modelName } from './model-switch'
 import type { ModelSwitch } from './model-switch'
@@ -15,7 +15,7 @@ import { TR } from './phrases-tr'
 
 export const say = (): Phrases => pick({ en: EN, tr: TR })
 
-export const autoWarm = (): string => fmtDuration(AUTO_WARM_MS)
+export const autoWarm = (s: State): string => fmtDuration(holdMs(s))
 
 /** How long ago the cache went cold. */
 export const coldFor = (s: State, now: number): number => now - s.lastRequestAt - TTL_MS
@@ -40,13 +40,26 @@ export function dropText(s: State, now: number): string {
   const switched = s.held?.switch ?? null
   const usd = fmtUsd(coldUsd(s, heldModel(s)))
   if (s.hasBand) return switched ? say().dropSwitched(usd) : say().dropHeld(usd)
-  return say().drop(guardText(s, { now, switched }), autoWarm())
+  return say().drop(guardText(s, { now, switched }), autoWarm(s))
 }
 
-export const warnText = (s: State, cause: Cause): string => say().warn(guardText(s, cause), autoWarm())
+export const warnText = (s: State, cause: Cause): string => say().warn(guardText(s, cause), autoWarm(s))
 
-export const paidText = (tokens: number, usd: number | null): string =>
-  say().paid({ tokens: fmtTok(tokens), usd: fmtUsd(usd), auto: autoWarm() })
+export const floorText = (s: State): string => say().underFloor(fmtUsd(s.guardFloor))
+
+/** The reply to `/cache-tax guard ...`. */
+export function guardSetText(s: State): string {
+  if (s.guard === 'warn') return say().guardMode.warn
+  return s.guardFloor ? say().guardMode.floor(fmtUsd(s.guardFloor)) : say().guardMode.refuse
+}
+
+function guardRow(s: State): string {
+  if (s.guard === 'warn') return say().guardWarn
+  return s.guardFloor ? say().guardFloor(fmtUsd(s.guardFloor)) : say().guardRefuse
+}
+
+export const paidText = (s: State, tokens: number, usd: number | null): string =>
+  say().paid({ tokens: fmtTok(tokens), usd: fmtUsd(usd), auto: autoWarm(s) })
 
 export const resumeText = (tokens: number, usd: string): string => say().resume(fmtInt(tokens), usd)
 
@@ -82,20 +95,20 @@ export function armedText(s: State, now: number, windowMs: number): string {
 }
 
 export const alwaysText = (s: State, now: number): string =>
-  say().always(fmtDuration(DEFAULT_WINDOW_MS)) + (isCold(s, now) ? coldNowText(s) : '')
+  say().always(fmtDuration(s.alwaysMs)) + (isCold(s, now) ? coldNowText(s) : '')
 
 /** The two commands as the command list shows them. */
 export const commands = (): Record<'keepwarm' | 'cacheTax', CommandSpec> => ({
   keepwarm: {
     name: 'keepwarm',
     description: say().keepwarmCommand,
-    argumentHint: '[6h | always | off | status]',
+    argumentHint: '[6h | always [24h] | off | status]',
     immediate: true,
   },
   cacheTax: {
     name: 'cache-tax',
     description: say().cacheTaxCommand,
-    argumentHint: '[status | guard warn | guard refuse]',
+    argumentHint: '[status | guard warn | guard refuse [dollars]]',
     immediate: true,
   },
 })
@@ -113,8 +126,7 @@ function keepwarmRow(s: State, now: number): string {
   const always = s.always ? ' (always)' : ''
   if (s.deadline) return `${say().on(heldText(s, now))}${always}`
   if (s.stopped) return `${say().stoppedRow(s.stopped)}${always}`
-  const window = fmtDuration(DEFAULT_WINDOW_MS)
-  return s.always ? say().offUntilNext(window) : say().off(window)
+  return s.always ? say().offUntilNext(fmtDuration(s.alwaysMs)) : say().off(fmtDuration(DEFAULT_WINDOW_MS))
 }
 
 /** `/cache-tax`: the model, the clock, the price and the session's tally. */
@@ -127,7 +139,7 @@ export function cardText(s: State, now: number): string {
   if (pings != null) {
     lines.push(row(labels.even, say().even(pings, { every: fmtDuration(s.every), span: fmtDuration(pings * s.every) })))
   }
-  lines.push(row(labels.guard, s.guard === 'refuse' ? say().guardRefuse : say().guardWarn))
+  lines.push(row(labels.guard, guardRow(s)))
   const paid = s.misses.reduce((a, m) => a + (m.usd ?? 0), 0)
   lines.push(row(labels.session, say().session(s.misses.length, fmtUsd(paid))))
   return lines.join('\n')

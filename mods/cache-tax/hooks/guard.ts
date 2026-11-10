@@ -4,11 +4,11 @@
 
 import type { PromptSubmitInput, PromptSubmitResult } from 'claude-code'
 
-import { BIG_TOKENS, isCold } from './core'
+import { BIG_TOKENS, coldUsd, isCold } from './core'
 import type { State } from './core'
 import { switchOf } from './model-switch'
 import type { ModelSwitch } from './model-switch'
-import { dropText, warnText } from './words'
+import { dropText, floorText, warnText } from './words'
 
 export const NAME = 'cache-tax'
 
@@ -24,6 +24,22 @@ export type GuardIo = {
   model: () => Promise<string>
   log: (text: string) => void
   redraw: () => void
+  get: (key: string) => Promise<unknown>
+  set: (key: string, value: unknown) => Promise<unknown>
+  del: (key: string) => Promise<unknown>
+}
+
+// Hosts that start a process per turn (claude -p) lose the in-memory hold, so it is also stored, naming the last
+// response: the running process stamps it at turn.complete, a resumed one rebuilds it from whole seconds, so the two
+// match within this.
+const ACK_SLACK_MS = 60 * 1000
+export const ackedKey = (s: State): string => `acked:${s.sid}`
+
+/** Whether this cold send is the one held before, by this process or by the one before it. */
+async function isAcked(io: GuardIo, s: State): Promise<boolean> {
+  if (s.ackedAt === s.lastRequestAt) return true
+  const acked = await io.get(ackedKey(s))
+  return typeof acked === 'number' && s.lastResponseAt > 0 && Math.abs(acked - s.lastResponseAt) < ACK_SLACK_MS
 }
 
 /** The switch the next send would make, read only once a turn has named the cache's model. */
@@ -38,16 +54,17 @@ function release(io: GuardIo, s: State) {
 }
 
 // The card's own resend: the person pressed pay, so its cold write is scored.
-function ownResend(s: State, { e, next }: Submit): Promise<PromptSubmitResult> {
+async function ownResend(io: GuardIo, s: State, { e, next }: Submit): Promise<PromptSubmitResult> {
   if (e.origin.kind === 'plugin' && e.origin.name === NAME && e.text === s.resend) {
     s.resend = null
     s.coldWritePending = true
+    await io.del(ackedKey(s))
   }
   return next(e)
 }
 
 export async function onPrompt(io: GuardIo, s: State, { e, next }: Submit): Promise<PromptSubmitResult> {
-  if (e.origin.kind === 'plugin') return ownResend(s, { e, next })
+  if (e.origin.kind === 'plugin') return ownResend(io, s, { e, next })
   if (typeof e.text !== 'string' || e.text.trimStart().startsWith('/') || s.ctx < BIG_TOKENS) return next(e)
   const now = await io.now()
   const switched = await switchNow(io, s)
@@ -57,14 +74,20 @@ export async function onPrompt(io: GuardIo, s: State, { e, next }: Submit): Prom
     return next(e)
   }
   const isUnattended = UNATTENDED.has(e.origin.kind)
-  if (s.guard === 'warn' || isUnattended || s.ackedAt === s.lastRequestAt) {
-    if (s.guard === 'warn' || isUnattended) io.log(warnText(s, { now, switched }))
+  // A model with no price row has no estimate to compare, so the floor never lets it through.
+  const usd = coldUsd(s, switched?.to ?? s.lastModel)
+  const isUnderFloor = s.guard === 'refuse' && usd !== null && usd < s.guardFloor
+  const isShown = s.guard === 'warn' || isUnattended || isUnderFloor
+  if (isShown || await isAcked(io, s)) {
+    if (isShown) io.log(warnText(s, { now, switched }) + (isUnderFloor ? floorText(s) : ''))
     s.ackedAt = 0
     s.coldWritePending = true
     release(io, s)
+    await io.del(ackedKey(s))
     return next(e)
   }
   s.ackedAt = s.lastRequestAt
+  if (s.lastResponseAt) await io.set(ackedKey(s), s.lastResponseAt)
   s.held = { text: e.text, at: now, switch: switched }
   if (s.hasBand) io.redraw()
   return { drop: dropText(s, now) }

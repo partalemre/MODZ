@@ -20,7 +20,10 @@ const SECOND_MS = 1000
 export function seedFromResume(s: State, e: ResumeFields, now: number): string | null {
   if (e.source !== 'resume' && e.source !== 'fork') return null
   if (typeof e.context_tokens === 'number' && e.context_tokens > 0) s.ctx = e.context_tokens
-  if (typeof e.seconds_since_last_response === 'number') s.lastRequestAt = now - e.seconds_since_last_response * SECOND_MS
+  if (typeof e.seconds_since_last_response === 'number') {
+    s.lastRequestAt = now - e.seconds_since_last_response * SECOND_MS
+    s.lastResponseAt = s.lastRequestAt
+  }
   if (typeof e.model === 'string') s.lastModel = e.model
   s.compacted = false
   if (e.prompt_cache_likely_expired !== true || s.ctx < BIG_TOKENS) return null

@@ -39,6 +39,10 @@ export type Words = {
   noRepo: string
   alreadyThere: string
   failed: string
+  // Lines under the confirm card: what an undo leaves alone, and what else it brings back.
+  commitsKept: (count: number) => string
+  indexBack: string
+  ignoredKept: string
   restored: (count: number, target: string) => string
   toggled: (isOn: boolean) => string
   toggleLine: string
@@ -105,6 +109,9 @@ const EN: Words = {
   noRepo: 'There is no git repository here.',
   alreadyThere: 'The files already match this checkpoint.',
   failed: 'Couldn\'t undo; the details are in the debug log.',
+  commitsKept: count => `${plural(count, 'commit', 'commits')} made since this checkpoint stay in git history; afterwards git status shows ${count === 1 ? 'its' : 'their'} changes reverted.`,
+  indexBack: 'What was staged goes back as it was too.',
+  ignoredKept: 'Git-ignored files (such as .env) are not covered and stay as they are.',
   restored: (count, target) => `Restored ${plural(count, 'file', 'files')} to before ${target}.`,
   toggled: isOn => `checkpoint ${isOn ? 'on' : 'off'}`,
   toggleLine: 'A quiet snapshot before each turn\'s first write: on/off',
@@ -146,6 +153,9 @@ const TR: Words = {
   noRepo: 'Burada git deposu yok.',
   alreadyThere: 'Dosyalar zaten bu noktadaki gibi.',
   failed: 'Geri alınamadı; ayrıntı debug günlüğünde.',
+  commitsKept: count => `Bu noktadan sonra yapılan ${count} commit git geçmişinde kalır; sonra git status değişikliklerini geri alınmış gösterir.`,
+  indexBack: 'Commit için hazırlanan (staged) dosyalar da eski haline döner.',
+  ignoredKept: 'Git\'in yok saydığı dosyalar (.env gibi) kapsanmaz, olduğu gibi kalır.',
   restored: (count, target) => `${count} dosya ${target} öncesine döndü.`,
   toggled: isOn => `checkpoint ${isOn ? 'açık' : 'kapalı'}`,
   toggleLine: 'Her turun ilk yazımından önce sessiz anlık görüntü: aç/kapa',

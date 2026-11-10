@@ -34,7 +34,9 @@ export function markUndone(meta: MetaMap, spec: { entries: CheckpointEntry[]; ta
   return out
 }
 
-export function pendingOf(entry: CheckpointEntry, spec: { changes: RestorePlan; stats: FileStat[]; turn: number | null }): PendingUndo {
+export type PendingSpec = { changes: RestorePlan; stats: FileStat[]; turn: number | null; commits: number; isIndexMoved: boolean }
+
+export function pendingOf(entry: CheckpointEntry, spec: PendingSpec): PendingUndo {
   const { changes, stats } = spec
   const statOf = (path: string) => stats.find(stat => stat.path === path)
   const files = [...changes.restore.map(path => ({ path, isRemoved: false })), ...changes.remove.map(path => ({ path, isRemoved: true }))]
@@ -42,5 +44,7 @@ export function pendingOf(entry: CheckpointEntry, spec: { changes: RestorePlan; 
     .map(file => ({ ...file, added: statOf(file.path)?.added ?? 0, removed: statOf(file.path)?.removed ?? 0 }))
   const sum = (key: 'added' | 'removed') => stats.reduce((total, stat) => total + stat[key], 0)
 
-  return { entry, turn: spec.turn, restore: changes.restore.length, remove: changes.remove.length, added: sum('added'), removed: sum('removed'), files }
+  const counts = { restore: changes.restore.length, remove: changes.remove.length, added: sum('added'), removed: sum('removed') }
+
+  return { entry, turn: spec.turn, ...counts, files, commits: spec.commits, isIndexMoved: spec.isIndexMoved }
 }

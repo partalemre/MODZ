@@ -41,6 +41,7 @@ async function start($: any, on: any, world: World) {
   for (const name of ['ui.log', 'ui.toast', 'store.set', 'store.get', 'command.register']) on(name, () => ({ value: undefined }))
   on('session.start', () => ({ cwd: '/w' }))
   on('session.cwd', () => ({ value: '/w' }))
+  on('session.id', () => ({ value: 'sess-1' }))
   on('ui.open', (_: any, e: any) => (world.opened.push(e), { value: { isPlaced: true } }))
   on('process.run', (_: any, e: any) => {
     const line = e.argv.join(' ')

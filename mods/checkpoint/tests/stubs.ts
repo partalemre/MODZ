@@ -4,7 +4,7 @@ import { mock } from 'claude-code/testing'
 
 type Call = { argv: string[]; env: Record<string, string>; stdin?: string }
 // `env` answers `$.env.get`: MODZ_LANG=tr for the Turkish tests, left out for the English ones.
-export type Fake = { env: Record<string, string>; calls: Call[]; isRepo: boolean; big: string; refs: string; diff: string; numstat?: string; asked: string[]; answer: string }
+export type Fake = { env: Record<string, string>; calls: Call[]; isRepo: boolean; big: string; refs: string; diff: string; numstat?: string; asked: string[]; answer: string; body?: string; ahead?: string }
 
 export const ok = (stdout = '', exitCode = 0) => ({ exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false })
 
@@ -22,6 +22,8 @@ export function fakeFor(fake: Fake) {
     if (line.startsWith('git commit-tree')) return ok('commit1\n')
     if (line.startsWith('git for-each-ref')) return ok(fake.refs)
     if (line.startsWith('git diff --numstat')) return ok(fake.numstat ?? '')
+    if (line.startsWith('git log -1 --format=%B')) return ok(fake.body ?? '')
+    if (line.startsWith('git rev-list --count')) return ok(fake.ahead ?? '0')
     if (line.startsWith('git diff')) return ok(fake.diff)
 
     return ok()

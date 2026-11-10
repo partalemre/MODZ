@@ -39,6 +39,13 @@ export const changedText = (pending: PendingUndo): string => words().changed(pen
 // The confirm button says what it does (verb and object); Cancel holds the focus, so Enter changes nothing.
 export const confirmOf = (pending: PendingUndo): { label: string; hotkey: string } => words().confirm(pending.restore + pending.remove)
 
+// What the card says beside the files: commits left in history, the staging area, ignored files.
+export function notesOf(pending: PendingUndo): string[] {
+  const said = words()
+
+  return [pending.commits > 0 ? said.commitsKept(pending.commits) : '', pending.isIndexMoved ? said.indexBack : '', said.ignoredKept].filter(note => note !== '')
+}
+
 export const emptyText = (): string => `${words().emptyLead} · ${words().emptyRest}`
 
 /** What the undo goes back to: the turn when it is known, else the prompt's opening words. */
@@ -82,6 +89,7 @@ function confirmCard(ui: Ui, pending: PendingUndo, opts: PaneOpts) {
     <Box flexDirection="column" borderStyle="single" borderColor={boxColor(opts.look.theme, 'amber', 'line')} paddingX={2} paddingY={1} rowGap={1}>
       {picture(ui, head, 'cp-card-head')}
       {picture(ui, diffstatSvg(frame, pending), 'cp-card-stat')}
+      {notesOf(pending).map((note, index) => <ui.Text key={`cp-note-${index}`} dimColor wrap="wrap">{note}</ui.Text>)}
       <Box flexDirection="row" columnGap={1}>
         <Button key="cp-confirm" variant="secondary" hotkey={confirm.hotkey} label={confirm.label} onPress={opts.actions.onConfirm} />
         <Button key="cp-cancel" variant="secondary" hotkey={said.cancel.hotkey} label={said.cancel.label} autoFocus onPress={opts.actions.onCancel} />

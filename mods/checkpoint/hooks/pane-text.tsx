@@ -1,4 +1,4 @@
-import { ago, changedText, confirmOf, emptyText, headerMeta, questionOf, statusRow, titleOf } from './pane'
+import { ago, changedText, confirmOf, emptyText, headerMeta, notesOf, questionOf, statusRow, titleOf } from './pane'
 import type { PaneOpts, Ui } from './pane'
 import { words } from './words'
 import type { CheckpointMeta, CheckpointView, PendingUndo } from '../types'
@@ -25,6 +25,7 @@ function confirmText(ui: Ui, pending: PendingUndo, opts: PaneOpts) {
         <Text key={`cp-path-${index}`} dimColor wrap="truncate-start">{`› ${file.path}${file.isRemoved ? ` (${said.willDelete})` : ''}`}</Text>
       ))}
       {more > 0 && <Text dimColor>{said.more(more)}</Text>}
+      {notesOf(pending).map((note, index) => <Text key={`cp-note-${index}`} dimColor wrap="wrap">{note}</Text>)}
       <Box flexDirection="row" columnGap={1} marginTop={1}>
         <Button key="cp-confirm" variant="secondary" hotkey={confirm.hotkey} label={confirm.label} onPress={opts.actions.onConfirm} />
         <Button key="cp-cancel" variant="secondary" hotkey={said.cancel.hotkey} label={said.cancel.label} autoFocus onPress={opts.actions.onCancel} />

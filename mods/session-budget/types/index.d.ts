@@ -41,9 +41,23 @@ export type PacePoint = { t: number; value: number }
 // "Continue" at the spawn brake: spawns go through until the window passes `percent` + 5 in that window.
 export type BrakeAck = { percent: number; window: string | null }
 
+// This mod's section of hud-pro's Usage pane (hud-pro types/index.d.ts): the budget and the spawn brake in words.
+export type UsageSection = {
+  id: string
+  title: string
+  lines: string[]
+  tone: 'neutral' | 'warn' | 'danger'
+  isEmpty?: boolean
+  at: number
+}
+
 declare module 'claude-code' {
   interface PluginState {
+    // Written by hud-pro, which owns it: true while it runs, so /budget opens its Usage pane at this mod's section.
+    'hud-pro': { host: boolean }
     'session-budget': {
+      section: UsageSection
+      openUsage: { section: string; at: number }
       budget: Budget | null
       reading: BudgetReading
       notice: BudgetNotice | null

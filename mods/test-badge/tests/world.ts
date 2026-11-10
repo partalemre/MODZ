@@ -18,6 +18,18 @@ export type World = {
   surface?: 'terminal' | 'desktop'
   // What $.env.get answers: Turkish unless a test asks for the English default.
   env?: Record<string, string>
+  // Each folder's entries (a folder not named is empty), each file's text, and what else exists.
+  tree: Record<string, string[]>
+  texts: Record<string, string>
+  existing: string[]
+  // The folder each check ran in, the questions asked and the answer given (null: dismissed), and the plugin store.
+  cwds: string[]
+  asked: string[]
+  consent: string | null
+  store: Record<string, unknown>
+  // What test-badge proposed for the prompt box, and the context each submitted prompt carried.
+  suggested: string[]
+  contexts: (readonly string[] | undefined)[]
 }
 
 export const VITEST_FAIL = [
@@ -33,17 +45,33 @@ export const ESLINT_FAIL = [
   '✖ 2 problems (2 errors, 0 warnings)',
 ].join('\n')
 
+export const PKG = JSON.stringify({ scripts: { test: 'vitest run', lint: 'eslint .' } })
 export const newWorld = (over: Partial<World> = {}): World => ({
-  runs: [], statuses: [], opened: [], copied: [], toasts: [], outs: { test: VITEST_FAIL, lint: ESLINT_FAIL }, code: 1, canOpen: true, ...over,
+  runs: [], statuses: [], opened: [], copied: [], toasts: [], outs: { test: VITEST_FAIL, lint: ESLINT_FAIL }, code: 1, canOpen: true,
+  tree: { '/w': ['package.json'] }, texts: { '/w/package.json': PKG }, existing: [], cwds: [], asked: [], consent: 'yes', store: {},
+  suggested: [], contexts: [], ...over,
 })
 export const result = (stdout: string, exitCode: number) => ({ value: { exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
-const pkg = JSON.stringify({ scripts: { test: 'vitest run', lint: 'eslint .' } })
+const YES = { tr: 'Evet, çalıştır', en: 'Yes, run them' }
+
+// The engine's AskUserQuestion dialog: the world's answer by its meaning, in the session's language.
+function answerAsk(world: World, e: any) {
+  const question = e.questions[0].question
+  world.asked.push(question)
+  if (world.consent === null) return { deny: 'dismissed' }
+  const lang = (world.env ?? { MODZ_LANG: 'tr' }).MODZ_LANG === 'tr' ? 'tr' : 'en'
+  const answer = world.consent === 'yes' ? YES[lang] : world.consent
+
+  return { result: { answers: { [question]: answer } } }
+}
 
 function stubHost(on: any, world: World) {
   on('session.start', () => ({ cwd: '/w' }))
   on('session.cwd', () => ({ value: '/w' }))
-  on('store.get', () => ({ value: undefined }))
-  on('store.set', () => ({ value: undefined }))
+  on('store.get', (_: any, e: any) => ({ value: world.store[e.key] }))
+  on('store.set', (_: any, e: any) => ((world.store[e.key] = e.value), { value: undefined }))
+  on('prompt.suggest', (_: any, e: any) => (world.suggested.push(e.text), { isShown: true }))
+  on('prompt.submit', (_: any, e: any) => (world.contexts.push(e.context), { text: e.text, context: e.context }))
   on('command.register', () => ({ value: undefined }))
   on('ui.log', () => ({ value: undefined }))
   on('ui.status', (_: any, e: any) => (world.statuses.push(e.text), { value: undefined }))
@@ -51,11 +79,12 @@ function stubHost(on: any, world: World) {
   on('ui.open', (_: any, e: any) => (world.opened.push(e.id), { value: { isPlaced: true } }))
   on('ui.copy', (_: any, e: any) => (world.copied.push(e.text), { value: { isCopied: true } }))
   on('ui.render', () => ({ type: 'engine', ref: 1 }))
-  on('fs.list', () => ({ value: [{ name: 'package.json', kind: 'file', size: 10 }] }))
-  on('fs.read', () => ({ value: pkg }))
-  on('fs.exists', () => ({ value: false }))
-  on('tool.call', () => ({ result: 'ok' }))
+  on('fs.list', (_: any, e: any) => ({ value: (world.tree[e.path] ?? []).map(name => ({ name, kind: name.includes('.') ? 'file' : 'dir', size: 10 })) }))
+  on('fs.read', (_: any, e: any) => ({ value: world.texts[e.path] ?? '' }))
+  on('fs.exists', (_: any, e: any) => ({ value: world.existing.includes(e.path) }))
+  on('tool.call', (_: any, e: any) => (e.tool === 'AskUserQuestion' ? answerAsk(world, e) : { result: 'ok' }))
   on('turn.complete', (_: any, e: any) => ({ text: e.answer }))
+  on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
 }
 
 export async function setup($: any, on: any, world: World) {
@@ -66,6 +95,7 @@ export async function setup($: any, on: any, world: World) {
     // The CI watch's probe (git, gh) is not a check run; this folder is no git repo, so it stops there.
     if (e.argv[0] === 'git' || e.argv[0] === 'gh') return result('', 128)
     world.runs.push(e.argv)
+    if (e.argv[0] === 'nice') world.cwds.push(e.init?.cwd)
     if (e.argv[0] !== 'nice') {
       if (!world.canOpen) throw new Error('not found')
 

@@ -72,7 +72,46 @@ const dart: Extract = text => {
   return line === undefined ? null : { passed: Number(line[1]), failed: Number(line[2] ?? 0) }
 }
 
-const EXTRACTORS = [cargo, jestLike, pytest, dart, mocha, tap, phpunit, goPackages]
+// rspec "12 examples, 1 failure"
+const rspec: Extract = text => {
+  const line = [...text.matchAll(/(\d+) examples?, (\d+) failures?/g)].at(-1)
+
+  return line === undefined ? null : { passed: Number(line[1]) - Number(line[2]), failed: Number(line[2]) }
+}
+
+// XCTest "Executed 9 tests, with 2 failures"
+const xctest: Extract = text => {
+  const line = [...text.matchAll(/Executed (\d+) tests?, with (\d+) failures?/g)].at(-1)
+
+  return line === undefined ? null : { passed: Number(line[1]) - Number(line[2]), failed: Number(line[2]) }
+}
+
+// unittest "Ran 5 tests in 0.002s", then "OK" or "FAILED (failures=1, errors=1)"
+const unittest: Extract = text => {
+  const ran = /^Ran (\d+) tests? in /m.exec(text)
+  if (ran === null) return null
+  const failed = num(text, /FAILED \(.*?failures=(\d+)/) + num(text, /FAILED \(.*?errors=(\d+)/)
+
+  return { passed: Number(ran[1]) - failed, failed }
+}
+
+// Deno "ok | 6 passed | 1 failed"
+const deno: Extract = text => {
+  const line = /^(?:ok|FAILED) \| (\d+) passed(?: \(\d+ steps?\))? \| (\d+) failed/m.exec(text)
+
+  return line === null ? null : { passed: Number(line[1]), failed: Number(line[2]) }
+}
+
+// Maven surefire "Tests run: 10, Failures: 1, Errors: 1, Skipped: 2": the last line is the module's total.
+const maven: Extract = text => {
+  const line = [...text.matchAll(/Tests run: (\d+), Failures: (\d+), Errors: (\d+), Skipped: (\d+)/g)].at(-1)
+  if (line === undefined) return null
+  const failed = Number(line[2]) + Number(line[3])
+
+  return { passed: Number(line[1]) - failed - Number(line[4]), failed }
+}
+
+const EXTRACTORS = [cargo, jestLike, pytest, dart, mocha, tap, phpunit, rspec, xctest, unittest, deno, maven, goPackages]
 
 // The last lines worth reading, for a failure no parser could place.
 function tailOf(text: string, isFailing: boolean, failures: Failure[]): string[] {

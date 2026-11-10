@@ -29,10 +29,13 @@ The sentence is red only for failures, amber for lint errors alone or a run that
 
 ## When it runs
 
+- **Only with your yes.** Before the first automatic run in a folder it asks once, in Claude Code's own question dialog, showing the exact commands (`npm run --silent test`, `npm run --silent lint`). The answer is kept per folder and command; a changed command asks again. Dismissing the question runs nothing and it is not asked again that session. `/test-badge run` and the pane's button are your own ask and never need it.
 - Only after a turn in which `Write`, `Edit` or `MultiEdit` (main agent or a subagent) changed a source file (`.ts .tsx .js .py .go .rs .php .rb .java .kt .swift .dart .c .cpp .cs .vue .svelte` and similar). Edits to Markdown, JSON or config files do not trigger it.
-- Five seconds after the turn ends; quick turns in a row give one run.
+- Five seconds after the turn ends; quick turns in a row give one run. A turn that starts first holds it until that turn ends, so it never runs beside Claude's own work.
 - One run at a time; a run requested during one waits and runs once afterwards.
-- Each command runs under `nice -n 10` (on Windows through `cmd /c`, with no `nice`, and `python` for `python3`) with a 120-second timeout, in the session's working directory, with `CI=1` (so vitest and jest do not start watch mode) and `FORCE_COLOR=0`. Tests run first, then lint.
+- **Where:** in the nearest folder above the last edited file that has its own checks (in a monorepo, the edited package, not the root suite), never above the session's working directory. A configured `testCommand` / `lintCommand` runs in the working directory.
+- Each command runs under `nice -n 10` (on Windows through `cmd /c`, with no `nice`, and `python` for `python3`) with a 120-second timeout, with `CI=1` (so vitest and jest do not start watch mode) and `FORCE_COLOR=0`. Tests run first, then lint. A tool that is not installed (exit 127, cmd's "not recognized", Python without pytest) reads as "No test command found", not as a failure.
+- **A failed run, offered to your next prompt:** the prompt box shows a dim suggestion, `Fix the failing checks test-badge found` (Tab takes it). Only when you send that suggestion does Claude get the command and its failures as context with it. Nothing is sent otherwise, and there is no model call.
 
 ## CI watch
 
@@ -46,19 +49,27 @@ It also follows your pull request's CI on GitHub, through your own `gh` CLI:
 
 A cancelled check counts as failed. `/test-badge off` stops the watch too.
 
-## Detection (first match in the project root)
+## Detection (first match in the folder the run uses)
 
 | Found | Test | Lint |
 |---|---|---|
 | `package.json` `scripts.test` / `scripts.lint` (npm's placeholder test is ignored) | `npm run --silent test`; `pnpm`, `yarn` or `bun run` when that lockfile exists | the same with `lint` |
-| `pytest.ini`, `conftest.py`, or pytest in `pyproject.toml` / `setup.cfg` / `tox.ini` | `python3 -m pytest -q` | |
+| `deno.json(c)` | `deno test` | |
+| `pytest.ini`, `conftest.py`, or pytest in `pyproject.toml` / `setup.cfg` / `tox.ini` | `<python> -m pytest -q` | |
+| `pyproject.toml` / `setup.py` / `setup.cfg` and a `tests/` (or `test/`) folder, no pytest | `<python> -m unittest discover -s tests -t .` | |
 | `go.mod` | `go test ./...` | |
 | `Cargo.toml` | `cargo test -q` | |
+| `pubspec.yaml` and a `test/` folder | `flutter test` or `dart test`, on the edited files' own tests (`test/a/b_test.dart` for `lib/a/b.dart`) where they exist | |
 | `phpunit.xml(.dist)` | `vendor/bin/phpunit` (or `phpunit`) | |
-| `pubspec.yaml` and a `test/` folder | `flutter test` or `dart test` | |
+| `build.gradle(.kts)` | `./gradlew test -q` (or `gradle`) | |
+| `pom.xml` | `./mvnw -q test` (or `mvn`) | |
+| `Package.swift` | `swift test` | |
+| `Gemfile` and `.rspec` or `spec/` | `bundle exec rspec` | |
 | `phpstan.neon(.dist)` | | `vendor/bin/phpstan analyse --no-progress --no-ansi` |
 
-Counts are read from jest, vitest, pytest, cargo, mocha, node:test, bun, phpunit, flutter/dart and go output. Lint errors are read from eslint, tsc, flutter/dart analyze and phpstan. Any other tool falls back to its exit code (`tests passed` / `tests failed`, `lint clean` / `lint failed`). Failures are read from the output; no extra command is run. If no parser recognises a failing run's output, its last 6 lines are shown. At most 50 failures per check are kept.
+`<python>` is the project's own: `.venv/bin/python` (uv and plain venvs), `venv/bin/python`, `poetry run python` when `poetry.lock` exists, else `python3`. A venv kept elsewhere (pyenv, conda) is not found; set `testCommand` for it. An Xcode project gets no command (it needs a scheme and a simulator): the pane says "No test command found".
+
+Counts are read from jest, vitest, pytest, unittest, cargo, mocha, node:test, bun, deno, phpunit, rspec, XCTest, Maven, flutter/dart and go output. Lint errors are read from eslint, tsc, flutter/dart analyze and phpstan. Any other tool falls back to its exit code (`tests passed` / `tests failed`, `lint clean` / `lint failed`). Failures are read from the output; no extra command is run. If no parser recognises a failing run's output, its last 6 lines are shown. At most 50 failures per check are kept.
 
 ## Commands
 
@@ -76,7 +87,7 @@ Counts are read from jest, vitest, pytest, cargo, mocha, node:test, bun, phpunit
 | `lintCommand` | empty | Overrides the detected lint command, run the same way. |
 | `openCommand` | empty | How a failure row opens its file, for example `cursor -g {file}:{line}` (no shell). Empty means VS Code's `code -g`, then the OS opener. If none starts, `file:line` is copied to the clipboard. |
 
-Uses no model tokens: it runs your own commands (and `gh`) and reads their output. The only prompt it sends is the one you press **Ask Claude to fix** for.
+Uses no model tokens: it runs your own commands (and `gh`) and reads their output. The only prompt it sends is the one you press **Ask Claude to fix** for; the failing output reaches Claude only with a prompt you send from its suggestion. Its CI watch is the one `gh` poller for the PR: [pr-card](../pr-card) reads its answers instead of polling.
 
 ## Language
 

@@ -41,10 +41,11 @@ async function setup($: any, on: any, world: World) {
   on('ui.open', (_: any, e: any) => (world.opened.push(e.id), { value: { isPlaced: true } }))
   on('session.start', () => ({ cwd: '/w' }))
   on('session.cwd', () => ({ value: '/w' }))
-  on('fs.list', () => ({ value: [{ name: 'package.json', kind: 'file', size: 10 }] }))
+  on('fs.list', (_: any, e: any) => ({ value: e.path === '/w' ? [{ name: 'package.json', kind: 'file', size: 10 }] : [] }))
   on('fs.read', () => ({ value: pkg }))
   on('fs.exists', () => ({ value: false }))
-  on('tool.call', () => ({ result: 'ok' }))
+  // The one-time question before the first automatic run is answered yes.
+  on('tool.call', (_: any, e: any) => (e.tool === 'AskUserQuestion' ? { result: { answers: { [e.questions[0].question]: 'Evet, çalıştır' } } } : { result: 'ok' }))
   on('turn.complete', (_: any, e: any) => ({ text: e.answer }))
   on('process.run', async (_: any, e: any) => {
     await world.hold

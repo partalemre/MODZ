@@ -110,6 +110,15 @@ const TR = {
   commandDetails: 'test-badge: ayrıntılar açıldı',
   commandSwitched: (isOn: boolean) => `test-badge ${isOn ? 'açık' : 'kapalı'}`,
   commandHelp: 'Düzenlemeden sonra arka planda test/lint: aç/kapa; run şimdi çalıştırır, details ayrıntıları açar',
+  // The one question before the first automatic run, and the failed run offered to the next prompt.
+  consent: {
+    header: 'Testler',
+    question: (commands: string[], root: string) => `Kod düzenlenen her turdan sonra ${root} içinde şunlar kendiliğinden çalışsın mı?\n${commands.join('\n')}`,
+    yes: 'Evet, çalıştır',
+    no: 'Hayır',
+  },
+  fixSuggestion: 'test-badge’in bulduğu kalan testleri düzelt',
+  fixContext: (command: string, root: string) => `test-badge, ${root} içinde \`${command}\` çalıştırdı ve kaldı. Çıktı:`,
   // The CI watch: the pane's section, the hub card, the band card, the notification and the prompt.
   ci: {
     eyebrow: 'GitHub',
@@ -235,6 +244,14 @@ const EN: Words = {
   commandDetails: 'test-badge: details opened',
   commandSwitched: isOn => `test-badge ${isOn ? 'on' : 'off'}`,
   commandHelp: 'Tests and lint in the background after edits: on or off; run runs them now, details opens the details',
+  consent: {
+    header: 'Tests',
+    question: (commands, root) => `After each turn that edits code, run these on their own in ${root}?\n${commands.join('\n')}`,
+    yes: 'Yes, run them',
+    no: 'No',
+  },
+  fixSuggestion: 'Fix the failing checks test-badge found',
+  fixContext: (command, root) => `test-badge ran \`${command}\` in ${root} and it failed. Output:`,
   ci: {
     eyebrow: 'GitHub',
     allPassed: (passed, total) => `GitHub ${passed}/${total} passed`,

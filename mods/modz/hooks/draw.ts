@@ -3,6 +3,8 @@
 // quiet line of where it runs and where it came from. Only what is unusual is marked: a broken mod in red, a
 // switched-off one dimmed with the word, an unknown state with the word.
 import type { ModInfo } from './catalog'
+import { commandsLine } from './guide'
+import type { ModGuide } from './guide'
 import { textWidth } from './kit/svg-metrics'
 import type { Group } from './meta'
 import { entering, MOTION_CSS } from './kit/motion'
@@ -59,13 +61,40 @@ export function headSvg(spec: { width: number; theme: Theme; title: string; meta
   return { source: settled({ width: spec.width, height: HEAD, theme: spec.theme, body, cue: spec.cue }), alt: `${catalogWords().allMods}: ${spec.title}${spec.meta === '' ? '' : ` · ${spec.meta}`}`, height: HEAD }
 }
 
-export function groupSvg(spec: { width: number; theme: Theme; group: Group; count: number; cue?: Cue }): Drawing {
-  const words = catalogWords()
-  const label = words.groups[spec.group]
-  const count = words.mods(spec.count)
+// A section's label: sentence case, quiet ink, its count at the right.
+export function labelSvg(spec: { width: number; theme: Theme; label: string; count: number; cue?: Cue }): Drawing {
+  const { label } = spec
+  const count = catalogWords().mods(spec.count)
   const body = `<text x="${TEXT_X}" y="${GROUP - 8}" style="font-size:11px;font-weight:600" class="lo">${esc(label)}</text><text x="${spec.width - TEXT_X}" y="${GROUP - 8}" text-anchor="end" style="font-size:11px" class="num lo">${esc(count)}</text>`
 
   return { source: settled({ width: spec.width, height: GROUP, theme: spec.theme, body, cue: spec.cue }), alt: `${label}: ${count}`, height: GROUP }
+}
+
+export const groupSvg = (spec: { width: number; theme: Theme; group: Group; count: number; cue?: Cue }): Drawing =>
+  labelSvg({ ...spec, label: catalogWords().groups[spec.group] })
+
+const GUIDE = { one: 28, two: 44 }
+
+// What a person can run and set for one installed mod: its name, its slash commands in the mono at the right, and
+// under them the options its manifest declares, which live under /plugin.
+export function guideSvg(spec: { width: number; theme: Theme; guide: ModGuide; cue?: Cue }): Drawing {
+  const { guide, width } = spec
+  const right = width - TEXT_X
+  const words = catalogWords()
+  const options = guide.options.length === 0 ? '' : words.options(guide.options.join(', '))
+  const height = options === '' ? GUIDE.one : GUIDE.two
+  const name = fit(guide.mod, (right - TEXT_X) / 2, { size: 13, weight: 560 })
+  const room = Math.floor((right - TEXT_X - measure(name, 13, 560) - GAP * 2) / (11.5 * MONO_EM))
+  const all = commandsLine(guide)
+  const commands = [...all].length <= room ? all : `${[...all].slice(0, Math.max(1, room - 1)).join('')}…`
+  const body = [
+    `<text x="${TEXT_X}" y="19" style="font-size:13px;font-weight:560" class="hi">${esc(name)}</text>`,
+    all === '' ? '' : `<text x="${right}" y="19" text-anchor="end" style="font-size:11.5px" class="num mid">${esc(commands)}</text>`,
+    options === '' ? '' : `<text x="${TEXT_X}" y="36" style="font-size:11px" class="lo">${esc(fit(options, right - TEXT_X, { size: 11 }))}</text>`,
+  ].join('')
+  const alt = [guide.mod, all === '' ? words.noCommand : all, options].filter(Boolean).join(' · ')
+
+  return { source: settled({ width, height, theme: spec.theme, body, cue: spec.cue }), alt, height }
 }
 
 // The right edge says only what is unusual, in words: broken, off, or a state that could not be read. An on mod

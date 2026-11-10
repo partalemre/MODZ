@@ -3,8 +3,17 @@ export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
 
 export type HubSection = 'work' | 'safety' | 'meter'
 
+// One line of what a mod has running, drawn under its row in the hub's "Now" area: `label` says what runs (an
+// agent's task, the plan's current step), `since` when it began in ms (the hub draws the elapsed time itself, so a
+// running clock costs the mod no write), `value` a short measured fact ("$0.12").
+export type HubLine = { label: string; since?: number; value?: string }
+
+// What a mod has running now: a few lines, and how many more there are than the lines say ("+2 more").
+export type HubLive = { lines: HubLine[]; more?: number }
+
 // One mod's line on the hub, written by that mod under `{ plugin: '<mod>', key: 'hub' }`. A mod the hub
 // does not know names its own row with the optional fields; for a known mod the hub's own words win.
+// `live` puts the mod's running work on the hub itself; left out, the row is its one line as before.
 export type HubCard = {
   pane: string
   detail: string
@@ -15,6 +24,7 @@ export type HubCard = {
   icon?: string
   section?: HubSection
   badge?: string
+  live?: HubLive
 }
 
 // Written when a hub row is pressed; the mod that owns `pane` opens its own pane.

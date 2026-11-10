@@ -6,12 +6,13 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { HubCard } from '../types'
+import { wireCards } from './cards'
 import type { Drawing } from './draw'
-import type { Market } from './catalog'
-import { footerTree, isHubShown } from './footer'
-import { cardOf, focusOf, hiddenRowsOf, HOLD_PANE, MODS_PANE, modsTitle, presenceOf, rowsOf, withUnanswered } from './hub'
+import { footerTree } from './footer'
+import { helpText } from './guide'
+import { HOLD_PANE, MODS_PANE, modsTitle } from './hub'
 import { hubTree } from './hub-pane'
-import type { HubActions, HubView } from './hub-pane'
+import type { HubActions } from './hub-pane'
 import { keepMarket, keepUpdated, marketOf, marketSoon } from './market'
 import type { Disk } from './market'
 import { wireLanguageKeeper } from './language-keeper'
@@ -19,13 +20,16 @@ import { EMPTY_LAYOUT, layoutOf, moveUp, setHidden } from './layout'
 import type { HubLayout } from './layout'
 import { setLang } from './kit/lang'
 import { HUB_PANE, paneOf } from './kit/stage'
-import { isSame } from './kit/same'
 import { pinned } from './kit/pin'
 import { stableDrawings } from './kit/stable'
 import { modzTree } from './pane'
+import { noteAnswer, openPane, stepAside, toggleHub } from './swap'
+import type { Swap } from './swap'
 import { themeOf } from './theme'
 import type { Theme } from './theme'
-import { hubWords } from './words'
+import { plainViewOf, viewOf } from './view'
+import type { Frame, Parts } from './view'
+import { catalogWords, hubWords } from './words'
 
 const PANE = HUB_PANE
 const TITLE = 'MODZ'
@@ -41,8 +45,6 @@ const unansweredAtom = atom({ plugin: 'modz', key: 'unanswered' } as const, null
 const ON = { plugin: 'modz', key: 'isOn' } as const
 const LAYOUT_KEY = 'layout'
 const DEFAULT_COLUMNS = 80
-// How long a mod has to put its pane up after a row press before the hub says it did not answer.
-const ANSWER_MS = 1_500
 
 async function themeNow($: EngineInterface): Promise<Theme> {
   const rows = await $.config.list().catch(() => [])
@@ -85,12 +87,18 @@ async function show($: EngineInterface, pane: typeof PANE | typeof MODS_PANE, is
 
 const openHub = ($: EngineInterface) => show($, PANE)
 
-// The footer toggle (footer.tsx): the hub's panes away when one is shown, else the hub on stage without the keyboard.
-async function toggleHub($: EngineInterface): Promise<void> {
-  if (!isHubShown(await $.ui.panes())) return show($, PANE, false)
-  await closeQuietly($, PANE)
-  await closeQuietly($, MODS_PANE)
-}
+// What swap.ts moves the panel through; built here, where `$` is.
+const swapOf = ($: EngineInterface): Swap => ({
+  panes: () => $.ui.panes(),
+  show: (pane, isFocused) => show($, pane, isFocused),
+  hold: () => $.ui.open({ id: HOLD_PANE, title: TITLE }),
+  close: id => closeQuietly($, id),
+  stage: { read: async () => (await $.state.get(STAGE)).value, write: pane => $.state.set(STAGE, { pane, at: Date.now() }) },
+  ask: pane => $.state.set(OPEN, { pane, at: Date.now() }).catch(cause => $.ui.log(`modz: asking for ${pane} failed: ${String(cause)}`, { to: 'debug' })),
+  unanswered: { read: () => read($, unansweredAtom), write: pane => update($, unansweredAtom, () => pane) },
+  later: (ms, work) => $.clock.after(ms, work),
+  log: text => $.ui.log(`modz: ${text}`, { to: 'debug' }),
+})
 
 async function saveLayout($: EngineInterface, change: (layout: HubLayout) => HubLayout): Promise<void> {
   const next = change(await read($, layoutAtom))
@@ -105,7 +113,7 @@ function actionsOf($: EngineInterface): HubActions {
     work().catch(cause => $.ui.log(`modz: ${what} failed: ${String(cause)}`, { to: 'debug' }))
 
   return {
-    onOpen: pane => run(`opening ${pane}`, () => openPane($, pane)),
+    onOpen: pane => run(`opening ${pane}`, () => openPane(swapOf($), pane)),
     onEdit: isEditing => run('customizing', () => update($, editingAtom, () => isEditing)),
     onMove: opts => run('moving a row', () => saveLayout($, layout => moveUp(layout, opts))),
     onHide: opts => run('hiding a row', () => saveLayout($, layout => setHidden(layout, opts))),
@@ -113,93 +121,23 @@ function actionsOf($: EngineInterface): HubActions {
   }
 }
 
-// A row press puts that pane in the panel: the catalog is this mod's own pane; any other is its
-// mod's to open, asked through `modz.open`. The hub steps aside once the mod's pane is up, so a mod that does not
-// answer leaves the hub where it is rather than an empty panel.
-async function openPane($: EngineInterface, pane: string): Promise<void> {
-  if (pane === MODS_PANE) {
-    await show($, MODS_PANE)
-
-    return
-  }
-  const ask = { pane }
-  asked = ask
-  if ((await read($, unansweredAtom)) !== null) await update($, unansweredAtom, () => null)
-  // A pane already open behind a tab does not come forward on another open: the asked one opens anew, last.
-  await $.state.set(STAGE, { pane: PANE, at: Date.now() })
-  // A click into a pane gives it the keyboard, and the engine shows no new pane over the one a person holds, focus
-  // or no focus. Closing the held pane shows the last one open: the mod's if it answered, else this stand-in.
-  const isHeld = (await $.ui.panes()).some(up => up.id === PANE && up.isFocused)
-  if (isHeld) await $.ui.open({ id: HOLD_PANE, title: TITLE })
-  answered = null
-  await $.state.set(OPEN, { pane, at: Date.now() }).catch(cause => $.ui.log(`modz: asking for ${pane} failed: ${String(cause)}`, { to: 'debug' }))
-  if (isHeld) await closeQuietly($, PANE)
-  // The mod answered inside this write, where the hub's own hooks hear nothing: engines up to 2.1.296 ran its
-  // `.catch` (re-entry), 2.1.309 skips that too. So the panel itself tells: a mod pane that took it leaves the hub
-  // no longer shown.
-  if (answered !== null || !isHubShown(await $.ui.panes())) await stepAside($, answered ?? pane)
-  else {
-    if (isHeld) await show($, PANE)
-    $.clock.after(ANSWER_MS, () => void watchAnswer($, ask).catch(cause => $.ui.log(`modz: the watch on ${pane} failed: ${String(cause)}`, { to: 'debug' })))
-  }
-  if (isHeld) await closeQuietly($, HOLD_PANE)
-}
-
-// The pane a mod said it opened while the hub's own write was still running; read once that write settles.
-let answered: string | null = null
-// The row pressed last: a later press takes the watchdog over.
-let asked: { pane: string } | null = null
-
-// The watchdog. Most mods answer inside the ask itself; one that answers a moment later takes the stage through its
-// `shown`. After ANSWER_MS with the hub still on stage, nobody did: the hub stays (and comes back if it went) and
-// the row says its pane did not answer, so a press never just vanishes.
-async function watchAnswer($: EngineInterface, ask: { pane: string }): Promise<void> {
-  if (asked !== ask || paneOf((await $.state.get(STAGE)).value) !== PANE) return
-  await update($, unansweredAtom, () => ask.pane)
-  if (!isHubShown(await $.ui.panes())) await show($, PANE, false)
-}
-
-// A mod's pane holds the panel: the hub's panes close and every other mod's pane follows (kit/stage.ts).
-async function stepAside($: EngineInterface, pane: string): Promise<void> {
-  answered = null
-  await $.state.set(STAGE, { pane, at: Date.now() })
-  await closeQuietly($, PANE)
-  await closeQuietly($, MODS_PANE)
-  if ((await read($, unansweredAtom)) !== null) await update($, unansweredAtom, () => null)
-}
-
-// An empty catalog is one that could not be read: the hub says so rather than "0 mods on".
-function metaOf(market: Market): string {
-  if (market.mods.length === 0) return hubWords().unreadable
-  const on = market.mods.filter(mod => mod.isEnabled === true).length
-
-  return hubWords().modsOn(on)
-}
-
 type Site = { surface: string; columns: number }
 
-// What the hub draws: the rows the catalog and the mods' cards give, in the person's arrangement.
-async function hubView($: EngineInterface, site: Site): Promise<HubView> {
-  const market = await marketSoon(diskOf($))
+const frameOf = async ($: EngineInterface, site: Site): Promise<Frame> => ({ ...site, theme: await themeNow($), actions: actionsOf($), stable: hubDrawings })
+
+// What the hub is drawn from (view.ts), read where `$` is. A clock that cannot be read costs the running times
+// their exactness, never the hub.
+async function partsOf($: EngineInterface): Promise<Parts> {
   const [cards, layout, isEditing] = [await read($, cardsAtom), await read($, layoutAtom), await read($, editingAtom)]
-  const presence = presenceOf(market)
-  const rows = withUnanswered(rowsOf(cards, presence, layout), await read($, unansweredAtom), hubWords().noAnswer)
 
-  return { rows, hidden: hiddenRowsOf(cards, presence, layout), focus: focusOf(rows), meta: metaOf(market), isEditing, ...site, theme: await themeNow($), actions: actionsOf($), stable: hubDrawings }
-}
-
-// The hub when its drawing threw: the same rows under the same keys, in the catalog's own order and as plain
-// elements, so every row stays pressable (its press handle goes by its key) and the way to each pane is kept.
-async function plainHubView($: EngineInterface, site: Site): Promise<HubView> {
-  const rows = rowsOf(await read($, cardsAtom), presenceOf(await marketSoon(diskOf($))))
-
-  return { rows, hidden: [], focus: null, meta: hubWords().plain, isEditing: false, ...site, surface: 'plain', theme: 'auto', actions: actionsOf($), stable: hubDrawings }
+  return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()) }
 }
 
 type On = Parameters<Register>[0]
 type Options = Parameters<Register>[1]
 
-function hubHooks(on: On, options: Options): void {
+// The hub's life: up when the session starts, and back when a desktop returns.
+function startHooks(on: On, options: Options): void {
   on('session.start', async ($, e, next) => {
     // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
@@ -233,21 +171,10 @@ function hubHooks(on: On, options: Options): void {
 
     return done
   }).catch(($, e, next) => next(e))
+}
 
-  // Every mod reports its line under its own `hub` key; the hub keeps the latest of each.
-  on('state.set', { key: 'hub' }, async ($, e, next) => {
-    const done = await next(e)
-    const card = cardOf(e.value)
-    // Widened from the declared reporters: the hub also hears a mod it does not list, and never itself.
-    const from: string = e.plugin
-    if (card === null || from === 'modz') return done
-    // An unchanged card is not kept again: the write would redraw the hub for nothing.
-    if (isSame((await read($, cardsAtom))[from], card)) return done
-    await update($, cardsAtom, cards => ({ ...cards, [from]: card }))
-
-    return done
-  }).catch(($, e, next) => next(e))
-
+// Who holds the one panel: a mod's way home, a mod's pane taking it, and /modz.
+function stageHooks(on: On): void {
   // A mod's "MODZ" button: the hub comes forward, and opens again if it was closed. Any mod may ask.
   // The hub comes back once the mod's write has settled: inside it, the mod's own hooks hear nothing (re-entry),
   // so its pane would miss the stage and stay behind as a tab.
@@ -267,17 +194,19 @@ function hubHooks(on: On, options: Options): void {
     const done = await next(e)
     const from: string = e.plugin
     const pane = paneOf(e.value)
-    if (from !== 'modz' && pane !== null) await stepAside($, pane)
+    if (from !== 'modz' && pane !== null) await stepAside(swapOf($), pane)
 
     return done
   }).catch(($, e, next) => {
     const from: string = e.plugin
-    if (next.error.kind === 're-entry' && from !== 'modz') answered = paneOf(e.value) ?? answered
+    if (next.error.kind === 're-entry' && from !== 'modz') noteAnswer(paneOf(e.value))
 
     return next(e)
   })
 
-  on('command.run', { command: 'modz' }, async $ => {
+  // `/modz help`: the one index of every installed mod's commands and options, as text; `/modz` opens the hub.
+  on('command.run', { command: 'modz' }, async ($, e) => {
+    if (e.args.trim().toLowerCase() === 'help') return { text: helpText(await marketOf(diskOf($)), await $.command.list().catch(() => [])) }
     await openHub($)
 
     return { text: hubWords().opened }
@@ -288,7 +217,7 @@ function paneHooks(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS
 
-    return pinned(e, hubTree($.ui.resolve(e), await hubView($, { surface: e.surface, columns })))
+    return pinned(e, hubTree($.ui.resolve(e), viewOf(await partsOf($), await frameOf($, { surface: e.surface, columns }))))
   }).catch(async ($, e, next) => {
     // The drawing threw or ran out of time. The engine would draw nothing and drop every row's press, so the tree
     // the desktop still shows would go dead: the plain rows keep the hub, and the presses, alive.
@@ -296,7 +225,7 @@ function paneHooks(on: On): void {
     $.ui.log(`modz: the hub fell back to its plain rows: ${next.error.message ?? next.error.kind}`, { to: 'debug' })
     const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS
 
-    return pinned(e, hubTree($.ui.resolve(e), await plainHubView($, { surface: e.surface, columns })))
+    return pinned(e, hubTree($.ui.resolve(e), plainViewOf(await partsOf($), await frameOf($, { surface: e.surface, columns }))))
   })
 
   on('ui.render', { component: 'Pane', requestId: HOLD_PANE }, async ($, e) => {
@@ -313,23 +242,37 @@ function paneHooks(on: On): void {
 
     const market = await marketOf(diskOf($))
     keepMarket(market)
+    const commands = await $.command.list().catch(() => [])
 
-    return pinned(e, modzTree(ui, { market, surface: e.surface, columns, theme: await themeNow($), onHome, stable: catalogDrawings }))
+    return pinned(e, modzTree(ui, { market, commands, surface: e.surface, columns, theme: await themeNow($), onHome, onCopy: (text, press) => copy($, text, press), stable: catalogDrawings }))
   })
+}
+
+// An install line onto the clipboard of the surface that was pressed; a toast says whether it took.
+async function copy($: EngineInterface, text: string, press: unknown): Promise<void> {
+  const surface = (press as { surface?: 'desktop' | 'terminal' } | undefined)?.surface
+  const words = catalogWords()
+  try {
+    $.ui.toast((await $.ui.copy(surface === undefined ? { text } : { text, surface })).isCopied ? words.copied : words.notCopied)
+  } catch (cause) {
+    $.ui.log(`modz: the install line could not be copied: ${String(cause)}`, { to: 'debug' })
+  }
 }
 
 // The desktop only: the terminal keeps its footer as the engine draws it, and /modz.
 function footerHooks(on: On): void {
   on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
     if (e.surface !== 'desktop') return next(e)
-    const onPress = () => void toggleHub($).catch(cause => $.ui.log(`modz: the footer toggle failed: ${String(cause)}`, { to: 'debug' }))
+    const onPress = () => void toggleHub(swapOf($)).catch(cause => $.ui.log(`modz: the footer toggle failed: ${String(cause)}`, { to: 'debug' }))
 
     return pinned(e, footerTree($.ui.resolve(e), { modes: e.props.modes, onPress }))
   })
 }
 
 export const register: Register = (on, options) => {
-  hubHooks(on, options)
+  startHooks(on, options)
+  stageHooks(on)
+  wireCards(on)
   paneHooks(on)
   footerHooks(on)
   wireLanguageKeeper(on, options)

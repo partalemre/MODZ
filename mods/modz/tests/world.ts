@@ -9,8 +9,8 @@ export const posix = (path: string) => path.replaceAll('\\', '/').replace(/^[A-Z
 // The engine the hub tests stand in: the catalog read from the market fixture, every mod in it switched
 // on, and the panes the hub asks for recorded. A test that mocks the clock itself says so. The hub
 // speaks Turkish unless a test hands it another env (an empty one draws English); `files` replaces the fixture;
-// `settings` joins the settings it reads.
-type WorldOptions = { hasOwnClock?: boolean; env?: Record<string, string>; files?: Record<string, string>; settings?: Record<string, unknown> }
+// `settings` joins the settings it reads; `enabled` names the mods that are on (every one in the fixture when not given).
+type WorldOptions = { hasOwnClock?: boolean; env?: Record<string, string>; files?: Record<string, string>; settings?: Record<string, unknown>; enabled?: string[] }
 
 export function stubWorld(on: any, options: WorldOptions = {}) {
   const files = options.files ?? MARKET_FILES
@@ -30,7 +30,9 @@ export function stubWorld(on: any, options: WorldOptions = {}) {
 
     return { value: text }
   })
-  const names = Object.keys(MARKET_FILES).map(path => /mods\/([^/]+)\//.exec(path)?.[1]).filter(Boolean)
+  const names = options.enabled ?? Object.keys(MARKET_FILES).map(path => /mods\/([^/]+)\//.exec(path)?.[1]).filter(Boolean)
+  // The hub reads the theme once per draw, so its draws are counted here.
+  const seen = { draws: 0 }
   on('settings.read', () => ({ value: { ...options.settings, enabledPlugins: Object.fromEntries(names.map(name => [`${name}@modz`, true])) } }))
   on('command.register', () => ({ value: undefined }))
   on('ui.open', (_: unknown, e: { id: string; title?: string; focus?: true }) => {
@@ -51,9 +53,13 @@ export function stubWorld(on: any, options: WorldOptions = {}) {
   })
   on('ui.panes', () => ({ value: up.map((id, i) => ({ id, title: titles[id], isShown: hold.id === null ? i === up.length - 1 : id === hold.id, isFocused: id === hold.id, isPlaced: true })) }))
   on('session.start', () => ({ cwd: '/work' }))
-  on('config.list', () => ({ value: [] }))
+  on('config.list', () => {
+    seen.draws++
+
+    return { value: [] }
+  })
   if (!options.hasOwnClock) on('clock.now', () => ({ value: 1_000 }))
   on('command.run', () => ({ text: '' }))
 
-  return { opened, titles, up, focused, hold }
+  return { opened, titles, up, focused, hold, seen }
 }

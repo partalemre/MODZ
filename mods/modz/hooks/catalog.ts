@@ -18,12 +18,14 @@ export type ModInfo = {
   isHealthy: boolean
   // settings' enabledPlugins, else a skills link (user's or the project's); null when neither says.
   isEnabled: boolean | null
+  // The options its manifest declares (`userConfig`), which a person sets under /plugin.
+  options: string[]
 }
 
 // A marketplace entry as written; any field may be missing or of another type.
 type Entry = { name?: unknown; source?: unknown; version?: unknown; description?: unknown }
 
-type Manifest = { version?: unknown; description?: unknown; repository?: unknown; homepage?: unknown; author?: { url?: unknown } }
+type Manifest = { version?: unknown; description?: unknown; repository?: unknown; homepage?: unknown; author?: { url?: unknown }; userConfig?: unknown }
 
 export type CatalogOptions = {
   read: ReadFile
@@ -113,6 +115,7 @@ function infoOf(facts: Facts): ModInfo {
     // A manifest without a version is still a readable one.
     isHealthy: manifest !== undefined && problem === undefined,
     isEnabled: facts.isEnabled,
+    options: isRecord(manifest?.userConfig) ? Object.keys(manifest.userConfig) : [],
   }
 }
 

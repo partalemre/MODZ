@@ -18,6 +18,7 @@ Install this first, then the mods you want. Start a new session, or run `/reload
 The panel opens on the right when a session starts, and again any time with `/modz`. In the desktop app the prompt footer also carries a dim **MODZ** button beside the mode labels: like the app's own session-rail toggle, one press brings the panel back (over any mod's pane) and the next puts it away. It never takes the keyboard from the prompt.
 
 - **A head card** that leads with what needs you most: a failure, then a warning, then live work. Idle, it says "All quiet". When something leads, a primary button opens that mod's pane (for example "Open Tests").
+- **Now**, above the sections, so a working day needs no pane swap: any mod that fails or warns first, then each running agent (its task, how long it has run, its cost once it has one; three by name, the rest as "+2 more"), the plan's current step under its "3 of 9 steps", and the usage line. Nothing running, nothing drawn. A press on any of these lines opens that mod's pane for the detail. A row lifted into Now says its value there and not a second time below.
 - **Rows in three sections**, each with the mod's one-line report and an **Open** button. In the terminal the rows also have number keys (`1` to `9`, then `0`).
 
 | Section | Row | Mod |
@@ -26,22 +27,25 @@ The panel opens on the right when a session starts, and again any time with `/mo
 | | Files | `filetree` |
 | | Plan | `plan-steps` |
 | | Transceiver | `transceiver` |
+| | Replay | `replay-theater` |
 | Safety | Tests | `test-badge` |
 | | Checkpoints | `checkpoint` |
-| | Replay | `replay-theater` |
 | Meter | Usage | `hud-pro` |
 | | Look | `skins` |
 | | Mods | `modz` (the catalog below) |
 
 A row shows for a mod the marketplace lists as on, or for a mod that has reported a line. Each mod reports one short line (60 characters at most) with a tone: idle, live, ok, warn or bad. Mods that draw no pane of their own (`blast-radius`, `secret-guard`, `session-budget`, `cache-tax`, `done-ping`, `reflect-mod`, `terminal-browser`) have no row.
 
-**The Mods pane** (the last row, or its tab beside the panel) lists every mod in the marketplace: its version, whether it is on, whether its `plugin.json` could be read (healthy or broken), its group (Look, Safety, Meter, Flow), where it draws (desktop, terminal), and the project it is adapted from. The head says how many are on and whether all are healthy. It reads the marketplace's `marketplace.json` and each mod's `plugin.json` from disk, and says "Catalog could not be read" if it can't find them.
+With only `modz` installed the panel has one row; it says so and offers **Add mods**, which opens the Mods pane.
+
+**The Mods pane** (the last row, or its tab beside the panel) starts with what you can act on. **Not installed** gives each missing mod's exact install line (`/plugin install <name>@modz`) as text you can select, with a **Copy** button, the core set first: `savvy-progress`, `plan-steps`, `filetree`, `blast-radius`, `secret-guard`, `checkpoint`, `hud-pro`. **Commands and settings** lists each installed mod's slash commands and the options it has under `/plugin`. Then it lists every mod in the marketplace: its version, whether it is on, whether its `plugin.json` could be read (healthy or broken), its group (Look, Safety, Meter, Flow), where it draws (desktop, terminal), and the project it is adapted from. The head says how many are on and whether all are healthy. It reads the marketplace's `marketplace.json` and each mod's `plugin.json` from disk, and says "Catalog could not be read" if it can't find them.
 
 The desktop app draws the panel as pictures; the terminal draws the same as text.
 
 ## Commands
 
 - `/modz` opens the panel and brings it forward.
+- `/modz help` prints one index: every installed mod's slash commands, the options it has under `/plugin`, and the install line of each mod that is not installed.
 - **MODZ** in the desktop prompt footer shows or hides the panel.
 
 ## Settings

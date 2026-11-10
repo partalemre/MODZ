@@ -23,7 +23,7 @@ const WIDE = 520
 const between = (k: number, from: number, to: number): number => Math.round((from + (to - from) * k) * 10) / 10
 
 export type Sizes = {
-  row: number; section: number; head: number; inset: number; icon: number; textX: number; baseline: number
+  row: number; line: number; section: number; head: number; inset: number; icon: number; textX: number; baseline: number
   glyph: { cell: number; pitch: number }; mark: { cell: number; pitch: number; gap: number }
   title: { size: number; weight: number }; value: { size: number; weight: number }; label: number; meta: number
 }
@@ -37,7 +37,7 @@ export function sizesOf(width: number): Sizes {
   const title = between(k, 13, 15)
 
   return {
-    row, section: Math.round(between(k, 30, 38)), head: Math.round(between(k, 46, 58)), inset, icon, textX: inset + icon + between(k, 12, 14),
+    row, line: Math.round(between(k, 24, 28)), section: Math.round(between(k, 30, 38)), head: Math.round(between(k, 46, 58)), inset, icon, textX: inset + icon + between(k, 12, 14),
     baseline: row / 2 + title * 0.35,
     glyph: { cell: between(k, 2, 2.5), pitch: between(k, 2.5, 3.1) },
     mark: { cell: between(k, 2.6, 3.3), pitch: between(k, 3.1, 3.9), gap: between(k, 5, 6.2) },
@@ -174,3 +174,20 @@ export function hubRowSvg(spec: { width: number; theme: Theme; row: HubRow; butt
   return { source: doc({ width, height: z.row, theme: spec.theme, body: entering(body, spec.cue) }), alt, height: z.row }
 }
 
+
+// A live line under a row in the "Now" area, on the title's column: what runs in the middle ink, and at the right
+// how long it has run and what it cost, quiet. No glyph: the row above it carries the mod's.
+export function hubLineSvg(spec: { width: number; theme: Theme; line: { label: string; value: string }; cue: Cue }): Drawing {
+  const z = sizesOf(spec.width)
+  const right = spec.width - z.inset
+  const { value } = spec.line
+  const room = right - z.textX - (value === '' ? 0 : measure(value, z.label, 400) + VALUE_GAP)
+  const label = fit(spec.line.label, room, { size: z.value.size, weight: 400 })
+  const y = z.line / 2 + z.value.size * 0.35
+  const body = [
+    `<text x="${z.textX}" y="${y}" style="font-size:${z.value.size}px" class="mid">${esc(label)}</text>`,
+    value === '' ? '' : `<text x="${right}" y="${y}" text-anchor="end" style="font-size:${z.label}px;font-variant-numeric:tabular-nums" class="lo">${esc(value)}</text>`,
+  ].join('')
+
+  return { source: doc({ width: spec.width, height: z.line, theme: spec.theme, body: entering(body, spec.cue) }), alt: [spec.line.label, value].filter(Boolean).join(': '), height: z.line }
+}

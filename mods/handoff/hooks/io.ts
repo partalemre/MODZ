@@ -1,6 +1,6 @@
-import type { ModelCompleteRequest, ModelCompleteResult, PluginState, SessionMessage } from 'claude-code'
+import type { ModelCompleteRequest, ModelCompleteResult, PluginState, SessionCompactResult, SessionMessage } from 'claude-code'
 
-import type { HandoffNote, HubCard } from '../types'
+import type { HandoffNote, HubCard, NoteEntry } from '../types'
 
 // The engine calls the rest of the mod needs, as closures: only register.tsx holds `$`.
 
@@ -16,7 +16,7 @@ export type Io = {
   hub: { get: () => Promise<HubCard | undefined>; set: (card: HubCard) => Promise<void> }
   // plan-steps' task list, unchecked: another mod's value.
   tasks: () => Promise<unknown>
-  store: { get: (key: string) => Promise<unknown>; set: (key: string, note: HandoffNote) => Promise<void>; delete: (key: string) => Promise<void> }
+  store: { get: (key: string) => Promise<unknown>; set: (key: string, value: HandoffNote | NoteEntry[]) => Promise<void>; delete: (key: string) => Promise<void> }
   now: () => Promise<number>
   root: () => Promise<string>
   sessionId: () => Promise<string>
@@ -24,7 +24,11 @@ export type Io = {
   complete: (request: ModelCompleteRequest) => Promise<ModelCompleteResult>
   run: (argv: string[], options: { cwd?: string; timeoutMs: number }) => Promise<RunOut>
   writeFile: (path: string, text: string) => Promise<void>
-  compact: () => Promise<unknown>
+  compact: () => Promise<SessionCompactResult>
+  // Where auto-compaction fires, in tokens (null: off), and the window the fill is measured against.
+  autoCompact: () => Promise<{ tokens: number | null; window: number }>
+  // A user-role row the model reads on its next request; the person does not see it as typed.
+  append: (text: string) => Promise<unknown>
   openPane: () => Promise<unknown>
   log: (text: string) => void
 }

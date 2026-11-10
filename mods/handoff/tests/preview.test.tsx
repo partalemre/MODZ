@@ -1,11 +1,12 @@
 import { test } from 'claude-code/testing'
 
-import { MINUTE, bandOf, measure, newWorld, paneOf, said, start, stub } from './stubs'
+import { MINUTE, bandOf, compactBy, measure, newWorld, paneOf, said, start, stub } from './stubs'
 
 /** The test runner's console: bin/preview reads the trees it prints. */
 declare const console: { log: (text: string) => void }
 
-// Visual states for bin/preview: the band card (ask, saved) and the pane (empty, with a note), on the desktop in
+// Visual states for bin/preview: the band (the ask line, the saved card, the line after a compaction) and the pane
+// (empty, with a note, with a compaction's notes), on the desktop in
 // both schemes and on the terminal. `-w<px>` names a narrow band.
 
 const log = async (label: string, ui: any) => console.log(`@@TREE@@${label}@@${JSON.stringify(await ui.drawn())}`)
@@ -60,6 +61,13 @@ for (const c of CASES) {
     await band.unmount()
 
     await clock.advance(3 * MINUTE)
-    await log(`pane-note-${c.name}`, await $.ui.mount(paneOf(c.surface, Math.min(c.columns, 52))))
+    const notePane = await $.ui.mount(paneOf(c.surface, Math.min(c.columns, 52)))
+    await log(`pane-note-${c.name}`, notePane)
+
+    world.sizes = { tokensBefore: 182_400, tokensAfter: 23_600 }
+    await compactBy($, 'auto')
+    await clock.advance(MINUTE)
+    await log(`band-compacted-${c.name}`, await $.ui.mount(bandOf(c.surface, { bodyColumns: c.columns })))
+    await log(`pane-notes-${c.name}`, notePane)
   })
 }

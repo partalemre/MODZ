@@ -1,17 +1,16 @@
 import type { RenderElement } from 'claude-code'
 
-import { ButtonRow, Card, Meter, cardInnerWidth } from './kit/ui'
+import { ButtonRow, Card, cardInnerWidth } from './kit/ui'
 import type { ButtonSpec, DrawCtx } from './kit/ui'
 import type { CardKind } from './gate'
+import { TOKENS_PER_K } from './limits'
 import { relativeTo } from './note'
-import { ageText } from './pane'
+import { ageText, howOf } from './pane'
 import { words } from './words'
-import type { HandoffNote } from '../types'
+import type { CompactedLine, HandoffNote } from '../types'
 
-// The one card this mod puts above the prompt (DESIGN.md §6, slot 2, a notification): the ask at the threshold,
-// then what became of it. It sits above `theirs`, which it never swallows.
-
-const PERCENT = 100
+// What this mod puts above the prompt (DESIGN.md §6, slot 2, a notification): one quiet line near auto-compaction,
+// one after a compaction, and the cards of a handoff. It sits above `theirs`, which it never swallows.
 
 export type BandActions = {
   onWrite: () => void
@@ -21,12 +20,16 @@ export type BandActions = {
   onDismiss: () => void
   onContinue: () => void
   onDecline: () => void
+  onRestore: () => void
+  onForget: () => void
 }
 
 export type BandView = {
   kind: Exclude<CardKind, null>
   percent: number | null
   threshold: number
+  autoAt: number | null
+  compacted: CompactedLine | null
   note: HandoffNote | null
   failure: string | null
   columns: number
@@ -34,24 +37,44 @@ export type BandView = {
   now: number
 }
 
-function askCard(draw: DrawCtx, view: BandView, width: number): RenderElement {
+// One dim line and its buttons, no card: a question, not an alarm.
+function quietLine(draw: DrawCtx, text: string, buttons: ButtonSpec[]): RenderElement {
+  const { Box, Text } = draw.ui
+
+  return (
+    <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
+      <Text key="handoff-line" dimColor>{text}</Text>
+      {ButtonRow(draw, { buttons })}
+    </Box>
+  )
+}
+
+// Near auto-compaction, the one question. Either way the working notes are saved first.
+function askLine(draw: DrawCtx, view: BandView): RenderElement {
   const says = words()
   const percent = view.percent ?? view.threshold
-  const buttons: ButtonSpec[] = [
-    { key: 'handoff-write', label: says.write, variant: 'primary', onPress: view.actions.onWrite },
-    { key: 'handoff-compact', label: says.compact, onPress: view.actions.onCompact },
-    { key: 'handoff-snooze', label: says.notNow, variant: 'plain', onPress: view.actions.onSnooze },
-  ]
+  const text = [says.askHeadline(percent), view.autoAt === null ? '' : says.askAuto(view.autoAt)].filter(part => part !== '').join(' · ')
 
-  // An offer, not an alarm: the card stays neutral and the meter alone turns red near full. The headline says the
-  // percent, so the meter carries no label of its own.
-  return Card(draw, {
-    header: { icon: 'flag', eyebrow: says.eyebrow, meta: says.askMeta(view.threshold), headline: says.askHeadline(percent), sub: says.askSub, width },
-    children: [
-      Meter(draw, { value: percent / PERCENT, width }),
-      ButtonRow(draw, { buttons }),
-    ],
-  })
+  return quietLine(draw, text, [
+    { key: 'handoff-compact', label: says.compactKeep, variant: 'primary', onPress: view.actions.onCompact },
+    { key: 'handoff-write', label: says.handOff, onPress: view.actions.onWrite },
+    { key: 'handoff-snooze', label: says.notNow, variant: 'plain', onPress: view.actions.onSnooze },
+  ])
+}
+
+const kTokens = (n: number): string => `${Math.round(n / TOKENS_PER_K)}k`
+
+// After a compaction: what happened, and the notes back on a press.
+function compactedLine(draw: DrawCtx, line: CompactedLine, view: BandView): RenderElement {
+  const says = words()
+  const { tokensBefore: before, tokensAfter: after } = line
+  const sizes = before === undefined || after === undefined ? '' : says.sizes(kTokens(before), kTokens(after))
+  const text = [says.compactedHead(howOf(line.trigger)), sizes, says.notesSaved].filter(part => part !== '').join(' · ')
+
+  return quietLine(draw, text, [
+    { key: 'handoff-restore', label: says.restore, variant: 'primary', onPress: view.actions.onRestore },
+    { key: 'handoff-forget', label: says.dismiss, variant: 'plain', onPress: view.actions.onForget },
+  ])
 }
 
 // A note another conversation left: it reaches this one only if the person says so.
@@ -105,7 +128,8 @@ function writingCard(draw: DrawCtx, width: number): RenderElement {
 
 export function bandCard(draw: DrawCtx, view: BandView): RenderElement {
   const width = cardInnerWidth(view.columns)
-  if (view.kind === 'ask') return askCard(draw, view, width)
+  if (view.kind === 'ask') return askLine(draw, view)
+  if (view.kind === 'compacted' && view.compacted !== null) return compactedLine(draw, view.compacted, view)
   if (view.kind === 'offer') return offerCard(draw, view, width)
   if (view.kind === 'saved') return savedCard(draw, view, width)
   if (view.kind === 'failed') return failedCard(draw, view, width)

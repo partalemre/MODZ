@@ -7,6 +7,8 @@ import type { PlanTask } from '../types'
 // The handoff note, built from what the session already holds. Pure: every fact comes in, markdown comes out.
 
 export type NoteFacts = {
+  // A handoff for the next chat, or the working notes kept at a compaction.
+  isCompaction?: boolean
   stamp: string
   root: string
   percent: number | null
@@ -36,7 +38,9 @@ export function stampOf(ms: number): { file: string; label: string } {
 }
 
 export const noteDir = (root: string): string => `${root}/.claude/handoff`
-export const notePath = (root: string, ms: number): string => `${noteDir(root)}/${stampOf(ms).file}.md`
+// A compaction's notes get a name of their own, so they never overwrite a handoff written the same minute.
+export const notePath = (root: string, ms: number, isCompaction = false): string =>
+  `${noteDir(root)}/${stampOf(ms).file}${isCompaction ? '-compact' : ''}.md`
 
 // What the person typed, newest last: tool results and the engine's tagged rows (`<command-name>`) are not goals.
 export function goalsOf(messages: readonly SessionMessage[]): string[] {
@@ -68,7 +72,8 @@ function section(heading: string, body: readonly string[]): string[] {
 
 export function buildNote(facts: NoteFacts): string {
   const says = words()
-  const head = [`# ${says.noteTitle(facts.stamp)}`, '', `${says.noteRepo}: ${facts.root}`]
+  const title = facts.isCompaction === true ? says.compactTitle(facts.stamp) : says.noteTitle(facts.stamp)
+  const head = [`# ${title}`, '', `${says.noteRepo}: ${facts.root}`]
   if (facts.percent !== null) head.push(says.noteContext(facts.percent))
   const git = facts.git.length === 0 ? [] : ['```', ...capped(facts.git, GIT_LINES_MAX), '```']
   const lines = [

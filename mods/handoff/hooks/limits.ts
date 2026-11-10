@@ -15,6 +15,12 @@ export const SNOOZE_POINTS = 10
 
 // A note older than this is not handed to a new conversation.
 export const MAX_NOTE_AGE_MS = 24 * 60 * 60 * 1000
+// The notes kept on disk and listed in the pane: pruned after a week, at most this many.
+export const NOTES_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000
+export const NOTES_MAX = 12
+// The one question comes this many points before auto-compaction fires, if that is under the setting.
+export const AUTO_LEAD_POINTS = 5
+export const TOKENS_PER_K = 1000
 // The user prompts the note quotes as the goal, newest last, each cut to this many characters.
 export const GOAL_PROMPTS = 3
 export const GOAL_CHARS = 280

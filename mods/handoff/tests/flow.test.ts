@@ -4,7 +4,7 @@ import { bandOf, buttonsOf, hubCardOf, measure, modz, newWorld, said, start, stu
 
 // The band card from the threshold on: ask, "Not now", compaction, a written note and a failed one, on both surfaces.
 
-const ASK = ['handoff-write', 'handoff-compact', 'handoff-snooze']
+const ASK = ['handoff-compact', 'handoff-write', 'handoff-snooze']
 const NOTE = /^\/w\/\.claude\/handoff\/\d{4}-\d{2}-\d{2}-\d{4}\.md$/
 
 for (const surface of ['terminal', 'desktop'] as const) {
@@ -44,7 +44,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(buttonsOf(await band.drawn())).toEqual(ASK)
   })
 
-  test(`${surface}: "Compact instead" compacts and the ask is done until the fill climbs again`, async ($: any, on: any) => {
+  test(`${surface}: "Compact now, keep notes" compacts; the ask is done until the fill climbs again`, async ($: any, on: any) => {
     const world = newWorld()
     stub(on, world)
     await start($, surface)
@@ -52,13 +52,13 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const band = await $.ui.mount(bandOf(surface))
     await band.press({ key: 'handoff-compact' })
     expect(world.compacts).toBe(1)
-    expect(buttonsOf(await band.drawn())).toEqual([])
+    expect(buttonsOf(await band.drawn())).toEqual(['handoff-restore', 'handoff-forget'])
     await measure($, 30)
     await measure($, 81)
     expect(buttonsOf(await band.drawn())).toEqual(ASK)
   })
 
-  test(`${surface}: "Write handoff" writes the note, keeps it, and the card says where`, async ($: any, on: any) => {
+  test(`${surface}: "Hand off to a fresh chat" writes the note, keeps it, and the card says where`, async ($: any, on: any) => {
     const world = newWorld({ messages: [said('user', 'fix the login form'), said('assistant', 'on it')] })
     stub(on, world)
     await start($, surface)
@@ -143,7 +143,7 @@ test('Turkish: the card and the hub line speak Turkish', { plugins: [modz] }, as
   await measure($, 82)
   const band = await $.ui.mount(bandOf('terminal'))
   expect(await band.find({ text: 'Bağlam %82 dolu' })).toBeDefined()
-  expect(await band.find({ type: 'Button', text: 'Devir notu yaz' })).toBeDefined()
+  expect(await band.find({ type: 'Button', text: 'Temiz bir sohbete devret' })).toBeDefined()
   expect((await hubCardOf($)).detail).toBe('Bağlam %82')
 })
 

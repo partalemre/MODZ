@@ -4,11 +4,12 @@ import { reasonOf } from './io'
 import type { Io } from './io'
 import { PROCESS_TIMEOUT_MS, SUMMARY_MAX_TOKENS, SUMMARY_MODEL, SUMMARY_TIMEOUT_MS } from './limits'
 import type { Settings } from './limits'
-import { SUMMARY_SYSTEM, buildNote, cleanSummary, goalsOf, noteDir, notePath, openSteps, relativeTo, stampOf, transcriptOf } from './note'
+import { SUMMARY_SYSTEM, buildNote, cleanSummary, goalsOf, notePath, openSteps, relativeTo, stampOf, transcriptOf } from './note'
+import { addEntry } from './notes'
 import { repoOf, saveNote } from './state'
-import type { HandoffNote, PlanTask } from '../types'
+import type { HandoffNote, NoteEntry, PlanTask } from '../types'
 
-// Writing a handoff: the deterministic facts first, then at most one Haiku call for the summary. Whatever fails
+// Writing a note: the deterministic facts first, then, for a handoff only, at most one Haiku call for the summary. Whatever fails
 // on the way (git, the plan, the model) leaves its part out; only the file write itself can fail the note.
 
 async function gitLines(io: Io, root: string): Promise<string[]> {
@@ -66,31 +67,44 @@ async function messagesOf(io: Io): Promise<readonly SessionMessage[]> {
   }
 }
 
-// Builds, writes and keeps the note; rejects only when the file could not be written.
-export async function writeHandoff(io: Io, settings: Settings): Promise<HandoffNote> {
+type NoteMade = { repo: string; path: string; text: string; at: number }
+type NoteInput = { messages: readonly SessionMessage[]; summary: string | null; isCompaction: boolean }
+
+// Builds and writes a note's file: the deterministic facts, and the summary when there is one.
+async function writeNoteFile(io: Io, input: NoteInput): Promise<NoteMade> {
+  const { messages, summary, isCompaction } = input
   const root = await io.root()
   const now = await io.now()
-  const messages = await messagesOf(io)
-  const summary = settings.isSummarizing ? await summarize(io, messages) : null
   const text = buildNote({
-    stamp: stampOf(now).label, root, percent: await io.get('percent'), goals: goalsOf(messages), steps: await planSteps(io),
+    isCompaction, stamp: stampOf(now).label, root, percent: await io.get('percent'), goals: goalsOf(messages), steps: await planSteps(io),
     files: (await io.get('files')).map(path => relativeTo(root, path)), git: await gitLines(io, root),
     lastError: await io.get('lastError'), summary,
   })
   // Kept in the main repo, so the note outlives a worktree and the next session in any of them finds it.
   const repo = await repoOf(io)
-  const path = notePath(repo, now)
+  const path = notePath(repo, now, isCompaction)
   await io.writeFile(path, text)
-  const note: HandoffNote = { path, root: repo, text, at: now, writtenBy: await io.sessionId(), isInjectOn: true, consumedBy: null, isSummarized: summary !== null }
+
+  return { repo, path, text, at: now }
+}
+
+// Builds, writes and keeps the handoff for the next chat; rejects only when the file could not be written.
+export async function writeHandoff(io: Io, settings: Settings): Promise<HandoffNote> {
+  const messages = await messagesOf(io)
+  const summary = settings.isSummarizing ? await summarize(io, messages) : null
+  const { repo, path, text, at } = await writeNoteFile(io, { messages, summary, isCompaction: false })
+  const note: HandoffNote = { path, root: repo, text, at, writtenBy: await io.sessionId(), isInjectOn: true, consumedBy: null, isSummarized: summary !== null }
   await saveNote(io, note)
+  await addEntry(io, repo, { path, at, kind: 'handoff', text })
 
   return note
 }
 
-// The note file goes too, but only the one this mod wrote, inside its own folder.
-export async function deleteNote(io: Io, note: HandoffNote): Promise<void> {
-  const isOurs = note.path.startsWith(`${noteDir(note.root)}/`) && note.path.endsWith('.md') && !note.path.includes('/../')
-  if (!isOurs) return
-  const out = await io.run(['rm', '-f', '--', note.path], { timeoutMs: PROCESS_TIMEOUT_MS })
-  if (out.exitCode !== 0) io.log(`note file kept (rm exited ${out.exitCode})`)
+// The working notes a compaction would otherwise take with it: no model call, never the next chat's handoff.
+export async function writeWorkingNotes(io: Io, trigger: string): Promise<NoteEntry> {
+  const { repo, path, text, at } = await writeNoteFile(io, { messages: await messagesOf(io), summary: null, isCompaction: true })
+  const entry: NoteEntry = { path, at, kind: 'compact', trigger, text }
+  await addEntry(io, repo, entry)
+
+  return entry
 }

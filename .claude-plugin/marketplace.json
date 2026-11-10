@@ -115,7 +115,7 @@
     {
       "name": "handoff",
       "source": "./mods/handoff",
-      "description": "Before the context fills, writes a handoff note; your next chat in this repo is offered it (Continue from handoff). Notes live in the main repository."
+      "description": "Saves working notes before every compaction and offers them back after with one press; near auto-compaction it asks once: compact now, or hand off to a fresh chat."
     },
     {
       "name": "pr-card",

@@ -71,6 +71,9 @@ Both variables go in the `env` block of `~/.claude/settings.json`:
 
 The panel opens beside the chat when a session starts. If a mod does not open its pane, its row says so instead of doing nothing. Each mod reports one honest line: what it measured, never a guess. One click opens that mod's own pane next to the panel.
 
+- **Now.** The top of the panel shows what is happening without opening anything: a failing or warning mod first, each running agent with its task, time and cost, the plan's current step, and your usage. Press a line for the detail.
+- **Commands and settings.** `/modz help` prints every installed mod's slash commands and the options it has under `/plugin`. The Mods pane shows the same, and for each mod you have not installed, the line that installs it with a Copy button.
+
 ## Every agent gets a face.
 
 <img src="docs/img/agents.jpg" alt="The Agents pane: three subagents as pixel crabs, each with its task, progress, cost and time">
@@ -101,18 +104,18 @@ The eight in **bold** are the core set. Everything else is an optional extra.
 | | **`filetree`** | Files Claude touched this turn, what it is doing now, git status. Does nothing until its pane is opened; before that, one `git status` at session start and one per turn for the panel line |
 | | **`plan-steps`** | The plan's steps as Claude works through them; the plan comes back after `/clear` and compaction, and a turn that ends with steps open offers to go on (it waits while background agents or commands still run) |
 | | `projects` | Every project in one place: percent, plans, where it stopped, tokens and agents, in the pane and on a full board |
-| | `handoff` | Before the context fills, writes a handoff note; your next chat in the repo is offered it (**Continue from handoff**). Notes live in the main repository, so a worktree finds them too |
+| | `handoff` | Saves working notes before every compaction (yours, automatic or idle) with no model call, and offers them back after with one press. Near auto-compaction it asks once: compact now, or hand off to a fresh chat; your next chat in the repo is offered the note (**Continue from handoff**). Notes live in the main repository, so a worktree finds them too |
+| | `replay-theater` | Replays the last turn's edits step by step, and earlier turns and past sessions. Opens from `/replay` or the MODZ row; changes made by shell commands are named as not replayable |
 | | `transceiver` | Chat and zero-token agent questions between your own computers; team rooms across accounts are experimental (beta; from its own repo) |
 | **Safety** | **`blast-radius`** | Holds a shell command that would lose work (`rm -rf`, `find -delete`, `git reset`/`checkout`/`clean`/`stash drop`/`branch -D`, force or deleting pushes, writes over files, docker, terraform, kubectl and database drops) and shows exactly what it would lose; a command that loses nothing runs, and one nobody can answer (a subagent, `claude -p`) is refused at once. Also holds an edit to a file another chat just changed, and checks other commands against your `.claude/house-rules.md` |
 | | **`secret-guard`** | Stops keys and tokens in writes, edits, `git add` and commits, including text a Bash command writes with `echo`, `printf`, `tee` or a heredoc; covers Slack, Google, GitLab, Hugging Face, SendGrid, Supabase, Stripe, database URLs and more. If the guard itself fails, the write is blocked. Keeps pasted keys out of the chat as placeholders; `/rec` masks keys, env values and e-mail addresses on screen |
 | | **`checkpoint`** | A silent git snapshot before each turn's first write (a file tool, or a Bash command that may write); undo a turn. Each session in each worktree sees only its own checkpoints; undo also restores the staging area. Git-ignored files such as `.env` are not covered |
 | | `test-badge` | After you allow it once per folder (it shows the exact command), runs tests and lint in the package you edited and shows the result; a failed run is offered to your next prompt; watches your PR's GitHub CI |
 | | `pr-card` | A card in the conversation for a PR Claude opens, also one the branch already has or the GitHub MCP opened. It runs no poller of its own. In the terminal it shows checks, review and merge state; on the desktop it adds the files with the largest changes |
-| | `replay-theater` | Replays the last turn's edits step by step, and earlier turns and past sessions. Opens from `/replay` or the MODZ row; changes made by shell commands are named as not replayable |
-| **Meter** | `session-budget` | A spend budget per session, with a stop at 100%; asks before new subagents when the 5-hour window runs low. Without a 5-hour reading it uses the weekly window; on a subscription, dollars are at list price |
-| | `cache-tax` | Prices a cold send, a model change included, and can keep the prompt cache warm through breaks. Keepwarm starts only from `/keepwarm` or the card's Pay and send, and stops after 12 pings |
-| | **`hud-pro`** | One line with the 5-hour and 7-day limits, context and cost; when the 5-hour window fills; what fills the context and how many turns are left; 7 and 30 days of usage history. The band above the prompt shows alerts only on the desktop and the full line in the terminal (`/hud band auto\|always\|alerts`) |
-| | `effort-router` | Shows each turn's effort and model; can send light prompts at low effort. A short follow-up goes at your own effort; a lowered turn says so, with a button to re-send at yours |
+| **Meter** | `session-budget` | A spend budget per session, with a stop at 100%; asks before new subagents when the 5-hour window runs low. Without a 5-hour reading it uses the weekly window; on a subscription, dollars are at list price. With `hud-pro` installed it shows as a section of the Usage pane |
+| | `cache-tax` | Prices a cold send, a model change included, and can keep the prompt cache warm through breaks. Keepwarm starts only from `/keepwarm` or the card's Pay and send, and stops after 12 pings. With `hud-pro` installed it shows as a section of the Usage pane |
+| | **`hud-pro`** | One line with the 5-hour and 7-day limits, context and cost; when the 5-hour window fills; what fills the context and how many turns are left; 7 and 30 days of usage history. The band above the prompt shows alerts only on the desktop and the full line in the terminal (`/hud band auto\|always\|alerts`). Its pane is the one place for usage: limits, then **Pace**, each turn's share of the 5-hour window (the weekly one if there is no 5-hour reading), the burn rate, and when the window fills at this pace compared with when it resets; with too few readings it says so instead of guessing. One quiet line above the prompt appears only when a turn takes 10 or more points of the 5-hour window (3 or more of the weekly one) or the pace would fill the window before it resets |
+| | `effort-router` | Shows each turn's effort and model; can send light prompts at low effort. A short follow-up goes at your own effort; a lowered turn says so, with a button to re-send at yours. With `hud-pro` installed it shows as a section of the Usage pane |
 | **Comfort** | `done-ping` | A notification when a long turn ends or Claude waits on you, a line when another session waits on you, optional sound packs. On the desktop it stays quiet unless tests failed or the turn ended on an error |
 | | `reflect-mod` | Saves corrections worth keeping to your CLAUDE.md (this project by default); `/reflect-undo` takes the last one back out; `/mine` turns friction that repeats across past chats into ideas |
 | | `skins` | Themes for the transcript, switched live with `/skin`, and living ASCII scenes above the prompt. It never cuts output short and leaves MCP tool rows as they are |
@@ -123,7 +126,7 @@ The eight in **bold** are the core set. Everything else is an optional extra.
 
 | Command | Mod | What it does |
 |---|---|---|
-| `/modz` | `modz` | Opens the MODZ panel |
+| `/modz [help]` | `modz` | Opens the MODZ panel; `help` lists every installed mod's commands and settings |
 | `/agents-info` | `savvy-progress` | Opens or closes the Agents pane |
 | `/filetree [path]` | `filetree` | Opens the file tree |
 | `/steps` | `plan-steps` | Opens the plan steps pane |
@@ -140,7 +143,7 @@ The eight in **bold** are the core set. Everything else is an optional extra.
 | `/keepwarm [6h\|always\|off\|status]` | `cache-tax` | Starts, stops or shows the cache keepwarm |
 | `/cache-tax [status\|guard warn\|guard refuse]` | `cache-tax` | Shows the cache state; sets the cold-send guard |
 | `/hud` | `hud-pro` | Shows or hides the HUD line; `full` opens limit details; `band auto\|always\|alerts` picks the band |
-| `/effort-router` | `effort-router` | Opens the Effort pane |
+| `/effort-router` | `effort-router` | Opens its section of the Usage pane (its own pane without `hud-pro`) |
 | `/done-ping` | `done-ping` | Turns notifications on or off; `test` sends one |
 | `/reflect-queue` | `reflect-mod` | Lists the rules found here and their state |
 | `/reflect-pause` | `reflect-mod` | Pauses or resumes the check of your prompts |
@@ -203,7 +206,7 @@ Jev is TypeSafe's classifier: set `MODZ_JUDGE=jev` and `TYPESAFE_API_KEY` to use
 
 The panel lists any mod that reports to it, with no change to MODZ. Your mod talks to it through `$.state`:
 
-1. **Report a line.** Write your own `{ plugin: '<your-mod>', key: 'hub' }` value: `{ pane, detail, tone, at }`, plus your row's `title`, `hint`, `icon` (a kit icon name), `section` (`work`, `safety` or `meter`) and an optional `badge`. `tone` is `idle`, `live`, `ok`, `warn` or `bad`; write it only when the text changes.
+1. **Report a line.** Write your own `{ plugin: '<your-mod>', key: 'hub' }` value: `{ pane, detail, tone, at }`, plus your row's `title`, `hint`, `icon` (a kit icon name), `section` (`work`, `safety` or `meter`) and an optional `badge`. `tone` is `idle`, `live`, `ok`, `warn` or `bad`; write it only when the text changes. A card may also carry `live: { lines: [{ label, since?, value? }], more? }` to put running work on the panel itself; give `since` (a start time in ms) and the panel tells the elapsed time.
 2. **Open on request.** Hook `state.set` on `{ plugin: 'modz', key: 'open' }`; when its `pane` is yours, call `$.ui.open({ id, title, focus: true })`.
 3. **Offer the way back.** While `{ plugin: 'modz', key: 'isOn' }` is `true`, draw `HomeButton` from [`kit/home.tsx`](kit/home.tsx) first in your pane; its press writes your own `{ plugin: '<your-mod>', key: 'home' }` as `{ at }`.
 

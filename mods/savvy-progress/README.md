@@ -13,7 +13,7 @@ It was built for [savvy-flow](../savvy-flow) and works with any subagent.
 
 Or in one step: `/plugin install savvy-progress --marketplace partalemre/MODZ`.
 
-The MODZ panel (`modz`) shows its line here, for example `Tasks 3/4 · 2 running`.
+The MODZ panel (`modz`) shows its line here, for example `Tasks 3/4 · 2 running`. While agents run, the panel also lists them on its own face without opening this pane: each one's task, how long it has run and its cost once it has one, three by name and the rest as `+2 more`. The mod writes that only when its words change (an agent starts or ends, a cost moves by a cent); the running time is told by the panel, so it costs no write.
 
 ## What you see
 
@@ -62,7 +62,7 @@ The pane lists the engine's own agent list (refreshed every second), so an agent
 
 ## Limits
 
-- Cost is a rough estimate from token counts and a built-in price table (list prices as of 2026-10-10), not a bill. Cache writes are priced at the 1-hour rate, which Claude Code writes on a subscription; 5-minute writes are overestimated.
+- Cost is a rough estimate from token counts and a built-in price table (list prices as of 2026-11-03, the same rows as `cache-tax`), not a bill. A model the table does not list shows no cost rather than a guessed one. Cache writes are priced at the 1-hour rate, which Claude Code writes on a subscription; 5-minute writes are overestimated.
 - The percentage of an agent that reports nothing is an estimate and is marked `~`.
 - A permission ask counts as waiting from the dialog until its tool call finishes, so a long command you approved still reads `waiting` until it ends (the engine raises no event for the answer itself). A turn's end always clears it.
 - Other chats show up only in sessions that run this mod. A session that is suspended (a sleeping laptop) drops off after 2 minutes and comes back on its next beat.

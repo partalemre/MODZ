@@ -2,8 +2,10 @@
 and the group that call folds into must draw the card over the Code tab's control protocol. A small driver plugin
 makes the call through `$.tool.call`, so the check needs no sign-in and spends no model turn.
 
-The card must sit beside what lies beneath it (a skin's row, the engine's fold), keep its Refresh handle across a
-redraw, and that press, on a tree drawn before the redraw, must reach gh.
+On the desktop the card shows only what the app's own PR pane lacks: the files with the largest changes, largest
+first, and none of the checks, review or merge state. It must sit beside what lies beneath it (a skin's row, the
+engine's fold), keep its Refresh handle across a redraw, and that press, on a tree drawn before the redraw, must
+reach gh.
 Usage: python3 -I tools/desk/check_pr_card.py [repo]   (exit 1 on any failure)
 """
 import json
@@ -33,8 +35,8 @@ DRIVER = '''export const register = on => {
 '''
 PRESS_WAIT_S = 8
 VIEW = {
-    'title': 'Add the checkout page', 'state': 'OPEN', 'isDraft': False, 'additions': 120, 'deletions': 8, 'changedFiles': 1,
-    'files': [{'path': 'src/checkout.tsx', 'additions': 120, 'deletions': 8}],
+    'title': 'Add the checkout page', 'state': 'OPEN', 'isDraft': False, 'additions': 123, 'deletions': 8, 'changedFiles': 2,
+    'files': [{'path': 'src/a.ts', 'additions': 3, 'deletions': 0}, {'path': 'src/checkout.tsx', 'additions': 120, 'deletions': 8}],
     'statusCheckRollup': [{'name': 'unit tests', 'status': 'COMPLETED', 'conclusion': 'FAILURE'}],
     'reviewDecision': 'APPROVED', 'mergeable': 'MERGEABLE', 'mergeStateStatus': 'CLEAN',
 }
@@ -115,11 +117,11 @@ def main(repo):
     print('  drawn by', first.get('drawn_by'))
     pics = svgs(tree)
     alt = next((pic.get('alt', '') for pic in pics if 'acme/shop #7' in pic.get('alt', '')), '')
-    # The person's MODZ_LANG reaches this engine, so the card may read in either language.
-    if not any(word in alt for word in ('1 failed', '1 başarısız')):
-        failures.append(f'the card says {alt!r}; drawn by {first.get("drawn_by")}')
-    if not any('unit tests' in pic.get('source', '') for pic in pics):
-        failures.append('the failing check is not on the card')
+    # The person's MODZ_LANG reaches this engine, so the count's word may be in either language: the names are not.
+    if not 0 <= alt.find('+123 −8') < alt.find('checkout.tsx') < alt.find('a.ts'):
+        failures.append(f'the card says {alt!r}, want the counts, then checkout.tsx before a.ts; drawn by {first.get("drawn_by")}')
+    if any('unit tests' in pic.get('source', '') for pic in pics):
+        failures.append('the card repeats a check the app\'s own PR pane already shows')
     held = dict(walk(tree, 'Button'))
     key = f'r-{URL}'
     if key not in held:

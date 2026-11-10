@@ -11,7 +11,7 @@ Shows the steps of the plan Claude is working through, and which step it is on. 
 
 Or in one step: `/plugin install plan-steps --marketplace partalemre/MODZ`.
 
-The MODZ panel (`modz`) shows its line here, for example `3 of 9 steps`, `5 steps · not started` or `3 of 9 steps · waiting`.
+The MODZ panel (`modz`) shows its line here, for example `3 of 9 steps`, `5 steps · not started` or `3 of 9 steps · waiting`. While the plan is under way the panel also names the current step under that line, with how long it has run.
 
 ## What you see
 

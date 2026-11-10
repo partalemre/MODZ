@@ -185,6 +185,29 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
   tutamacı korur, eski ağaç da basılabilir kalır. Değişmeyen değer `$.state`'e yeniden yazılmaz (`kit/same.ts`).
 - **Özet kartı:** her mod kendi `{ plugin: '<mod>', key: 'hub' }` değerine `HubCard` yazar; ana panel
   `on('state.set', { key: 'hub' }, …)` ile hepsini toplar. Yalnızca gösterilen metin değişince yazılır.
+- **Canlı satırlar (`live`):** kartın isteğe bağlı alanı; modun o an çalışan işini hub'ın kendi yüzüne koyar, panel
+  değiştirmeye gerek kalmaz. `lines` en fazla 4 satırdır (`label` ≤60: ajanın görevi, planın şimdiki adımı; `value` ≤16:
+  ölçülmüş kısa bir gerçek, "$0,12"), `more` satırlara sığmayanların sayısıdır ("+2 tane daha"). Süre **yazılmaz**:
+  mod `since` (başlangıç, ms) verir, geçen süreyi hub çizerken hesaplar. Böylece işleyen saat modda tek bir `$.state`
+  yazımına mal olmaz; kart yine yalnızca gösterdiği metin değişince yazılır (ajan başladı/bitti, maliyet kuruş
+  değiştirdi, adım değişti). Bugün yazanlar: savvy-progress (çalışan ajanlar: ilk 3 ve `more`), plan-steps (şimdiki
+  adım). Bozuk satır atılır, satırsız `live` yok sayılır (`hub.ts: cardOf`).
+- **"Şu an" alanı:** hub'ın başında, bölümlerin üstünde (`now.ts`). Sıra: `bad` kartlar, `warn` kartlar (tutulan ya
+  da başarısız olan en üstte), `live` taşıyan kartlar, en sonda kullanım (`usage` paneli, hud-pro'nun kartı). Her biri
+  modun kendi satırıdır, bölümünden yukarı **taşınmış** (aynı anahtarlar: `row-<pane>`, `open-<pane>`), altında canlı
+  satırları. Taşınan satır bölümünde bir daha çizilmez; satırı kalmayan bölümün başlığı da çizilmez. Her satıra basış
+  modun panelini ayrıntı için açar. Alan boşken çizilmez; düzenleme sırasında da çizilmez. Süre metni
+  bir dakikanın altında 10 sn'lik adımlarla söylenir ve hub yalnızca `since` taşıyan bir kart varken kendi 10 sn'lik
+  vuruşuyla yeniden çizilir (`cards.ts`; yazım yok). Hiçbir şey çalışmıyorken vuruş da yoktur.
+- **Başka panelde ağırlanan mod:** hud-pro çalışırken `{ plugin: 'hud-pro', key: 'host' }` değerine `true` yazar;
+  session-budget, cache-tax ve effort-router o zaman bölümlerini Kullanım paneline verir ve hub kartı yazmaz. Hub
+  bu değeri çizerken okur ve bu üç modun satırını (bilinen Efor satırı dahil, eski bir kartı kalmış olsa bile)
+  çizmez (`hub.ts: withHosted`).
+- **Komut ve ayar dizini:** `/modz help` ve katalog panelinin "Komutlar ve ayarlar" bölümü, kurulu her modun slash
+  komutlarını (`$.command.list()`; motor komutun hangi eklentiden geldiğini söyler, tablo tutulmaz) ve ayarlarının
+  yerini (manifest'teki `userConfig` anahtarları, `/plugin` altında) listeler. Kurulu olmayan her mod için katalog
+  tam kurulum satırını (`/plugin install <mod>@modz`) seçilebilir metin ve "Kopyala" düğmesiyle verir; çekirdek set
+  önce: modz, savvy-progress, plan-steps, filetree, blast-radius, secret-guard, checkpoint, hud-pro (`guide.ts`).
 
 - **Eve dönüş:** hub çalıştıkça `{ plugin: 'modz', key: 'isOn' }` `true`'dur. Hub'ın açtığı her panel bunu çizerken
   okur ve açıksa ağacın başına `HomeButton` (`kit/home.tsx`, "← MODZ") koyar. Basınca mod kendi
@@ -204,8 +227,11 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
 
 ```ts
 type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'   // lo · Iris · Moss · Amber · Flare
+type HubLine = { label: string; since?: number; value?: string }   // ne çalışıyor · ne zamandan beri (ms) · kısa gerçek
+type HubLive = { lines: HubLine[]; more?: number }
 type HubCard = { pane: string; detail: string; tone: HubTone; at: number
-                 title?: string; hint?: string; icon?: string; section?: 'work' | 'safety' | 'meter'; badge?: string }
+                 title?: string; hint?: string; icon?: string; section?: 'work' | 'safety' | 'meter'; badge?: string
+                 live?: HubLive }
 ```
 
 | pane | mod | panel başlığı |

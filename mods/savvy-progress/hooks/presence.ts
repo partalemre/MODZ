@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { HomeCrab, SelfChat } from '../types'
-import { hubCardOf } from './hub'
+import { hubCardOf, isShowing } from './hub'
 import { HEARTBEAT_MS, KEY_PREFIX, SCAN_MS, beatOf, blankSelf, bodyOf, keyOf, projectOf, scanOf, settle, sharedOf, titleOf, withAsk, withoutAsk } from './chats'
 import { TURNS_KEY, ended, rested, restingCrab, started, turnsFrom } from './mood'
 import type { TurnEnd } from './mood'
@@ -87,11 +87,10 @@ async function scan($: EngineInterface): Promise<void> {
 // writes come back under this plugin's own frame, where its own hooks are not run again.
 async function syncHub($: EngineInterface): Promise<void> {
   const sources = { flow: await read($, flow), agents: await read($, agents), job: await read($, job), tasks: await read($, tasks) }
-  const { detail, tone } = hubCardOf({ ...sources, chats: await read($, chats) })
-  const prev = await read($, hub)
-  if (prev.detail === detail && prev.tone === tone) return
+  const shown = hubCardOf({ ...sources, chats: await read($, chats) })
+  if (isShowing(await read($, hub), shown)) return
   const at = await $.clock.now()
-  await update($, hub, () => ({ pane: HUB_PANE, detail, tone, at }))
+  await update($, hub, () => ({ pane: HUB_PANE, ...shown, at }))
 }
 
 async function moveCrab($: EngineInterface, fn: (prev: HomeCrab) => HomeCrab): Promise<void> {

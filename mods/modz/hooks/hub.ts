@@ -1,6 +1,6 @@
 // The hub's model: which panes it lists, how a mod's reported card reads, and what leads the head.
 // Pure: no `$`, so the tests and both surfaces share it.
-import type { HubCard, HubTone } from '../types'
+import type { HubCard, HubLine, HubLive, HubTone } from '../types'
 import type { Market } from './catalog'
 import { ICON_NAMES } from './kit/icons'
 import type { IconName } from './kit/icons'
@@ -40,9 +40,9 @@ const BASES: EntryBase[] = [
   { pane: 'files', mod: 'filetree', icon: 'folder', role: 'read', section: 'work' },
   { pane: 'plan', mod: 'plan-steps', icon: 'list', role: 'plan', section: 'work' },
   { pane: 'transceiver', mod: 'transceiver', icon: 'bell', role: 'read', section: 'work', isBeta: true },
+  { pane: 'replay', mod: 'replay-theater', icon: 'rewind', role: 'plan', section: 'work' },
   { pane: 'tests', mod: 'test-badge', icon: 'check', role: 'ok', section: 'safety' },
   { pane: 'checkpoints', mod: 'checkpoint', icon: 'bookmark', role: 'ok', section: 'safety' },
-  { pane: 'replay', mod: 'replay-theater', icon: 'rewind', role: 'plan', section: 'safety' },
   { pane: 'usage', mod: 'hud-pro', icon: 'gauge', role: 'warn', section: 'meter' },
   { pane: 'effort', mod: 'effort-router', icon: 'bolt', role: 'run', section: 'meter' },
   { pane: 'handoff', mod: 'handoff', icon: 'flag', role: 'plan', section: 'meter' },
@@ -76,6 +76,30 @@ const PANE_ID = /^[\w-]{1,64}$/
 const textOf = (value: unknown, max: number): string | undefined =>
   typeof value === 'string' && value.trim() !== '' ? value.trim().slice(0, max) : undefined
 
+// How many live lines a card may bring, and how long a line's value may be.
+const LINES_MAX = 4
+const VALUE_MAX = 16
+
+function lineOf(value: unknown): HubLine | null {
+  if (typeof value !== 'object' || value === null) return null
+  const line = value as Partial<Record<keyof HubLine, unknown>>
+  const label = textOf(line.label, DETAIL_MAX)
+  if (label === undefined) return null
+  const short = textOf(line.value, VALUE_MAX)
+
+  return { label, ...(typeof line.since === 'number' && Number.isFinite(line.since) ? { since: line.since } : {}), ...(short === undefined ? {} : { value: short }) }
+}
+
+// A card's live lines as the hub draws them: the well-formed ones, a few at most; none leaves the card without.
+function liveOf(value: unknown): HubLive | undefined {
+  if (typeof value !== 'object' || value === null) return undefined
+  const live = value as { lines?: unknown; more?: unknown }
+  const lines = (Array.isArray(live.lines) ? live.lines : []).map(lineOf).filter((line): line is HubLine => line !== null).slice(0, LINES_MAX)
+  if (lines.length === 0) return undefined
+
+  return typeof live.more === 'number' && Number.isInteger(live.more) && live.more > 0 ? { lines, more: live.more } : { lines }
+}
+
 // A card as another mod wrote it: anything malformed is dropped rather than drawn; a row's own words are kept short.
 export function cardOf(value: unknown): HubCard | null {
   if (typeof value !== 'object' || value === null) return null
@@ -87,6 +111,7 @@ export function cardOf(value: unknown): HubCard | null {
     icon: textOf(card.icon, TITLE_MAX),
     section: SECTIONS.includes(card.section as Section) ? (card.section as Section) : undefined,
     badge: textOf(card.badge, BADGE_MAX),
+    live: liveOf(card.live),
   }
   const named = Object.fromEntries(Object.entries(own).filter(([, v]) => v !== undefined))
 
@@ -113,6 +138,14 @@ export function presenceOf(market: Market): (mod: string) => Presence {
     return isEnabled === true ? 'listed' : 'unlisted'
   }
 }
+
+// The meter mods hud-pro's Usage pane hosts while it runs: each draws its section there and has no row of its own.
+const HOSTED_IN_USAGE = new Set(['session-budget', 'cache-tax', 'effort-router'])
+
+// hud-pro says it hosts under `{ plugin: 'hud-pro', key: 'host' }`; a hosted mod then reads as switched off to the
+// rows, whether or not a card of its own is still around.
+export const withHosted = (presence: (mod: string) => Presence, isHosting: boolean) => (mod: string): Presence =>
+  isHosting && HOSTED_IN_USAGE.has(mod) ? 'off' : presence(mod)
 
 // The terminal's row hotkeys: the digits in keyboard order, so a tenth row still gets one.
 const HOTKEYS = '1234567890'

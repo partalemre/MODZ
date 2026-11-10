@@ -3,13 +3,15 @@
 // the row is the control, its hover and its press one surface. "Customize" turns the rows into Up and Hide buttons
 // at their right edge, and lists the hidden rows with Show. The catalog ("Mods") is a pane of its own (register.tsx).
 import type { Drawing } from './draw'
-import type { Cue } from './kit/motion'
-import type { HubTone } from '../types'
 import type { Focus, HubRow, Section } from './hub'
 import { SECTIONS } from './hub'
+import { firstRun, firstRunRow } from './first-run'
 import { hubHeadSvg, hubRowSvg, sectionSvg } from './hub-draw'
 import { GLYPH } from './kit/icons'
 import { PressRow } from './kit/press'
+import type { NowRow } from './now'
+import { detailText, GLYPH_COLOR, nowDesktop, nowTerminal } from './now-pane'
+import type { NowTools } from './now-pane'
 import type { Theme } from './theme'
 import type { Stable } from './kit/stable'
 import { hubWords } from './words'
@@ -30,6 +32,8 @@ export type HubView = {
   rows: HubRow[]
   hidden: HubRow[]
   focus: Focus | null
+  // What fails, waits or runs now, drawn above the sections (now.ts); empty while nothing does.
+  now: NowRow[]
   meta: string
   surface: string
   columns: number
@@ -98,12 +102,23 @@ function editBar(ui: Ui, view: HubView) {
   )
 }
 
+// The area is left out while customizing. A row lifted into it is that row, moved: it is not drawn in its section too.
+const nowRows = (view: HubView): NowRow[] => (view.isEditing ? [] : view.now)
+
+function sectionRows(view: HubView): HubRow[] {
+  const lifted = new Set(nowRows(view).map(item => item.row.entry.pane))
+
+  return view.rows.filter(row => !lifted.has(row.entry.pane))
+}
+
 type Group = { key: string; label: string; rows: HubRow[]; isHiddenGroup: boolean }
 
-// The sections that have rows, and while customizing the hidden rows as one more group at the end.
+// The sections that still have rows (one whose rows all stand in "Now" has no heading either), and while
+// customizing the hidden rows as one more group at the end.
 function groupsOf(view: HubView): Group[] {
   const words = hubWords()
-  const sections = SECTIONS.map(section => ({ key: section, label: words.sections[section], rows: inSection(view.rows, section), isHiddenGroup: false }))
+  const rows = sectionRows(view)
+  const sections = SECTIONS.map(section => ({ key: section, label: words.sections[section], rows: inSection(rows, section), isHiddenGroup: false }))
   const hidden = view.isEditing && view.hidden.length > 0 ? [{ key: 'hidden', label: words.hidden, rows: view.hidden, isHiddenGroup: true }] : []
 
   return [...sections, ...hidden].filter(group => group.rows.length > 0)
@@ -137,42 +152,54 @@ function pressRow(ui: Ui, view: HubView, opts: { box: string; key: string; drawi
   return PressRow(ui, { box: opts.box, key: opts.key, drawing: svg, onPress: () => view.actions.onOpen(pane) })
 }
 
+// One section: its label, then its rows, each pressed whole or, while customizing, under its buttons.
+function desktopGroup(ui: Ui, view: HubView, opts: { group: Group; pen: NowTools }) {
+  const { Box } = ui
+  const { group, pen } = opts
+  const { width, theme } = pen
+  const buttonRoom = view.isEditing ? EDIT_BUTTON_ROOM : 0
+  const panes = group.isHiddenGroup ? null : group.rows.map(row => row.entry.pane)
+  const eyebrow = pen.keep(`eyebrow-${group.key}`, { width, theme, label: group.label }, cue => sectionSvg({ width, theme, label: group.label, cue }))
+
+  return (
+    <Box key={`section-${group.key}`} flexDirection="column">
+      {pen.label(eyebrow, `eyebrow-${group.key}`)}
+      {group.rows.map(row => {
+        const pane = row.entry.pane
+        const built = pen.keep(`row-${pane}`, rowShows(row, { width, theme, buttonRoom }), cue => hubRowSvg({ width, theme, row, buttonRoom, cue }))
+        if (!view.isEditing && panes !== null) return pen.press({ box: `row-${pane}`, key: `open-${pane}`, drawing: built, pane })
+
+        return overlaid(ui, { key: `row-${pane}`, drawing: pen.label(built, `svg-${pane}`), controls: rowControls(ui, view, { row, panes }) })
+      })}
+    </Box>
+  )
+}
+
 function desktopTree(ui: Ui, view: HubView) {
   const { Box, Svg } = ui
   const width = hubWidth(view.columns)
-  const draw = (drawing: Drawing, key: string, drawnWidth: number) => (
-    <Svg key={key} source={drawing.source} alt={drawing.alt} width={drawnWidth} height={drawing.height} isInteractive />
-  )
-  const buttonRoom = view.isEditing ? EDIT_BUTTON_ROOM : 0
+  const { theme } = view
   // Each drawing's place in the opening cascade, top to bottom.
   let order = 0
-  const kept = (key: string, what: unknown, build: (cue: Cue) => Drawing) => {
-    const at = order++
+  const pen: NowTools = {
+    width,
+    theme,
+    keep: (key, what, build) => {
+      const at = order++
 
-    return view.stable.draw(key, what, phase => build({ phase, order: at }))
+      return view.stable.draw(key, what, phase => build({ phase, order: at }))
+    },
+    label: (drawing, key) => <Svg key={key} source={drawing.source} alt={drawing.alt} width={width} height={drawing.height} isInteractive />,
+    press: opts => pressRow(ui, view, { ...opts, width }),
   }
-  const head = kept('head', { width, theme: view.theme, meta: view.meta }, cue => hubHeadSvg({ width, theme: view.theme, meta: view.meta, cue }))
+  const head = pen.keep('head', { width, theme, meta: view.meta }, cue => hubHeadSvg({ width, theme, meta: view.meta, cue }))
 
   return (
     <Box flexDirection="column">
-      {draw(head, 'head', width)}
-      {groupsOf(view).map(group => {
-        const panes = group.isHiddenGroup ? null : group.rows.map(row => row.entry.pane)
-
-        return (
-          <Box key={`section-${group.key}`} flexDirection="column">
-            {draw(kept(`eyebrow-${group.key}`, { width, theme: view.theme, label: group.label }, cue => sectionSvg({ width, theme: view.theme, label: group.label, cue })), `eyebrow-${group.key}`, width)}
-            {group.rows.map(row => {
-              const shows = rowShows(row, { width, theme: view.theme, buttonRoom })
-              const built = kept(`row-${row.entry.pane}`, shows, cue => hubRowSvg({ width, theme: view.theme, row, buttonRoom, cue }))
-              const box = `row-${row.entry.pane}`
-              if (!view.isEditing && panes !== null) return pressRow(ui, view, { box, key: `open-${row.entry.pane}`, drawing: built, width, pane: row.entry.pane })
-
-              return overlaid(ui, { key: box, drawing: draw(built, `svg-${row.entry.pane}`, width), controls: rowControls(ui, view, { row, panes }) })
-            })}
-          </Box>
-        )
-      })}
+      {pen.label(head, 'head')}
+      {nowDesktop(ui, nowRows(view), pen)}
+      {groupsOf(view).map(group => desktopGroup(ui, view, { group, pen }))}
+      {firstRunRow(ui, view, pen)}
       {editBar(ui, view)}
     </Box>
   )
@@ -193,14 +220,6 @@ function terminalButtons(ui: Ui, view: HubView, opts: { row: HubRow; panes: stri
   const up = panes.indexOf(pane) > 0 ? [<Button key={`up-${pane}`} label={words.up} variant="secondary" onPress={() => view.actions.onMove({ pane, panes })} />] : []
 
   return [...up, <Button key={`hide-${pane}`} label={words.hide} variant="secondary" onPress={() => view.actions.onHide({ pane, isHidden: true })} />]
-}
-
-// As the desktop draws it (hub-draw.ts): the words plain unless failing; the glyph lit only for live, warn or bad.
-const GLYPH_COLOR: Partial<Record<HubTone, string>> = { live: 'claude', warn: 'warning', bad: 'error' }
-function detailText(ui: Ui, tone: HubTone, detail: string) {
-  const { Text } = ui
-
-  return tone === 'bad' ? <Text color="error" wrap="truncate">{detail}</Text> : <Text dimColor wrap="truncate">{detail}</Text>
 }
 
 function terminalRow(ui: Ui, view: HubView, opts: { row: HubRow; panes: string[] | null }) {
@@ -224,19 +243,24 @@ function terminalRow(ui: Ui, view: HubView, opts: { row: HubRow; panes: string[]
 
 function terminalTree(ui: Ui, view: HubView) {
   const { Box, Button, Text } = ui
+  // The area below the head says what leads; the head says it only while there is no area, and keeps its button.
+  const now = nowRows(view)
   const focus = view.focus
+  const said = now.length > 0 ? null : focus
   const words = hubWords()
 
   return (
     <Box flexDirection="column" rowGap={1}>
       <Box flexDirection="row" columnGap={2}>
         <Text color="claude" bold>MODZ</Text>
-        {focus === null ? <Text dimColor>{words.idleTitle}</Text> : <Text dimColor>{`${words.now} · ${focus.row.entry.title}`}</Text>}
-        {focus === null ? null : detailText(ui, focus.tone, focus.row.card?.detail ?? '')}
+        {focus === null ? <Text dimColor>{words.idleTitle}</Text> : null}
+        {said === null ? null : <Text dimColor>{`${words.now} · ${said.row.entry.title}`}</Text>}
+        {said === null ? null : detailText(ui, said.tone, said.row.card?.detail ?? '')}
         <Box flexGrow={1} />
         <Text dimColor>{view.meta}</Text>
       </Box>
       {focus === null || view.isEditing ? null : <Button key="open-focus" label={words.openPane(focus.row.entry.title)} variant="primary" onPress={() => view.actions.onOpen(focus.row.entry.pane)} />}
+      {nowTerminal(ui, now, row => terminalButtons(ui, view, { row, panes: [] }))}
       {groupsOf(view).map(group => {
         const panes = group.isHiddenGroup ? null : group.rows.map(row => row.entry.pane)
 
@@ -247,6 +271,7 @@ function terminalTree(ui: Ui, view: HubView) {
           </Box>
         )
       })}
+      {firstRun(ui, view)}
       {editBar(ui, view)}
     </Box>
   )

@@ -30,7 +30,8 @@ FAMILY_MAX = 3
 # Its own repo's mod, so this checkout does not hold it; the hub sees the real home's link and offers its row.
 SKIP_ROWS = {'open-transceiver'}
 SKIP_KEY = re.compile(r'modz-home|modz-toggle|estimate|judge|uninstall|disable|turn-off', re.I)
-SKIP_LABEL = re.compile(r'estimate|tahmin|commit|push|gönder|uninstall|kaldır|disable|kapat$', re.I)
+# "Close" shuts the pane the tour is walking, in either language (replay's rt-close): named once, not pressed.
+SKIP_LABEL = re.compile(r'estimate|tahmin|commit|push|gönder|uninstall|kaldır|disable|kapat$|^close$', re.I)
 # Programs a press could reach out of the throwaway world with: answered by a stub on PATH.
 STUBS = ('open', 'xdg-open', 'osascript', 'afplay', 'say', 'gh', 'pbcopy')
 FIXTURE = {
@@ -151,8 +152,9 @@ class Tour:
         for key in list(self.pressable(tree, seen)):
             if self.presses >= self.limit:
                 return True
-            # Walking the last button's contents may have taken this one away.
-            if key not in dict(walk(tree, 'Button')):
+            # Walking the last button's contents may have taken this one away, or already pressed it (the list was
+            # made before that walk): a button is visited once, so it is pressed, or named as unpressed, once.
+            if key in seen or key not in dict(walk(tree, 'Button')):
                 continue
             seen.add(key)
             if SKIP_LABEL.search(self.label_of(tree, key)):

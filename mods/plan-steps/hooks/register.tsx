@@ -5,8 +5,8 @@ import { isShown, planState, STALE_MS } from './freshness'
 import { withoutRestored } from './carry'
 import { wireCarry } from './carry-hooks'
 import { wireFinish } from './finish-hooks'
-import { HUB_PANE, hubOf } from './hub'
-import type { HubShown } from './hub'
+import { HUB_PANE, hubOf, isShowing } from './hub'
+import type { CurrentStep, HubShown } from './hub'
 import { resolvePlan } from './match'
 import type { Plan } from './match'
 import { wirePane } from './pane-hook'
@@ -58,10 +58,16 @@ async function currentPlan($: EngineInterface): Promise<Plan | null> {
   return resolvePlan(await read($, tasksAtom), await read($, docAtom))
 }
 
+// The step under way and when it began, for the hub's own face.
+function currentStep(plan: Plan, tracks: Record<string, StepTrack>): CurrentStep | null {
+  const step = plan.steps[currentIndex(plan.steps, tracks)]
+
+  return step === undefined ? null : { title: step.title, startedAt: tracks[step.key]?.startedAt ?? null }
+}
+
 // The MODZ main panel's card (DESIGN.md §9), written only when what it shows changes.
 async function writeHub($: EngineInterface, shown: HubShown): Promise<void> {
-  const { value } = await $.state.get(hubRef)
-  if (value !== undefined && value.detail === shown.detail && value.tone === shown.tone) return
+  if (isShowing((await $.state.get(hubRef)).value, shown)) return
   const card: HubCard = { pane: HUB_PANE, ...shown, at: await $.clock.now() }
   await $.state.set(hubRef, card)
 }
@@ -76,7 +82,7 @@ async function sync($: EngineInterface): Promise<void> {
   const state = planState(plan, { now, touchedAt: flags.touchedAt })
   if (progress === null || progress.done < progress.total) flags.isSettled = false
   showStatus($, flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks))
-  await writeHub($, hubOf(progress, state))
+  await writeHub($, hubOf(progress, state, plan === null ? null : currentStep(plan, tracks)))
 }
 
 // The plan moved: it is fresh again, and goes quiet if nothing moves it for STALE_MS.
@@ -192,7 +198,7 @@ function lifecycle(on: On): void {
     flags.status = null
     const plan = await currentPlan($)
     const state = planState(plan, { now: await $.clock.now(), touchedAt: flags.touchedAt })
-    await writeHub($, hubOf(plan === null ? null : progressOf(plan), state))
+    await writeHub($, hubOf(plan === null ? null : progressOf(plan), state, plan === null ? null : currentStep(plan, await read($, tracksAtom))))
     try {
       await $.command.register({ name: 'steps', description: words().command })
     } catch {

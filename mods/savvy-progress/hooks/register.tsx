@@ -8,7 +8,7 @@ import { onBand } from './band'
 import { onDispatch } from './dispatch'
 import { onEvents } from './events'
 import { PHASES, TIERS } from './flow'
-import { hubCardOf } from './hub'
+import { hubCardOf, isShowing } from './hub'
 import { isLang, langOf, setLang, t } from './i18n'
 import type { Lang } from './i18n'
 import { readingOf, trackLimit } from './limit'
@@ -150,12 +150,15 @@ async function scanTypes($: EngineInterface): Promise<void> {
 
 // Folds the engine's own agent list into ours: an agent spawned before this mod loaded appears,
 // one whose end event never came is closed. A failure only costs this beat, never the session.
+// A timer's write runs none of this mod's own state hooks, so the hub card is brought in line here.
 async function syncRoster($: EngineInterface): Promise<void> {
   try {
     const roster = await $.agent.list()
     const at = await $.clock.now()
     const prev = await read($, agents)
-    if (reconcile(prev, roster, at) !== prev) await update($, agents, list => reconcile(list, roster, at))
+    if (reconcile(prev, roster, at) === prev) return
+    await update($, agents, list => reconcile(list, roster, at))
+    await syncHub($)
   } catch (error) {
     $.ui.log(`savvy-progress: no agent list this beat (${String(error)})`, { to: 'debug' })
   }
@@ -186,11 +189,10 @@ function startBeat($: EngineInterface): void {
 // presence.ts writes it too, after the other chats' beat.
 async function syncHub($: EngineInterface, isForced = false): Promise<void> {
   const sources = { flow: await read($, flow), agents: await read($, agents), job: await read($, job), tasks: await read($, tasks) }
-  const { detail, tone } = hubCardOf({ ...sources, chats: await read($, chats) })
-  const prev = await read($, hub)
-  if (!isForced && prev.detail === detail && prev.tone === tone) return
+  const shown = hubCardOf({ ...sources, chats: await read($, chats) })
+  if (!isForced && isShowing(await read($, hub), shown)) return
   const at = await $.clock.now()
-  await update($, hub, () => ({ pane: HUB_PANE, detail, tone, at }))
+  await update($, hub, () => ({ pane: HUB_PANE, ...shown, at }))
 }
 
 // The values the card is derived from; `now`, `panel`, `limit` and `hub` itself never move it.

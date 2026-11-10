@@ -9,16 +9,22 @@ press handle across a focus flip, and offer "← MODZ", whose press swaps the pa
 redraw (kit/moving.ts), else the desktop rebuilds each frame and its loops restart. The band must draw a tree of its
 own too, and the prompt footer (SessionMode) the engine's labels plus a "MODZ" toggle: a press on the tree drawn before
 a redraw takes the hub away, the next brings it back alone. In the band only this repo's mods are held to the
-pinned-handle rule; another plugin's buttons there are named, not failed.
+pinned-handle rule; another plugin's buttons there are named, not failed. The catalog must list another mod's slash
+commands: the engine itself enumerates them, so the hub keeps no table of its own.
+Run from a checkout the home's skills links do not point at (a worktree), the mods checked are this checkout's own,
+in a throwaway home and project as the tour's: otherwise the main checkout's mods would stand in and pass for them.
 Usage: python3 -I tools/desk/check.py [repo]   (exit 1 on any failure)
 """
 import json
 import os
+import re
 import sys
+import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from desk import Desk, Engine, walk, words  # noqa: E402
+from tour import SKIP_ROWS, world  # noqa: E402
 
 HUB = 'modz'
 SETTLE_S = 1.5
@@ -38,12 +44,13 @@ def own_mods(repo):
     return {json.load(open(path))['name'] for path in manifests if os.path.isfile(path)}
 
 
-def check_band(desk, owners):
+def check_band(desk, owners, is_new_home=False):
     """The band draws a tree, and MODZ's own buttons keep their handles across a focus flip. Other
-    plugins' buttons are theirs to pin: they are named, not failed."""
+    plugins' buttons are theirs to pin: they are named, not failed. In a throwaway home no mod has anything to say
+    above the prompt (no usage, no turn, no notice), so every band hook passes the engine's own tree through."""
     first = desk.render('above-prompt', 'AbovePrompt')
     if not isinstance(first, dict) or first.get('type') == 'engine':
-        return 'AbovePrompt above-prompt: drew no tree of its own', []
+        return (None, ['nothing to say in a new home']) if is_new_home else ('AbovePrompt above-prompt: drew no tree of its own', [])
     desk.render('above-prompt', 'AbovePrompt', {'isFocused': False, 'bodyColumns': 80})
     again = desk.render('above-prompt', 'AbovePrompt')
     others = sorted({p['plugin'] for kind in ('Button', 'Input', 'Select') for _, p in walk(first, kind)} - owners)
@@ -79,6 +86,13 @@ def is_press_row(tree):
     return any(str(p.get('props', {}).get('label', '')).startswith(BLANK) for p in buttons(tree))
 
 
+def has_cover(tree):
+    """A box whose drawing lies under a control: kit/press.tsx's blank buttons, or a button in a box laid over it
+    (the "← MODZ" over a pane's head line). A frame there would take the click, so the drawing is a plain image."""
+    over = [c for c in tree.get('children') or [] if isinstance(c, dict) and c.get('type') == 'Box' and c.get('props', {}).get('position') == 'absolute']
+    return is_press_row(tree) or any(buttons(box) for box in over)
+
+
 def buttons(tree):
     if not isinstance(tree, dict):
         return []
@@ -90,7 +104,7 @@ def svgs(tree, is_pressed=False):
     """(alt, props, is_pressed) for every Svg in a tree, in document order; `is_pressed`: under a press row."""
     if not isinstance(tree, dict):
         return []
-    is_pressed = is_pressed or (tree.get('type') == 'Box' and is_press_row(tree) and any(c.get('type') == 'Svg' for c in tree.get('children') or [] if isinstance(c, dict)))
+    is_pressed = is_pressed or (tree.get('type') == 'Box' and has_cover(tree) and any(c.get('type') == 'Svg' for c in tree.get('children') or [] if isinstance(c, dict)))
     own = [(tree['props'].get('alt'), tree['props'], is_pressed)] if tree.get('type') == 'Svg' else []
     return own + [svg for child in tree.get('children') or [] for svg in svgs(child, is_pressed)]
 
@@ -184,6 +198,20 @@ def check_reattach(desk, engine, row):
     return None if ids(engine) == shown else f'reattach: the panel went from {shown} to {ids(engine)}'
 
 
+CATALOG = 'modz-mods'
+# A guide row's alt (mods/modz/hooks/draw.ts guideSvg): the mod, then its commands; the hub's own does not count.
+GUIDE_ROW = re.compile(r'^(?!modz\b)[\w-]+ · /[\w-]+')
+
+
+def check_guide(desk, engine):
+    """The catalog's index of commands: at least one other mod's command, as the engine lists it."""
+    problem = press_row(desk, engine, f'open-{CATALOG}')
+    if problem:
+        return f'guide: {problem}'
+    rows = [alt for alt, _, _ in svgs(desk.render(CATALOG)) if GUIDE_ROW.match(str(alt))]
+    return None if rows else 'guide: the catalog lists no other mod\'s slash command'
+
+
 FOOTER_PROPS = {'modes': ['focus']}
 
 
@@ -208,22 +236,39 @@ def check_footer(desk, engine):
     return None
 
 
+def is_linked_here(repo):
+    """Whether the home's skills links load this checkout's mods (the hub's link stands for them all)."""
+    link = os.path.expanduser('~/.claude/skills/modz')
+    return os.path.realpath(link) == os.path.realpath(os.path.join(repo, 'mods', 'modz'))
+
+
 def main(repo):
-    engine = Engine(repo)
+    if is_linked_here(repo):
+        return check(Engine(repo), own_mods(repo))
+    print('  the home links another checkout: this one\'s mods run in a throwaway home')
+    with tempfile.TemporaryDirectory(prefix='modz-desk-', ignore_cleanup_errors=True) as root:
+        home, project = world(repo, root)
+        return check(Engine(project, home=home), own_mods(repo), SKIP_ROWS)
+
+
+def check(engine, owners, skipped=None):
     desk = Desk(engine)
     failures = []
     if not wait(lambda: HUB in ids(engine), OPEN_WAIT_S * 2):
         failures.append('the MODZ hub did not open at session start')
-    rows = [key for key, _ in walk(desk.render(HUB), 'Button') if key.startswith('open-') and key != 'open-focus']
+    rows = [key for key, _ in walk(desk.render(HUB), 'Button') if key.startswith('open-') and key != 'open-focus' and key not in (skipped or ())]
     failures += [problem for problem in (check_motion(desk, HUB), check_site(desk, HUB)) if problem]
     for row in rows:
         failures += check_row(desk, engine, row)
     problem = check_reattach(desk, engine, rows[0])
     print(f'  reattach {"":<14} {"✘ " + problem if problem else "✔"}')
     failures += [problem] if problem else []
-    problem, others = check_band(desk, own_mods(repo))
+    problem, others = check_band(desk, owners, is_new_home=skipped is not None)
     note = f'  (not ours, not checked: {", ".join(others)})' if others else ''
     print(f'  band {"":<18} {"✘ " + problem if problem else "✔"}{note}')
+    failures += [problem] if problem else []
+    problem = check_guide(desk, engine)
+    print(f'  guide {"":<17} {"✘ " + problem if problem else "✔"}')
     failures += [problem] if problem else []
     problem = check_footer(desk, engine)
     print(f'  footer {"":<16} {"✘ " + problem if problem else "✔"}')

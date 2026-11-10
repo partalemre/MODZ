@@ -5,7 +5,7 @@ import type { Io } from './io'
 import { PROCESS_TIMEOUT_MS, SUMMARY_MAX_TOKENS, SUMMARY_MODEL, SUMMARY_TIMEOUT_MS } from './limits'
 import type { Settings } from './limits'
 import { SUMMARY_SYSTEM, buildNote, cleanSummary, goalsOf, noteDir, notePath, openSteps, relativeTo, stampOf, transcriptOf } from './note'
-import { saveNote } from './state'
+import { repoOf, saveNote } from './state'
 import type { HandoffNote, PlanTask } from '../types'
 
 // Writing a handoff: the deterministic facts first, then at most one Haiku call for the summary. Whatever fails
@@ -77,9 +77,11 @@ export async function writeHandoff(io: Io, settings: Settings): Promise<HandoffN
     files: (await io.get('files')).map(path => relativeTo(root, path)), git: await gitLines(io, root),
     lastError: await io.get('lastError'), summary,
   })
-  const path = notePath(root, now)
+  // Kept in the main repo, so the note outlives a worktree and the next session in any of them finds it.
+  const repo = await repoOf(io)
+  const path = notePath(repo, now)
   await io.writeFile(path, text)
-  const note: HandoffNote = { path, root, text, at: now, writtenBy: await io.sessionId(), isInjectOn: true, consumedBy: null, isSummarized: summary !== null }
+  const note: HandoffNote = { path, root: repo, text, at: now, writtenBy: await io.sessionId(), isInjectOn: true, consumedBy: null, isSummarized: summary !== null }
   await saveNote(io, note)
 
   return note

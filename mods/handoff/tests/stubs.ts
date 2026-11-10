@@ -22,12 +22,15 @@ export type World = {
   logs: string[]
   // fs.write rejects with this, when set.
   writeError: string | null
+  // The session's folder, and what `git rev-parse --git-common-dir` says there (null: not a repo).
+  root: string
+  commonDir: string | null
 }
 
 export const newWorld = (over: Partial<World> = {}): World => ({
   env: {}, sessionId: 's1', messages: [], store: {}, files: {}, argv: [], asked: [], opened: [], compacts: 0,
   reply: 'Login form is done.\nNext: wire the API call.', git: { exitCode: 0, stdout: '## main\n M src/app.ts\n' }, tasks: undefined, logs: [], writeError: null,
-  ...over,
+  root: ROOT, commonDir: `${ROOT}/.git`, ...over,
 })
 
 export const said = (role: 'user' | 'assistant', text: string, extra: object = {}) => ({ role, text, toolUses: [], ...extra })
@@ -51,6 +54,7 @@ function engineIo(on: any, w: World) {
 
       return runOut(0, '')
     }
+    if (e.argv.includes('rev-parse')) return w.commonDir === null ? runOut(128, '') : runOut(0, `${w.commonDir}\n`)
 
     return runOut(w.git.exitCode, w.git.stdout)
   })
@@ -69,8 +73,8 @@ export function stub(on: any, w: World) {
   on('ui.log', (_: any, e: any) => (w.logs.push(e.text), { value: undefined }))
   on('session.start', () => ({ cwd: ROOT }))
   on('session.end', (_: any, e: any) => ({ sessionId: e.sessionId }))
-  on('session.root', () => ({ value: ROOT }))
-  on('session.cwd', () => ({ value: ROOT }))
+  on('session.root', () => ({ value: w.root }))
+  on('session.cwd', () => ({ value: w.root }))
   on('session.id', () => ({ value: w.sessionId }))
   on('session.messages', () => ({ value: w.messages }))
   on('session.measure', (_: any, e: any) => ({ changed: e.changed }))
@@ -130,3 +134,16 @@ export const modz = {
 }
 
 export const hubCardOf = async ($: any) => JSON.parse((await $.command.run({ command: 'modz-hub', args: '' })).text)
+
+// A /clear: the next conversation in the same process, under its own id.
+export async function nextChat($: any, w: World, sessionId: string) {
+  await $.session.end({ reason: 'clear', sessionId: w.sessionId, resume: { id: w.sessionId } } as any)
+  w.sessionId = sessionId
+}
+
+// The person presses "Continue from handoff" in the band.
+export async function takeNote($: any) {
+  const band = await $.ui.mount(bandOf('terminal'))
+  await band.press({ key: 'handoff-continue' })
+  await band.unmount()
+}

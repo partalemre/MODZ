@@ -1,7 +1,25 @@
 import type { Io } from './io'
+import { PROCESS_TIMEOUT_MS } from './limits'
 import type { HandoffNote } from '../types'
 
 // The note kept across sessions in `$.store`, one per repo, mirrored into the session's `latest` value.
+
+// Desktop sessions run in worktrees that come and go: the note belongs to the main repository they share.
+const repos = new Map<string, string>()
+const GIT_DIR = '/.git'
+
+export async function repoOf(io: Io): Promise<string> {
+  const root = await io.root()
+  const known = repos.get(root)
+  if (known !== undefined) return known
+  const out = await io.run(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'], { cwd: root, timeoutMs: PROCESS_TIMEOUT_MS }).catch(() => null)
+  const common = out?.exitCode === 0 ? out.stdout.trim() : ''
+  // A bare repo or no repo at all: the folder itself.
+  const repo = common.endsWith(GIT_DIR) ? common.slice(0, -GIT_DIR.length) : root
+  repos.set(root, repo)
+
+  return repo
+}
 
 const storeKey = (root: string): string => `latest:${root}`
 

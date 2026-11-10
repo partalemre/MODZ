@@ -7,7 +7,7 @@ import { reasonOf } from './io'
 import type { Io } from './io'
 import { NOTICE_FOREVER, NOTICE_PRIORITY, SECTION_ID } from './limits'
 import type { Settings } from './limits'
-import { forgetNote, loadNote, saveNote } from './state'
+import { forgetNote, loadNote, repoOf, saveNote } from './state'
 import { words } from './words'
 import { deleteNote, writeHandoff } from './write'
 
@@ -48,6 +48,7 @@ export async function resetConversation(io: Io, settings: Settings): Promise<voi
   await io.put('files', [])
   await io.put('lastError', null)
   await io.put('notice', null)
+  await io.put('declined', null)
   await writeHub(io, settings)
 }
 
@@ -113,19 +114,35 @@ export async function remove(io: Io, settings: Settings): Promise<void> {
   await writeHub(io, settings)
 }
 
-// The note's section for this conversation, or null: a fresh one claims it once, then keeps it for every request,
-// so its system prompt stays the same from the first request on.
-export async function noteSection(io: Io, settings: Settings): Promise<PromptComposeSection | null> {
-  const note = await loadNote(io, await io.root())
-  const sessionId = await io.sessionId()
-  const move = injectMove({ note, sessionId, now: await io.now() })
-  if (note === null || move === 'skip') return null
-  if (move === 'claim') {
-    const isFresh = (await io.messages()).every(message => message.role !== 'assistant')
-    if (!isFresh) return null
-    await saveNote(io, { ...note, consumedBy: sessionId })
-    await writeHub(io, settings)
-  }
+// Whether this conversation may take the note: one another conversation wrote, still waiting.
+export const canTake = async (io: Io): Promise<boolean> =>
+  injectMove({ note: await io.get('latest'), sessionId: await io.sessionId(), now: await io.now() }) === 'claim'
+
+// The band offers the note while this conversation may take it and has not passed it over.
+export async function isOffered(io: Io): Promise<boolean> {
+  const note = await io.get('latest')
+
+  return note !== null && (await io.get('declined')) !== note.at && (await canTake(io))
+}
+
+export async function decline(io: Io): Promise<void> {
+  await io.put('declined', (await io.get('latest'))?.at ?? null)
+}
+
+// The person chose to carry on from the note: this conversation takes it, and no other will.
+export async function take(io: Io, settings: Settings): Promise<void> {
+  const note = await loadNote(io, await repoOf(io))
+  if (note === null || !(await canTake(io))) return
+  await saveNote(io, { ...note, consumedBy: await io.sessionId() })
+  await writeHub(io, settings)
+}
+
+// The note's section for this conversation, or null: only once the person took it here (the band's Continue), and
+// then for every request, so its system prompt stays the same from then on.
+export async function noteSection(io: Io): Promise<PromptComposeSection | null> {
+  const note = await loadNote(io, await repoOf(io))
+  const move = injectMove({ note, sessionId: await io.sessionId(), now: await io.now() })
+  if (note === null || move !== 'inject') return null
 
   return { id: SECTION_ID, text: sectionText(note), scope: 'session' }
 }

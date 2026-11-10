@@ -69,6 +69,7 @@ const HUB = {
     hidden: 'Hidden',
     editLine: 'Move a row up or hide it. Hidden rows wait here.',
     noAnswer: 'did not answer: its pane did not open',
+    inBand: (title: string) => `${title} has no pane: its question is waiting by the prompt.`,
     plain: 'plain view: the drawing failed',
     more: (n: number) => `+${n} more`,
     ago: {
@@ -104,6 +105,7 @@ const HUB = {
     hidden: 'Gizli',
     editLine: 'Bir satırı yukarı taşı ya da gizle. Gizlenenler burada bekler.',
     noAnswer: 'yanıt vermedi: paneli açılmadı',
+    inBand: (title: string) => `${title} modunun paneli yok: sorusu istem alanında bekliyor.`,
     plain: 'düz görünüm: çizim başarısız',
     more: (n: number) => `+${n} tane daha`,
     ago: {

@@ -131,3 +131,30 @@ test('a write to a path only known at run time runs: nothing says it would lose 
     expect([command, ((await call($, command)) as any)?.deny]).toEqual([command, undefined])
   }
 })
+
+// Reads this mod's own hub card, as the MODZ panel does.
+const panel = {
+  name: 'panel',
+  register(on: any) {
+    on('command.run', { command: 'hub-card' }, async ($: any) => ({ text: JSON.stringify((await $.state.get({ plugin: 'blast-radius', key: 'hub' })).value ?? null) }))
+  },
+}
+
+test('a held command is told to the MODZ panel while it waits, and the line goes once it is answered', { plugins: [panel] }, async ($: any, on: any) => {
+  const w = world({ ...EN, answers: { files: BUILD_SCAN } })
+  stub(on, w)
+  await start($, w)
+  const hub = async () => JSON.parse((await $.command.run({ command: 'hub-card', args: '' })).text)
+
+  await call($, 'git clean -n')
+  expect(await hub()).toBeNull()
+  const pending = call($, 'rm -rf build')
+  await pass(w, 0)
+  expect(await hub()).toMatchObject({ pane: 'blast-radius', detail: 'rm -rf build is waiting', tone: 'warn', section: 'safety', isBandOnly: true })
+
+  const ui = await mountBand($, 'desktop')
+  await ui.press({ key: 'cancel' })
+  await pass(w)
+  await pending
+  expect(await hub()).toMatchObject({ detail: '', tone: 'idle' })
+})

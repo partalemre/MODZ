@@ -8,5 +8,6 @@
     "mods",
     "safety",
     "git"
-  ]
+  ],
+  "types": "./types/index.d.ts"
 }

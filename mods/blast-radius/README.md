@@ -42,7 +42,9 @@ When Claude calls Bash with one of the commands below, the call stops and a card
 
 A command that would lose nothing runs with no card. Every other command runs as normal. Blast Radius reads the command inside `bash -c`, `sh -c`, `eval` and `xargs`, and through `sudo`, `env`, `timeout`, `nice`, `ionice`, `nohup` and `VAR=value`; text inside quotes or a heredoc is never read as a command. The card follows `cd dir &&`, `pushd`/`popd` and `git -C dir` on the same line and measures in that folder; on a line with several risky parts, the first that would lose something is the card.
 
-A risky call nobody can answer is refused at once, never held: from a subagent (only the main chat can answer a card) or in a chat with no screen attached (`claude -p`, the SDK, and also a desktop chat left in the background or driven over Remote Control). Claude is told the command and what it would have lost, and to tell you. If it would lose nothing, it runs. A write (`>`, `cp`, `mv`) to a path only known when the command runs, such as `cp "$a" "$b"`, is not measured and runs.
+A risky call nobody can answer is refused at once, never held: from a subagent (only the main chat can answer a card) or in a chat with no screen attached (`claude -p`, the SDK, and also a desktop chat left in the background or driven over Remote Control). Claude is told the command and what it would have lost, and to tell you. If it would lose nothing, it runs.
+
+While a command waits for your answer, the MODZ panel says so at its top (`rm -rf build is waiting`); the line goes once you answer. Blast Radius has no pane of its own, so pressing the line tells you the card is by the prompt. A write (`>`, `cp`, `mv`) to a path only known when the command runs, such as `cp "$a" "$b"`, is not measured and runs.
 
 On the desktop app the card is drawn as a picture; in the terminal it is text. In a terminal too narrow for a side pane (under about 144 columns) the card moves into the band above the prompt. Focus the band first (click it, or ctrl+x then tab); letters never answer from the prompt, so a stray keystroke can't delete anything.
 

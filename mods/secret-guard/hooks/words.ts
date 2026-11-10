@@ -9,6 +9,8 @@ export type Words = {
   allow: string
   cancel: string
   question: string
+  // The MODZ panel's line while a write waits on the question.
+  hubWaiting: (subject: string) => string
   // The safe fix's label, for one key or several.
   move: (count: number) => string
   privateKey: string
@@ -44,6 +46,7 @@ const EN: Words = {
   allow: 'Allow once',
   cancel: 'Cancel',
   question: 'How do you want to go on?',
+  hubWaiting: subject => `secret in ${subject} is waiting`,
   move: count => (count === 1 ? 'Move key to .env' : 'Move keys to .env'),
   privateKey: 'Private key',
   allowLine: 'The call runs as it is; the key stays in the open.',
@@ -72,6 +75,7 @@ const TR: Words = {
   allow: 'Bir kez izin ver',
   cancel: 'Vazgeç',
   question: 'Nasıl devam edilsin?',
+  hubWaiting: subject => `${subject} içindeki anahtar bekliyor`,
   move: count => (count === 1 ? "Anahtarı .env'e taşı" : "Anahtarları .env'e taşı"),
   privateKey: 'Özel anahtar',
   allowLine: 'Bu çağrı olduğu gibi çalışır; anahtar açıkta kalır.',

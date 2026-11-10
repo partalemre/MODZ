@@ -47,9 +47,9 @@ export type Io = ScanIo & {
 
 type Cache = { files: Record<string, FileSum>; leftOff: Record<string, { stamp: string; left: LeftOff }> }
 
-async function readJson<T>(io: Io, path: string, empty: T): Promise<T> {
+function parseJson<T>(text: string, empty: T): T {
   try {
-    return JSON.parse(await io.read(path)) as T
+    return JSON.parse(text) as T
   } catch {
     return empty
   }
@@ -151,7 +151,8 @@ async function complete(io: Io, grown: Grown, spec: { plans: PlanRow[]; estimate
 // One pass: changed transcripts, projects, then each shown project's plans, git and last words.
 export async function collect(io: Io, paths: Paths, onStep: (label: 'scan' | 'build') => void): Promise<Snapshot> {
   const cachePath = `${paths.own}/cache.json`
-  const cache = await readJson<Cache>(io, cachePath, { files: {}, leftOff: {} })
+  const cacheText = await io.read(cachePath).catch(() => '')
+  const cache = parseJson<Cache>(cacheText, { files: {}, leftOff: {} })
   onStep('scan')
   const files = await scanFiles(io, `${paths.config}/projects`, cache.files)
   cache.files = files
@@ -177,7 +178,9 @@ export async function collect(io: Io, paths: Paths, onStep: (label: 'scan' | 'bu
       otherTokens += spent(one.tokens)
     }
   }
-  await io.write(cachePath, JSON.stringify(cache))
+  // The cache is over a megabyte; most timed reads leave it as it was.
+  const nextCache = JSON.stringify(cache)
+  if (nextCache !== cacheText) await io.write(cachePath, nextCache)
 
   return { at: nowMs, projects: withClearNames(projects).sort(byRecent), other: { folders: otherFolders, tokens: otherTokens }, hidden: hidden.size }
 }

@@ -56,6 +56,12 @@ export function percentText(percent: Percent): string {
   return `${percent.kind === 'estimate' ? '~' : ''}${percent.value}%`
 }
 
+// A week without commits still leaves work the model never read: past it, an estimate reads as old.
+const ESTIMATE_FRESH_MS = 7 * DAY_MS
+
+export const isFaded = (percent: Percent, nowMs: number): boolean =>
+  percent.isStale || (percent.kind === 'estimate' && percent.at > 0 && nowMs - percent.at > ESTIMATE_FRESH_MS)
+
 // A folder under the home folder as `~`, with either kind of slash.
 export function shortPath(root: string, home: string): string {
   if (home === '' || !root.startsWith(home)) return root

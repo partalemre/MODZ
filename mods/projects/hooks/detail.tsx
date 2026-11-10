@@ -1,5 +1,5 @@
 import { spent } from './build'
-import { agoText, foldText, percentText, shortPath, spanText, tokensText } from './format'
+import { agoText, foldText, isFaded, percentText, shortPath, spanText, tokensText } from './format'
 import { PressRow } from './kit/press'
 import { headerPic, isPlanTitleCut, nextPic, planPic, statsPic } from './svg-detail'
 import { busyText, flush, groupLabel, rowWidth } from './view'
@@ -69,7 +69,7 @@ function headBlock(ui: Ui, view: PaneView, project: Project) {
       {head}
       {(project.also ?? []).map(root => <Text key={`also:${root}`} dimColor>{say.alsoAt(shortPath(root, view.homeDir))}</Text>)}
       <Text key="basis" dimColor>{basis}</Text>
-      {percent.isStale ? <Text key="stale" color="warning">{say.basisStale}</Text> : null}
+      {isFaded(percent, view.nowMs) ? <Text key="stale" color="warning">{percent.isStale ? say.basisStale : say.basisOld}</Text> : null}
       {estimateControl(ui, view, project)}
     </Box>
   )

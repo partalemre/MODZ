@@ -22,6 +22,20 @@ export type HandoffNote = {
   isSummarized: boolean
 }
 
+// One note this mod keeps in `<repo>/.claude/handoff/`, listed in `$.store` under `notes:<repo>` (newest first):
+// a handoff written for the next chat, or working notes written just before a compaction.
+export type NoteEntry = {
+  path: string
+  at: number
+  kind: 'handoff' | 'compact'
+  // What compacted, for a compaction's notes (`manual`, `auto`, `plugin`).
+  trigger?: string
+  text: string
+}
+
+// The line after a compaction: what was compacted, and the notes "Restore working notes" puts back.
+export type CompactedLine = { at: number; trigger: string; tokensBefore?: number; tokensAfter?: number; path: string }
+
 // The shared notice line (DESIGN.md §6, slot 2): one at a time, the highest priority wins.
 // you-should-know 3, handoff 3, reflect 2, session-budget 1, test-badge 1; an `expiresAt` of 0 never expires.
 export type HandoffNotice = { priority: number; expiresAt: number }
@@ -62,6 +76,12 @@ declare module 'claude-code' {
       notice: HandoffNotice | null
       // "Not now" on the offer to continue: the `at` of the note this conversation passed over; null when none.
       declined: number | null
+      // This repo's notes, as the store lists them (NoteEntry), newest first.
+      notes: NoteEntry[]
+      // The last compaction of this conversation, until its notes are restored or the line is dismissed.
+      compacted: CompactedLine | null
+      // Where auto-compaction fires, in percent of the window; 'off' when it is off, null until first read.
+      autoAt: number | 'off' | null
       hub: HubCard
       // The person pressed "← MODZ" in the Handoff pane; the hub hears it and comes forward.
       home: { at: number }

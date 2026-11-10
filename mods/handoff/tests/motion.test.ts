@@ -16,7 +16,8 @@ test('desktop: the drawings cascade in as frames, and a new reading moves only t
   const svgs = await pane.findAll({ type: 'Svg' })
   const [head, meter] = await sources(pane)
 
-  expect(svgs).toHaveLength(2)
+  // The latest note's header and meter, then the headers of "What it does" and "Saved notes".
+  expect(svgs).toHaveLength(4)
   expect(svgs.every((svg: any) => svg.props.isInteractive === true && svg.props.width > 0 && svg.props.height > 0)).toBe(true)
   expect([head, meter].every(source => source.includes(':root{color-scheme:light dark}') && source.includes('class="m-in"'))).toBe(true)
 
@@ -36,7 +37,7 @@ test('desktop: the drawings cascade in as frames, and a new reading moves only t
 test('desktop: the band above the prompt keeps plain drawings', async ($: any, on: any) => {
   stub(on, newWorld())
   await start($, 'desktop')
-  await measure($, 80)
+  await $.command.run({ command: 'handoff', args: '' })
   const band = await $.ui.mount(bandOf('desktop'))
   const svgs = await band.findAll({ type: 'Svg' })
 

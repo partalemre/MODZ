@@ -1,7 +1,10 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Register } from 'claude-code'
 
-import { compact, decline, dismiss, isOffered, measured, noteSection, remove, resetConversation, snooze, take, toggleInject, write, writeHub } from './actions'
+import {
+  compact, decline, dismiss, drop, forgetCompacted, isOffered, isOwnCompaction, measured, noteCompacted, noteSection, notesBefore, remove, resetConversation,
+  restore, runCommand, snooze, take, toggleInject, write, writeHub,
+} from './actions'
 import { bandCard, withTheirs } from './band'
 import { cardOf, isBandQuiet, isLouderNow } from './gate'
 import { isOpenFor } from './hub'
@@ -16,13 +19,14 @@ import { resolveLight } from './kit/tokens'
 import type { DrawCtx } from './kit/ui'
 import { COMMAND, PANE, settingsOf } from './limits'
 import type { Settings } from './limits'
+import { loadNotes } from './notes'
 import { motion, paneTree } from './pane'
 import { loadNote, repoOf } from './state'
 import { errorLine, touchedPath, withFile } from './track'
 import { words } from './words'
 
-// Watches the context fill; at the threshold one card above the prompt offers a handoff note. The note goes to
-// `.claude/handoff/` and, once, into the system prompt of the next fresh conversation in the same repo.
+// Watches the context fill and every compaction. Before one, working notes go to `.claude/handoff/`; after it, one
+// line offers them back. Near auto-compaction one line asks: compact now, or hand off a note to the next fresh chat.
 
 const percentAtom = atom({ plugin: 'handoff', key: 'percent' } as const, null)
 const snoozeAtom = atom({ plugin: 'handoff', key: 'snoozeUntil' } as const, null)
@@ -33,6 +37,9 @@ const filesAtom = atom({ plugin: 'handoff', key: 'files' } as const, [])
 const errorAtom = atom({ plugin: 'handoff', key: 'lastError' } as const, null)
 const noticeAtom = atom({ plugin: 'handoff', key: 'notice' } as const, null)
 const declinedAtom = atom({ plugin: 'handoff', key: 'declined' } as const, null)
+const notesAtom = atom({ plugin: 'handoff', key: 'notes' } as const, [])
+const compactedAtom = atom({ plugin: 'handoff', key: 'compacted' } as const, null)
+const autoAtAtom = atom({ plugin: 'handoff', key: 'autoAt' } as const, null)
 const hubRef = { plugin: 'handoff', key: 'hub' } as const
 const homeRef = { plugin: 'handoff', key: 'home' } as const
 const hubOnRef = { plugin: 'modz', key: 'isOn' } as const
@@ -57,6 +64,9 @@ function cellsOf($: EngineInterface): Cells {
     lastError: { get: () => read($, errorAtom), set: value => update($, errorAtom, () => value) },
     notice: { get: () => read($, noticeAtom), set: value => update($, noticeAtom, () => value) },
     declined: { get: () => read($, declinedAtom), set: value => update($, declinedAtom, () => value) },
+    notes: { get: () => read($, notesAtom), set: value => update($, notesAtom, () => value) },
+    compacted: { get: () => read($, compactedAtom), set: value => update($, compactedAtom, () => value) },
+    autoAt: { get: () => read($, autoAtAtom), set: value => update($, autoAtAtom, () => value) },
   }
 }
 
@@ -93,6 +103,13 @@ function ioOf($: EngineInterface): Io {
     run: (argv, options) => $.process.run(argv, options),
     writeFile: (path, text) => $.fs.write(path, text),
     compact: () => $.session.compact(),
+    autoCompact: async () => {
+      const { context } = await $.session.usage({ breakdown: 'summary' })
+      const isOn = context.breakdown?.isAutoCompactEnabled === true
+
+      return { tokens: isOn ? (context.breakdown?.autoCompactThreshold ?? null) : null, window: context.window }
+    },
+    append: text => $.session.append({ message: { type: 'user', content: [{ type: 'text', text }] } }),
     openPane: () => openPane($),
     log: text => $.ui.log(`handoff: ${text}`, { to: 'debug' }),
   }
@@ -112,7 +129,9 @@ function hookSession(on: On, settings: Settings): void {
     const io = ioOf($)
     try {
       await $.command.register({ name: COMMAND, description: words().commandHelp, argumentHint: '[show]' })
-      await loadNote(io, await repoOf(io))
+      const repo = await repoOf(io)
+      await loadNote(io, repo)
+      await loadNotes(io, repo)
       await writeHub(io, settings)
     } catch (error) {
       io.log(`could not start (${reasonOf(error)})`)
@@ -136,6 +155,20 @@ function hookSession(on: On, settings: Settings): void {
   }).catch(($, e, next) => next(e))
 }
 
+function hookCompaction(on: On): void {
+  // Any compaction of the main conversation: the notes first, then core; a precompute installs nothing. Nothing
+  // after `next` may throw, or `.catch` would compact a second time.
+  on('session.compact', async ($, e, next) => {
+    if (e.agentId !== undefined || e.trigger === 'precompute' || isOwnCompaction()) return next(e)
+    const io = ioOf($)
+    const entry = await notesBefore(io, e.trigger)
+    const result = await next(e)
+    await noteCompacted(io, { trigger: e.trigger, result, entry }).catch(error => io.log(`after compaction (${reasonOf(error)})`))
+
+    return result
+  }).catch(($, e, next) => next(e))
+}
+
 function hookTools(on: On): void {
   on('tool.call', async ($, e, next) => {
     const result = await next(e)
@@ -147,21 +180,6 @@ function hookTools(on: On): void {
 
     return result
   }).catch(($, e, next) => next(e))
-}
-
-async function runCommand(io: Io, settings: Settings, arg: string): Promise<string> {
-  if (arg === 'show') {
-    await io.openPane()
-
-    return words().commandShown
-  }
-  try {
-    const path = await write(io, settings)
-
-    return path === null ? words().writingHeadline : words().commandSaved(path)
-  } catch (error) {
-    return words().commandFailed(reasonOf(error))
-  }
 }
 
 function hookCommands(on: On, settings: Settings): void {
@@ -216,13 +234,16 @@ function hookBand(on: On, settings: Settings): void {
     if (isBandQuiet({ isWorking: e.props.isWorking, hasSurvey: e.props.hasSurvey })) return theirs
     const io = ioOf($)
     const percent = await io.get('percent')
-    const asked = cardOf({ percent, threshold: settings.threshold, snoozeUntil: await io.get('snoozeUntil'), stage: await io.get('stage') })
+    const compacted = await io.get('compacted')
+    const autoAt = await io.get('autoAt')
+    const asked = cardOf({ percent, threshold: settings.threshold, snoozeUntil: await io.get('snoozeUntil'), stage: await io.get('stage'), autoAt, hasCompacted: compacted !== null })
     const kind = asked ?? ((await isOffered(io)) ? 'offer' : null)
     // Read after the card's own values, so the next measurement draws again and a stuck notice times out.
     if (kind === null || (await hasLouderNotice($))) return theirs
     const draw: DrawCtx = { ui: $.ui.resolve(e), surface: e.surface, isLight: await isLightNow($) }
     const card = bandCard(draw, {
-      kind, percent, threshold: settings.threshold, note: await io.get('latest'), failure: await io.get('failure'), columns: e.props.bodyColumns,
+      kind, percent, threshold: settings.threshold, autoAt: typeof autoAt === 'number' ? autoAt : null, compacted,
+      note: await io.get('latest'), failure: await io.get('failure'), columns: e.props.bodyColumns,
       actions: {
         onWrite: pressed(io, () => write(io, settings)),
         onCompact: pressed(io, () => compact(io, settings)),
@@ -231,6 +252,8 @@ function hookBand(on: On, settings: Settings): void {
         onDismiss: pressed(io, () => dismiss(io, settings)),
         onContinue: pressed(io, () => take(io, settings)),
         onDecline: pressed(io, () => decline(io)),
+        onRestore: pressed(io, () => restore(io)),
+        onForget: pressed(io, () => forgetCompacted(io)),
       },
       now: await io.now(),
     })
@@ -245,13 +268,16 @@ function hookPane(on: On, settings: Settings): void {
     const draw: DrawCtx = { ui: $.ui.resolve(e), surface: e.surface, isLight: await isLightNow($), motion }
     const isHubOn = (await $.state.get(hubOnRef)).value === true
     const goHome = pressed(io, async () => $.state.set(homeRef, { at: await $.clock.now() }))
+    const autoAt = await io.get('autoAt')
     const tree = paneTree(draw, {
       note: await io.get('latest'), now: await io.now(), percent: await io.get('percent'), threshold: settings.threshold,
+      autoAt: typeof autoAt === 'number' ? autoAt : null, notes: await io.get('notes'),
       stage: await io.get('stage'), columns: e.props.bodyColumns,
       actions: {
         onWrite: pressed(io, () => write(io, settings)),
         onToggle: pressed(io, () => toggleInject(io, settings)),
         onDelete: pressed(io, () => remove(io, settings)),
+        onDrop: path => pressed(io, () => drop(io, settings, path))(),
       },
     })
 
@@ -262,6 +288,7 @@ function hookPane(on: On, settings: Settings): void {
 export const register: Register = (on, options) => {
   const settings = settingsOf(options)
   hookSession(on, settings)
+  hookCompaction(on)
   hookTools(on)
   hookCommands(on, settings)
   hookBand(on, settings)

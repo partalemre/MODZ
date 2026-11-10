@@ -3,13 +3,17 @@ import type { RenderElement } from 'claude-code'
 import { paneMotion } from './kit/moving'
 import { ButtonRow, Card, Meter, paneInnerWidth } from './kit/ui'
 import type { ButtonSpec, DrawCtx } from './kit/ui'
+import { askPointOf } from './gate'
 import { isTooOld } from './inject'
-import { MINUTES_PER_HOUR, MS_PER_MINUTE, PREVIEW_LINES } from './limits'
+import { MINUTES_PER_HOUR, MS_PER_MINUTE, NOTES_MAX_AGE_MS, PREVIEW_LINES } from './limits'
 import { words } from './words'
-import type { HandoffNote, HandoffStage } from '../types'
+import type { HandoffNote, HandoffStage, NoteEntry } from '../types'
 
 // The small "Handoff" pane: the latest note of this repo, its age, whether the next chat gets it, and a way to
-// write a new one, stop handing it on, or delete it. Opened only by a press or a command, never by itself.
+// write a new one, stop handing it on, or delete it; then what the mod does and when, and every other note it keeps.
+// Opened only by a press or a command, never by itself.
+
+const MS_PER_DAY = 24 * 60 * MS_PER_MINUTE
 
 const PERCENT = 100
 const FENCE = '```'
@@ -18,13 +22,15 @@ const FENCE = '```'
 // pane opens, so they cascade in each time. The band above the prompt draws without it.
 export const motion = paneMotion()
 
-export type PaneActions = { onWrite: () => void; onToggle: () => void; onDelete: () => void }
+export type PaneActions = { onWrite: () => void; onToggle: () => void; onDelete: () => void; onDrop: (path: string) => void }
 
 export type PaneView = {
   note: HandoffNote | null
   now: number
   percent: number | null
   threshold: number
+  autoAt: number | null
+  notes: readonly NoteEntry[]
   stage: HandoffStage
   columns: number
   actions: PaneActions
@@ -56,6 +62,9 @@ export function statusOf(note: HandoffNote, now: number): string {
   return note.isInjectOn ? says.injectOn : says.injectOff
 }
 
+// `automatic` for `auto`; a trigger the words do not know stands as the engine names it.
+export const howOf = (trigger: string): string => words().how[trigger] ?? trigger
+
 const fileName = (path: string): string => path.slice(path.lastIndexOf('/') + 1)
 
 function noteButtons(view: PaneView, note: HandoffNote): ButtonSpec[] {
@@ -79,7 +88,7 @@ function emptyCard(draw: DrawCtx, view: PaneView, width: number): RenderElement 
   const buttons: ButtonSpec[] = [{ key: 'handoff-write-now', label: says.writeNow, variant: 'primary', onPress: view.actions.onWrite }]
 
   return Card(draw, {
-    header: { icon: 'flag', eyebrow: says.latest, sub: says.emptyLine(view.threshold), width },
+    header: { icon: 'flag', eyebrow: says.latest, sub: says.emptyLine(askPointOf(view)), width },
     children: [...contextMeter(draw, view, width), ButtonRow(draw, { buttons })],
   })
 }
@@ -107,9 +116,56 @@ function writingCard(draw: DrawCtx, width: number): RenderElement {
   return Card(draw, { header: { icon: 'pencil', role: 'edit', hasDot: true, eyebrow: words().latest, headline: words().writingHeadline, width } })
 }
 
-export function paneTree(draw: DrawCtx, view: PaneView): RenderElement {
-  const width = paneInnerWidth(view.columns)
+// Plain words for what happens and when, at this conversation's numbers.
+function aboutCard(draw: DrawCtx, view: PaneView, width: number): RenderElement {
+  const { Text } = draw.ui
+  const lines = words().aboutLines(askPointOf(view), view.autoAt, Math.round(NOTES_MAX_AGE_MS / MS_PER_DAY))
+
+  return Card(draw, {
+    header: { icon: 'flag', eyebrow: words().aboutEyebrow, width },
+    children: lines.map((line, index) => <Text key={`handoff-about-${index}`} wrap="wrap">{line}</Text>),
+  })
+}
+
+function noteRow(draw: DrawCtx, view: PaneView, entry: NoteEntry, index: number): RenderElement {
+  const says = words()
+  const { Box, Text } = draw.ui
+  const kind = entry.kind === 'compact' ? says.kindCompact(howOf(entry.trigger ?? '')) : says.kindHandoff
+  const button: ButtonSpec = { key: `handoff-drop-${index}`, label: says.drop, variant: 'plain', isDestructive: true, onPress: () => view.actions.onDrop(entry.path) }
+
+  return (
+    <Box key={`handoff-row-${index}`} flexDirection="column">
+      <Text wrap="truncate-middle">{fileName(entry.path)}</Text>
+      <Text dimColor wrap="wrap">{`${kind} · ${ageText(view.now - entry.at)}`}</Text>
+      {ButtonRow(draw, { buttons: [button] })}
+    </Box>
+  )
+}
+
+// Every note kept but the one shown above, newest first, each with its own Delete.
+function notesCard(draw: DrawCtx, view: PaneView, width: number): RenderElement {
+  const { Text } = draw.ui
+  const others = view.notes.filter(entry => entry.path !== view.note?.path)
+  const rows = others.length === 0 ? [<Text key="handoff-notes-empty" dimColor>{words().notesEmpty}</Text>] : others.map((entry, index) => noteRow(draw, view, entry, index))
+
+  return Card(draw, { header: { icon: 'flag', eyebrow: words().notesEyebrow, width }, children: rows })
+}
+
+function latestCard(draw: DrawCtx, view: PaneView, width: number): RenderElement {
   if (view.stage === 'writing') return writingCard(draw, width)
 
   return view.note === null ? emptyCard(draw, view, width) : noteCard(draw, view, view.note, width)
+}
+
+export function paneTree(draw: DrawCtx, view: PaneView): RenderElement {
+  const width = paneInnerWidth(view.columns)
+  const { Box } = draw.ui
+
+  return (
+    <Box flexDirection="column" gap={1}>
+      {latestCard(draw, view, width)}
+      {aboutCard(draw, view, width)}
+      {notesCard(draw, view, width)}
+    </Box>
+  )
 }

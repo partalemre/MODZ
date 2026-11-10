@@ -25,12 +25,19 @@ export type World = {
   // The session's folder, and what `git rev-parse --git-common-dir` says there (null: not a repo).
   root: string
   commonDir: string | null
+  // The engine's auto-compaction point in tokens (of a 200k window); null: auto-compaction is off.
+  autoTokens: number | null
+  // What a compaction reports, and the note files there were when core ran.
+  sizes: { tokensBefore?: number; tokensAfter?: number }
+  filesAtCompact: string[]
+  // Rows a plugin appended to the conversation.
+  appended: any[]
 }
 
 export const newWorld = (over: Partial<World> = {}): World => ({
   env: {}, sessionId: 's1', messages: [], store: {}, files: {}, argv: [], asked: [], opened: [], compacts: 0,
   reply: 'Login form is done.\nNext: wire the API call.', git: { exitCode: 0, stdout: '## main\n M src/app.ts\n' }, tasks: undefined, logs: [], writeError: null,
-  root: ROOT, commonDir: `${ROOT}/.git`, ...over,
+  root: ROOT, commonDir: `${ROOT}/.git`, autoTokens: 180_000, sizes: {}, filesAtCompact: [], appended: [], ...over,
 })
 
 export const said = (role: 'user' | 'assistant', text: string, extra: object = {}) => ({ role, text, toolUses: [], ...extra })
@@ -78,7 +85,19 @@ export function stub(on: any, w: World) {
   on('session.id', () => ({ value: w.sessionId }))
   on('session.messages', () => ({ value: w.messages }))
   on('session.measure', (_: any, e: any) => ({ changed: e.changed }))
-  on('session.compact', () => ((w.compacts += 1), { messages: [said('user', 'summary')] }))
+  on('session.compact', () => {
+    w.compacts += 1
+    w.filesAtCompact = Object.keys(w.files)
+
+    return { messages: [said('user', 'summary')], ...w.sizes }
+  })
+  on('session.append', (_: any, e: any, next: any) => (w.appended.push(e.message), next(e)))
+  on('session.usage', () => ({
+    value: {
+      startedAt: 0, rateLimits: [],
+      context: { window: 200_000, breakdown: { isAutoCompactEnabled: w.autoTokens !== null, ...(w.autoTokens === null ? {} : { autoCompactThreshold: w.autoTokens }) } },
+    },
+  }))
   on('config.list', () => ({ value: [{ key: 'theme', value: w.env.MODZ_THEME ?? 'dark' }] }))
   on('ui.open', (_: any, e: any) => (w.opened.push(e.id), { value: { isPlaced: true } }))
   on('ui.render', (_: any, e: any) => $text(e))
@@ -140,6 +159,10 @@ export async function nextChat($: any, w: World, sessionId: string) {
   await $.session.end({ reason: 'clear', sessionId: w.sessionId, resume: { id: w.sessionId } } as any)
   w.sessionId = sessionId
 }
+
+// A compaction the engine starts (the person's /compact, the threshold, an idle one), over the conversation so far.
+export const compactBy = ($: any, trigger: string, over: object = {}) =>
+  $.session.compact({ trigger, messages: [said('user', 'earlier work')], ...over })
 
 // The person presses "Continue from handoff" in the band.
 export async function takeNote($: any) {

@@ -1,9 +1,10 @@
 import { expect, test } from 'claude-code/testing'
 
-import { cardOf, isAskDue, isBandQuiet, rearmed, snoozeFrom } from '../hooks/gate'
+import { askPointOf, autoPercentOf, cardOf, isAskDue, isBandQuiet, rearmed, snoozeFrom } from '../hooks/gate'
 import { injectMove } from '../hooks/inject'
 import { settingsOf } from '../hooks/limits'
 import { buildNote, cleanSummary, goalsOf, notePath, openSteps, relativeTo, transcriptOf } from '../hooks/note'
+import { pruned, withEntry } from '../hooks/notes'
 import { errorLine, touchedPath, withFile } from '../hooks/track'
 import { said } from './stubs'
 
@@ -28,6 +29,26 @@ test('"Not now" waits ten points, and a fall under the threshold lets the snooze
   expect(isAskDue(facts(92, { snoozeUntil: 92 }))).toBe(true)
   expect(rearmed(facts(40, { snoozeUntil: 92, stage: 'done' }))).toEqual({ snoozeUntil: null, stage: 'idle' })
   expect(rearmed(facts(85, { snoozeUntil: 92, stage: 'done' }))).toEqual({ snoozeUntil: 92, stage: 'done' })
+})
+
+test('the ask point: the setting, or five points before auto-compaction when that is sooner', () => {
+  expect(autoPercentOf({ tokens: 180_000, window: 200_000 })).toBe(90)
+  expect(autoPercentOf({ tokens: null, window: 200_000 })).toBe(null)
+  expect(askPointOf({ threshold: 80, autoAt: 90 })).toBe(80)
+  expect(askPointOf({ threshold: 80, autoAt: 78 })).toBe(73)
+  expect(askPointOf({ threshold: 80, autoAt: 'off' })).toBe(80)
+  expect(isAskDue(facts(73, { autoAt: 78 }))).toBe(true)
+  expect(cardOf({ ...facts(30), hasCompacted: true })).toBe('compacted')
+  expect(cardOf({ ...facts(85), hasCompacted: true })).toBe('ask')
+})
+
+test('the notes list: newest first, one row per file, a week kept', () => {
+  const entry = (path: string, at: number) => ({ path, at, kind: 'compact' as const, text: '' })
+  const list = withEntry([entry('/a.md', 1), entry('/b.md', 2)], entry('/a.md', 3))
+  expect(list.map(e => [e.path, e.at])).toEqual([['/a.md', 3], ['/b.md', 2]])
+  const { kept, dropped } = pruned([entry('/new.md', 6 * DAY), entry('/old.md', 0)], 8 * DAY)
+  expect(kept.map(e => e.path)).toEqual(['/new.md'])
+  expect(dropped.map(e => e.path)).toEqual(['/old.md'])
 })
 
 test('the card follows the stage; the band is quiet while a turn runs or a survey is open', () => {

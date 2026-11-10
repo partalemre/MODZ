@@ -1,15 +1,18 @@
-import type { PromptComposeSection } from 'claude-code'
+import type { PromptComposeSection, SessionCompactResult } from 'claude-code'
 
-import { isAskDue, rearmed, snoozeFrom } from './gate'
+import { autoPercentOf, isAskDue, rearmed, snoozeFrom } from './gate'
+import type { AskFacts } from './gate'
 import { hubCard, hubOf } from './hub'
 import { injectMove, sectionText } from './inject'
 import { reasonOf } from './io'
 import type { Io } from './io'
 import { NOTICE_FOREVER, NOTICE_PRIORITY, SECTION_ID } from './limits'
 import type { Settings } from './limits'
-import { forgetNote, loadNote, repoOf, saveNote } from './state'
+import { dropEntry } from './notes'
+import { loadNote, repoOf, saveNote } from './state'
 import { words } from './words'
-import { deleteNote, writeHandoff } from './write'
+import { writeHandoff, writeWorkingNotes } from './write'
+import type { NoteEntry } from '../types'
 
 // What a press, the command, a measurement and the prompt do. Each runs from a handler or an event, never
 // while drawing.
@@ -24,15 +27,30 @@ export async function writeHub(io: Io, settings: Settings): Promise<void> {
   if (!isUnchanged) await io.hub.set(hubCard(shown, await io.now()))
 }
 
+export const askFactsOf = async (io: Io, settings: Settings): Promise<AskFacts> => ({
+  percent: await io.get('percent'), threshold: settings.threshold, snoozeUntil: await io.get('snoozeUntil'), stage: await io.get('stage'), autoAt: await io.get('autoAt'),
+})
+
 // The shared notice line holds this mod's place while the ask is due, and lets go once it is answered.
 async function syncNotice(io: Io, settings: Settings): Promise<void> {
-  const isDue = isAskDue({ percent: await io.get('percent'), threshold: settings.threshold, snoozeUntil: await io.get('snoozeUntil'), stage: await io.get('stage') })
+  const isDue = isAskDue(await askFactsOf(io, settings))
   await io.put('notice', isDue ? { priority: NOTICE_PRIORITY, expiresAt: NOTICE_FOREVER } : null)
+}
+
+// Where auto-compaction fires, read once per conversation (the engine's own estimate); unread, the setting alone.
+async function readAutoAt(io: Io): Promise<void> {
+  if ((await io.get('autoAt')) !== null) return
+  try {
+    await io.put('autoAt', autoPercentOf(await io.autoCompact()) ?? 'off')
+  } catch (error) {
+    io.log(`auto-compaction point unread (${reasonOf(error)})`)
+  }
 }
 
 export async function measured(io: Io, settings: Settings, percent: number | null): Promise<void> {
   await io.put('percent', percent)
-  const next = rearmed({ percent, threshold: settings.threshold, snoozeUntil: await io.get('snoozeUntil'), stage: await io.get('stage') })
+  if (percent !== null) await readAutoAt(io)
+  const next = rearmed({ ...(await askFactsOf(io, settings)), percent })
   await io.put('snoozeUntil', next.snoozeUntil)
   await io.put('stage', next.stage)
   await syncNotice(io, settings)
@@ -49,6 +67,8 @@ export async function resetConversation(io: Io, settings: Settings): Promise<voi
   await io.put('lastError', null)
   await io.put('notice', null)
   await io.put('declined', null)
+  await io.put('compacted', null)
+  await io.put('autoAt', null)
   await writeHub(io, settings)
 }
 
@@ -80,15 +100,56 @@ export async function snooze(io: Io, settings: Settings): Promise<void> {
   await syncNotice(io, settings)
 }
 
-// Compaction runs between turns only, and the band offers it only then. The ask is done for this climb.
-export async function compact(io: Io, settings: Settings): Promise<void> {
-  await dismiss(io, settings)
+// Set while this mod's own compaction runs, so its notes are written once, by the press.
+let isCompactingHere = false
+export const isOwnCompaction = (): boolean => isCompactingHere
+
+// Before any compaction: the working notes on disk first. A failure is logged and the compaction goes on.
+export async function notesBefore(io: Io, trigger: string): Promise<NoteEntry | null> {
   try {
-    await io.compact()
+    return await writeWorkingNotes(io, trigger)
   } catch (error) {
-    io.log(`compaction refused (${reasonOf(error)})`)
+    io.log(`working notes not written (${reasonOf(error)})`)
+
+    return null
   }
 }
+
+// After one that stands: the line that says what was compacted and offers the notes back.
+export async function noteCompacted(io: Io, done: { trigger: string; result: SessionCompactResult; entry: NoteEntry | null }): Promise<void> {
+  const { trigger, result, entry } = done
+  if (result.messages === undefined || entry === null) return
+  const sizes = { ...(result.tokensBefore === undefined ? {} : { tokensBefore: result.tokensBefore }), ...(result.tokensAfter === undefined ? {} : { tokensAfter: result.tokensAfter }) }
+  await io.put('compacted', { at: await io.now(), trigger, path: entry.path, ...sizes })
+  // The conversation went on here: a handoff card still up is old news, and the line takes its place.
+  const stage = await io.get('stage')
+  if (stage === 'saved' || stage === 'failed') await io.put('stage', 'done')
+}
+
+// "Compact now, keep notes": the notes, then the compaction, between turns only. The ask is done for this climb.
+export async function compact(io: Io, settings: Settings): Promise<void> {
+  await dismiss(io, settings)
+  isCompactingHere = true
+  try {
+    const entry = await notesBefore(io, 'plugin')
+    await noteCompacted(io, { trigger: 'plugin', result: await io.compact(), entry })
+  } catch (error) {
+    io.log(`compaction refused (${reasonOf(error)})`)
+  } finally {
+    isCompactingHere = false
+  }
+}
+
+// "Restore working notes": the notes go back into this conversation once, and the line goes.
+export async function restore(io: Io): Promise<void> {
+  const shown = await io.get('compacted')
+  if (shown === null) return
+  await io.put('compacted', null)
+  const entry = (await io.get('notes')).find(e => e.path === shown.path)
+  if (entry !== undefined) await io.append(`${words().restoreIntro}\n\n${entry.text}`)
+}
+
+export const forgetCompacted = (io: Io): Promise<void> => io.put('compacted', null)
 
 export async function dismiss(io: Io, settings: Settings): Promise<void> {
   await io.put('stage', 'done')
@@ -105,12 +166,13 @@ export async function toggleInject(io: Io, settings: Settings): Promise<void> {
 export async function remove(io: Io, settings: Settings): Promise<void> {
   const note = await io.get('latest')
   if (note === null) return
-  try {
-    await deleteNote(io, note)
-  } catch (error) {
-    io.log(`note file kept (${reasonOf(error)})`)
-  }
-  await forgetNote(io, note.root)
+  await dropEntry(io, note.root, note.path)
+  await writeHub(io, settings)
+}
+
+// One row of the pane's list.
+export async function drop(io: Io, settings: Settings, path: string): Promise<void> {
+  await dropEntry(io, await repoOf(io), path)
   await writeHub(io, settings)
 }
 
@@ -145,4 +207,20 @@ export async function noteSection(io: Io): Promise<PromptComposeSection | null> 
   if (note === null || move !== 'inject') return null
 
   return { id: SECTION_ID, text: sectionText(note), scope: 'session' }
+}
+
+// `/handoff` writes a note now; `/handoff show` opens the pane.
+export async function runCommand(io: Io, settings: Settings, arg: string): Promise<string> {
+  if (arg === 'show') {
+    await io.openPane()
+
+    return words().commandShown
+  }
+  try {
+    const path = await write(io, settings)
+
+    return path === null ? words().writingHeadline : words().commandSaved(path)
+  } catch (error) {
+    return words().commandFailed(reasonOf(error))
+  }
 }

@@ -1,5 +1,5 @@
-// effort-router: each main-loop turn's effective effort and model, seen in a small pane and on the MODZ hub
-// (`show`, no tokens); in `auto`, a prompt the judge calls light goes at low effort. Subagent steps are never
+// effort-router: each main-loop turn's effective effort and model, seen in a small pane and on the MODZ hub, or in
+// hud-pro's Usage pane while it runs (`show`, no tokens); in `auto`, a light prompt goes at low effort. Subagent steps are never
 // touched, and a turn is never sent above the person's own setting.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
@@ -16,8 +16,9 @@ import { resolveLight } from './kit/tokens'
 import { motion, paneTree } from './pane'
 import { loweredRow } from './lowered'
 import type { Lowered } from './lowered'
-import { DEFAULT_MODE, isPerson, isSkipped, resolveMode, routedEffort } from './route'
+import { DEFAULT_MODE, isPerson, isSkipped, modeOf, resolveMode, routedEffort } from './route'
 import type { PromptFacts } from './route'
+import { effortSection, isLive, loweredNotice } from './section'
 import { hubOf, startedRow, withStep, withTurn } from './turns'
 import { words } from './words'
 
@@ -31,6 +32,8 @@ const turnsAtom = atom({ plugin: 'effort-router', key: 'turns' } as const, [] as
 const HUB = { plugin: 'effort-router', key: 'hub' } as const
 const HOME = { plugin: 'effort-router', key: 'home' } as const
 const HUB_ON = { plugin: 'modz', key: 'isOn' } as const
+const SECTION = { plugin: 'effort-router', key: 'section' } as const
+const NOTICE = { plugin: 'effort-router', key: 'notice' } as const
 
 // The module's own: the judge's settings, the theme override, the routing judged for the person's prompt whose turn
 // starts next (consumed by that turn alone), whether a task is under way, and the last lowered turn the band names.
@@ -64,9 +67,36 @@ function judgeIoOf($: EngineInterface): JudgeIo {
   }
 }
 
+// While hud-pro runs, its Usage pane is this mod's one place: the section there, no pane or hub row of its own.
+const isHosted = async ($: EngineInterface): Promise<boolean> => (await $.state.get({ plugin: 'hud-pro', key: 'host' })).value === true
+// The section hud-pro's Usage pane draws, written only when it changes (with or without hud-pro: it may come later).
+async function writeSection($: EngineInterface): Promise<void> {
+  const section = effortSection(await read($, turnsAtom), await read($, modeAtom))
+  const { value } = await $.state.get(SECTION)
+  if (value === undefined || !isSame(value, section)) await $.state.set(SECTION, section)
+}
+
+// The lowered turn's notice for the shared line above the prompt, so the quieter meters wait behind it (DESIGN.md §6).
+async function setLowered($: EngineInterface, lowered: Lowered | null): Promise<void> {
+  session.lowered = lowered
+  $.ui.invalidate('ui.render')
+  await $.state.set(NOTICE, lowered === null ? null : loweredNotice(lowered)).catch(() => log($, 'the notice could not be written'))
+}
+
+// The louder notices of the shared line, top first (DESIGN.md §6): while one is live the lowered row waits.
+async function isOutranked($: EngineInterface): Promise<boolean> {
+  const now = await $.clock.now()
+  const louder = [await $.state.get({ plugin: 'reflect', key: 'notice' }), await $.state.get({ plugin: 'you-should-know', key: 'notice' }),
+    await $.state.get({ plugin: 'cache-tax', key: 'notice' }), await $.state.get({ plugin: 'session-budget', key: 'notice' })]
+
+  return louder.some(({ value }) => isLive(value, now))
+}
+
 // The hub's row (DESIGN.md §9): the hub does not know this mod, so the card names its own title, hint, icon and
-// section. Written only when what it shows changes.
+// section. Written only when what it shows changes; the section with it.
 async function writeHub($: EngineInterface): Promise<void> {
+  await writeSection($)
+  if (await isHosted($)) return
   const said = words()
   const shown = hubOf(await read($, turnsAtom), await read($, modeAtom))
   const card = { pane: PANE, ...shown, title: said.title, hint: said.hint, icon: 'bolt', section: 'meter' as const }
@@ -124,13 +154,40 @@ function sessionHooks(on: On, options: Options): void {
     return done
   })
 
-  on('command.run', { command: COMMAND }, async $ => (await openPane($, false), {}))
+  // While hud-pro runs, the command opens its Usage pane at this mod's section instead.
+  on('command.run', { command: COMMAND }, async $ => {
+    if (await isHosted($)) await $.state.set({ plugin: 'effort-router', key: 'openUsage' }, { section: 'effort', at: await $.clock.now() })
+    else await openPane($, false)
+
+    return {}
+  })
+
+}
+
+// hud-pro's Usage pane and the shared line: a mode button pressed there, and a louder notice that clears.
+function usageHooks(on: On): void {
+  // A press on the section's mode buttons in hud-pro's Usage pane.
+  on('state.set', { plugin: 'hud-pro', key: 'press' }, async ($, e, next) => {
+    const done = await next(e)
+    const mode = e.value?.section === 'effort' ? modeOf(e.value.action) : undefined
+    if (mode !== undefined) await setMode($, mode)
+
+    return done
+  }).catch(($, e, next) => next(e))
+
+  // A louder notice that clears hands the shared line back to the lowered row.
+  on('state.set', { key: 'notice' } as any, async ($: EngineInterface, e: any, next: any) => {
+    const done = await next(e)
+    if (session.lowered !== null && e.plugin !== 'effort-router') $.ui.invalidate('ui.render')
+
+    return done
+  }).catch(($: EngineInterface, e: any, next: any) => next(e))
 
   // The hub's open request: opens only, so a pane already open comes forward instead of closing.
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
     const done = await next(e)
     const pane = (e.value as { pane?: unknown } | undefined)?.pane
-    if (pane === PANE) await openPane($, true)
+    if (pane === PANE && !(await isHosted($))) await openPane($, true)
 
     return done
   }).catch(($, e, next) => next(e))
@@ -158,10 +215,7 @@ function turnHooks(on: On): void {
   on('prompt.submit', async ($, e, next) => {
     const facts = { text: e.text, origin: e.origin.kind, isMidTurn: e.turnId !== undefined, isInTask: session.isInTask }
     if (!facts.isMidTurn) session.route = await judgeFor($, facts)
-    if (isPerson(facts.origin) && session.lowered !== null) {
-      session.lowered = null
-      $.ui.invalidate('ui.render')
-    }
+    if (isPerson(facts.origin) && session.lowered !== null) await setLowered($, null)
 
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -198,8 +252,7 @@ function turnHooks(on: On): void {
     const seeded = known === undefined ? withTurn(turns, startedRow({ turnId: e.turnId, at, text: '', cls })) : turns
     await setTurns($, () => withStep(seeded, { turnId: e.turnId, asked: e.effort, sent, model: e.model }))
     if (sent !== e.effort && session.turn?.turnId === e.turnId && session.lowered?.turnId !== e.turnId) {
-      session.lowered = { turnId: e.turnId, text: session.turn.text, asked: e.effort, sent }
-      $.ui.invalidate('ui.render')
+      await setLowered($, { turnId: e.turnId, text: session.turn.text, asked: e.effort, sent })
     }
 
     return yield* next(sent === e.effort ? e : { ...e, effort: sent })
@@ -228,10 +281,9 @@ function bandHooks(on: On): void {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const theirs = await next(e)
     const lowered = session.lowered
-    if (lowered === null || e.props.hasSurvey) return theirs
+    if (lowered === null || e.props.hasSurvey || (await isOutranked($))) return theirs
     const resend = () => {
-      session.lowered = null
-      $.ui.invalidate('ui.render')
+      void setLowered($, null)
       void $.prompt.submit({ text: lowered.text, asUser: true }).catch(() => log($, 'could not send the prompt again'))
     }
 
@@ -241,6 +293,7 @@ function bandHooks(on: On): void {
 
 export const register: Register = (on, options) => {
   sessionHooks(on, options)
+  usageHooks(on)
   turnHooks(on)
   paneHooks(on)
   bandHooks(on)

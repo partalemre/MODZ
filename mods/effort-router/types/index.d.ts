@@ -38,10 +38,41 @@ export type HubCard = {
   badge?: string
 }
 
+// This mod's section of hud-pro's Usage pane (hud-pro types/index.d.ts): the mode with its buttons and the newest turns.
+export type UsageSection = {
+  id: string
+  title: string
+  lines: string[]
+  tone: 'neutral' | 'warn' | 'danger'
+  isEmpty?: boolean
+  actions?: Array<{ id: string; label: string; isOn?: boolean }>
+  at: number
+}
+
+// This mod's notice in the shared line above the prompt (DESIGN.md §6): a lowered turn, live until cleared.
+export type SlotNotice = { id: number; text: string; expiresAt: number }
+
 declare module 'claude-code' {
   interface PluginState {
     // `mode` is the one in force (the person's pick, else the option); `turns` the newest main-loop turns, newest first.
-    'effort-router': { mode: EffortMode; turns: TurnRow[]; hub: HubCard; home: { at: number }; shown: { pane: string; at: number } }
+    'effort-router': {
+      mode: EffortMode
+      turns: TurnRow[]
+      hub: HubCard
+      home: { at: number }
+      shown: { pane: string; at: number }
+      section: UsageSection
+      openUsage: { section: string; at: number }
+      notice: SlotNotice | null
+    }
+    // Written by hud-pro, which owns them: true while it runs (its Usage pane then stands in for this mod's pane and hub
+    // row), and a press on a button of this mod's section there.
+    'hud-pro': { host: boolean; press: { section: string; action: string; at: number } }
+    // The louder notices this mod's lowered-turn row waits behind.
+    'session-budget': { notice: unknown }
+    reflect: { notice: unknown }
+    'you-should-know': { notice: unknown }
+    'cache-tax': { notice: unknown }
     // The MODZ main panel's values this mod reads (DESIGN.md §9); modz owns and writes them.
     modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
   }

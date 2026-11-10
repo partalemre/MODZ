@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import { BAND_KEY, band, parseBand } from './band-mode'
 import { HUB_PANE, isOwnOpen } from './hub'
 import { motion } from './pane-motion'
+import { LOUDER } from './slot'
 import { isOffStage, shownOf } from './stage'
 import { words } from './words'
 
@@ -33,8 +34,17 @@ async function reportShown($: EngineInterface): Promise<void> {
   }
 }
 
+// The section the pane leads with: the one a meter mod's command asked for, or none (Limits first).
+export const focus: { section: string | null } = { section: null }
+
+// The meter mods whose sections the pane draws, by the section each publishes.
+const SECTION_OF: Readonly<Record<string, string>> = { 'session-budget': 'budget', 'cache-tax': 'cache', 'effort-router': 'effort' }
+// The hub's Effort row asks for effort-router's pane, which the Usage pane stands in for once that mod reports.
+const EFFORT_PANE = 'effort'
+
 // Opens the pane, or brings it forward when it is open already; never closes it.
-async function openPane($: EngineInterface): Promise<void> {
+async function openPane($: EngineInterface, section: string | null = null): Promise<void> {
+  focus.section = section
   motion.reset()
   const opened = await $.ui.open({ id: PANE, title: words().paneTitle, focus: true, closeOnEscape: true })
   if (opened.isPlaced) await reportShown($)
@@ -75,6 +85,9 @@ export function onCommand(on: On) {
   on('state.set', { plugin: 'modz', key: 'open' } as any, async ($: EngineInterface, e: any, next: any) => {
     const done = await next(e)
     if (isOwnOpen(e.value)) await openPane($)
+    else if (e.value?.pane === EFFORT_PANE && (await $.state.get({ plugin: 'effort-router', key: 'section' })).value !== undefined) {
+      await openPane($, 'effort')
+    }
 
     return done
   }).catch(($: EngineInterface, e: any, next: any) => next(e))
@@ -82,6 +95,32 @@ export function onCommand(on: On) {
   on('state.set', { plugin: 'modz', key: 'stage' } as any, async ($: EngineInterface, e: any, next: any) => {
     const done = await next(e)
     if (isOffStage(e.value, HUB_PANE)) await $.ui.close({ id: PANE })
+
+    return done
+  }).catch(($: EngineInterface, e: any, next: any) => next(e))
+  onUsageAsks(on)
+}
+
+// The other meter mods: an ask for the pane at their section, a changed section, a louder notice that comes or goes.
+function onUsageAsks(on: On) {
+  // `/budget`, `/cache-tax` or `/effort-router` while this mod runs: the Usage pane opens at that mod's section.
+  on('state.set', { key: 'openUsage' } as any, async ($: EngineInterface, e: any, next: any) => {
+    const done = await next(e)
+    const section = SECTION_OF[e.plugin]
+    if (section !== undefined) await openPane($, section)
+
+    return done
+  }).catch(($: EngineInterface, e: any, next: any) => next(e))
+  // A section that changed draws again; so does the band when a louder notice comes or goes (slot.ts).
+  on('state.set', { key: 'section' } as any, async ($: EngineInterface, e: any, next: any) => {
+    const done = await next(e)
+    if (SECTION_OF[e.plugin] !== undefined) $.ui.invalidate('ui.render')
+
+    return done
+  }).catch(($: EngineInterface, e: any, next: any) => next(e))
+  on('state.set', { key: 'notice' } as any, async ($: EngineInterface, e: any, next: any) => {
+    const done = await next(e)
+    if ((LOUDER as readonly string[]).includes(e.plugin)) $.ui.invalidate('ui.render')
 
     return done
   }).catch(($: EngineInterface, e: any, next: any) => next(e))

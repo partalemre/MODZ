@@ -11,9 +11,12 @@ import { gaugeViews } from './model'
 import type { Forecasts, GaugeView } from './model'
 import { motion } from './pane-motion'
 import { pastCard } from './past-card'
+import { ordered, sectionsTree, sectionTree } from './sections'
+import type { SectionsView } from './sections'
 import type { PastView } from './past-hook'
 import { tilesSvg } from './svg-tiles'
 import type { Tile } from './svg-tiles'
+import { usageWords } from './usage-words'
 import { words } from './words'
 import type { HudContext, HudSample, HudTurn, HudUsage } from '../types'
 
@@ -35,6 +38,9 @@ export type PaneView = {
   isLive: boolean
   // The last 7 or 30 days from the transcripts; null until they have been read.
   past: PastView | null
+  // Pace and the other meter mods' sections, and the one a mod's command asked the pane to lead with.
+  sections: SectionsView
+  focus: string | null
   svg?: PaneSvg
 }
 
@@ -92,6 +98,9 @@ function gaugeTile(gauge: GaugeView, view: PaneView): Tile {
   }
 }
 
+// A limit window means a subscription: its dollars are list-price arithmetic, not a bill.
+const isSubscriber = (view: PaneView): boolean => view.usage?.gauges.some(gauge => gauge.id !== CONTEXT) === true
+
 function costTile(usd: number, view: PaneView): Tile {
   const series = costSeries(view.history)
   const turn = view.turn
@@ -107,7 +116,7 @@ function costTile(usd: number, view: PaneView): Tile {
     arc: null,
     series,
     seriesMax: Math.max(...series, usd) * COST_HEADROOM,
-    caption: series.length < 2 ? words().thisSession : `${words().thisSession} · ${words().readings(series.length)}`,
+    caption: [isSubscriber(view) ? usageWords().listPrice : '', words().thisSession, series.length < 2 ? '' : words().readings(series.length)].filter(part => part !== '').join(' · '),
   }
 }
 
@@ -173,6 +182,7 @@ function terminalBody(ui: Ui, view: PaneView, gauges: readonly GaugeView[]) {
       <Box flexDirection="column" marginTop={1}>
         {gauges.map(gauge => terminalRow(ui, gauge, view))}
       </Box>
+      {sectionsTree(ui, restOf(view))}
       {contextCard(ui, cardOf(view, gauges))}
       {view.past !== null && pastCard(ui, view.past)}
     </Box>
@@ -192,23 +202,30 @@ function body(ui: Ui, view: PaneView, usage: HudUsage) {
   return (
     <Box flexDirection="column">
       <Svg key="hud-tiles" {...motion.pic('hud-tiles', drawn, { shows })} />
+      {sectionsTree(ui, restOf(view))}
       {contextCard(ui, cardOf(view, gauges, drawn.width))}
       {view.past !== null && pastCard(ui, { ...view.past, width: drawn.width, svg: Svg })}
     </Box>
   )
 }
 
+const ledOf = (view: PaneView) => view.sections.sections.find(section => section.id === view.focus)
+
+// The sections under Limits, less the one the pane leads with.
+const restOf = (view: PaneView): SectionsView => ({ ...view.sections, sections: ordered(view.sections.sections).filter(section => section !== ledOf(view)) })
+
 export function paneTree(ui: Ui, view: PaneView) {
   const { Box, Text } = ui
   const usage = view.usage
-  if (usage === null || (usage.gauges.length === 0 && usage.costUsd === null)) {
-    return <Text dimColor>{words().noReadings}</Text>
-  }
+  const led = ledOf(view)
+  const isUnread = usage === null || (usage.gauges.length === 0 && usage.costUsd === null)
 
   return (
     <Box flexDirection="column">
-      {body(ui, view, usage)}
-      {view.turn !== null && view.turn.requests > 0 && (
+      {led !== undefined && sectionTree(ui, led, view.sections.press)}
+      {isUnread || usage === null ? <Text dimColor>{words().noReadings}</Text> : body(ui, view, usage)}
+      {isUnread && sectionsTree(ui, restOf(view))}
+      {!isUnread && view.turn !== null && view.turn.requests > 0 && (
         <Box marginTop={1}>
           <Text dimColor>{turnText(view.turn)}</Text>
         </Box>

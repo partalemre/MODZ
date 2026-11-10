@@ -4,5 +4,6 @@
   "author": {
     "name": "Karan Bansal"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "types": "./types/index.d.ts"
 }

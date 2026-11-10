@@ -40,6 +40,10 @@ const EN = {
   tooLong: (tokens: number): string => `a refresh wrote ${tokens} output tokens, over the cap`,
   gone: (g: { read: string; wrote: string; usd: string }): string =>
     `the refresh read ${g.read} tokens and rewrote ${g.wrote} tokens (${g.usd}); the cache had already gone cold`,
+  // The Usage pane's section (section.ts).
+  section: 'Cache',
+  sectionEmpty: 'No reply yet. The cache’s one-hour clock starts with the first reply; then this shows warm or cold, the time left, what a cold send would rewrite, and keepwarm.',
+  listPrice: '$ are list-price estimates; on a subscription the limit percent is what counts.',
 }
 
 const TR: typeof EN = {
@@ -77,6 +81,9 @@ const TR: typeof EN = {
   tooLong: (tokens: number): string => `bir tazeleme ${tokens} çıktı tokenı yazdı, sınırın üstünde`,
   gone: (g: { read: string; wrote: string; usd: string }): string =>
     `tazeleme ${g.read} token okudu, ${g.wrote} token baştan yazdı (${g.usd}); önbellek zaten soğumuştu`,
+  section: 'Önbellek',
+  sectionEmpty: 'Henüz yanıt yok. Önbelleğin bir saatlik saati ilk yanıtla başlar; sonra burada sıcak mı soğuk mu, kalan süre, soğuk bir gönderimin yeniden yazacağı ve keepwarm görünür.',
+  listPrice: '$ tutarları liste fiyatı tahminidir; abonelikte asıl ölçü limit yüzdesidir.',
 }
 
 export const bandWords = (): typeof EN => pick({ en: EN, tr: TR })

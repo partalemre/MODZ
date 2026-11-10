@@ -1,11 +1,13 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, PromptOrigin, Register, SessionRateLimit } from 'claude-code'
 
-import { BRAKE_DEFAULT, addPoint, brakeWhy } from './brake'
+import { BRAKE_DEFAULT, addPoint } from './brake'
+import { registerBrake } from './brake-hooks'
 import { WARN_RATIO, advance, describe, isWeekly, parseCommand, raise, ratioOf, readingOf, spendText, startBudget, stepText, windowOf } from './budget'
 import { fullCard, isLive, noticeAbove, stoppedRow, warnRow } from './notice'
 import { setLang } from './lang'
 import { pinned } from './pin'
+import { budgetSection } from './section'
 import { words } from './words'
 import type { Budget, BudgetNotice } from '../types'
 
@@ -13,8 +15,6 @@ const BUDGET = 'budget'
 const TOGGLE = 'session-budget'
 const STORE_KEY = 'session-budget.enabled'
 const BRAKE_KEY = 'session-budget.brake'
-// Agent is today's name of the subagent tool; Task the older one.
-const SPAWN_TOOLS = /^(Agent|Task)$/
 const PRIORITY = 1
 const DISMISS_AFTER_MS = 20_000
 // After "Dur" the dropped prompt goes back in the box once the dialog has given it back.
@@ -27,16 +27,30 @@ const readingAtom = atom({ plugin: 'session-budget', key: 'reading' } as const, 
 const noticeAtom = atom({ plugin: 'session-budget', key: 'notice' } as const, null)
 const enabledAtom = atom({ plugin: 'session-budget', key: 'isEnabled' } as const, true)
 const brakeAtom = atom({ plugin: 'session-budget', key: 'brakeAt' } as const, BRAKE_DEFAULT)
-const ackAtom = atom({ plugin: 'session-budget', key: 'brakeAck' } as const, null)
 const paceAtom = atom({ plugin: 'session-budget', key: 'pace' } as const, { points: [], resetsAt: null })
 // The shared notice line: every one of these outranks this mod's line.
 const cacheTaxNotice = { plugin: 'cache-tax', key: 'notice' } as const
 const knowNotice = { plugin: 'you-should-know', key: 'notice' } as const
 const reflectNotice = { plugin: 'reflect', key: 'notice' } as const
 
-// A fan-out raises several spawns at once: they share one brake question.
 // `shownId`: the last notice a band drew, so a warning held off the line waits instead of clearing.
-const run: { nextId: number; brake: Promise<boolean> | null; shownId: number } = { nextId: 0, brake: null, shownId: 0 }
+const run: { nextId: number; shownId: number; section: string } = { nextId: 0, shownId: 0, section: '' }
+
+// The section hud-pro's Usage pane draws for this mod, written only when what it says changes.
+async function publish($: EngineInterface): Promise<void> {
+  const spec = { budget: await read($, budgetAtom), brakeAt: await read($, brakeAtom), isEnabled: await read($, enabledAtom), nowMs: await $.clock.now() }
+  const section = budgetSection(spec)
+  const said = JSON.stringify(section)
+  if (said === run.section) return
+  run.section = said
+  await $.state.set({ plugin: 'session-budget', key: 'section' }, section)
+}
+
+// `/budget` with nothing after it, while hud-pro runs: its Usage pane opens at this mod's section.
+async function openUsage($: EngineInterface): Promise<void> {
+  if ((await $.state.get({ plugin: 'hud-pro', key: 'host' })).value !== true) return
+  await $.state.set({ plugin: 'session-budget', key: 'openUsage' }, { section: 'budget', at: await $.clock.now() })
+}
 
 async function notify($: EngineInterface, kind: BudgetNotice['kind'], text: string): Promise<void> {
   run.nextId += 1
@@ -82,6 +96,7 @@ async function setBudget($: EngineInterface, args: string): Promise<string> {
   }
   if (command.kind === 'status') {
     const budget = await read($, budgetAtom)
+    await openUsage($)
 
     return budget === null ? words().none : words().status(describe(budget))
   }
@@ -153,6 +168,7 @@ function registerSetup(on: On) {
       await update($, readingAtom, () => readingOf(usage.rateLimits, usage.cost?.usd))
       await $.command.register({ name: BUDGET, description: words().budgetHelp, argumentHint: '<20% | $5 | off | brake 85 | brake off>' })
       await $.command.register({ name: TOGGLE, description: words().toggleHelp, argumentHint: '[on|off]' })
+      await publish($)
     } catch {
       $.ui.log('session-budget: could not load settings', { to: 'debug' })
     }
@@ -160,7 +176,12 @@ function registerSetup(on: On) {
     return next(e)
   })
 
-  on('command.run', { command: BUDGET }, async ($, e) => ({ text: await setBudget($, e.args) }))
+  on('command.run', { command: BUDGET }, async ($, e) => {
+    const text = await setBudget($, e.args)
+    await publish($)
+
+    return { text }
+  })
 
   on('command.run', { command: TOGGLE }, async ($, e) => {
     const arg = e.args.trim().toLowerCase()
@@ -168,6 +189,7 @@ function registerSetup(on: On) {
     await update($, enabledAtom, () => isOn)
     await $.store.set(STORE_KEY, isOn)
     if (!isOn) await update($, noticeAtom, () => null)
+    await publish($)
 
     return { text: words().switched(isOn) }
   })
@@ -185,6 +207,7 @@ function registerFlow(on: On) {
         await update($, budgetAtom, () => advanced)
         if (await read($, enabledAtom)) await checkWarn($, advanced)
       }
+      await publish($)
     } catch {
       $.ui.log('session-budget: could not read usage', { to: 'debug' })
     }
@@ -241,46 +264,6 @@ async function recordPace($: EngineInterface, rateLimits: readonly SessionRateLi
   if (window === undefined) return
   const point = { t: await $.clock.now(), value: window.percentUsed }
   await update($, paceAtom, pace => ({ points: addPoint(pace.points, point), resetsAt: window.resetsAt ?? null, scope: window.kind }))
-}
-
-// "Dur" first, as the main way; anything else, a dismissal or nobody to ask lets spawns through for a step.
-async function askBrake($: EngineInterface, why: string): Promise<boolean> {
-  const says = words()
-  let answer: string | null = null
-  try {
-    answer = await $.ui.ask(says.brakeQuestion(why), { options: [says.stop, says.brakeGo], header: says.brakeHeader })
-  } catch {
-    // Nobody to ask (a -p run) or dismissed: the brake never blocks a spawn it cannot ask about.
-    $.ui.log('session-budget: spawn brake not answered; spawn let through', { to: 'debug' })
-  }
-  if (answer === says.stop) return false
-  const pace = await read($, paceAtom)
-  const percent = pace.points[pace.points.length - 1]?.value ?? 0
-  await update($, ackAtom, () => ({ percent, window: pace.resetsAt }))
-
-  return true
-}
-
-async function heldWhy($: EngineInterface): Promise<string | null> {
-  if (!(await read($, enabledAtom))) return null
-  const pace = await read($, paceAtom)
-
-  const ack = await read($, ackAtom)
-
-  return brakeWhy({ at: await read($, brakeAtom), points: pace.points, resetsAt: pace.resetsAt, ack, isWeekly: isWeekly(pace.scope) })
-}
-
-function registerBrake(on: On) {
-  // Only spawns are braked; a brake that fails lets the spawn through.
-  on('tool.call', { tool: SPAWN_TOOLS }, async ($, e, next) => {
-    const why = await heldWhy($)
-    if (why === null) return next(e)
-    run.brake ??= askBrake($, why).finally(() => {
-      run.brake = null
-    })
-
-    return (await run.brake) ? next(e) : { deny: words().brakeDenied(why) }
-  }).catch(($, e, next) => next(e))
 }
 
 export const register: Register = on => {

@@ -57,6 +57,8 @@ const TR = {
   brakeDenied: (why: string) => `alt ajan freni: ${why}`,
   brakeState: (at: number | null) => (at === null ? 'Alt ajan freni kapalı.' : `Alt ajan freni: 5 saatlik pencere %${at} olunca sorar.`),
   brakeUsage: 'Kullanım: /budget brake <yüzde, ör. 85> | brake off',
+  sectionEmpty: 'Bütçe kurulmadı. /budget 20% bu oturum 5 saatlik pencereden 20 puan kullanınca (5 saatlik pencere yoksa haftalıktan) istemden önce sorar; /budget $5 dolar sayar, abonelikte liste fiyatı tahminidir.',
+  sectionOff: 'session-budget kapalı: uyarı, onay ve alt ajan freni yok. /session-budget on ile açılır.',
 }
 
 type Words = typeof TR
@@ -109,6 +111,8 @@ const EN: Words = {
   brakeDenied: why => `spawn brake: ${why}`,
   brakeState: at => (at === null ? 'Spawn brake off.' : `Spawn brake on: asks before a subagent at ${at}% of the 5-hour window.`),
   brakeUsage: 'Usage: /budget brake <percent, e.g. 85> | brake off',
+  sectionEmpty: 'No budget set. /budget 20% asks before a prompt once this session has used 20 points of the 5-hour window (the weekly one where there is no 5-hour window); /budget $5 counts dollars, a list-price estimate on a subscription.',
+  sectionOff: 'session-budget is off: no warning, no check, no spawn brake. /session-budget on turns it back on.',
 }
 
 export const words = (): Words => pick({ en: EN, tr: TR })

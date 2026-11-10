@@ -128,3 +128,32 @@ test('preview hud-full', async ($, on) => {
   await $.command.run({ command: 'hud', args: 'full' } as any)
   await logPane($, 'hud-full')
 })
+
+// The other meter mods' sections as they publish them, spelled inside: a stand-in's module is compiled on its own.
+const METERS = {
+  name: 'effort-router',
+  register(on: any) {
+    on('command.run', { command: 'meters' }, async ($: any) => {
+      const actions = [{ id: 'show', label: 'Show only' }, { id: 'auto', label: 'Route', isOn: true }, { id: 'off', label: 'Off' }]
+      const lines = ['Mode: Route. Light prompts go at low effort; the rest keep your setting.', 'low from high · opus-5-5 · What does this regex match?', 'high · opus-5-5 · Rename the helper']
+      await $.state.set({ plugin: 'effort-router', key: 'section' }, { id: 'effort', title: 'Effort', tone: 'neutral', at: 1, lines, actions })
+
+      return {}
+    })
+  },
+}
+
+// The one Usage pane: Limits, then Pace with turn shares and a fill before the reset, then a meter mod's section.
+test('preview usage-pane', { plugins: [METERS] } as any, async ($: any, on: any) => {
+  const clock = stubSession(on, usage(58, 30, 41), {})
+  await start($, 'desktop')
+  for (const five of [40, 46, 52]) {
+    await clock.advance(5 * 60_000)
+    await $.session.measure({ ...usage(five, 30, 41), changed: ['rateLimits'] } as any)
+  }
+  await $.turn.start({ text: 'go', turnId: 'p1' } as any)
+  await $.turn.complete({ answer: 'ok', durationMs: 1, isAborted: false, turnId: 'p1', reason: 'answer' } as any)
+  await $.command.run({ command: 'meters', args: '' })
+  await logPane($, 'usage-pane')
+  await log('usage-notice', await $.ui.mount({ ...BAND, surface: 'desktop' }))
+})

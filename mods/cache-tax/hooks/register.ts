@@ -1,15 +1,14 @@
 import type { EngineInterface, On, Register, TurnCompleteInput } from 'claude-code'
 
-import { composeBand } from './band'
-import { pinned } from './pin'
 import type { Prefs } from './band'
+import { wireBand } from './band-hooks'
 import { DEFAULT_WINDOW_MS, MIN_MS, MIN_PING_MS, PING_AFTER_MS, TTL_MS, alwaysWindow, freshState, isFullMiss, parseAlways, parseDuration, resetForClear } from './core'
 import type { State } from './core'
 import { NAME, ackedKey, onPrompt } from './guard'
 import type { GuardIo } from './guard'
 import { guardFromStore, parseGuard, storedGuard } from './guard-mode'
-import type { HoldActions } from './hold'
 import { bandKey } from './row'
+import { cacheSection } from './section'
 import { seedFromResume } from './session'
 import { trackRate } from './share'
 import { isLightTheme } from './theme'
@@ -43,38 +42,30 @@ function io($: EngineInterface): Io {
 
 const guardIo = ($: EngineInterface): GuardIo => ({ ...io($), model: () => $.session.model() })
 
-type Ctx = { s: State; prefs: Prefs; drawn: string }
+type Ctx = { s: State; prefs: Prefs; drawn: string; section: string }
+
+/** The section hud-pro's Usage pane draws for this mod; written only when what it says changes. */
+async function publish($: EngineInterface, c: Ctx) {
+  const section = cacheSection(c.s, await $.clock.now())
+  const said = JSON.stringify(section)
+  if (said === c.section) return
+  c.section = said
+  await $.state.set({ plugin: 'cache-tax', key: 'section' }, section)
+}
+
+/** `/cache-tax` for the card while hud-pro runs: its Usage pane opens at this mod's section too. */
+async function openUsage($: EngineInterface) {
+  if ((await $.state.get({ plugin: 'hud-pro', key: 'host' })).value !== true) return
+  await $.state.set({ plugin: 'cache-tax', key: 'openUsage' }, { section: 'cache', at: await $.clock.now() })
+}
 
 /** What the band shows changes minute by minute; it is redrawn only when the drawing would differ. */
 function tick($: EngineInterface, c: Ctx, now: number) {
+  void publish($, c).catch(() => $.ui.log('cache-tax: the Usage section was not written'))
   const key = bandKey(c.s, now)
   if (key === c.drawn) return
   c.drawn = key
   $.ui.invalidate('ui.render')
-}
-
-function actions($: EngineInterface, s: State): HoldActions {
-  const release = () => {
-    const held = s.held
-    s.held = null
-    $.ui.invalidate('ui.render')
-    return held
-  }
-  return {
-    pay: () => void (async () => {
-      const held = release()
-      if (!held) return
-      s.resend = held.text
-      s.isWarmAfterPay = true
-      await $.prompt.submit({ text: held.text, asUser: true })
-    })(),
-    fresh: () => void (async () => {
-      const held = release()
-      await $.command.run({ command: 'clear' })
-      if (held) await $.prompt.fill({ text: held.text })
-    })(),
-    status: () => void $.command.run({ command: NAME }),
-  }
 }
 
 async function readPrefs($: EngineInterface, prefs: Prefs) {
@@ -149,7 +140,10 @@ async function onKeepwarm($: EngineInterface, s: State, args: string): Promise<s
 
 async function onCacheTax($: EngineInterface, s: State, args: string): Promise<string> {
   const words = args.trim().split(/\s+/).filter(Boolean)
-  if (words[0] !== 'guard') return cardText(s, await $.clock.now())
+  if (words[0] !== 'guard') {
+    await openUsage($)
+    return cardText(s, await $.clock.now())
+  }
   const setting = parseGuard(words.slice(1))
   if (!setting) return say().guardMode.usage
   Object.assign(s, setting)
@@ -190,27 +184,6 @@ async function onTurnComplete($: EngineInterface, s: State, e: TurnCompleteInput
   else await arm(io($), s)
 }
 
-function wireBand(on: On, c: Ctx) {
-  const { s } = c
-  on('config.set', { key: 'theme' }, async ($, e, next) => {
-    const result = await next(e)
-    if (result.deny === undefined) {
-      c.prefs.isLight = isLightTheme(result.value)
-      if (s.hasBand) $.ui.invalidate('ui.render')
-    }
-    return result
-  })
-
-  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const theirs = await next(e)
-    if (!s.hasBand || e.props.hasSurvey) return theirs
-    const band = { s, prefs: c.prefs, actions: actions($, s), columns: e.props.bodyColumns, now: await $.clock.now() }
-    if (e.surface === 'desktop') return pinned(e, composeBand({ surface: 'desktop', ui: $.ui.resolve(e) }, theirs, band))
-    if (e.surface === 'terminal') return pinned(e, composeBand({ surface: 'terminal', ui: $.ui.resolve(e) }, theirs, band))
-    return theirs
-  })
-}
-
 function wireSession(on: On, c: Ctx) {
   const { s } = c
   on('session.start', async ($, e, next) => {
@@ -227,6 +200,7 @@ function wireSession(on: On, c: Ctx) {
     await restore($, s, now)
     await registerCommands($)
     updateStatus(io($), s, now)
+    await publish($, c)
     return r
   })
 
@@ -241,6 +215,7 @@ function wireSession(on: On, c: Ctx) {
       // /clear raises no session.start, so always arms the new conversation here.
       if (s.always) await openAlways($, s)
       else updateStatus(io($), s, await $.clock.now())
+      await publish($, c)
       return r
     }
     const line = seedFromResume(s, e, await $.clock.now())
@@ -253,9 +228,22 @@ function wireSession(on: On, c: Ctx) {
   })
 }
 
-function wireTurns(on: On, s: State) {
-  on('command.run', { command: 'keepwarm' }, async ($, e) => ({ text: await onKeepwarm($, s, String(e.args ?? '')) }))
-  on('command.run', { command: NAME }, async ($, e) => ({ text: await onCacheTax($, s, String(e.args ?? '')) }))
+function wireCommands(on: On, c: Ctx) {
+  const { s } = c
+  on('command.run', { command: 'keepwarm' }, async ($, e) => {
+    const text = await onKeepwarm($, s, String(e.args ?? ''))
+    await publish($, c)
+    return { text }
+  })
+  on('command.run', { command: NAME }, async ($, e) => {
+    const text = await onCacheTax($, s, String(e.args ?? ''))
+    await publish($, c)
+    return { text }
+  })
+}
+
+function wireTurns(on: On, c: Ctx) {
+  const { s } = c
   on('prompt.submit', ($, e, next) => onPrompt(guardIo($), s, { e, next }))
 
   on('turn.step', async function* ($, e, next) {
@@ -271,7 +259,10 @@ function wireTurns(on: On, s: State) {
 
   on('turn.complete', async ($, e, next) => {
     const r = await next(e)
-    if (!e.agentId) await onTurnComplete($, s, e)
+    if (!e.agentId) {
+      await onTurnComplete($, s, e)
+      await publish($, c)
+    }
     return r
   })
 
@@ -283,14 +274,16 @@ function wireTurns(on: On, s: State) {
       s.ackedAt = 0
       s.held = null
       await arm(io($), s)
+      await publish($, c)
     }
     return r
   })
 }
 
 export const register: Register = on => {
-  const c: Ctx = { s: freshState(), prefs: { isLight: false, noColor: false }, drawn: '' }
+  const c: Ctx = { s: freshState(), prefs: { isLight: false, noColor: false }, drawn: '', section: '' }
   wireBand(on, c)
   wireSession(on, c)
-  wireTurns(on, c.s)
+  wireCommands(on, c)
+  wireTurns(on, c)
 }

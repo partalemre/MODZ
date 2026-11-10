@@ -35,12 +35,12 @@ const isThrowaway = (path: string, state: string): boolean =>
   state === 'ignored' && (path.endsWith('.log') || path.split('/').some(part => REBUILDABLE.has(part)))
 
 export async function measureWrite(run: Run, risk: Extract<Risk, { kind: 'overwrite' }>, cwd: string): Promise<Report> {
-  const paths = risk.paths.filter(path => !TEMP_PATH.test(path))
+  // shortcut: a write to a path only known at run time (`cp "$a" "$b"`, a loop variable) passes unmeasured;
+  // holding each one stopped agents' ordinary work. Upgrade by expanding loop and assignment variables.
+  const paths = risk.paths.filter(path => !TEMP_PATH.test(path) && !isUnresolved(path))
   const device = paths.find(path => path.startsWith('/dev/') && !HARMLESS_DEVICE.test(path))
   if (device !== undefined) return emptyReport('overwrites', `${risk.label} (writes the device ${device})`, words().notes.device(device))
-  const unknown = paths.filter(isUnresolved)
-  if (unknown.length > 0) return emptyReport('overwrites', `${risk.label} (paths decided at run time)`, words().notes.decidedAtRun(unknown.join(' ')))
-  if (paths.length === 0) return nothingReport('overwrites', `${risk.label}: writes only temp files`)
+  if (paths.length === 0) return nothingReport('overwrites', `${risk.label}: writes only temp files or paths named at run time`)
   const ran = await run(['bash', '-c', WRITE_SCRIPT, 'blast-radius', ...paths], { cwd, timeoutMs: TIMEOUT_MS })
   if (ran.exitCode !== 0) throw new Error(`the overwrite scan exited ${ran.exitCode}`)
   const lost: Item[] = []

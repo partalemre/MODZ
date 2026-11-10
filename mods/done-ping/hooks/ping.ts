@@ -116,6 +116,25 @@ export function donePing(spec: { project: string; durationMs: number; files: num
   return { kind, project: spec.project, title: says.done, subtitle: spec.project, body, detail }
 }
 
+export type TurnEnd = { durationMs: number; isAborted: boolean; agentId?: string; reason?: string; answer?: string }
+
+// The ping a long turn ends with: how it stopped when the API or a refusal ended it, else what it did.
+export function endPing(e: TurnEnd & { project: string; files: number; tests: TestsSeen }): Ping {
+  const { project, durationMs } = e
+  if (e.reason === 'error' || e.reason === 'refusal') return stoppedPing({ project, durationMs, reason: e.reason, answer: e.answer ?? '' })
+
+  return donePing({ project, durationMs, files: e.files, tests: e.tests })
+}
+
+// A turn the API or a refusal ended: says what happened, with the reply's own words (a rate limit, an overload).
+function stoppedPing(spec: { project: string; durationMs: number; reason: 'error' | 'refusal'; answer: string }): Ping {
+  const says = words()
+  const title = spec.reason === 'error' ? says.stoppedOnError : says.refused
+  const body = plainSnippet(spec.answer) || says.took(durationText(spec.durationMs))
+
+  return { kind: 'fail', project: spec.project, title, subtitle: spec.project, body, detail: body }
+}
+
 function baseName(path: string): string {
   return path.split('/').filter(part => part !== '').pop() ?? path
 }

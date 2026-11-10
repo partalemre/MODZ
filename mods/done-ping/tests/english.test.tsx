@@ -23,20 +23,20 @@ test('English: the banner, the permission ping and the app notification', async 
 })
 
 test('English: the desktop app notification', async ($, on) => {
-  const spy = spyOf({ lang: null, surface: 'desktop', push: { message: '', localSent: true } })
+  const spy = spyOf({ lang: null, surface: 'desktop', push: { message: '', localSent: true }, isTestFailing: true })
   await setup($, on, spy)
   await turn($, spy, LONG_TURN_MS)
-  expect(spy.calls[0]).toMatchObject({ message: 'Turn finished · eliti\ntests passed · 2 files' })
+  expect(spy.calls[0]).toMatchObject({ message: 'Turn finished · eliti\ntests failed · 2 files' })
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`English: the fallback band (${surface})`, async ($, on) => {
-    const spy = spyOf({ lang: null, exitCode: 1, surface })
+    const spy = spyOf({ lang: null, exitCode: 1, surface, isTestFailing: true })
     await setup($, on, spy)
     await turn($, spy, LONG_TURN_MS)
     const ui = await $.ui.mount(bandOf(surface) as any)
     const drawn = JSON.stringify(await ui.drawn())
-    expect(drawn).toMatch(/Turn finished · tests passed · 2 files changed · 1m 15s/)
+    expect(drawn).toMatch(/Turn finished · tests failed · 2 files changed · 1m 15s/)
     expect(drawn).not.toMatch(TURKISH)
   })
 }

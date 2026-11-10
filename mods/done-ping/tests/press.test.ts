@@ -18,7 +18,7 @@ function handlesOf(node: any, out: Record<string, number> = {}): Record<string, 
 }
 
 test('a band redraw keeps every button’s press handle', async ($, on) => {
-  const spy = spyOf({ exitCode: 1, surface: 'desktop' })
+  const spy = spyOf({ exitCode: 1, surface: 'desktop', isTestFailing: true })
   await setup($, on, spy)
   await turn($, spy, LONG_TURN_MS)
   const site = bandOf('desktop') as any

@@ -122,17 +122,17 @@ test('terminal-notifier, when installed, draws the host app icon', async ($, on)
 })
 
 test('on the desktop the app notification is used when it runs without asking', async ($, on) => {
-  const spy = spyOf({ surface: 'desktop', push: { message: '', localSent: true } })
+  const spy = spyOf({ surface: 'desktop', push: { message: '', localSent: true }, isTestFailing: true })
   await setup($, on, spy)
 
   await turn($, spy, 75_000)
 
-  expect(spy.calls[0]).toMatchObject({ status: 'proactive', message: 'Tur bitti · eliti\ntestler geçti · 2 dosya' })
+  expect(spy.calls[0]).toMatchObject({ status: 'proactive', message: 'Tur bitti · eliti\ntestler kaldı · 2 dosya' })
   expect(banners(spy)).toHaveLength(0)
 })
 
 test('on the desktop, the app saying the person is present keeps it quiet', async ($, on) => {
-  const spy = spyOf({ surface: 'desktop', push: { message: '', localSent: false, disabledReason: 'user_present' } })
+  const spy = spyOf({ surface: 'desktop', push: { message: '', localSent: false, disabledReason: 'user_present' }, isTestFailing: true })
   await setup($, on, spy)
 
   await turn($, spy, 75_000)
@@ -142,7 +142,7 @@ test('on the desktop, the app saying the person is present keeps it quiet', asyn
 })
 
 test('with appNotification off the desktop uses the banner', { options: { appNotification: false } }, async ($, on) => {
-  const spy = spyOf({ surface: 'desktop', files: new Set([NOTIFIER]), push: { message: '', localSent: true } })
+  const spy = spyOf({ surface: 'desktop', files: new Set([NOTIFIER]), push: { message: '', localSent: true }, isTestFailing: true })
   await setup($, on, spy)
 
   await turn($, spy, 75_000)
@@ -152,7 +152,7 @@ test('with appNotification off the desktop uses the banner', { options: { appNot
 })
 
 test('on the desktop without terminal-notifier no Script Editor banner is sent', async ($, on) => {
-  const spy = spyOf({ surface: 'desktop' })
+  const spy = spyOf({ surface: 'desktop', isTestFailing: true })
   await setup($, on, spy)
 
   await turn($, spy, 75_000)
@@ -164,13 +164,14 @@ test('on the desktop without terminal-notifier no Script Editor banner is sent',
 
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`without a notifier the ping falls back to one line above the others (${surface})`, async ($, on) => {
-    const spy = spyOf({ exitCode: 1, surface })
+    // On the desktop only a turn the app's own notice says too little about rings: tests that failed.
+    const spy = spyOf({ exitCode: 1, surface, isTestFailing: surface === 'desktop' })
     await setup($, on, spy)
 
     await turn($, spy, 75_000)
     const ui = await $.ui.mount(bandOf(surface) as any)
 
-    const line = 'Tur bitti · testler geçti · 2 dosya değişti · 1dk 15sn'
+    const line = `Tur bitti · testler ${surface === 'desktop' ? 'kaldı' : 'geçti'} · 2 dosya değişti · 1dk 15sn`
     const drawn = JSON.stringify(await ui.drawn())
     if (surface === 'desktop') expect(drawn).toContain(`"alt":"${line}"`)
     else expect(await ui.find({ type: 'Text', text: line })).toBeDefined()
@@ -198,7 +199,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
   })
 
   test(`the fallback row clears when the person sends the next prompt (${surface})`, async ($, on) => {
-    const spy = spyOf({ exitCode: 1, surface })
+    const spy = spyOf({ exitCode: 1, surface, isTestFailing: true })
     on('prompt.submit', (_: any, e: any) => ({ text: e.text }))
     await setup($, on, spy)
     await turn($, spy, 75_000)

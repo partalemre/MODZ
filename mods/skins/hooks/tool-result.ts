@@ -1,8 +1,8 @@
 import { diffCard, terminalCard } from './cards'
 import { clipLines, diffstat, shortenPath } from './format'
 import type { Look, Meta, SvgElement } from './look'
-import { hunksOf } from './svg-diff'
-import { shellOutputOf } from './svg-terminal'
+import { diffLines, hunksOf, MAX_LINES } from './svg-diff'
+import { fitsCard, shellOutputOf } from './svg-terminal'
 
 const EDITS = new Set(['Edit', 'MultiEdit', 'Write'])
 
@@ -14,12 +14,13 @@ type ResultProps = { tool: string; output: unknown; isErrored: boolean }
 export type ResultCard = { props: ResultProps; columns: number; cwd: () => Promise<string> }
 
 // The desktop's card for a tool result: a diff for an edit, a terminal for a shell
-// command; null where the result has neither.
+// command; null where the result has neither, or more than a card shows whole: the engine's own result
+// then stays, expandable, so nothing is cut out of reach.
 export async function resultCard(look: Look, Svg: SvgElement, { props, columns, cwd }: ResultCard) {
   if (EDITS.has(props.tool) && !props.isErrored) {
     const diff = hunksOf(props.output)
 
-    if (diff !== null) {
+    if (diff !== null && diffLines(diff.hunks).length <= MAX_LINES) {
       return diffCard(look, { Svg, input: diff, shownPath: shortenPath(diff.path, await cwd()), columns })
     }
   }
@@ -27,7 +28,7 @@ export async function resultCard(look: Look, Svg: SvgElement, { props, columns, 
   if (props.tool === 'Bash') {
     const shell = shellOutputOf(props.output)
 
-    if (shell !== null) {
+    if (shell !== null && fitsCard(shell)) {
       return terminalCard(look, { Svg, output: shell, isErrored: props.isErrored, columns })
     }
   }
@@ -39,7 +40,8 @@ export async function resultCard(look: Look, Svg: SvgElement, { props, columns, 
 export function clippedOutput(props: ResultProps, isClipping: boolean): object | undefined {
   const output = props.output as { stdout?: unknown } | null
 
-  if (!isClipping || props.tool !== 'Bash' || typeof output?.stdout !== 'string') {
+  // A failed command's output is the reason to look: it is never clipped.
+  if (!isClipping || props.isErrored || props.tool !== 'Bash' || typeof output?.stdout !== 'string') {
     return undefined
   }
 

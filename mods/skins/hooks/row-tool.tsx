@@ -2,7 +2,8 @@ import type { Kind } from './skin'
 import { toolIcon } from './icons'
 import type { Call, Look, Meta, SvgElement, Ui } from './look'
 import { formatMs } from './format'
-import { kindOf, toolLabel } from './tools'
+import { groupKindOf, toolLabel } from './tools'
+import { say } from './words'
 
 const KIND_LABEL: Readonly<Record<Kind, string>> = {
   read: 'Read',
@@ -133,8 +134,8 @@ function iconRow(look: Look, { Svg, kind, calls, line }: IconLine) {
 // The desktop row has no status glyph, so a failure or a stop is said in a word, not by colour alone.
 function outcomeWord(look: Look, call: Call) {
   const { Text } = look.ui
-  if (call.isInterrupted) return <Text color={look.skin.palette.warn}>{'  · durduruldu'}</Text>
-  if (call.isErrored) return <Text color={look.skin.palette.err}>{'  · hata'}</Text>
+  if (call.isInterrupted) return <Text color={look.skin.palette.warn}>{`  · ${say().stopped}`}</Text>
+  if (call.isErrored) return <Text color={look.skin.palette.err}>{`  · ${say().failed}`}</Text>
 
   return null
 }
@@ -177,7 +178,7 @@ export function groupRow(look: Look, calls: readonly Call[]) {
   const counts = new Map<Kind, number>()
 
   for (const call of calls) {
-    const kind = kindOf(call.tool) ?? 'other'
+    const kind = groupKindOf(call.tool)
     counts.set(kind, (counts.get(kind) ?? 0) + 1)
   }
 

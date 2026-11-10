@@ -4,11 +4,13 @@ import type { EngineInterface, On, Register } from 'claude-code'
 import type { JustSaved, Learning } from '../types'
 import { cardDesktop, cardText, savedDesktop, savedText } from './card'
 import type { CardActions, Scope } from './card'
-import { claudePaths, decide, isHere, items, record, waitingHere } from './learn'
+import { claudePaths, decide, items, record, waitingHere } from './learn'
 import type { Io } from './learn'
 import { SYSTEM, checkPrompt, parseVerdict } from './policy'
 import { MAX_PROMPT, cleanRule, hasTrigger, isTrivial, looksSecret, remembered, withRule } from './rules'
 import { setLang } from './lang'
+import { wireCommands } from './commands'
+import { noteWritten } from './undo'
 import { MINE_COMMAND, wireMine } from './mine-wire'
 import { mineWords } from './mine-words'
 import { pinned } from './pin'
@@ -33,6 +35,8 @@ const CHECK_MAX_TOKENS = 300
 const GLOBAL_DISPLAY = '~/.claude/CLAUDE.md'
 /** The person's own prompts: typed at the terminal, or sent by Remote Control. */
 const HUMAN = new Set(['composer', 'bridge'])
+/** The desktop app's Code tab hosts the session through the SDK: its typed prompts arrive as `sdk`. */
+const SDK = 'sdk'
 
 // The module's own: a reload drops them; the store keeps the learnings themselves.
 let model = 'haiku'
@@ -127,7 +131,10 @@ async function saveTo($: EngineInterface, l: Learning, scope: Scope) {
     const before = await readText($, path)
     const after = withRule(before, latest.rule)
     if (after === undefined) return $.ui.toast(words().brokenMarks(path))
-    if (after !== before) await $.fs.write(path, after)
+    if (after !== before) {
+      await $.fs.write(path, after)
+      await noteWritten(io($), { rule: latest.rule, path, at: await $.clock.now() })
+    }
     await settle($, { id: l.id, status: 'saved', scope, project: root })
     await update($, savedThisSession, rules => [...rules, { rule: latest.rule, scope, project: root }])
     const done: JustSaved = { rule: latest.rule, scope, path: shownPaths(root)[scope], isNew: after !== before }
@@ -173,6 +180,7 @@ function wireSession(on: On) {
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     await $.command.register({ name: 'reflect-queue', description: words().queueHelp })
     await $.command.register({ name: 'reflect-pause', description: words().pauseHelp })
+    await $.command.register({ name: 'reflect-undo', description: words().undoHelp })
     await $.command.register({ name: MINE_COMMAND, description: mineWords().mineHelp })
     await readTheme($)
     await refreshBand($)
@@ -192,12 +200,12 @@ function wireSession(on: On) {
 
 function wirePrompts(on: On) {
   // Only cheap checks here: the prompt goes on at once, the work runs on a timer.
-  on('prompt.submit', ($, e, next) => {
+  on('prompt.submit', async ($, e, next) => {
     const text = e.text.trim()
     const isExplicit = remembered(text) !== undefined
-    const isCandidate = HUMAN.has(e.origin.kind) && !text.startsWith('/') && !isTrivial(text) && !looksSecret(text) &&
+    const isCandidate = !text.startsWith('/') && !isTrivial(text) && !looksSecret(text) &&
       (isExplicit || (text.length <= MAX_PROMPT && hasTrigger(text)))
-    if (isCandidate && queue.length < MAX_QUEUE) {
+    if (isCandidate && queue.length < MAX_QUEUE && (await isTyped($, e.origin.kind))) {
       queue.push(text)
       $.clock.after(0, () => void drain($).catch(() => undefined))
     }
@@ -221,28 +229,9 @@ function wirePrompts(on: On) {
 
 }
 
-function wireCommands(on: On) {
-  on('command.run', { command: 'reflect-queue' }, async $ => {
-    const root = await $.session.root()
-    const list = (await items(io($))).filter(l => isHere(l, root))
-    const says = words()
-    if (list.length === 0) return { text: says.nothingHere }
-    const waiting = list.filter(l => l.status === 'pending')
-    // Columns as wide as the language's longest word, so the rules line up.
-    const widest = (table: Record<string, string>): number => Math.max(...Object.values(table).map(word => word.length))
-    const lines = [...waiting, ...list.filter(l => l.status !== 'pending').sort((a, b) => b.lastAt - a.lastAt)]
-      .slice(0, 40)
-      .map(l => `${says.status[l.status].padEnd(widest(says.status))} ×${l.count} ${says.scope[l.scope].padEnd(widest(says.scope))} ${l.rule}`)
-    return { text: [says.queueHead(waiting.length, list.length), ...lines].join('\n') }
-  })
-
-  on('command.run', { command: 'reflect-pause' }, async $ => {
-    const isPaused = (await $.store.get('paused')) !== true
-    await $.store.set('paused', isPaused)
-    if (isPaused) queue.length = 0
-    return { text: isPaused ? words().paused : words().resumed }
-  })
-
+async function isTyped($: EngineInterface, kind: string): Promise<boolean> {
+  if (HUMAN.has(kind)) return true
+  return kind === SDK && (await $.session.surfaces().catch(() => [] as readonly string[])).includes('desktop')
 }
 
 function wireBand(on: On) {
@@ -262,7 +251,8 @@ function wireBand(on: On) {
     if (l === undefined) return theirs
     const hasField = 'Input' in ui
     const input = {
-      l, picked: (await read($, picked))[l.id] ?? l.scope, isEditing: (await read($, editing)) === l.id, more: list.length - 1,
+      // This project unless the person picks otherwise: a model's "global" guess once saved a game's rule everywhere.
+      l, picked: (await read($, picked))[l.id] ?? 'project', isEditing: (await read($, editing)) === l.id, more: list.length - 1,
       paths: shownPaths(await $.session.root()), on: actions($, l, hasField),
     }
     const card = e.surface === 'desktop' ? cardDesktop($.ui.resolve(e), input, look) : cardText(ui, input)
@@ -274,7 +264,7 @@ export const register: Register = (on, options) => {
   if (typeof options.model === 'string' && options.model.trim() !== '') model = options.model.trim()
   wireSession(on)
   wirePrompts(on)
-  wireCommands(on)
+  wireCommands(on, { clearQueue: () => void (queue.length = 0) })
   wireBand(on)
   wireMine(on, { look: () => ({ isLight, model }) })
 }

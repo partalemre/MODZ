@@ -191,11 +191,11 @@ function onSession(on: On, live: Live, loaded: SessionLoad): void {
     await loaded.start(sessionOf($))
     await refreshUsage($)
 
-    // Only the spinner reads the frame, so a tick redraws the spinner and nothing else.
+    // Only the terminal spinner reads the frame; a desktop-only session animates its own vector and never ticks.
     live.ticker?.cancel()
-    live.ticker = $.clock.every(FRAME_MS, () => {
-      if (live.isWorking) void update($, frameAtom, frame => frame + 1)
-    })
+    const surfaces = await $.session.surfaces().catch(() => [] as readonly string[])
+    const isTicking = surfaces.length === 0 || surfaces.includes('terminal')
+    live.ticker = isTicking ? $.clock.every(FRAME_MS, () => void (live.isWorking && update($, frameAtom, frame => frame + 1))) : undefined
 
     return next(e)
   })

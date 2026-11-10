@@ -10,7 +10,7 @@ const HEADER_H = 44
 const LINE_H = 22
 const GAP_H = 20
 const CODE = 12.5
-const MAX_LINES = 30
+export const MAX_LINES = 30
 const CODE_X = 112
 const PENCIL = '<path d="M4 20h4L18.5 9.5a2.83 2.83 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>'
 const NEW_FILE = '<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M12 11v6M9 14h6"/>'

@@ -15,6 +15,9 @@ const TR = {
   filesChanged: (count: number) => `${count} dosya değişti`,
   took: (duration: string) => `${duration} sürdü`,
   done: 'Tur bitti',
+  stoppedOnError: 'Hatayla durdu',
+  refused: 'Model reddetti',
+  bannersOff: 'done-ping: terminal-notifier bildirimleri kapalı (Sistem Ayarları › Bildirimler); osascript kullanılıyor',
   bashCommand: 'komut izni',
   toolPermission: (tool: string) => `${tool} izni`,
   // Built-in tools by what they do, for a person who never saw the tool's name.
@@ -46,6 +49,9 @@ const EN: Words = {
   filesChanged: count => `${plural(count, 'file', 'files')} changed`,
   took: duration => `took ${duration}`,
   done: 'Turn finished',
+  stoppedOnError: 'Stopped on an error',
+  refused: 'Model refused',
+  bannersOff: 'done-ping: terminal-notifier notifications are off (System Settings › Notifications); using osascript',
   bashCommand: 'command permission',
   toolPermission: tool => `${tool} permission`,
   tools: {

@@ -84,6 +84,11 @@ function stubEngine(on: On, own: { env?: boolean; store?: boolean } = {}) {
   on('ui.render', ($, e) => (e.component === 'AskUserQuestion' ? { type: 'engine', ref: 0 } : STOCK))
 }
 
+// The skin's own drawing, without what the stand-in beneath it (STOCK) adds under it.
+type Tree = { type?: string; props?: Record<string, unknown>; children?: readonly Tree[] }
+const ownOf = (node: Tree | undefined): Tree | undefined =>
+  (node?.children?.at(-1)?.children?.[0] as unknown) === 'stock row' ? node?.children?.[0] : node
+
 const toolUse = (props: ReturnType<typeof call>, surface: (typeof SURFACES)[number] = 'terminal') =>
   ({ ...SITE, surface, component: 'ToolUse', requestId: props.tool_use_id, props }) as const
 
@@ -166,7 +171,7 @@ test('a typed prompt sits in an outline sized to its text in the terminal, other
     ({ ...SITE, surface: 'terminal', component: 'UserMessage', requestId: 'm1', props: { text: 'fix the build', origin: { kind }, isExpanded: false } }) as const
 
   const typed = await $.ui.mount(prompt('composer'))
-  const column = (await typed.find({ type: 'Box' })) as { props: { alignItems?: string }; children?: readonly { props?: { borderStyle?: string } }[] } | undefined
+  const column = ownOf((await typed.find({ type: 'Box' })) as Tree) as { props: { alignItems?: string }; children?: readonly { props?: { borderStyle?: string } }[] } | undefined
   // The outline hugs the text: its column does not stretch it to the full width.
   expect(column?.props.alignItems).toBe('flex-start')
   expect(column?.children?.[0]?.props?.borderStyle).toBe('round')
@@ -338,7 +343,7 @@ test('a table wider than its share spans the column instead of running off it', 
       props: { text: wide, isFirstOfReply: true },
     })
     type Node = { props?: { width?: unknown; position?: unknown; top?: unknown; borderStyle?: unknown }; children?: readonly Node[] }
-    const reply = (await ui.find({ type: 'Box' })) as Node
+    const reply = ownOf((await ui.find({ type: 'Box' })) as Tree) as Node
     const frame = reply.children?.[0]
     // Copy sits on the frame's top border, laid over it from a plain Box around the bordered one:
     // inside it, Windows Terminal drew the border over the button.
@@ -631,7 +636,7 @@ test('on the desktop the Copy button is laid over the card, in the corner the ca
     props: { text: '```ts\nconst a = 1\n```', isFirstOfReply: true },
   })
   type Node = { type?: string; props?: Record<string, unknown>; children?: readonly Node[] }
-  const reply = (await ui.find({ type: 'Box' })) as Node
+  const reply = ownOf((await ui.find({ type: 'Box' })) as Tree) as Node
   const card = reply.children?.[0]
   const overlay = card?.children?.[1]
 

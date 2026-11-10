@@ -4,8 +4,8 @@ import type { EngineInterface, Register, RenderElement } from 'claude-code'
 import { othersRow, pingRow } from './band'
 import { othersWatcher, POLL_MS } from './others'
 import type { OtherNeed, PingNotice } from '../types'
-import { configFrom, donePing, editedPath, isTestCommand, parseSeconds, permissionPing, projectOf, questionPing } from './ping'
-import type { Ping, PingConfig, TestsSeen } from './ping'
+import { configFrom, donePing, editedPath, endPing, isTestCommand, parseSeconds, permissionPing, projectOf, questionPing } from './ping'
+import type { Ping, PingConfig, TestsSeen, TurnEnd } from './ping'
 import { AUTO, themeFrom } from './tidemark'
 import { isDesktop, ring } from './ring'
 import type { RingIo, Rung } from './ring'
@@ -41,7 +41,7 @@ const themeAtom = atom({ plugin: 'done-ping', key: 'theme' } as const, AUTO)
 const othersAtom = atom({ plugin: 'done-ping', key: 'others' } as const, [] as readonly OtherNeed[])
 
 const session = {
-  project: 'Claude', lastWaitAt: -WAIT_GAP_MS, lastPingAt: -PING_GAP_MS, files: new Set<string>(), tests: null as TestsSeen, noticeId: 0,
+  project: 'Claude', lastWaitAt: -WAIT_GAP_MS, lastPingAt: -PING_GAP_MS, files: new Set<string>(), tests: null as TestsSeen, noticeId: 0, isBannersOffSaid: false,
 }
 
 async function showNotice($: EngineInterface, ping: Ping): Promise<void> {
@@ -88,6 +88,11 @@ function ioOf($: EngineInterface): RingIo {
     run: (argv, init) => $.process.run(argv, init),
     exists: path => $.fs.exists(path),
     log: text => $.ui.log(text, { to: 'debug' }),
+    notifierOff: () => {
+      if (session.isBannersOffSaid) return
+      session.isBannersOffSaid = true
+      $.ui.log(words().bannersOff, { to: 'transcript' })
+    },
   }
 }
 
@@ -104,13 +109,17 @@ async function playPack($: EngineInterface, ping: Ping, config: PingConfig): Pro
 
 // The app's notification or a macOS banner; where neither can show, the shared notice line says it.
 // The pack sounds with whatever showed, and stays quiet with it while you are looking.
-async function deliver($: EngineInterface, ping: Ping, spec: { config: PingConfig; isForced: boolean }): Promise<void> {
+type Delivery = { config: PingConfig; isForced: boolean; at: number; before: number }
+
+async function deliver($: EngineInterface, ping: Ping, spec: Delivery): Promise<void> {
   let rung: Rung = 'failed'
   try {
     rung = await ring(ioOf($), { ping, ...spec })
   } catch (error) {
     $.ui.log(`done-ping: ping failed (${error instanceof Error ? error.message : 'unknown'})`, { to: 'debug' })
   }
+  // Nothing showed, so the gap this ping reserved goes back: the next real ping is not swallowed.
+  if (rung === 'quiet' && session.lastPingAt === spec.at) session.lastPingAt = spec.before
   if (rung === 'failed') await showNotice($, ping)
   if (rung !== 'quiet') await playPack($, ping, spec.config)
 }
@@ -119,8 +128,9 @@ async function deliver($: EngineInterface, ping: Ping, spec: { config: PingConfi
 async function later($: EngineInterface, ping: Ping, spec: { config: PingConfig; isForced: boolean }): Promise<void> {
   const nowMs = await $.clock.now()
   if (!spec.isForced && nowMs - session.lastPingAt < PING_GAP_MS) return
+  const before = session.lastPingAt
   session.lastPingAt = nowMs
-  $.clock.after(1, () => void deliver($, ping, spec))
+  $.clock.after(1, () => void deliver($, ping, { ...spec, at: nowMs, before }))
 }
 
 // The desktop app already notifies when a session waits on the person, so a second ping there is noise.
@@ -162,12 +172,9 @@ async function runCommand($: EngineInterface, args: string, config: PingConfig):
 
 async function hasLouderNotice($: EngineInterface): Promise<boolean> {
   const others: { value?: unknown }[] = [
-    await $.state.get(cacheTaxNotice as never),
-    await $.state.get(knowNotice as never),
-    await $.state.get(reflectNotice as never),
-    await $.state.get(budgetNotice as never),
-    await $.state.get(testBadgeNotice as never),
-    await $.state.get(handoffNotice as never),
+    await $.state.get(cacheTaxNotice as never), await $.state.get(knowNotice as never),
+    await $.state.get(reflectNotice as never), await $.state.get(budgetNotice as never),
+    await $.state.get(testBadgeNotice as never), await $.state.get(handoffNotice as never),
     await $.state.get(planNotice as never),
   ]
 
@@ -185,10 +192,12 @@ async function loadSettings($: EngineInterface, cwd: string): Promise<void> {
   await $.command.register({ name: COMMAND, description: words().help })
 }
 
-async function turnEnded($: EngineInterface, e: { durationMs: number; isAborted: boolean; agentId?: string }, config: PingConfig): Promise<void> {
+async function turnEnded($: EngineInterface, e: TurnEnd, config: PingConfig): Promise<void> {
   const isLong = e.durationMs >= (await thresholdOf($, config)) * MS_PER_SECOND
   if (e.agentId !== undefined || e.isAborted || !isLong || !(await read($, enabledAtom))) return
-  const ping = donePing({ project: session.project, durationMs: e.durationMs, files: session.files.size, tests: session.tests })
+  const ping = endPing({ ...e, project: session.project, files: session.files.size, tests: session.tests })
+  // The desktop app sends its own turn-end notice; ring there only for what it lacks (failed tests, an error).
+  if (ping.kind !== 'fail' && (await isDesktop(ioOf($)))) return
   await later($, ping, { config, isForced: false })
 }
 

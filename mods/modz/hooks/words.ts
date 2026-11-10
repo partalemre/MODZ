@@ -68,6 +68,8 @@ const HUB = {
     reset: 'Reset',
     hidden: 'Hidden',
     editLine: 'Move a row up or hide it. Hidden rows wait here.',
+    noAnswer: 'did not answer: its pane did not open',
+    plain: 'plain view: the drawing failed',
   },
   tr: {
     sections: { work: 'Çalışma', safety: 'Güvence', meter: 'Ölçüm ve ayarlar' } as Record<Section, string>,
@@ -88,6 +90,8 @@ const HUB = {
     reset: 'Sıfırla',
     hidden: 'Gizli',
     editLine: 'Bir satırı yukarı taşı ya da gizle. Gizlenenler burada bekler.',
+    noAnswer: 'yanıt vermedi: paneli açılmadı',
+    plain: 'düz görünüm: çizim başarısız',
   },
 }
 

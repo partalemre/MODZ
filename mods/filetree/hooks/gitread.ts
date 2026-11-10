@@ -2,7 +2,7 @@ import { mapper, parseGit, parseNumstat, rollCounts, rollUp } from './gitstatus'
 import { type Host, patch } from './host'
 import { mem } from './session'
 import { resolve } from './shell'
-import { dirname, join } from './tree'
+import { dirname, join, posix } from './tree'
 import { syncHub } from './turn'
 
 const GIT_TIMEOUT_MS = 20_000
@@ -61,6 +61,24 @@ async function readGit(h: Host): Promise<void> {
     return
   }
 }
+
+// One porcelain entry per changed path; a rename's second (old) path has no status letters before it.
+const STATUS_ENTRY = /^[ MTADRCU?!]{2} /
+
+// The hub's line while the pane was never opened: one status where the session runs, counted, nothing listed.
+export async function quickStatus(h: Host): Promise<void> {
+  if (mem.isLooked) return
+  try {
+    const run = await git(h, posix(await h.cwd()), { args: ['status', '--porcelain=v1', '-z', '--untracked-files=normal'], timeoutMs: QUICK_MS })
+    mem.quick = run.exitCode === 0 ? { hasRepo: true, changed: run.stdout.split('\0').filter(entry => STATUS_ENTRY.test(entry)).length } : { hasRepo: false, changed: 0 }
+  } catch {
+    mem.quick = { hasRepo: false, changed: 0 }
+  }
+  await syncHub(h)
+}
+
+// A pane never opened learns what the turn left in git once, at its end, not after each command.
+export const hubAfterTurn = (h: Host): Promise<void> => (mem.isLooked ? syncHub(h) : quickStatus(h))
 
 export function refreshGit(h: Host): Promise<void> {
   if (!gitRun) {

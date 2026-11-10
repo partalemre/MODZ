@@ -2,21 +2,21 @@ import { type EngineInterface, type On, type Register, update } from 'claude-cod
 
 import { drawDesktop, opening } from './desktop'
 import { HomeButton } from './home'
-import { gitDir } from './gitread'
+import { gitDir, hubAfterTurn, quickStatus } from './gitread'
 import type { Host, IoHost, StateHost, UiHost } from './host'
 import { HUB_PANE, isOpenFor } from './hub'
 import { setLang } from './lang'
 import { onRows, type RowsMessage, scrollBy } from './keys'
 import { refreshLook } from './look'
-import { followCwd, openFromHub, sync } from './pane'
+import { followCwd, sync } from './pane'
 import { promptContext } from './prompt'
 import { loopDone, noteRead, stepDone, takeReads } from './readstep'
-import { settleBackground, touched } from './scan'
+import { readTouched, settleBackground } from './scan'
 import { sceneOf } from './scene'
 import { isOffStage, shownOf } from './stage'
 import { mem } from './session'
 import { pinned } from './pin'
-import { openByCommand, resumePane, startPane } from './start'
+import { openByCommand, openForHub, resumePane, startPane } from './start'
 import { drawTerminal } from './terminal'
 import { afterCall, beforeCall, callFailed, isWatched } from './toolcall'
 import { emptyTree, join, posix, useDrives } from './tree'
@@ -137,7 +137,7 @@ function onStart(on: On): void {
   // modz's contract is not this mod's to import, so its address stays untyped here.
   on('state.set', { plugin: 'modz', key: 'open' } as any, async ($: EngineInterface, e: any, next: any) => {
     const done = await next(e)
-    if (isOpenFor(e.value, HUB_PANE)) await openFromHub(hostOf($))
+    if (isOpenFor(e.value, HUB_PANE)) await openForHub(hostOf($))
 
     return done
   }).catch(($, e, next) => next(e))
@@ -155,9 +155,9 @@ function onStart(on: On): void {
     const isWindows = (await $.env.get('OS')) === 'Windows_NT'
     useDrives(isWindows)
     mem.home = posix(((await $.env.get('HOME')) || (await $.env.get('USERPROFILE')) || '').replace(/[\\/]+$/, ''))
-    const host = hostOf($)
-    mem.activityId = Math.max(mem.activityId, ...(await host.activities()).map(a => a.id))
-    void startPane(host, { isWindows, isRemote: async () => Boolean((await $.env.get('SSH_CONNECTION')) || (await $.env.get('SSH_TTY'))) })
+    mem.activityId = Math.max(mem.activityId, ...(await hostOf($).activities()).map(a => a.id))
+    mem.look = { isWindows, isRemote: async () => Boolean((await $.env.get('SSH_CONNECTION')) || (await $.env.get('SSH_TTY'))) }
+    void quickStatus(hostOf($))
     return next(e)
   })
   on('command.run', { command: 'filetree' }, async ($, e) => ({ text: await openByCommand(hostOf($), e) }))
@@ -181,7 +181,7 @@ function onTools(on: On): void {
     const result = await next(e)
     if (result.deny || result.isError || e.tool !== 'Read') return result
     noteRead({ id: e.tool_use_id ?? '', file: e.file_path, text: result.text ?? '', agentId: e.agentId })
-    if (mem.showReads) void touched(hostOf($), [posix(e.file_path)], { tone: 'purple', isShown: true })
+    void readTouched(hostOf($), posix(e.file_path))
     return result
   })
   // Each model request's size measures what the step before it read (readcost.ts); the request itself passes untouched.
@@ -207,7 +207,7 @@ function onTurns(on: On): void {
     const host = hostOf($)
     await loopDone(host, e.agentId)
     if (!e.agentId) await host.setTurn(cur => ({ ...NO_TURN, ...cur, isRunning: false }))
-    if (!e.agentId) await syncHub(host)
+    if (!e.agentId) await hubAfterTurn(host)
     return result
   })
   on('ui.message', async ($, e, next) => {
@@ -227,12 +227,12 @@ function onClassic(on: On): void {
   })
   on('classic.CwdChanged', async ($, e, next) => {
     const result = await next(e)
-    void followCwd(hostOf($))
+    if (mem.isLooked) void followCwd(hostOf($))
     return result
   })
   on('classic.FileChanged', async ($, e, next) => {
     const result = await next(e)
-    if (/[\\/]\.git[\\/]|[\\/](index|HEAD)$/.test(e.file_path)) $.clock.after(GIT_SETTLE_MS, () => void sync(hostOf($), true))
+    if (mem.isLooked && /[\\/]\.git[\\/]|[\\/](index|HEAD)$/.test(e.file_path)) $.clock.after(GIT_SETTLE_MS, () => void sync(hostOf($), true))
     return result
   })
 }
@@ -269,6 +269,7 @@ function onRender(on: On): void {
       return <Empty />
     }
     const host = hostOf($)
+    if (!mem.isLooked) void startPane(host)
     const s = await sceneOf(host, e.surface === 'desktop')
     const isHubOn = await host.isHubOn()
     const room = { width: Math.max(MIN_WIDTH, e.props.bodyColumns), bodyRows: (e.props.scroll?.bodyRows ?? DEFAULT_ROWS) - (isHubOn ? HOME_ROWS : 0) }

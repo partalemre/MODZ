@@ -160,6 +160,9 @@ test('macOS outside a repo: write scan uses find -newer marker, not GNU -newermt
   const clock = world(on, { os: 'darwin', env: { HOME: '/Users/k' }, cwd: root, top: '', dirs: { [root]: [['a.ts', 'file']] }, status: '', numstat: '' }, ran)
   await $.session.start({ cwd: root, surface: 'terminal', isInteractive: true })
   await clock.settle()
+  // The pane open: until then the mod lists, probes and scans nothing.
+  await $.ui.mount({ plugin: 'filetree', surface: 'terminal', component: 'Pane', requestId: 'filetree', props: paneProps(60) })
+  await clock.settle()
   await $.tool.call({ tool: 'Bash', command: 'echo hi > a.ts' } as any)
   await clock.settle()
   const find = ran.find(a => a[0] === 'find')
@@ -173,6 +176,9 @@ test('macOS: the Nerd Font probe skips the LastResort font and trusts a Fonts fo
   const root = '/Users/k/scratch'
   const clock = world(on, { os: 'darwin', env: { HOME: '/Users/k' }, cwd: root, top: '', dirs: { [root]: [['a.ts', 'file']] }, status: '', numstat: '' }, ran)
   await $.session.start({ cwd: root, surface: 'terminal', isInteractive: true })
+  await clock.settle()
+  // The pane open: until then the mod lists, probes and scans nothing.
+  await $.ui.mount({ plugin: 'filetree', surface: 'terminal', component: 'Pane', requestId: 'filetree', props: paneProps(60) })
   await clock.settle()
   const call = ran.find(a => a[0] === 'sh' && (a[2] ?? '').includes('fc-list')) ?? []
   const probe = call[2] ?? ''
@@ -279,6 +285,11 @@ test('outside a repo only git rev-parse runs, never status, diff or ls-files', {
   const root = '/home/k/scratch'
   const clock = world(on, { os: 'linux', env: { HOME: '/home/k' }, cwd: root, top: '', dirs: { [root]: [['c.txt', 'file']] }, status: '', numstat: '' }, ran)
   await $.session.start({ cwd: root, surface: 'terminal', isInteractive: true })
+  await clock.settle()
+  // The one counted status the hub's line takes before the pane opens is not the tree's.
+  ran.length = 0
+  // The pane open: until then the mod lists, probes and scans nothing.
+  await $.ui.mount({ plugin: 'filetree', surface: 'terminal', component: 'Pane', requestId: 'filetree', props: paneProps(60) })
   await clock.settle()
   await $.tool.call({ tool: 'Bash', command: 'echo hi > c.txt' } as any)
   await $.tool.call({ tool: 'Edit', file_path: `${root}/c.txt`, old_string: 'a', new_string: 'b' } as any)

@@ -83,7 +83,10 @@ export async function copyPath(h: Host, id: string, how: { isAbsolute: boolean; 
 
 export async function toggle(h: Host, n: FileNode): Promise<void> {
   if (n.kind === 'dir' && !(await h.tree()).expanded.includes(n.id)) await loadDirs(h, [n.id])
-  else if (n.kind !== 'dir') mem.freshPick = n.id
+  else if (n.kind !== 'dir') {
+    mem.freshPick = n.id
+    mem.freshPickAt = await h.now()
+  }
   await patch(h, t => {
     const open = new Set(t.expanded)
     if (n.kind === 'dir') open.has(n.id) ? open.delete(n.id) : open.add(n.id)
@@ -102,7 +105,8 @@ export async function press(h: Host, n: FileNode): Promise<void> {
   const now = await h.now()
   const isDouble = mem.lastPress.key === n.id && now - mem.lastPress.at < DOUBLE_MS
   mem.lastPress = { key: isDouble ? '' : n.id, at: now }
-  if (!isDouble) {
+  // A folder's double click is two toggles; making it the root is Ctrl- or Shift-click, never by accident.
+  if (!isDouble || n.kind === 'dir') {
     await toggle(h, n)
     return
   }

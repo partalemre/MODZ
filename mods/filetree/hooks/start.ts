@@ -1,7 +1,7 @@
 import { unlit } from './flash'
 import { type Host, patch } from './host'
 import { loadTheme } from './look'
-import { cwdOf, inApp, reset, showPane } from './pane'
+import { cwdOf, inApp, openFromHub, reset, showPane } from './pane'
 import { finePointerOk, fontState } from './platform'
 import { mem } from './session'
 import { shortPath } from './listing'
@@ -26,7 +26,11 @@ async function settleTree(h: Host): Promise<void> {
   await syncHub(h)
 }
 
-export async function startPane(h: Host, env: { isWindows: boolean; isRemote: () => Promise<boolean> }): Promise<void> {
+// The first look at the pane: fonts, theme and its poll, then the tree. Before it the session pays for none of them.
+async function prepareLook(h: Host): Promise<boolean> {
+  if (mem.isLooked) return false
+  mem.isLooked = true
+  const env = mem.look
   mem.pointer = await finePointerOk(h)
   try {
     const remote = await env.isRemote()
@@ -37,11 +41,17 @@ export async function startPane(h: Host, env: { isWindows: boolean; isRemote: ()
   await loadTheme(h)
   mem.themePoll?.cancel()
   mem.themePoll = mem.themeMtime ? h.every(THEME_POLL_MS, () => void loadTheme(h)) : null
-  await settleTree(h)
+  return true
+}
+
+// A pane drawn before anything opened it (one the app kept open across a restart) starts here.
+export async function startPane(h: Host): Promise<void> {
+  if (await prepareLook(h)) await settleTree(h)
 }
 
 // A cleared, resumed or forked session: the tree comes back where it was, or to the working folder it follows.
 export async function resumePane(h: Host): Promise<void> {
+  if (!mem.isLooked) return
   await loadTheme(h)
   const root = mem.follow || !mem.lastRoot ? await cwdOf(h) : mem.lastRoot
   const t = await h.tree()
@@ -53,6 +63,7 @@ export async function openByCommand(h: Host, e: { args?: string; presentation: {
   const w = words()
   if (!isApp && !e.presentation.isFullscreen) return w.needsFullscreen
   if (!isApp && e.presentation.columns < MIN_COLUMNS) return w.needsColumns(MIN_COLUMNS)
+  await prepareLook(h)
   mem.noDock = false
   const arg = (e.args ?? '').trim()
   const cwd = await cwdOf(h)
@@ -60,4 +71,10 @@ export async function openByCommand(h: Host, e: { args?: string; presentation: {
   const root = arg ? resolve(cwd, arg, mem.home) : cwd
   await reset(h, root, true)
   return w.opened(shortPath(root), mem.follow)
+}
+
+// The MODZ main panel's open request: the first one is the first look.
+export async function openForHub(h: Host): Promise<void> {
+  await prepareLook(h)
+  await openFromHub(h)
 }

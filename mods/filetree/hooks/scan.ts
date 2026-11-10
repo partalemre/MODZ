@@ -169,6 +169,12 @@ export async function touched(h: Host, paths: string[], how: { tone: string; isS
   await flash(h, tones)
 }
 
+// A file Claude read: lit in an opened tree, only counted for the hub's line before that.
+export async function readTouched(h: Host, path: string): Promise<void> {
+  if (!mem.isLooked) await noteTouches(h, [path], 'read')
+  else if (mem.showReads) await touched(h, [path], { tone: 'purple', isShown: true })
+}
+
 // Background commands Claude started end in a task notification: their git work and files settle then.
 export async function settleBackground(h: Host, text: string): Promise<void> {
   if (mem.background.size === 0 || !text.includes('<task-notification>')) return

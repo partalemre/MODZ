@@ -7,7 +7,8 @@ import type { Host } from './host'
 import { cwdOf, followCwd } from './pane'
 import { dropMarks, scheduleScan, touched } from './scan'
 import { mem } from './session'
-import { noteCommit } from './turn'
+import { posix } from './tree'
+import { noteCommit, noteTouches } from './turn'
 
 // What a tool call resolves to, as far as this mod reads it.
 type CallResult = { deny?: unknown; isError?: boolean; isReadOnly?: boolean; result?: unknown; text?: unknown }
@@ -33,7 +34,7 @@ export async function beforeCall(h: Host, e: Args<'tool.call'>): Promise<Call> {
   const actions = gitActions(command)
   const quiet = !actions.length && readOnly(command)
   // In a repo the scan reads git status, not `find -newer`, so no marker file is needed.
-  const since = await sinceNow(h, e.tool === 'Bash' && !quiet && !(await h.tree()).top)
+  const since = await sinceNow(h, mem.isLooked && e.tool === 'Bash' && !quiet && !(await h.tree()).top)
   const pending = actions.length ? await pendingOf(h, { command, actions, cwd: e.agentId ? '' : cwd }) : null
   return { tool: e.tool, command, cwd, file: fileOf(e), actions, quiet, since, pending }
 }
@@ -50,6 +51,8 @@ async function settle(h: Host, call: Call, done: { result: CallResult; out: Bash
   if (pending) await finishGit(h, pending, results)
   const sha = results.find((r, i) => r.state === 'done' && pending?.actions[i]?.verb === 'commit')?.detail
   if (sha && pending?.place.isHere) await noteCommit(h, { sha })
+  // A pane never opened has no tree to light: its git work above is all the hub needs.
+  if (!mem.isLooked) return
   mem.queuedReads.push(...done.reads)
   scheduleScan(h, { ...done.job, actions: proven(pending, results) })
 }
@@ -62,7 +65,7 @@ function afterBash(h: Host, call: Call, result: CallResult): void {
   const job: Job = { actions: [], since: call.since, initRepo: call.actions.some(a => a.init), readOnly: call.quiet || result.isReadOnly === true }
   if (out.backgroundTaskId) mem.background.set(out.backgroundTaskId, { p: pending, job, reads })
   else void settle(h, call, { result, out, job, reads })
-  if (mem.follow && /(^|[;&|\s])(cd|pushd|popd)(\s|$)/.test(command)) h.after(CD_FOLLOW_MS, () => void followCwd(h))
+  if (mem.isLooked && mem.follow && /(^|[;&|\s])(cd|pushd|popd)(\s|$)/.test(command)) h.after(CD_FOLLOW_MS, () => void followCwd(h))
 }
 
 export function afterCall<R extends CallResult>(h: Host, call: Call, result: R): R {
@@ -76,6 +79,7 @@ export function afterCall<R extends CallResult>(h: Host, call: Call, result: R):
     return result
   }
   if (call.tool === 'Bash') afterBash(h, call, result)
-  else if (call.file) void touched(h, [call.file], { tone: 'orange', isShown: mem.showWrites })
+  else if (call.file && mem.isLooked) void touched(h, [call.file], { tone: 'orange', isShown: mem.showWrites })
+  else if (call.file) void noteTouches(h, [posix(call.file)], 'edit')
   return result
 }

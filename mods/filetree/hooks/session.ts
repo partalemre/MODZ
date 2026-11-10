@@ -11,6 +11,11 @@ export type Loop = { turnId: string; size: StepSize | null; pending: PendingRead
 // What the hooks share for the session beyond `$.state`: the person's options, the pane's last window and the
 // work in flight. A hot reload starts it afresh, as it did the hooks module's own variables.
 export const mem = {
+  // The pane was opened in this session: until then the mod lists nothing, polls nothing and scans nothing.
+  isLooked: false,
+  look: { isWindows: false, isRemote: async () => false } as { isWindows: boolean; isRemote: () => Promise<boolean> },
+  // What the hub's line needs before then: one `git status`, counted.
+  quick: { hasRepo: false, changed: 0 },
   blink: null as Timer | null,
   themePoll: null as Timer | null,
   themeMtime: null as number | null,
@@ -34,6 +39,7 @@ export const mem = {
   lastRoot: '',
   // The file picked in the tree since the last prompt: the next prompt names it once.
   freshPick: '',
+  freshPickAt: 0,
   sizeDefault: false,
   sizeEpoch: 0,
   sizeQueue: [] as string[],

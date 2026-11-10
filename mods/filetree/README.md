@@ -22,7 +22,8 @@ Open the pane with `/filetree`. It does not open by itself; once opened, it come
 - **All files:** the full tree for the working folder. The row Claude is in shimmers with a label, and the right column shows the date or the size, after a file's read tokens this turn in blue (`≈1.5k tok`). Reads are blue, writes orange, commits green, uncommitted changes amber.
 - **Git:** per-file status, `+N -N` line counts on modified files, and counts on folders. Commits to another repo (`cd other && git commit`) show as committed there; if git refuses a commit, the reason is shown.
 - **Toolbar:** search (it finds folders you have not opened), Collapse, Refresh, and More (size or date column, hidden files, parent folder, back to project, clear selection). With the tree focused: `r` refresh, `c` collapse, `s` size/date, `.` hidden files, `u` parent folder, `p` project, `x` clear selection, `y` copies the relative path (`Y`, the absolute one), arrow keys or `j`/`k` move, Enter opens a file or toggles a folder.
-- Click a row to select it; Ctrl-click or Shift-click opens the file in its default app.
+- Click a row to select it; Ctrl-click or Shift-click opens the file in its default app, or makes a folder the
+  tree's root. A double click on a folder only opens and closes it.
 
 ### Read tokens
 
@@ -36,7 +37,7 @@ The turn total sums the files; the session total sums the turns. In the terminal
 
 The desktop app (Code tab) draws the tree directly. The terminal needs the fullscreen layout (`/tui fullscreen`) and a window at least 110 columns wide.
 
-If a file is selected in the tree when you send a prompt, one line naming it is added to that prompt's context so "this" can mean it. Writing `@path` in a prompt reveals that file in the tree.
+If you picked a file in the tree since your last prompt, within the last two minutes, one line naming it is added to the next prompt's context so "this" can mean it. Writing `@path` in a prompt reveals that file in the tree.
 
 ## Commands
 
@@ -54,6 +55,8 @@ If a file is selected in the tree when you send a prompt, one line naming it is 
 
 ## Limits
 
+- Until you open the pane in a session the mod lists nothing and scans nothing: it runs one `git status` at session
+  start and one at the end of each turn, only for the MODZ hub's line.
 - Folder sizes come from `du` (a summed listing on Windows), worked out in the background for the rows on screen.
 - Outside a git repository it checks once whether one exists; every git call is scoped to the working folder.
 - Clicking rows in herdr needs herdr 0.9.1 or later; on older versions the rows ignore the mouse.

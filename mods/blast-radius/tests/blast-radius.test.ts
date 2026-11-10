@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { classify } from '../hooks/classify'
+import { classify, classifyAll } from '../hooks/classify'
 import { cleanArgs, parseScan } from '../hooks/measure-files'
 import { parseNumstat } from '../hooks/measure-git'
 import { setLang } from '../hooks/lang'
@@ -18,7 +18,7 @@ test('risky commands are classified, the rest pass', () => {
   expect(classify('export OUT=dist && rm -rf "${OUT}/cache"')).toMatchObject({ kind: 'rm', targets: ['dist/cache'] })
   expect(classify('rm -rf $UNSET')).toMatchObject({ kind: 'rm', targets: ['$UNSET'] })
   expect(classify('cd app && git reset --hard')).toMatchObject({ kind: 'git-reset', dir: 'app' })
-  expect(classify('(cd sub && make) > log; rm -rf out')).toMatchObject({ kind: 'rm', dir: null })
+  expect(classifyAll('(cd sub && make) > log; rm -rf out')).toMatchObject([{ kind: 'overwrite', paths: ['log'], dir: null }, { kind: 'rm', dir: null }])
   expect(classify('pushd a && pushd b && popd && rm -rf x')).toMatchObject({ dir: 'a' })
   expect(classify('git -C repo clean -fdx')).toMatchObject({ kind: 'git-clean', dir: 'repo', args: ['-fdx'] })
   expect(classify('git push origin +main')).toMatchObject({ kind: 'git-push-force' })

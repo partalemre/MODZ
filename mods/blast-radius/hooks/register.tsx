@@ -20,10 +20,10 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { desktopCard, terminalCard } from './card'
 import type { CardProps } from './card'
-import { classify } from './classify'
+import { classify, classifyAll } from './classify'
 import type { Risk } from './classify'
 import { editHooks } from './collide'
-import { PANE_ID, SLEEP_TIMEOUT_MS, current, dropStaleTab, hold, take } from './hold'
+import { PANE_ID, SLEEP_TIMEOUT_MS, current, dropStaleTab, hold, markAnswered, take, unheld } from './hold'
 import type { Decision, Held, HoldIo } from './hold'
 import { houseHooks, resetHouse } from './house'
 import { setLang } from './lang'
@@ -35,6 +35,8 @@ import { viewOf } from './view'
 import { words } from './words'
 
 const CD_TIMEOUT_MS = 5000
+// How much of the command a refusal quotes back.
+const COMMAND_CHARS = 300
 
 const theme = { isLight: false }
 
@@ -74,20 +76,46 @@ async function resolveDir($: EngineInterface, sessionCwd: string, dir: string): 
   return ran.exitCode === 0 && out !== '' ? out : null
 }
 
-type Risky = { mine: Held; risk: Risk; summary: string }
+type Risky = { mine: Held; risks: Risk[]; summary: string }
 
-/** Where the command will run (the session folder, moved by `cd dir &&` or `git -C dir`), and what it would change there. */
+/**
+ * Where each risky part will run (the session folder, moved by `cd dir &&` or `git -C dir`), and what it
+ * would change there. The first part that would lose something is the card; true when there is one.
+ */
 async function survey($: EngineInterface, risky: Risky): Promise<boolean> {
-  const { mine, risk } = risky
+  const { mine } = risky
   const sessionCwd = await $.session.cwd()
-  const dir = risk.dir ? await resolveDir($, sessionCwd, risk.dir) : sessionCwd
   const run: Run = (argv, options) => $.process.run(argv, options)
-  const cwd = dir ?? sessionCwd
-  const report: Report = dir === null ? missingFolder(risk) : await measure(run, risk, dir)
-  risky.summary = report.summary
-  mine.view = isExpanded => viewOf({ command: mine.command, risk, report, cwd, isExpanded })
+  for (const risk of risky.risks) {
+    const dir = risk.dir ? await resolveDir($, sessionCwd, risk.dir) : sessionCwd
+    const report: Report = dir === null ? missingFolder(risk) : await measure(run, risk, dir)
+    if (report.isEmpty) continue
+    const cwd = dir ?? sessionCwd
+    risky.summary = report.summary
+    mine.view = isExpanded => viewOf({ command: mine.command, risk, report, cwd, isExpanded })
 
-  return !report.isEmpty
+    return true
+  }
+
+  return false
+}
+
+// No card can be answered in a subagent's loop or a run with no screen (`claude -p`).
+const isUnattended = async ($: EngineInterface, agentId: string | undefined): Promise<boolean> =>
+  agentId !== undefined || (await $.session.surfaces()).length === 0
+
+/** A call nobody can answer: refused at once when it would lose something, never held. Null when it loses nothing. */
+async function refuseUnattended($: EngineInterface, input: { command: string; risks: Risk[]; isSubagent: boolean }): Promise<{ deny: string } | null> {
+  const risky: Risky = { mine: unheld(input.command), risks: input.risks, summary: input.risks[0]?.label ?? 'a risky command' }
+  // A measurement that broke can't say it is harmless: refuse.
+  const isLossy = await survey($, risky).catch(() => true)
+  if (!isLossy) return null
+  const who = input.isSubagent ? 'it came from a subagent, and only the main chat can answer its card' : 'this run has no screen (claude -p), so nobody can answer its card'
+  const command = input.command.length > COMMAND_CHARS ? `${input.command.slice(0, COMMAND_CHARS)}…` : input.command
+
+  return {
+    deny: `Blast Radius refused this command without running it: ${who}. Command: ${command}. It would have: ${risky.summary}. Do not retry it or work around it; ask the user to run it, or run it from the main chat.`,
+  }
 }
 
 async function refreshTheme($: EngineInterface): Promise<void> {
@@ -151,13 +179,18 @@ function holdHooks(on: On): void {
 
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const command = String(e.command ?? '')
-    const risk = classify(command)
-    if (risk === null) return next(e)
+    const risks = classifyAll(command)
+    if (risks.length === 0) return next(e)
+    if (await isUnattended($, e.agentId)) return (await refuseUnattended($, { command, risks, isSubagent: e.agentId !== undefined })) ?? next(e)
     const mine = await take(holdIo($), { command, signal: next.signal, canStrike: true })
-    if (mine === null) return refusal(WHY.interrupted, risk.label)
-    const risky: Risky = { mine, risk, summary: risk.label }
+    if (mine === null) return refusal(WHY.interrupted, risks[0]?.label ?? 'a risky command')
+    const risky: Risky = { mine, risks, summary: risks[0]?.label ?? 'a risky command' }
     await hold(holdIo($), mine, { signal: next.signal, prepare: () => survey($, risky) })
-    if (mine.decision === 'proceed') return next(e)
+    if (mine.decision === 'proceed') {
+      if (mine.view !== null) markAnswered(command)
+
+      return next(e)
+    }
     sayKept($, mine.decision)
 
     return refusal(whyOf(mine.decision), risky.summary)

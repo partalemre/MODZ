@@ -70,6 +70,16 @@ export type Notes = {
   migrationsFailed: (argv: string) => string
   unmeasured: (reason: string) => string
   missingFolder: (dir: string) => string
+  // `… | xargs rm`: what it acts on comes from its input.
+  fromInput: (label: string) => string
+  // A find with another action besides the delete can't be dry-run.
+  findUnmeasured: string
+  device: (path: string) => string
+  // The statement or reset a database would run.
+  database: (statement: string) => string
+  toolFailed: (argv: string) => string
+  // reset --hard to an older ref drops commits as well as the changes.
+  alsoDrops: (count: number, branch: string) => string
 }
 
 export const words = (): Words => pick({ en: EN, tr: TR })

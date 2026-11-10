@@ -8,7 +8,7 @@ import { BUILD_SCAN, EN, SURFACES, mountBand, pass, start, stub, world } from '.
 const RULES_PATH = '/work/demo-app/.claude/house-rules.md'
 const RULES = '# House rules\n\n<!-- plain words -->\n- never touch the production database\n* no network calls to *.internal\n'
 const WITH_RULES = { ...EN, files: { [RULES_PATH]: RULES } }
-const PSQL = 'psql "$PROD_URL" -c "delete from users"'
+const PSQL = 'psql "$PROD_URL" -c "update users set plan = 1"'
 // Built at run time so no scanner mistakes the fixture for a real key.
 const SECRET = ['sk', 'live', '0123456789abcdef0123'].join('_')
 
@@ -147,7 +147,7 @@ test('Jev, when opted in, gets the masked command and the model is not asked', a
   const w = world({ ...WITH_RULES, env: { MODZ_JUDGE: 'jev', TYPESAFE_API_KEY: 'ts-test-key' }, jevChoice: 'block 1' })
   stub(on, w)
   await start($, w)
-  const result: any = await ($ as any).tool.call({ tool: 'Bash', command: `DB_PASSWORD=${SECRET} psql -c "drop table users"` })
+  const result: any = await ($ as any).tool.call({ tool: 'Bash', command: `DB_PASSWORD=${SECRET} psql -c "update users set plan = 1"` })
 
   expect(result.deny).toMatch(/never touch the production database/)
   expect(w.asked).toHaveLength(0)

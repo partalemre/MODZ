@@ -77,6 +77,7 @@ const ok = (stdout: string) => ({ value: { exitCode: 0, stdout, stderr: '', isSt
 // The key a process run is answered by: `bash` for the files script, else the argv joined.
 function keyOf(argv: string[]): string {
   if (argv[0] === 'bash' && argv[2]?.includes('compgen')) return 'files'
+  if (argv[0] === 'bash' && argv[2]?.includes('ls-files --error-unmatch')) return 'writes'
   if (argv[0] === 'bash' && argv[2]?.includes('pwd -P')) return `cd ${argv[4]}`
 
   return argv.join(' ')

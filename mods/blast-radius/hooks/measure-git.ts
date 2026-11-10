@@ -34,15 +34,17 @@ function changeItem(row: string, stats: Map<string, { added: number; removed: nu
 }
 
 export async function measureChanges(run: Run, risk: GitRisk, cwd: string): Promise<Report> {
-  const status = await run(['git', 'status', '--porcelain'], { cwd, timeoutMs: TIMEOUT_MS })
+  const paths = risk.paths ?? []
+  const spec = paths.length > 0 ? ['--', ...paths] : []
+  const status = await run(['git', 'status', '--porcelain', ...spec], { cwd, timeoutMs: TIMEOUT_MS })
   if (status.exitCode !== 0) {
     return emptyReport('changes', `${risk.label} (not a git repo here?)`, words().notes.statusFailed(status.stderr.trim().slice(0, 160)))
   }
   const rows = lines(status.stdout).filter(l => l.length > 3 && !l.startsWith('??'))
-  const isReset = risk.kind === 'git-reset'
-  // reset --hard drops staged and unstaged changes; checkout -- . drops unstaged ones.
-  const lost = isReset ? rows : rows.filter(l => l[1] !== ' ')
-  const numstat = await run(['git', 'diff', '--numstat', isReset ? 'HEAD' : '--'], { cwd, timeoutMs: TIMEOUT_MS })
+  // reset --hard, checkout -f and checkout <ref> -- paths drop staged and unstaged changes; checkout -- paths drops unstaged ones.
+  const dropsStaged = risk.kind === 'git-reset' || risk.dropsStaged === true
+  const lost = dropsStaged ? rows : rows.filter(l => l[1] !== ' ')
+  const numstat = await run(['git', 'diff', '--numstat', ...(dropsStaged ? ['HEAD'] : []), ...(spec.length > 0 ? spec : dropsStaged ? [] : ['--'])], { cwd, timeoutMs: TIMEOUT_MS })
   const stats = parseNumstat(numstat.stdout)
   const items = lost.map(row => changeItem(row, stats)).sort((a, b) => b.weight - a.weight)
   if (lost.length === 0) return nothingReport('changes', 'discard nothing: no uncommitted changes')
@@ -51,6 +53,33 @@ export async function measureChanges(run: Run, risk: GitRisk, cwd: string): Prom
   const removed = items.reduce((sum, item) => sum + (stats.get(item.name)?.removed ?? 0), 0)
 
   return { ...emptyReport('changes', summary, null), count: lost.length, items: items.slice(0, LIST_MAX), more: Math.max(0, lost.length - LIST_MAX), added, removed }
+}
+
+/** The commits `range` lists, one oneline each: the ones a move of the branch or a deleted ref would drop. */
+export async function droppedCommits(run: Run, range: string[], cwd: string): Promise<Item[]> {
+  const log = await run(['git', 'log', '--oneline', '--no-decorate', ...range], { cwd, timeoutMs: TIMEOUT_MS })
+  if (log.exitCode !== 0) throw new Error(`git log exited ${log.exitCode}: ${log.stderr.trim().slice(0, 120)}`)
+
+  return lines(log.stdout).map(line => ({ name: line.replace(/^\S+\s*/, ''), tag: line.split(' ')[0] ?? '', meta: '', weight: 0 }))
+}
+
+export const commitsReport = (items: Item[], summary: string, where: string): Report => ({
+  ...emptyReport('commits', summary, null), count: items.length, items: items.slice(0, LIST_MAX), more: Math.max(0, items.length - LIST_MAX), where,
+})
+
+/** reset --hard <ref> drops the uncommitted changes and, when the ref is behind, the commits only HEAD has. */
+export async function measureReset(run: Run, risk: GitRisk, cwd: string): Promise<Report> {
+  const changes = await measureChanges(run, risk, cwd)
+  const ref = risk.args.find(arg => !arg.startsWith('-'))
+  if (ref === undefined || ref === 'HEAD') return changes
+  const dropped = await droppedCommits(run, [`${ref}..HEAD`], cwd)
+  if (dropped.length === 0) return changes
+  const head = await run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], { cwd, timeoutMs: SHORT_TIMEOUT_MS })
+  const branch = head.stdout.trim() || 'HEAD'
+  const commits = `move ${branch} back to ${ref}, dropping ${plural(dropped.length, 'commit', 'commits')}`
+  if (changes.isEmpty || changes.count === 0) return commitsReport(dropped, changes.isEmpty ? commits : `${commits}; ${changes.summary}`, branch)
+
+  return { ...changes, summary: `${changes.summary} and ${commits}`, note: words().notes.alsoDrops(dropped.length, branch) }
 }
 
 /** The remote branch a force push lands on, and the local ref it pushes from. */

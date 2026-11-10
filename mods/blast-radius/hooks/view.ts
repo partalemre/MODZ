@@ -51,6 +51,7 @@ function shownCommand(risk: Risk): string {
 
 const ICON_OF: Record<Risk['kind'], IconName> = {
   rm: 'trash', 'git-clean': 'branch', 'git-reset': 'rewind', 'git-checkout': 'rewind', 'git-push-force': 'push', migrate: 'database',
+  'git-stash': 'trash', 'git-branch-delete': 'branch', 'git-push-delete': 'push', 'git-worktree': 'folder', find: 'trash', overwrite: 'pencil', tool: 'database',
 }
 
 function fileRows(report: Report, isExpanded: boolean): { rows: Row[]; listed: number; shown: number } {
@@ -79,7 +80,7 @@ function fileRows(report: Report, isExpanded: boolean): { rows: Row[]; listed: n
   return { rows, listed, shown }
 }
 
-const ITEM_ICON: Partial<Record<Report['kind'], IconName>> = { commits: 'commit', migrations: 'database' }
+const ITEM_ICON: Partial<Record<Report['kind'], IconName>> = { commits: 'commit', migrations: 'database', stashes: 'commit', removals: 'trash' }
 
 function itemRows(report: Report, isExpanded: boolean): { rows: Row[]; listed: number; shown: number } {
   const icon = ITEM_ICON[report.kind] ?? 'file'

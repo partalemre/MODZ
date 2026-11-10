@@ -9,7 +9,26 @@ import type { EditWords, HouseWords, Notes, Words } from './words'
 const enSize = (bytes: number): string => formatSize(bytes, '.')
 
 const MORE_NOUN: Record<Report['kind'], [string, string]> = {
-  files: ['file', 'files'], changes: ['file', 'files'], commits: ['commit', 'commits'], migrations: ['migration', 'migrations'], unknown: ['item', 'items'],
+  files: ['file', 'files'], changes: ['file', 'files'], commits: ['commit', 'commits'], migrations: ['migration', 'migrations'],
+  overwrites: ['file', 'files'], stashes: ['stash', 'stashes'], removals: ['item', 'items'], unknown: ['item', 'items'],
+}
+
+const appended = (text: string, note: string | null): string => (note === null ? text : `${text} ${note}`)
+
+/** The banner for the reports a delete-like command makes beside rm's files. */
+function lossBanner(report: Report): Banner | null {
+  const files = plural(report.count, 'file', 'files')
+  if (report.kind === 'changes') {
+    const changed = report.added + report.removed
+    const what = changed === 0 ? files : `${files} and ${plural(changed, 'line', 'lines')}`
+
+    return { tone: 'danger', text: appended(`This would throw away ${what} you haven't committed.`, report.note) }
+  }
+  if (report.kind === 'overwrites') return { tone: 'danger', text: `This would write over ${files} (${enSize(report.bytes ?? 0)}) whose contents git can't bring back.` }
+  if (report.kind === 'stashes') return { tone: 'danger', text: `This would delete ${plural(report.count, 'stash', 'stashes')}. A dropped stash is hard to get back.` }
+  if (report.kind === 'removals') return { tone: 'danger', text: `This would remove ${plural(report.count, 'item', 'items')} listed below; they can't be brought back from here.` }
+
+  return null
 }
 
 function filesBanner(report: Report): Banner {
@@ -26,9 +45,8 @@ function filesBanner(report: Report): Banner {
 function banner(report: Report): Banner | null {
   if (report.count === 0) return { tone: 'warn', text: report.note ?? 'This could not be measured beforehand.' }
   if (report.kind === 'files') return filesBanner(report)
-  if (report.kind === 'changes') {
-    return { tone: 'danger', text: `This would throw away ${plural(report.count, 'file', 'files')} and ${plural(report.added + report.removed, 'line', 'lines')} you haven't committed.` }
-  }
+  const loss = lossBanner(report)
+  if (loss !== null) return loss
   if (report.kind === 'commits') {
     return { tone: 'danger', text: `This would drop ${plural(report.count, 'commit', 'commits')} from ${report.where ?? 'the remote branch'}. Without a local copy they don't come back.` }
   }
@@ -50,6 +68,12 @@ const notes: Notes = {
   migrationsFailed: argv => `Pending migrations couldn't be listed (${argv} failed).`,
   unmeasured: reason => `Couldn't measure it: ${reason}`,
   missingFolder: dir => `The folder ${dir} wasn't found, so what would change couldn't be measured.`,
+  fromInput: label => `${label} acts on what its input lists, so what it would change can't be measured beforehand.`,
+  findUnmeasured: 'This find runs another action besides the delete, so it can\'t be dry-run to list what it deletes.',
+  device: path => `This writes straight to the device ${path}, which can wipe a whole disk.`,
+  database: statement => `This runs ${statement} on a database. What it holds can't be measured from here, and it can't be undone from here.`,
+  toolFailed: argv => `What it would remove couldn't be listed (${argv} failed).`,
+  alsoDrops: (count, branch) => `It also moves ${branch} back past ${plural(count, 'commit', 'commits')}.`,
 }
 
 const edit: EditWords = {

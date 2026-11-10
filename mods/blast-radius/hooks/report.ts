@@ -9,7 +9,7 @@ export type Group = { dir: string; count: number; bytes: number; files: FileRow[
 // One line of any other report: a changed file, a commit, a migration.
 export type Item = { name: string; tag: string; meta: string; weight: number }
 
-export type ReportKind = 'files' | 'changes' | 'commits' | 'migrations' | 'unknown'
+export type ReportKind = 'files' | 'changes' | 'commits' | 'migrations' | 'overwrites' | 'stashes' | 'removals' | 'unknown'
 
 export type Report = {
   kind: ReportKind

@@ -1,7 +1,7 @@
 // The hub's "Now" area: what fails, waits or runs is read on the hub itself, without opening a mod's pane.
 import { expect, mock, test } from 'claude-code/testing'
 
-import { cardOf, rowsOf } from '../hooks/hub'
+import { cardOf, rowsOf, withHosted } from '../hooks/hub'
 import { elapsedText, nowOf } from '../hooks/now'
 import { setLang } from '../hooks/kit/lang'
 import type { HubCard } from '../types'
@@ -48,6 +48,22 @@ const reporters = [
     register(on: any) {
       on('command.run', { command: 'usage' }, async ($: any, e: any, next: any) => {
         await $.state.set({ plugin: 'hud-pro', key: 'hub' }, JSON.parse(e.args))
+
+        return next(e)
+      })
+      // As hud-pro says it once its Usage pane hosts the other meter mods.
+      on('command.run', { command: 'host' }, async ($: any, e: any, next: any) => {
+        await $.state.set({ plugin: 'hud-pro', key: 'host' }, true)
+
+        return next(e)
+      })
+    },
+  },
+  {
+    name: 'effort-router',
+    register(on: any) {
+      on('command.run', { command: 'effort' }, async ($: any, e: any, next: any) => {
+        await $.state.set({ plugin: 'effort-router', key: 'hub' }, JSON.parse(e.args))
 
         return next(e)
       })
@@ -115,11 +131,57 @@ test('desktop: the hub itself shows each running agent, the plan step, the failu
   expect(seen).toContain('testleri yaz: 4 dk')
   expect(seen).toContain('+2 tane daha')
   expect(seen).toContain('register dosyasını böl')
-  // The failure is the first row under "Şu an", and a lifted row says its value once, not again in its section.
+  // The failure is the first row under "Şu an".
   expect(seen.slice(1, 3)).toEqual(['Şu an', 'Testler: 41/42 geçti'])
-  expect(seen.filter(alt => /41\/42 geçti/.test(alt))).toHaveLength(1)
-  expect(seen.filter(alt => /%44/.test(alt))).toHaveLength(1)
-  expect(seen).toContain('Testler')
+})
+
+const LIFTED = { Testler: 'tests', Ajanlar: 'agents', Plan: 'plan', Kullanım: 'usage' }
+
+for (const surface of ['desktop', 'terminal'] as const) {
+  test(`${surface}: a row lifted into "Şu an" is that row, moved: no name is drawn twice, and it keeps its own press`, { plugins: reporters }, async ($: any, on: any) => {
+    const { ui } = await busyHub($, on, surface)
+    const names = surface === 'desktop'
+      ? (await alts(ui)).map(alt => alt.split(':')[0])
+      : (await ui.findAll({ type: 'Text' })).map((text: any) => String(text.children?.[0]))
+
+    for (const [title, pane] of Object.entries(LIFTED)) {
+      expect(names.filter((name: string) => name === title)).toHaveLength(1)
+      expect(await ui.findAll({ type: 'Button', key: `open-${pane}` })).toHaveLength(1)
+    }
+  })
+}
+
+test('a section whose every row stands in "Şu an" has no heading left', { plugins: reporters }, async ($: any, on: any) => {
+  stubWorld(on, { enabled: ['modz', 'test-badge'] })
+  await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
+  await say($, 'tests', { pane: 'tests', detail: '42/42 geçti', tone: 'ok', at: 1 })
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await alts(ui)).toContain('Güvence')
+
+  await say($, 'tests', tests)
+  const seen = await alts(ui)
+  expect(seen).not.toContain('Güvence')
+  expect(seen).toContain('Testler: 41/42 geçti')
+})
+
+test('a meter mod hosted in the Usage pane has no row of its own, card or no card', { plugins: reporters }, async ($: any, on: any) => {
+  const effort: HubCard = { pane: 'effort', detail: 'orta · Opus 5.5', tone: 'idle', at: 1 }
+  const listed = () => 'listed' as const
+  expect(rowsOf({}, withHosted(listed, false)).map(row => row.entry.pane)).toContain('effort')
+  expect(rowsOf({}, withHosted(listed, true)).map(row => row.entry.pane)).not.toContain('effort')
+  expect(rowsOf({ 'effort-router': effort }, withHosted(listed, true)).map(row => row.entry.pane)).not.toContain('effort')
+  expect(rowsOf({}, withHosted(listed, true)).map(row => row.entry.pane)).toContain('usage')
+
+  stubWorld(on)
+  await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
+  await say($, 'effort', effort)
+  await say($, 'usage', usage)
+  const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  expect(await ui.find({ key: 'open-effort' })).toBeDefined()
+
+  await $.command.run({ command: 'host', args: '' })
+  expect(await ui.find({ key: 'open-effort' })).toBeUndefined()
+  expect(await ui.find({ key: 'open-usage' })).toBeDefined()
 })
 
 test('desktop: a press on a live line opens its mod\'s pane for the detail', { plugins: reporters }, async ($: any, on: any) => {
@@ -132,7 +194,7 @@ test('desktop: a press on a live line opens its mod\'s pane for the detail', { p
   const { ui } = await busyHub($, on, 'desktop')
 
   await ui.press({ key: 'now-open-agents-1' })
-  await ui.press({ key: 'now-open-plan' })
+  await ui.press({ key: 'open-plan' })
 
   expect(asked).toEqual(['agents', 'plan'])
 })
@@ -190,6 +252,12 @@ test('with only the hub installed it says so and leads to the install lines', as
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
 
   expect(await ui.find({ type: 'Text', text: /Yalnızca ana panel kurulu/ })).toBeDefined()
+  // On the desktop the way there is a row like the others: a drawing under a blank plain button, no pill of its own.
+  const press = await ui.find({ key: 'add-mods' })
+  expect(press.props).toMatchObject({ plain: true })
+  expect(press.props.variant).toBeUndefined()
+  expect(press.props.label).toMatch(/^\u3164+$/)
+  expect(await alts(ui)).toContain('Mod ekle')
   await ui.press({ key: 'add-mods' })
   expect(world.up).toEqual(['modz-mods'])
 })

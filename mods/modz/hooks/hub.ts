@@ -139,6 +139,14 @@ export function presenceOf(market: Market): (mod: string) => Presence {
   }
 }
 
+// The meter mods hud-pro's Usage pane hosts while it runs: each draws its section there and has no row of its own.
+const HOSTED_IN_USAGE = new Set(['session-budget', 'cache-tax', 'effort-router'])
+
+// hud-pro says it hosts under `{ plugin: 'hud-pro', key: 'host' }`; a hosted mod then reads as switched off to the
+// rows, whether or not a card of its own is still around.
+export const withHosted = (presence: (mod: string) => Presence, isHosting: boolean) => (mod: string): Presence =>
+  isHosting && HOSTED_IN_USAGE.has(mod) ? 'off' : presence(mod)
+
 // The terminal's row hotkeys: the digits in keyboard order, so a tenth row still gets one.
 const HOTKEYS = '1234567890'
 

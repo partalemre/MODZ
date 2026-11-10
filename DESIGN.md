@@ -194,10 +194,15 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
   adım). Bozuk satır atılır, satırsız `live` yok sayılır (`hub.ts: cardOf`).
 - **"Şu an" alanı:** hub'ın başında, bölümlerin üstünde (`now.ts`). Sıra: `bad` kartlar, `warn` kartlar (tutulan ya
   da başarısız olan en üstte), `live` taşıyan kartlar, en sonda kullanım (`usage` paneli, hud-pro'nun kartı). Her biri
-  modun kendi satırıdır, altında canlı satırları; yukarı alınan satır değerini aşağıda bir kez daha söylemez. Her
-  satıra basış modun panelini ayrıntı için açar. Alan boşken çizilmez; düzenleme sırasında da çizilmez. Süre metni
+  modun kendi satırıdır, bölümünden yukarı **taşınmış** (aynı anahtarlar: `row-<pane>`, `open-<pane>`), altında canlı
+  satırları. Taşınan satır bölümünde bir daha çizilmez; satırı kalmayan bölümün başlığı da çizilmez. Her satıra basış
+  modun panelini ayrıntı için açar. Alan boşken çizilmez; düzenleme sırasında da çizilmez. Süre metni
   bir dakikanın altında 10 sn'lik adımlarla söylenir ve hub yalnızca `since` taşıyan bir kart varken kendi 10 sn'lik
   vuruşuyla yeniden çizilir (`cards.ts`; yazım yok). Hiçbir şey çalışmıyorken vuruş da yoktur.
+- **Başka panelde ağırlanan mod:** hud-pro çalışırken `{ plugin: 'hud-pro', key: 'host' }` değerine `true` yazar;
+  session-budget, cache-tax ve effort-router o zaman bölümlerini Kullanım paneline verir ve hub kartı yazmaz. Hub
+  bu değeri çizerken okur ve bu üç modun satırını (bilinen Efor satırı dahil, eski bir kartı kalmış olsa bile)
+  çizmez (`hub.ts: withHosted`).
 - **Komut ve ayar dizini:** `/modz help` ve katalog panelinin "Komutlar ve ayarlar" bölümü, kurulu her modun slash
   komutlarını (`$.command.list()`; motor komutun hangi eklentiden geldiğini söyler, tablo tutulmaz) ve ayarlarının
   yerini (manifest'teki `userConfig` anahtarları, `/plugin` altında) listeler. Kurulu olmayan her mod için katalog

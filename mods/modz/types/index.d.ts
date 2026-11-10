@@ -54,7 +54,8 @@ declare module 'claude-code' {
     'test-badge': { hub: HubCard; home: ModzHome; shown: ModzStage }
     checkpoint: { hub: HubCard; home: ModzHome; shown: ModzStage }
     'replay-theater': { hub: HubCard; home: ModzHome; shown: ModzStage }
-    'hud-pro': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    // `host`: true while hud-pro's Usage pane hosts session-budget, cache-tax and effort-router, which then have no hub row.
+    'hud-pro': { hub: HubCard; home: ModzHome; shown: ModzStage; host: boolean }
     skins: { hub: HubCard; home: ModzHome; shown: ModzStage }
     'effort-router': { hub: HubCard; home: ModzHome; shown: ModzStage }
     handoff: { hub: HubCard; home: ModzHome; shown: ModzStage }

@@ -130,7 +130,10 @@ const frameOf = async ($: EngineInterface, site: Site): Promise<Frame> => ({ ...
 async function partsOf($: EngineInterface): Promise<Parts> {
   const [cards, layout, isEditing] = [await read($, cardsAtom), await read($, layoutAtom), await read($, editingAtom)]
 
-  return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()) }
+  // hud-pro says when its Usage pane hosts the other meter mods; nobody saying so means nobody hosts.
+  const host = await $.state.get({ plugin: 'hud-pro', key: 'host' }).catch(() => ({ value: false }))
+
+  return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()), isUsageHosting: host.value === true }
 }
 
 type On = Parameters<Register>[0]

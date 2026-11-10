@@ -4,7 +4,8 @@
 // at their right edge, and lists the hidden rows with Show. The catalog ("Mods") is a pane of its own (register.tsx).
 import type { Drawing } from './draw'
 import type { Focus, HubRow, Section } from './hub'
-import { MODS_PANE, SECTIONS } from './hub'
+import { SECTIONS } from './hub'
+import { firstRun, firstRunRow } from './first-run'
 import { hubHeadSvg, hubRowSvg, sectionSvg } from './hub-draw'
 import { GLYPH } from './kit/icons'
 import { PressRow } from './kit/press'
@@ -101,37 +102,23 @@ function editBar(ui: Ui, view: HubView) {
   )
 }
 
-// With no mod but the hub installed there is one row: a sentence says so, and one press leads to the install lines.
-function firstRun(ui: Ui, view: HubView) {
-  const { Box, Button, Text } = ui
-  if (view.isEditing || view.hidden.length > 0 || view.rows.some(row => row.entry.pane !== MODS_PANE)) return null
-  const words = hubWords()
-
-  return (
-    <Box key="first-run" flexDirection="column" rowGap={1} {...(view.surface === 'desktop' ? DESKTOP_FOOT : {})}>
-      <Text dimColor>{words.firstRun}</Text>
-      <Box flexDirection="row">
-        <Button key="add-mods" label={words.addMods} variant="primary" onPress={() => view.actions.onOpen(MODS_PANE)} />
-      </Box>
-    </Box>
-  )
-}
-
-// The area is left out while customizing; a row lifted into it says its value there, not twice.
+// The area is left out while customizing. A row lifted into it is that row, moved: it is not drawn in its section too.
 const nowRows = (view: HubView): NowRow[] => (view.isEditing ? [] : view.now)
 
-function withoutLifted(view: HubView): (row: HubRow) => HubRow {
+function sectionRows(view: HubView): HubRow[] {
   const lifted = new Set(nowRows(view).map(item => item.row.entry.pane))
 
-  return row => (lifted.has(row.entry.pane) ? { ...row, card: null } : row)
+  return view.rows.filter(row => !lifted.has(row.entry.pane))
 }
 
 type Group = { key: string; label: string; rows: HubRow[]; isHiddenGroup: boolean }
 
-// The sections that have rows, and while customizing the hidden rows as one more group at the end.
+// The sections that still have rows (one whose rows all stand in "Now" has no heading either), and while
+// customizing the hidden rows as one more group at the end.
 function groupsOf(view: HubView): Group[] {
   const words = hubWords()
-  const sections = SECTIONS.map(section => ({ key: section, label: words.sections[section], rows: inSection(view.rows, section), isHiddenGroup: false }))
+  const rows = sectionRows(view)
+  const sections = SECTIONS.map(section => ({ key: section, label: words.sections[section], rows: inSection(rows, section), isHiddenGroup: false }))
   const hidden = view.isEditing && view.hidden.length > 0 ? [{ key: 'hidden', label: words.hidden, rows: view.hidden, isHiddenGroup: true }] : []
 
   return [...sections, ...hidden].filter(group => group.rows.length > 0)
@@ -177,7 +164,7 @@ function desktopGroup(ui: Ui, view: HubView, opts: { group: Group; pen: NowTools
   return (
     <Box key={`section-${group.key}`} flexDirection="column">
       {pen.label(eyebrow, `eyebrow-${group.key}`)}
-      {group.rows.map(withoutLifted(view)).map(row => {
+      {group.rows.map(row => {
         const pane = row.entry.pane
         const built = pen.keep(`row-${pane}`, rowShows(row, { width, theme, buttonRoom }), cue => hubRowSvg({ width, theme, row, buttonRoom, cue }))
         if (!view.isEditing && panes !== null) return pen.press({ box: `row-${pane}`, key: `open-${pane}`, drawing: built, pane })
@@ -212,7 +199,7 @@ function desktopTree(ui: Ui, view: HubView) {
       {pen.label(head, 'head')}
       {nowDesktop(ui, nowRows(view), pen)}
       {groupsOf(view).map(group => desktopGroup(ui, view, { group, pen }))}
-      {firstRun(ui, view)}
+      {firstRunRow(ui, view, pen)}
       {editBar(ui, view)}
     </Box>
   )
@@ -260,7 +247,6 @@ function terminalTree(ui: Ui, view: HubView) {
   const now = nowRows(view)
   const focus = view.focus
   const said = now.length > 0 ? null : focus
-  const quiet = withoutLifted(view)
   const words = hubWords()
 
   return (
@@ -274,14 +260,14 @@ function terminalTree(ui: Ui, view: HubView) {
         <Text dimColor>{view.meta}</Text>
       </Box>
       {focus === null || view.isEditing ? null : <Button key="open-focus" label={words.openPane(focus.row.entry.title)} variant="primary" onPress={() => view.actions.onOpen(focus.row.entry.pane)} />}
-      {nowTerminal(ui, now)}
+      {nowTerminal(ui, now, row => terminalButtons(ui, view, { row, panes: [] }))}
       {groupsOf(view).map(group => {
         const panes = group.isHiddenGroup ? null : group.rows.map(row => row.entry.pane)
 
         return (
           <Box key={`section-${group.key}`} flexDirection="column">
             <Text bold dimColor>{group.label}</Text>
-            {group.rows.map(quiet).map(row => terminalRow(ui, view, { row, panes }))}
+            {group.rows.map(row => terminalRow(ui, view, { row, panes }))}
           </Box>
         )
       })}

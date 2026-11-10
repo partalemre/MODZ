@@ -72,7 +72,11 @@ export type HeldFinish = { signature: string; count: number }
 
 // The MODZ main panel's summary card (DESIGN.md §9): lo · Iris · Moss · Amber · Flare.
 export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
-export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
+// One running thing on the hub: what runs, when it began (ms; the hub tells the elapsed time) and a short fact.
+export type HubLine = { label: string; since?: number; value?: string }
+// What runs now, a few lines, and how many more there are than the lines say.
+export type HubLive = { lines: HubLine[]; more?: number }
+export type HubCard = { pane: string; detail: string; tone: HubTone; at: number; live?: HubLive }
 
 declare module 'claude-code' {
   interface PluginState {

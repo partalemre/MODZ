@@ -115,6 +115,27 @@ for (const surface of SURFACES) {
   })
 }
 
+test('the MODZ card names the step under way and when it began, and drops it once the plan rests', { plugins: [modz] }, async ($: any, on: any) => {
+  await setup($, on)
+  await $.tool.call(todos([['A', 'pending'], ['B', 'pending']]))
+  expect((await hubOf($)).live).toBeUndefined()
+
+  await clock.advance(MIN)
+  await $.tool.call(todos([['A', 'completed'], ['B', 'in_progress']]))
+  const started = (await hubOf($)).live
+  expect(started).toEqual({ lines: [{ label: 'B', since: clock.now() }] })
+
+  // Time passing alone writes nothing: the hub tells how long the step has run.
+  const { at } = await hubOf($)
+  await clock.advance(5 * MIN)
+  expect((await hubOf($)).at).toBe(at)
+
+  await clock.advance(31 * MIN)
+  expect((await hubOf($)).live).toBeUndefined()
+  await $.tool.call(todos([['A', 'completed'], ['B', 'completed']]))
+  expect((await hubOf($)).live).toBeUndefined()
+})
+
 test('the status line and the MODZ card read English by default', { plugins: [modz] }, async ($: any, on: any) => {
   await setup($, on)
   await $.tool.call(todos([['A', 'pending'], ['B', 'pending']]))

@@ -14,7 +14,10 @@ import { isSame } from './kit/same'
 import { isOffStage, shownOf } from './kit/stage'
 import { resolveLight } from './kit/tokens'
 import { motion, paneTree } from './pane'
-import { DEFAULT_MODE, isSkipped, resolveMode, routedEffort } from './route'
+import { loweredRow } from './lowered'
+import type { Lowered } from './lowered'
+import { DEFAULT_MODE, isPerson, isSkipped, resolveMode, routedEffort } from './route'
+import type { PromptFacts } from './route'
 import { hubOf, startedRow, withStep, withTurn } from './turns'
 import { words } from './words'
 
@@ -29,8 +32,17 @@ const HUB = { plugin: 'effort-router', key: 'hub' } as const
 const HOME = { plugin: 'effort-router', key: 'home' } as const
 const HUB_ON = { plugin: 'modz', key: 'isOn' } as const
 
-// The module's own: the judge's settings, the theme override, and the routing the last judged prompt set.
-const session = { env: {} as JudgeEnv, themeOverride: undefined as string | undefined, route: null as RouteClass | null }
+// The module's own: the judge's settings, the theme override, the routing judged for the person's prompt whose turn
+// starts next (consumed by that turn alone), whether a task is under way, and the last lowered turn the band names.
+const session = {
+  env: {} as JudgeEnv,
+  themeOverride: undefined as string | undefined,
+  route: null as RouteClass | null,
+  isInTask: false,
+  // The running turn's own prompt, kept only to send it again from the band.
+  turn: null as { turnId: string; text: string } | null,
+  lowered: null as Lowered | null,
+}
 
 const log = ($: EngineInterface, line: string) => $.ui.log(`effort-router: ${line}`, { to: 'debug' })
 
@@ -132,11 +144,24 @@ function sessionHooks(on: On, options: Options): void {
   }).catch(($, e, next) => next(e))
 }
 
+// The judge's routing for this prompt alone: null for a skipped one, which then goes at the person's own effort.
+async function judgeFor($: EngineInterface, facts: PromptFacts): Promise<RouteClass | null> {
+  if ((await read($, modeAtom)) !== 'auto' || isSkipped(facts)) return null
+  const cls = await classify(judgeIoOf($), facts.text)
+  if (cls !== null) session.isInTask = cls !== 'light'
+
+  return cls
+}
+
 function turnHooks(on: On): void {
-  // At most one judge call per prompt, and only in `auto`; a skipped prompt keeps the last routing.
+  // At most one judge call per prompt, and only in `auto`. A person's new prompt clears the band's last notice.
   on('prompt.submit', async ($, e, next) => {
-    const facts = { text: e.text, origin: e.origin.kind, isMidTurn: e.turnId !== undefined }
-    if ((await read($, modeAtom)) === 'auto' && !isSkipped(facts)) session.route = await classify(judgeIoOf($), e.text)
+    const facts = { text: e.text, origin: e.origin.kind, isMidTurn: e.turnId !== undefined, isInTask: session.isInTask }
+    if (!facts.isMidTurn) session.route = await judgeFor($, facts)
+    if (isPerson(facts.origin) && session.lowered !== null) {
+      session.lowered = null
+      $.ui.invalidate('ui.render')
+    }
 
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -144,11 +169,20 @@ function turnHooks(on: On): void {
   on('turn.start', async ($, e, next) => {
     const done = await next(e)
     const mode = await read($, modeAtom)
+    const cls = mode === 'auto' ? session.route : null
+    session.route = null
     if (mode === 'off') return done
-    const row = startedRow({ turnId: e.turnId, at: await $.clock.now(), text: e.text, cls: mode === 'auto' ? session.route : null })
+    session.turn = { turnId: e.turnId, text: e.text }
+    const row = startedRow({ turnId: e.turnId, at: await $.clock.now(), text: e.text, cls })
     await setTurns($, turns => withTurn(turns, row))
 
     return done
+  }).catch(($, e, next) => next(e))
+
+  on('turn.complete', async ($, e, next) => {
+    if (e.agentId === undefined) session.route = null
+
+    return next(e)
   }).catch(($, e, next) => next(e))
 
   // Main-loop steps only: a subagent's request goes on exactly as it came.
@@ -157,11 +191,16 @@ function turnHooks(on: On): void {
     if (e.agentId !== undefined || mode === 'off') return yield* next(e)
     const turns = await read($, turnsAtom)
     const known = turns.find(turn => turn.turnId === e.turnId)
-    const cls = mode === 'auto' ? (known?.cls ?? session.route) : null
+    // A turn no judged prompt started (a continuation, a notification) goes at the person's own effort.
+    const cls = mode === 'auto' ? (known?.cls ?? null) : null
     const sent = mode === 'auto' ? routedEffort(cls, e.effort) : e.effort
     const at = await $.clock.now()
     const seeded = known === undefined ? withTurn(turns, startedRow({ turnId: e.turnId, at, text: '', cls })) : turns
     await setTurns($, () => withStep(seeded, { turnId: e.turnId, asked: e.effort, sent, model: e.model }))
+    if (sent !== e.effort && session.turn?.turnId === e.turnId && session.lowered?.turnId !== e.turnId) {
+      session.lowered = { turnId: e.turnId, text: session.turn.text, asked: e.effort, sent }
+      $.ui.invalidate('ui.render')
+    }
 
     return yield* next(sent === e.effort ? e : { ...e, effort: sent })
   })
@@ -183,8 +222,26 @@ function paneHooks(on: On): void {
   })
 }
 
+// The last lowered turn, above the prompt where the person looks: what it went at, and one press to send the same
+// prompt again at their own effort (a plugin's prompt, which the judge never reads).
+function bandHooks(on: On): void {
+  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
+    const theirs = await next(e)
+    const lowered = session.lowered
+    if (lowered === null || e.props.hasSurvey) return theirs
+    const resend = () => {
+      session.lowered = null
+      $.ui.invalidate('ui.render')
+      void $.prompt.submit({ text: lowered.text, asUser: true }).catch(() => log($, 'could not send the prompt again'))
+    }
+
+    return pinned(e, loweredRow($.ui.resolve(e), { theirs, lowered, resend }))
+  }).catch(($, e, next) => next(e))
+}
+
 export const register: Register = (on, options) => {
   sessionHooks(on, options)
   turnHooks(on)
   paneHooks(on)
+  bandHooks(on)
 }

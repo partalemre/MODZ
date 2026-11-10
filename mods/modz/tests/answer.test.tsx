@@ -39,6 +39,18 @@ const guest = {
     })
   },
 }
+// A mod with no pane of its own: what it holds is answered on its card above the prompt.
+const band = {
+  name: 'band',
+  register(on: any) {
+    on('command.run', { command: 'report' }, async ($: any, e: any) => {
+      const isClear = e.args === 'clear'
+      await $.state.set({ plugin: 'band', key: 'hub' }, { pane: 'band', detail: isClear ? '' : 'rm -rf build is waiting', tone: isClear ? 'idle' : 'warn', at: 1, title: 'Band', section: 'safety', isBandOnly: true })
+
+      return { text: '' }
+    })
+  },
+}
 // An arrangement the drawing cannot read, so the hub's drawing throws.
 const layoutBreaker = {
   name: 'layout-breaker',
@@ -77,6 +89,22 @@ for (const surface of ['desktop', 'terminal'] as const) {
 
     await $.command.run({ command: 'modz', args: '' })
     expect(await drawnText(ui)).not.toContain('did not answer')
+  })
+
+  test(`${surface}: a mod with no pane has a row only while it says something, and a press points to the prompt`, { plugins: [band] }, async ($: any, on: any) => {
+    const toasts: string[] = []
+    on('ui.toast', (_: any, e: any) => (toasts.push(e.text), { value: undefined }))
+    const { world, clock, ui } = await hubWith($, on, surface)
+    expect(await drawnText(ui)).toContain('rm -rf build is waiting')
+
+    await ui.press({ key: 'open-band' })
+    await clock.advance(ANSWER_MS)
+    expect(world.up).toEqual(['modz'])
+    expect(await drawnText(ui)).not.toContain('did not answer')
+    expect(toasts).toEqual(['Band has no pane: its question is waiting by the prompt.'])
+
+    await $.command.run({ command: 'report', args: 'clear' })
+    expect(await drawnText(ui)).not.toContain('Band')
   })
 
   test(`${surface}: a hub whose drawing throws still lists its rows, and a row pressed there opens its pane`, { plugins: [guest, layoutBreaker] }, async ($: any, on: any) => {

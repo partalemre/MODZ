@@ -47,6 +47,21 @@ const holdIo = ($: EngineInterface): HoldIo => ({
   redraw: () => $.ui.invalidate('ui.render'),
 })
 
+const HUB = { plugin: 'blast-radius', key: 'hub' } as const
+const HUB_COMMAND_CHARS = 40
+
+// The MODZ panel's line while a command waits on the card above the prompt (null: nothing waits). This mod has no
+// pane, so the card says so (`isBandOnly`); telling the panel must never fail a hold.
+async function tellHub($: EngineInterface, command: string | null): Promise<void> {
+  const short = command !== null && command.length > HUB_COMMAND_CHARS ? `${command.slice(0, HUB_COMMAND_CHARS)}…` : command
+  const said = short === null ? { detail: '', tone: 'idle' as const } : { detail: words().hubWaiting(short), tone: 'warn' as const }
+  try {
+    await $.state.set(HUB, { pane: PANE_ID, ...said, at: await $.clock.now().catch(() => Date.now()), title: 'Blast Radius', icon: 'shield', section: 'safety', isBandOnly: true })
+  } catch {
+    $.ui.log('blast-radius: could not tell the MODZ panel', { to: 'debug' })
+  }
+}
+
 const WHY: Record<Exclude<Decision, 'proceed' | 'cancel'>, string> = {
   timeout: 'no answer within 10 minutes',
   interrupted: 'the turn was interrupted',
@@ -194,7 +209,14 @@ function holdHooks(on: On): void {
     const mine = await take(holdIo($), { command, signal: next.signal, canStrike: true })
     if (mine === null) return refusal(WHY.interrupted, risks[0]?.label ?? 'a risky command')
     const risky: Risky = { mine, risks, summary: risks[0]?.label ?? 'a risky command' }
-    await hold(holdIo($), mine, { signal: next.signal, prepare: () => survey($, risky) })
+    const prepare = async (): Promise<boolean> => {
+      const isLossy = await survey($, risky)
+      if (isLossy) await tellHub($, command)
+
+      return isLossy
+    }
+    await hold(holdIo($), mine, { signal: next.signal, prepare })
+    if (mine.view !== null) await tellHub($, null)
     if (mine.decision === 'proceed') {
       if (mine.view !== null) markAnswered(command)
 

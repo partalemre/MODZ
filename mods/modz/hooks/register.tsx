@@ -106,6 +106,13 @@ async function saveLayout($: EngineInterface, change: (layout: HubLayout) => Hub
   await $.store.set(LAYOUT_KEY, next)
 }
 
+// A mod with no pane answers on its card above the prompt: the press says where, and nothing is asked to open.
+async function openOrPoint($: EngineInterface, pane: string): Promise<void> {
+  const [mod, card] = Object.entries(await read($, cardsAtom)).find(([, each]) => each.pane === pane && each.isBandOnly === true) ?? []
+  if (card === undefined) return openPane(swapOf($), pane)
+  $.ui.toast(hubWords().inBand(card.title ?? String(mod)))
+}
+
 // Each press of the hub, written where it is kept; a failed write is logged, never thrown into the drawing.
 // The press waits for the work, so the panel has swapped by the time it settles.
 function actionsOf($: EngineInterface): HubActions {
@@ -113,7 +120,7 @@ function actionsOf($: EngineInterface): HubActions {
     work().catch(cause => $.ui.log(`modz: ${what} failed: ${String(cause)}`, { to: 'debug' }))
 
   return {
-    onOpen: pane => run(`opening ${pane}`, () => openPane(swapOf($), pane)),
+    onOpen: pane => run(`opening ${pane}`, () => openOrPoint($, pane)),
     onEdit: isEditing => run('customizing', () => update($, editingAtom, () => isEditing)),
     onMove: opts => run('moving a row', () => saveLayout($, layout => moveUp(layout, opts))),
     onHide: opts => run('hiding a row', () => saveLayout($, layout => setHidden(layout, opts))),

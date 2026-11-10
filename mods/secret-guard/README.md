@@ -43,6 +43,8 @@ The question is "How do you want to go on?", the safe fix first, each answer wit
 
 The desktop app draws the card as a picture; the terminal draws the same words as text. The card follows Claude Code's `theme` setting, or `MODZ_THEME=light|dark` in the `env` block of `~/.claude/settings.json`.
 
+While a write waits on the question, the MODZ panel says so at its top (`secret in src/config.ts is waiting`); the line goes with your answer.
+
 ## Secrets you paste into a prompt
 
 A key, token or private key you paste into a prompt never reaches the model. The prompt goes out with `⟦secret:1⟧` in its place (the same value always gets the same number), and the system prompt gets one short note telling Claude that each placeholder is a real secret it uses verbatim and never asks for.

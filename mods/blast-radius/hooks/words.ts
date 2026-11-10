@@ -18,6 +18,8 @@ export type Words = {
   fullCommand: (command: string) => string
   // Said once the person kept their work.
   kept: string
+  // The MODZ panel's line while a command waits for its answer.
+  hubWaiting: (command: string) => string
   // The deny reason when Cancel was pressed, read by Claude and shown in the transcript.
   cancelWhy: string
   context: (place: { where: string | null; folder: string }) => string

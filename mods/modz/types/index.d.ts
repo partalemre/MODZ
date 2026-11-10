@@ -25,6 +25,9 @@ export type HubCard = {
   section?: HubSection
   badge?: string
   live?: HubLive
+  // The mod has no pane: what it holds is answered on its own card above the prompt. Its row is drawn only while
+  // `detail` says something, and a press says where to answer instead of asking for a pane.
+  isBandOnly?: true
 }
 
 // Written when a hub row is pressed; the mod that owns `pane` opens its own pane.

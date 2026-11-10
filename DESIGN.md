@@ -192,6 +192,9 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
   yazımına mal olmaz; kart yine yalnızca gösterdiği metin değişince yazılır (ajan başladı/bitti, maliyet kuruş
   değiştirdi, adım değişti). Bugün yazanlar: savvy-progress (çalışan ajanlar: ilk 3 ve `more`), plan-steps (şimdiki
   adım). Bozuk satır atılır, satırsız `live` yok sayılır (`hub.ts: cardOf`).
+- **Panelsiz mod (`isBandOnly`):** paneli olmayan, tuttuğunu istem alanındaki kendi kartında ya da sorusunda soran mod (Blast Radius,
+  Secret Guard) kartına `isBandOnly: true` koyar. Satırı yalnızca `detail` bir şey söylerken çizilir (`warn` ile "Şu an"a
+  çıkar); basış panel istemez, sorunun istem alanında beklediğini söyler. İş bitince mod `detail: ''` yazar ve satır kalkar.
 - **"Şu an" alanı:** hub'ın başında, bölümlerin üstünde (`now.ts`). Sıra: `bad` kartlar, `warn` kartlar (tutulan ya
   da başarısız olan en üstte), `live` taşıyan kartlar, en sonda kullanım (`usage` paneli, hud-pro'nun kartı). Her biri
   modun kendi satırıdır, bölümünden yukarı **taşınmış** (aynı anahtarlar: `row-<pane>`, `open-<pane>`), altında canlı
@@ -231,7 +234,7 @@ type HubLine = { label: string; since?: number; value?: string }   // ne çalı�
 type HubLive = { lines: HubLine[]; more?: number }
 type HubCard = { pane: string; detail: string; tone: HubTone; at: number
                  title?: string; hint?: string; icon?: string; section?: 'work' | 'safety' | 'meter'; badge?: string
-                 live?: HubLive }
+                 live?: HubLive; isBandOnly?: true }
 ```
 
 | pane | mod | panel başlığı |

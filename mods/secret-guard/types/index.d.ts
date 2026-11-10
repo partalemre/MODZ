@@ -23,9 +23,13 @@ export type GuardPending = {
   options: GuardOption[]
 }
 
+// The one-line card the MODZ main panel collects from every mod (DESIGN.md §9). This mod has no pane: what it
+// holds is answered in its question, so the card says `isBandOnly` and its row shows only while a write waits.
+export type HubCard = { pane: string; detail: string; tone: 'idle' | 'warn'; at: number; title: string; icon: string; section: 'safety'; isBandOnly: true }
+
 declare module 'claude-code' {
   interface PluginState {
     // isRecording: recording mode masks secrets, env values and e-mail addresses on screen, for this session.
-    'secret-guard': { pending: GuardPending | null; isEnabled: boolean; isRecording: boolean }
+    'secret-guard': { pending: GuardPending | null; isEnabled: boolean; isRecording: boolean; hub: HubCard }
   }
 }

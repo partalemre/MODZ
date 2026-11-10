@@ -73,10 +73,26 @@ async function inspect($: EngineInterface, input: Record<string, unknown>): Prom
   return found.secrets.length + found.envFiles.length === 0 ? null : found
 }
 
+const HUB = { plugin: 'secret-guard', key: 'hub' } as const
+const HUB_SUBJECT_CHARS = 30
+
+// The MODZ panel's line while a write waits on the question (null: nothing waits). This mod has no pane, so the
+// card says so (`isBandOnly`); telling the panel must never fail the guard.
+async function tellHub($: EngineInterface, subject: string | null): Promise<void> {
+  const short = subject !== null && subject.length > HUB_SUBJECT_CHARS ? `${subject.slice(0, HUB_SUBJECT_CHARS)}…` : subject
+  const said = short === null ? { detail: '', tone: 'idle' as const } : { detail: words().hubWaiting(short), tone: 'warn' as const }
+  try {
+    await $.state.set(HUB, { pane: 'secret-guard', ...said, at: await $.clock.now().catch(() => Date.now()), title: 'Secret Guard', icon: 'key', section: 'safety', isBandOnly: true })
+  } catch {
+    $.ui.log('secret-guard: could not tell the MODZ panel', { to: 'debug' })
+  }
+}
+
 async function askUser($: EngineInterface, found: Found): Promise<string> {
   const pending = pendingOf(found, session.cwd)
   const options = pending.options.map(option => option.label)
   await update($, pendingAtom, () => pending)
+  await tellHub($, pending.subject)
   let answer = ''
   try {
     answer = await $.ui.ask(words().question, { options, header: HEADER })
@@ -84,6 +100,7 @@ async function askUser($: EngineInterface, found: Found): Promise<string> {
     $.ui.log('secret-guard: question dismissed, call cancelled', { to: 'debug' })
   }
   await update($, pendingAtom, () => null)
+  await tellHub($, null)
 
   return answer
 }

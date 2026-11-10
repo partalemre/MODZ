@@ -70,3 +70,23 @@ test('a subagent writing only a placeholder passes with the note: the file holds
   expect(ran.context).toContain(TOKEN_NOTE)
   expect(setup.ran[0]?.content).toBe(`const k = "${ONE}"\n`)
 })
+
+// Hears each hub card this mod writes, as the MODZ panel does, and tells them back in order.
+const panel = {
+  name: 'panel',
+  register(on: any) {
+    const heard: unknown[] = []
+    on('state.set', { plugin: 'secret-guard', key: 'hub' }, (_: any, e: any, next: any) => (heard.push(e.value), next(e)))
+    on('command.run', { command: 'hub-heard' }, () => ({ text: JSON.stringify(heard) }))
+  },
+}
+
+test('a write that waits on the question is told to the MODZ panel, and the line goes with the answer', { plugins: [panel] }, async ($: any, on: any) => {
+  const setup = english('Allow once')
+  await start($, on, setup)
+  await $.tool.call({ tool: 'Write', file_path: '/work/src/a.ts', content: `const k = "${ANT}"\n` })
+  const heard: any[] = JSON.parse((await $.command.run({ command: 'hub-heard', args: '' })).text)
+
+  expect(heard.map(card => [card.detail, card.tone, card.isBandOnly])).toEqual([['secret in src/a.ts is waiting', 'warn', true], ['', 'idle', true]])
+  expect(heard[0]).toMatchObject({ pane: 'secret-guard', title: 'Secret Guard', icon: 'key', section: 'safety' })
+})

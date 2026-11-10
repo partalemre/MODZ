@@ -102,6 +102,7 @@ export const EN: Words = {
   doing: isDelete => (isDelete ? 'Deleting…' : 'Running…'),
   fullCommand: command => `full command: ${command}`,
   kept: 'Kept. Nothing was thrown away.',
+  hubWaiting: command => `${command} is waiting`,
   cancelWhy: 'the user pressed Keep my work',
   context: ({ where }) => `${where === null ? '' : `${where} · `}Waiting for you`,
   size: enSize,

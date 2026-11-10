@@ -112,6 +112,7 @@ export function cardOf(value: unknown): HubCard | null {
     section: SECTIONS.includes(card.section as Section) ? (card.section as Section) : undefined,
     badge: textOf(card.badge, BADGE_MAX),
     live: liveOf(card.live),
+    isBandOnly: card.isBandOnly === true ? (true as const) : undefined,
   }
   const named = Object.fromEntries(Object.entries(own).filter(([, v]) => v !== undefined))
 
@@ -147,6 +148,9 @@ const HOSTED_IN_USAGE = new Set(['session-budget', 'cache-tax', 'effort-router']
 export const withHosted = (presence: (mod: string) => Presence, isHosting: boolean) => (mod: string): Presence =>
   isHosting && HOSTED_IN_USAGE.has(mod) ? 'off' : presence(mod)
 
+// A mod with no pane has nothing to open, so its row is there only while it has something to say.
+const isSilentBand = (card: HubCard): boolean => card.isBandOnly === true && card.detail === ''
+
 // The terminal's row hotkeys: the digits in keyboard order, so a tenth row still gets one.
 const HOTKEYS = '1234567890'
 
@@ -167,7 +171,7 @@ function candidates(cards: Record<string, HubCard>, presence: (mod: string) => P
   })
   const taken = new Set(entries().map(entry => entry.pane))
   const guests = Object.entries(cards)
-    .filter(([mod, card]) => mod !== 'modz' && !KNOWN_MODS.has(mod) && presence(mod) !== 'off' && !taken.has(card.pane))
+    .filter(([mod, card]) => mod !== 'modz' && !KNOWN_MODS.has(mod) && presence(mod) !== 'off' && !taken.has(card.pane) && !isSilentBand(card))
     .map(([mod, card]) => guestEntry(mod, card))
 
   return [...known, ...guests].map(entry => ({ entry, card: own(entry) }))

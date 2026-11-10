@@ -104,6 +104,7 @@ export const TR: Words = {
   doing: isDelete => (isDelete ? 'Siliniyor…' : 'Çalıştırılıyor…'),
   fullCommand: command => `tam komut: ${command}`,
   kept: 'Tutuldu. Hiçbir şey kaybolmadı.',
+  hubWaiting: command => `${command} bekliyor`,
   cancelWhy: 'the user pressed Vazgeç (cancel)',
   context: ({ where, folder }) => `${where === null ? '' : `${where} · `}${folder === '' ? '' : `${folder} içinde`}`,
   size: trSize,

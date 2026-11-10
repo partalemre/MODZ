@@ -6,8 +6,8 @@ import type { HudSample } from '../types'
 // fills at its recent burn rate, and how many turns the context has left at its average growth.
 
 // A burn rate needs this many readings spread over at least this long, all from the last hour.
-const PACE_MIN_SAMPLES = 3
-const PACE_MIN_SPAN_MS = 10 * 60_000
+export const PACE_MIN_SAMPLES = 3
+export const PACE_MIN_SPAN_MS = 10 * 60_000
 const PACE_LOOKBACK_MS = 60 * 60_000
 // The HUD line names a fill time only this close; the pane names any that falls before the reset.
 export const FULL_WARN_MS = 60 * 60_000
@@ -52,22 +52,34 @@ function slopeOf(points: readonly Point[]): number {
   return bottom === 0 ? 0 : top / bottom
 }
 
-export type FullSpec = { points: readonly Point[]; percent: number; resetsAt: string | null; nowMs: number }
+// How far back a burn rate reads: an hour by default; a weekly window reads a longer stretch (pace.ts).
+export type BurnSpec = { points: readonly Point[]; nowMs: number; lookbackMs?: number }
+
+// The readings a burn rate reads: within the lookback, after the last fall.
+export const recentOf = (spec: BurnSpec): Point[] =>
+  sinceLastDrop(
+    spec.points.filter(point => spec.nowMs - point.t <= (spec.lookbackMs ?? PACE_LOOKBACK_MS)),
+    point => point.value,
+  )
+
+// The recent burn in percent points per ms; null without PACE_MIN_SAMPLES readings spread over PACE_MIN_SPAN_MS.
+export function burnOf(spec: BurnSpec): number | null {
+  const recent = recentOf(spec)
+  const first = recent[0]
+  const last = recent[recent.length - 1]
+  if (first === undefined || last === undefined || recent.length < PACE_MIN_SAMPLES) return null
+
+  return last.t - first.t < PACE_MIN_SPAN_MS ? null : slopeOf(recent)
+}
+
+export type FullSpec = BurnSpec & { percent: number; resetsAt: string | null }
 
 // When the window reaches 100 % at the recent rate, from now; null without a basis or past the reset.
 export function fullAtOf(spec: FullSpec): number | null {
   const resetMs = spec.resetsAt === null ? Number.NaN : Date.parse(spec.resetsAt)
   if (Number.isNaN(resetMs) || spec.percent >= PERCENT) return null
-  const recent = sinceLastDrop(
-    spec.points.filter(point => spec.nowMs - point.t <= PACE_LOOKBACK_MS),
-    point => point.value,
-  )
-  const first = recent[0]
-  const last = recent[recent.length - 1]
-  if (first === undefined || last === undefined || recent.length < PACE_MIN_SAMPLES) return null
-  if (last.t - first.t < PACE_MIN_SPAN_MS) return null
-  const slope = slopeOf(recent)
-  if (slope <= 0) return null
+  const slope = burnOf(spec)
+  if (slope === null || slope <= 0) return null
   const fullAt = spec.nowMs + (PERCENT - spec.percent) / slope
 
   return fullAt < resetMs ? Math.round(fullAt) : null

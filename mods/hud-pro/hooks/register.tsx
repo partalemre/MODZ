@@ -1,22 +1,21 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { bandRow } from './band'
-import { BAND_KEY, band, isAlertsOnly, isBandMode } from './band-mode'
-import type { ContextView } from './breakdown'
-import { HIDDEN_KEY, PANE, onCommand } from './command'
-import { compactedOf, forecastsFrom, forgetBreakdown, freshBreakdown, keepBreakdown, keepLast, reasonOf } from './context'
+import { BAND_KEY, band, isBandMode } from './band-mode'
+import { HIDDEN_KEY, onCommand } from './command'
+import { forecastsFrom, forgetBreakdown } from './context'
+import { onDraw } from './draw-hook'
 import { accountHistory, addSample, hasLimitsMoved, isHistory, mergeHistory } from './history'
 import { EMPTY_HUB, HUB_PANE, hubOf } from './hub'
 import { setLang } from './lang'
 import { gaugeViews } from './model'
 import type { Forecasts } from './model'
-import { paneTree, withHome } from './pane'
-import type { CardData } from './pane'
-import { onPast, pastViewOf } from './past-hook'
+import { paceOf } from './pace'
+import { fillNotice } from './pace-section'
+import { onPast } from './past-hook'
 import { isSame } from './same'
-import { pinned } from './pin'
-import { EMPTY_TURN, onTurns } from './turns-hook'
+import { enqueue, expired, resetSlot } from './slot'
+import { onTurns } from './turns-hook'
 import { newNotices, toUsage } from './usage'
 import { words } from './words'
 import type { HudUsage } from '../types'
@@ -26,19 +25,15 @@ const HISTORY_KEY = 'hud-pro.history'
 const REFRESH_MS = 60_000
 
 const usageAtom = atom({ plugin: 'hud-pro', key: 'usage' } as const, null)
-const turnAtom = atom({ plugin: 'hud-pro', key: 'turn' } as const, EMPTY_TURN)
-const lastTurnAtom = atom({ plugin: 'hud-pro', key: 'lastTurn' } as const, null)
 const hiddenAtom = atom({ plugin: 'hud-pro', key: 'isHidden' } as const, false)
 const historyAtom = atom({ plugin: 'hud-pro', key: 'history' } as const, [])
-const compactingAtom = atom({ plugin: 'hud-pro', key: 'isCompacting' } as const, false)
 const contextTurnsAtom = atom({ plugin: 'hud-pro', key: 'contextTurns' } as const, [])
-const lastCompactAtom = atom({ plugin: 'hud-pro', key: 'lastCompact' } as const, null)
 const hubAtom = atom({ plugin: 'hud-pro', key: 'hub' } as const, EMPTY_HUB)
-const liveAtom = atom({ plugin: 'hud-pro', key: 'isLive' } as const, false)
-const pastAtom = atom({ plugin: 'hud-pro', key: 'past' } as const, null)
-const rangeAtom = atom({ plugin: 'hud-pro', key: 'pastRange' } as const, 7)
+const noticesAtom = atom({ plugin: 'hud-pro', key: 'notices' } as const, [])
 
 const noticed = new Set<string>()
+// The windows (by reset) whose fill-before-reset line was already said.
+const filled = new Set<string>()
 // What the minute clock last moved on screen: the gauges' countdowns, pace marks and estimates.
 let shownGauges: unknown = null
 
@@ -68,53 +63,40 @@ async function noticeHigh($: EngineInterface, fresh: HudUsage): Promise<void> {
   for (const text of newNotices(fresh, { nowMs: await $.clock.now(), noticed })) $.ui.toast(text)
 }
 
+// A pace that fills the window before it resets earns one line per window, once the history holds the reading.
+async function noticeFill($: EngineInterface, fresh: HudUsage): Promise<void> {
+  const nowMs = await $.clock.now()
+  const fill = fillNotice(paceOf({ usage: fresh, history: await read($, historyAtom), nowMs }), nowMs)
+  if (fill === null || filled.has(fill.key)) return
+  filled.add(fill.key)
+  await update($, noticesAtom, queue => enqueue(queue, fill.text))
+  $.ui.invalidate('ui.render')
+}
+
 async function forecastsOf($: EngineInterface, usage: HudUsage | null): Promise<Forecasts> {
   return forecastsFrom({ history: await read($, historyAtom), turns: await read($, contextTurnsAtom), usage })
 }
 
-// The window by category while the pane draws: the local estimate, read again once it is stale.
-async function breakdownView($: EngineInterface): Promise<ContextView | null> {
-  const nowMs = await $.clock.now()
-  const fresh = freshBreakdown(nowMs)
-  if (fresh !== undefined) return fresh
-  try {
-    return keepBreakdown(nowMs, (await $.session.usage({ breakdown: 'summary' })).context.breakdown)
-  } catch {
-    $.ui.log('hud-pro: context breakdown failed', { to: 'debug' })
-
-    return keepLast(nowMs)
-  }
-}
-
-// Compacts as /compact does, through the engine's own call. A press's own work is abandoned when the
-// press ends, so a timer starts it in a dispatch of its own that lasts until it ends; the buttons
-// hide until then. A refusal (a turn running) says why in one toast.
-function compactNow($: EngineInterface): void {
-  void update($, compactingAtom, () => true)
-  $.clock.after(1, () =>
-    $.session
-      .compact()
-      .then(async result => {
-        forgetBreakdown()
-        const done = compactedOf(result, await $.clock.now())
-        if (done !== null) await update($, lastCompactAtom, () => done)
-      })
-      .catch((error: unknown) => $.ui.toast(words().compactFailed(reasonOf(error))))
-      .finally(() => update($, compactingAtom, () => false)),
-  )
-}
-
-// The minute clock moves only the gauges' countdowns, pace marks and estimates; a minute that moves
-// none of them redraws nothing, since every redraw also hands out new press handles.
+// The minute clock moves only the gauges' countdowns, pace marks and estimates, and takes a notice that has been on
+// screen long enough off the line; a minute that moves none of them redraws nothing, since every redraw also hands
+// out new press handles.
 async function redrawIfMoved($: EngineInterface): Promise<void> {
+  const nowMs = await $.clock.now()
+  const queue = await read($, noticesAtom)
+  const left = expired(queue, nowMs)
+  if (left !== queue) await update($, noticesAtom, () => [...left])
   const usage = await read($, usageAtom)
-  const gauges = usage === null ? null : gaugeViews(usage, await $.clock.now(), await forecastsOf($, usage))
-  if (isSame(gauges, shownGauges)) return
+  const gauges = usage === null ? null : gaugeViews(usage, nowMs, await forecastsOf($, usage))
+  if (isSame(gauges, shownGauges) && left === queue) return
   shownGauges = gauges
   $.ui.invalidate('ui.render')
 }
 
 async function setup($: EngineInterface): Promise<void> {
+  // Said first, so the other meter mods know before they report that their sections show here.
+  await $.state.set({ plugin: 'hud-pro', key: 'host' }, true)
+  resetSlot()
+  filled.clear()
   const current = toUsage(await $.session.usage())
   await update($, usageAtom, () => current)
   shownGauges = gaugeViews(current, await $.clock.now(), await forecastsOf($, current))
@@ -155,6 +137,7 @@ function onUsage(on: On) {
       await writeHub($, fresh)
       await noticeHigh($, fresh)
       await record($, fresh)
+      await noticeFill($, fresh)
     } catch {
       $.ui.log('hud-pro: measure failed', { to: 'debug' })
     }
@@ -163,92 +146,11 @@ function onUsage(on: On) {
   })
 }
 
-// The way back to the MODZ hub: written to this mod's own `home` value, which the hub hears. A press
-// never throws out of the handler, so a failed write is logged and the pane stays as it is.
-async function goHome($: EngineInterface): Promise<void> {
-  try {
-    await $.state.set({ plugin: 'hud-pro', key: 'home' }, { at: await $.clock.now() })
-  } catch {
-    $.ui.log('hud-pro: could not go back to the hub', { to: 'debug' })
-  }
-}
-
-async function cardData($: EngineInterface): Promise<CardData> {
-  return {
-    view: await breakdownView($),
-    turns: await read($, contextTurnsAtom),
-    lastCompact: await read($, lastCompactAtom),
-    isCompacting: await read($, compactingAtom),
-    compact: () => compactNow($),
-  }
-}
-
-function onRender(on: On) {
-  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const turn = await read($, turnAtom)
-    const ui = $.ui.resolve(e)
-    const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
-    const usage = await read($, usageAtom)
-    const tree = paneTree(ui, {
-      usage,
-      history: await read($, historyAtom),
-      turn: turn.requests > 0 ? turn : await read($, lastTurnAtom),
-      columns: e.props.bodyColumns,
-      nowMs: await $.clock.now(),
-      card: await cardData($),
-      isLive: await read($, liveAtom),
-      // The breakdown read first, so the forecast counts up to the compaction point it names.
-      forecasts: await forecastsOf($, usage),
-      past: pastViewOf(await read($, pastAtom), { range: await read($, rangeAtom), choose: range => void update($, rangeAtom, () => range) }),
-      ...(e.surface !== 'terminal' && 'Svg' in ui ? { svg: ui.Svg } : {}),
-    })
-
-    return pinned(e, isHubOn ? withHome(ui, { tree, goHome: () => void goHome($) }) : tree)
-  })
-}
-
-function onBand(on: On) {
-  // The bottom row of the band, right above the prompt: what the plugins beneath drew stays above it.
-  on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    const theirs = await next(e)
-    try {
-      const usage = await read($, usageAtom)
-      if (e.props.hasSurvey || usage === null || (await read($, hiddenAtom))) return theirs
-      const ui = $.ui.resolve(e)
-      const isDesktop = e.surface !== 'terminal' && 'Svg' in ui
-      const row = bandRow(ui, {
-        usage,
-        columns: e.props.bodyColumns,
-        nowMs: await $.clock.now(),
-        forecasts: await forecastsOf($, usage),
-        isDesktop,
-        canCompact: !e.props.isWorking && !(await read($, compactingAtom)),
-        compact: () => compactNow($),
-        isAlertsOnly: isAlertsOnly(band.chosen ?? band.setting, isDesktop),
-      })
-      if (row === null) return theirs
-      const { Box } = ui
-
-      return (
-        <Box flexDirection="column">
-          {theirs}
-          {pinned(e, row)}
-        </Box>
-      )
-    } catch {
-      $.ui.log('hud-pro: band render failed', { to: 'debug' })
-
-      return theirs
-    }
-  })
-}
-
 export const register: Register = (on, options) => {
   onUsage(on)
   onTurns(on)
   onPast(on)
   onCommand(on)
-  onRender(on)
   band.setting = isBandMode(options?.band) ? options.band : 'auto'
-  onBand(on)
+  onDraw(on)
 }

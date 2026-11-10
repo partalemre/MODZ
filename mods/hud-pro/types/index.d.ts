@@ -48,6 +48,20 @@ export type HudPast = { range: HudRange; activeDays: number; sessions: number; t
 export type HubTone = 'idle' | 'live' | 'ok' | 'warn' | 'bad'
 export type HubCard = { pane: string; detail: string; tone: HubTone; at: number }
 
+// One section of the Usage pane that another meter mod (session-budget, cache-tax, effort-router) publishes under its
+// own `{ plugin, key: 'section' }`, in its own words: a title, plain lines (the first one dim when `isEmpty`, which says
+// what the section will show and when), a tone for the title, and buttons whose press this mod writes to its `press`.
+export type UsageTone = 'neutral' | 'warn' | 'danger'
+export type UsageAction = { id: string; label: string; isOn?: boolean }
+export type UsageSection = { id: string; title: string; lines: string[]; tone: UsageTone; isEmpty?: boolean; actions?: UsageAction[]; at: number }
+// A press on a section's button, for the mod that published it; and a mod's ask to open the pane at its section.
+export type UsagePress = { section: string; action: string; at: number }
+export type UsageOpen = { section: string; at: number }
+// One main-loop turn's share of the limit window that exists (5-hour, else weekly), in percent points.
+export type TurnShare = { window: string; share: number; percent: number }
+// A notice in the one shared line above the prompt (DESIGN.md §6): live until `expiresAt`, or until cleared when 0.
+export type SlotNotice = { id: number; text: string; expiresAt: number }
+
 declare module 'claude-code' {
   interface PluginState {
     'hud-pro': {
@@ -71,7 +85,19 @@ declare module 'claude-code' {
       past: { week: HudPast; month: HudPast } | null
       pastRange: HudRange
       pastRoot: string
+      // True once this mod runs: the other meter mods then show through the Usage pane instead of their own.
+      host: boolean
+      press: UsagePress
+      // The newest turns' shares of the window, newest last; the notices waiting for the line, oldest first.
+      shares: TurnShare[]
+      notices: SlotNotice[]
     }
+    // The other meter mods' sections and asks, and the notices that outrank this mod's line (DESIGN.md §6).
+    'session-budget': { section: UsageSection; openUsage: UsageOpen; notice: unknown }
+    'cache-tax': { section: UsageSection; openUsage: UsageOpen; notice: unknown }
+    'effort-router': { section: UsageSection; openUsage: UsageOpen; notice: SlotNotice | null }
+    reflect: { notice: unknown }
+    'you-should-know': { notice: unknown }
     // Written by the MODZ hub, which owns both: true while the hub runs, so this pane draws its way back; and
     // which pane holds the hub's one panel.
     modz: { isOn: boolean; stage: { pane: string; at: number } }

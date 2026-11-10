@@ -108,7 +108,7 @@ test('pane in English on the desktop: figures with English labels, notes and cap
   const ui = await fullPane($, on, 'desktop')
   const svg = await svgOf(ui)
 
-  for (const text of ['Limits', '5-hour 64%', 'range 32%–64%', 'session cost ≈$1.23', 'last turn 13k tokens', 'this session · 2 readings']) {
+  for (const text of ['Limits', '5-hour 64%', 'range 32%–64%', 'session cost ≈$1.23', 'last turn 13k tokens', 'list-price estimate · this session · 2 readings']) {
     expect(svg?.props.alt).toContain(text)
   }
   expect(svg?.props.alt).toContain('118k tokens free')

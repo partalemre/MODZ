@@ -16,7 +16,10 @@ const PACE_FLOOR = 50
 const PACE_MIN_SAMPLES = 3
 const PACE_MIN_SPAN_MS = 10 * 60_000
 const PACE_LOOKBACK_MS = 60 * 60_000
+const DAY_MS = 24 * 60 * 60_000
 const TWO_DIGITS = 2
+// A reset time that moves less than this is the same window: the engine's text shifts by seconds.
+const SAME_WINDOW_MS = 10 * 60_000
 
 // `arg` arrives lowercased with its spaces taken out: "brake", "brakeoff", "brake85", "brake85%".
 export function parseBrake(arg: string): BrakeCommand {
@@ -26,6 +29,14 @@ export function parseBrake(arg: string): BrakeCommand {
   const at = match === null ? Number.NaN : Number(match[1])
 
   return at > 0 && at <= MAX_PERCENT ? { kind: 'brake', at } : { kind: 'error', text: words().brakeUsage }
+}
+
+// A later window: its reset time moved forward past the tolerance (text compared when it is not a time).
+export function isNewWindow(before: string | null, after: string | null): boolean {
+  if (before === null || after === null) return false
+  const delta = Date.parse(after) - Date.parse(before)
+
+  return Number.isNaN(delta) ? before !== after : delta > SAME_WINDOW_MS
 }
 
 // The readings of this window from the last hour; a fall means the window reset, so counting starts over.
@@ -60,29 +71,30 @@ export function fullAtOf(points: readonly PacePoint[], resetsAt: string | null):
   return fullAt < resetMs ? fullAt : null
 }
 
-export type BrakeSpec = { at: number | null; points: readonly PacePoint[]; resetsAt: string | null; ack: BrakeAck | null }
+export type BrakeSpec = { at: number | null; points: readonly PacePoint[]; resetsAt: string | null; ack: BrakeAck | null; isWeekly?: boolean }
 
 // Why this spawn is held ("5-hour window at 88%, resets 14:20"), or null to let it through.
 export function brakeWhy(spec: BrakeSpec): string | null {
   const last = spec.points[spec.points.length - 1]
   if (spec.at === null || last === undefined) return null
   const { ack } = spec
-  if (ack !== null && ack.window === spec.resetsAt && last.value < ack.percent + ACK_POINTS) return null
+  if (ack !== null && !isNewWindow(ack.window, spec.resetsAt) && last.value < ack.percent + ACK_POINTS) return null
   const fullAt = last.value < PACE_FLOOR ? null : fullAtOf(spec.points, spec.resetsAt)
   if (last.value < spec.at && fullAt === null) return null
   const says = words()
   const percent = says.percent(says.decimal(String(last.value)))
   const pace = fullAt === null ? '' : says.brakePace(clockOf(fullAt))
-  const reset = spec.resetsAt === null ? '' : says.brakeReset(clockOf(Date.parse(spec.resetsAt)))
+  const reset = spec.resetsAt === null ? '' : says.brakeReset(clockOf(Date.parse(spec.resetsAt), last.t))
 
-  return says.brakeWhy(percent, pace, reset)
+  return (spec.isWeekly === true ? says.brakeWhyWeekly : says.brakeWhy)(percent, pace, reset)
 }
 
 const pad = (value: number): string => String(value).padStart(TWO_DIGITS, '0')
 
-// A local clock time, "14:20": a 5h window resets within the next five hours.
-export function clockOf(atMs: number): string {
+// A local clock time, "14:20"; a weekly window's reset more than a day off adds the date, "14:20 12.11".
+export function clockOf(atMs: number, nowMs = atMs): string {
   const at = new Date(atMs)
+  const time = `${pad(at.getHours())}:${pad(at.getMinutes())}`
 
-  return `${pad(at.getHours())}:${pad(at.getMinutes())}`
+  return atMs - nowMs > DAY_MS ? `${time} ${pad(at.getDate())}.${pad(at.getMonth() + 1)}` : time
 }

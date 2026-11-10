@@ -11,13 +11,17 @@ export type Budget = {
   // The last reading seen, and the window it belongs to (its reset time).
   last: number | null
   window: string | null
+  // Which limit window a percent budget counts: five_hour, or seven_day where the account reports no 5h window.
+  scope?: string
+  // Dollars on a subscription are list-price arithmetic, not a bill.
+  isEstimate?: boolean
   hasWarned: boolean
   isAccepted: boolean
   // Epoch ms the budget was set, for "bu hızla ~25 dk".
   setAt?: number
 }
 
-export type BudgetReading = { percent: number | null; resetsAt: string | null; usd: number | null }
+export type BudgetReading = { percent: number | null; resetsAt: string | null; usd: number | null; scope?: string }
 
 export type BudgetNotice = {
   id: number
@@ -47,7 +51,7 @@ declare module 'claude-code' {
       // The spawn brake's line in percent of the 5h window; null when off.
       brakeAt: number | null
       brakeAck: BrakeAck | null
-      pace: { points: PacePoint[]; resetsAt: string | null }
+      pace: { points: PacePoint[]; resetsAt: string | null; scope?: string }
     }
   }
 }

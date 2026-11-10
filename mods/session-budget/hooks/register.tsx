@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, PromptOrigin, Register, SessionRateLimit } from 'claude-code'
 
 import { BRAKE_DEFAULT, addPoint, brakeWhy } from './brake'
-import { FIVE_HOUR, WARN_RATIO, advance, describe, parseCommand, raise, ratioOf, readingOf, spendText, startBudget, stepText } from './budget'
+import { WARN_RATIO, advance, describe, isWeekly, parseCommand, raise, ratioOf, readingOf, spendText, startBudget, stepText, windowOf } from './budget'
 import { fullCard, isLive, noticeAbove, stoppedRow, warnRow } from './notice'
 import { setLang } from './lang'
 import { pinned } from './pin'
@@ -35,15 +35,29 @@ const knowNotice = { plugin: 'you-should-know', key: 'notice' } as const
 const reflectNotice = { plugin: 'reflect', key: 'notice' } as const
 
 // A fan-out raises several spawns at once: they share one brake question.
-const run: { nextId: number; brake: Promise<boolean> | null } = { nextId: 0, brake: null }
+// `shownId`: the last notice a band drew, so a warning held off the line waits instead of clearing.
+const run: { nextId: number; brake: Promise<boolean> | null; shownId: number } = { nextId: 0, brake: null, shownId: 0 }
 
 async function notify($: EngineInterface, kind: BudgetNotice['kind'], text: string): Promise<void> {
   run.nextId += 1
   const id = run.nextId
   const expiresAt = (await $.clock.now()) + DISMISS_AFTER_MS
   await update($, noticeAtom, () => ({ id, kind, text, isAlert: kind === 'stopped', priority: PRIORITY, expiresAt }))
+  dismissLater($, id)
+}
+
+// A warning not yet drawn (a louder notice held the line) waits another round instead of clearing.
+function dismissLater($: EngineInterface, id: number): void {
   $.clock.after(DISMISS_AFTER_MS, () => {
-    void update($, noticeAtom, current => (current !== null && current.id === id ? null : current))
+    void (async () => {
+      const notice = await read($, noticeAtom)
+      if (notice === null || notice.id !== id) return
+      const isPending = notice.kind === 'warn' && run.shownId !== id && (await read($, budgetAtom)) !== null
+      if (!isPending) return update($, noticeAtom, () => null)
+      const expiresAt = (await $.clock.now()) + DISMISS_AFTER_MS
+      await update($, noticeAtom, current => (current?.id === id ? { ...current, expiresAt } : current))
+      dismissLater($, id)
+    })().catch(() => $.ui.log('session-budget: could not clear the notice', { to: 'debug' }))
   })
 }
 
@@ -76,9 +90,10 @@ async function setBudget($: EngineInterface, args: string): Promise<string> {
   const hasData = kind === 'percent' ? reading.percent !== null : reading.usd !== null
   const setAt = await $.clock.now()
   await update($, budgetAtom, () => ({ ...startBudget(kind, limit, reading), setAt }))
-  const unit = kind === 'percent' ? words().percentUnit(limit) : `$${limit}`
+  const unit = kind === 'percent' ? words().percentUnit(limit, isWeekly(reading.scope)) : `$${limit}`
+  const note = kind === 'usd' && reading.percent !== null ? words().estimateNote : ''
 
-  return words().set(unit, hasData ? '' : words().waitForData)
+  return words().set(unit, hasData ? note : words().waitForData)
 }
 
 // "Dur" first, as the main way; "Devam et (+$1)" raises the budget a step and lets the prompt in.
@@ -204,6 +219,7 @@ function registerBand(on: On) {
       return pinned(e, noticeAbove(ui, stoppedRow(ui, { text: notice.text, spend, surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss }))
     }
     if (budget === null) return theirs
+    run.shownId = notice.id
 
     return pinned(e, noticeAbove(ui, warnRow(ui, { budget, nowMs: await $.clock.now(), surface: e.surface, columns: e.props.bodyColumns }), { theirs, dismiss }))
   })
@@ -219,12 +235,12 @@ function registerBand(on: On) {
   })
 }
 
-// One more 5h reading for the spawn brake's pace.
+// One more 5h reading (weekly, where the account has no 5h window) for the spawn brake's pace.
 async function recordPace($: EngineInterface, rateLimits: readonly SessionRateLimit[]): Promise<void> {
-  const window = rateLimits.find(limit => limit.kind === FIVE_HOUR)
+  const window = windowOf(rateLimits)
   if (window === undefined) return
   const point = { t: await $.clock.now(), value: window.percentUsed }
-  await update($, paceAtom, pace => ({ points: addPoint(pace.points, point), resetsAt: window.resetsAt ?? null }))
+  await update($, paceAtom, pace => ({ points: addPoint(pace.points, point), resetsAt: window.resetsAt ?? null, scope: window.kind }))
 }
 
 // "Dur" first, as the main way; anything else, a dismissal or nobody to ask lets spawns through for a step.
@@ -249,7 +265,9 @@ async function heldWhy($: EngineInterface): Promise<string | null> {
   if (!(await read($, enabledAtom))) return null
   const pace = await read($, paceAtom)
 
-  return brakeWhy({ at: await read($, brakeAtom), points: pace.points, resetsAt: pace.resetsAt, ack: await read($, ackAtom) })
+  const ack = await read($, ackAtom)
+
+  return brakeWhy({ at: await read($, brakeAtom), points: pace.points, resetsAt: pace.resetsAt, ack, isWeekly: isWeekly(pace.scope) })
 }
 
 function registerBrake(on: On) {

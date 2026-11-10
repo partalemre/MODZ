@@ -218,11 +218,11 @@ test('a full budget puts an Amber card above the question, which keeps its own o
 
   const desktop = await $.ui.mount(question('desktop'))
   const card = (await desktop.find({ type: 'Svg' })) as { props: { alt: string; source: string } } | undefined
-  expect(card?.props.alt).toBe('Oturum bütçesi doldu: $0,60 / $0,50 · %120. Mesajın bekletiliyor; devam edersen bütçe +$1 artar.')
+  expect(card?.props.alt).toBe('Oturum bütçesi doldu: $0,60 / $0,50 liste fiyatıyla · %120. Mesajın bekletiliyor; devam edersen bütçe +$1 artar.')
   expect(card?.props.source).toContain('s-warn-l')
   expect(JSON.stringify(await desktop.drawn())).toContain('"engine"')
   const terminal = await $.ui.mount(question('terminal'))
-  expect(await terminal.find({ type: 'Text', text: 'Bütçe doldu · $0,60 / $0,50 (%120)' })).toBeDefined()
+  expect(await terminal.find({ type: 'Text', text: 'Bütçe doldu · $0,60 / $0,50 liste fiyatıyla (%120)' })).toBeDefined()
 })
 
 // Without MODZ_LANG every word is English, on both surfaces.
@@ -259,11 +259,13 @@ test('English: Continue anyway raises the budget; the commands answer in English
   const world: World = { asked: [], answer: 'Continue anyway (+$1)', submitted: [], env: {} }
   await setup($, on, world)
   expect(await $.command.run({ command: 'budget', args: '' })).toMatchObject({ text: 'No session budget. Set one with /budget 20% or /budget $5' })
-  expect(await $.command.run({ command: 'budget', args: '$0.5' })).toMatchObject({ text: 'Session budget set: $0.5.' })
+  expect(await $.command.run({ command: 'budget', args: '$0.5' })).toMatchObject({
+    text: 'Session budget set: $0.5. On a subscription $ is a list-price estimate only; the limit percent is what counts.',
+  })
   await $.session.measure({ context: {}, rateLimits: [], cost: { usd: 1.6 }, changed: ['cost'] })
   await $.prompt.submit(typed('go on'))
   expect(world.submitted).toEqual(['go on'])
-  expect(await $.command.run({ command: 'budget', args: 'status' })).toMatchObject({ text: 'Session budget: $0.60 / $1.60 (38%)' })
+  expect(await $.command.run({ command: 'budget', args: 'status' })).toMatchObject({ text: 'Session budget: $0.60 / $1.60 at list price (38%)' })
   expect(await $.command.run({ command: 'budget', args: 'lots' })).toMatchObject({ text: 'Usage: /budget <share of the 5h limit, e.g. 20%> | <$amount, e.g. $5> | off' })
   expect(await $.command.run({ command: 'session-budget', args: 'off' })).toMatchObject({ text: 'session-budget off' })
   setLang('en')

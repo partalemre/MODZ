@@ -134,8 +134,32 @@ Mods that do not vendor the kit carry a byte-identical `hooks/pin.ts` (and `hook
 
 | Export | Example |
 |---|---|
-| `pinned(e, tree)` | `return pinned(e, paneTree(ui, view))`, every render hook that draws a Button, Input or Select |
+| `pinned(e, tree)` | `return pinned(e, paneTree(ui, view))`, every render hook: its tree's presses pinned and its texts made drawable |
+| `drawable(text)` | `drawable('run \u001b[31mfailed')` → `'run [31mfailed'` (what `pinned` does to every text child and string prop) |
 | `isSame(a, b)` | `if (isSame(cards[from], card)) return` (structural, for plain state values) |
+
+The engine refuses a whole tree for one text it cannot draw: a control character (an escape sequence out of a
+command's output) or half a surrogate pair (an emoji cut by a length limit), in a text child, a label or an alt.
+The pane then reads "Nothing to show yet", every press it held is dropped, and a click on the tree the desktop
+still shows does nothing (measured on engine 2.1.321, 2026-11-10). `pinned` drops such characters on the way out.
+
+## pane-keep.tsx (a pane that does not stay blank)
+
+For a mod's own pane. No `$` in it: the mod hands in closures (`PaneNouns`) from the file where `$` is.
+
+| Export | Example |
+|---|---|
+| `paneKept()` | `const kept = paneKept()`, once per pane: what this engine knows of it |
+| `drawSafely(kept, o)` | `pinned(e, await drawSafely(kept, { draw, plain, log }))`: a drawing that throws costs the plain one |
+| `plainPane(ui, o)` | `plainPane(ui, { notice: words().paneFailed, lines })`: a quiet notice, then one line each |
+| `reopenKeptTab(kept, nouns)` | first thing in the render hook: a tab the desktop kept from before a restart opens again, after the draw, once |
+| `restorePane(kept, nouns)` | in `session.attach` on a desktop: a pane the note says was open opens again; drawn again either way |
+| `watchPane(kept, nouns, isBeat)` | on the mod's timer: the open note kept, a failed or missing draw asked for again |
+| `noteKey(id)`, `staleNotes(entries, o)` | the store's `pane-open/<session>` note and the old ones to drop |
+
+The render hook also takes a `.catch` that draws the plain pane (a hook that runs out of time). A tree the engine
+refuses after the hook returned reaches no `.catch`: keep trees under its limits (20000 nodes, 131072 characters an
+Svg source) by capping what a pane lists.
 
 ## judge.ts
 

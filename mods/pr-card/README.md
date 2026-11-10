@@ -1,6 +1,6 @@
 # pr-card
 
-When Claude opens a pull request with `gh pr create`, draws a card in the conversation under that run of commands. The Claude desktop app shows its own PR card; this one adds what that card leaves out: CI checks and which ones fail, the review decision, whether the PR can merge, and the files with the largest changes first.
+When Claude opens a pull request (with `gh pr create` in the Bash tool, or through the GitHub MCP tool), draws a card in the conversation under that run of commands.
 
 ## Install
 
@@ -11,20 +11,20 @@ When Claude opens a pull request with `gh pr create`, draws a card in the conver
 
 ## What it shows
 
-- State (open, draft, merged, closed), repository and number, title, files and `+`/`−` counts
-- Checks: passed, running or failed, with the names of the failing ones
-- Review decision and mergeability (ready, conflicts, blocked, behind base)
-- A row of changed files, largest change first
+- **Desktop app:** the app's own PR pane already shows state, checks, review and merge, so the card shows only what that pane lacks: repository and number, files and `+`/`−` counts, and a row of changed files, largest change first. Until `gh` has told the files, nothing is drawn.
+- **Terminal:** state (open, draft, merged, closed), repository and number, title; checks (passed, running or failed, with the names of the failing ones); review decision and mergeability (ready, conflicts, blocked, behind base); the files with the largest changes.
 
-The terminal draws the same facts as text. Set `MODZ_LANG=tr` for Turkish.
+Set `MODZ_LANG=tr` for Turkish.
 
 ## How it stays fresh
 
-One `gh pr view` per PR, each minute while checks run or GitHub is still working out mergeability, otherwise every five minutes. It stops once the PR is merged or closed, and when `gh` is missing. **Refresh** asks at once. Only the three newest open PRs refresh by themselves.
+One `gh pr view` when a PR is first seen, and again on **Refresh**. pr-card runs no poller of its own: where [test-badge](../test-badge) is installed, its CI watch is the one poller of the PR's checks, and the terminal card shows its newer answer (checks, and a PR it saw merged or closed).
 
-It uses no model tokens and writes nothing to disk. Cards last for the session: a resumed session draws none.
+At session start and on a resume it looks once for the branch's open PR, so a run that opened it earlier draws its card again.
+
+It uses no model tokens and writes nothing to disk.
 
 ## Limits
 
-- Only PRs opened through `gh pr create` in the Bash tool are seen, not ones opened through the GitHub MCP tool or the GitHub website.
+- A PR opened on the GitHub website is picked up only as the branch's open PR; it has no run of commands to draw under.
 - `$.ui.place` rows do not reach the desktop app yet (app 4.16336.0, November 2026), so the card is drawn through the `ToolGroup` row of the run that opened the PR.

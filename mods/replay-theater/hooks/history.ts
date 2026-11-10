@@ -48,9 +48,9 @@ export function inTimeOrder(events: TranscriptEvent[]): TranscriptEvent[] {
   return events.map((event, k) => ({ event, k })).sort(earlier).map(item => item.event)
 }
 
-// What the transcript holds of a Write's earlier text: none on a new file, the whole text when it was kept.
+// What the transcript holds of the file before a Write or an Edit: none on a new file, the whole text when it was kept.
 function beforeOf(tool: string, result: Result | undefined): Before | undefined {
-  if (tool !== 'Write') return undefined
+  if (tool !== 'Write' && tool !== 'Edit' && tool !== 'MultiEdit') return undefined
   const detail = result?.detail
   if (detail?.type === 'create') return { text: '', isNew: true }
   if (typeof detail?.originalFile === 'string') return { text: detail.originalFile, isNew: false }
@@ -122,9 +122,9 @@ export function turnRows(session: PastSession): ReplayTurnRow[] {
   return session.turns.map(turn => ({ n: turn.n, ask: turn.ask, at: turn.at, edits: turn.edits.length, files: filesOf(turn) })).reverse()
 }
 
-// An Edit's transcript holds the changed span, not the file: its note says so.
+// An Edit whose transcript kept only the changed span, not the file: its note says so.
 function spanNote(step: ReplayStep): ReplayStep {
-  if (step.tool !== 'Edit' && step.tool !== 'MultiEdit') return step
+  if ((step.tool !== 'Edit' && step.tool !== 'MultiEdit') || step.hasContext === true) return step
 
   return { ...step, note: [words().spanOnly, step.note].filter(Boolean).join(' · ') }
 }

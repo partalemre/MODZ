@@ -30,6 +30,33 @@ test('commands are detected per ecosystem, and config overrides win', () => {
   expect(detect(root(['go.mod']), { test: 'make check', lint: '' }).test).toEqual(['/bin/sh', '-c', 'make check'])
 })
 
+test('Gradle, Maven, SwiftPM, rspec, unittest and Deno are detected; Python uses the project’s own environment', () => {
+  const testOf = (names: string[], texts: Record<string, string> = {}) => detect(root(names, texts), NONE).test
+  expect(testOf(['build.gradle.kts', 'gradlew'])).toEqual(['./gradlew', 'test', '-q'])
+  expect(testOf(['build.gradle'])).toEqual(['gradle', 'test', '-q'])
+  expect(testOf(['pom.xml'])).toEqual(['mvn', '-q', 'test'])
+  expect(testOf(['pom.xml', 'mvnw'])).toEqual(['./mvnw', '-q', 'test'])
+  expect(testOf(['Package.swift'])).toEqual(['swift', 'test'])
+  expect(testOf(['Gemfile', '.rspec', 'spec'])).toEqual(['bundle', 'exec', 'rspec'])
+  expect(testOf(['deno.json'])).toEqual(['deno', 'test'])
+  expect(testOf(['pyproject.toml', 'tests'], { 'pyproject.toml': '[project]' })).toEqual(['python3', '-m', 'unittest', 'discover', '-s', 'tests', '-t', '.'])
+  expect(testOf(['pyproject.toml', '.venv', 'uv.lock'], { 'pyproject.toml': 'pytest' })).toEqual(['.venv/bin/python', '-m', 'pytest', '-q'])
+  expect(testOf(['pytest.ini', 'poetry.lock'])).toEqual(['poetry', 'run', 'python', '-m', 'pytest', '-q'])
+  // An Xcode project needs a scheme and a simulator: no command is safe to guess.
+  expect(testOf(['App.xcodeproj', 'App'])).toBeNull()
+  expect(spawnArgv(['.venv/bin/python', '-m', 'pytest'], true)).toEqual(['cmd', '/c', '.venv\\Scripts\\python', '-m', 'pytest'])
+})
+
+test('rspec, XCTest, unittest, Deno and Maven counts are read', () => {
+  const counts = (out: string, code = 0) => { const o = parseTests(out, code, CTX); return [o.passed, o.total] }
+  expect(counts('12 examples, 1 failure', 1)).toEqual([11, 12])
+  expect(counts('Executed 9 tests, with 2 failures (0 unexpected) in 0.1 seconds', 1)).toEqual([7, 9])
+  expect(counts('Ran 5 tests in 0.002s\n\nFAILED (failures=1, errors=1)', 1)).toEqual([3, 5])
+  expect(counts('Ran 5 tests in 0.002s\n\nOK')).toEqual([5, 5])
+  expect(counts('ok | 6 passed | 1 failed (20ms)', 1)).toEqual([6, 7])
+  expect(counts('[ERROR] Tests run: 10, Failures: 1, Errors: 1, Skipped: 2', 1)).toEqual([6, 8])
+})
+
 test('only source files count as edits', () => {
   expect(isSource('/w/src/app.tsx')).toBe(true)
   expect(isSource('/w/main.go')).toBe(true)

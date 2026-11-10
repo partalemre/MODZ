@@ -1,4 +1,4 @@
-import type { Ui } from './offer'
+import type { Ui } from './facts'
 import type { PaneModel } from './pane-svg'
 import { words } from './words'
 

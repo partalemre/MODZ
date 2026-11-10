@@ -1,7 +1,7 @@
 // With no MODZ_LANG the replay speaks English, the film's words, and nothing Turkish-only shows.
 import { expect, test } from 'claude-code/testing'
 
-import { SURFACES, bandOf, newWorld, paneOf, replayCommand, said, settle, setup, startWithArchive, svgText, texts } from './fixtures'
+import { SURFACES, newWorld, paneOf, replayCommand, said, settle, setup, startWithArchive, svgText, texts } from './fixtures'
 import type { World } from './fixtures'
 
 const OPEN_WAIT_MS = 200
@@ -34,22 +34,6 @@ async function everything(site: any): Promise<string> {
 }
 
 for (const surface of SURFACES) {
-  test(`${surface}: the offer card speaks English`, async ($: any, on: any) => {
-    const world = englishWorld()
-    await setup($, on, world)
-    await englishTurn($, world)
-    const band = await $.ui.mount(bandOf(surface))
-    const shown = await everything(band)
-
-    expect((await band.find({ key: 'rt-open' }))?.props?.label).toBe('Watch the edits')
-    expect((await band.find({ key: 'rt-dismiss' }))?.props?.label).toBe('Not now')
-    expect(shown).toContain('2 edits · 2 files')
-    expect(shown).toContain('or type /replay')
-    if (surface === 'terminal') expect(await texts(band)).toContain('Replay')
-    else expect(await svgText(band)).toMatch(/Replay ·/)
-    expect(shown).not.toMatch(TURKISH_ONLY)
-  })
-
   test(`${surface}: the pane speaks English, step by step`, async ($: any, on: any) => {
     const world = englishWorld()
     const clock = await setup($, on, world)

@@ -1,6 +1,6 @@
 import { test } from 'claude-code/testing'
 
-import { bandOf, newWorld, paneOf, replayCommand, said, settle, setup, startWithArchive } from './fixtures'
+import { newWorld, paneOf, replayCommand, said, settle, setup, startWithArchive } from './fixtures'
 
 /** The test runner's console: bin/preview reads the trees it prints. */
 declare const console: { log: (text: string) => void }
@@ -40,10 +40,7 @@ for (const [size, columns] of Object.entries(WIDTHS)) {
   for (const theme of ['dark', 'light']) {
     test(`preview ${size} ${theme}`, async ($: any, on: any) => {
       const { clock } = await demo($, on, theme)
-      const band = await $.ui.mount(bandOf('desktop', { bodyColumns: columns }))
-      console.log(`@@TREE@@${size}-offer-${theme}@@` + JSON.stringify(await band.drawn()))
-      await band.press({ key: 'rt-open' })
-      await clock.advance(200)
+      await replayCommand($, clock, '')
       const pane = await $.ui.mount(paneAt('desktop', columns))
       await pane.press({ key: 'rt-next' })
       console.log(`@@TREE@@${size}-pane-step2-${theme}@@` + JSON.stringify(await pane.drawn()))

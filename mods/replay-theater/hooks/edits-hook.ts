@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import { why } from './explainer'
 import { currentStep, planAfter, PLAN_TOOLS } from './plan'
-import { EDIT_TOOLS, isAnswered, stepsFor } from './record'
+import { EDIT_TOOLS, isAnswered, isChangingCommand, stepsFor } from './record'
 import type { EditCall } from './record'
 import type { ReplayStep } from '../types'
 
@@ -13,6 +13,7 @@ import type { ReplayStep } from '../types'
 // The engine reads each module's use of the mod's values from that module's own source.
 const pendingAtom = atom({ plugin: 'replay-theater', key: 'pending' } as const, [])
 const planAtom = atom({ plugin: 'replay-theater', key: 'plan' } as const, [])
+const commandsAtom = atom({ plugin: 'replay-theater', key: 'commands' } as const, 0)
 
 type On = Parameters<Register>[0]
 type Call = EditCall & Record<string, unknown>
@@ -55,10 +56,19 @@ async function trackPlan<R extends { deny?: unknown; isError?: unknown; result?:
   return result
 }
 
+// A Bash call that may have changed files is counted, so the replay can say those changes are not in it.
+async function countCommand<R extends { deny?: unknown; isError?: unknown }>($: EngineInterface, e: Call, run: () => Promise<R>): Promise<R> {
+  const result = await run()
+  if (isAnswered(result) && isChangingCommand(String(e.command ?? ''))) await update($, commandsAtom, n => n + 1)
+
+  return result
+}
+
 export function hookEdits(on: On, where: Where): void {
   on('tool.call', async ($, e, next) => {
     const call = e as unknown as Call
     if (EDIT_TOOLS.has(call.tool)) return recordEdit($, { e: call, where }, () => next(e))
+    if (call.tool === 'Bash') return countCommand($, call, () => next(e))
     if ((PLAN_TOOLS as readonly string[]).includes(call.tool)) return trackPlan($, call, () => next(e))
 
     return next(e)

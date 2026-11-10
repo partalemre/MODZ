@@ -17,7 +17,6 @@ export type PaneIo = {
   browse: Cell<ReplayBrowse>
   view: Cell<ReplayView>
   index: Cell<number>
-  offered: Cell<boolean>
   replay: Cell<Replay | null>
   past: Cell<Replay | null>
   turns: Cell<ReplayTurns | null>

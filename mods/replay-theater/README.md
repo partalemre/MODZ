@@ -15,13 +15,14 @@ The MODZ panel (`modz`) shows its line here.
 
 ## What you see
 
-**An offer card** above the prompt, when a turn that edited files ends: the edit and file counts (`4 edits · 4 files`), the file names, the first sentence of Claude's reply, and **Watch the edits** (`r`) or **Not now**. It sits above the other rows, stays out of the way while a survey is open or a turn is running, and disappears on the next turn.
+Nothing appears on its own: no card is drawn after a turn. The MODZ panel's **Replay** row (under Work) and `/replay` open it.
 
-**The pane**, from the card or `/replay`:
+**The pane**, from `/replay` or the MODZ row:
 
 - A header with the age of the turn, `4 edits in 4 files`, the lines added and removed, and the request that started the turn.
 - **Edits in order**: numbered circles for each step (the current one filled, finished ones checked, upcoming ones as rings), each with its file, folder and `+N -N`.
-- Below, the current step: `Edit 2 / 4`, the file name, the tool (`Edit`), one line saying what the change does, which plan step it served (`Plan step 3/9 · <task>`), and a diff with changed lines and changed words highlighted, plus a legend (Removed, Added, Changed word, Unchanged).
+- Below, the current step: `Edit 2 / 4`, the file name, the tool (`Edit`), one line saying what the change does, which plan step it served (`Plan step 3/9 · <task>`), and a diff with changed lines and changed words highlighted, three lines of the file above and below the change where the file before the edit is known, plus a legend (Removed, Added, Changed word, Unchanged).
+- **Changes made by commands.** Files changed through Bash (`sed -i`, `>` into a file, `mv`, `cp`, `rm`, `git checkout`, `--write` / `--fix` and similar) are not edits the replay can show. When a turn ran such commands the pane says so plainly above the steps (`2 commands in this turn may have changed files; those changes cannot be replayed.`), also for a turn whose changes were all made that way. A script that writes files under another name is not recognised.
 - **Previous** (`p`), **Next** (`n`; **Finish** on the last step), **Turns** (`t`) and **Close** (`c`, or Esc).
 
 **Going back further.** **Turns** lists the turns of this session that edited files, newest first: the prompt that started each one, `Turn 3 · 4 edits · 3 files · 2h ago`, and **Watch** (`1`–`9` for the first nine rows). Watching a turn replays it exactly like the last one (step list, diff, the sentence Claude said before each edit, the plan step); **Finish** brings you back to the turn list. **Past sessions** (`s`) lists this project's newest 20 sessions, each with the date it was last written, its first prompt as a title, and its turns and edits (`This session` is tagged); **Open** shows a session's turns, and **This session** (`t`) goes back to the current one. **More** (`m`) shows the next rows of a long list. The empty pane (no edits yet) has **Past sessions** too.
@@ -52,7 +53,7 @@ Nothing extra is recorded for this. Claude Code writes every session's transcrip
 
 What a step shows is what the transcript holds, and its note says so:
 
-- **Edit / MultiEdit**: the edited part only (`old_string` to `new_string`), not the whole file.
+- **Edit / MultiEdit**: with three lines of the file around the change when the transcript kept the file before it (`originalFile`); otherwise the edited part only (`old_string` to `new_string`), noted `edited part only`.
 - **Write**: a new file is all added lines; a rewrite is a real diff when the transcript kept the earlier text, otherwise the new text alone, noted `whole file; earlier text not in transcript`.
 - **NotebookEdit**: the cell's new source; a replaced or deleted cell's old text is not recorded.
 
@@ -62,7 +63,7 @@ When the session has no local transcript (its `transcript_path` is empty), the l
 
 ## Limits
 
-- For `Edit`, the diff is `old_string` to `new_string`; for `Write`, the file's text on disk before the write is read first. Each step shows one line of context around the change and at most 12 lines (`... N more lines`).
+- For `Edit` and `MultiEdit` the file on disk is read just before the edit and the change is shown with three lines of it above and below (an `Edit` with `replace_all` shows the changed strings only); for `Write`, the file's text before the write is read first and shown with one line of context. Each step shows at most 12 lines (`... N more lines`).
 - A rejected or failed edit is not recorded, live or read back.
 - The live replay's state lives in the session; earlier turns and sessions come back from the transcripts for as long as Claude Code keeps them.
 - Only the newest 20 sessions are listed.

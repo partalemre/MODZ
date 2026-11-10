@@ -1,4 +1,4 @@
-import { offerFacts } from './offer'
+import { editFacts } from './facts'
 import type { HubTone, Replay } from '../types'
 
 // The MODZ main panel's side of this mod (DESIGN.md §9): the one-line card it collects, and its "open"
@@ -12,7 +12,7 @@ export type HubShown = { detail: string; tone: HubTone }
 export function hubOf(replay: Replay | null): HubShown {
   if (replay === null || replay.steps.length === 0) return { detail: '', tone: 'idle' }
 
-  return { detail: offerFacts(replay.steps).title, tone: 'ok' }
+  return { detail: editFacts(replay.steps).title, tone: 'ok' }
 }
 
 export function isOpenFor(value: unknown, pane: string): boolean {

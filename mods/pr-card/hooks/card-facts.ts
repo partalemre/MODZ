@@ -1,5 +1,5 @@
 import { words } from './words'
-import type { Checks, Merge, PrEntry, PrView, Review } from '../types'
+import type { Checks, Merge, PrEntry, PrState, PrView, Review, SharedCi } from '../types'
 
 // What a card says, in words and a status tone, for the desktop drawing and the terminal's text alike.
 
@@ -56,3 +56,18 @@ export const shortName = (path: string): string => path.split('/').at(-1) ?? pat
 // The largest changes first: the ones a reader wants to see in a row that cannot hold them all.
 export const biggestFirst = (view: PrView) =>
   [...view.files].sort((a, b) => b.additions + b.deletions - (a.additions + a.deletions))
+
+const MAX_FAILING = 5
+const LEFT: Record<string, PrState> = { merged: 'merged', closed: 'closed' }
+
+// test-badge's CI watch answered later than pr-card's one read: its checks, and a PR it saw leave, are the newer.
+export function withCi(entry: PrEntry, ci: SharedCi | null): PrEntry {
+  const view = entry.view
+  const isNewer = ci !== null && ci.url === entry.url && ci.checkedAt !== null && (entry.checkedAt === null || ci.checkedAt > entry.checkedAt)
+  if (view === null || !isNewer) return entry
+  const count = (state: SharedCi['checks'][number]['state']) => ci.checks.filter(check => check.state === state).length
+  const failing = ci.checks.filter(check => check.state === 'fail').map(check => check.name).slice(0, MAX_FAILING)
+  const checks: Checks = { passed: count('pass'), failed: count('fail'), pending: count('pending'), skipped: count('skipped'), failing }
+
+  return { ...entry, view: { ...view, checks, state: LEFT[ci.phase] ?? view.state } }
+}

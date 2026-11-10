@@ -2,7 +2,7 @@ import { buttons } from './buttons'
 import type { PaneHandlers } from './buttons'
 import { diffSvg } from './diff-svg'
 import { paneMotion } from './kit/moving'
-import type { Ui } from './offer'
+import type { Ui } from './facts'
 import { baseName, detailSvg, overviewSvg, totals } from './pane-svg'
 import type { PaneModel } from './pane-svg'
 import type { ReplayStep } from '../types'
@@ -117,7 +117,24 @@ function emptyView(ui: Ui, spec: { surface: string; width: number; theme: Theme;
 
 export const paneWidth = (columns: number): number => widthFor(columns - PANE_GUTTER_COLUMNS, { min: 280, max: 720 })
 
+// Changes made by commands are said plainly above the replay, or above "no edits" when they were all there was.
 export function replayView(ui: Ui, model: Omit<PaneModel, 'width'>, site: PaneSite & { on: PaneHandlers }) {
+  const view = stepsView(ui, model, site)
+  const count = model.byCommands ?? 0
+  if (count === 0) return view
+  const { Box, Text } = ui
+
+  return (
+    <Box key="rt-with-commands" flexDirection="column" gap={1}>
+      <Box key="rt-commands" paddingX={1}>
+        <Text color="warning" wrap="wrap">{words().byCommands(count)}</Text>
+      </Box>
+      {view}
+    </Box>
+  )
+}
+
+function stepsView(ui: Ui, model: Omit<PaneModel, 'width'>, site: PaneSite & { on: PaneHandlers }) {
   const width = paneWidth(site.columns)
   if (model.steps.length === 0) return emptyView(ui, { surface: site.surface, width, theme: model.theme, on: site.on })
   const index = Math.max(0, Math.min(model.index, model.steps.length - 1))

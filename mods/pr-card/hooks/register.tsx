@@ -1,44 +1,36 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, RenderElement, Register, Timer } from 'claude-code'
+import type { EngineInterface, RenderElement, Register } from 'claude-code'
 
-import { biggestFirst, factsOf, noteOf, shortName, stateOf } from './card-facts'
+import { biggestFirst, factsOf, noteOf, shortName, stateOf, withCi } from './card-facts'
 import { cardSvg } from './card-svg'
 import { setLang } from './kit/lang'
 import { pinned } from './kit/pin'
-import { VIEW_FIELDS, isPrCreate, outputText, prRefOf, viewOf } from './parse'
+import { VIEW_FIELDS, isPrCall, outputText, prRefOf, viewOf } from './parse'
 import type { PrRef } from './parse'
 import { words } from './words'
-import type { PrEntry, PrView } from '../types'
+import type { PrEntry, PrView, SharedCi } from '../types'
 
 const prsAtom = atom({ plugin: 'pr-card', key: 'prs' } as const, {} as Record<string, PrEntry>)
+const ciRef = { plugin: 'test-badge', key: 'ci' } as const
 
-// One `gh pr view` per PR, and rarely: each minute only while its checks run or GitHub is still working out
-// mergeability, otherwise every five. A merged or closed PR, or a machine without gh, is not asked again.
+// One `gh pr view` when a PR is first seen, and again only on a press: test-badge's CI watch is the one poller of
+// a PR's checks, and the terminal card reads its answers through $.state. The desktop card needs no checks at all.
 
 const GH_ENV = { GH_PROMPT_DISABLED: '1', GH_NO_UPDATE_NOTIFIER: '1', NO_COLOR: '1' }
 const GH_TIMEOUT_MS = 20_000
-const BUSY_MS = 60_000
-const SETTLED_MS = 300_000
-// shortcut: only the newest PRs refresh by themselves, older cards go still; a press still refreshes one.
-const MAX_WATCHED = 3
 
-const live = { timer: null as Timer | null, asking: new Set<string>() }
+const live = { asking: new Set<string>() }
 
-const isDone = (entry: PrEntry): boolean => entry.problem === 'no-gh' || (entry.view !== null && entry.view.state !== 'open')
+const debug = ($: EngineInterface, text: string) => $.ui.log(`pr-card: ${text}`, { to: 'debug' })
 
-function waitOf(view: PrView | null): number {
-  const isBusy = view !== null && (view.checks.pending > 0 || view.merge === 'unknown')
+async function gh($: EngineInterface, selector: string[]) {
+  const argv = ['gh', 'pr', 'view', ...selector, '--json', VIEW_FIELDS]
 
-  return isBusy ? BUSY_MS : SETTLED_MS
-}
-
-function stop(): void {
-  live.timer?.cancel()
-  live.timer = null
+  return $.process.run(argv, { cwd: await $.session.cwd(), env: GH_ENV, timeoutMs: GH_TIMEOUT_MS }).catch(() => null)
 }
 
 async function ask($: EngineInterface, url: string): Promise<Pick<PrEntry, 'view' | 'problem'>> {
-  const run = await $.process.run(['gh', 'pr', 'view', url, '--json', VIEW_FIELDS], { cwd: await $.session.cwd(), env: GH_ENV, timeoutMs: GH_TIMEOUT_MS }).catch(() => null)
+  const run = await gh($, [url])
   if (run === null) return { view: null, problem: 'no-gh' }
   const view = run.exitCode === 0 ? viewOf(run.stdout) : null
 
@@ -54,41 +46,41 @@ async function refresh($: EngineInterface, url: string): Promise<void> {
     await update($, prsAtom, prs => {
       const entry = prs[url]
       if (entry === undefined) return prs
-      const view = got.view ?? entry.view
 
-      return { ...prs, [url]: { ...entry, view, problem: got.problem, checkedAt: got.view === null ? entry.checkedAt : now, nextAt: now + waitOf(view) } }
+      return { ...prs, [url]: { ...entry, view: got.view ?? entry.view, problem: got.problem, checkedAt: got.view === null ? entry.checkedAt : now } }
     })
   } finally {
     live.asking.delete(url)
   }
 }
 
-async function tick($: EngineInterface): Promise<void> {
-  const now = await $.clock.now()
-  const watched = Object.values(await read($, prsAtom)).filter(entry => !isDone(entry)).slice(-MAX_WATCHED)
-  if (watched.length === 0) return stop()
-  await Promise.all(watched.filter(entry => entry.nextAt <= now).map(entry => refresh($, entry.url)))
-}
-
-// The timer ticks each busy interval and asks only for the PRs that are due; a reload starts it again.
-async function wake($: EngineInterface): Promise<void> {
-  if (live.timer !== null) return
-  const isWatching = Object.values(await read($, prsAtom)).some(entry => !isDone(entry))
-  if (!isWatching) return
-  live.timer = $.clock.every(BUSY_MS, () => void tick($).catch(error => $.ui.log(`pr-card: refresh failed (${String(error)})`, { to: 'debug' })))
-}
-
 async function track($: EngineInterface, ref: PrRef, callId: string | undefined): Promise<void> {
-  const entry: PrEntry = { ...ref, callId: callId ?? null, view: null, problem: null, checkedAt: null, nextAt: 0 }
+  const entry: PrEntry = { ...ref, callId: callId ?? null, view: null, problem: null, checkedAt: null }
   await update($, prsAtom, prs => (prs[ref.url] === undefined ? { ...prs, [ref.url]: entry } : prs))
   await refresh($, ref.url)
-  await wake($)
 }
 
-// A press asks at once, whatever the wait, and brings back a machine that has since got gh.
-async function refreshNow($: EngineInterface, url: string): Promise<void> {
-  await refresh($, url)
-  await wake($)
+// The branch's open PR, at the start and on a resume: a run that opened it earlier draws its card again.
+// Quiet where the folder is no repo, the branch has no PR, or gh is missing.
+async function pickUp($: EngineInterface): Promise<void> {
+  const run = await gh($, [])
+  if (run === null || run.exitCode !== 0) return
+  const view = viewOf(run.stdout)
+  const ref = prRefOf(run.stdout)
+  if (view === null || ref === null || view.state !== 'open') return
+  const entry: PrEntry = { ...ref, callId: null, view, problem: null, checkedAt: await $.clock.now() }
+  await update($, prsAtom, prs => (prs[ref.url] === undefined ? { ...prs, [ref.url]: entry } : prs))
+}
+
+const pickUpQuietly = ($: EngineInterface): void => void pickUp($).catch(error => debug($, `could not look for the branch's PR (${String(error)})`))
+
+async function sharedCi($: EngineInterface): Promise<SharedCi | null> {
+  try {
+    return (await $.state.get(ciRef)).value ?? null
+  } catch {
+    // test-badge is not installed, or its value is unreadable: pr-card's own read stands.
+    return null
+  }
 }
 
 const CARD_MAX_PX = 560
@@ -97,12 +89,10 @@ const PX_PER_COLUMN = 8
 const TERMINAL_FILES = 5
 type Site = { surface: string; viewport?: { columns?: number } }
 
-const commandOf = (input: unknown): string => String((input as { command?: unknown } | null | undefined)?.command ?? '')
-
 // A hook above may have changed a call's output, so the PR's link is read back from what is drawn.
 const urlsOf = (calls: readonly { tool: string; input: unknown; output?: unknown }[]): string[] =>
   calls.flatMap(call => {
-    const ref = call.tool === 'Bash' && isPrCreate(commandOf(call.input)) ? prRefOf(outputText(call.output)) : null
+    const ref = isPrCall(call.tool, call.input) ? prRefOf(outputText(call.output)) : null
 
     return ref === null ? [] : [ref.url]
   })
@@ -127,41 +117,63 @@ function terminalCard(Text: any, Box: any, entry: PrEntry, now: number): RenderE
   )
 }
 
-async function drawn($: any, e: any, urls: string[], under: RenderElement): Promise<RenderElement> {
+// The desktop app's own PR pane already shows state, checks, review and merge: there a card is drawn only once
+// gh has told the files, the one thing that pane lacks.
+async function entriesOf($: EngineInterface, urls: string[], isDesktop: boolean): Promise<PrEntry[]> {
   const prs = await read($, prsAtom)
-  const entries = urls.flatMap(url => (prs[url] === undefined ? [] : [prs[url]]))
-  if (entries.length === 0) return under
-  const { Box, Button, Svg, Text } = $.ui.resolve(e)
-  const now = await $.clock.now()
-  const isDesktop = e.surface === 'desktop'
-  const cards = entries.map(entry => isDesktop
-    ? (
-      <Box key={`c-${entry.url}`} flexDirection="column" gap={1}>
-        <Svg key={`p-${entry.url}`} {...cardSvg(entry, { now, width: widthOf(e) })} />
-        <Box flexDirection="row">
-          <Button key={`r-${entry.url}`} label={words().refresh} plain dimColor onPress={() => void refreshNow($, entry.url)} />
-        </Box>
-      </Box>
-    )
-    : terminalCard(Text, Box, entry, now))
+  const ci = isDesktop ? null : await sharedCi($)
+  const known = urls.flatMap(url => (prs[url] === undefined ? [] : [withCi(prs[url], ci)]))
 
-  return pinned(e, <Box flexDirection="column" gap={1}>{under}{cards}</Box>)
+  return isDesktop ? known.filter(entry => entry.view !== null) : known
+}
+
+function desktopCard(ui: any, $: EngineInterface, card: { entry: PrEntry & { view: PrView }; now: number; width: number }): RenderElement {
+  const { Box, Button, Svg } = ui
+  const { entry } = card
+
+  return (
+    <Box key={`c-${entry.url}`} flexDirection="column" gap={1}>
+      <Svg key={`p-${entry.url}`} {...cardSvg(entry, { now: card.now, width: card.width })} />
+      <Box flexDirection="row">
+        <Button key={`r-${entry.url}`} label={words().refresh} plain dimColor onPress={() => void refresh($, entry.url)} />
+      </Box>
+    </Box>
+  )
+}
+
+async function drawn($: any, e: any, urls: string[], under: RenderElement): Promise<RenderElement> {
+  const isDesktop = e.surface === 'desktop'
+  const entries = await entriesOf($, urls, isDesktop)
+  if (entries.length === 0) return under
+  const ui = $.ui.resolve(e)
+  const now = await $.clock.now()
+  const cards = entries.map(entry => (isDesktop && entry.view !== null
+    ? desktopCard(ui, $, { entry: { ...entry, view: entry.view }, now, width: widthOf(e) })
+    : terminalCard(ui.Text, ui.Box, entry, now)))
+
+  return pinned(e, <ui.Box flexDirection="column" gap={1}>{under}{cards}</ui.Box>)
 }
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     const result = await next(e)
     setLang(await $.env.get('MODZ_LANG'))
-    await wake($)
+    pickUpQuietly($)
 
     return result
   })
 
-  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+  on('classic.SessionStart', async ($, e, next) => {
+    if (e.source === 'resume') pickUpQuietly($)
+
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('tool.call', async ($, e, next) => {
     const result = await next(e)
-    if (result.deny !== undefined || result.isError === true || !isPrCreate(commandOf(e))) return result
+    if (result.deny !== undefined || result.isError === true || !isPrCall(String(e.tool), e)) return result
     const ref = prRefOf(`${result.text ?? ''}\n${outputText(result.result)}`)
-    if (ref !== null) void track($, ref, e.tool_use_id).catch(error => $.ui.log(`pr-card: could not read the PR (${String(error)})`, { to: 'debug' }))
+    if (ref !== null) void track($, ref, e.tool_use_id).catch(error => debug($, `could not read the PR (${String(error)})`))
 
     return result
   }).catch(($, e, next) => next(e))
@@ -177,9 +189,8 @@ export const register: Register = on => {
   // A run of one call may stand alone, with no group around it.
   on('ui.render', { component: 'ToolResult' }, async ($, e, next) => {
     const under = await next(e)
-    if (e.props.tool !== 'Bash') return under
     const prs = await read($, prsAtom)
-    const url = Object.values(prs).find(entry => entry.callId === e.props.tool_use_id)?.url
+    const url = Object.values(prs).find(entry => entry.callId !== null && entry.callId === e.props.tool_use_id)?.url
 
     return url === undefined ? under : drawn($, e, [url], under)
   })

@@ -19,7 +19,7 @@ export type PrView = {
   merge: Merge
 }
 
-// `no-gh`: the command would not start, so polling stops until a press; `failed`: gh answered with an error.
+// `no-gh`: the command would not start; `failed`: gh answered with an error.
 export type Problem = 'no-gh' | 'failed'
 
 export type PrEntry = {
@@ -32,11 +32,19 @@ export type PrEntry = {
   view: PrView | null
   problem: Problem | null
   checkedAt: number | null
-  nextAt: number
+}
+
+// What pr-card reads of test-badge's CI watch, the one poller of a PR's checks (DESIGN.md §9: mods talk through $.state).
+export type SharedCi = {
+  url: string
+  phase: string
+  checkedAt: number | null
+  checks: { name: string; state: 'pass' | 'fail' | 'pending' | 'skipped' }[]
 }
 
 declare module 'claude-code' {
   interface PluginState {
     'pr-card': { prs: Record<string, PrEntry> }
+    'test-badge': { ci: SharedCi | null }
   }
 }

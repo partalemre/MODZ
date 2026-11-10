@@ -4,13 +4,14 @@ import type { CardFrame } from './svg-kit'
 import { say } from './words'
 
 // A shell command's output as a terminal card: a status pill, the output in mono with
-// stderr in the error colour, and long output folded to its head and tail.
+// stderr in the error colour. Nothing is ever folded: output longer than a card keeps the engine's own
+// expandable result instead (tool-result.ts).
 
 const HEADER_H = 56
 const LINE_H = 20
 const CODE = 12.5
-const HEAD = 6
-const TAIL = 6
+// The most lines a card draws; more and the card is not drawn at all.
+export const MAX_CARD_LINES = 24
 const PROMPT = '<path d="M5 7l5 5-5 5"/><path d="M12 18h7"/>'
 
 // Escape sequences for colour and cursor moves, which a card cannot draw.
@@ -34,23 +35,19 @@ export function shellOutputOf(output: unknown): ShellOutput | null {
   }
 }
 
-type Line = { text: string; isErr: boolean } | { fold: number }
+type Line = { text: string; isErr: boolean }
 
 // A stream's lines, colour codes stripped and trailing blank lines dropped.
-function streamLines(text: string, isErr: boolean): { text: string; isErr: boolean }[] {
+function streamLines(text: string, isErr: boolean): Line[] {
   const lines = text.replace(ANSI, '').replace(/\r/g, '').replace(/\t/g, '  ').split('\n')
   const end = lines.length - [...lines].reverse().findIndex(line => line.trim() !== '')
 
   return lines.every(line => line.trim() === '') ? [] : lines.slice(0, end).map(line => ({ text: line, isErr }))
 }
 
-export function outputLines(output: ShellOutput): Line[] {
-  const kept = [...streamLines(output.stdout, false), ...streamLines(output.stderr, true)]
+export const outputLines = (output: ShellOutput): Line[] => [...streamLines(output.stdout, false), ...streamLines(output.stderr, true)]
 
-  return kept.length <= HEAD + TAIL + 1
-    ? kept
-    : [...kept.slice(0, HEAD), { fold: kept.length - HEAD - TAIL }, ...kept.slice(kept.length - TAIL)]
-}
+export const fitsCard = (output: ShellOutput): boolean => outputLines(output).length <= MAX_CARD_LINES
 
 type Status = { text: string; color: string }
 
@@ -66,7 +63,7 @@ function statusOf(output: ShellOutput, isErrored: boolean, palette: Palette): St
   return isErrored ? { text: say().failed, color: palette.err } : { text: say().ok, color: palette.ok }
 }
 
-type Shown = Line | { text: string; isErr: boolean; isNote: true }
+type Shown = Line & { isNote?: true }
 
 function lineColor(line: { text: string; isErr: boolean; isNote?: true }, palette: Palette): string {
   if (line.isNote === true) {
@@ -78,10 +75,6 @@ function lineColor(line: { text: string; isErr: boolean; isNote?: true }, palett
 
 function outputRow(line: Shown, i: number, { palette, width }: CardFrame): string {
   const top = HEADER_H + 6 + i * LINE_H
-
-  if ('fold' in line) {
-    return `<g class="rise" ${riseDelay(i, 22)}><text x="20" y="${top + 14}" font-size="11.5" style="fill:${palette.muted}">⋯  ${escape(say().moreLines(line.fold))}</text></g>`
-  }
 
   return `<g class="rise" ${riseDelay(i, 22)}><text x="20" y="${top + 14}" font-family="${MONO}" font-size="${CODE}" style="fill:${lineColor(line, palette)}" xml:space="preserve">${escape(fitText(line.text, width - 40, { isMono: true, size: CODE }))}</text></g>`
 }
@@ -107,6 +100,6 @@ export function terminalSvg(output: ShellOutput, isErrored: boolean, frame: Card
     source: svgCard({ width, height, palette, body: header + rows.join('') }),
     width,
     height,
-    alt: lines.map(line => ('fold' in line ? `… ${say().moreLines(line.fold)}` : line.text)).join('\n') || say().noOutput,
+    alt: lines.map(line => line.text).join('\n') || say().noOutput,
   }
 }

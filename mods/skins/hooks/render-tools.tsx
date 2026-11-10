@@ -6,14 +6,7 @@ import { clippedOutput, metaOf, resultCard } from './tool-result'
 import { kindOf, summarize } from './tools'
 import { DEFAULT_COLUMNS } from './view'
 import type { Drawing } from './view'
-import type { Look } from './look'
-
-// A skin redraws the engine's row, not another mod's: what a mod beneath it draws (a PR card) stays, under the row.
-function withBeneath(look: Look, row: RenderElement, beneath: RenderElement): RenderElement {
-  const { Box } = look.ui
-
-  return beneath.type === 'engine' ? row : <Box flexDirection="column" gap={1}>{row}{beneath}</Box>
-}
+import { withBeneath } from './beneath'
 
 export async function toolUseView({ view, e, pass }: Drawing<'ToolUse'>): Promise<RenderElement> {
   const kind = kindOf(e.props.tool)
@@ -26,7 +19,9 @@ export async function toolUseView({ view, e, pass }: Drawing<'ToolUse'>): Promis
   const ms = await view.duration()
   const target = summarize(e.props.tool, e.props.input, await view.cwd())
 
-  return toolRow(view.look(active), { call: e.props, kind, target, meta: metaOf(e.props, ms) })
+  const look = view.look(active)
+
+  return withBeneath(look, toolRow(look, { call: e.props, kind, target, meta: metaOf(e.props, ms) }), await pass(e))
 }
 
 export async function toolGroupView({ view, e, pass }: Drawing<'ToolGroup'>): Promise<RenderElement> {

@@ -40,6 +40,7 @@ for (const [id, args] of OPENERS) {
 
 test('the transcript row the panes sample stays a plain image', async ($, on) => {
   stubEngine(on)
+  on('ui.render', () => ({ type: 'engine', ref: 0 }) as never)
   await start($)
   await runSkin($, 'gallery')
   const call = { tool_use_id: 'tu1', tool: 'Bash', input: { command: 'pnpm test' }, isRunning: false, isErrored: false, isInterrupted: false }

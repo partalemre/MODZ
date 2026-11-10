@@ -8,7 +8,7 @@ import { say } from './words'
 const HEADER_H = 56
 const LINE_H = 20
 const CODE = 12.5
-const MAX_LINES = 80
+export const MAX_LINES = 80
 
 const KEYWORDS = new Set([
   'const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'switch', 'case', 'break',

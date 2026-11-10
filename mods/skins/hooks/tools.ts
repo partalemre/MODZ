@@ -1,5 +1,5 @@
 import { oneLine, shortenPath } from './format'
-import type { ToolKind } from './skin'
+import type { Kind, ToolKind } from './skin'
 
 const BUILTIN: Readonly<Record<string, ToolKind>> = {
   Bash: 'run',
@@ -18,14 +18,14 @@ const BUILTIN: Readonly<Record<string, ToolKind>> = {
 const MAX_TARGET = 120
 
 // Null leaves the row to Claude Code: agents, plan mode and todos draw live progress
-// and dialogs that a skin would have to rebuild.
+// and dialogs that a skin would have to rebuild. An MCP tool's row belongs to its server's mod
+// (savvy-progress hides its own step calls), so a skin never redraws one.
 export function kindOf(tool: string): ToolKind | null {
-  if (tool.startsWith('mcp__')) {
-    return 'mcp'
-  }
-
   return BUILTIN[tool] ?? null
 }
+
+// What a folded group counts a call as: an MCP call still reads as MCP there.
+export const groupKindOf = (tool: string): Kind => kindOf(tool) ?? (tool.startsWith('mcp__') ? 'mcp' : 'other')
 
 // `mcp__github__search_code` reads as `github:search_code`.
 export function toolLabel(tool: string): string {

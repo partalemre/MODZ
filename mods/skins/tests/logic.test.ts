@@ -63,7 +63,7 @@ test('a patch counts its added and removed lines, anything else counts nothing',
 
 test('only the tools a skin can draw faithfully get a kind', async () => {
   expect(kindOf('Bash')).toBe('run')
-  expect(kindOf('mcp__github__search_code')).toBe('mcp')
+  expect(kindOf('mcp__github__search_code')).toBeNull()
   expect(kindOf('Task')).toBeNull()
   expect(toolLabel('mcp__github__search_code')).toBe('github:search_code')
 })
@@ -263,13 +263,13 @@ test('a new file with an empty patch shows its content as added lines', async ()
   expect(card.alt).toBe('a.ts: +2 −0')
 })
 
-test('shell output loses its colour codes, keeps stderr apart and folds the middle', async () => {
+test('shell output loses its colour codes, keeps stderr apart and folds nothing', async () => {
   const long = Array.from({ length: 40 }, (_, i) => `line ${i}`).join('\n')
   const shell = shellOutputOf({ stdout: `\u001b[32mok\u001b[0m\n${long}\n\n`, stderr: 'warn: x', interrupted: false })
   const lines = outputLines(shell!)
 
   expect(lines[0]).toEqual({ text: 'ok', isErr: false })
-  expect(lines[6]).toEqual({ fold: 30 })
+  expect(lines).toHaveLength(42)
   expect(lines.at(-1)).toEqual({ text: 'warn: x', isErr: true })
   expect(terminalSvg(shell!, true, { palette: tokyoNight.palette, width: 600 }).source).toContain('hata')
   expect(shellOutputOf({ content: 'x' })).toBeNull()

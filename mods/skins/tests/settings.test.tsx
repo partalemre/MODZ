@@ -97,8 +97,8 @@ test('a failed call says so in a word on the desktop, where the row has no statu
   stubEngine(on)
   const failed = { tool_use_id: 'tu2', tool: 'Bash', input: { command: 'pnpm build' }, isRunning: false, isErrored: true, isInterrupted: false }
   const desktop = await $.ui.mount({ ...SITE, surface: 'desktop', component: 'ToolUse', requestId: 'tu2', props: failed })
-  expect(await desktop.find({ type: 'Text', text: /pnpm build {2}· hata/ })).toBeDefined()
+  expect(await desktop.find({ type: 'Text', text: /pnpm build {2}· error/ })).toBeDefined()
 
   const stopped = await $.ui.mount({ ...SITE, surface: 'desktop', component: 'ToolUse', requestId: 'tu3', props: { ...failed, tool_use_id: 'tu3', isErrored: false, isInterrupted: true } })
-  expect(await stopped.find({ type: 'Text', text: /· durduruldu/ })).toBeDefined()
+  expect(await stopped.find({ type: 'Text', text: /· stopped/ })).toBeDefined()
 })

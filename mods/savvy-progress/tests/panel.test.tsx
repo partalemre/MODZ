@@ -43,7 +43,9 @@ for (const surface of SURFACES) {
     await setup($, on)
     await threeRunning($)
     await finish($, 'a2')
-    const seen = await words(await mount($))
+    const ui = await mount($)
+    await ui.press({ key: 'done' })
+    const seen = await words(ui)
     for (const part of ['Pip', 'Mako', 'Nori', 'heavy', 'medium', 'light', 'Opus 5.5', 'çalışıyor', 'bitti']) expect(seen).toContain(part)
   })
 
@@ -88,6 +90,7 @@ for (const surface of SURFACES) {
     await threeRunning($)
     await finish($, 'a1')
     const ui = await mount($)
+    await ui.press({ key: 'done' })
     await ui.press({ key: 'open-a2' })
     await ui.press({ key: 'stop-a2' })
     expect(world.toasts).toContain('Durdurma reddedildi')

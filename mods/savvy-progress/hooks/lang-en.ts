@@ -15,6 +15,7 @@ export const en: Strings = {
   planned: 'Planned',
   emptyTitle: 'No agents yet',
   paneFailed: 'The pane could not be drawn; here is the plain list.',
+  moreAgents: n => `+${n} more ${n === 1 ? 'agent' : 'agents'}`,
   empty: 'Hand out a task and a crab gets to work: its status, progress and cost show here live.',
   round: 'round',
   failed: 'failed',

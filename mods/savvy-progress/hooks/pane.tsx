@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Draft, Panel } from '../types'
 import { BUILTIN_TYPES, DEFAULT_TYPE, TASK_TITLE_MAX, blankDraft, chosenOf } from './agent-types'
 import { addRun, askedAgain } from './agents'
+import { listedChats } from './chats'
 import { crewTree, quietTree, waitingTree } from './chats-tree'
 import { draftTree } from './dispatch'
 import { HomeButton } from './home'
@@ -21,6 +22,7 @@ import type { Layout, PaneHandlers, PaneView } from './sections'
 import { pinned } from './pin'
 import { HUB_PANE, PANE } from './state'
 import { shownOf } from './stage'
+import { drawSafely, plainPane, reopenKeptTab } from './kit/pane-keep'
 import { paneHeld } from './pane-held'
 import { deliveryText } from './steer'
 import type { StopNoun } from './steer'
@@ -33,7 +35,7 @@ const agents = atom({ plugin: 'savvy-progress', key: 'agents' } as const, [])
 const flow = atom({ plugin: 'savvy-progress', key: 'flow' } as const, null)
 const job = atom({ plugin: 'savvy-progress', key: 'job' } as const, null)
 const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
-const panel = atom({ plugin: 'savvy-progress', key: 'panel' } as const, { isCompact: false, isDoneCollapsed: false })
+const panel = atom({ plugin: 'savvy-progress', key: 'panel' } as const, { isCompact: false })
 const tasks = atom({ plugin: 'savvy-progress', key: 'tasks' } as const, [])
 const limit = atom({ plugin: 'savvy-progress', key: 'limit' } as const, null)
 const types = atom({ plugin: 'savvy-progress', key: 'types' } as const, BUILTIN_TYPES)
@@ -144,43 +146,56 @@ function handlersOf($: EngineInterface, d: PaneData): PaneHandlers {
     onSend: (id, text) => void sendTo($, id, text),
     onStop: id => void stopAgent($, id),
     onCompact: flip(prev => ({ ...prev, isCompact: !prev.isCompact })),
-    onDone: flip(prev => ({ ...prev, isDoneCollapsed: !prev.isDoneCollapsed })),
+    onDone: flip(prev => ({ ...prev, isDoneOpen: !isDoneOpenIn(prev, d) })),
     onTimeline: flip(prev => ({ ...prev, isTimelineHidden: prev.isTimelineHidden !== true })),
     onChats: flip(prev => ({ ...prev, isChatsOpen: prev.isChatsOpen !== true })),
     ...draftHandlers($, { draft: d.panel.draft, types: d.types }),
   }
 }
 
+// The rows drawn at most: a long crew costs a line saying how many more, never a pane too heavy to draw.
+const ROWS_MAX = 12
+
+// Finished agents fold away while others run and open once all are done; the person's own press wins either way.
+const isDoneOpenIn = (shown: Panel, d: PaneData): boolean => shown.isDoneOpen ?? d.running.length === 0
+
 function listTree(ui: Ui, view: PaneView) {
-  const { Box } = ui
+  const { Box, Text } = ui
   const { d, layout, on } = view
   const s = t()
   // The desktop's rows have no frame: they take the pane's whole width.
   const ctx: RowContext = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.isDesktop ? layout.W : layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen }
-  const isDoneOpen = !d.panel.isDoneCollapsed
+  const isDoneOpen = isDoneOpenIn(d.panel, d)
+  const running = d.running.slice(0, ROWS_MAX)
+  const finished = isDoneOpen ? d.finished.slice(0, ROWS_MAX - running.length) : []
+  const planned = d.planned.slice(0, ROWS_MAX - running.length - finished.length)
+  const more = d.running.length + (isDoneOpen ? d.finished.length : 0) + d.planned.length - running.length - finished.length - planned.length
   return (
     <Box key="list" flexDirection="column" rowGap={1}>
       {d.running.length > 0 && sectionHead(ui, layout, { id: 'running', label: `${s.running} · ${d.running.length}` })}
-      {d.running.map(a => agentRow(ui, a, ctx))}
+      {running.map(a => agentRow(ui, a, ctx))}
       {d.finished.length > 0 && sectionHead(ui, layout, { id: 'finished', label: `${s.finished} · ${d.finished.length}`, toggle: { key: 'done', isOpen: isDoneOpen, onPress: on.onDone } })}
-      {isDoneOpen && d.finished.map(a => agentRow(ui, a, ctx))}
+      {finished.map(a => agentRow(ui, a, ctx))}
       {d.planned.length > 0 && sectionHead(ui, layout, { id: 'planned', label: `${s.planned} · ${d.planned.length}` })}
-      {d.planned.map(p => plannedRow(ui, p, ctx))}
+      {planned.map(p => plannedRow(ui, p, ctx))}
+      {more > 0 && <Text key="more" dimColor>{s.moreAgents(more)}</Text>}
     </Box>
   )
 }
 
 // Who else on this machine waits on the person comes first; the quiet rest folds at the foot.
 function withChats(ui: Ui, view: PaneView) {
-  const { Box } = ui
+  const { Box, Text } = ui
   const { d, layout, on } = view
-  const quiet = quietTree(ui, { chats: d.chats, layout, isOpen: d.panel.isChatsOpen === true, onToggle: on.onChats })
+  const listed = listedChats(d.chats)
+  const quiet = quietTree(ui, { chats: listed.chats, layout, isOpen: d.panel.isChatsOpen === true, onToggle: on.onChats })
   return (
     <Box flexDirection="column" rowGap={1}>
       {waitingTree(ui, d.chats, layout)}
       {paneTree(ui, view)}
-      {crewTree(ui, d.chats, layout)}
+      {crewTree(ui, listed.chats, layout)}
       {quiet}
+      {listed.more > 0 && <Text key="chats-more" dimColor>{t().chats.more(listed.more)}</Text>}
     </Box>
   )
 }
@@ -221,26 +236,30 @@ export const layoutOf = (isDesktop: boolean, columns: number): Layout => {
   return { isDesktop, W, inner: W - FRAME_PX, cols: columns - FRAME_COLS }
 }
 
-// A drawing that throws costs a plain list, never the tab: an unanswered pane shows the app's "Nothing to show yet".
-async function drawnBody($: EngineInterface, ui: Ui, room: { isDesktop: boolean; columns: number }) {
-  try {
-    const d = await paneData($)
-    return withChats(ui, { d, layout: layoutOf(room.isDesktop, room.columns), on: handlersOf($, d) })
-  } catch (error) {
-    $.ui.log(`savvy-progress: the pane fell back to its plain list (${String(error)})`, { to: 'debug' })
-    const { Box, Text } = ui
-    const list = await read($, agents)
-    return <Box flexDirection="column"><Text dimColor>{t().paneFailed}</Text>{list.map(a => <Text key={a.id} wrap="truncate-end">{`${a.status === 'running' ? '● ' : ''}${a.description || a.type}`}</Text>)}</Box>
-  }
+type Room = { isDesktop: boolean; columns: number }
+
+// Everything the pane draws. A throw anywhere in it costs the plain list, never the tab (kit/pane-keep.tsx): an
+// unanswered pane shows the app's "Nothing to show yet".
+async function drawnPane($: EngineInterface, ui: Ui, room: Room) {
+  const { Box } = ui
+  const home = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true && HomeButton(ui, () => void goHome($))
+  const d = await paneData($)
+  const body = withChats(ui, { d, layout: layoutOf(room.isDesktop, room.columns), on: handlersOf($, d) })
+  return <Box flexDirection="column" rowGap={1}>{home}{body}</Box>
 }
 
-// The desktop kept this pane's tab across an engine restart and asks it to draw while the engine lists no such pane
-// (the tab reads "Nothing to show yet"; the note band.tsx restores from may be missing): reopened once, unless this
-// engine already opened, closed or saw the pane, so a tab the person closed or the hub swapped stays as it is.
-async function reopenStaleTab($: EngineInterface): Promise<void> {
-  if (paneHeld.isHeld) return
-  paneHeld.isHeld = true
-  if ((await $.ui.panes()).some(p => p.id === PANE)) return
+// The plain list: the running agents first, each by its task; with no list to read, the notice alone.
+async function plainOf($: EngineInterface, ui: Ui) {
+  const list = await read($, agents).catch(() => [])
+  const lines = [...list].sort((a, b) => Number(b.status === 'running') - Number(a.status === 'running'))
+  return plainPane(ui, { notice: t().paneFailed, lines: lines.map(a => `${a.status === 'running' ? '● ' : ''}${a.description || a.type}`) })
+}
+
+const logOf = ($: EngineInterface) => (text: string) => $.ui.log(`savvy-progress: ${text}`, { to: 'debug' })
+
+// Opens the pane again for a tab the desktop kept from before a restart, and tells the hub. Asked by
+// kit/pane-keep.tsx once the render is over: no open or state write runs while a hook draws.
+async function reopenPane($: EngineInterface): Promise<void> {
   const opened = await $.ui.open({ id: PANE, title: t().pane })
   if (!opened.isPlaced || (await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
   await $.state.set({ plugin: 'savvy-progress', key: 'shown' }, shownOf(HUB_PANE, await $.clock.now()))
@@ -248,13 +267,19 @@ async function reopenStaleTab($: EngineInterface): Promise<void> {
 
 export function onPane(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    void reopenStaleTab($).catch(cause => $.ui.log(`savvy-progress: could not reopen the pane: ${String(cause)}`, { to: 'debug' }))
-    const table = $.ui.resolve(e)
-    const ui = table as Ui
-    const isDesktop = e.surface === 'desktop' && 'Svg' in ui
-    const home = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true && HomeButton(ui, () => void goHome($))
-    const { Box } = ui
-    const body = await drawnBody($, ui, { isDesktop, columns: Math.max(MIN_COLS, e.props.bodyColumns || DEFAULT_COLS) })
-    return pinned(e, <Box flexDirection="column" rowGap={1}>{home}{body}</Box>)
+    const ui = $.ui.resolve(e) as Ui
+    reopenKeptTab(paneHeld, {
+      isListed: async () => (await $.ui.panes()).some(p => p.id === PANE),
+      reopen: () => reopenPane($),
+      soon: work => $.clock.after(0, work),
+      log: logOf($),
+    })
+    const room = { isDesktop: e.surface === 'desktop' && 'Svg' in ui, columns: Math.max(MIN_COLS, e.props.bodyColumns || DEFAULT_COLS) }
+    return pinned(e, await drawSafely(paneHeld, { draw: () => drawnPane($, ui, room), plain: () => plainOf($, ui), log: logOf($) }))
+  }).catch(async ($, e, next) => {
+    // The hook threw past its own guard or ran out of time: still a list, and a redraw on the next look.
+    if (next.error.kind === 're-entry') return next(e)
+    paneHeld.needsDraw = true
+    return pinned(e, await plainOf($, $.ui.resolve(e) as Ui))
   })
 }

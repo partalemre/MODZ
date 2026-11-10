@@ -4,7 +4,8 @@ import type { EngineInterface, Register, ThemeKey } from 'claude-code'
 import type { CrabMood } from '../types'
 import { bandSvg, BAND_H } from './band-svg'
 import { isOwnOpen } from './hub'
-import { SCAN_MS } from './chats'
+import { HEARTBEAT_MS, SCAN_MS } from './chats'
+import { NOTE_PREFIX, noteKey, restorePane, staleNotes, watchPane } from './kit/pane-keep'
 import { isOffStage, shownOf } from './stage'
 import { t } from './i18n'
 import type { JobView } from './job'
@@ -74,34 +75,47 @@ async function openPane($: EngineInterface): Promise<void> {
   if (opened.isPlaced) await reportShown($, at)
 }
 
-// Whether the pane was open, in the store as it must outlive the engine. Watched rather than set at each open and close:
-// a person's click on the tab's cross raises no hook. It starts at the first attach, so a pane not yet restored isn't noted.
+// The pane's watch (kit/pane-keep.tsx): whether it was open is noted in the store, as it must outlive the engine, and
+// a draw that failed or never came is asked for again. It starts at the first attach, so a pane not yet restored
+// isn't noted; every BEAT_LOOKS-th look redraws whatever the last draw was.
 let isWatchingPane = false
-const openNoteKey = (id: string): string => `pane-open/${id}`
+const BEAT_LOOKS = HEARTBEAT_MS / SCAN_MS
 
-async function noteOpenPane($: EngineInterface): Promise<void> {
+async function reopenPane($: EngineInterface): Promise<void> {
+  const opened = await $.ui.open({ id: PANE, title: t().pane })
+  if (opened.isPlaced) await reportShown($, await $.clock.now())
+}
+
+// What the kit asks of the engine for this pane; built here, where `$` is.
+const keepNouns = ($: EngineInterface) => ({
+  isListed: async () => (await $.ui.panes()).some(p => p.id === PANE),
+  reopen: () => reopenPane($),
+  redraw: () => $.ui.invalidate('ui.render'),
+  note: {
+    read: async () => $.store.get(noteKey(await $.session.id())),
+    write: async (at: number | undefined) => {
+      const key = noteKey(await $.session.id())
+      return at === undefined ? $.store.delete(key) : $.store.set(key, at)
+    },
+  },
+  now: () => $.clock.now(),
+  log: (text: string) => $.ui.log(`savvy-progress: ${text}`, { to: 'debug' }),
+})
+
+// Notes left by sessions long gone (a session that ends with its pane open never clears its own) are dropped.
+async function pruneNotes($: EngineInterface): Promise<void> {
   try {
-    const key = openNoteKey(await $.session.id())
-    const isOpen = (await $.ui.panes()).some(p => p.id === PANE)
-    paneHeld.isHeld ||= isOpen
-    if (isOpen === ((await $.store.get(key)) === true)) return
-    if (isOpen) await $.store.set(key, true)
-    else await $.store.delete(key)
+    const entries: [string, unknown][] = []
+    for (const key of await $.store.keys()) if (key.startsWith(NOTE_PREFIX)) entries.push([key, await $.store.get(key)])
+    for (const key of staleNotes(entries, { own: noteKey(await $.session.id()), now: await $.clock.now() })) await $.store.delete(key)
   } catch (cause) {
-    $.ui.log(`savvy-progress: could not note the open pane: ${String(cause)}`, { to: 'debug' })
+    $.ui.log(`savvy-progress: could not drop old pane notes: ${String(cause)}`, { to: 'debug' })
   }
 }
 
-async function restorePane($: EngineInterface): Promise<void> {
-  if ((await $.store.get(openNoteKey(await $.session.id()))) !== true) return
-  await reopenPane($)
-}
-
-async function reopenPane($: EngineInterface): Promise<void> {
-  paneHeld.isHeld = true
-  if ((await $.ui.panes()).some(p => p.id === PANE)) return
-  const opened = await $.ui.open({ id: PANE, title: t().pane })
-  if (opened.isPlaced) await reportShown($, await $.clock.now())
+function startWatch($: EngineInterface): void {
+  let looks = 0
+  $.clock.every(SCAN_MS, () => void watchPane(paneHeld, keepNouns($), ++looks % BEAT_LOOKS === 0))
 }
 
 
@@ -210,14 +224,15 @@ function onOpen(on: On): void {
 
   // A desktop that comes back (the app restarted, a session resumed) keeps this pane's tab, but the engine's panes are
   // gone and the tab reads "Nothing to show yet" until the pane opens again. The stage can't say so: the hub writes it
-  // back to itself on every start. So the note the watch below keeps decides.
+  // back to itself on every start. So the note the watch keeps decides; the pane is drawn again either way.
   on('session.attach', async ($, e, next) => {
     const done = await next(e)
     if (e.surface !== 'desktop') return done
-    await restorePane($)
+    await restorePane(paneHeld, keepNouns($))
     if (!isWatchingPane) {
       isWatchingPane = true
-      $.clock.every(SCAN_MS, () => void noteOpenPane($))
+      await pruneNotes($)
+      startWatch($)
     }
     return done
   }).catch(($, e, next) => next(e))

@@ -179,7 +179,7 @@ test('preview: panel with a finished agent open on its result', async ($, on) =>
   await work($, clock, 'a2', READS)
   await work($, clock, 'a3', EDITS)
   await measure($, 23.5, 1)
-  await dumpPane($, 'panel-result-open', ['open-a1'])
+  await dumpPane($, 'panel-result-open', ['done', 'open-a1'])
 })
 
 test('preview: panel with a question asked from the form: its answer and a follow-up on its way', async ($, on) => {

@@ -51,6 +51,8 @@ export type Strings = {
   emptyTitle: string
   /** Above the plain list, when the pane's drawing failed. */
   paneFailed: string
+  /** Under the rows, when more agents exist than the pane draws. */
+  moreAgents: (n: number) => string
   round: string
   failed: string
   aborted: string

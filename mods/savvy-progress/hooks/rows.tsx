@@ -7,13 +7,14 @@ import { detailTree } from './detail'
 import { agentProgress } from './estimate'
 import type { Progress } from './estimate'
 import type { Planned } from './flow'
-import { clip, fitText, fmtCost } from './format'
+import { clip, fitText } from './format'
 import { t } from './i18n'
 import { lookOf } from './identity'
 import { stuckOf } from './insight'
 import type { Stuck } from './insight'
 import { progressLabel } from './metrics'
 import { BAR_H, progressBarSvg } from './metrics-svg'
+import { costText } from './pricing'
 import { PressCover } from './kit/press'
 import { picture } from './pane-motion'
 import { CARD_CRAB, CRAB, activityOf, cardCrabSvg, clockOf, crabSvg, modelLine, plannedLine } from './pane-svg'
@@ -117,7 +118,7 @@ function termBarTree(ui: Ui, a: AgentRun, ctx: RowContext) {
     <Box flexDirection="row" columnGap={1}>
       <Text color={key} dimColor={progress.isEstimate}>{termBar(progress, width)}</Text>
       <Text bold color={key}>{barLabel(a, progress)}</Text>
-      <Text>{`≈${fmtCost(a.costUsd)}`}</Text>
+      <Text>{costText(a)}</Text>
     </Box>
   )
 }
@@ -190,7 +191,7 @@ function deskHead(ui: Ui, a: AgentRun, ctx: RowContext) {
 function deskFoot(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box, Text } = ui
   const isOpen = ctx.selected === a.id
-  const meta = [t().tools(a.toolCount || 0), clockOf(a, ctx.at), `≈${fmtCost(a.costUsd)}`, whoLine(a)].join(' · ')
+  const meta = [t().tools(a.toolCount || 0), clockOf(a, ctx.at), costText(a), whoLine(a)].filter(Boolean).join(' · ')
   return (
     <Box key="foot" flexDirection="column">
       <Text wrap="truncate-end" dimColor={a.status !== 'running'}>{fitText(nowLine(a, isOpen), BODY_PX, ctx.inner)}</Text>

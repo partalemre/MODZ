@@ -1,10 +1,11 @@
 import type { AgentRun, LimitTrack } from '../types'
 import { ctxOf, elapsed } from './agents'
 import type { Progress } from './estimate'
-import { fmtCost, fmtTime, fmtTokens } from './format'
+import { fmtTime, fmtTokens } from './format'
 import { t } from './i18n'
 import { shareNumber, shareOf } from './limit'
 import type { Chip } from './metrics-svg'
+import { costText } from './pricing'
 
 // What an agent used, as chips on the desktop and one line on the terminal: its time, its context,
 // its tokens, its ≈$ and, once the session has a rate for it, its ≈share of the 5h limit.
@@ -19,11 +20,13 @@ export type MetricsFacts = { limit: LimitTrack | null; at: number }
 export const usageChipsOf = (a: AgentRun, limit: LimitTrack | null): Chip[] => {
   const s = t()
   const ctx = ctxOf(a)
-  const share = limitShareOf(a, limit)
+  // A model with no price has no cost to show, and so no share of the limit either.
+  const cost = costText(a)
+  const share = cost === '' ? null : limitShareOf(a, limit)
   const chips: Chip[] = [
     { text: `${s.context} ${s.pct(ctx)}`, ring: { ratio: ctx / PERCENT } },
     { text: `${fmtTokens(a.tokens)} ${s.tokensWord}` },
-    { text: `≈${fmtCost(a.costUsd)}` },
+    ...(cost === '' ? [] : [{ text: cost }]),
   ]
   if (share !== null) chips.push({ text: `${s.limit} ≈${s.pct(shareNumber(share))}`, ring: { ratio: share / PERCENT } })
   return chips

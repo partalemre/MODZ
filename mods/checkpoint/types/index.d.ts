@@ -33,6 +33,10 @@ export type PendingUndo = {
   removed: number
   // The first few files it touches.
   files: UndoFile[]
+  // Commits made on top of the checkpoint's HEAD since: an undo never rewrites history, so it says so.
+  commits: number
+  // The staging area differs from the checkpoint's, and the undo brings it back too.
+  isIndexMoved: boolean
 }
 
 export type CheckpointStatus = {

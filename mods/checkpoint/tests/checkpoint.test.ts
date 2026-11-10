@@ -1,6 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 
 import { gitBinary, list, locate, parseNameStatus, parseNumstat, prune, snapshot } from '../hooks/git'
+import { keyOf } from '../hooks/key'
 import { markUndone, pendingOf } from '../hooks/meta'
 import { setLang } from '../hooks/lang'
 import { diffstatSvg } from '../hooks/pane-svg'
@@ -17,7 +18,7 @@ test('a snapshot goes through a private index and a checkpoint ref, never the re
   const repo = await locate(run, { cwd: '/w/sub', home: '/Users/x', bin: 'git' })
   expect(repo).toEqual({ root: '/w', gitDir: '/w/.git', isShadow: false, bin: 'git' })
 
-  await snapshot(run, repo!, { ref: 's1/100', label: 'fix the bug' })
+  await snapshot(run, { ...repo!, scope: 'refs/checkpoints/k/s1/' }, { ref: '100', label: 'fix the bug' })
   const add = fake.calls.find(call => call.argv[1] === 'add')!
   expect(add.env.GIT_INDEX_FILE).toBe('/w/.git/checkpoint.index')
   expect(add.argv).toContain(':(exclude,literal)assets/video.mp4')
@@ -25,8 +26,9 @@ test('a snapshot goes through a private index and a checkpoint ref, never the re
   expect(lines(fake)).toContain('git ls-files -o --exclude-standard -z')
   expect(lines(fake)).toContain('find ./assets/video.mp4 -maxdepth 0 -type f -size +5M -print')
   expect(fake.calls.find(call => call.argv[1] === 'write-tree')!.env.GIT_INDEX_FILE).toBe('/w/.git/checkpoint.index')
-  expect(lines(fake)).toContain('git commit-tree tree1 -p head1 -m fix the bug')
-  expect(lines(fake)).toContain('git update-ref refs/checkpoints/s1/100 commit1')
+  // The staging area rides along as a second parent, named by a trailer.
+  expect(lines(fake)).toContain('git commit-tree tree1 -p head1 -p commit1 -m fix the bug -m Checkpoint-Head: head1\nCheckpoint-Index: tree1')
+  expect(lines(fake)).toContain('git update-ref refs/checkpoints/k/s1/100 commit1')
   const touchesBranch = lines(fake).some(line => /git (checkout|reset|stash|commit |branch|switch)/.test(line))
   expect(touchesBranch).toBe(false)
 })
@@ -35,7 +37,7 @@ test('a folder that is not a repo gets a shadow repo, but never the home folder'
   const fake = newFake({ isRepo: false })
   const run = runOf(fake)
   const repo = await locate(run, { cwd: '/Users/x/notes', home: '/Users/x', bin: 'git' })
-  expect(repo).toEqual({ root: '/Users/x/notes', gitDir: '/Users/x/.cache/claude-checkpoint/Users-x-notes.git', isShadow: true, bin: 'git' })
+  expect(repo).toEqual({ root: '/Users/x/notes', gitDir: `/Users/x/.cache/claude-checkpoint/${keyOf('/Users/x/notes')}.git`, isShadow: true, bin: 'git' })
   expect(lines(fake).some(line => line.startsWith('git init -q --bare'))).toBe(true)
 
   expect(await locate(run, { cwd: '/Users/x', home: '/Users/x', bin: 'git' })).toBeNull()
@@ -45,7 +47,7 @@ test('only the newest 30 checkpoint refs are kept; a shadow repo is also asked t
   const refs = Array.from({ length: 33 }, (_, i) => `refs/checkpoints/s/${i}\tc${i}\t${1000 - i}\tturn ${i}`).join('\n')
   const fake = newFake({ refs })
   const run = runOf(fake)
-  const repo = { root: '/w', gitDir: '/w/.git', isShadow: false, bin: 'git' }
+  const repo = { root: '/w', gitDir: '/w/.git', isShadow: false, bin: 'git', scope: 'refs/checkpoints/s/' }
 
   expect((await list(run, repo))[0]).toEqual({ ref: 'refs/checkpoints/s/0', commit: 'c0', at: 1_000_000, label: 'turn 0' })
   expect(await prune(run, repo)).toHaveLength(30)
@@ -73,7 +75,8 @@ test('a diff splits into files to restore and files made since', () => {
 })
 
 const PROMPT = { context: [], wait: false, origin: { kind: 'composer' } }
-const commits = (fake: Fake) => lines(fake).filter(line => line.startsWith('git commit-tree'))
+// The turns' checkpoints, not the staging-area commits that ride along with them.
+const commits = (fake: Fake) => lines(fake).filter(line => line.startsWith('git commit-tree') && !line.includes('checkpoint index'))
 const SURFACES = ['terminal', 'desktop'] as const
 
 test('the first write of a turn takes one snapshot; later writes and other tools do not', async ($: any, on: any) => {
@@ -87,7 +90,7 @@ test('the first write of a turn takes one snapshot; later writes and other tools
   await $.tool.call({ tool: 'Read', file_path: '/w/a.ts' })
   await $.tool.call({ tool: 'Edit', file_path: '/w/a.ts', old_string: 'x', new_string: 'y' })
   await $.tool.call({ tool: 'Write', file_path: '/w/b.ts', content: 'z' })
-  expect(commits(fake)).toEqual(['git commit-tree tree1 -p head1 -m add a feature'])
+  expect(commits(fake)).toEqual(['git commit-tree tree1 -p head1 -p commit1 -m add a feature -m Checkpoint-Head: head1\nCheckpoint-Index: tree1'])
 })
 
 test('the repository is looked up once per folder, not again on every snapshot', async ($: any, on: any) => {
@@ -233,7 +236,7 @@ test('the desktop card counts the files it has no row for, as the terminal card 
   setLang('tr')
   const paths = Array.from({ length: 7 }, (_, i) => `src/f${i}.ts`)
   const entry = { ref: 'r', commit: 'c', at: 1, label: 'x' }
-  const pending = pendingOf(entry, { changes: { restore: paths, remove: [] }, stats: paths.map(path => ({ path, added: 1, removed: 0 })), turn: 3 })
+  const pending = pendingOf(entry, { changes: { restore: paths, remove: [] }, stats: paths.map(path => ({ path, added: 1, removed: 0 })), turn: 3, commits: 0, isIndexMoved: false })
   const drawn = diffstatSvg({ width: 400, mode: 'dark' }, pending)
   expect(drawn.source).toContain('+2 dosya daha')
   expect(drawn.alt).toMatch(/\+2 dosya daha$/)

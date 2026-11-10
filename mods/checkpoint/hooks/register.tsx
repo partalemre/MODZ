@@ -1,9 +1,10 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { apply, gitBinary, list, locate, numstat, plan, prune, slug, snapshot } from './git'
-import type { Repo, Run } from './git'
+import { apply, gitBinary, list, locate, madeSince, numstat, plan, prune, snapshot, takenWith } from './git'
+import type { Repo, Run, Scoped } from './git'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
+import { scopeOf } from './key'
 import { glyphOf, keepListed, markUndone, pendingOf, sortGlyphs } from './meta'
 import type { MetaMap } from './meta'
 import { clip, motion, paneTree, targetOf } from './pane'
@@ -11,6 +12,7 @@ import { withHome } from './home'
 import { pinned } from './pin'
 import { shownOf } from './stage'
 import { hookStage } from './stage-hook'
+import { armTurn, isWrite, turn } from './turn'
 import { setLang } from './lang'
 import { AUTO, themeFrom } from './tidemark'
 import { words } from './words'
@@ -20,9 +22,7 @@ const PANE = 'checkpoints'
 const TOGGLE = 'checkpoint'
 const STORE_KEY = 'checkpoint.enabled'
 const META_KEY = 'checkpoint.meta'
-const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit'])
 const GIT_TIMEOUT_MS = 60_000
-const PROMPT_LABEL_MAX = 100
 const EMPTY_VIEW: CheckpointView = { entries: [], status: null, isBusy: false, pending: null }
 const failed = (): CheckpointStatus => ({ text: words().failed, tone: 'error' })
 
@@ -33,12 +33,7 @@ const HUB = { plugin: 'checkpoint', key: 'hub' } as const
 const HOME = { plugin: 'checkpoint', key: 'home' } as const
 const themeAtom = atom({ plugin: 'checkpoint', key: 'theme' } as const, AUTO)
 
-// Armed by each prompt; the first write after it takes the snapshot, later writes wait for it.
-// `ref` is the turn's checkpoint once taken; `files` and `tools` what the turn did after it.
-const turn = {
-  isArmed: false, label: '', pending: null as Promise<void> | null, bin: undefined as string | null | undefined,
-  number: 0, ref: null as string | null, files: new Set<string>(), tools: new Set<string>(),
-}
+const tools = { git: undefined as string | null | undefined }
 
 function runnerOf($: EngineInterface): Run {
   return (argv, init) => $.process.run(argv, { timeoutMs: GIT_TIMEOUT_MS, ...init })
@@ -47,17 +42,19 @@ function runnerOf($: EngineInterface): Run {
 // A folder's repository does not move during a session, so rev-parse runs once per cwd.
 const repos = new Map<string, Repo>()
 
-async function repoOf($: EngineInterface, isProbeOnly = false): Promise<Repo | null> {
+// Scoped to this session in this work tree: another worktree's or session's checkpoints are never listed or undone.
+async function repoOf($: EngineInterface, isProbeOnly = false): Promise<Scoped | null> {
   const cwd = await $.session.cwd()
-  const known = repos.get(cwd)
-  if (known !== undefined) return known
-  const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE')) || ''
-  turn.bin ??= await gitBinary(runnerOf($), cwd)
-  if (turn.bin === null) return null
-  const repo = await locate(runnerOf($), { cwd, home, bin: turn.bin, isProbeOnly })
-  if (repo !== null) repos.set(cwd, repo)
+  let repo = repos.get(cwd) ?? null
+  if (repo === null) {
+    const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE')) || ''
+    tools.git ??= await gitBinary(runnerOf($), cwd)
+    if (tools.git === null) return null
+    repo = await locate(runnerOf($), { cwd, home, bin: tools.git, isProbeOnly })
+    if (repo !== null) repos.set(cwd, repo)
+  }
 
-  return repo
+  return repo === null ? null : { ...repo, scope: scopeOf(repo.root, await $.session.id()) }
 }
 
 // The main panel's card (DESIGN.md §9), written only when what it shows changes so the panel does not redraw for nothing.
@@ -80,9 +77,7 @@ async function greetHub($: EngineInterface): Promise<void> {
   }
 }
 
-async function refName($: EngineInterface): Promise<string> {
-  return `${slug(await $.session.id())}/${await $.clock.now()}`
-}
+const refName = async ($: EngineInterface): Promise<string> => String(await $.clock.now())
 
 async function setView($: EngineInterface, change: Partial<CheckpointView>): Promise<void> {
   await update($, viewAtom, view => ({ ...view, ...change }))
@@ -93,25 +88,29 @@ async function saveMeta($: EngineInterface, change: (meta: MetaMap) => MetaMap):
   await $.store.set(META_KEY, await read($, metaAtom))
 }
 
-async function take($: EngineInterface, label: string): Promise<void> {
+// The turn's checkpoint ref, or null when none was taken.
+async function take($: EngineInterface, label: string): Promise<string | null> {
   try {
     const repo = await repoOf($)
     if (repo === null) {
       $.ui.log('checkpoint: no working git, or folder too broad for a shadow copy; skipped', { to: 'debug' })
 
-      return
+      return null
     }
     const ref = await refName($)
     await snapshot(runnerOf($), repo, { ref, label })
-    const full = `refs/checkpoints/${ref}`
-    turn.ref = full
+    const full = `${repo.scope}${ref}`
     const entries = await prune(runnerOf($), repo)
     const number = turn.number
     await saveMeta($, meta => ({ ...keepListed(meta, entries), [full]: { turn: number } }))
     await setView($, { entries })
     await writeHub($, entries)
+
+    return full
   } catch (error) {
     $.ui.log(`checkpoint: snapshot failed (${error instanceof Error ? error.message : 'unknown'})`, { to: 'debug' })
+
+    return null
   }
 }
 
@@ -123,12 +122,15 @@ async function ask($: EngineInterface, entry: CheckpointEntry): Promise<void> {
   try {
     const repo = await repoOf($)
     const changes = repo === null ? null : await plan(runnerOf($), repo, entry.commit)
+    const taken = repo === null ? null : await takenWith(runnerOf($), repo, entry.commit)
+    const isIndexMoved = taken !== null && taken.index !== null && taken.index !== changes?.index
     if (repo === null || changes === null) change = { status: { text: words().noRepo, tone: 'error' } }
-    else if (changes.restore.length + changes.remove.length === 0) change = { status: { text: words().alreadyThere, tone: 'info' } }
+    else if (changes.restore.length + changes.remove.length === 0 && !isIndexMoved) change = { status: { text: words().alreadyThere, tone: 'info' } }
     else {
       const stats = await numstat(runnerOf($), repo, { tree: changes.tree, commit: entry.commit })
       const turnOf = (await read($, metaAtom))[entry.ref]?.turn ?? null
-      change = { status: null, pending: pendingOf(entry, { changes, stats, turn: turnOf }) }
+      const commits = await madeSince(runnerOf($), repo, taken?.head ?? null)
+      change = { status: null, pending: pendingOf(entry, { changes, stats, turn: turnOf, commits, isIndexMoved }) }
     }
   } catch (error) {
     $.ui.log(`checkpoint: undo check failed (${error instanceof Error ? error.message : 'unknown'})`, { to: 'debug' })
@@ -142,14 +144,15 @@ async function restore($: EngineInterface, entry: CheckpointEntry): Promise<Chec
   if (repo === null) return { text: words().noRepo, tone: 'error' }
   const run = runnerOf($)
   const changes = await plan(run, repo, entry.commit)
+  const { index } = await takenWith(run, repo, entry.commit)
   const total = changes.restore.length + changes.remove.length
-  if (total === 0) return { text: words().alreadyThere, tone: 'info' }
+  if (total === 0 && (index === null || index === changes.index)) return { text: words().alreadyThere, tone: 'info' }
   const safety = await refName($)
   const label = `${words().safetyPrefix}${clip(entry.label)}`
   const commit = await snapshot(run, repo, { ref: safety, label })
-  await apply(run, repo, { commit: entry.commit, plan: changes })
+  await apply(run, repo, { commit: entry.commit, plan: changes, index })
   const entries = await prune(run, repo)
-  const safetyRef = `refs/checkpoints/${safety}`
+  const safetyRef = `${repo.scope}${safety}`
   await saveMeta($, meta => keepListed(markUndone(meta, { entries, target: entry, safetyRef }), entries))
   await setView($, { entries })
   await writeHub($, entries)
@@ -238,26 +241,15 @@ function hookCommands(on: On): void {
 
 // Both hooks hand the event on untouched: nothing reaches the prompt or a tool result.
 function hookTurns(on: On): void {
-  on('prompt.submit', async ($, e, next) => {
-    turn.isArmed = true
-    turn.label = clip(e.text.split('\n')[0]?.trim() || words().promptFallback, PROMPT_LABEL_MAX)
-    turn.number += 1
-    turn.ref = null
-    turn.files.clear()
-    turn.tools.clear()
-
-    return next(e)
-  }).catch(($, e, next) => next(e))
+  on('prompt.submit', async ($, e, next) => (armTurn(e.text), next(e))).catch(($, e, next) => next(e))
 
   on('tool.call', async ($, e, next) => {
     const glyph = glyphOf(String(e.tool))
     if (glyph !== undefined) turn.tools.add(glyph)
-    if (!WRITE_TOOLS.has(String(e.tool))) return next(e)
-    const path = (e as { file_path?: unknown; notebook_path?: unknown }).file_path ?? (e as { notebook_path?: unknown }).notebook_path
-    if (typeof path === 'string') turn.files.add(path)
+    if (!isWrite(e)) return next(e)
     if (turn.isArmed && (await read($, enabledAtom))) {
       turn.isArmed = false
-      turn.pending = take($, turn.label)
+      turn.pending = take($, turn.label).then(ref => void (turn.ref = ref))
     }
     if (turn.pending !== null) await turn.pending
 

@@ -35,18 +35,22 @@ export async function step($: Engine, model: string, agentId?: string) {
 export const prompt = (text: string): PromptSubmitInput => ({ text, wait: false, origin: { kind: 'composer' } })
 export const themeChange = (value: string): ConfigSetInput => ({ key: 'theme', value, previous: 'dark', provider: { plugin: 'engine', tier: 'core' }, origin: { kind: 'composer' } })
 
-export type ForkAnswer = null | ModelForkResult | { read: number; write: number; out?: number; input?: number }
+/** The account's limit readings and the session's cost, as `$.session.usage()` answers them; a test moves them by writing here. */
+export type Limits = { rateLimits: Array<{ kind: string; percentUsed: number; resetsAt?: string }>; cost?: { usd: number } }
+
+export type ForkAnswer =null | ModelForkResult | { read: number; write: number; out?: number; input?: number }
 
 // The world beneath the mod: its store, the engine's answers, and a fork that
 // replies from a script so each test decides what the cache looked like.
-export function world(on: On, forkAnswers: ForkAnswer[], opts: { store?: Map<string, unknown>; commands?: string[]; live?: { tokens?: number }; sid?: string; model?: string; bandText?: string; theme?: { value: string }; noColor?: boolean; denyTheme?: boolean; writtenTheme?: string; lang?: 'en' | 'tr' } = {}) {
+export function world(on: On, forkAnswers: ForkAnswer[], opts: { store?: Map<string, unknown>; commands?: string[]; live?: { tokens?: number }; sid?: string; model?: string; bandText?: string; theme?: { value: string }; noColor?: boolean; denyTheme?: boolean; writtenTheme?: string; lang?: 'en' | 'tr'; limits?: Limits } = {}) {
   if (opts.store) {
     const store = opts.store
     on('store.get', ($, e) => ({ value: store.get(e.key) }))
     on('store.set', ($, e) => { store.set(e.key, e.value); return { value: undefined } })
     on('store.delete', ($, e) => { store.delete(e.key); return { value: undefined } })
     on('store.keys', () => ({ value: [...store.keys()] }))
-  } else mock.store(on, {})
+    // Without a store of its own a test runs the guard that holds; a fresh store warns (accuracy.test.ts).
+  } else mock.store(on, { guard: 'refuse' })
   const reads = { theme: 0, env: 0 }
   // The tests read Turkish (MODZ_LANG=tr) unless one asks for English, which leaves the variable unset.
   const env: Record<string, string | undefined> = { NO_COLOR: opts.noColor ? '1' : undefined, MODZ_LANG: opts.lang === 'en' ? undefined : 'tr' }
@@ -71,7 +75,7 @@ export function world(on: On, forkAnswers: ForkAnswer[], opts: { store?: Map<str
   on('turn.step', async function* ($, e) {
     return { turnId: e.turnId, index: e.index, answer: '', toolUses: [], stopReason: 'end_turn', usage: usage({ model: e.model, cache_creation_input_tokens: current.stepWrite }) }
   })
-  on('session.usage', () => ({ value: { startedAt: START, context: { window: 1000000, tokens: opts.live?.tokens }, rateLimits: [] } }))
+  on('session.usage', () => ({ value: { startedAt: START, context: { window: 1000000, tokens: opts.live?.tokens }, rateLimits: opts.limits?.rateLimits ?? [], cost: opts.limits?.cost } }))
   on('command.register', ($, e) => ({ value: { command: e.name } }))
   on('command.list', () => ({ value: (opts.commands ?? []).map(name => ({ name, description: '', source: 'plugin' as const })) }))
   on('turn.complete', ($, e) => ({ text: e.answer }))

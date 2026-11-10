@@ -18,6 +18,8 @@ export type HoldView = {
   warmUsd: number | null
   rate: string
   autoWarm: string
+  /** On a subscription, the limit share sending now takes ("≈2% of the weekly limit"); null without a basis. */
+  share: string | null
 }
 
 /** How many times cheaper a warm turn is than the cold write (list prices), or null without both prices. */

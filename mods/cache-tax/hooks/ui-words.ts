@@ -35,6 +35,9 @@ const EN = {
   aborted: 'the refresh was cut off',
   noText: 'the refresh got no reply',
   pingFailed: (why: string): string => `the refresh failed: ${why}`,
+  share: (share: string): string => `Sending now takes ${share} at this session’s pace`,
+  capReached: (pings: number): string => `${pings} refreshes, the most one window sends; /keepwarm starts another`,
+  tooLong: (tokens: number): string => `a refresh wrote ${tokens} output tokens, over the cap`,
   gone: (g: { read: string; wrote: string; usd: string }): string =>
     `the refresh read ${g.read} tokens and rewrote ${g.wrote} tokens (${g.usd}); the cache had already gone cold`,
 }
@@ -69,6 +72,9 @@ const TR: typeof EN = {
   aborted: 'tazeleme yarıda kesildi',
   noText: 'tazeleme yanıt almadı',
   pingFailed: (why: string): string => `tazeleme başarısız: ${why}`,
+  share: (share: string): string => `Şimdi göndermek bu oturumun hızıyla ${share} tutar`,
+  capReached: (pings: number): string => `${pings} tazeleme, bir pencerenin en fazlası; /keepwarm yenisini başlatır`,
+  tooLong: (tokens: number): string => `bir tazeleme ${tokens} çıktı tokenı yazdı, sınırın üstünde`,
   gone: (g: { read: string; wrote: string; usd: string }): string =>
     `tazeleme ${g.read} token okudu, ${g.wrote} token baştan yazdı (${g.usd}); önbellek zaten soğumuştu`,
 }

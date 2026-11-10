@@ -5,16 +5,22 @@ import type { Guard, Phrases, Times } from './phrases-en'
 export const TR: Phrases = {
   rateUnknown: 'önbellek yazma fiyatı',
   guard: (g: Guard): string =>
-    `${g.lead} Bu gönderim en fazla ${g.tokens} token'ı ${g.rate} fiyatla yeniden yazar = ${g.usd}` +
+    (g.share === null
+      ? `${g.lead} Bu gönderim en fazla ${g.tokens} token'ı ${g.rate} fiyatla yeniden yazar = ${g.usd}`
+      : `${g.lead} Bu gönderim en fazla ${g.tokens} token'ı yeniden yazar: ${g.share} (liste fiyatıyla ${g.usd})`) +
     (g.warm === null ? '' : ` (sıcak bir tur ${g.warm} olurdu)`) + '.',
+  share: (percent: string, isWeekly: boolean): string => `${isWeekly ? 'haftalık' : '5 saatlik'} limitten ≈%${percent}`,
+  noPrice: 'bu modelin fiyatı yok',
   coldLead: (ago: string): string => `önbellek ${ago} önce soğudu.`,
   switchLead: (from: string, to: string): string => `model değişti (${from} → ${to}): önbellek yeniden yazılacak.`,
   dropHeld: (usd: string): string => `cache-tax: mesajın bekletiliyor, kartta seç (soğuk önbellek, en fazla ${usd}).`,
   dropSwitched: (usd: string): string => `cache-tax: mesajın bekletiliyor, kartta seç (model değişti, en fazla ${usd}).`,
-  drop: (guard: string, auto: string): string =>
-    `cache-tax: ${guard} Ödemek için yeniden gönder; keepwarm sonra önbelleği ${auto} tutar. ` +
-    'Ya da /clear ile bir notla baştan başla.',
-  warn: (guard: string, auto: string): string => `${guard} Yine de gönderiliyor; keepwarm sonra önbelleği ${auto} tutar.`,
+  drop: (guard: string): string =>
+    `cache-tax: ${guard} Ödemek için yeniden gönder; sonra /keepwarm önbelleği sıcak tutar. Ya da /clear ile bir notla baştan başla.`,
+  warn: (guard: string): string => `${guard} Yine de gönderiliyor; buradan sonra /keepwarm önbelleği sıcak tutar.`,
+  paidCold: (g: { tokens: string; usd: string }): string =>
+    `${g.tokens} token önbelleğe baştan yazıldı (${g.usd}). Bugün yeniden ödenmesin diye /keepwarm önbelleği sıcak tutar.`,
+  cap: (pings: number, output: number): string => `; en fazla ${pings} tazeleme, ${output} çıktı tokenından fazlasını yazan tazeleme pencereyi kapatır`,
   paid: (g: { tokens: string; usd: string; auto: string }): string =>
     `${g.tokens} token önbelleğe baştan yazıldı (${g.usd}). Bugün yeniden ödenmesin diye önbellek ${g.auto} ` +
     'sıcak tutuluyor; durdurmak için /keepwarm off.',

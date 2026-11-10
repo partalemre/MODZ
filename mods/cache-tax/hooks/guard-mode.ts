@@ -6,10 +6,10 @@ export type GuardSetting = { guard: GuardMode; guardFloor: number }
 
 const isFloor = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n > 0
 
-/** The setting as stored: 'warn', 'refuse', or the floor in its place. Anything else reads as plain refuse. */
+/** The setting as stored: 'warn', 'refuse', or the floor in its place. Nothing stored, or anything else, reads as warn. */
 export function guardFromStore(value: unknown): GuardSetting {
-  if (value === 'warn') return { guard: 'warn', guardFloor: 0 }
-  return { guard: 'refuse', guardFloor: isFloor(value) ? value : 0 }
+  if (value === 'refuse') return { guard: 'refuse', guardFloor: 0 }
+  return isFloor(value) ? { guard: 'refuse', guardFloor: value } : { guard: 'warn', guardFloor: 0 }
 }
 
 export const storedGuard = (s: State): string | number => (s.guard === 'warn' ? 'warn' : s.guardFloor || 'refuse')

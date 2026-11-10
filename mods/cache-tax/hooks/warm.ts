@@ -2,11 +2,11 @@
 
 import type { ModelForkResult } from 'claude-code'
 
-import { MIN_MS, MIN_PING_MS, PING_AFTER_MS, PING_PROMPT, TTL_MS, disarm, isCold, pingUsd, priceOf } from './core'
+import { AUTO_WARM_MS, HOUR_MS, MAX_PINGS, MAX_PING_OUTPUT, MIN_MS, MIN_PING_MS, PING_AFTER_MS, PING_PROMPT, TTL_MS, disarm, isCold, pingUsd, priceOf } from './core'
 import type { State } from './core'
 import { fmtTok, fmtUsd } from './fmt'
 import { bandWords } from './ui-words'
-import { say, statusText } from './words'
+import { paidText, say, statusText } from './words'
 
 const KEY_DEADLINE = 'deadline'
 const KEY_EVERY = 'every'
@@ -24,6 +24,7 @@ export type Io = {
   every: (ms: number, fn: () => void) => { cancel: () => void }
   fork: (prompt: string) => Promise<ModelForkResult | null>
   get: (key: string) => Promise<unknown>
+  keys: () => Promise<string[]>
   set: (key: string, value: unknown) => Promise<unknown>
   del: (key: string) => Promise<unknown>
   redraw: () => void
@@ -58,12 +59,22 @@ export function updateStatus(io: Io, s: State, now: number) {
   io.status(text)
 }
 
-/** Clears this session's own dead window and the bare keys a store written before 2.1.1 still holds. Other sessions' keys are never touched: a read followed by a delete cannot be made atomic against their renewal. */
+/** Another session's window this long dead is gone for good: nothing restores a lapsed window. */
+const STALE_MS = 24 * HOUR_MS
+
+/**
+ * Clears dead windows: this session's own and the bare keys a store written before 2.1.1 still holds, and other
+ * sessions' a day after they lapsed. A read followed by a delete is not atomic against another session's renewal;
+ * the day's margin means only a session renewing a window a day dead could lose its stored copy (not its timer).
+ */
 export async function prune(io: Io, s: State, now: number) {
-  for (const key of [KEY_DEADLINE, deadlineKey(s)]) {
+  const own = new Set([KEY_DEADLINE, deadlineKey(s)])
+  for (const key of await io.keys()) {
+    if (key !== KEY_DEADLINE && !key.startsWith(`${KEY_DEADLINE}:`)) continue
     const deadline = await io.get(key)
-    if (deadline === undefined) continue
-    if (typeof deadline === 'number' && deadline > now) continue
+    // A zero or a non-number is no window at all.
+    const lapsedBy = typeof deadline === 'number' && deadline > 0 ? now - deadline : Number.POSITIVE_INFINITY
+    if (lapsedBy < (own.has(key) ? 0 : STALE_MS)) continue
     await io.del(key)
     await io.del(KEY_EVERY + key.slice(KEY_DEADLINE.length))
   }
@@ -144,6 +155,8 @@ async function ping(io: Io, s: State) {
   if (now - s.lastRequestAt < s.every - MIN_DELAY_MS) return arm(io, s)
   // A host that slept past a retry's slot must not send it inside the last minute.
   if (s.retries && now >= s.lastRequestAt + TTL_MS - MIN_PING_MS) return stop(io, s, bandWords().apiError(''))
+  if (s.pings >= MAX_PINGS) return stop(io, s, bandWords().capReached(MAX_PINGS))
+  s.pings++
   const sentAt = s.lastRequestAt
   let reply: ForkReply
   try {
@@ -165,8 +178,21 @@ async function ping(io: Io, s: State) {
   if (!warm) {
     return stop(io, s, bandWords().gone({ read: fmtTok(u.cache_read_input_tokens), wrote: fmtTok(u.cache_creation_input_tokens), usd: fmtUsd(usd) }))
   }
+  if (u.output_tokens > MAX_PING_OUTPUT) return stop(io, s, bandWords().tooLong(u.output_tokens))
   s.lastRequestAt = now
   await arm(io, s)
+}
+
+/** A full rewrite paid: scored, and with the card's pay button behind it, kept warm for three hours. */
+export async function scoreMiss(io: Io, s: State, { now, write }: { now: number; write: number }) {
+  const price = priceOf(s.lastModel, s.ctx)
+  const usd = price ? write * price[1] / 1e6 : null
+  s.misses.push({ at: now, tokens: write, usd })
+  // With always on, its own window, which the turn opens next, governs renewal, shorter than three hours or not.
+  if (s.always || s.deadline >= now + AUTO_WARM_MS) return
+  // Keepwarm spends on the person's behalf, so only their own ask opens it: the card's pay button, or /keepwarm.
+  if (s.isWarmAfterPay) await startWindow(io, s, { windowMs: AUTO_WARM_MS, every: s.every })
+  io.log(paidText(s, { tokens: write, usd, isWarm: s.isWarmAfterPay }))
 }
 
 export async function startWindow(io: Io, s: State, span: { windowMs: number; every: number }) {
@@ -177,6 +203,7 @@ export async function startWindow(io: Io, s: State, span: { windowMs: number; ev
   else await io.set(everyKey(s), every)
   s.deadline = now + windowMs
   s.stopped = null
+  s.pings = 0
   await io.set(deadlineKey(s), s.deadline)
   await arm(io, s)
 }

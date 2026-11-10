@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MODZ: 22 mods for Claude Code</title>
-<meta name="description" content="22 mods for Claude Code. One panel. See every move Claude makes: agents, files, plans, tests and risky commands, live, beside the chat.">
-<meta property="og:title" content="MODZ: 22 mods for Claude Code">
-<meta property="og:description" content="22 mods for Claude Code. One panel.">
+<title>MODZ: 23 mods for Claude Code</title>
+<meta name="description" content="23 mods for Claude Code. One panel. See every move Claude makes: agents, files, plans, tests and risky commands, live, beside the chat.">
+<meta property="og:title" content="MODZ: 23 mods for Claude Code">
+<meta property="og:description" content="23 mods for Claude Code. One panel.">
 <meta property="og:image" content="https://partalemre.github.io/MODZ/img/poster.jpg?v=4">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="img/icon.svg" type="image/svg+xml">
@@ -180,25 +180,37 @@
       <div class="panel" role="tabpanel" id="p-code" aria-labelledby="t-code">
         <div class="row">
 <pre><span class="chev" aria-hidden="true">› </span>/plugin marketplace add partalemre/MODZ
-<span class="chev" aria-hidden="true">› </span>/plugin install modz@modz</pre>
-          <button type="button" class="copy" data-copy="/plugin marketplace add partalemre/MODZ&#10;/plugin install modz@modz">Copy</button>
+<span class="chev" aria-hidden="true">› </span>/plugin install modz@modz
+<span class="chev" aria-hidden="true">› </span>/plugin install savvy-progress@modz
+<span class="chev" aria-hidden="true">› </span>/plugin install plan-steps@modz
+<span class="chev" aria-hidden="true">› </span>/plugin install filetree@modz
+<span class="chev" aria-hidden="true">› </span>/plugin install blast-radius@modz
+<span class="chev" aria-hidden="true">› </span>/plugin install secret-guard@modz
+<span class="chev" aria-hidden="true">› </span>/plugin install checkpoint@modz
+<span class="chev" aria-hidden="true">› </span>/plugin install hud-pro@modz</pre>
+          <button type="button" class="copy" data-copy="/plugin marketplace add partalemre/MODZ&#10;/plugin install modz@modz&#10;/plugin install savvy-progress@modz&#10;/plugin install plan-steps@modz&#10;/plugin install filetree@modz&#10;/plugin install blast-radius@modz&#10;/plugin install secret-guard@modz&#10;/plugin install checkpoint@modz&#10;/plugin install hud-pro@modz">Copy</button>
         </div>
-        <p class="note">Then add any mod by name: <code>/plugin install savvy-progress@modz</code>. <a href="#mods">See the mods</a>.</p>
+        <p class="note">That is the core set. The other 15 mods are optional extras: add any by name, such as <code>/plugin install test-badge@modz</code>. <a href="#mods">See the mods</a>.</p>
       </div>
       <div class="panel" role="tabpanel" id="p-term" aria-labelledby="t-term" hidden>
         <div class="row">
-<pre><span class="c"># every mod, in one go</span>
+<pre><span class="c"># the core set</span>
 claude plugin marketplace add partalemre/MODZ
-for m in modz savvy-progress savvy-flow filetree \
-  plan-steps projects handoff transceiver blast-radius \
-  secret-guard checkpoint test-badge pr-card replay-theater \
-  session-budget cache-tax hud-pro effort-router \
-  done-ping reflect-mod skins wrapped terminal-browser; do
+for m in modz savvy-progress plan-steps filetree \
+  blast-radius secret-guard checkpoint hud-pro; do
+  claude plugin install "$m@modz"
+done
+
+<span class="c"># optional extras</span>
+for m in savvy-flow projects handoff transceiver \
+  test-badge pr-card replay-theater session-budget \
+  cache-tax effort-router done-ping reflect-mod \
+  skins wrapped terminal-browser; do
   claude plugin install "$m@modz"
 done</pre>
-          <button type="button" class="copy" data-copy="claude plugin marketplace add partalemre/MODZ&#10;for m in modz savvy-progress savvy-flow filetree plan-steps projects handoff transceiver blast-radius secret-guard checkpoint test-badge pr-card replay-theater session-budget cache-tax hud-pro effort-router done-ping reflect-mod skins wrapped terminal-browser; do&#10;  claude plugin install &quot;$m@modz&quot;&#10;done">Copy</button>
+          <button type="button" class="copy" data-copy="claude plugin marketplace add partalemre/MODZ&#10;for m in modz savvy-progress plan-steps filetree blast-radius secret-guard checkpoint hud-pro; do&#10;  claude plugin install &quot;$m@modz&quot;&#10;done&#10;for m in savvy-flow projects handoff transceiver test-badge pr-card replay-theater session-budget cache-tax effort-router done-ping reflect-mod skins wrapped terminal-browser; do&#10;  claude plugin install &quot;$m@modz&quot;&#10;done">Copy</button>
         </div>
-        <p class="note">Start a new session afterwards. The panel opens on the right.</p>
+        <p class="note">Start a new session afterwards. The panel opens on the right. Skip the second loop to keep only the core set.</p>
       </div>
       <div class="panel" role="tabpanel" id="p-agent" aria-labelledby="t-agent" hidden>
         <div class="row">
@@ -240,14 +252,14 @@ done</pre>
     <p class="sub">You see what would be lost before anything is.</p>
     <figure>
       <img src="img/hold.jpg" width="1400" height="1008" loading="lazy" alt="A held git reset --hard origin/main. The card says it would throw away 14 files and 312 uncommitted lines, lists them, and offers Run anyway and Keep my work">
-      <figcaption>rm -rf, git reset --hard, git clean, force pushes and migrations are held. The safe choice has the focus.</figcaption>
+      <figcaption>rm -rf, git reset --hard, git clean, force pushes and migrations are held. The safe choice has the focus. A command that would lose nothing just runs.</figcaption>
     </figure>
   </section>
 
   <section class="scene" aria-labelledby="s-team">
-    <p class="eyebrow">Transceiver · Beta</p>
+    <p class="eyebrow">Transceiver · Beta · Extra</p>
     <h2 id="s-team">Your team, inside Claude.</h2>
-    <p class="sub">Chat with teammates. Let your agents ask theirs. Zero tokens.</p>
+    <p class="sub">Link your own computers first: chat, and let one agent ask the other. Zero tokens. Team rooms across accounts are experimental.</p>
     <figure>
       <img src="img/team.jpg" width="1400" height="692" loading="lazy" alt="Two Claude Code windows, Maya's and Leo's, in the same project room. Leo's agent asked for a diff and Maya's machine answered at zero tokens in 0.4 seconds">
       <figcaption>Only repo collaborators can ask. Secrets never leave your machine. Rooms are private claude.ai artifacts, with no server of their own.</figcaption>
@@ -256,49 +268,49 @@ done</pre>
 
   <section id="mods" class="mods" aria-labelledby="s-mods">
     <h2 id="s-mods">The mods</h2>
-    <p>Install the panel, then any of these. Click a name to copy its install command. Most use no model tokens at all.</p>
+    <p>Eight are the core set, marked Core; the rest are optional extras. Click a name to copy its install command. Most use no model tokens at all.</p>
     <div class="groups">
       <div>
         <h3>Work</h3>
         <dl>
-          <dt><button type="button" data-copy="/plugin install modz@modz" aria-label="Copy the install command for modz">modz<span class="at" aria-hidden="true">copy install</span></button></dt><dd>The panel: one live line per mod, one click to each pane.</dd>
-          <dt><button type="button" data-copy="/plugin install savvy-progress@modz" aria-label="Copy the install command for savvy-progress">savvy-progress<span class="at" aria-hidden="true">copy install</span></button></dt><dd>The Agents pane and progress band: each subagent's progress, cost and time.</dd>
+          <dt><button type="button" data-copy="/plugin install modz@modz" aria-label="Copy the install command for modz">modz<span class="at" aria-hidden="true">copy install</span></button></dt><dd><strong>Core.</strong> The panel: one live line per mod, one click to each pane.</dd>
+          <dt><button type="button" data-copy="/plugin install savvy-progress@modz" aria-label="Copy the install command for savvy-progress">savvy-progress<span class="at" aria-hidden="true">copy install</span></button></dt><dd><strong>Core.</strong> The Agents pane and progress band: each subagent's progress, cost and time.</dd>
           <dt><button type="button" data-copy="/plugin install savvy-flow@modz" aria-label="Copy the install command for savvy-flow">savvy-flow<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Orchestrated delivery: the session model plans, tiered worker agents build.</dd>
-          <dt><button type="button" data-copy="/plugin install filetree@modz" aria-label="Copy the install command for filetree">filetree<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Files Claude touched this turn, what it is doing now, git status.</dd>
-          <dt><button type="button" data-copy="/plugin install plan-steps@modz" aria-label="Copy the install command for plan-steps">plan-steps<span class="at" aria-hidden="true">copy install</span></button></dt><dd>The plan's steps as Claude works through them.</dd>
+          <dt><button type="button" data-copy="/plugin install filetree@modz" aria-label="Copy the install command for filetree">filetree<span class="at" aria-hidden="true">copy install</span></button></dt><dd><strong>Core.</strong> Files Claude touched this turn, what it is doing now, git status. Idle until opened.</dd>
+          <dt><button type="button" data-copy="/plugin install plan-steps@modz" aria-label="Copy the install command for plan-steps">plan-steps<span class="at" aria-hidden="true">copy install</span></button></dt><dd><strong>Core.</strong> The plan's steps as Claude works through them.</dd>
           <dt><button type="button" data-copy="/plugin install projects@modz" aria-label="Copy the install command for projects">projects<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Every project in one place: percent, plans, tokens and agents.</dd>
-          <dt><button type="button" data-copy="/plugin install handoff@modz" aria-label="Copy the install command for handoff">handoff<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A handoff note before the context fills, handed to your next fresh chat.</dd>
-          <dt><button type="button" data-copy="/plugin install transceiver@modz" aria-label="Copy the install command for transceiver">transceiver<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Team chat, and zero-token agent questions between teammates. Beta.</dd>
+          <dt><button type="button" data-copy="/plugin install handoff@modz" aria-label="Copy the install command for handoff">handoff<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A handoff note before the context fills; your next chat in the repo is offered it.</dd>
+          <dt><button type="button" data-copy="/plugin install transceiver@modz" aria-label="Copy the install command for transceiver">transceiver<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Chat and zero-token agent questions between your own computers; team rooms across accounts are experimental. Beta.</dd>
         </dl>
       </div>
       <div>
         <h3>Safety</h3>
         <dl>
-          <dt><button type="button" data-copy="/plugin install blast-radius@modz" aria-label="Copy the install command for blast-radius">blast-radius<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Holds destructive shell commands and shows what they would change.</dd>
-          <dt><button type="button" data-copy="/plugin install secret-guard@modz" aria-label="Copy the install command for secret-guard">secret-guard<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Stops keys and tokens in writes, edits, git add and commits.</dd>
-          <dt><button type="button" data-copy="/plugin install checkpoint@modz" aria-label="Copy the install command for checkpoint">checkpoint<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A silent git snapshot before each turn's first write. Undo a turn.</dd>
-          <dt><button type="button" data-copy="/plugin install test-badge@modz" aria-label="Copy the install command for test-badge">test-badge<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Runs tests and lint after edits and shows the result.</dd>
-          <dt><button type="button" data-copy="/plugin install pr-card@modz" aria-label="Copy the install command for pr-card">pr-card<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A card in the conversation for the PR Claude opens: CI, review, mergeability, files.</dd>
-          <dt><button type="button" data-copy="/plugin install replay-theater@modz" aria-label="Copy the install command for replay-theater">replay-theater<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Replays the last turn's edits step by step, and earlier turns and past sessions.</dd>
+          <dt><button type="button" data-copy="/plugin install blast-radius@modz" aria-label="Copy the install command for blast-radius">blast-radius<span class="at" aria-hidden="true">copy install</span></button></dt><dd><strong>Core.</strong> Holds shell commands that would lose work and shows what they would lose; the rest run.</dd>
+          <dt><button type="button" data-copy="/plugin install secret-guard@modz" aria-label="Copy the install command for secret-guard">secret-guard<span class="at" aria-hidden="true">copy install</span></button></dt><dd><strong>Core.</strong> Stops keys and tokens in writes, edits, Bash-written text, git add and commits.</dd>
+          <dt><button type="button" data-copy="/plugin install checkpoint@modz" aria-label="Copy the install command for checkpoint">checkpoint<span class="at" aria-hidden="true">copy install</span></button></dt><dd><strong>Core.</strong> A silent git snapshot before each turn's first write, per session and worktree. Undo a turn.</dd>
+          <dt><button type="button" data-copy="/plugin install test-badge@modz" aria-label="Copy the install command for test-badge">test-badge<span class="at" aria-hidden="true">copy install</span></button></dt><dd>After you allow it once per folder, runs tests and lint in the edited package and shows the result.</dd>
+          <dt><button type="button" data-copy="/plugin install pr-card@modz" aria-label="Copy the install command for pr-card">pr-card<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A card in the conversation for the PR Claude opens: checks, review and merge in the terminal, the biggest changed files on the desktop.</dd>
+          <dt><button type="button" data-copy="/plugin install replay-theater@modz" aria-label="Copy the install command for replay-theater">replay-theater<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Replays the last turn's edits step by step, and earlier turns and past sessions. Opens from /replay.</dd>
         </dl>
       </div>
       <div>
         <h3>Meter</h3>
         <dl>
           <dt><button type="button" data-copy="/plugin install session-budget@modz" aria-label="Copy the install command for session-budget">session-budget<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A spend budget per session, with a stop at 100%.</dd>
-          <dt><button type="button" data-copy="/plugin install cache-tax@modz" aria-label="Copy the install command for cache-tax">cache-tax<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Keeps the prompt cache warm through breaks and prices a cold send.</dd>
-          <dt><button type="button" data-copy="/plugin install hud-pro@modz" aria-label="Copy the install command for hud-pro">hud-pro<span class="at" aria-hidden="true">copy install</span></button></dt><dd>One line: the 5-hour and 7-day limits, context and cost.</dd>
+          <dt><button type="button" data-copy="/plugin install cache-tax@modz" aria-label="Copy the install command for cache-tax">cache-tax<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Prices a cold send and can keep the prompt cache warm when you ask.</dd>
+          <dt><button type="button" data-copy="/plugin install hud-pro@modz" aria-label="Copy the install command for hud-pro">hud-pro<span class="at" aria-hidden="true">copy install</span></button></dt><dd><strong>Core.</strong> One line: the 5-hour and 7-day limits, context and cost.</dd>
           <dt><button type="button" data-copy="/plugin install effort-router@modz" aria-label="Copy the install command for effort-router">effort-router<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Each turn's effort and model; light prompts can go at low effort.</dd>
         </dl>
       </div>
       <div>
         <h3>Comfort</h3>
         <dl>
-          <dt><button type="button" data-copy="/plugin install done-ping@modz" aria-label="Copy the install command for done-ping">done-ping<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A notification when a long turn ends or Claude waits on you.</dd>
+          <dt><button type="button" data-copy="/plugin install done-ping@modz" aria-label="Copy the install command for done-ping">done-ping<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A notification when a long turn ends or Claude waits on you; quiet on the desktop unless something failed.</dd>
           <dt><button type="button" data-copy="/plugin install reflect-mod@modz" aria-label="Copy the install command for reflect-mod">reflect-mod<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Saves corrections worth keeping to your CLAUDE.md.</dd>
-          <dt><button type="button" data-copy="/plugin install skins@modz" aria-label="Copy the install command for skins">skins<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Themes for the transcript, switched live with /skin, and living ASCII scenes above the prompt.</dd>
+          <dt><button type="button" data-copy="/plugin install skins@modz" aria-label="Copy the install command for skins">skins<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Themes for the transcript, switched live with /skin, and living ASCII scenes above the prompt. Never cuts output.</dd>
           <dt><button type="button" data-copy="/plugin install wrapped@modz" aria-label="Copy the install command for wrapped">wrapped<span class="at" aria-hidden="true">copy install</span></button></dt><dd>Your year with Claude Code as a story and a video.</dd>
-          <dt><button type="button" data-copy="/plugin install terminal-browser@modz" aria-label="Copy the install command for terminal-browser">terminal-browser<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A browser inside the terminal that the agent can drive.</dd>
+          <dt><button type="button" data-copy="/plugin install terminal-browser@modz" aria-label="Copy the install command for terminal-browser">terminal-browser<span class="at" aria-hidden="true">copy install</span></button></dt><dd>A browser inside the terminal that the agent can drive. Terminal only; needs the terminal-browser CLI.</dd>
         </dl>
       </div>
     </div>
@@ -318,7 +330,7 @@ done</pre>
     <ol>
       <li>Check that <code class="inline">claude --version</code> is 2.1.295 or later. If not, ask the person to update.</li>
       <li>Run <code class="inline">claude plugin marketplace add partalemre/MODZ</code>.</li>
-      <li>Run <code class="inline">claude plugin install modz@modz</code>, then <code class="inline">claude plugin install &lt;name&gt;@modz</code> for each mod the person wants.</li>
+      <li>Install the core set (modz, savvy-progress, plan-steps, filetree, blast-radius, secret-guard, checkpoint, hud-pro), each as <code class="inline">claude plugin install &lt;name&gt;@modz</code>. Add any of the 15 extras the person wants.</li>
       <li>Merge optional settings into the <code class="inline">env</code> block of <code class="inline">~/.claude/settings.json</code>, keeping what is there.</li>
       <li>Check that <code class="inline">claude plugin list</code> shows each mod enabled, then ask the person to start a new session.</li>
     </ol>
@@ -330,7 +342,7 @@ done</pre>
 
   <section class="end" aria-labelledby="s-end">
     <picture><source media="(prefers-color-scheme: light)" srcset="img/hero-light.svg"><img src="img/hero-dark.svg" alt="" width="380" style="width:min(380px,70vw);height:auto;margin:0 auto;display:block"></picture>
-    <h2 id="s-end">22 mods for Claude Code. <span style="color: var(--lo)">One panel.</span></h2>
+    <h2 id="s-end">23 mods for Claude Code. <span style="color: var(--lo)">One panel.</span></h2>
     <div class="cmd" role="group" aria-label="Install command">
       <code><span class="chev" aria-hidden="true">›</span> /plugin marketplace add partalemre/MODZ</code>
       <button type="button" class="copy" data-copy="/plugin marketplace add partalemre/MODZ">Copy</button>

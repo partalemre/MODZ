@@ -131,7 +131,8 @@ export type Draft = {
 
 export type Panel = {
   isCompact: boolean
-  isDoneCollapsed: boolean
+  /** The person's own press on the finished list; unset, it is open only once nothing runs. */
+  isDoneOpen?: boolean
   /** The agent whose work history is open. */
   selected?: string
   /** The agent whose task text is shown whole rather than cut short. */

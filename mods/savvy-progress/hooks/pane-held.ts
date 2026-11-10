@@ -1,3 +1,5 @@
-// Whether this engine has opened, closed or seen the İlerleme pane itself (band.tsx, pane.tsx). Until it has, a render of
-// the pane that the engine's list lacks is the desktop drawing a tab it kept from before the engine restarted.
-export const paneHeld = { isHeld: false }
+import { paneKept } from './kit/pane-keep'
+
+// What this engine knows of the Agents pane (band.tsx, pane.tsx; kit/pane-keep.tsx): whether it opened, closed or saw
+// it, and whether the pane still waits for a good draw.
+export const paneHeld = paneKept()

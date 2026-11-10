@@ -4,7 +4,7 @@ import type { EngineInterface, On } from 'claude-code'
 import { plansOf, STORE_KEY, withoutPlan } from './carry'
 import { finishCard } from './finish-card'
 import type { FinishActions } from './finish-card'
-import { finishCall, heldCount, heldKey, nextStep, noticeOf } from './finish'
+import { finishCall, heldCount, heldKey, isAgentLive, nextStep, noticeOf, notifiedIds, shellBudget } from './finish'
 import { resolveLight } from './kit/tokens'
 import { resolvePlan } from './match'
 import type { Plan } from './match'
@@ -79,7 +79,26 @@ async function refreshLook($: EngineInterface): Promise<void> {
   }
 }
 
+// Work the turn left running behind it. The main loop wakes again when it reports, so an answer given meanwhile
+// has left nothing unfinished yet: no card and no prompt to go on until it is over. `stopTasks`: what the engine
+// counted in flight as the turn stopped; `shells`: background commands by task id, each until its time runs out.
+const background = { stopTasks: 0, shells: new Map<string, number>() }
+
+async function hasBackgroundWork($: EngineInterface): Promise<boolean> {
+  if (background.stopTasks > 0) return true
+  const now = await $.clock.now()
+  if ([...background.shells.values()].some(until => until > now)) return true
+  try {
+    return (await $.agent.list()).some(agent => isAgentLive(agent.status))
+  } catch (error) {
+    $.ui.log(`plan-steps: the agents could not be listed (${reason(error)})`, { to: 'debug' })
+
+    return false
+  }
+}
+
 async function guard($: EngineInterface, ctx: FinishCtx): Promise<void> {
+  if (await hasBackgroundWork($)) return
   const plan = await currentPlan($)
   const facts = { plan, isTouched: ctx.touchedAt() >= turn.startedAt, dismissed: await read($, dismissedAtom), held: await read($, heldAtom), isStrict: ctx.isStrict }
   const call = finishCall(facts)
@@ -129,7 +148,25 @@ export function wireFinish(on: On, ctx: FinishCtx): void {
   // The turn a prompt starts; the card goes with it.
   on('turn.start', async ($, e, next) => {
     turn.startedAt = await $.clock.now()
+    background.stopTasks = 0
+    // A background command's notification starts a turn of its own: that command is over.
+    for (const id of notifiedIds(e.text)) background.shells.delete(id)
     await clearNotice($)
+
+    return next(e)
+  }).catch(($, e, next) => next(e))
+
+  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
+    const ran = await next(e)
+    const id = (ran.result as { backgroundTaskId?: unknown } | undefined)?.backgroundTaskId
+    if (typeof id === 'string') background.shells.set(id, (await $.clock.now()) + shellBudget((e as { timeout?: unknown }).timeout))
+
+    return ran
+  }).catch(($, e, next) => next(e))
+
+  // What the engine itself counts in flight as the main loop stops: subagents, background commands, monitors.
+  on('classic.Stop', async ($, e, next) => {
+    background.stopTasks = e.background_tasks?.length ?? 0
 
     return next(e)
   }).catch(($, e, next) => next(e))

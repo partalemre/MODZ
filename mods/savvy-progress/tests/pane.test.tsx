@@ -68,6 +68,9 @@ for (const surface of SURFACES) {
     await finish($, 'a1')
     await finish($, 'a2', 'aborted')
     const ui = await mount($)
+    // Folded while another agent still runs; the person opens it.
+    expect((await ui.find({ key: 'done' }))?.props?.label).toBe(surface === 'terminal' ? '▸ Bitti · 2' : 'Göster')
+    await ui.press({ key: 'done' })
     expect(await text(ui)).toContain('toplam 1:01')
     expect(await text(ui)).toContain('durduruldu')
     expect(await hasHead(ui, 'Bitti · 2') || (await ui.find({ key: 'done' }))?.props?.label === '▾ Bitti · 2').toBe(true)
@@ -110,6 +113,7 @@ for (const surface of SURFACES) {
     await tool($, { tool: 'Read', file_path: '/w/site/src/a.ts', agentId: 'a3' })
     await finish($, 'a3')
     const ui = await mount($)
+    await ui.press({ key: 'done' })
     expect(await text(ui)).not.toContain('İş geçmişi')
     expect(await isShownOpen(ui, false, 'Build the landing page')).toBe(true)
 
@@ -135,6 +139,7 @@ for (const surface of SURFACES) {
     await tool($, { tool: 'mcp__savvy-progress__step', done: 3, total: 5, agentId: 'a2' })
     await finish($, 'a1')
     const ui = await mount($)
+    await ui.press({ key: 'done' })
     const all = surface === 'terminal' ? await text(ui) : await svgOf(ui)
     expect(all).toContain('%100')
     expect(all).toContain('%60')
@@ -159,6 +164,7 @@ for (const surface of SURFACES) {
     await tool($, { tool: 'Read', file_path: '/w/site/src/a.ts', agentId: 'a3' })
     await finish($, 'a3')
     const pane = await mount($)
+    await pane.press({ key: 'done' })
     await pane.press({ key: 'open-a3' })
     const open = await text(pane)
     expect(open).toContain('düzenleme 1')

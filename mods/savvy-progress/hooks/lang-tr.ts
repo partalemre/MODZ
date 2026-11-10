@@ -32,6 +32,7 @@ export const tr: Strings = {
   planned: 'Planlı',
   emptyTitle: 'Henüz ajan yok',
   paneFailed: 'Panel çizilemedi, düz liste gösteriliyor.',
+  moreAgents: n => `+${n} ajan daha`,
   empty: 'Bir görev ver, bir yengeç işe koyulsun: durumu, ilerlemesi ve maliyeti burada canlı görünür.',
   round: 'tur',
   failed: 'hata',

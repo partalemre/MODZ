@@ -149,6 +149,11 @@ export function rowsOf(cards: Record<string, HubCard>, presence: (mod: string) =
   return shown.map(({ entry, card }, i) => ({ entry, card, hotkey: HOTKEYS[i] ?? null }))
 }
 
+// The rows with the one whose mod did not put its pane up saying so, in the failing tone, in place of its own line.
+export function withUnanswered(rows: HubRow[], pane: string | null, detail: string): HubRow[] {
+  return rows.map(row => (row.entry.pane === pane ? { ...row, card: { pane: row.entry.pane, detail, tone: 'bad', at: 0 } } : row))
+}
+
 // The rows the person hid, offered back while they customize the hub.
 export function hiddenRowsOf(cards: Record<string, HubCard>, presence: (mod: string) => Presence, layout: HubLayout): HubRow[] {
   return candidates(cards, presence)

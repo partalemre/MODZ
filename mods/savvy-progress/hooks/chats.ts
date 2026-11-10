@@ -131,3 +131,14 @@ export const waitingOf = (chats: readonly OtherChat[]): OtherChat[] => chats.fil
 export const crewedOf = (chats: readonly OtherChat[]): OtherChat[] => chats.filter(chat => (chat.agents?.length ?? 0) > 0)
 
 export const quietOf = (chats: readonly OtherChat[]): OtherChat[] => chats.filter(chat => chat.state !== 'waiting')
+
+const CHATS_MAX = 8
+const CHAT_AGENTS_MAX = 6
+
+/** The chats the pane lists at most, and the agents under each: a crowded machine costs a "+N more", never the pane
+ * (the engine draws no tree past its size). */
+export function listedChats(chats: readonly OtherChat[]): { chats: OtherChat[]; more: number } {
+  const listed = chats.slice(0, CHATS_MAX).map(chat => (chat.agents && chat.agents.length > CHAT_AGENTS_MAX ? { ...chat, agents: chat.agents.slice(0, CHAT_AGENTS_MAX) } : chat))
+
+  return { chats: listed, more: chats.length - listed.length }
+}

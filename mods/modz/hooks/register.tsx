@@ -6,14 +6,14 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { HubCard } from '../types'
-import { autoUpdateSettings, installOf } from './auto-update'
 import type { Drawing } from './draw'
-import { installedMarketRoot, linkCheck, loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
 import { footerTree, isHubShown } from './footer'
-import { cardOf, focusOf, hiddenRowsOf, HOLD_PANE, MODS_PANE, modsTitle, presenceOf, rowsOf } from './hub'
+import { cardOf, focusOf, hiddenRowsOf, HOLD_PANE, MODS_PANE, modsTitle, presenceOf, rowsOf, withUnanswered } from './hub'
 import { hubTree } from './hub-pane'
-import type { HubActions } from './hub-pane'
+import type { HubActions, HubView } from './hub-pane'
+import { keepMarket, keepUpdated, marketOf, marketSoon } from './market'
+import type { Disk } from './market'
 import { wireLanguageKeeper } from './language-keeper'
 import { EMPTY_LAYOUT, layoutOf, moveUp, setHidden } from './layout'
 import type { HubLayout } from './layout'
@@ -36,9 +36,13 @@ const cardsAtom = atom({ plugin: 'modz', key: 'cards' } as const, {} as Record<s
 // The person's arrangement, mirrored from `$.store` (kept across sessions) so a change redraws the hub.
 const layoutAtom = atom({ plugin: 'modz', key: 'layout' } as const, EMPTY_LAYOUT)
 const editingAtom = atom({ plugin: 'modz', key: 'isEditing' } as const, false)
+// The pane of a row whose mod did not put it up when asked (openPane's watchdog); the row says so until pressed again.
+const unansweredAtom = atom({ plugin: 'modz', key: 'unanswered' } as const, null as string | null)
 const ON = { plugin: 'modz', key: 'isOn' } as const
 const LAYOUT_KEY = 'layout'
 const DEFAULT_COLUMNS = 80
+// How long a mod has to put its pane up after a row press before the hub says it did not answer.
+const ANSWER_MS = 1_500
 
 async function themeNow($: EngineInterface): Promise<Theme> {
   const rows = await $.config.list().catch(() => [])
@@ -46,65 +50,19 @@ async function themeNow($: EngineInterface): Promise<Theme> {
   return themeOf(rows.find(row => row.key === 'theme')?.value)
 }
 
-async function enabledPlugins($: EngineInterface): Promise<Record<string, unknown>> {
-  try {
-    const value = (await $.settings.read()).enabledPlugins
-
-    return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
-  } catch {
-    $.ui.log('modz: settings could not be read; enabled state unknown', { to: 'debug' })
-
-    return {}
-  }
-}
-
-// The home folder, with '/' separators. Windows sets USERPROFILE and no HOME; each name is spelled out, as the
-// engine admits an env read by a literal name only.
-async function homeOf($: EngineInterface): Promise<string | undefined> {
-  const home = (await $.env.get('HOME').catch(() => undefined)) || (await $.env.get('USERPROFILE').catch(() => undefined))
-
-  return home ? home.replaceAll('\\', '/').replace(/\/+$/, '') : undefined
-}
-
-// Mods are enabled by a skills-folder symlink (~/.claude/skills, or the project's
-// .claude/skills in a cloud session), which settings never mention.
-async function skillLinks($: EngineInterface): Promise<(name: string) => Promise<boolean>> {
-  const home = await homeOf($)
-  const cwd = await $.session.cwd().catch(() => undefined)
-
-  return linkCheck({ roots: [home, cwd], exists: path => $.fs.exists(path) })
-}
-
-// A catalog that cannot be read is an empty one: the hub still draws (the engine closes a pane whose drawing
-// throws, and the person would lose the way back to every other pane).
-// Every card a mod writes redraws the hub; the catalog (some twenty files, settings and links) is read again only
-// after MARKET_TTL_MS, so a busy session does not reread it on each redraw. The catalog pane always reads it fresh.
-const MARKET_TTL_MS = 15_000
-let marketKept: { at: number; market: Promise<Market> } | null = null
-
-function marketSoon($: EngineInterface): Promise<Market> {
-  const now = Date.now()
-  if (marketKept === null || now - marketKept.at > MARKET_TTL_MS) marketKept = { at: now, market: marketOf($) }
-
-  return marketKept.market
-}
-
-async function marketOf($: EngineInterface): Promise<Market> {
-  try {
-    const stat = await $.fs.stat($.plugin.root, { resolve: true }).catch(() => undefined)
-    const real = stat?.realPath ?? $.plugin.root
-    const install = installOf(real)
-    const root = install === undefined
-      ? marketRoot(real)
-      : installedMarketRoot(install, await textOf($, `${install.pluginsDir}/known_marketplaces.json`).catch(() => undefined))
-
-    return await loadCatalog({ read: path => $.fs.read(path), root, enabledPlugins: await enabledPlugins($), hasLink: await skillLinks($) })
-  } catch (cause) {
-    $.ui.log(`modz: the catalog could not be read: ${String(cause)}`, { to: 'debug' })
-
-    return { name: '', mods: [] }
-  }
-}
+// What market.ts reads the catalog and the settings through; built here, where `$` is. Each env name is spelled
+// out, as the engine admits an env read by a literal name only.
+const diskOf = ($: EngineInterface): Disk => ({
+  root: $.plugin.root,
+  env: { home: () => $.env.get('HOME'), userProfile: () => $.env.get('USERPROFILE'), configDir: () => $.env.get('CLAUDE_CONFIG_DIR') },
+  cwd: () => $.session.cwd(),
+  settings: () => $.settings.read(),
+  realPath: async path => (await $.fs.stat(path, { resolve: true })).realPath,
+  read: path => $.fs.read(path),
+  exists: path => $.fs.exists(path),
+  write: (path, text) => $.fs.write(path, text),
+  log: text => $.ui.log(text, { to: 'debug' }),
+})
 
 // The hub's and the catalog's drawings, kept per what they show (stable.ts); forgotten when the pane opens again.
 const hubDrawings = stableDrawings<Drawing>()
@@ -164,6 +122,9 @@ async function openPane($: EngineInterface, pane: string): Promise<void> {
 
     return
   }
+  const ask = { pane }
+  asked = ask
+  if ((await read($, unansweredAtom)) !== null) await update($, unansweredAtom, () => null)
   // A pane already open behind a tab does not come forward on another open: the asked one opens anew, last.
   await $.state.set(STAGE, { pane: PANE, at: Date.now() })
   // A click into a pane gives it the keyboard, and the engine shows no new pane over the one a person holds, focus
@@ -177,12 +138,26 @@ async function openPane($: EngineInterface, pane: string): Promise<void> {
   // `.catch` (re-entry), 2.1.309 skips that too. So the panel itself tells: a mod pane that took it leaves the hub
   // no longer shown.
   if (answered !== null || !isHubShown(await $.ui.panes())) await stepAside($, answered ?? pane)
-  else if (isHeld) await show($, PANE)
+  else {
+    if (isHeld) await show($, PANE)
+    $.clock.after(ANSWER_MS, () => void watchAnswer($, ask).catch(cause => $.ui.log(`modz: the watch on ${pane} failed: ${String(cause)}`, { to: 'debug' })))
+  }
   if (isHeld) await closeQuietly($, HOLD_PANE)
 }
 
 // The pane a mod said it opened while the hub's own write was still running; read once that write settles.
 let answered: string | null = null
+// The row pressed last: a later press takes the watchdog over.
+let asked: { pane: string } | null = null
+
+// The watchdog. Most mods answer inside the ask itself; one that answers a moment later takes the stage through its
+// `shown`. After ANSWER_MS with the hub still on stage, nobody did: the hub stays (and comes back if it went) and
+// the row says its pane did not answer, so a press never just vanishes.
+async function watchAnswer($: EngineInterface, ask: { pane: string }): Promise<void> {
+  if (asked !== ask || paneOf((await $.state.get(STAGE)).value) !== PANE) return
+  await update($, unansweredAtom, () => ask.pane)
+  if (!isHubShown(await $.ui.panes())) await show($, PANE, false)
+}
 
 // A mod's pane holds the panel: the hub's panes close and every other mod's pane follows (kit/stage.ts).
 async function stepAside($: EngineInterface, pane: string): Promise<void> {
@@ -190,6 +165,7 @@ async function stepAside($: EngineInterface, pane: string): Promise<void> {
   await $.state.set(STAGE, { pane, at: Date.now() })
   await closeQuietly($, PANE)
   await closeQuietly($, MODS_PANE)
+  if ((await read($, unansweredAtom)) !== null) await update($, unansweredAtom, () => null)
 }
 
 // An empty catalog is one that could not be read: the hub says so rather than "0 mods on".
@@ -200,27 +176,24 @@ function metaOf(market: Market): string {
   return hubWords().modsOn(on)
 }
 
-async function textOf($: EngineInterface, path: string): Promise<string | undefined> {
-  return (await $.fs.exists(path)) ? String(await $.fs.read(path)) : undefined
+type Site = { surface: string; columns: number }
+
+// What the hub draws: the rows the catalog and the mods' cards give, in the person's arrangement.
+async function hubView($: EngineInterface, site: Site): Promise<HubView> {
+  const market = await marketSoon(diskOf($))
+  const [cards, layout, isEditing] = [await read($, cardsAtom), await read($, layoutAtom), await read($, editingAtom)]
+  const presence = presenceOf(market)
+  const rows = withUnanswered(rowsOf(cards, presence, layout), await read($, unansweredAtom), hubWords().noAnswer)
+
+  return { rows, hidden: hiddenRowsOf(cards, presence, layout), focus: focusOf(rows), meta: metaOf(market), isEditing, ...site, theme: await themeNow($), actions: actionsOf($), stable: hubDrawings }
 }
 
-// Turns on Claude Code's own auto-update for the marketplace this copy was installed from (auto-update.ts).
-async function keepUpdated($: EngineInterface): Promise<void> {
-  const install = installOf($.plugin.root)
-  if (install === undefined) return
-  const home = await homeOf($)
-  const configDir = (await $.env.get('CLAUDE_CONFIG_DIR')) ?? (home === undefined ? undefined : `${home}/.claude`)
-  // With no folder to name, nothing is written: never a settings file under "undefined/.claude".
-  if (configDir === undefined) return
-  const settingsPath = `${configDir}/settings.json`
-  const next = autoUpdateSettings({
-    market: install.market,
-    settingsText: await textOf($, settingsPath),
-    knownText: await textOf($, `${install.pluginsDir}/known_marketplaces.json`),
-  })
-  if (next === undefined) return
-  await $.fs.write(settingsPath, next)
-  $.ui.log(`modz: auto-update turned on for the ${install.market} marketplace`, { to: 'debug' })
+// The hub when its drawing threw: the same rows under the same keys, in the catalog's own order and as plain
+// elements, so every row stays pressable (its press handle goes by its key) and the way to each pane is kept.
+async function plainHubView($: EngineInterface, site: Site): Promise<HubView> {
+  const rows = rowsOf(await read($, cardsAtom), presenceOf(await marketSoon(diskOf($))))
+
+  return { rows, hidden: [], focus: null, meta: hubWords().plain, isEditing: false, ...site, surface: 'plain', theme: 'auto', actions: actionsOf($), stable: hubDrawings }
 }
 
 type On = Parameters<Register>[0]
@@ -240,7 +213,7 @@ function hubHooks(on: On, options: Options): void {
       await $.ui.open({ id: PANE, title: TITLE })
     }
     if (options.keepUpdated !== false) {
-      void keepUpdated($).catch(cause => $.ui.log(`modz: auto-update could not be turned on: ${String(cause)}`, { to: 'debug' }))
+      void keepUpdated(diskOf($)).catch(cause => $.ui.log(`modz: auto-update could not be turned on: ${String(cause)}`, { to: 'debug' }))
     }
 
     return started
@@ -255,6 +228,8 @@ function hubHooks(on: On, options: Options): void {
     const staged = paneOf((await $.state.get(STAGE)).value)
     const isModStaged = staged !== null && staged !== PANE && staged !== MODS_PANE
     if (isDesktop && options.openOnStart !== false && !isModStaged && (await $.ui.panes()).length === 0) await show($, PANE, false)
+    // A desktop that comes back may still show a tree from before: drawn again, its rows carry presses this engine holds.
+    if (isDesktop) $.ui.invalidate('ui.render')
 
     return done
   }).catch(($, e, next) => next(e))
@@ -311,16 +286,17 @@ function hubHooks(on: On, options: Options): void {
 
 function paneHooks(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const ui = $.ui.resolve(e)
-    const market = await marketSoon($)
-    const theme = await themeNow($)
     const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS
-    const [cards, layout, isEditing] = [await read($, cardsAtom), await read($, layoutAtom), await read($, editingAtom)]
-    const presence = presenceOf(market)
-    const rows = rowsOf(cards, presence, layout)
-    const view = { rows, hidden: hiddenRowsOf(cards, presence, layout), focus: focusOf(rows), meta: metaOf(market), isEditing }
 
-    return pinned(e, hubTree(ui, { ...view, surface: e.surface, columns, theme, actions: actionsOf($), stable: hubDrawings }))
+    return pinned(e, hubTree($.ui.resolve(e), await hubView($, { surface: e.surface, columns })))
+  }).catch(async ($, e, next) => {
+    // The drawing threw or ran out of time. The engine would draw nothing and drop every row's press, so the tree
+    // the desktop still shows would go dead: the plain rows keep the hub, and the presses, alive.
+    if (next.error.kind === 're-entry') return next(e)
+    $.ui.log(`modz: the hub fell back to its plain rows: ${next.error.message ?? next.error.kind}`, { to: 'debug' })
+    const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS
+
+    return pinned(e, hubTree($.ui.resolve(e), await plainHubView($, { surface: e.surface, columns })))
   })
 
   on('ui.render', { component: 'Pane', requestId: HOLD_PANE }, async ($, e) => {
@@ -335,8 +311,8 @@ function paneHooks(on: On): void {
 
     const onHome = () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not be opened: ${String(cause)}`, { to: 'debug' }))
 
-    const market = await marketOf($)
-    marketKept = { at: Date.now(), market: Promise.resolve(market) }
+    const market = await marketOf(diskOf($))
+    keepMarket(market)
 
     return pinned(e, modzTree(ui, { market, surface: e.surface, columns, theme: await themeNow($), onHome, stable: catalogDrawings }))
   })

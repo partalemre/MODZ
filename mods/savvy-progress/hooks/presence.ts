@@ -132,6 +132,17 @@ async function projectName($: EngineInterface, cwd: string): Promise<string> {
   }
 }
 
+// The folder the session works in now, read before each slow beat: a session the desktop starts ahead of time is
+// parked in a neutral folder ("spare-…") and moved to its project later, with no session.start of its own.
+async function followFolder($: EngineInterface): Promise<void> {
+  try {
+    const project = await projectName($, await $.session.cwd())
+    await change($, prev => ({ ...prev, project }))
+  } catch (error) {
+    log($, 'the folder could not be read this beat', error)
+  }
+}
+
 // A reload keeps what the session and the crab were doing; a fresh session starts idle and asleep.
 async function start($: EngineInterface, cwd: string): Promise<void> {
   try {
@@ -145,7 +156,7 @@ async function start($: EngineInterface, cwd: string): Promise<void> {
     log($, 'other chats and the crab wait for the next beat', error)
   }
   await beat($)
-  $.clock.every(HEARTBEAT_MS, () => void beat($))
+  $.clock.every(HEARTBEAT_MS, () => void followFolder($).then(() => beat($)))
   $.clock.every(SCAN_MS, () => void glance($))
 }
 

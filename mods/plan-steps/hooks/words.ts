@@ -28,6 +28,8 @@ export type Words = {
   allDone: string
   now: string
   running: string
+  // Above the plain list, when the pane's drawing failed.
+  paneFailed: string
   emptyLead: string
   emptyHow: string
   tasksLabel: string
@@ -67,6 +69,7 @@ const EN: Words = {
   allDone: 'done',
   now: 'now',
   running: 'running',
+  paneFailed: 'The plan could not be drawn; here is the plain list.',
   emptyLead: 'No plan yet',
   emptyHow: 'steps show up here once a task list or an approved plan arrives',
   tasksLabel: 'task list',
@@ -104,6 +107,7 @@ const TR: Words = {
   allDone: 'tamam',
   now: 'şimdi',
   running: 'çalışıyor',
+  paneFailed: 'Plan çizilemedi, düz liste gösteriliyor.',
   emptyLead: 'Henüz plan yok',
   emptyHow: 'görev listesi ya da onaylı bir plan gelince adımlar burada belirir',
   tasksLabel: 'görev listesi',

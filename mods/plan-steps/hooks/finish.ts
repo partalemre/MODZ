@@ -43,6 +43,19 @@ export function finishCall(facts: FinishFacts): FinishCall {
   return heldCount(facts.held, heldKey(facts.plan)) < MAX_AUTO_CONTINUES ? 'continue' : 'card'
 }
 
+// An agent that still works or waits on work of its own: the main loop hears from it later.
+const LIVE_AGENT = ['pending', 'running', 'waiting']
+export const isAgentLive = (status: unknown): boolean => LIVE_AGENT.includes(String(status))
+
+// The task ids a turn's opening text reports on: a background task's notification names the task that ended.
+export const notifiedIds = (text: unknown): string[] =>
+  typeof text === 'string' ? [...text.matchAll(/<task-id>\s*([^<\s]+)\s*<\/task-id>/g)].map(found => found[1] ?? '') : []
+
+// How long a background command counts as running when no notification says it ended: its own timeout, else the
+// engine's default for one (30 minutes).
+const SHELL_DEFAULT_MS = 30 * 60 * 1000
+export const shellBudget = (timeout: unknown): number => (typeof timeout === 'number' && timeout > 0 ? timeout : SHELL_DEFAULT_MS)
+
 // The step to go on with: the one under way, else the first not begun.
 export function nextStep(plan: Plan): string {
   const open = openSteps(plan)

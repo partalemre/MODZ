@@ -31,7 +31,7 @@ test('band in English on the terminal: 5h with reset, 7d, context, cost', async 
   await start($, 'terminal')
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
 
-  for (const text of ['5h', '32%', '↻ 2h 0m', '7d', '91%', '↻ 3d 22h', 'context', '41%', '≈$1.23']) {
+  for (const text of ['5h', '32%', '↻ 2h 0m', 'week', '91%', '↻ 3d 22h', 'memory', '41%', '≈$1.23']) {
     expect(await ui.find({ type: 'Text', text })).toBeDefined()
   }
   await expectNoTurkish(ui)
@@ -43,8 +43,8 @@ test('band in English on the desktop: the pills read the long labels and the ses
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const svg = await svgOf(ui)
 
-  expect(svg?.props.alt).toBe('5-hour 32%, resets in 2h 0m · 7-day 91%, resets in 3d 22h · context 41% · session ≈$1.23')
-  expect(svg?.props.source).toContain('>5-hour<')
+  expect(svg?.props.alt).toBe('5-hour allowance 32%, refills in 2h 0m · weekly allowance 91%, refills in 3d 22h · chat memory 41% · session ≈$1.23')
+  expect(svg?.props.source).toContain('>5-hour allowance<')
   expect(svg?.props.source).toContain('>session<')
   await expectNoTurkish(ui)
 })
@@ -55,9 +55,9 @@ for (const surface of SURFACES) {
     await start($, surface)
     const ui = await $.ui.mount({ ...BAND, surface })
 
-    expect((await ui.find({ key: 'compact' }))?.props?.label).toBe('Compact')
+    expect((await ui.find({ key: 'compact' }))?.props?.label).toBe('Summarize')
     if (surface === 'terminal') expect(await ui.find({ type: 'Text', text: 'full' })).toBeDefined()
-    else expect((await svgOf(ui))?.props.alt).toContain('5-hour full, resets in 2h 0m')
+    else expect((await svgOf(ui))?.props.alt).toContain('5-hour allowance full, refills in 2h 0m')
     await expectNoTurkish(ui)
   })
 
@@ -72,10 +72,10 @@ for (const surface of SURFACES) {
     await start($, surface)
     await $.session.measure(MEASURE)
 
-    expect(cards[0]?.detail).toBe('5-hour 32% · 7-day 91%')
-    expect(toasts).toEqual(['7-day limit 91% used · ↻ 3d 22h'])
-    expect((await $.command.run({ command: 'hud', args: '' } as any)).text).toBe('HUD hidden.')
-    expect((await $.command.run({ command: 'hud', args: '' } as any)).text).toBe('HUD shown.')
+    expect(cards[0]?.detail).toBe('5-hour 32% · weekly 91%')
+    expect(toasts).toEqual(['weekly allowance: 91% used · ↻ 3d 22h'])
+    expect((await $.command.run({ command: 'hud', args: '' } as any)).text).toBe('Usage line hidden.')
+    expect((await $.command.run({ command: 'hud', args: '' } as any)).text).toBe('Usage line shown.')
     await $.command.run({ command: 'hud', args: 'full' } as any)
     expect(opens).toEqual([expect.objectContaining({ id: 'hud-pro', title: 'Usage' })])
   })
@@ -99,8 +99,8 @@ test('pane in English on the terminal: limits, resets, range and the last turn',
 
   expect(await ui.find({ type: 'Text', text: 'Limits' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: '2 readings · session ≈$1.23' })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: '· resets in 2h 0m · range 32%–64%' })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: /^last turn: input 12.4k · output 640 · cache 96% · 1 request$/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: '· refills in 2h 0m · range 32%–64%' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^last turn: read 12.4k · wrote 640 · 96% reused · 1 model call$/ })).toBeDefined()
   await expectNoTurkish(ui)
 })
 
@@ -108,11 +108,11 @@ test('pane in English on the desktop: figures with English labels, notes and cap
   const ui = await fullPane($, on, 'desktop')
   const svg = await svgOf(ui)
 
-  for (const text of ['Limits', '5-hour 64%', 'range 32%–64%', 'session cost ≈$1.23', 'last turn 13k tokens', 'list-price estimate · this session · 2 readings']) {
+  for (const text of ['Limits', '5-hour allowance 64%', 'range 32%–64%', 'session cost ≈$1.23', 'last turn 13k tokens', 'estimate at list prices · this session · 2 readings']) {
     expect(svg?.props.alt).toContain(text)
   }
-  expect(svg?.props.alt).toContain('118k tokens free')
-  expect(svg?.props.source).toContain('>5-hour<')
+  expect(svg?.props.alt).toContain('room for 118k more tokens')
+  expect(svg?.props.source).toContain('>5-hour allowance<')
   expect(svg?.props.source).not.toContain('letter-spacing')
   await expectNoTurkish(ui)
 })
@@ -123,7 +123,7 @@ for (const surface of SURFACES) {
     await start($, surface)
     const ui = await $.ui.mount({ ...PANE, surface })
 
-    expect(await ui.find({ type: 'Text', text: 'No readings yet; they come with the first model reply.' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Nothing measured yet; the numbers arrive with the first answer.' })).toBeDefined()
     await expectNoTurkish(ui)
   })
 }

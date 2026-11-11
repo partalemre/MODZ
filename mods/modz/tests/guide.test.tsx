@@ -87,7 +87,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(lines).not.toContain('/plugin install modz@modz')
     await ui.press({ key: 'copy-plan-steps' })
     expect(copied).toEqual(['/plugin install plan-steps@modz'])
-    expect(toasts).toEqual(['Copied. Paste it into the prompt.'])
+    expect(toasts).toEqual(['Copied. Paste it into the message box.'])
   })
 
   test(`the catalog lists what each installed mod can be asked and set (${surface})`, async ($: any, on: any) => {

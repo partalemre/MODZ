@@ -76,7 +76,7 @@ test('no pane opens by itself; a hub request for "effort" opens it in front, ano
   await $.command.run({ command: 'hub-open', args: 'tests' })
   expect(world.opened).toEqual([])
   await $.command.run({ command: 'hub-open', args: 'effort' })
-  expect(world.opened).toEqual([expect.objectContaining({ id: 'effort', title: 'Effort', focus: true })])
+  expect(world.opened).toEqual([expect.objectContaining({ id: 'effort', title: 'Thinking level', focus: true })])
 
   await $.command.run({ command: 'effort-router', args: '' })
   expect(world.opened).toHaveLength(2)

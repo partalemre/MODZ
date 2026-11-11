@@ -46,7 +46,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await mine($, w)
     expect(w.mined).toEqual([])
     const drawn = await paneWords($, surface)
-    expect(JSON.stringify(drawn)).toContain('No repeating friction found in the last 1 chat')
+    expect(JSON.stringify(drawn)).toContain('Nothing that keeps going wrong in the last 1 chat')
     expect(drawn.buttons).toEqual(['mine-again=Run again'])
   })
 
@@ -74,7 +74,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await mine($, w)
     const pane = await $.ui.mount(paneSite(surface))
     await pane.press({ key: 'idea-save:0' })
-    expect((await wordsOf(pane)).texts).toContain('✓ In the card above the prompt')
+    expect((await wordsOf(pane)).texts).toContain('✓ In the card above your message box')
     const band = await $.ui.mount({ plugin: 'reflect-mod', surface, ...BAND })
     const keys = (await band.findAll({ type: 'Button' })).map(b => b.key ?? '')
     expect(keys.some(k => k.startsWith('pick-global:'))).toBe(true)

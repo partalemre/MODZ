@@ -46,7 +46,7 @@ for (const surface of SURFACES) {
     expect(seen).toMatch(/≈\$0,\d\d/)
     expect(seen).toContain('2:36')
     // Context and tokens wait in the detail, so the card reads name, status, progress and cost.
-    const metrics = /bağlam %13 · 129k token · ≈\$0,\d\d/
+    const metrics = /hafıza %13 · 129k token · ≈\$0,\d\d/
     expect(surface === 'terminal' ? seen : await svgOf(ui)).not.toMatch(metrics)
     await ui.press({ key: 'open-a3' })
     if (surface === 'terminal') expect(await text(ui)).toMatch(metrics)
@@ -155,11 +155,11 @@ for (const surface of SURFACES) {
     await threeRunning($)
     const pane = await mount($)
     const words = async () => (surface === 'terminal' ? text(pane) : svgOf(pane))
-    expect(await words()).not.toContain('5 saat ≈')
+    expect(await words()).not.toContain('5 saatlik hak ≈')
     await measure($, 23.5, 1)
-    expect(await words()).toContain('5 saat payı ≈%5,9')
+    expect(await words()).toContain('5 saatlik haktan ≈%5,9')
     await pane.press({ key: 'open-a1' })
-    expect(await words()).toContain('5 saat ≈%2,0')
+    expect(await words()).toContain('5 saatlik hak ≈%2,0')
   })
 
   test(`${surface}: an open finished row shows its work mix and its answer`, async ($, on) => {

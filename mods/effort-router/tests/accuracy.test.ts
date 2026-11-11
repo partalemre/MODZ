@@ -41,12 +41,12 @@ test('a lowered turn says so above the prompt, and the button sends it again at 
   await begin($)
   await turn($, { text: 'What does this regex match?', turnId: 'light' })
   const ui = await $.ui.mount(band)
-  expect(await ui.find({ type: 'Text', text: /Sent at low effort \(yours: high\)/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /Sent at low thinking \(yours: high\)/ })).toBeDefined()
 
   await ui.press({ key: 'effort-router:resend' })
   await $.turn.start({ text: 'What does this regex match?', turnId: 'again' })
   await step($, { turnId: 'again', effort: 'high' })
 
   expect(sentTo(world, 'again')).toEqual(['high'])
-  expect(await ui.find({ type: 'Text', text: /Sent at low effort/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /Sent at low thinking/ })).toBeUndefined()
 })

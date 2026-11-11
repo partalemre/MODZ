@@ -1,6 +1,6 @@
 {
   "name": "blast-radius",
-  "description": "Holds shell commands that would lose work (rm -rf, find -delete, git reset/checkout/clean/stash drop/branch -D, force or deleting pushes, writes over files, docker/terraform/kubectl/database drops, migrations) and shows what they would change, with Run anyway and Keep my work (a call nobody can answer is refused at once); holds an edit to a file another chat just changed, and checks other commands against your .claude/house-rules.md (English UI, Turkish with MODZ_LANG=tr; Svg card on desktop).",
+  "description": "Stops a command that could lose your work before it runs: deleting files (rm -rf), throwing away unsaved changes or saved versions (git reset, checkout, clean, branch -D), overwriting the shared copy (force push), writing over files, changing or dropping a database, or removing what docker, terraform or kubectl run. It shows exactly what would be lost, then you pick Run anyway or Keep my work; if nobody is there to answer, the command is refused. It also holds an edit to a file another chat just changed, and checks other commands against your own rules in .claude/house-rules.md (English; Turkish with MODZ_LANG=tr).",
   "author": {
     "name": "Claude Code DevRel"
   },

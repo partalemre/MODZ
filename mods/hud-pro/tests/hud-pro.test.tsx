@@ -31,7 +31,7 @@ test('terminal: one text line under what others drew, 5s with reset, 7g, bağlam
 
   const ui = await $.ui.mount({ ...BAND, surface: 'terminal' })
 
-  for (const text of ['theirs', '5s', '%32', '↻ 2sa 0dk', '7g', '%91', '↻ 3g 22sa', 'bağlam', '%41', '≈$1,23']) {
+  for (const text of ['theirs', '5s', '%32', '↻ 2sa 0dk', 'hafta', '%91', '↻ 3g 22sa', 'hafıza', '%41', '≈$1,23']) {
     expect(await ui.find({ type: 'Text', text })).toBeDefined()
   }
   const order = (await ui.findAll({ type: 'Text' })).map((found: any) => found.text)
@@ -49,7 +49,7 @@ test('desktop: one transparent Svg line of pills with meters and pace ticks, und
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const svg = (await ui.find({ type: 'Svg' })) as Drawn
 
-  expect(svg?.props.alt).toBe('5 saat %32, 2sa 0dk sonra sıfırlanır · 7 gün %91, 3g 22sa sonra sıfırlanır · bağlam %41 · oturum ≈$1,23')
+  expect(svg?.props.alt).toBe('5 saatlik hak %32, 2sa 0dk sonra yenilenir · haftalık hak %91, 3g 22sa sonra yenilenir · sohbet hafızası %41 · oturum ≈$1,23')
   expect(svg?.props.source).toContain('class="f-hi" x=')
   expect(svg?.props.source).not.toContain('<path')
   expect(svg?.props.isInteractive).toBeUndefined()
@@ -115,7 +115,7 @@ for (const surface of SURFACES) {
 
     const ui = await $.ui.mount({ ...BAND, surface })
     if (surface === 'terminal') expect(await ui.find({ type: 'Text', text: 'dolu' })).toBeDefined()
-    else expect(((await ui.find({ type: 'Svg' })) as Drawn)?.props.alt).toContain('5 saat dolu, 1sa 20dk sonra sıfırlanır')
+    else expect(((await ui.find({ type: 'Svg' })) as Drawn)?.props.alt).toContain('5 saatlik hak dolu, 1sa 20dk sonra yenilenir')
     expect(await ui.find({ type: 'Text', text: '%104' })).toBeUndefined()
   })
 
@@ -131,7 +131,7 @@ for (const surface of SURFACES) {
 
     const answer = await $.command.run({ command: 'hud', args: '' } as any)
     const hidden = await $.ui.mount({ ...BAND, surface })
-    expect(answer.text).toBe('HUD gizlendi.')
+    expect(answer.text).toBe('Kullanım satırı gizlendi.')
     expect(await hidden.find({ type: 'Svg' })).toBeUndefined()
     expect(await hidden.find({ type: 'Text', text: '%32' })).toBeUndefined()
     expect(await hidden.find({ type: 'Text', text: 'theirs' })).toBeDefined()
@@ -142,7 +142,7 @@ for (const surface of SURFACES) {
     await start($, surface)
 
     const band = await $.ui.mount({ ...BAND, surface })
-    expect((await band.find({ key: 'compact' }))?.props?.label).toBe('Sıkıştır')
+    expect((await band.find({ key: 'compact' }))?.props?.label).toBe('Özetle')
     await band.press({ key: 'compact' })
     expect(compactions.count).toBe(0)
     expect(await band.find({ key: 'compact' })).toBeUndefined()
@@ -165,7 +165,7 @@ test('a limit past 90% raises one notice per window', async ($, on) => {
   await $.session.measure(MEASURE)
   await $.session.measure(MEASURE)
 
-  expect(toasts.filter(text => text === '7 gün limiti %91 dolu · ↻ 3g 22sa').length).toBe(1)
+  expect(toasts.filter(text => text === 'haftalık hak: %91 kullanıldı · ↻ 3g 22sa').length).toBe(1)
 })
 
 async function fullPane($: any, on: any, surface: string) {
@@ -187,8 +187,8 @@ test('/hud full on the terminal: each limit with its pace tick, reset, range, sp
 
   expect(await ui.find({ type: 'Text', text: 'Limitler' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: '%64' })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: '· sıfırlanma 2sa 0dk · aralık %32–%64' })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: /^son tur: girdi 12,4k · çıktı 640/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: '· yenilenme 2sa 0dk · aralık %32–%64' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^son tur: okunan 12,4k · yazılan 640/ })).toBeDefined()
 })
 
 test('/hud full on the desktop: stat tiles with meters and sparklines', async ($, on) => {
@@ -196,12 +196,12 @@ test('/hud full on the desktop: stat tiles with meters and sparklines', async ($
   const svg = (await ui.find({ type: 'Svg' })) as Drawn
 
   expect(svg?.props.alt).toContain('Limitler')
-  expect(svg?.props.alt).toContain('5 saat %64')
+  expect(svg?.props.alt).toContain('5 saatlik hak %64')
   expect(svg?.props.alt).toContain('aralık %32–%64')
   expect(svg?.props.alt).toContain('oturum maliyeti ≈$1,23')
   expect(svg?.props.source).toContain('fill-opacity="0.12"')
   expect(svg?.props.width).toBeLessThanOrEqual(80 * 9)
-  expect(await ui.find({ type: 'Text', text: /^son tur: girdi 12,4k/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^son tur: okunan 12,4k/ })).toBeDefined()
 })
 
 test('the pane says so before the first reading', async ($, on) => {
@@ -231,14 +231,14 @@ test('the MODZ card reads both plan windows, the 5-hour one sets its tone, a sam
   const cards = watchHub(on)
   await start($, 'desktop')
 
-  expect(cards).toEqual([expect.objectContaining({ pane: 'usage', detail: '5 saat %32 · 7 gün %91', tone: 'idle' })])
+  expect(cards).toEqual([expect.objectContaining({ pane: 'usage', detail: '5 saatlik %32 · haftalık %91', tone: 'idle' })])
   await $.session.measure(MEASURE)
   expect(cards).toHaveLength(1)
   await $.session.measure(fiveAt(85))
   await $.session.measure(fiveAt(96))
   expect(cards.slice(1)).toEqual([
-    expect.objectContaining({ detail: '5 saat %85 · 7 gün %91', tone: 'warn' }),
-    expect.objectContaining({ detail: '5 saat %96 · 7 gün %91', tone: 'bad' }),
+    expect.objectContaining({ detail: '5 saatlik %85 · haftalık %91', tone: 'warn' }),
+    expect.objectContaining({ detail: '5 saatlik %96 · haftalık %91', tone: 'bad' }),
   ])
   expect(hubOf(null)).toEqual({ detail: '', tone: 'idle' })
 })

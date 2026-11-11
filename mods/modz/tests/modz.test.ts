@@ -140,5 +140,5 @@ test('installed from the marketplace, the hub reads the catalog from the marketp
   const ui = await $.ui.mount({ ...PANE, requestId: 'modz-mods', surface: 'terminal' })
 
   expect(await ui.find({ type: 'Text', text: /3 mod · hepsi açık/ })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: /Katalog okunamadı/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /Mod listesi okunamadı/ })).toBeUndefined()
 })

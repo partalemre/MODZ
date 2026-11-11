@@ -93,16 +93,16 @@ const band = (surface: (typeof SURFACES)[number]) => ({
 test('80% shows one amber line above the other rows on both surfaces; it clears itself after 20s', async ($: any, on: any) => {
   const world: World = { asked: [], answer: 'Dur', submitted: [] }
   const clock = await setup($, on, world)
-  expect(await $.command.run({ command: 'budget', args: '10%' })).toMatchObject({ text: 'Oturum bütçesi kuruldu: %10 (5 saatlik limit).' })
+  expect(await $.command.run({ command: 'budget', args: '10%' })).toMatchObject({ text: 'Oturum bütçesi kuruldu: 5 saatlik kullanım hakkının %10 kadarı.' })
 
   await measure($, 48.5)
   const terminal = await $.ui.mount(band('terminal'))
-  expect((await terminal.find({ type: 'Text', text: 'Bütçe %85 · 5s %8,5 / %10' }))?.props.color).toBe('warning')
+  expect((await terminal.find({ type: 'Text', text: 'Bütçe %85 · 5 saatlik %8,5 / %10' }))?.props.color).toBe('warning')
   expect(await terminal.find({ type: 'Text', text: /┃/ })).toBeDefined()
   await terminal.unmount()
   const ui = await $.ui.mount(band('desktop'))
   const svg = (await ui.find({ type: 'Svg' })) as { props: { alt: string; source: string } } | undefined
-  expect(svg?.props.alt).toBe('Bütçe · %85 · 5s %8,5 / %10')
+  expect(svg?.props.alt).toBe('Bütçe · %85 · 5 saatlik %8,5 / %10')
   expect(svg?.props.source).toContain('f-warn-t')
   const drawn = JSON.stringify(await ui.drawn())
   expect(drawn.indexOf('"engine"')).toBeGreaterThan(drawn.indexOf('Bütçe'))
@@ -118,15 +118,15 @@ for (const surface of SURFACES) {
     await measure($, 46)
 
     const stopped = await $.prompt.submit(typed('one more thing'))
-    expect(world.asked[0]).toBe('Oturum bütçesi doldu: 5s %6 / %5 (%120). Yine de devam edilsin mi?')
-    expect(stopped.drop).toMatch(/^Oturum bütçesi doldu/)
+    expect(world.asked[0]).toBe('Bu sohbete ayırdığın bütçe doldu: 5 saatlik %6 / %5 (%120). Yine de devam edilsin mi?')
+    expect(stopped.drop).toMatch(/^Bu sohbetin bütçesi doldu/)
     expect(world.submitted).toEqual([])
     const ui = await $.ui.mount(band(surface))
     if (surface === 'terminal') {
       expect((await ui.find({ type: 'Text', text: /^Durduruldu: bütçe doldu/ }))?.props.color).toBe('error')
     } else {
       const svg = (await ui.find({ type: 'Svg' })) as { props: { alt: string; source: string } } | undefined
-      expect(svg?.props.alt).toBe('Durduruldu: bütçe doldu · 5s %6 / %5 · /budget ile artır')
+      expect(svg?.props.alt).toBe('Durduruldu: bütçe doldu · 5 saatlik %6 / %5 · /budget ile artır')
       expect(svg?.props.source).toContain('class="f-danger" font-size="13"')
     }
     await clock.advance(1_000)
@@ -232,25 +232,25 @@ for (const surface of SURFACES) {
   test(`English: the 80% row, the Stop line and the full card (${surface})`, async ($: any, on: any) => {
     const world: World = { asked: [], answer: 'Stop', submitted: [], env: {} }
     await setup($, on, world)
-    expect(await $.command.run({ command: 'budget', args: '10%' })).toMatchObject({ text: 'Session budget set: 10% of the 5-hour limit.' })
+    expect(await $.command.run({ command: 'budget', args: '10%' })).toMatchObject({ text: 'Session budget set: 10% of the 5-hour usage allowance.' })
     await measure($, 48.5)
     const warn = await $.ui.mount(band(surface))
     const warnText = JSON.stringify(await warn.drawn())
-    expect(warnText).toContain(surface === 'terminal' ? 'Budget 85% · 5h 8.5% / 10%' : 'Budget · 85% · 5h 8.5% / 10%')
+    expect(warnText).toContain(surface === 'terminal' ? 'Budget 85% · 5-hour 8.5% / 10%' : 'Budget · 85% · 5-hour 8.5% / 10%')
     expect(warnText).not.toMatch(TURKISH)
     await warn.unmount()
 
     await measure($, 51)
     const stopped = await $.prompt.submit(typed('one more thing'))
-    expect(world.asked[0]).toBe('Session budget is full: 5h 11% / 10% (110%). Continue anyway?')
-    expect(stopped.drop).toBe('Session budget is full: 5h 11% / 10% (110%). Raise it with /budget, or remove it with /budget off.')
+    expect(world.asked[0]).toBe('The budget you set for this chat is used up: 5-hour 11% / 10% (110%). Continue anyway?')
+    expect(stopped.drop).toBe('This chat\'s budget is used up: 5-hour 11% / 10% (110%). Raise it with /budget, or remove it with /budget off.')
     const line = JSON.stringify(await (await $.ui.mount(band(surface))).drawn())
-    expect(line).toContain('Stopped: budget is full · 5h 11% / 10%')
+    expect(line).toContain('Stopped: budget is full · 5-hour 11% / 10%')
     expect(line).not.toMatch(TURKISH)
 
     const card = await $.ui.mount({ ...question(surface), props: { ...question(surface).props, questions: [{ header: 'Budget', question: 'Full?', options: [] }] } })
     const cardText = JSON.stringify(await card.drawn())
-    expect(cardText).toContain(surface === 'terminal' ? 'Budget is full · 5h 11% / 10% (110%)' : 'Your message is on hold; continuing raises the budget by +2%.')
+    expect(cardText).toContain(surface === 'terminal' ? 'Budget is full · 5-hour 11% / 10% (110%)' : 'Your message is on hold; continuing raises the budget by +2%.')
     expect(cardText).not.toMatch(TURKISH)
   })
 }
@@ -260,14 +260,14 @@ test('English: Continue anyway raises the budget; the commands answer in English
   await setup($, on, world)
   expect(await $.command.run({ command: 'budget', args: '' })).toMatchObject({ text: 'No session budget. Set one with /budget 20% or /budget $5' })
   expect(await $.command.run({ command: 'budget', args: '$0.5' })).toMatchObject({
-    text: 'Session budget set: $0.5. On a subscription $ is a list-price estimate only; the limit percent is what counts.',
+    text: 'Session budget set: $0.5. On a subscription $ is only an estimate at list prices; the share of your allowance is what counts.',
   })
   await $.session.measure({ context: {}, rateLimits: [], cost: { usd: 1.6 }, changed: ['cost'] })
   await $.prompt.submit(typed('go on'))
   expect(world.submitted).toEqual(['go on'])
   expect(await $.command.run({ command: 'budget', args: 'status' })).toMatchObject({ text: 'Session budget: $0.60 / $1.60 at list price (38%)' })
-  expect(await $.command.run({ command: 'budget', args: 'lots' })).toMatchObject({ text: 'Usage: /budget <share of the 5h limit, e.g. 20%> | <$amount, e.g. $5> | off' })
+  expect(await $.command.run({ command: 'budget', args: 'lots' })).toMatchObject({ text: 'Write it as: /budget <share of the 5-hour allowance, e.g. 20%> | <$amount, e.g. $5> | off' })
   expect(await $.command.run({ command: 'session-budget', args: 'off' })).toMatchObject({ text: 'session-budget off' })
   setLang('en')
-  expect(etaText(80)).toBe('full in ≈1h 20m at this pace')
+  expect(etaText(80)).toBe('runs out in ≈1h 20m at this pace')
 })

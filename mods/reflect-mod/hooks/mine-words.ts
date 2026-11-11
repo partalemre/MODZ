@@ -7,7 +7,7 @@ const plural = (count: number, one: string, many: string): string => `${count} $
 
 const TR = {
   title: 'Fikirler',
-  mineHelp: 'reflect: son sohbetlerinde tekrar eden sürtünmeyi bul',
+  mineHelp: 'reflect: son sohbetlerinde tekrar tekrar takıldığın yerleri bul',
   eyebrow: 'Geçmiş sohbetlerinden',
   reading: (n: number) => `Son ${n} sohbetin okunuyor`,
   thinking: 'Tekrar edenler fikre dönüşüyor',
@@ -15,7 +15,7 @@ const TR = {
   read: (n: number) => `${n} sohbet okundu`,
   partial: (n: number) => `${n} sonundan`,
   unread: (n: number) => `${n} okunamadı`,
-  empty: (n: number) => `Son ${n} sohbette tekrar eden sürtünme bulunmadı`,
+  empty: (n: number) => `Son ${n} sohbette tekrar eden bir takılma bulunmadı`,
   noChats: 'Bu proje için geçmiş sohbet bulunamadı',
   unreadable: 'Geçmiş sohbetlerin okunamadı',
   failedHead: (n: number) => `${n} şey tekrar ediyor`,
@@ -26,13 +26,13 @@ const TR = {
   copy: 'Kopyala',
   copied: 'Kopyalandı',
   copyFailed: 'reflect: burada kopyalanamadı',
-  waiting: 'İstem üstündeki kartta',
+  waiting: 'Mesaj kutusunun üstündeki kartta',
   known: "Zaten CLAUDE.md'de",
   saved: "CLAUDE.md'ye kaydedildi",
   seen: (count: number, chats: number) => `${chats} sohbette ${count} kez`,
-  type: { rule: 'Kural', hook: 'Hook', skill: 'Skill', mod: 'Mod' } as Record<Idea['type'], string>,
+  type: { rule: 'Kural', hook: 'Otomasyon', skill: 'Beceri', mod: 'Mod' } as Record<Idea['type'], string>,
   kind: {
-    correction: 'Düzeltme', ask: 'Kalıcı istek', held: 'Bekletilen çağrı', failing: 'Başarısız komut', repeat: 'Tekrarlanan istem',
+    correction: 'Düzeltme', ask: 'Kalıcı istek', held: 'Durdurulan işlem', failing: 'Başarısız komut', repeat: 'Tekrarlanan mesaj',
   } as Record<Candidate['kind'], string>,
 }
 
@@ -48,7 +48,7 @@ const EN: MineWords = {
   read: n => `${plural(n, 'chat', 'chats')} read`,
   partial: n => `${n} from the end`,
   unread: n => `${n} unreadable`,
-  empty: n => `No repeating friction found in the last ${plural(n, 'chat', 'chats')}`,
+  empty: n => `Nothing that keeps going wrong in the last ${plural(n, 'chat', 'chats')}`,
   noChats: 'No past chats found for this project',
   unreadable: 'Could not read your past chats',
   failedHead: n => `${plural(n, 'thing repeats', 'things repeat')}`,
@@ -59,12 +59,12 @@ const EN: MineWords = {
   copy: 'Copy',
   copied: 'Copied',
   copyFailed: 'reflect: could not copy here',
-  waiting: 'In the card above the prompt',
+  waiting: 'In the card above your message box',
   known: 'Already in CLAUDE.md',
   saved: 'Saved to CLAUDE.md',
   seen: (count, chats) => `Seen ${plural(count, 'time', 'times')} in ${plural(chats, 'chat', 'chats')}`,
-  type: { rule: 'Rule', hook: 'Hook', skill: 'Skill', mod: 'Mod' },
-  kind: { correction: 'Correction', ask: 'Standing ask', held: 'Held call', failing: 'Failing command', repeat: 'Repeated prompt' },
+  type: { rule: 'Rule', hook: 'Automation', skill: 'Skill', mod: 'Mod' },
+  kind: { correction: 'Correction', ask: 'Lasting request', held: 'Stopped action', failing: 'Failing command', repeat: 'Repeated message' },
 }
 
 export const mineWords = (): MineWords => pick({ en: EN, tr: TR })

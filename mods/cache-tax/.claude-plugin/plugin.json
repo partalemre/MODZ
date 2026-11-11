@@ -1,6 +1,6 @@
 {
   "name": "cache-tax",
-  "description": "A Claude Code mod that keeps the one-hour prompt cache warm during breaks and holds a cold send, after a break or a model change, on a card with its estimated rewrite cost. Warming uses model requests and costs tokens. Requires Claude Code 2.1.287+.",
+  "description": "Keeps the chat ready (the one-hour prompt cache) during breaks, so your next message does not make Claude read the whole chat again at full price. After a long break or a model change it holds your message on a card with the estimated cost. Keeping the chat ready sends small requests that cost tokens. Requires Claude Code 2.1.287+.",
   "author": {
     "name": "Karan Bansal"
   },

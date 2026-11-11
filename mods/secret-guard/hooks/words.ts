@@ -39,65 +39,65 @@ export type Words = {
 
 const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`
 
-const EN_SOURCE: Record<GuardPending['source'], string> = { write: 'This write has', add: 'The files being added have', commit: 'This commit has' }
-const TR_SOURCE: Record<GuardPending['source'], string> = { write: 'Bu yazımda', add: 'Bu eklemede', commit: 'Bu commit\'te' }
+const EN_SOURCE: Record<GuardPending['source'], string> = { write: 'This write has', add: 'The files about to be saved have', commit: 'This saved version has' }
+const TR_SOURCE: Record<GuardPending['source'], string> = { write: 'Bu yazımda', add: 'Kayda eklenen dosyalarda', commit: 'Bu kayıtta' }
 
 const EN: Words = {
   allow: 'Allow once',
   cancel: 'Cancel',
   question: 'How do you want to go on?',
-  hubWaiting: subject => `secret in ${subject} is waiting`,
-  move: count => (count === 1 ? 'Move key to .env' : 'Move keys to .env'),
+  hubWaiting: subject => `A secret key in ${subject} is waiting for you`,
+  move: count => (count === 1 ? 'Move key to the secrets file' : 'Move keys to the secrets file'),
   privateKey: 'Private key',
-  allowLine: 'The call runs as it is; the key stays in the open.',
-  cancelLine: 'The call is blocked and Claude is told why.',
+  allowLine: 'It goes ahead as it is; the key stays readable to anyone who gets these files.',
+  cancelLine: 'It is stopped, nothing is written or saved, and Claude is told why.',
   moveLine: isMovable => (isMovable
-    ? 'Recommended. The values go into .env, which git ignores; the code reads them from the environment.'
-    : 'Recommended. The call stops; Claude moves the keys to .env and tries again.'),
-  envFile: 'env file',
-  toGit: 'being added to git',
+    ? 'Recommended. The keys move to the secrets file (.env), which is kept out of saved versions; the code reads them from there.'
+    : 'Recommended. This step stops; Claude moves the keys to the secrets file (.env) and tries again.'),
+  envFile: 'secrets file',
+  toGit: 'about to be saved',
   line: line => `line ${line}`,
   leakEyebrow: 'Leak blocked',
-  envEyebrow: 'Env file',
+  envEyebrow: 'Secrets file',
   leakTitle: (source, count) => `${EN_SOURCE[source]} ${plural(count, 'secret key', 'secret keys')}`,
-  envTitle: envFiles => (envFiles.length === 1 ? `${envFiles[0] ?? '.env'} is being added to git` : `${envFiles.length} env files are being added to git`),
+  envTitle: envFiles => (envFiles.length === 1 ? `${envFiles[0] ?? '.env'} is about to go into a saved version` : `${envFiles.length} secrets files are about to go into a saved version`),
   moreFindings: count => `+ ${plural(count, 'more finding', 'more findings')}`,
   moreRows: count => `+ ${count} more`,
-  commandLine: 'Turn the secret key scan before writes and git add/commit on or off',
+  commandLine: 'Turn on or off the check for secret keys before a file is written or a version is saved',
   toggled: isOn => `secret-guard ${isOn ? 'on' : 'off'}`,
   keptOut: count => `${plural(count, 'secret', 'secrets')} kept out of the chat`,
   rec: 'REC',
-  recCommandLine: 'Recording mode: mask keys, env values and e-mail addresses on screen',
-  recToggled: isOn => (isOn ? 'Recording mode on: keys, env values and e-mail addresses are masked on screen' : 'Recording mode off'),
+  recCommandLine: 'Recording mode: hide keys, secret settings and e-mail addresses on screen',
+  recToggled: isOn => (isOn ? 'Recording mode on: keys, secret settings and e-mail addresses are hidden on screen' : 'Recording mode off'),
 }
 
 const TR: Words = {
   allow: 'Bir kez izin ver',
   cancel: 'Vazgeç',
   question: 'Nasıl devam edilsin?',
-  hubWaiting: subject => `${subject} içindeki anahtar bekliyor`,
-  move: count => (count === 1 ? "Anahtarı .env'e taşı" : "Anahtarları .env'e taşı"),
+  hubWaiting: subject => `${subject} içindeki gizli anahtar seni bekliyor`,
+  move: count => (count === 1 ? 'Anahtarı gizli ayar dosyasına taşı' : 'Anahtarları gizli ayar dosyasına taşı'),
   privateKey: 'Özel anahtar',
-  allowLine: 'Bu çağrı olduğu gibi çalışır; anahtar açıkta kalır.',
-  cancelLine: 'Çağrı engellenir; Claude\'a nedeni söylenir.',
+  allowLine: 'Olduğu gibi devam eder; anahtar bu dosyaları alan herkesin okuyabileceği hâlde kalır.',
+  cancelLine: 'Durdurulur, hiçbir şey yazılmaz ya da kaydedilmez; Claude\'a nedeni söylenir.',
   moveLine: isMovable => (isMovable
-    ? 'Önerilen. Değerler .env\'e yazılır, .env git dışında tutulur; kod onları ortamdan okur.'
-    : 'Önerilen. Çağrı durur; Claude anahtarları .env\'e taşıyıp yeniden dener.'),
-  envFile: 'ortam dosyası',
-  toGit: 'git\'e ekleniyor',
+    ? 'Önerilen. Anahtarlar gizli ayar dosyasına (.env) taşınır; bu dosya kayıtlara girmez, kod anahtarları oradan okur.'
+    : 'Önerilen. Bu adım durur; Claude anahtarları gizli ayar dosyasına (.env) taşıyıp yeniden dener.'),
+  envFile: 'gizli ayar dosyası',
+  toGit: 'kayda giriyor',
   line: line => `satır ${line}`,
   leakEyebrow: 'Sızıntı engellendi',
-  envEyebrow: 'Ortam dosyası',
+  envEyebrow: 'Gizli ayar dosyası',
   leakTitle: (source, count) => `${TR_SOURCE[source]} ${count} gizli anahtar var`,
-  envTitle: envFiles => `${envFiles.length === 1 ? (envFiles[0] ?? '.env') : `${envFiles.length} ortam dosyası`} git'e ekleniyor`,
+  envTitle: envFiles => `${envFiles.length === 1 ? (envFiles[0] ?? '.env') : `${envFiles.length} gizli ayar dosyası`} kayda giriyor`,
   moreFindings: count => `+${count} bulgu daha`,
   moreRows: count => `+${count} daha`,
-  commandLine: 'Yazma ve git add/commit öncesi gizli anahtar taramasını aç/kapat',
+  commandLine: 'Dosya yazılmadan ya da sürüm kaydedilmeden önce gizli anahtar kontrolünü aç/kapat',
   toggled: isOn => `secret-guard ${isOn ? 'açık' : 'kapalı'}`,
-  keptOut: count => `${count} sır sohbetin dışında tutuldu`,
+  keptOut: count => `${count} gizli anahtar sohbetin dışında tutuldu`,
   rec: 'REC',
-  recCommandLine: 'Kayıt modu: anahtarları, env değerlerini ve e-posta adreslerini ekranda maskele',
-  recToggled: isOn => (isOn ? 'Kayıt modu açık: anahtarlar, env değerleri ve e-posta adresleri ekranda maskelenir' : 'Kayıt modu kapalı'),
+  recCommandLine: 'Kayıt modu: anahtarları, gizli ayarları ve e-posta adreslerini ekranda gizle',
+  recToggled: isOn => (isOn ? 'Kayıt modu açık: anahtarlar, gizli ayarlar ve e-posta adresleri ekranda gizlenir' : 'Kayıt modu kapalı'),
 }
 
 export const WORDS: Readonly<Record<Lang, Words>> = { en: EN, tr: TR }

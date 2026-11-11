@@ -70,5 +70,5 @@ test('live work lights its glyph; a quiet row stays in the quiet ink', { plugins
   const all = await sources(ui)
 
   expect(all[Object.keys(all).find(alt => alt.startsWith('Testler')) ?? '']).toMatch(/<g class="fg-edit"><rect/)
-  expect(all[Object.keys(all).find(alt => alt.startsWith('Kontrol')) ?? '']).toMatch(/<g class="f-mid"><rect/)
+  expect(all[Object.keys(all).find(alt => alt.startsWith('Geri dönüş')) ?? '']).toMatch(/<g class="f-mid"><rect/)
 })

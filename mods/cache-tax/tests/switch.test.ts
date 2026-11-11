@@ -10,7 +10,7 @@ tier('user')
 const OPUS = 'claude-opus-5'
 const SONNET = 'claude-sonnet-5'
 const OPUS_TURN = turn({ usage: usage({ model: OPUS }) })
-const SWITCH_LEAD = /model değişti \(Opus 5 → Sonnet 5\): önbellek yeniden yazılacak\. /
+const SWITCH_LEAD = /model değişti \(Opus 5 → Sonnet 5\): Claude tüm sohbeti baştan okur\. /
 const HELD = 'Devam edelim.'
 
 /** A warm big cache written on Opus, ten minutes ago. */
@@ -39,13 +39,13 @@ describe('model switch', () => {
     w.current.model = SONNET
     const first = await $.prompt.submit(prompt('hi'))
     expect(first.drop).toMatch(SWITCH_LEAD)
-    expect(first.drop).toMatch(/en fazla 200\.502 token'ı \$4\/MTok fiyatla yeniden yazar = \$0,80 \(sıcak bir tur \$0,04 olurdu\)/)
+    expect(first.drop).toMatch(/en fazla 200\.502 token'ını milyon token başına \$4 fiyatla baştan okur = \$0,80 \(sohbet hazır tutulurken bir tur \$0,04 olurdu\)/)
     expect(w.entered).toEqual([])
     await $.prompt.submit(prompt('hi'))
     expect(w.entered).toEqual(['hi'])
     await step($, SONNET)
     await $.turn.complete(turn({ usage: usage({ model: SONNET, cache_read_input_tokens: 0, cache_creation_input_tokens: 200502 }) }))
-    expect(w.logs.at(-1)).toMatch(/201k token önbelleğe baştan yazıldı \(\$0,80\)/)
+    expect(w.logs.at(-1)).toMatch(/Claude sohbetin 201k token'ını baştan okudu \(\$0,80\)/)
     await $.prompt.submit(prompt('again'))
     expect(w.entered).toEqual(['hi', 'again'])
   })
@@ -69,7 +69,7 @@ describe('model switch', () => {
     expect(w.entered).toEqual(['warm'])
     await clock.advance(3 * HOUR)
     const cold = await $.prompt.submit(prompt('cold'))
-    expect(cold.drop).toMatch(/^cache-tax: önbellek 2 sa önce soğudu\. /)
+    expect(cold.drop).toMatch(/^cache-tax: sohbet 2 sa önce hazır tutulmayı bıraktı \(cache\)\. /)
   })
 
   test('a subagent on another model leaves the cache model alone', async ($, on) => {
@@ -96,7 +96,7 @@ describe('model switch', () => {
       w.current.model = SONNET
       const dropped = await $.prompt.submit(prompt(HELD))
       expect(dropped.drop).toBe('cache-tax: mesajın bekletiliyor, kartta seç (model değişti, en fazla $0,80).')
-      const reason = 'Model değişti (Opus 5 → Sonnet 5): önbellek yeniden yazılacak.'
+      const reason = 'Model değişti (Opus 5 → Sonnet 5): Claude tüm sohbeti baştan okur.'
       if (surface === 'desktop') expect(String((await ui.find({ type: 'Svg' }))?.props.source)).toContain(reason)
       else expect(await ui.find({ type: 'Text', text: reason })).not.toBe(undefined)
       expect(JSON.stringify(await ui.drawn())).toContain('$0,80')
@@ -115,6 +115,6 @@ describe('model switch', () => {
     await $.turn.complete(OPUS_TURN)
     w.current.model = SONNET
     const first = await $.prompt.submit(prompt('hi'))
-    expect(first.drop).toMatch(/^cache-tax: Model changed \(Opus 5 → Sonnet 5\): the cache will be rewritten\. This send rewrites up to 200,502 tokens at \$4\/MTok = \$0\.80/)
+    expect(first.drop).toMatch(/^cache-tax: Model changed \(Opus 5 → Sonnet 5\): Claude reads the whole chat again\. This message makes Claude read up to 200,502 tokens of the chat again at \$4 per million tokens = \$0\.80/)
   })
 })

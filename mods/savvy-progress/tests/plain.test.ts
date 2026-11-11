@@ -36,6 +36,11 @@ test('a command that can lose work says so plainly', () => {
   expect(bash('git reset --hard HEAD~1')).toBe('Henüz kaydedilmemiş değişiklikleri siliyor')
   expect(bash('git push --force-with-lease')).toBe('Ortak kopyanın üzerine kendi kayıtlarını yazıyor')
   expect(bash("sed -i '' 's/a/b/' file.ts")).toBe('Bir dosyayı kurala göre değiştiriyor: file.ts')
+  expect(bash('git checkout -- src/a.ts')).toBe('Dosyaları eski haline döndürüyor (kaydedilmemiş değişiklikler silinir)')
+  expect(bash('git stash drop')).toBe('Kenara konmuş değişiklikleri siliyor')
+  expect(bash('git branch -D old-idea')).toBe('Bir çalışma dalını (branch) siliyor: old-idea')
+  // Moving to another branch loses nothing, and is not told as if it did.
+  expect(bash('git checkout main')).toBe('Başka bir çalışma dalına (branch) geçiyor')
 })
 
 test('a script written on the spot, a script of the project and an unknown command are each named for what they are', () => {

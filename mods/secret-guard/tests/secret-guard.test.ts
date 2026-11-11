@@ -128,8 +128,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     const denied: any = await ($ as any).tool.call({ tool: 'Bash', command: 'git add .' })
 
-    if (surface === 'terminal') expect(setup.cards[0]).toEqual(['Ortam dosyası · git add .', ".env.local git'e ekleniyor", '  ortam dosyası  .env.local'])
-    else expect(JSON.stringify(setup.trees[0])).toContain(".env.local git'e ekleniyor")
+    if (surface === 'terminal') expect(setup.cards[0]).toEqual(['Gizli ayar dosyası · git add .', '.env.local kayda giriyor', '  gizli ayar dosyası  .env.local'])
+    else expect(JSON.stringify(setup.trees[0])).toContain('.env.local kayda giriyor')
     expect(denied.deny).toMatch(/blocked/)
   })
 }
@@ -176,7 +176,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
       expect(setup.cards[0]?.[0]).toBe('Sızıntı engellendi · git commit -m "pay"')
       expect(setup.cards[0]?.[2]).toBe('  Stripe live key  sk_l****  src/pay.ts')
     } else {
-      expect(setup.trees[0]?.children?.[0]?.children?.[0]?.props.alt).toBe("Bu commit'te 1 gizli anahtar var: Stripe src/pay.ts sk_l****")
+      expect(setup.trees[0]?.children?.[0]?.children?.[0]?.props.alt).toBe('Bu kayıtta 1 gizli anahtar var: Stripe src/pay.ts sk_l****')
     }
     expect(denied.deny).toMatch(/Move each secret/)
     expect(denied.deny).not.toContain(STRIPE)

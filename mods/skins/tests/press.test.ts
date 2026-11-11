@@ -12,7 +12,7 @@ const SETTINGS = {
   requestId: 'skins-settings',
   props: { title: 'Görünüm', isFocused: true, bodyColumns: 62, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} },
 } as const
-const PANES = [SETTINGS, { ...SETTINGS, requestId: 'skins-gallery', props: { ...SETTINGS.props, title: 'Skin galerisi' } }] as const
+const PANES = [SETTINGS, { ...SETTINGS, requestId: 'skins-gallery', props: { ...SETTINGS.props, title: 'Görünüm galerisi' } }] as const
 const BAND = {
   ...SITE,
   component: 'AbovePrompt',

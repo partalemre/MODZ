@@ -101,7 +101,7 @@ for (const surface of ['desktop', 'terminal'] as const) {
     await clock.advance(ANSWER_MS)
     expect(world.up).toEqual(['modz'])
     expect(await drawnText(ui)).not.toContain('did not answer')
-    expect(toasts).toEqual(['Band has no pane: its question is waiting by the prompt.'])
+    expect(toasts).toEqual(['Band has no panel: its question waits above the message box.'])
 
     await $.command.run({ command: 'report', args: 'clear' })
     expect(await drawnText(ui)).not.toContain('Band')

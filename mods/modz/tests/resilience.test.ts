@@ -97,9 +97,9 @@ for (const surface of ['terminal', 'desktop'] as const) {
 
     expect(await ui.find({ key: 'open-tests' })).toBeDefined()
     expect(await ui.find({ key: 'open-files' })).toBeUndefined()
-    expect(await said(ui, /katalog okunamadı/)).toBe(true)
+    expect(await said(ui, /mod listesi okunamadı/)).toBe(true)
     const catalog = await $.ui.mount({ ...PANE, requestId: 'modz-mods', surface })
-    expect(await said(catalog, /Katalog okunamadı/)).toBe(true)
+    expect(await said(catalog, /Mod listesi okunamadı/)).toBe(true)
   })
 
   test(`the catalog marks a mod whose folder is gone and files an unknown one under Diğer (${surface})`, async ($: any, on: any) => {

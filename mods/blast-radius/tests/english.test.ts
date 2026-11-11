@@ -18,7 +18,7 @@ for (const surface of SURFACES) {
     const drawn = JSON.stringify(tree)
 
     for (const text of ['Held · Blast Radius', 'Waiting for you', 'git reset --hard', 'Run anyway', 'Keep my work']) expect(drawn).toContain(text)
-    expect(drawn).toContain('This would throw away 3 files and 124 lines you haven\'t committed.')
+    expect(drawn).toContain('This would throw away 124 changed lines in 3 files, never saved as a version.')
     expect(hasTurkish(tree)).toBe(false)
     await ui.press({ key: 'cancel' })
     await pass(w)
@@ -38,7 +38,7 @@ for (const surface of SURFACES) {
     const ui = await mountBand($, surface)
     const drawn = JSON.stringify(await ui.drawn())
 
-    expect(drawn).toContain('This would delete 9 files (286 KB). None of them are in git, so they can\'t be brought back.')
+    expect(drawn).toContain('This would delete 9 files (286 KB). None of them were ever saved as a version, so they can\'t be brought back.')
     expect(drawn).toContain('+ 3 more files · 29 KB')
     expect(drawn).toContain('Show more')
     await ui.press({ key: 'toggle' })

@@ -50,9 +50,9 @@ const band = {
 test('without a five_hour reading /budget 20% counts the weekly window and says so', async ($: any, on: any) => {
   const world: World = { asked: [], answer: 'Stop', submitted: [] }
   await setup($, on, world)
-  expect(await $.command.run({ command: 'budget', args: '20%' })).toMatchObject({ text: 'Session budget set: 20% of the weekly limit.' })
+  expect(await $.command.run({ command: 'budget', args: '20%' })).toMatchObject({ text: 'Session budget set: 20% of the weekly usage allowance.' })
   await weekly($, 36)
-  expect(await $.command.run({ command: 'budget', args: 'status' })).toMatchObject({ text: 'Session budget: 7d 6% / 20% (30%)' })
+  expect(await $.command.run({ command: 'budget', args: 'status' })).toMatchObject({ text: 'Session budget: weekly 6% / 20% (30%)' })
 })
 
 test('without a five_hour reading the spawn brake reads the weekly window', async ($: any, on: any) => {
@@ -60,7 +60,7 @@ test('without a five_hour reading the spawn brake reads the weekly window', asyn
   await setup($, on, world)
   await weekly($, 90)
   await $.tool.call({ tool: 'Agent', description: 'one', prompt: 'look', subagent_type: 'Explore' })
-  expect(world.asked[0]).toMatch(/^Spawn brake: weekly window at 90%/)
+  expect(world.asked[0]).toMatch(/^weekly usage allowance 90% used/)
 })
 
 // A stand-in for reflect whose notice owns the line for the first 30 seconds.

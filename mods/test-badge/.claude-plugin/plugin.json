@@ -1,6 +1,6 @@
 {
   "name": "test-badge",
-  "description": "After a turn that edited source files, runs the project's tests and lint in the background and shows a one-line badge (tests 41/42 · lint 2 errors · 4s ago) with a details pane listing each failure by suite and file:line; also watches the open PR's GitHub CI through gh",
+  "description": "After Claude changes your code, runs the project's tests and its style-rule check (lint) on their own and shows the result in one line (tests 41/42 · style rules: 2 errors · 4s ago), with a panel that lists each failing test and where it is. It also follows the automatic checks GitHub runs on your open change request (pull request), through the gh tool.",
   "author": {
     "name": "Faik Emre Partal"
   },
@@ -9,19 +9,19 @@
     "testCommand": {
       "type": "string",
       "title": "Test command",
-      "description": "Overrides the detected test command (run with /bin/sh -c, or cmd /c on Windows, in the project root); empty = auto-detect",
+      "description": "The command that runs your tests, if the one found on its own is wrong (it runs in the project's main folder); leave empty to find it automatically",
       "default": ""
     },
     "lintCommand": {
       "type": "string",
-      "title": "Lint command",
-      "description": "Overrides the detected lint command (run with /bin/sh -c, or cmd /c on Windows, in the project root); empty = auto-detect",
+      "title": "Style-rule check command",
+      "description": "The command that checks the code against its style rules (lint), if the one found on its own is wrong; leave empty to find it automatically",
       "default": ""
     },
     "openCommand": {
       "type": "string",
       "title": "Open command",
-      "description": "How a failure row opens its file, e.g. \"cursor -g {file}:{line}\" (no shell); empty = VS Code's code -g, then the OS opener",
+      "description": "How a failing test opens its file in your editor, e.g. \"cursor -g {file}:{line}\"; leave empty to use VS Code, or else the computer's default app",
       "default": ""
     }
   }

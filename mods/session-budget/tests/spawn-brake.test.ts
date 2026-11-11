@@ -61,8 +61,8 @@ test('at the line a spawn asks; Stop refuses it with the reason the model reads'
   await measure($, 88)
   const refused = await spawn($, 'one')
   const reset = clockOf(RESETS_AT_MS)
-  expect(w.asked).toEqual([`Spawn brake: 5-hour window at 88%, resets ${reset}. Start the subagent anyway?`])
-  expect(JSON.stringify(refused)).toContain(`spawn brake: 5-hour window at 88%, resets ${reset}`)
+  expect(w.asked).toEqual([`5-hour usage allowance 88% used, refills ${reset}. Start a helper agent (subagent) anyway?`])
+  expect(JSON.stringify(refused)).toContain(`helper-agent brake: 5-hour usage allowance 88% used, refills ${reset}`)
   expect(w.spawned).toEqual([])
 })
 
@@ -107,7 +107,7 @@ test('a pace that fills the window before it resets asks below the line', async 
   await clock.advance(5 * MINUTE)
   await measure($, 60)
   await spawn($, 'one')
-  expect(w.asked[0]).toBe(`Spawn brake: 5-hour window at 60%, full by ${clockOf(50 * MINUTE)} at this pace, resets ${clockOf(RESETS_AT_MS)}. Start the subagent anyway?`)
+  expect(w.asked[0]).toBe(`5-hour usage allowance 60% used, runs out by ${clockOf(50 * MINUTE)} at this pace, refills ${clockOf(RESETS_AT_MS)}. Start a helper agent (subagent) anyway?`)
   expect(w.spawned).toEqual([])
 })
 
@@ -127,16 +127,16 @@ test('the pace alone stays quiet early in a window', async ($: any, on: any) => 
 test('/budget brake sets the line or turns it off, and the choice is saved', async ($: any, on: any) => {
   const w = world('Stop')
   await setup($, on, w)
-  expect(await $.command.run({ command: 'budget', args: 'brake' })).toMatchObject({ text: 'Spawn brake on: asks before a subagent at 85% of the 5-hour window.' })
-  expect(await $.command.run({ command: 'budget', args: 'brake 95' })).toMatchObject({ text: 'Spawn brake on: asks before a subagent at 95% of the 5-hour window.' })
+  expect(await $.command.run({ command: 'budget', args: 'brake' })).toMatchObject({ text: 'Helper-agent brake on: once 85% of the 5-hour allowance is used, it asks before a helper agent starts.' })
+  expect(await $.command.run({ command: 'budget', args: 'brake 95' })).toMatchObject({ text: 'Helper-agent brake on: once 95% of the 5-hour allowance is used, it asks before a helper agent starts.' })
   await measure($, 90)
   await spawn($, 'one')
-  expect(await $.command.run({ command: 'budget', args: 'brake off' })).toMatchObject({ text: 'Spawn brake off.' })
+  expect(await $.command.run({ command: 'budget', args: 'brake off' })).toMatchObject({ text: 'Helper-agent brake off.' })
   await measure($, 99)
   await spawn($, 'two')
   expect(w.asked).toEqual([])
   expect(w.stored['session-budget.brake']).toBe(false)
-  expect(await $.command.run({ command: 'budget', args: 'brake 0' })).toMatchObject({ text: 'Usage: /budget brake <percent, e.g. 85> | brake off' })
+  expect(await $.command.run({ command: 'budget', args: 'brake 0' })).toMatchObject({ text: 'Write it as: /budget brake <percent, e.g. 85> | brake off' })
 })
 
 test('a saved brake setting comes back at session start', async ($: any, on: any) => {

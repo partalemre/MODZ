@@ -89,17 +89,17 @@ test('lint errors are read from eslint, tsc and phpstan', () => {
 
 const outcome = (over: object) => ({ status: 'pass' as const, passed: null, total: null, errors: null, failures: [], tail: [], ...over })
 
-test('the badge reads like "testler 41/42 · lint 2 hata · 4 sn önce"', () => {
+test('the badge reads like "testler 41/42 · yazım kuralları: 2 hata · 4 sn önce"', () => {
   setLang('tr')
   const badge = {
     tests: outcome({ status: 'fail', passed: 41, total: 42 }),
     lint: outcome({ status: 'fail', errors: 2 }),
     root: '/w', finishedAt: 1000, durationMs: 3000, isRunning: false,
   }
-  expect(badgeText(badge, 5000)).toBe('testler 41/42 · lint 2 hata · 4 sn önce')
-  expect(badgeText({ ...badge, isRunning: true }, 5000)).toBe('testler 41/42 · lint 2 hata · çalışıyor…')
-  expect(badgeText({ ...badge, tests: null, lint: outcome({ status: 'timeout' }) }, 125_000)).toBe('lint zaman aşımı · 2 dk önce')
-  expect(badgeText({ ...badge, tests: outcome({}), lint: outcome({ errors: 0 }) }, 1000)).toBe('testler geçti · lint temiz · 0 sn önce')
+  expect(badgeText(badge, 5000)).toBe('testler 41/42 · yazım kuralları: 2 hata · 4 sn önce')
+  expect(badgeText({ ...badge, isRunning: true }, 5000)).toBe('testler 41/42 · yazım kuralları: 2 hata · çalışıyor…')
+  expect(badgeText({ ...badge, tests: null, lint: outcome({ status: 'timeout' }) }, 125_000)).toBe('yazım kuralları çok uzun sürdü · 2 dk önce')
+  expect(badgeText({ ...badge, tests: outcome({}), lint: outcome({ errors: 0 }) }, 1000)).toBe('testler geçti · yazım kuralları tamam · 0 sn önce')
 })
 
 test('a failure row opens VS Code at the line, or the configured command, never through a shell', () => {

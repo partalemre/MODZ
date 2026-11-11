@@ -70,7 +70,7 @@ test('go test: subtests, the package mapped to its folder, and build errors', ()
   ].join('\n')
   expect(where(out)).toEqual([
     ['unit', 'auth/login_test.go', 42, 'TestTable/expired', 'expected 401, got 200'],
-    ['typecheck', 'auth/token.go', 9, 'undefined: clock', 'derleme hatası'],
+    ['typecheck', 'auth/token.go', 9, 'undefined: clock', 'kod derlenemedi'],
   ])
 })
 

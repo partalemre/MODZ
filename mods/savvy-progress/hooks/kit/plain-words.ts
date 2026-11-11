@@ -119,7 +119,7 @@ const GIT: Family = {
     'cherry-pick': ['Copying one saved change onto this branch', 'Kaydedilmiş tek bir değişikliği bu dala kopyalıyor'],
     stash: ['Setting unfinished changes aside', 'Yarım kalan değişiklikleri kenara koyuyor'],
     reset: ['Taking back the changes picked for saving', 'Kayıt için seçilen değişiklikleri geri çekiyor'],
-    restore: ['Putting a file back as it was', 'Bir dosyayı eski haline döndürüyor'],
+    restore: ['Putting files back as they were (unsaved edits are lost)', 'Dosyaları eski haline döndürüyor (kaydedilmemiş değişiklikler silinir)'],
     revert: ['Undoing an earlier saved version', 'Daha önce kaydedilmiş bir sürümü geri alıyor'],
     clean: ['Deleting files that were never saved', 'Hiç kaydedilmemiş dosyaları siliyor'],
     clone: ['Downloading a project', 'Bir projeyi indiriyor'],
@@ -201,6 +201,9 @@ export const FAMILIES: Readonly<Record<string, Family>> = {
 export const SHELL = {
   newBranch: ['Starting a new line of work (branch)[: {x}]', 'Yeni bir çalışma dalı (branch) açıyor[: {x}]'],
   hardReset: ['Throwing away the changes not saved yet', 'Henüz kaydedilmemiş değişiklikleri siliyor'],
+  discard: ['Putting files back as they were (unsaved edits are lost)', 'Dosyaları eski haline döndürüyor (kaydedilmemiş değişiklikler silinir)'],
+  dropStash: ['Throwing away the changes that were set aside', 'Kenara konmuş değişiklikleri siliyor'],
+  deleteBranch: ['Deleting a line of work (branch)[: {x}]', 'Bir çalışma dalını (branch) siliyor[: {x}]'],
   forcePush: ['Overwriting the shared copy with its own versions', 'Ortak kopyanın üzerine kendi kayıtlarını yazıyor'],
   prCreate: ['Opening a change request (PR) on GitHub', 'GitHub’da bir değişiklik isteği (PR) açıyor'],
   prMerge: ['Merging a change request (PR) into the main code', 'Bir değişiklik isteğini (PR) ana koda birleştiriyor'],

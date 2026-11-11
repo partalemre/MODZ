@@ -14,7 +14,7 @@ describe('guard refuse with a dollar floor', () => {
     await $.session.start(session)
     await $.turn.complete(turn())
     const set = await $.command.run(run('cache-tax', 'guard refuse 5'))
-    expect(set.text).toBe('koruma: $5,00 ve üstünde bir kez durdur. Daha ucuz soğuk gönderim fiyatı gösterilerek geçer')
+    expect(set.text).toBe('koruma: $5,00 ve üstüne gelen mesajı bir kez beklet. Daha ucuzu fiyatı gösterilerek geçer')
     expect(store.get('guard')).toBe(5)
     await clock.advance(3 * HOUR)
     expect((await $.prompt.submit(prompt('hi'))).drop).toBe(undefined)
@@ -22,8 +22,8 @@ describe('guard refuse with a dollar floor', () => {
     expect(w.logs.at(-1)).toMatch(/\$4,01.*Yine de gönderiliyor.* \$5,00 sınırının altında olduğu için bekletilmedi\.$/)
     await $.turn.complete(turn({ usage: usage({ cache_read_input_tokens: 0, cache_creation_input_tokens: 1000 }) }))
     const card = await $.command.run(run('cache-tax', ''))
-    expect(card.text).toMatch(/önbellek 1 kez baştan yazıldı/)
-    expect(card.text).toMatch(/koruma      \$5,00 ve üstünde bir kez durdur, altında uyar/)
+    expect(card.text).toMatch(/sohbet 1 kez baştan okundu/)
+    expect(card.text).toMatch(/koruma      \$5,00 ve üstünde bir kez beklet, altında uyar/)
   })
 
   test('a cold send at or over the floor is held as before', async ($, on) => {
@@ -66,6 +66,6 @@ describe('guard refuse with a dollar floor', () => {
     world(on, [], { lang: 'en' })
     await $.session.start(session)
     const set = await $.command.run(run('cache-tax', 'guard refuse 5'))
-    expect(set.text).toBe('guard: hold once at $5.00 or more. A cheaper cold send goes through with its price shown')
+    expect(set.text).toBe('guard: hold the message once when it costs $5.00 or more. A cheaper one goes through with its price shown')
   })
 })

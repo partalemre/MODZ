@@ -138,7 +138,10 @@ function specialSay(call: Call, lang: Lang): string | null {
   const combined = (letter: string): boolean => args.some(arg => /^-[a-zA-Z]+$/.test(arg) && arg.includes(letter))
   const second = args.filter(arg => !isFlag(arg))[1] ?? ''
   if (name === 'git' && (args[0] === 'checkout' || args[0] === 'switch') && has('-b', '-B', '-c')) return say(SHELL.newBranch, lang, clip(args.filter(arg => !isFlag(arg))[1] ?? ''))
-  if (name === 'git' && args[0] === 'reset' && has('--hard')) return say(SHELL.hardReset, lang)
+  if (name === 'git' && args[0] === 'reset' && has('--hard', '--merge', '--keep')) return say(SHELL.hardReset, lang)
+  if (name === 'git' && args[0] === 'checkout' && (has('--', '.') || has('-f', '--force'))) return say(SHELL.discard, lang)
+  if (name === 'git' && args[0] === 'stash' && (second === 'drop' || second === 'clear')) return say(SHELL.dropStash, lang)
+  if (name === 'git' && args[0] === 'branch' && (has('-D', '--delete') || combined('d'))) return say(SHELL.deleteBranch, lang, clip(args.filter(arg => !isFlag(arg))[1] ?? ''))
   if (name === 'git' && args[0] === 'push' && (has('--force', '--force-with-lease') || combined('f'))) return say(SHELL.forcePush, lang)
   if (name === 'gh' && args[0] === 'pr' && second === 'create') return say(SHELL.prCreate, lang)
   if (name === 'gh' && args[0] === 'pr' && second === 'merge') return say(SHELL.prMerge, lang)

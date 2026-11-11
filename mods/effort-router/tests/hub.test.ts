@@ -11,7 +11,7 @@ const row = (turnId: string, sent: unknown) => ({ turnId, at: 0, snippet: '', cl
 test('the card names its own row and counts the effort of the last five turns', { plugins: [spy] }, async ($: any, on: any) => {
   stub(on, worldOf())
   await begin($)
-  expect(await stateOf($, 'hub')).toMatchObject({ pane: 'effort', detail: '', tone: 'idle', title: 'Effort', icon: 'bolt', section: 'meter' })
+  expect(await stateOf($, 'hub')).toMatchObject({ pane: 'effort', detail: '', tone: 'idle', title: 'Thinking level', icon: 'bolt', section: 'meter' })
 
   const efforts = ['low', 'high', 'low', 'high', 'high', 'medium']
   for (const [i, effort] of efforts.entries()) await turn($, { text: `Prompt ${i}`, turnId: `t${i}`, effort })
@@ -27,7 +27,7 @@ test('Turkish: the card and its detail in Turkish', { plugins: [spy] }, async ($
   stub(on, worldOf({ env: { MODZ_LANG: 'tr' } }))
   await begin($)
   await turn($, { text: 'Yardımcıyı yeniden adlandır', turnId: 't1', effort: 'high' })
-  expect(await stateOf($, 'hub')).toMatchObject({ title: 'Efor', hint: 'Her turun eforu ve modeli', detail: 'high · son 1: 1 high' })
+  expect(await stateOf($, 'hub')).toMatchObject({ title: 'Düşünme düzeyi', hint: 'Claude her turda ne kadar düşündü, hangi model', detail: 'high · son 1: 1 high' })
 })
 
 test('off says so on the hub', { options: { mode: 'off' }, plugins: [spy] }, async ($: any, on: any) => {

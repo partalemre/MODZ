@@ -62,7 +62,7 @@ for (const surface of SURFACES) {
     expect(order.every(at => at >= 0)).toBe(true)
     expect([...order].sort((x, y) => x - y)).toEqual(order)
     expect(all).toContain('12 sn önce')
-    expect(await seen(ui)).toContain('Süre 0:12 · bağlam')
+    expect(await seen(ui)).toContain('Süre 0:12 · hafıza')
   })
 
   test(`${surface}: between calls a running agent is thinking, with its latest call and how long ago`, async ($, on) => {

@@ -35,20 +35,20 @@ test('the body is cut to 80 characters and code blocks are left out', () => {
 
 test('a waiting ping names the tool but never shows a command or code', () => {
   setLang('tr')
-  expect(permissionPing('eliti', 'Bash', { command: 'curl -H "Authorization: sk-123" x' })).toMatchObject({ title: 'Onay bekliyor', subtitle: 'eliti', body: 'komut izni' })
+  expect(permissionPing('eliti', 'Bash', { command: 'curl -H "Authorization: sk-123" x' })).toMatchObject({ title: 'Onay bekliyor', subtitle: 'eliti', body: 'komut çalıştırma izni' })
   expect(permissionPing('eliti', 'Edit', { file_path: '/w/src/app.ts' }).body).toBe('dosya düzenleme · app.ts')
   expect(permissionPing('eliti', 'WebFetch', { url: 'https://docs.example.com/a?token=1' }).body).toBe('web sayfası · docs.example.com')
   expect(permissionPing('eliti', 'Mystery', {}).body).toBe('Mystery izni')
   expect(permissionPing('eliti', 'mcp__plugin_x__do_thing', {}).body).toBe('do thing izni')
   expect(permissionPing('eliti', 'mcp__github__create_issue', { path: '/w/a.md' }).body).toBe('create issue · a.md')
   expect(questionPing('eliti', { questions: [{ question: 'Hangi kütüphane? `rm -rf` mi?' }] })).toMatchObject({ title: 'Cevap bekliyor', body: 'Hangi kütüphane? mi?' })
-  expect(appMessage(permissionPing('eliti', 'Bash', { command: 'ls' }))).toBe('Onay bekliyor · eliti\nkomut izni')
+  expect(appMessage(permissionPing('eliti', 'Bash', { command: 'ls' }))).toBe('Onay bekliyor · eliti\nkomut çalıştırma izni')
 })
 
 test('tool names read as plain words in English too', () => {
   setLang('en')
   expect(permissionPing('eliti', 'Write', { file_path: '/w/a.ts' }).body).toBe('file write · a.ts')
-  expect(permissionPing('eliti', 'Bash', { command: 'ls' }).body).toBe('command permission')
+  expect(permissionPing('eliti', 'Bash', { command: 'ls' }).body).toBe('permission to run a command')
   expect(permissionPing('eliti', 'mcp__plugin_x__do_thing', {}).body).toBe('do thing permission')
   setLang('tr')
 })

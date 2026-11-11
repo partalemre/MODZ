@@ -108,7 +108,7 @@ async function previewAll($: Engine, theme: Theme) {
   await runSkin($, 'band on')
   const band = { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 90, scroll: { offset: 0, bodyRows: 4 }, view: {} }
   const ui = await $.ui.mount({ ...SITE, component: 'AbovePrompt', requestId: 'band', props: band })
-  expect(await ui.find({ type: 'Text', text: `Bağlam %${CONTEXT_FULL} dolu` })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: `Sohbet hafızası %${CONTEXT_FULL} dolu` })).toBeDefined()
   await logTree(`${theme}-tidemark-band`, ui)
 }
 

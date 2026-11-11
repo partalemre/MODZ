@@ -285,13 +285,13 @@ test('code is split into comments, strings, numbers and keywords by language', a
 
 test('plan limits read as 5s and 7g, and a meter warns as it fills', async () => {
   expect(limitLabel('five_hour')).toBe('5s')
-  expect(limitLabel('seven_day')).toBe('7g')
+  expect(limitLabel('seven_day')).toBe('hafta')
   expect(metersOf({ context: 42.4, limits: [{ label: '5s', percent: 120 }] })).toEqual([
-    { label: 'bağlam', percent: 42 },
+    { label: 'hafıza', percent: 42 },
     { label: '5s', percent: 100 },
   ])
   expect(meterColor(85, tokyoNight.palette)).toBe(tokyoNight.palette.warn)
-  expect(usageSvg([{ label: 'bağlam', percent: 42 }], tokyoNight.palette).alt).toBe('bağlam %42')
+  expect(usageSvg([{ label: 'hafıza', percent: 42 }], tokyoNight.palette).alt).toBe('hafıza %42')
 })
 
 test('a long cell wraps on its words, breaks a word too long for the column, and caps its lines', async () => {

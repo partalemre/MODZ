@@ -246,10 +246,10 @@ type HubCard = { pane: string; detail: string; tone: HubTone; at: number
 | plan | plan-steps | Plan |
 | transceiver | transceiver | Transceiver (Beta) |
 | tests | test-badge | Testler |
-| checkpoints | checkpoint | Kontrol noktaları |
+| checkpoints | checkpoint | Geri dönüş noktaları |
 | replay | replay-theater | Tekrar |
 | usage | hud-pro | Kullanım |
-| effort | effort-router | Efor |
+| effort | effort-router | Düşünme düzeyi |
 | handoff | handoff | Devir |
 | skins | skins | Görünüm |
 | modz-mods | modz | Modlar (modz'un ikinci paneli) |

@@ -73,6 +73,12 @@ export const MOTION = [
   '@media (prefers-reduced-motion:reduce){.rise,.card{animation:none;opacity:1}}',
 ].join('')
 
+// A card with its entrance over, as reduced motion shows it. The desktop draws a plain Svg as a new image on every
+// redraw, so an entrance left in plays again each time.
+const SETTLED = '<style>.rise,.card,.row,.rule{animation:none!important;opacity:1!important}.rule{stroke-dashoffset:0!important}</style>'
+
+export const settled = (source: string): string => source.replace(/<\/svg>\s*$/, `${SETTLED}</svg>`)
+
 export const riseDelay = (index: number, stepMs: number, startMs = 80): string =>
   `style="animation-delay:${startMs + index * stepMs}ms"`
 

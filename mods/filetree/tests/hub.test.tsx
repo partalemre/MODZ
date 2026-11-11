@@ -44,10 +44,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await $.tool.call({ tool: 'Bash', command: SEED } as any)
     await clock.settle()
     const shown = await texts(ui)
-    expect(shown).toContain('commit edildi · playground')
-    expect(shown).not.toContain('başarısız')
-    expect(shown).not.toContain('oluşmadı')
-    expect(shown).not.toContain('commit etti')
+    expect(shown).toContain('yeni sürüm kaydedildi · playground')
+    expect(shown).not.toContain('Olmadı:')
+    expect(shown).not.toContain('sürüm kaydedilmedi')
+    expect(shown).not.toContain('yeni sürüm olarak kaydetti')
     await ui.unmount()
   })
 
@@ -63,7 +63,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ plugin: 'filetree', surface, component: 'Pane', requestId: 'filetree', props })
     await $.tool.call({ tool: 'Bash', command: 'git commit -m x' } as any)
     await clock.settle()
-    expect(await texts(ui)).toContain('commit olmadı: değişiklik yok')
+    expect(await texts(ui)).toContain('kaydedilmedi: kaydedilecek değişiklik yok')
     await ui.unmount()
   })
 }
@@ -74,7 +74,7 @@ test('hub card: written at start, live during a turn, then what git leaves', { t
   const clock = world(on, w)
   await $.session.start({ cwd: root, surface: 'desktop', isInteractive: true })
   await clock.settle()
-  expect(await hub($)).toMatchObject({ pane: 'files', detail: '2 değişiklik commit edilmedi', tone: 'warn' })
+  expect(await hub($)).toMatchObject({ pane: 'files', detail: '2 değişiklik kaydedilmedi', tone: 'warn' })
   await $.turn.start({ text: 'go', turnId: 't1' })
   await $.tool.call({ tool: 'Read', file_path: `${root}/a.ts` } as any)
   await clock.settle()
@@ -83,7 +83,7 @@ test('hub card: written at start, live during a turn, then what git leaves', { t
   await $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
   await $.tool.call({ tool: 'Bash', command: 'touch c' } as any)
   await clock.settle()
-  expect(await hub($)).toMatchObject({ detail: 'temiz', tone: 'ok' })
+  expect(await hub($)).toMatchObject({ detail: 'hepsi kayıtlı', tone: 'ok' })
 })
 
 test('modz.open with pane "files" opens the pane titled Dosyalar; another pane key does not', { timeoutMs: 20_000, plugins: [modz] } as any, async ($: any, on: any) => {
@@ -156,5 +156,5 @@ test('hub card: after a turn that committed, the commit and a clean tree', { tim
   await clock.settle()
   await $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
   await clock.settle()
-  expect(await hub($)).toMatchObject({ detail: 'son commit · temiz', tone: 'ok' })
+  expect(await hub($)).toMatchObject({ detail: 'yeni sürüm kaydedildi · hepsi kayıtlı', tone: 'ok' })
 })

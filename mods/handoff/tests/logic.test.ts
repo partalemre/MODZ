@@ -96,8 +96,8 @@ test('the note lists every fact it has and leaves out the empty sections', () =>
   })
 
   expect(text).toContain('# Handoff · 2026-10-13 14:05')
-  expect(text).toContain('Context 82% full')
-  expect(text).toContain('## Goal (latest prompts)\n- fix login')
+  expect(text).toContain('Chat memory 82% full')
+  expect(text).toContain('## Goal (your latest messages)\n- fix login')
   expect(text).toContain('## Open plan steps\n- [ ] Ship')
   expect(text).toContain('## Files touched\n- src/a.ts')
   expect(text).toContain('```\n## main\n M src/a.ts\n```')

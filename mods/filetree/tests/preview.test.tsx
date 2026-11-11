@@ -127,7 +127,7 @@ for (const theme of ['dark', 'light'] as const) for (const [size, cols] of SIZES
     await $.tool.call({ tool: 'Bash', command: 'git commit -am "Fix client retry"' } as any)
     await ($ as any).turn.complete(done('t1'))
     await snap(ui, `${size}-${theme}-3-committed`)
-    expect(JSON.stringify(await ui.drawn())).toContain('commit etti')
+    expect(JSON.stringify(await ui.drawn())).toContain('yeni sürüm olarak kaydetti')
     w.git.status = '## main...origin/main\0 M src/index.js\0?? docs/setup.md\0'
     w.git.numstat = '4\t2\tsrc/index.js\0'
     await ($ as any).turn.start(turn('t3'))
@@ -135,7 +135,7 @@ for (const theme of ['dark', 'light'] as const) for (const [size, cols] of SIZES
     await ($ as any).turn.complete(done('t3'))
     await ui.press({ key: 'more' })
     await snap(ui, `${size}-${theme}-6-tools-open`)
-    expect(JSON.stringify(await ui.drawn())).toContain('commit oluşmadı')
+    expect(JSON.stringify(await ui.drawn())).toContain('yeni sürüm kaydedilmedi')
     await ui.unmount()
   })
 

@@ -34,7 +34,7 @@ for (const surface of SURFACES) {
   test(`${surface}: the pane lists turns and asks before an undo, in English`, async ($: any, on: any) => {
     const pane = await openPane($, on, { fake: english(ONE), surface })
     const list = await shown(pane)
-    expect(list).toContain('Checkpoints')
+    expect(list).toContain('Restore points')
     expect(list).toContain(surface === 'desktop' ? 'newest ' : '1 saved · newest ')
     if (surface === 'desktop') expect(list).toContain('1 turn saved')
     expect(list).toContain('Undo')
@@ -63,7 +63,7 @@ for (const surface of SURFACES) {
   test(`${surface}: an empty project says how checkpoints are made, in English`, async ($: any, on: any) => {
     const pane = await openPane($, on, { fake: english(), surface })
     const empty = await shown(pane)
-    expect(empty).toContain('No checkpoints yet')
+    expect(empty).toContain('No restore points yet')
     expect(TURKISH_ONLY.test(empty)).toBe(false)
   })
 }
@@ -74,7 +74,7 @@ test('/checkpoint off says so in English', async ($: any, on: any) => {
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/w' })
 
   await $.command.run({ command: 'checkpoint', args: '' })
-  expect(fake.asked).toEqual(['toast:checkpoint off'])
+  expect(fake.asked).toEqual(['toast:restore points off'])
 })
 
 test('the hub line counts checkpoints and carries no age that would go stale', () => {

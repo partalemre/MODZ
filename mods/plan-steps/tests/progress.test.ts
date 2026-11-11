@@ -112,7 +112,7 @@ test('the current step lists its files, newest first, and its agents', () => {
   }
 
   expect(detailLines({ ...step('s', 'in_progress'), checksDone: 2, checksTotal: 5 }, track)).toEqual({
-    summary: '2/5 madde · 1 dosya: x.ts · 1 ajan bitti',
+    summary: '2/5 madde · 1 dosya: x.ts · 1 yardımcı ajan bitti',
     agents: ['Testleri yaz'],
   })
 })

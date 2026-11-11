@@ -70,13 +70,13 @@ test('the hub line says a note is ready until a conversation takes it', { plugin
   await measure($, 42)
   const card = await hubCardOf($)
 
-  expect(card).toMatchObject({ pane: 'handoff', detail: 'Context 42% · note ready', tone: 'ok', title: 'Handoff', icon: 'flag', section: 'meter' })
+  expect(card).toMatchObject({ pane: 'handoff', detail: 'Memory 42% · note ready', tone: 'ok', title: 'Handoff', icon: 'flag', section: 'meter' })
   expect(card.detail.length).toBeLessThanOrEqual(40)
 
   await nextChat($, world, 's2')
   await measure($, 42)
   await takeNote($)
-  expect((await hubCardOf($)).detail).toBe('Context 42%')
+  expect((await hubCardOf($)).detail).toBe('Memory 42%')
 })
 
 test('a stale note is skipped', async ($: any, on: any) => {

@@ -83,7 +83,7 @@ test('one question near auto-compaction: compact now (notes kept) or hand off', 
 
   await measure($, 73)
   expect(buttonsOf(await band.drawn())).toEqual(['handoff-compact', 'handoff-write', 'handoff-snooze'])
-  expect(await band.find({ text: /auto-compact at 78%/ })).toBeDefined()
+  expect(await band.find({ text: /summarized automatically at 78%/ })).toBeDefined()
 
   await band.press({ key: 'handoff-compact' })
   expect(world.compacts).toBe(1)
@@ -99,7 +99,7 @@ test('with auto-compaction off the line comes at the setting', async ($: any, on
   await measure($, 80)
   const band = await $.ui.mount(bandOf('terminal'))
   expect(buttonsOf(await band.drawn())).toEqual(['handoff-compact', 'handoff-write', 'handoff-snooze'])
-  expect(await band.find({ text: /auto-compact at/ })).toBeUndefined()
+  expect(await band.find({ text: /summarized automatically at/ })).toBeUndefined()
 })
 
 test('the pane says what the mod does and lists the notes with their age; Delete removes one', async ($: any, on: any) => {
@@ -110,7 +110,7 @@ test('the pane says what the mod does and lists the notes with their age; Delete
   await clock.advance(3 * 60 * MINUTE)
   const pane = await $.ui.mount(paneOf('terminal'))
 
-  expect(await pane.find({ text: /Before any compaction/ })).toBeDefined()
+  expect(await pane.find({ text: /Before the chat is summarized/ })).toBeDefined()
   expect(await pane.find({ text: /3 h ago/ })).toBeDefined()
   const [path] = Object.keys(world.files)
   await pane.press({ key: 'handoff-drop-0' })

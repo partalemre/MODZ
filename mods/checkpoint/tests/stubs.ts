@@ -56,5 +56,5 @@ export function stub(on: any, fake: Fake, record: { seen?: any[]; stored?: Recor
 export const paneOf = (surface: string) => ({
   plugin: 'checkpoint', component: 'Pane', requestId: 'checkpoints', surface,
   viewport: { columns: 120, rows: 30 },
-  props: { title: 'Kontrol noktaları', isFocused: true, bodyColumns: 80, placement: 'dock', scroll: { offset: 0, bodyRows: 24 }, view: {} },
+  props: { title: 'Geri dönüş noktaları', isFocused: true, bodyColumns: 80, placement: 'dock', scroll: { offset: 0, bodyRows: 24 }, view: {} },
 })

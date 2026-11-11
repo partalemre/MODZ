@@ -133,7 +133,7 @@ test('/checkpoint off stops snapshots and says so in a toast, not the transcript
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/w' })
 
   await $.command.run({ command: 'checkpoint', args: '' })
-  expect(fake.asked).toEqual(['toast:checkpoint kapalı'])
+  expect(fake.asked).toEqual(['toast:geri dönüş noktaları kapalı'])
   await $.prompt.submit({ text: 'go', ...PROMPT })
   await $.tool.call({ tool: 'Write', file_path: '/w/a.ts', content: 'x' })
   expect(commits(fake)).toHaveLength(0)
@@ -163,10 +163,10 @@ for (const surface of SURFACES) {
   test(`${surface}: the pane lists turns; Geri al shows the confirm card, Vazgeç changes nothing`, async ($: any, on: any) => {
     const fake = newFake({ ...ONE, numstat: '12\t3\ta.ts\0' + '0\t20\tnew.ts\0' })
     const pane = await openPane($, on, { fake, surface })
-    expect(await shown(pane)).toContain('Kontrol noktaları')
+    expect(await shown(pane)).toContain('Geri dönüş noktaları')
     // Desktop's lead already reads "1 tur kayıtlı", so its meta does not count again.
-    expect(await shown(pane)).toMatch(surface === 'desktop' ? /1 tur kayıtlı[\s\S]*en yenisi / : /1 kayıt · en yenisi /)
-    if (surface === 'desktop') expect(await shown(pane)).not.toContain('1 kayıt ·')
+    expect(await shown(pane)).toMatch(surface === 'desktop' ? /1 tur kayıtlı[\s\S]*en yenisi / : /1 nokta · en yenisi /)
+    if (surface === 'desktop') expect(await shown(pane)).not.toContain('1 nokta ·')
     expect(await shown(pane)).toContain('fix login')
 
     await pane.press({ key: 'cp-undo-0' })
@@ -228,7 +228,7 @@ test('undo bookkeeping and git numstat', () => {
 for (const surface of SURFACES) {
   test(`${surface}: an empty project says how checkpoints are made`, async ($: any, on: any) => {
     const pane = await openPane($, on, { fake: newFake(), surface })
-    expect(await shown(pane)).toContain('Henüz kontrol noktası yok · ilk dosya yazımından önce sessizce alınır')
+    expect(await shown(pane)).toContain('Henüz geri dönüş noktası yok · ilk dosya değişikliğinden önce sessizce alınır')
   })
 }
 

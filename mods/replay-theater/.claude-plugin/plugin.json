@@ -1,6 +1,6 @@
 {
   "name": "replay-theater",
-  "description": "Replay Theater: step through the file edits of the last turn, or of any earlier turn and past session read from the transcripts, with what each step does, the plan step it served and a colored diff.",
+  "description": "Replay Theater: step through the file edits of the last turn, or of any earlier turn and past session read from the saved conversations, with what each step does, the plan step it served and the changed lines in color.",
   "author": {
     "name": "Claude Code DevRel"
   },

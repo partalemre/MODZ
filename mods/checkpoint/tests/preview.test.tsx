@@ -60,7 +60,7 @@ async function open($: any, on: any, spec: Spec) {
 
   return $.ui.mount({
     plugin: 'checkpoint', component: 'Pane', requestId: 'checkpoints', surface, viewport: { columns: spec.columns + 10, rows: 40 },
-    props: { title: 'Kontrol noktaları', isFocused: true, bodyColumns: spec.columns, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} },
+    props: { title: 'Geri dönüş noktaları', isFocused: true, bodyColumns: spec.columns, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} },
   })
 }
 

@@ -106,7 +106,7 @@ test('a transcript past the read cap is read from its end and says so', async ($
 
   const shown = await shownIn(pane)
   expect(world.spawned.at(-1)).toEqual(['dd', `if=${DIR}/${BIG_ID}.jsonl`, `bs=${MIB}`, 'skip=2'])
-  expect(shown).toContain('çok büyük kaydın yalnızca son kısmı okundu')
+  expect(shown).toContain('çok uzun sohbetin yalnızca son kısmı okundu')
   expect(shown).toContain('1 düzenleme · 1 dosya')
 })
 
@@ -116,9 +116,9 @@ test('with no transcript the lists say there is nothing to read', async ($: any,
   await replayCommand($, clock, 'sessions')
   const pane = await $.ui.mount(paneOf('terminal'))
 
-  expect(await texts(pane)).toContain('Okunacak kayıt yok')
+  expect(await texts(pane)).toContain('Okunacak sohbet kaydı yok')
   await press(pane, clock, 'rt-this-session')
-  expect(await texts(pane)).toContain('Okunacak kayıt yok')
+  expect(await texts(pane)).toContain('Okunacak sohbet kaydı yok')
 })
 
 test('list lines are kept across sessions: a session read before is not read again', async ($: any, on: any) => {
@@ -142,7 +142,7 @@ test('a transcript that cannot be read says so in its row', async ($: any, on: a
   delete world.streamed[`${DIR}/${BIG_ID}.jsonl`]
   await replayCommand($, clock, 'sessions')
 
-  expect(await shownIn(await $.ui.mount(paneOf('terminal')))).toContain('kayıt okunamadı')
+  expect(await shownIn(await $.ui.mount(paneOf('terminal')))).toContain('sohbet kaydı okunamadı')
   expect(Object.keys(world.store.sessions as object)).not.toContain(BIG_ID)
 })
 

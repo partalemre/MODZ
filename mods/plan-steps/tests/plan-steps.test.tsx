@@ -129,7 +129,7 @@ for (const surface of SURFACES) {
 
     await $.turn.complete({ answer: 'bitti', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer', agentId: 'ag-12' })
     expect(await rowText(pane, 'detail-agent-0')).toBeUndefined()
-    expect(await rowText(pane, 'detail-summary')).toBe('› 2 dosya: parse.test.ts, parse.ts · 1 ajan bitti')
+    expect(await rowText(pane, 'detail-summary')).toBe('› 2 dosya: parse.test.ts, parse.ts · 1 yardımcı ajan bitti')
   })
 
   test(`${surface}: a plan file leads, tasks matched to its steps give their status`, async ($: any, on: any) => {

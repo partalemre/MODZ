@@ -3,7 +3,7 @@ import type { PaneHandlers } from './buttons'
 import { countChanges } from './diff'
 import { MAX_DIFF_LINES } from './diff-svg'
 import type { Ui } from './facts'
-import { baseName, folderOf, totals, windowOf } from './pane-svg'
+import { baseName, doingOf, folderOf, totals, windowOf } from './pane-svg'
 import type { PaneModel } from './pane-svg'
 import { words } from './words'
 import type { ReplayDiffLine, ReplayStep } from '../types'
@@ -101,7 +101,7 @@ export function terminalView(ui: Ui, model: PaneModel, site: TerminalSite) {
   const maxDiff = site.isCompact ? Math.max(MIN_DIFF_ROWS, Math.min(MAX_DIFF_LINES, site.maxRows - BAND_CHROME_ROWS)) : MAX_DIFF_LINES
   const lines = step.diff.slice(0, maxDiff)
   const w = words()
-  const meta = [folderOf(step.file) || w.projectRoot, step.tool, step.note].filter(Boolean).join(' · ')
+  const meta = [doingOf(step), folderOf(step.file) || w.projectRoot, step.note, step.tool].filter(Boolean).join(' · ')
 
   return (
     <Box key="rt-pane" flexDirection="column" paddingX={1}>
@@ -112,7 +112,7 @@ export function terminalView(ui: Ui, model: PaneModel, site: TerminalSite) {
       </Box>
       <Box key="rt-file" flexDirection="row" columnGap={1}>
         <Text bold>{baseName(step.file)}</Text>
-        <Text dimColor wrap="truncate-start">{meta}</Text>
+        <Text dimColor wrap="truncate-end">{meta}</Text>
       </Box>
       {contextRows(ui, step, model.explain === 'pending')}
       <Box key="rt-diff" flexDirection="column">

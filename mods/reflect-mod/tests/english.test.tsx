@@ -58,6 +58,6 @@ test('English: the queue and pause commands answer in English; a Turkish correct
   await say($, w, TR)
   expect(w.asked).toEqual([TR])
   expect((await $.command.run({ command: 'reflect-queue', args: '' } as never)).text)
-    .toBe('1 waiting, 1 in all (here and global)\nwaiting ×1 project Use pnpm, not npm, in this repo.')
-  expect(await $.command.run({ command: 'reflect-pause', args: '' } as never)).toMatchObject({ text: 'Paused. Your prompts are not checked.' })
+    .toBe('1 waiting, 1 in all (this project and all projects)\nwaiting ×1 this project Use pnpm, not npm, in this repo.')
+  expect(await $.command.run({ command: 'reflect-pause', args: '' } as never)).toMatchObject({ text: 'Paused. Your messages are not checked for rules.' })
 })

@@ -79,7 +79,7 @@ test('the hub card is idle before a run, live while one goes, then says what fai
   world.hold = undefined
   release()
   await clock.advance(1)
-  expect(await cardOf($)).toMatchObject({ detail: '41/42 geçti · lint 2 hata', tone: 'bad' })
+  expect(await cardOf($)).toMatchObject({ detail: '41/42 geçti · yazım kuralları: 2 hata', tone: 'bad' })
 })
 
 test('a green run reads 42/42 geçti; an unchanged card is not written again', { plugins: [modz] }, async ($: any, on: any) => {
@@ -127,7 +127,7 @@ test('a check that could not run is a warning, not a failure', () => {
   const timedOut = { status: 'timeout' as const, passed: null, total: null, errors: null, failures: [], tail: [] }
   const badge = { tests: timedOut, lint: null, root: '/w', finishedAt: 1, durationMs: 1, isRunning: false }
 
-  expect(hubOf(badge)).toEqual({ detail: 'test zaman aşımı', tone: 'warn' })
+  expect(hubOf(badge)).toEqual({ detail: 'test çok uzun sürdü', tone: 'warn' })
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
@@ -141,6 +141,6 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const sentence = 'Henüz test çalıştırılmadı'
     if (surface === 'desktop') expect((await pane.find({ type: 'Svg' }))?.props?.alt).toBe(sentence)
     else expect((await pane.find({ key: 'tb-verdict' }))?.text).toBe(sentence)
-    expect((await pane.find({ key: 'tb-rerun' }))?.props?.label).toBe('Testleri ve kod denetimini çalıştır')
+    expect((await pane.find({ key: 'tb-rerun' }))?.props?.label).toBe('Testleri ve yazım kuralları denetimini çalıştır')
   })
 }

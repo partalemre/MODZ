@@ -64,7 +64,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const shown = await texts(ui)
 
     if (surface === 'desktop') expect(shown).toContain('Claude is waiting')
-    else expect(shown).toContain(' clean')
+    else expect(shown).toContain(' all saved')
     expect(shown).not.toMatch(TURKISH_ONLY)
     await ui.unmount()
   })
@@ -79,7 +79,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await clock.settle()
     const shown = await texts(ui)
 
-    expect(shown).toContain('no commit: nothing to commit')
+    expect(shown).toContain('not saved: no changes to save')
     expect(shown).not.toMatch(TURKISH_ONLY)
     await ui.unmount()
   })
@@ -90,14 +90,14 @@ test('the hub card reads like the film: changed this turn, then what git leaves'
   const clock = world(on, w)
   await $.session.start({ cwd: ROOT, surface: 'desktop', isInteractive: true })
   await clock.settle()
-  expect(await hub($)).toMatchObject({ pane: 'files', detail: '1 uncommitted change', tone: 'warn' })
+  expect(await hub($)).toMatchObject({ pane: 'files', detail: '1 unsaved change', tone: 'warn' })
   await editTurn($, clock)
   expect(await hub($)).toMatchObject({ detail: '1 changed this turn', tone: 'live' })
   w.status = '## main\0'
   await $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
   await $.tool.call({ tool: 'Bash', command: 'touch c' } as any)
   await clock.settle()
-  expect(await hub($)).toMatchObject({ detail: 'clean', tone: 'ok' })
+  expect(await hub($)).toMatchObject({ detail: 'all saved', tone: 'ok' })
 })
 
 test('a MODZ open request opens the pane titled Files', { timeoutMs: 20_000, plugins: [modz] } as any, async ($: any, on: any) => {

@@ -1,6 +1,6 @@
 {
   "name": "handoff",
-  "description": "Saves working notes before every compaction and offers them back after; near auto-compaction asks once: compact now or hand off to a fresh chat",
+  "description": "Saves working notes before the chat is summarized to free its memory (compact) and offers them back after; when the memory is nearly full it asks once: summarize now or hand off to a fresh chat",
   "author": {
     "name": "Faik Emre Partal"
   },
@@ -9,13 +9,13 @@
     "threshold": {
       "type": "number",
       "title": "Threshold (%)",
-      "description": "Ask once (compact now, or hand off to a fresh chat) at this fill, 50 to 99; five points before auto-compaction instead when that comes sooner",
+      "description": "Ask once (summarize now, or hand off to a fresh chat) when the chat's memory is this full, 50 to 99; five points before the automatic summary instead when that comes sooner",
       "default": 80
     },
     "summarize": {
       "type": "boolean",
       "title": "Summarize with Haiku",
-      "description": "Add a short 'where we are / next step' summary to each note: one Haiku call per handoff. Off: the note is built from the session alone, no tokens",
+      "description": "Add a short 'where we are / next step' summary to each note: one call to Haiku, a small and cheap model, per handoff. Off: the note is built from the session alone, at no cost",
       "default": true
     }
   }

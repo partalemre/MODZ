@@ -29,7 +29,7 @@ test('a turn that edited source runs tests then lint, niced, 5s after it ends', 
     ['nice', '-n', '10', 'npm', 'run', '--silent', 'test'],
     ['nice', '-n', '10', 'npm', 'run', '--silent', 'lint'],
   ])
-  expect(world.statuses.at(-1)).toBe('testler 41/42 · lint 2 hata · 0 sn önce')
+  expect(world.statuses.at(-1)).toBe('testler 41/42 · yazım kuralları: 2 hata · 0 sn önce')
 })
 
 test('the status line holds a failure only: a green run clears it', async ($: any, on: any) => {
@@ -45,7 +45,7 @@ for (const surface of SURFACES) {
     await editAndRun($, await setup($, on, world))
 
     const band = await $.ui.mount(bandOf(surface))
-    expect(await shown(band, surface)).toMatch(/✕ 1\/42 kaldı[\s\S]*lint 2 hata[\s\S]*\d sn önce/)
+    expect(await shown(band, surface)).toMatch(/✕ 1\/42 kaldı[\s\S]*yazım kuralları: 2 hata[\s\S]*\d sn önce/)
     // The other plugins' lines stay last.
     const shownChildren = (await band.drawn() as any).children
     expect(shownChildren.at(-1)).toEqual({ type: 'engine', ref: 1 })
@@ -58,7 +58,7 @@ for (const surface of SURFACES) {
     expect(text).toContain('src/auth/login.test.ts')
     expect(text).toContain('src/api/user.ts')
     expect(text).toMatch(/AssertionError: expected 200 to be 401/)
-    expect((await pane.find({ key: 'tb-filter-lint' }))?.text).toBe('Kod denetimi 2')
+    expect((await pane.find({ key: 'tb-filter-lint' }))?.text).toBe('Yazım kuralları 2')
     expect(await pane.find({ key: 'tb-filter-e2e' })).toBeUndefined()
     expect(await pane.find({ key: 'tb-filter-typecheck' })).toBeUndefined()
     expect(await pane.find({ key: 'tb-open-0' })).toBeDefined()
@@ -110,7 +110,7 @@ for (const surface of SURFACES) {
     await editAndRun($, await setup($, on, world))
 
     const band = await $.ui.mount(bandOf(surface))
-    expect(await shown(band, surface)).toMatch(/✓ 42\/42 geçti[\s\S]*lint temiz/)
+    expect(await shown(band, surface)).toMatch(/✓ 42\/42 geçti[\s\S]*yazım kuralları tamam/)
     expect(await band.find({ key: 'tb-details' })).toBeUndefined()
     const pane = await $.ui.mount(paneOf(surface))
     expect(await shown(pane, surface)).toMatch(/Bu bilgisayarda tüm testler geçti[\s\S]*42 test geçti/)
@@ -123,12 +123,12 @@ for (const surface of SURFACES) {
     await editAndRun($, await setup($, on, world))
 
     const pane = await $.ui.mount(paneOf(surface))
-    expect(await shown(pane, surface)).toMatch(/2 kod sorunu[\s\S]*42 test geçti/)
+    expect(await shown(pane, surface)).toMatch(/2 yazım kuralı sorunu[\s\S]*42 test geçti/)
     expect(await pane.find({ key: 'tb-filter-unit' })).toBeUndefined()
     if (surface === 'terminal') {
       expect((await pane.find({ type: 'Text', text: /BU BİLGİSAYARDA/ }))).toBeUndefined()
       expect((await pane.find({ type: 'Text', text: 'Bu bilgisayarda' }))?.props?.dimColor).toBe(true)
-      expect((await pane.find({ type: 'Text', text: /kod sorunu/ }))?.props?.color).toBe('warning')
+      expect((await pane.find({ type: 'Text', text: /yazım kuralı sorunu/ }))?.props?.color).toBe('warning')
 
       return
     }
@@ -227,5 +227,5 @@ test('the 15 s refresh tells the status line only when its words change', async 
   // Two refreshes land inside the same minute: the words change once, so they are sent once.
   await clock.advance(30_000)
 
-  expect(world.statuses.slice(sent)).toEqual(['testler 41/42 · lint 2 hata · 1 dk önce'])
+  expect(world.statuses.slice(sent)).toEqual(['testler 41/42 · yazım kuralları: 2 hata · 1 dk önce'])
 })

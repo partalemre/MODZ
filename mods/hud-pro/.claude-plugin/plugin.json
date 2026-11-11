@@ -1,6 +1,6 @@
 {
   "name": "hud-pro",
-  "description": "One quiet line at the bottom of the band, terminal and desktop: 5h limit with reset, 7d, context and session ≈cost; /hud full shows details",
+  "description": "One quiet line above your message box, in the terminal and the desktop app: how much of the 5-hour and weekly usage allowance is used and when it refills, how full the chat's memory is, and the chat's ≈cost; /hud full shows the details",
   "author": {
     "name": "Faik Emre Partal",
     "url": "https://github.com/partalemre"
@@ -9,8 +9,8 @@
   "userConfig": {
     "band": {
       "type": "string",
-      "title": "Band above the prompt",
-      "description": "auto: alerts on the desktop (the app shows the 5-hour and weekly percent itself), the full line in the terminal. always: the full line. alerts: only a limit or the context that needs a look (amber or red, or a near estimate), without the cost; nothing while all is calm. /hud band changes it from the prompt",
+      "title": "Usage line above your message box",
+      "description": "auto: only warnings in the desktop app (it shows the 5-hour and weekly percent itself), the full line in the terminal. always: the full line. alerts: only an allowance or the chat's memory that needs a look (amber or red, or close to running out), without the cost; nothing while all is calm. /hud band changes it from the message box",
       "default": "auto",
       "options": [
         "auto",

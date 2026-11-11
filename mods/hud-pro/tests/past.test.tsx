@@ -203,21 +203,21 @@ test('desktop: the history card draws the 7 days, and its switch shows 30', asyn
   const ui = await openPane($, on, { surface: 'desktop', isReadable: true })
   const svg = await pastSvgOf(ui)
   expect(svg?.props.alt).toContain('son 7 gün')
-  expect(svg?.props.alt).toContain('aktif gün 1/7')
+  expect(svg?.props.alt).toContain('kullanılan gün 1/7')
   expect((await ui.find({ type: 'Button', key: 'past-7' }))?.props.variant).toBe('secondary')
   expect((await ui.find({ type: 'Button', key: 'past-30' }))?.props.plain).toBe(true)
 
   await ui.press({ key: 'past-30' })
   const month = await pastSvgOf(ui)
   expect(month?.props.alt).toContain('son 30 gün')
-  expect(month?.props.alt).toContain('aktif gün 2/30')
+  expect(month?.props.alt).toContain('kullanılan gün 2/30')
 })
 
 test('terminal: two lines, the figures and a strip of one cell per day', async ($, on) => {
   const ui = await openPane($, on, { surface: 'terminal', isReadable: true })
 
   expect(await ui.find({ type: 'Text', text: 'Geçmiş' })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: '1/7 aktif gün · 1 oturum · 50 giriş + çıkış token · 50 önbellek · çoğunlukla Opus 5.5' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: '1/7 kullanılan gün · 1 oturum · 50 token okunup yazıldı · 50 hazır tutulan · çoğunlukla Opus 5.5' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: '······█' })).toBeDefined()
 })
 

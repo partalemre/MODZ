@@ -71,10 +71,10 @@ for (const surface of SURFACES) {
 
     gh.checks = [passed('test'), failed('lint')]
     await clock.advance(MINUTE)
-    expect(gh.notes).toEqual(['GitHub checks failed: lint · #7'])
+    expect(gh.notes).toEqual(['Automatic checks on GitHub failed: lint · #7'])
     expect((await hubOf($))).toMatchObject({ detail: 'GitHub 1/2 · 1 failing', tone: 'bad' })
     await band.redraw()
-    expect(shownText(await band.drawn())).toContain('GitHub checks failed: lint')
+    expect(shownText(await band.drawn())).toContain('Automatic checks on GitHub failed: lint')
     expect(await hrefsOf(band)).toEqual([PR_URL])
     expect(await band.find({ key: 'tb-ci-dismiss' })).toBeDefined()
     expect((await band.drawn() as any).children.at(-1)).toEqual({ type: 'engine', ref: 1 })
@@ -97,7 +97,7 @@ for (const surface of SURFACES) {
     gh.checks = [passed('lint'), passed('test')]
     await clock.advance(MINUTE)
 
-    expect(gh.notes).toEqual(['GitHub checks passed · #7 · 2/2'])
+    expect(gh.notes).toEqual(['Automatic checks on GitHub passed · #7 · 2/2'])
     expect(await hubOf($)).toMatchObject({ detail: 'GitHub 2/2 passed', tone: 'ok' })
     const band = await $.ui.mount(bandOf(surface))
     expect(await band.find({ key: 'tb-ci-ask' })).toBeUndefined()
@@ -127,7 +127,7 @@ for (const surface of SURFACES) {
     gh.checks = [failed('lint'), failed('test'), failed('e2e')]
     await clock.advance(MINUTE)
     const band = await $.ui.mount(bandOf(surface))
-    expect(shownText(await band.drawn())).toContain('GitHub checks failed: lint, test +1')
+    expect(shownText(await band.drawn())).toContain('Automatic checks on GitHub failed: lint, test +1')
 
     await band.press({ key: 'tb-ci-dismiss' })
     await band.redraw()
@@ -149,7 +149,7 @@ test('a long run backs off to a poll every three minutes after ten, and stops wh
 
   gh.prState = 'MERGED'
   await clock.advance(3 * MINUTE)
-  expect((await hubOf($)).detail).toBe('PR #7 merged')
+  expect((await hubOf($)).detail).toBe('Change request #7 merged')
   await clock.advance(30 * MINUTE)
   expect(ghCalls(gh, 'checks')).toHaveLength(12)
   expect(gh.notes).toEqual([])

@@ -38,6 +38,8 @@ v3 (2026-10-29) v2'nin şablon görünümünü söktü: renkli ikon kutuları, b
    odak çalmaz, rutin olay için toast atmaz. Komutu kullanıcı adına çalıştırmak (`$.command.run`) yasak: transkripte balon düşer.
 5. **İki dil.** Arayüz varsayılan İngilizce, `MODZ_LANG=tr` ile Türkçe (`kit/lang.ts`: `pick`, `upper`). Kısa, cümle düzeni;
    komut adları İngilizce. Büyük harfli etiketler `upper()` ile: Türkçede İ korunur, İngilizcede hiç çıkmaz.
+6. **Sade dil.** Okuyan kişi hiç kod yazmamış olabilir; her etiket, ipucu, boş durum, toast ve komut açıklaması bir
+   terim bilmeden anlaşılır (§10). Ajanın yaptığı her iş düz bir cümleyle söylenir, model çağrısı olmadan.
 
 ## 2. Renk (hex, iki tema)
 Svg içinde iki palet `<style>` + `@media (prefers-color-scheme: …)` ile; Box/Text hex'i kit'teki `palette(isLight)`
@@ -244,10 +246,10 @@ type HubCard = { pane: string; detail: string; tone: HubTone; at: number
 | plan | plan-steps | Plan |
 | transceiver | transceiver | Transceiver (Beta) |
 | tests | test-badge | Testler |
-| checkpoints | checkpoint | Kontrol noktaları |
+| checkpoints | checkpoint | Geri dönüş noktaları |
 | replay | replay-theater | Tekrar |
 | usage | hud-pro | Kullanım |
-| effort | effort-router | Efor |
+| effort | effort-router | Düşünme düzeyi |
 | handoff | handoff | Devir |
 | skins | skins | Görünüm |
 | modz-mods | modz | Modlar (modz'un ikinci paneli) |
@@ -255,3 +257,42 @@ type HubCard = { pane: string; detail: string; tone: HubTone; at: number
 
 `detail` tek satır, ≤40 karakter, Türkçe, ölçülmüş gerçek ("2 ajan çalışıyor", "41/42 geçti", "3/9 adım"); bilinmiyorsa
 boş dize. Panel başlıkları tabloda yazıldığı gibidir; iki sekme aynı adı taşımaz.
+
+## 10. Sade dil
+
+MODZ'un amacı: ajanın ne yaptığını, hiç kod yazmamış biri de net anlasın. Bu her mod, her panel ve her satır için geçerlidir.
+
+1. **Önce ne işe yaradığı.** Metin, şeyin adını değil kişiye ne yaptığını söyler: "Son test ve lint koşusu" değil
+   "Testlerin son sonucu". Kısaltma ve iç ad (hook, pane, MCP, CI, diff) tek başına durmaz.
+2. **Terim yalnızca parantezde.** Kişi o terimi başka yerde (sohbette, GitHub'da) göreceği için sade adın ardından bir kez
+   parantez içinde verilir: "çalışma dalı (branch)". Düğme ve hap gibi kısa etiketlerde parantez de düşer.
+3. **Ortak sözlük.** Aynı şey her modda aynı sözle söylenir:
+
+| terim | Türkçe | English |
+|---|---|---|
+| commit | kayıt, kaydedilmiş sürüm | saved version |
+| branch | çalışma dalı | line of work |
+| push / pull | ortak kopyaya gönder / ortak kopyadan al | send to / bring in from the shared copy |
+| PR | değişiklik isteği | change request |
+| CI, checks | otomatik kontroller | automatic checks |
+| lint | yazım kuralları denetimi | style-rule check |
+| diff | değişiklikler | changes |
+| checkpoint | geri dönüş noktası | restore point |
+| context | sohbetin hafızası | the chat's memory |
+| token | kelime parçası (sayıyla: "129k token") | word pieces (with a number: "129k tokens") |
+| cache | hazır tutulan sohbet | the chat kept ready |
+| rate limit, 5h window | kullanım hakkı, 5 saatlik hak | usage allowance, 5-hour allowance |
+| effort | düşünme düzeyi | thinking level |
+| turn | tur (mesajın ve yanıtı) | turn (your message and its answer) |
+| prompt | mesajın | your message |
+| subagent | yardımcı ajan | helper agent |
+| worktree | projenin ayrı çalışma kopyası | separate copy of the project |
+| secret, API key | gizli anahtar | secret key |
+| .env | gizli ayar dosyası (.env) | secrets file (.env) |
+| skin | görünüm | look |
+| pane | panel | panel |
+
+4. **Araç çağrıları.** Bir araç çağrısı gösterilen her yerde (satır, kart, geçmiş) `kit/plain.ts` `plainCall(tool, input, lang)`
+   cümlesi öne gelir; aracın kendi adı ve hedefi isteyen için arkasında, soluk durur. Kural tablosudur: model çağrısı yok.
+5. **Kısa kalır.** Sade olmak uzun olmak değildir; Svg'de ölçülen yuvalara sığar (§3). Sığmıyorsa cümle kısalır, yuva büyümez.
+6. **Komut ve ayar adları değişmez.** `/hud`, `MODZ_LANG`, seçenek anahtarları oldukları gibi kalır; açıklamaları sadeleşir.

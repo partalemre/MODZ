@@ -49,7 +49,7 @@ test('the view: consequence headline, untracked banner, capped rows with an hone
   const view = viewOf({ command: 'rm -rf build', risk, report, cwd: '/work/demo-app', isExpanded: false })
 
   expect([view.command, view.payload, view.tail, view.context]).toEqual(['rm -rf build', '9 dosya · 286 KB', ' silinecek', 'demo-app içinde'])
-  expect(view.banner).toEqual({ tone: 'danger', text: 'Bunların hiçbiri git\'te değil, geri getirilemez.' })
+  expect(view.banner).toEqual({ tone: 'danger', text: 'Bunların hiçbiri hiç kaydedilmedi; geri getirilemez.' })
   expect(view.rows.filter(row => row.kind === 'file')).toHaveLength(6)
   expect(view.rows.at(-1)?.name).toBe('+3 dosya daha · 29 KB')
   expect(view.toggleCount).toBe(3)

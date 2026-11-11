@@ -1,6 +1,6 @@
 {
   "name": "effort-router",
-  "description": "Shows each turn's effective effort and model; can route a light prompt to low effort",
+  "description": "Shows how hard Claude thought on each turn (effort) and which model answered; can send a simple message at a lower thinking level",
   "author": {
     "name": "Faik Emre Partal"
   },
@@ -9,7 +9,7 @@
     "mode": {
       "type": "string",
       "title": "Mode",
-      "description": "show: only display each turn's effort (no tokens); auto: a prompt judged light goes at low effort (one haiku call per prompt); off. A pick in the Effort pane wins over this.",
+      "description": "show: only show each turn's thinking level (uses no tokens); auto: a message judged simple goes at a low thinking level (a small model reads each message to decide, one call per message); off. A choice in the Thinking level panel wins over this.",
       "options": ["show", "auto", "off"],
       "default": "show"
     }

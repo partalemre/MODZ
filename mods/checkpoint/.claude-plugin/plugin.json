@@ -1,6 +1,6 @@
 {
   "name": "checkpoint",
-  "description": "Silent git snapshot before each turn's first file write; /checkpoints lists turns and undoes one after a confirm",
+  "description": "Quietly saves a restore point before each turn's first file change; /checkpoints lists the turns and undoes one after you confirm",
   "author": {
     "name": "Faik Emre Partal"
   },

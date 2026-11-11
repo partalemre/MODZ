@@ -42,7 +42,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const ui = await $.ui.mount({ ...PANE, surface })
     const text = await drawnText(ui)
 
-    for (const word of [/17 mods on/, /WORK|Work/, /SAFETY|Safety/, /METER|Meter/, /Agents/, /Checkpoints/, /Usage/, /Look/, /Mods/, /3 running/]) expect(text).toMatch(word)
+    for (const word of [/17 mods on/, /WORK|Work/, /SAFETY|Safety/, /METER|Meter/, /Agents/, /Restore points/, /Usage/, /Look/, /Mods/, /3 running/]) expect(text).toMatch(word)
     // The terminal keeps an "Open" button per row and leads with what matters now; on the desktop the whole row is
     // a blank cover over its drawing, and no card above the list repeats a row.
     if (surface === 'terminal') {
@@ -82,9 +82,9 @@ test('with no catalog both panes say it could not be read, in English', async ($
   const hub = await drawnText(await $.ui.mount({ ...PANE, surface: 'desktop' }))
   const catalog = await drawnText(await $.ui.mount({ ...PANE, requestId: 'modz-mods', surface: 'desktop' }))
 
-  expect(hub).toMatch(/catalog could not be read/)
-  expect(catalog).toMatch(/Catalog could not be read/)
-  expect(catalog).toMatch(/marketplace\.json is missing or lists no mods/)
+  expect(hub).toMatch(/the mod list could not be read/)
+  expect(catalog).toMatch(/The mod list could not be read/)
+  expect(catalog).toMatch(/marketplace\.json\) is missing or lists no mods/)
   expect(hub + catalog).not.toMatch(TURKISH_ONLY)
 })
 
@@ -95,7 +95,7 @@ test('/modz answers in English and the catalog tab opens as Mods', async ($: any
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'open-modz-mods' })
 
-  expect(answer?.text).toBe('Opened the MODZ pane.')
+  expect(answer?.text).toBe('Opened the MODZ panel.')
   expect(w.titles['modz']).toBe('MODZ')
   expect(w.titles['modz-mods']).toBe('Mods')
 })

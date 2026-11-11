@@ -21,8 +21,8 @@ const hud = async ($: any, command: string) => JSON.parse((await $.command.run({
 
 test('before any reply the section says what it will show and when', () => {
   setLang('en')
-  expect(cacheSection(freshState(), 0)).toMatchObject({ id: 'cache', title: 'Cache', tone: 'neutral', isEmpty: true })
-  expect(cacheSection(freshState(), 0).lines[0]).toMatch(/^No reply yet\. The cache’s one-hour clock starts with the first reply/)
+  expect(cacheSection(freshState(), 0)).toMatchObject({ id: 'cache', title: 'Chat kept ready', tone: 'neutral', isEmpty: true })
+  expect(cacheSection(freshState(), 0).lines[0]).toMatch(/^No answer yet\. After each answer Claude keeps the chat ready \(cache\) for an hour/)
 })
 
 test('after a reply it lists the card\'s rows, says the dollars are list-price estimates, and warns once cold', () => {
@@ -31,8 +31,8 @@ test('after a reply it lists the card\'s rows, says the dollars are list-price e
   const warm = cacheSection(s, START + 5 * MIN)
   expect(warm.tone).toBe('neutral')
   expect(warm.lines[0]).toBe('claude-opus-5-5')
-  expect(warm.lines).toContain('state · warm, 55m left')
-  expect(warm.lines.at(-1)).toBe('$ are list-price estimates; on a subscription the limit percent is what counts.')
+  expect(warm.lines).toContain('kept ready · yes, 55m left')
+  expect(warm.lines.at(-1)).toBe('$ are estimates at list prices; on a subscription the share of your usage allowance is what counts.')
   expect(cacheSection(s, START + 2 * HOUR).tone).toBe('warn')
 })
 

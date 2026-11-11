@@ -61,7 +61,7 @@ describe('keepwarm only when asked', () => {
     await $.prompt.submit(prompt('held'))
     await ui.press({ key: 'cache-tax:pay' })
     await $.turn.complete(turn({ usage: usage({ cache_read_input_tokens: 0, cache_creation_input_tokens: 200502 }) }))
-    expect((await $.command.run(run('keepwarm', 'status'))).text).toMatch(/^sıcak tutma: 3 sa kaldı/)
+    expect((await $.command.run(run('keepwarm', 'status'))).text).toMatch(/^hazır tutma: 3 sa kaldı/)
     expect(w.entered).toEqual(['held'])
   })
 })
@@ -75,7 +75,7 @@ describe('pings are capped', () => {
     await $.turn.complete(turn())
     await clock.advance(20 * MIN)
     expect(w.forks.length).toBe(12)
-    expect((await $.command.run(run('keepwarm', 'status'))).text).toMatch(/^stopped keeping the cache warm: 12 refreshes/)
+    expect((await $.command.run(run('keepwarm', 'status'))).text).toMatch(/^stopped keeping the chat ready: 12 refreshes/)
   })
 
   test('a refresh that answers at length ends the window', async ($, on) => {
@@ -86,7 +86,7 @@ describe('pings are capped', () => {
     await $.turn.complete(turn())
     await clock.advance(5 * MIN)
     expect(w.forks.length).toBe(1)
-    expect((await $.command.run(run('keepwarm', 'status'))).text).toMatch(/^stopped keeping the cache warm: a refresh wrote 1500 output tokens/)
+    expect((await $.command.run(run('keepwarm', 'status'))).text).toMatch(/^stopped keeping the chat ready: a refresh wrote 1500 tokens/)
   })
 })
 
@@ -126,7 +126,7 @@ describe('on a subscription', () => {
     await $.turn.complete(turn())
     await clock.advance(3 * HOUR)
     await $.prompt.submit(prompt('hi'))
-    expect(w.logs.at(-1)).toContain('≈2% of the weekly limit ($4.01 at list price)')
+    expect(w.logs.at(-1)).toContain('≈2% of the weekly usage allowance ($4.01 at list prices)')
   })
 
   for (const surface of ['terminal', 'desktop'] as const) {
@@ -142,7 +142,7 @@ describe('on a subscription', () => {
       await clock.advance(3 * HOUR)
       const ui = await $.ui.mount({ plugin: 'cache-tax', surface, component: 'AbovePrompt', props: bandProps })
       await $.prompt.submit(prompt('hi'))
-      expect(JSON.stringify(await ui.drawn())).toContain('Sending now takes ≈2% of the weekly limit at this session’s pace')
+      expect(JSON.stringify(await ui.drawn())).toContain('Sending now takes ≈2% of the weekly usage allowance at this chat’s pace')
     })
   }
 })

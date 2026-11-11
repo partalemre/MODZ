@@ -122,7 +122,7 @@ test('a model error leaves the summary out and the note is still written', async
   const [path] = Object.keys(world.files)
   expect(world.asked).toHaveLength(1)
   expect(world.files[path!]).not.toContain('## Where we are')
-  expect(world.files[path!]).not.toContain('## Git status')
+  expect(world.files[path!]).not.toContain('## Changes not yet saved (git status)')
   expect((world.store['latest:/w'] as any).isSummarized).toBe(false)
 })
 
@@ -134,7 +134,7 @@ test('/handoff show opens the pane; it never opens by itself', async ($: any, on
   expect(world.opened).toEqual([])
   const out = await $.command.run({ command: 'handoff', args: 'show' })
   expect(world.opened).toEqual(['handoff'])
-  expect(out.text).toBe('handoff: pane opened')
+  expect(out.text).toBe('handoff: panel opened')
 })
 
 test('Turkish: the card and the hub line speak Turkish', { plugins: [modz] }, async ($: any, on: any) => {
@@ -142,9 +142,9 @@ test('Turkish: the card and the hub line speak Turkish', { plugins: [modz] }, as
   await start($, 'terminal')
   await measure($, 82)
   const band = await $.ui.mount(bandOf('terminal'))
-  expect(await band.find({ text: 'Bağlam %82 dolu' })).toBeDefined()
+  expect(await band.find({ text: 'Sohbetin hafızası %82 dolu' })).toBeDefined()
   expect(await band.find({ type: 'Button', text: 'Temiz bir sohbete devret' })).toBeDefined()
-  expect((await hubCardOf($)).detail).toBe('Bağlam %82')
+  expect((await hubCardOf($)).detail).toBe('Hafıza %82')
 })
 
 const plan = {

@@ -1,6 +1,6 @@
 {
   "name": "secret-guard",
-  "description": "Stops secrets before they land: scans Write/Edit and git add/commit for keys and tokens, blocks git add of .env, keeps pasted keys out of the chat as placeholders, /rec masks the screen; a card with masked values, then Move keys to .env, Allow once or Cancel (Turkish with MODZ_LANG=tr)",
+  "description": "Catches secret keys (passwords, API keys, tokens) before they are written into a file or saved in a version, and stops the secrets file (.env) from being saved with your work. A card shows each key half-hidden and asks you to move it to the secrets file, allow it once, or cancel. Keys you paste into the chat reach Claude only as stand-ins, and /rec hides keys on screen while you record (Turkish with MODZ_LANG=tr).",
   "author": {
     "name": "Faik Emre Partal",
     "url": "https://github.com/partalemre"

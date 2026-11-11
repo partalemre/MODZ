@@ -62,7 +62,7 @@ test('the hub card counts the checkpoints there at session start, and is rewritt
   const world = worldOf({ refs: refsOf(12) })
   await start($, on, world)
   const first = await hub($)
-  expect(first).toMatchObject({ pane: 'checkpoints', detail: '12 kayıt', tone: 'ok' })
+  expect(first).toMatchObject({ pane: 'checkpoints', detail: '12 nokta', tone: 'ok' })
 
   await $.command.run({ command: 'checkpoints', args: '' })
   expect((await hub($)).at).toBe(first.at)
@@ -82,7 +82,7 @@ test('a MODZ open request for checkpoints opens the pane in front; one for anoth
   expect(world.opened).toEqual([])
 
   await $.command.run({ command: 'modz-open', args: 'checkpoints' })
-  expect(world.opened).toEqual([expect.objectContaining({ id: 'checkpoints', title: 'Kontrol noktaları', focus: true })])
+  expect(world.opened).toEqual([expect.objectContaining({ id: 'checkpoints', title: 'Geri dönüş noktaları', focus: true })])
 })
 
 test('with the hub on the opened pane reports itself shown, and steps aside when another pane takes the panel', { plugins: [modz] }, async ($: any, on: any) => {
@@ -106,7 +106,7 @@ test('with the hub on the opened pane reports itself shown, and steps aside when
 test('the card and the open match are pure', () => {
   setLang('tr')
   expect(hubOf([])).toEqual({ detail: '', tone: 'idle' })
-  expect(hubOf([{ ref: 'r', commit: 'c', at: 0, label: 'x' }])).toEqual({ detail: '1 kayıt', tone: 'ok' })
+  expect(hubOf([{ ref: 'r', commit: 'c', at: 0, label: 'x' }])).toEqual({ detail: '1 nokta', tone: 'ok' })
   expect(isOpenFor({ pane: 'checkpoints', at: 1 }, 'checkpoints')).toBe(true)
   expect(isOpenFor({ pane: 'replay' }, 'checkpoints')).toBe(false)
   expect(isOpenFor(null, 'checkpoints')).toBe(false)

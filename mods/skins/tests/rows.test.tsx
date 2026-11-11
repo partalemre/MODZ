@@ -164,6 +164,28 @@ test('a folded group keeps what a mod beneath it draws, and adds nothing to the 
   expect(await ui.find({ type: 'Text', text: 'stock row' })).toBeDefined()
 })
 
+// A mod beneath the skin that keeps the engine's row and puts its own line under it, as the plain-words line does.
+const PLAIN_BENEATH = {
+  name: 'plain-beneath',
+  register(hook: any) {
+    hook('ui.render', { component: 'ToolUse' }, async (_$: unknown, e: unknown, next: (e: unknown) => Promise<unknown>) => ({
+      type: 'Box',
+      props: { flexDirection: 'column' },
+      children: [{ type: 'engine', ref: 7 }, { type: 'Text', props: {}, children: ['plain line'] }, await next(e)].slice(0, 2),
+    }))
+  },
+}
+
+test('a mod beneath that kept the engine\u2019s row beside its own line has the line kept and the row drawn once', { plugins: [PLAIN_BENEATH] }, async ($, on) => {
+  stubEngine(on)
+
+  const ui = await $.ui.mount(toolUse(call('Bash', { command: 'pnpm test' }), 'terminal'))
+  expect(await ui.find({ type: 'Text', text: /●─ Bash {2}pnpm test/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'plain line' })).toBeDefined()
+  // The engine's own row is the one the skin redrew: it is not drawn a second time under it.
+  expect(JSON.stringify(await ui.drawn())).not.toContain('"engine"')
+})
+
 test('a typed prompt sits in an outline sized to its text in the terminal, other senders keep their row', async ($, on) => {
   stubEngine(on)
 
@@ -498,7 +520,7 @@ test('the band offers Compact, nudges at 70% context, and compacts on a press', 
   toasts.length = 0
 
   const band = await $.ui.mount(BAND('desktop', false))
-  expect(await band.find({ type: 'Text', text: 'Bağlam %85 dolu' })).toBeDefined()
+  expect(await band.find({ type: 'Text', text: 'Sohbet hafızası %85 dolu' })).toBeDefined()
   // A digit hotkey reaches it from an empty prompt where the terminal reports no clicks.
   expect(((await band.find({ key: 'compact' })) as { props: { hotkey?: string } } | undefined)?.props.hotkey).toBe('0')
   await band.press({ key: 'compact' })
@@ -576,8 +598,8 @@ test('/skin gallery opens a pane with every element, numbered, on both surfaces'
   for (const surface of SURFACES) {
     const ui = await $.ui.mount({ ...PANE, requestId: 'skins-gallery', surface })
 
-    expect(await ui.find({ type: 'Text', text: /^1  Senin istemin/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /^11  Tur altbilgisi/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^1  Senin mesajın/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^11  Tur altı satırı/ })).toBeDefined()
     await ui.unmount()
   }
 })

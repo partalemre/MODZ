@@ -11,6 +11,7 @@ import type { Attention } from './insight'
 import { deriveJob, percentText } from './job'
 import type { JobView } from './job'
 import { shareNumber, shareOf } from './limit'
+import { isMain } from './main-run'
 import { levelOf } from './mood'
 import type { HomeMark } from './mood-svg'
 
@@ -76,7 +77,9 @@ export function paneDataOf(state: PaneState): PaneData {
   const at = Math.max(state.now, ...list.map(a => a.startedAt), 0)
   const view = deriveJob({ flow: state.flow, agents: list, job: state.job, tasks: state.tasks }) ?? crewView(list)
   const ended = (a: AgentRun) => a.endedAt ?? a.startedAt
-  const running = list.filter(isRunning).reverse()
+  // The newest first, under the session's own loop.
+  const live = list.filter(isRunning).reverse()
+  const running = [...live.filter(isMain), ...live.filter(a => !isMain(a))]
   return {
     list,
     running,

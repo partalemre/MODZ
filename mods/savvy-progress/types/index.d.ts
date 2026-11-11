@@ -32,6 +32,8 @@ export type ToolEvent = {
   id?: string
   tool: string
   target: string
+  /** The call in plain words ("Testleri çalıştırıyor"), worked out by rules when it opened. */
+  plain?: string
   at: number
   endAt?: number
   isError?: boolean
@@ -77,6 +79,10 @@ export type AgentRun = {
   toolCount: number
   lastTool?: string
   lastTarget?: string
+  /** The latest call in plain words. */
+  lastPlain?: string
+  /** The session's own loop, not a subagent: never stopped, written to or counted as crew. */
+  isMain?: boolean
   /** The latest call's target in full (a whole path, a command's first line), for the open card. */
   lastDetail?: string
   /** Self-reported by the worker through the `step` tool. */

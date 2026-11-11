@@ -4,6 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { AgentType } from '../types'
 import { BUILTIN_TYPES, mergeTypes, parseAgentFile } from './agent-types'
 import { isRunning } from './agents'
+import { crewOf } from './main-run'
 import { onBand } from './band'
 import { onDispatch } from './dispatch'
 import { onEvents } from './events'
@@ -170,7 +171,7 @@ function startBeat($: EngineInterface): void {
   let idleBeats = 0
   $.clock.every(TICK_MS, () => {
     void (async () => {
-      const isBusy = (await read($, agents)).some(isRunning)
+      const isBusy = crewOf(await read($, agents)).some(isRunning)
       idleBeats = isBusy ? 0 : idleBeats + 1
       if (isBusy || idleBeats >= IDLE_ROSTER_BEATS) {
         idleBeats = 0

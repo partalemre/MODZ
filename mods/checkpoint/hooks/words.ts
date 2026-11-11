@@ -13,7 +13,7 @@ export type Words = {
   emptyRest: string
   turnsSaved: (turns: number) => string
   turn: (number: number) => string
-  // A checkpoint with no turn number.
+  // A restore point with no turn number.
   saved: string
   beforeUndo: string
   // What a safety snapshot's label starts with; written into git, so every language's prefix is read back.
@@ -76,16 +76,16 @@ function agoTr(ms: number): string {
 }
 
 const EN: Words = {
-  title: 'Checkpoints',
+  title: 'Restore points',
   ago: agoEn,
   hubDetail: count => `${count} saved`,
   headerMeta: (count, ago) => `${count} saved · newest ${ago}`,
   newest: ago => `newest ${ago}`,
-  emptyLead: 'No checkpoints yet',
-  emptyRest: 'one is taken quietly before the first file write',
+  emptyLead: 'No restore points yet',
+  emptyRest: 'one is saved quietly before the first file change',
   turnsSaved: turns => `${plural(turns, 'turn', 'turns')} saved`,
   turn: number => `Turn ${number}`,
-  saved: 'Checkpoint',
+  saved: 'Restore point',
   beforeUndo: 'Before undo',
   safetyPrefix: 'before undo: ',
   undo: 'Undo',
@@ -106,30 +106,30 @@ const EN: Words = {
   summary: (restore, remove) => [`${plural(restore, 'file', 'files')} will be restored`, remove > 0 ? `${plural(remove, 'new file', 'new files')} will be deleted` : ''].filter(Boolean).join(', ') + '. The current state is saved first.',
   checking: 'Checking…',
   undoing: 'Undoing…',
-  noRepo: 'There is no git repository here.',
-  alreadyThere: 'The files already match this checkpoint.',
-  failed: 'Couldn\'t undo; the details are in the debug log.',
-  commitsKept: count => `${plural(count, 'commit', 'commits')} made since this checkpoint stay in git history; afterwards git status shows ${count === 1 ? 'its' : 'their'} changes reverted.`,
-  indexBack: 'What was staged goes back as it was too.',
-  ignoredKept: 'Git-ignored files (such as .env) are not covered and stay as they are.',
+  noRepo: 'This folder has no version history (git).',
+  alreadyThere: 'The files already match this restore point.',
+  failed: 'Couldn\'t undo; the reason is in Claude Code\'s log (debug log).',
+  commitsKept: count => `${plural(count, 'saved version', 'saved versions')} (commits) made since this point stay in the history; the undo shows up as new changes on top.`,
+  indexBack: 'Files marked for the next saved version (staged) go back as they were too.',
+  ignoredKept: 'Files git is told to skip (such as the secrets file .env) are not covered and stay as they are.',
   restored: (count, target) => `Restored ${plural(count, 'file', 'files')} to before ${target}.`,
-  toggled: isOn => `checkpoint ${isOn ? 'on' : 'off'}`,
-  toggleLine: 'A quiet snapshot before each turn\'s first write: on/off',
-  paneLine: 'Lists the checkpoints; undoes a turn',
+  toggled: isOn => `restore points ${isOn ? 'on' : 'off'}`,
+  toggleLine: 'Quietly saves a restore point before each turn\'s first file change: on/off',
+  paneLine: 'Lists the restore points; undoes a turn',
   promptFallback: 'turn',
 }
 
 const TR: Words = {
-  title: 'Kontrol noktaları',
+  title: 'Geri dönüş noktaları',
   ago: agoTr,
-  hubDetail: count => `${count} kayıt`,
-  headerMeta: (count, ago) => `${count} kayıt · en yenisi ${ago}`,
+  hubDetail: count => `${count} nokta`,
+  headerMeta: (count, ago) => `${count} nokta · en yenisi ${ago}`,
   newest: ago => `en yenisi ${ago}`,
-  emptyLead: 'Henüz kontrol noktası yok',
-  emptyRest: 'ilk dosya yazımından önce sessizce alınır',
+  emptyLead: 'Henüz geri dönüş noktası yok',
+  emptyRest: 'ilk dosya değişikliğinden önce sessizce alınır',
   turnsSaved: turns => `${turns} tur kayıtlı`,
   turn: number => `Tur ${number}`,
-  saved: 'Kayıt',
+  saved: 'Geri dönüş noktası',
   beforeUndo: 'Geri almadan önce',
   safetyPrefix: 'geri almadan önce: ',
   undo: 'Geri al',
@@ -150,16 +150,16 @@ const TR: Words = {
   summary: (restore, remove) => [`${restore} dosya geri yüklenecek`, remove > 0 ? `${remove} yeni dosya silinecek` : ''].filter(Boolean).join(', ') + '. Önce şimdiki hal kaydedilir.',
   checking: 'Denetleniyor…',
   undoing: 'Geri alınıyor…',
-  noRepo: 'Burada git deposu yok.',
+  noRepo: 'Bu klasörün sürüm geçmişi (git) yok.',
   alreadyThere: 'Dosyalar zaten bu noktadaki gibi.',
-  failed: 'Geri alınamadı; ayrıntı debug günlüğünde.',
-  commitsKept: count => `Bu noktadan sonra yapılan ${count} commit git geçmişinde kalır; sonra git status değişikliklerini geri alınmış gösterir.`,
-  indexBack: 'Commit için hazırlanan (staged) dosyalar da eski haline döner.',
-  ignoredKept: 'Git\'in yok saydığı dosyalar (.env gibi) kapsanmaz, olduğu gibi kalır.',
+  failed: 'Geri alınamadı; nedeni Claude Code günlüğünde (debug log).',
+  commitsKept: count => `Bu noktadan sonraki ${count} kayıt (commit) geçmişte kalır; geri alma bunların üstüne yeni değişiklik olarak görünür.`,
+  indexBack: 'Sonraki kayda hazırlanan (staged) dosyalar da eski haline döner.',
+  ignoredKept: 'Git\'in atladığı dosyalar (gizli ayar dosyası .env gibi) kapsanmaz, olduğu gibi kalır.',
   restored: (count, target) => `${count} dosya ${target} öncesine döndü.`,
-  toggled: isOn => `checkpoint ${isOn ? 'açık' : 'kapalı'}`,
-  toggleLine: 'Her turun ilk yazımından önce sessiz anlık görüntü: aç/kapa',
-  paneLine: 'Kontrol noktalarını listeler; bir turu geri alır',
+  toggled: isOn => `geri dönüş noktaları ${isOn ? 'açık' : 'kapalı'}`,
+  toggleLine: 'Her turun ilk dosya değişikliğinden önce sessizce geri dönüş noktası alır: aç/kapa',
+  paneLine: 'Geri dönüş noktalarını listeler; bir turu geri alır',
   promptFallback: 'tur',
 }
 

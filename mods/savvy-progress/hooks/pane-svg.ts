@@ -10,7 +10,7 @@ import { homeCrab, levelPill, levelWidth } from './mood-svg'
 import type { HomeMark } from './mood-svg'
 import { countTasks } from './tasks'
 import { FONT, paneSvg } from './theme'
-import { TIER_MODEL, plannedTierOf } from './tiers'
+import { TIER_MODEL, effortWord, plannedTierOf } from './tiers'
 
 // The agents panel's small drawings: the crab, the open call's dot and the compact strip. The
 // words around them are native text; each drawing keeps one source while its state holds, so its
@@ -37,7 +37,7 @@ export const activityOf = (a: AgentRun): string => {
   const steps = stepsOf(a)
   if (a.status === 'failed') return [steps, a.endReason === 'aborted' ? s.aborted : s.failed].filter(Boolean).join(' · ')
   if (a.status === 'done') return steps || s.completed
-  const tool = a.lastTool ? `› ${a.lastTool}${a.lastTarget ? ' ' + a.lastTarget : ''}` : s.starting
+  const tool = a.lastTool ? `› ${a.lastPlain ?? `${a.lastTool}${a.lastTarget ? ' ' + a.lastTarget : ''}`}` : s.starting
   return steps ? `${steps}  ${tool}` : tool
 }
 
@@ -48,7 +48,7 @@ const UNNAMED = ['', 'inherit']
 export const modelLine = (a: AgentRun): string => {
   const round = a.round > 1 ? `${t().round} ${a.round}` : ''
   const model = UNNAMED.includes(a.model) ? '' : modelName(a.model)
-  return [model, a.effort ?? '', round].filter(Boolean).join(' · ')
+  return [model, effortWord(a.effort), round].filter(Boolean).join(' · ')
 }
 
 export const clockOf = (a: AgentRun, at: number): string => {

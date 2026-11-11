@@ -57,6 +57,9 @@ function gitHost($: EngineInterface): GitHost {
 
 async function inspect($: EngineInterface, input: Record<string, unknown>): Promise<Found | null> {
   const found: Found = { secrets: [], envFiles: [], path: null, command: String(input.command ?? '') }
+  // The desktop starts a session in a parked folder and moves it to its project later, with no session.start: the
+  // folder is asked for now, or git is started in one that is gone and every commit is refused.
+  session.cwd = (await $.session.cwd().catch(() => '')) || session.cwd
   if (isFileTool(input)) {
     const path = pathOf(input)
     if (path === null || isEnvFile(path)) return null

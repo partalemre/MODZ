@@ -37,14 +37,17 @@ for (const surface of SURFACES) {
     const seen = await all(ui)
     expect(seen).toContain('Build the landing page')
     expect(seen).not.toContain('general-purpose')
-    expect(seen).toContain('heavy')
-    expect(seen).toContain('Opus 5.5 · xhigh')
-    expect(seen).toContain('› Edit src/hero.tsx')
-    expect(seen).toContain('1 araç')
+    // The thinking level is said in words, once, before the model.
+    expect(seen).toContain('çok derin düşünme · Opus 5.5')
+    expect(seen).not.toContain('xhigh')
+    // What it does now is said in plain words, not as the tool's name.
+    expect(seen).toContain('› hero.tsx dosyasını değiştiriyor')
+    expect(seen).not.toContain('› Edit')
+    expect(seen).toContain('1 adım')
     expect(seen).toMatch(/≈\$0,\d\d/)
     expect(seen).toContain('2:36')
     // Context and tokens wait in the detail, so the card reads name, status, progress and cost.
-    const metrics = /bağlam %13 · 129k token · ≈\$0,\d\d/
+    const metrics = /hafıza %13 · 129k token · ≈\$0,\d\d/
     expect(surface === 'terminal' ? seen : await svgOf(ui)).not.toMatch(metrics)
     await ui.press({ key: 'open-a3' })
     if (surface === 'terminal') expect(await text(ui)).toMatch(metrics)
@@ -122,7 +125,9 @@ for (const surface of SURFACES) {
     expect(await isShownOpen(ui, true, 'Build the landing page')).toBe(true)
     expect(open).toContain('Görev')
     expect(open).toContain('do it')
-    expect(open).toContain('İş geçmişi · 2 araç')
+    expect(open).toContain('İş geçmişi · 2 adım')
+    // Each step leads with its plain sentence; the tool's own name and target follow it.
+    expect(open).toContain('a.ts dosyasını okuyor')
     expect(open).toContain('Edit')
     expect(open).toContain(' src/hero.tsx')
     expect(open).toContain(' src/a.ts')
@@ -151,11 +156,11 @@ for (const surface of SURFACES) {
     await threeRunning($)
     const pane = await mount($)
     const words = async () => (surface === 'terminal' ? text(pane) : svgOf(pane))
-    expect(await words()).not.toContain('5 saat ≈')
+    expect(await words()).not.toContain('5 saatlik hak ≈')
     await measure($, 23.5, 1)
-    expect(await words()).toContain('5 saat payı ≈%5,9')
+    expect(await words()).toContain('5 saatlik haktan ≈%5,9')
     await pane.press({ key: 'open-a1' })
-    expect(await words()).toContain('5 saat ≈%2,0')
+    expect(await words()).toContain('5 saatlik hak ≈%2,0')
   })
 
   test(`${surface}: an open finished row shows its work mix and its answer`, async ($, on) => {

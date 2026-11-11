@@ -34,14 +34,14 @@ test('with no budget the section says what /budget does, the brake beside it', (
   setLang('en')
   const section = budgetSection({ budget: null, brakeAt: 85, isEnabled: true, nowMs: 0 })
   expect(section).toMatchObject({ id: 'budget', title: 'Session budget', tone: 'neutral', isEmpty: true })
-  expect(section.lines[0]).toMatch(/^No budget set\. \/budget 20% asks before a prompt/)
-  expect(section.lines[1]).toBe('Spawn brake on: asks before a subagent at 85% of the 5-hour window.')
+  expect(section.lines[0]).toMatch(/^No budget set\. With \/budget 20%, once this chat has used 20 points/)
+  expect(section.lines[1]).toBe('Helper-agent brake on: once 85% of the 5-hour allowance is used, it asks before a helper agent starts.')
 })
 
 test('a set budget shows its spend in the window, warns from 80% and is danger when full; dollars say list price', () => {
   setLang('en')
   const spent = (limit: number, last: number) => ({ ...startBudget('percent', limit, reading), last })
-  expect(budgetSection({ budget: spent(10, 44), brakeAt: null, isEnabled: true, nowMs: 0 })).toMatchObject({ tone: 'neutral', lines: ['Session budget: 5h 4% / 10% (40%)', 'Spawn brake off.'] })
+  expect(budgetSection({ budget: spent(10, 44), brakeAt: null, isEnabled: true, nowMs: 0 })).toMatchObject({ tone: 'neutral', lines: ['Session budget: 5-hour 4% / 10% (40%)', 'Helper-agent brake off.'] })
   expect(budgetSection({ budget: spent(10, 48), brakeAt: null, isEnabled: true, nowMs: 0 }).tone).toBe('warn')
   expect(budgetSection({ budget: spent(10, 50), brakeAt: null, isEnabled: true, nowMs: 0 }).tone).toBe('danger')
   const usd = startBudget('usd', 5, reading)
@@ -51,7 +51,7 @@ test('a set budget shows its spend in the window, warns from 80% and is danger w
 test('switched off, the section says so and how to turn it on', () => {
   setLang('tr')
   expect(budgetSection({ budget: null, brakeAt: 85, isEnabled: false, nowMs: 0 }).lines).toEqual([
-    'session-budget kapalı: uyarı, onay ve alt ajan freni yok. /session-budget on ile açılır.',
+    'session-budget kapalı: uyarı, devam sorusu ve yardımcı ajan freni yok. /session-budget on ile açılır.',
   ])
 })
 
@@ -60,7 +60,7 @@ test('the section is published at start and follows /budget', { plugins: [HUD] }
   expect(JSON.parse(await run($, 'hud-section'))).toMatchObject({ id: 'budget', isEmpty: true })
 
   await run($, 'budget', '20%')
-  expect(JSON.parse(await run($, 'hud-section')).lines[0]).toMatch(/^Session budget: 5h 0% \/ 20%/)
+  expect(JSON.parse(await run($, 'hud-section')).lines[0]).toMatch(/^Session budget: 5-hour 0% \/ 20%/)
 })
 
 test('/budget alone asks hud-pro for its Usage pane only while hud-pro runs, and still answers', { plugins: [HUD] } as any, async ($: any, on: any) => {

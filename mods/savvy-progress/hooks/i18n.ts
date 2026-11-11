@@ -21,6 +21,9 @@ export const setLang = (next: Lang): void => {
   setKitLang(next)
 }
 
+/** The language the plain-words layer speaks: Turkish, or English for every other. */
+export const plainLang = (): 'en' | 'tr' => (lang === 'tr' ? 'tr' : 'en')
+
 export const langOf = (value: unknown): Lang | null => {
   if (typeof value !== 'string' || !value.trim()) return null
   if (/^(tr|turk|türk)/i.test(value.trim())) return 'tr'

@@ -59,7 +59,7 @@ export const blockedDeny = (found: Found): string =>
   `The user blocked this call: it would expose ${exposed(found)}. Keep secrets in .env (git-ignored) and read them from the environment.`
 
 export const moveYourselfDeny = (found: Found): string =>
-  `The user chose "Move to .env" for ${summary(found)}. Move each secret into the project's .env (git-ignored), reference it from the environment, then retry.`
+  `The user chose to move ${summary(found)} into .env. Move each secret into the project's .env (git-ignored), reference it from the environment, then retry.`
 
 export const failedDeny = (why: string): string =>
   `secret-guard could not check this call for secrets (${why}), so it was blocked to keep a key from leaking. Retry it; if this keeps happening, the user can turn the scan off with /secret-guard.`

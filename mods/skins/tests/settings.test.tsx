@@ -79,9 +79,9 @@ for (const surface of SURFACES) {
     const ui = await $.ui.mount(pane(surface))
 
     expect(String(((await ui.find({ key: 'toggle-rail' })) as Node | undefined)?.props?.label)).toBe('● Yanıt çizgisi')
-    expect(String(((await ui.find({ key: 'toggle-band' })) as Node | undefined)?.props?.label)).toBe('○ Kullanım bandı')
+    expect(String(((await ui.find({ key: 'toggle-band' })) as Node | undefined)?.props?.label)).toBe('○ Kullanım satırı')
     await ui.press({ key: 'toggle-band' })
-    expect(String(((await ui.find({ key: 'toggle-band' })) as Node | undefined)?.props?.label)).toBe('● Kullanım bandı')
+    expect(String(((await ui.find({ key: 'toggle-band' })) as Node | undefined)?.props?.label)).toBe('● Kullanım satırı')
 
     await ui.press({ key: 'skin-off' })
     expect(((await ui.find({ key: 'skin-off' })) as Node | undefined)?.props?.label).toBe('Kapalı ✓')

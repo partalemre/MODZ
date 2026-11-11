@@ -23,6 +23,12 @@
       "title": "Keep the reply language",
       "description": "After English tool output or a subagent's English report, remind Claude once per turn to reply in your language (Claude Code's language setting, else MODZ_LANG=tr). No model call.",
       "default": true
+    },
+    "plainWords": {
+      "type": "boolean",
+      "title": "Say each step in plain words",
+      "description": "Under every tool call in the conversation, one sentence that says what it does in everyday words (\"Running the tests\" under a long shell command). Worked out by rules: no model call, no tokens.",
+      "default": true
     }
   }
 }

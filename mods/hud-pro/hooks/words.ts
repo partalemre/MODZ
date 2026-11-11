@@ -7,16 +7,23 @@ import type { Lang } from './lang'
 type Labels = Readonly<Record<string, string>>
 
 const SHORT: Readonly<Record<Lang, Labels>> = {
-  en: { five_hour: '5h', seven_day: '7d', spend_limit: 'spend', context: 'context' },
-  tr: { five_hour: '5s', seven_day: '7g', spend_limit: 'harcama', context: 'bağlam' },
+  en: { five_hour: '5h', seven_day: 'week', spend_limit: 'spend', context: 'memory' },
+  tr: { five_hour: '5s', seven_day: 'hafta', spend_limit: 'harcama', context: 'hafıza' },
 }
 
 const LONG: Readonly<Record<Lang, Labels>> = {
-  en: { five_hour: '5-hour', seven_day: '7-day', spend_limit: 'spend limit', context: 'context' },
-  tr: { five_hour: '5 saat', seven_day: '7 gün', spend_limit: 'harcama limiti', context: 'bağlam' },
+  en: { five_hour: '5-hour allowance', seven_day: 'weekly allowance', spend_limit: 'spend limit', context: 'chat memory' },
+  tr: { five_hour: '5 saatlik hak', seven_day: 'haftalık hak', spend_limit: 'harcama sınırı', context: 'sohbet hafızası' },
+}
+
+// The MODZ card's one line: as short as the band's labels, but whole words.
+const CARD: Readonly<Record<Lang, Labels>> = {
+  en: { five_hour: '5-hour', seven_day: 'weekly', spend_limit: 'spend', context: 'memory' },
+  tr: { five_hour: '5 saatlik', seven_day: 'haftalık', spend_limit: 'harcama', context: 'hafıza' },
 }
 
 export const shortLabels = (): Labels => pick(SHORT)
+export const cardLabels = (): Labels => pick(CARD)
 export const longLabels = (): Labels => pick(LONG)
 
 // How numbers read: the decimal mark, where the percent sign goes, a full window, the countdown units.
@@ -37,19 +44,27 @@ const WEEKDAYS: Readonly<Record<Lang, readonly string[]>> = {
 
 export const weekdays = (): readonly string[] => pick(WEEKDAYS)
 
-// /context's row names in Turkish; English keeps the engine's own, and so does an unknown row.
+// /context's row names in plain words; an unknown row keeps the engine's own name.
+const CATEGORY_EN: Labels = {
+  'System prompt': 'Built-in instructions',
+  'System tools': 'Built-in tools',
+  'MCP tools': 'Connected tools (MCP)',
+  'Custom agents': 'Your agents',
+  'Slash commands': 'Commands',
+}
+
 const CATEGORY_TR: Labels = {
-  'System prompt': 'Sistem istemi',
-  'System tools': 'Sistem araçları',
-  'MCP tools': 'MCP araçları',
-  'Custom agents': 'Özel ajanlar',
-  'Memory files': 'Bellek dosyaları',
+  'System prompt': 'Yerleşik talimatlar',
+  'System tools': 'Yerleşik araçlar',
+  'MCP tools': 'Bağlı araçlar (MCP)',
+  'Custom agents': 'Senin ajanların',
+  'Memory files': 'Hafıza dosyaları',
   Skills: 'Beceriler',
   'Slash commands': 'Komutlar',
   Messages: 'Mesajlar',
 }
 
-export const categoryLabel = (name: string): string => pick({ en: name, tr: CATEGORY_TR[name] ?? name })
+export const categoryLabel = (name: string): string => pick({ en: CATEGORY_EN[name] ?? name, tr: CATEGORY_TR[name] ?? name })
 
 // English counts: "1 reading", "3 readings".
 const plural = (count: number, one: string, many: string): string => `${count} ${count === 1 ? one : many}`
@@ -119,41 +134,41 @@ type Words = {
 const EN: Words = {
   paneTitle: 'Usage',
   limits: 'Limits',
-  compact: 'Compact',
+  compact: 'Summarize',
   session: 'session',
   sessionCost: 'session cost',
   thisSession: 'this session',
-  noReadings: 'No readings yet; they come with the first model reply.',
-  hidden: 'HUD hidden.',
-  shown: 'HUD shown.',
-  commandFailed: 'The HUD command failed.',
-  commandDescription: 'Show or hide the HUD line; "/hud full" opens the limit details; "/hud band auto|always|alerts" picks the band',
-  bandSet: mode => `HUD band: ${mode}${mode === 'auto' ? ' (alerts only on the desktop, which shows the limits itself; the full line in the terminal)' : ''}.`,
-  bandUsage: 'Usage: /hud band auto | always | alerts',
-  timeToCompact: 'time to compact',
+  noReadings: 'Nothing measured yet; the numbers arrive with the first answer.',
+  hidden: 'Usage line hidden.',
+  shown: 'Usage line shown.',
+  commandFailed: 'The /hud command did not work.',
+  commandDescription: 'Show or hide the usage line above your message box; "/hud full" opens the details; "/hud band auto|always|alerts" picks when it shows',
+  bandSet: mode => `Usage line: ${mode}${mode === 'auto' ? ' (only warnings in the desktop app, which shows your allowances itself; the full line in the terminal)' : ''}.`,
+  bandUsage: 'Write one of: /hud band auto | always | alerts',
+  timeToCompact: 'worth summarizing now',
   readings: count => plural(count, 'reading', 'readings'),
   sessionAt: cost => `session ${cost}`,
   range: (low, high) => `range ${low}–${high}`,
-  ahead: points => `${plural(points, 'point', 'points')} ahead of pace`,
-  pace: percent => `pace ${percent}`,
-  free: spec => `${spec.tokens} ${nouns(spec.count, 'token')} free`,
+  ahead: points => `${plural(points, 'point', 'points')} ahead of an even pace`,
+  pace: percent => `even pace ${percent}`,
+  free: spec => `room for ${spec.tokens} more ${nouns(spec.count, 'token')}`,
   lastTurnTokens: spec => `last turn ${spec.tokens} ${nouns(spec.count, 'token')}`,
   turn: spec =>
-    `last turn: input ${spec.input} · output ${spec.output} · cache ${spec.cache} · ${plural(spec.requests, 'request', 'requests')}`,
-  resetsIn: reset => `resets in ${reset}`,
-  resetsAfter: reset => `resets in ${reset}`,
-  limitFull: label => `${label} limit reached`,
-  limitAt: (label, value) => `${label} limit ${value} used`,
-  compactFailed: message => `Compact failed: ${message}`,
-  contextTitle: 'Context breakdown',
+    `last turn: read ${spec.input} · wrote ${spec.output} · ${spec.cache} reused · ${plural(spec.requests, 'model call', 'model calls')}`,
+  resetsIn: reset => `refills in ${reset}`,
+  resetsAfter: reset => `refills in ${reset}`,
+  limitFull: label => `${label} used up`,
+  limitAt: (label, value) => `${label}: ${value} used`,
+  compactFailed: message => `Could not summarize the chat (compact): ${message}`,
+  contextTitle: 'Chat memory (context)',
   other: 'Other',
   freeSpace: 'Free',
-  reserve: 'Reserve',
-  compactNow: 'Compact now',
-  compacting: 'Compacting…',
+  reserve: 'Set aside',
+  compactNow: 'Summarize now',
+  compacting: 'Summarizing…',
   noBreakdown: 'No breakdown yet.',
-  compacted: 'Compacted',
-  compactedFrom: spec => `Compacted ${spec.before} → ${spec.after}`,
+  compacted: 'Summarized',
+  compactedFrom: spec => `Summarized ${spec.before} → ${spec.after}`,
   estimate: (used, total) => `~${used} / ${total}`,
   fullAt: time => `~full at ${time}`,
   fullAtShort: time => `~full ${time}`,
@@ -164,12 +179,12 @@ const EN: Words = {
   activeDays: 'active days',
   sessions: 'sessions',
   tokens: 'tokens',
-  tokensApart: cache => `tokens in + out · ${cache} cache`,
+  tokensApart: cache => `tokens · ${cache} kept ready`,
   topModel: 'most used',
   rangeLabel: days => `${days} days`,
   lastDays: days => `last ${days} days`,
   pastLine: spec =>
-    [`${spec.active}/${spec.range} active days`, plural(spec.sessions, 'session', 'sessions'), `${spec.tokens} tokens in + out`, `${spec.cache} cache`, spec.model === null ? '' : `mostly ${spec.model}`]
+    [`${spec.active}/${spec.range} active days`, plural(spec.sessions, 'session', 'sessions'), `${spec.tokens} tokens read and written`, `${spec.cache} kept ready`, spec.model === null ? '' : `mostly ${spec.model}`]
       .filter(part => part !== '')
       .join(' · '),
   dayTokens: (day, tokens) => `${day}: ${tokens} tokens`,
@@ -178,40 +193,40 @@ const EN: Words = {
 const TR: Words = {
   paneTitle: 'Kullanım',
   limits: 'Limitler',
-  compact: 'Sıkıştır',
+  compact: 'Özetle',
   session: 'oturum',
   sessionCost: 'oturum maliyeti',
   thisSession: 'bu oturum',
-  noReadings: 'Henüz ölçüm yok; ilk model yanıtıyla gelir.',
-  hidden: 'HUD gizlendi.',
-  shown: 'HUD gösteriliyor.',
-  commandFailed: 'HUD komutu çalışmadı.',
-  commandDescription: 'HUD satırını aç/kapat; "/hud full" limit ayrıntılarını açar; "/hud band auto|always|alerts" bandı seçer',
-  bandSet: mode => `HUD bandı: ${mode}${mode === 'auto' ? ' (masaüstünde yalnızca uyarılar, limitleri uygulama zaten gösteriyor; terminalde tam satır)' : ''}.`,
-  bandUsage: 'Kullanım: /hud band auto | always | alerts',
-  timeToCompact: 'sıkıştırmak iyi olur',
-  readings: count => `${count} okuma`,
+  noReadings: 'Henüz ölçüm yok; sayılar ilk yanıtla gelir.',
+  hidden: 'Kullanım satırı gizlendi.',
+  shown: 'Kullanım satırı gösteriliyor.',
+  commandFailed: '/hud komutu çalışmadı.',
+  commandDescription: 'Mesaj kutusunun üstündeki kullanım satırını aç/kapat; "/hud full" ayrıntıları açar; "/hud band auto|always|alerts" ne zaman görüneceğini seçer',
+  bandSet: mode => `Kullanım satırı: ${mode}${mode === 'auto' ? ' (masaüstü uygulamasında yalnızca uyarılar, kullanım haklarını uygulama zaten gösteriyor; terminalde tam satır)' : ''}.`,
+  bandUsage: 'Şunlardan biri: /hud band auto | always | alerts',
+  timeToCompact: 'özetlemek iyi olur',
+  readings: count => `${count} ölçüm`,
   sessionAt: cost => `oturum ${cost}`,
   range: (low, high) => `aralık ${low}–${high}`,
-  ahead: points => `tempodan ${points} puan önde`,
-  pace: percent => `tempo ${percent}`,
-  free: spec => `${spec.tokens} token boş`,
+  ahead: points => `eşit hızdan ${points} puan önde`,
+  pace: percent => `eşit hızda ${percent}`,
+  free: spec => `${spec.tokens} token daha sığar`,
   lastTurnTokens: spec => `son tur ${spec.tokens} token`,
-  turn: spec => `son tur: girdi ${spec.input} · çıktı ${spec.output} · önbellek ${spec.cache} · ${spec.requests} istek`,
-  resetsIn: reset => `sıfırlanma ${reset}`,
-  resetsAfter: reset => `${reset} sonra sıfırlanır`,
-  limitFull: label => `${label} limiti doldu`,
-  limitAt: (label, value) => `${label} limiti ${value} dolu`,
-  compactFailed: message => `Sıkıştırma başarısız: ${message}`,
-  contextTitle: 'Bağlam dökümü',
+  turn: spec => `son tur: okunan ${spec.input} · yazılan ${spec.output} · ${spec.cache} hazır sohbetten · ${spec.requests} model çağrısı`,
+  resetsIn: reset => `yenilenme ${reset}`,
+  resetsAfter: reset => `${reset} sonra yenilenir`,
+  limitFull: label => `${label} doldu`,
+  limitAt: (label, value) => `${label}: ${value} kullanıldı`,
+  compactFailed: message => `Sohbet özetlenemedi (compact): ${message}`,
+  contextTitle: 'Sohbet hafızası (context)',
   other: 'Diğer',
   freeSpace: 'Boş',
   reserve: 'Yedek pay',
-  compactNow: 'Şimdi sıkıştır',
-  compacting: 'Sıkıştırılıyor…',
+  compactNow: 'Şimdi özetle',
+  compacting: 'Özetleniyor…',
   noBreakdown: 'Henüz döküm yok.',
-  compacted: 'Sıkıştırıldı',
-  compactedFrom: spec => `Sıkıştırıldı: ${spec.before} → ${spec.after}`,
+  compacted: 'Özetlendi',
+  compactedFrom: spec => `Özetlendi: ${spec.before} → ${spec.after}`,
   estimate: (used, total) => `~${used} / ${total}`,
   fullAt: time => `~${time} civarında dolar`,
   fullAtShort: time => `~dolar ${time}`,
@@ -219,15 +234,15 @@ const TR: Words = {
   turnsShort: count => `~${count} tur`,
   lastTurns: count => `son ${count} tur`,
   pastTitle: 'Geçmiş',
-  activeDays: 'aktif gün',
+  activeDays: 'kullanılan gün',
   sessions: 'oturum',
   tokens: 'token',
-  tokensApart: cache => `giriş + çıkış token · ${cache} önbellek`,
+  tokensApart: cache => `token · ${cache} hazır tutulan`,
   topModel: 'en çok',
   rangeLabel: days => `${days} gün`,
   lastDays: days => `son ${days} gün`,
   pastLine: spec =>
-    [`${spec.active}/${spec.range} aktif gün`, `${spec.sessions} oturum`, `${spec.tokens} giriş + çıkış token`, `${spec.cache} önbellek`, spec.model === null ? '' : `çoğunlukla ${spec.model}`]
+    [`${spec.active}/${spec.range} kullanılan gün`, `${spec.sessions} oturum`, `${spec.tokens} token okunup yazıldı`, `${spec.cache} hazır tutulan`, spec.model === null ? '' : `çoğunlukla ${spec.model}`]
       .filter(part => part !== '')
       .join(' · '),
   dayTokens: (day, tokens) => `${day}: ${tokens} token`,

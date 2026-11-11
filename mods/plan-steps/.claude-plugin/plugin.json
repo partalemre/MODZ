@@ -1,6 +1,6 @@
 {
   "name": "plan-steps",
-  "description": "Shows the plan's steps when there is one (task list, approved plan or plan file): the /steps pane and a quiet status line; keeps an open plan across /clear and compaction, and asks before an answer leaves steps open",
+  "description": "Shows the plan's steps when there is one (task list, approved plan or plan file): the /steps panel and a quiet line under the chat; keeps an open plan when the chat is cleared (/clear) or summarized (compact), and asks before an answer leaves steps open",
   "author": {
     "name": "Faik Emre Partal"
   },

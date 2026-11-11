@@ -38,7 +38,7 @@ test('the form picks the chosen type or the first; an offer keeps its first line
   expect(chosenOf(BUILTIN_TYPES, { ...blankDraft(), type: 'Plan' })?.name).toBe('Plan')
   expect(chosenOf(BUILTIN_TYPES, { ...blankDraft(), type: 'gone' })?.name).toBe('general-purpose')
   expect(offered({ agent: 'x', description: 'One line\nmore', source: 'plugin' }).description).toBe('One line')
-  expect(describe(BUILTIN_TYPES[1]!)).toBe('Hızlı, salt okunur kod araması')
+  expect(describe(BUILTIN_TYPES[1]!)).toBe('Kodu hızlıca tarar, hiçbir şeyi değiştirmez')
   expect(describe({ name: 'mine', description: '', source: 'user' })).toBe('Açıklama yok.')
   expect(sourceWord('plugin')).toBe('eklenti')
   expect(sourceWord('policySettings')).toBe('policySettings')
@@ -88,14 +88,14 @@ test('Turkish names take their case by vowel harmony', () => {
 
 const HEADER: HeaderData = {
   eyebrow: 'Ajanlar', counts: '2 çalışıyor', headline: 'Launch kit', percent: '—', tone: 'run', meter: null,
-  stats: [{ label: 'Maliyet', value: '≈$1,68' }, { label: 'Token', value: '387k' }, { label: 'Süre', value: '0:56' }, { label: '5 saat payı', value: '≈%5,9' }],
+  stats: [{ label: 'Maliyet', value: '≈$1,68' }, { label: 'Token', value: '387k' }, { label: 'Süre', value: '0:56' }, { label: '5 saatlik haktan', value: '≈%5,9' }],
 }
 
 test('the header lays its four figures in a row when they fit, two by two when not; an unknown percent is not drawn', () => {
   const wide = headerSvg(600, HEADER)
   const narrow = headerSvg(300, HEADER)
   expect(narrow.height).toBeGreaterThan(wide.height)
-  expect(wide.source).toContain('5 saat payı')
+  expect(wide.source).toContain('5 saatlik haktan')
   expect(wide.source).not.toContain('letter-spacing')
   expect(narrow.source).not.toContain('…')
   expect(wide.source).not.toContain('>—<')

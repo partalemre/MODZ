@@ -132,7 +132,7 @@ test('the value is never stored, written, logged or shown', async ($, on) => {
   await ($ as any).prompt.submit({ text: `key: ${ANT}` })
   await ($ as any).tool.call({ tool: 'Bash', command: `echo ${ONE}` })
 
-  expect(setup.statuses.at(-1)).toBe('1 sır sohbetin dışında tutuldu')
+  expect(setup.statuses.at(-1)).toBe('1 gizli anahtar sohbetin dışında tutuldu')
   for (const kept of [setup.files, setup.stored, setup.asked, setup.statuses, setup.trees]) expect(JSON.stringify(kept)).not.toContain(ANT)
 })
 

@@ -26,15 +26,15 @@ test('one sentence says the whole state, the worse side first', () => {
   expect(sentence({ commands: { test: null, lint: null } })).toEqual({ sentence: 'No test command found', tone: 'neutral' })
   expect(sentence({ badge: { isRunning: true } })).toEqual({ sentence: 'Running your tests…', tone: 'kiln' })
   expect(sentence({ badge: fail })).toEqual({ sentence: '3 tests failing', tone: 'flare' })
-  expect(sentence({ badge: fail, ci: ci('failed', [check('fail')]) }).sentence).toBe('3 tests and 1 GitHub check failing')
-  expect(sentence({ badge: pass, ci: ci('failed', [check('fail'), check('fail')]) })).toEqual({ sentence: '2 GitHub checks failing', tone: 'flare' })
+  expect(sentence({ badge: fail, ci: ci('failed', [check('fail')]) }).sentence).toBe('3 tests and 1 automatic check on GitHub failing')
+  expect(sentence({ badge: pass, ci: ci('failed', [check('fail'), check('fail')]) })).toEqual({ sentence: '2 automatic checks failing on GitHub', tone: 'flare' })
   expect(sentence({ badge: pass, ci: ci('passed', [check('pass')]) })).toEqual({ sentence: 'Everything passes', tone: 'moss' })
   expect(sentence({ badge: pass, ci: ci('watching', [check('pending')]) }).sentence).toBe('Tests pass, GitHub is still checking')
   // GitHub tested nothing, so "everything" would overclaim.
   expect(sentence({ badge: pass, ci: ci('none', []) })).toEqual({ sentence: 'All tests pass on this computer', tone: 'moss' })
   // A merged PR's old red is over.
   expect(sentence({ badge: pass, ci: ci('merged', [check('fail')]) }).sentence).toBe('Everything passes')
-  expect(sentence({ badge: { lint: outcome({ status: 'fail', errors: 2 }), tests: outcome({}), finishedAt: 1 } })).toEqual({ sentence: '2 code problems', tone: 'amber' })
+  expect(sentence({ badge: { lint: outcome({ status: 'fail', errors: 2 }), tests: outcome({}), finishedAt: 1 } })).toEqual({ sentence: '2 style-rule problems', tone: 'amber' })
 })
 
 test('the local rows name each check, its command and what happened', () => {
@@ -42,7 +42,7 @@ test('the local rows name each check, its command and what happened', () => {
   const commands = { test: ['npm', 'test'], lint: ['/bin/sh', '-c', 'make lint'] }
   expect(localRowsOf({ badge: EMPTY, ci: null, commands }).map(row => [row.name, row.command, row.result])).toEqual([
     ['Tests', 'npm test', 'not run yet'],
-    ['Code check (lint)', 'make lint', 'not run yet'],
+    ['Style-rule check (lint)', 'make lint', 'not run yet'],
   ])
   const failed = ran({ tests: outcome({ status: 'fail', passed: 39, total: 42 }), lint: outcome({ status: 'timeout' }) })
   expect(localRowsOf({ badge: failed, ci: null, commands }).map(row => [row.result, row.role])).toEqual([['3 of 42 failed', 'flare'], ['took too long', 'amber']])
@@ -53,9 +53,9 @@ test('the local rows name each check, its command and what happened', () => {
 
 test('the run button says what it runs', () => {
   setLang('en')
-  expect(runLabelOf({ test: ['t'], lint: ['l'] })).toBe('Run tests and code check')
+  expect(runLabelOf({ test: ['t'], lint: ['l'] })).toBe('Run tests and style-rule check')
   expect(runLabelOf({ test: ['t'], lint: null })).toBe('Run tests')
-  expect(runLabelOf({ test: null, lint: ['l'] })).toBe('Run code check')
+  expect(runLabelOf({ test: null, lint: ['l'] })).toBe('Run style-rule check')
   expect(runLabelOf({ test: null, lint: null })).toBe('Look again')
   expect(runLabelOf(null)).toBe('Run tests')
 })
@@ -80,7 +80,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(text).toContain('On this computer')
     expect(text).toContain('npm run --silent test')
     expect(text).toContain('On GitHub')
-    expect(text).toContain('Pull request #7')
+    expect(text).toContain('Change request #7')
     expect(text).toContain('GitHub reported no automatic checks')
     expect(text).not.toMatch(/\bCI\b/)
   })
@@ -92,7 +92,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     const text = shownText(await pane.drawn())
 
     expect(text).toContain('No test command found')
-    expect(text).toContain('No pull request is being followed')
+    expect(text).toContain('No change request (pull request) is being followed')
     expect((await pane.find({ key: 'tb-rerun' }))?.props?.label).toBe('Look again')
   })
 }

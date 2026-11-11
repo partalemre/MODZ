@@ -112,7 +112,7 @@ for (const surface of SURFACES) {
     const ui = await $.ui.mount({ ...PANE, surface })
 
     expect(await ui.find({ type: 'Text', text: 'Pace' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /^Too few readings for a pace yet: 1 of 3/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^Not enough measurements to tell the pace yet: 1 of 3/ })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /At this pace/ })).toBeUndefined()
     expect(await ui.find({ type: 'Text', text: /shows here once a turn ends/ })).toBeDefined()
   })
@@ -123,8 +123,8 @@ for (const surface of SURFACES) {
     await measureFive($, clock, [40, 45, 50, 55])
     const ui = await $.ui.mount({ ...PANE, surface })
 
-    expect(await ui.find({ type: 'Text', text: '5-hour window 55% · rising 60% an hour' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /^At this pace it fills .+, before it resets at / })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: '5-hour allowance 55% used · rising 60% an hour' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^At this pace it runs out .+, before it refills at / })).toBeDefined()
   })
 
   test(`${surface}: each turn's share of the window is listed, newest first`, async ($, on) => {
@@ -134,8 +134,8 @@ for (const surface of SURFACES) {
     await turn($, 't1')
     const ui = await $.ui.mount({ ...PANE, surface })
 
-    expect(await ui.find({ type: 'Text', text: 'Last turn used 14% of the 5-hour window' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /other sessions on the account count too/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Last turn used 14% of the 5-hour allowance' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /your other chats on the account count too/ })).toBeDefined()
   })
 
   test(`${surface}: another meter mod's section is drawn, and its button's press is written for it`, { plugins: [EFFORT] } as any, async ($: any, on: any) => {
@@ -163,8 +163,8 @@ test('a notable turn says one quiet line above the other rows; an ordinary one s
   await turn($, 't1')
   const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
   const order = (await band.findAll({ type: 'Text' })).map((found: any) => found.text)
-  expect(order).toContain('That turn used 14% of the 5-hour window (now 44%).')
-  expect(order.indexOf('That turn used 14% of the 5-hour window (now 44%).')).toBeLessThan(order.indexOf('theirs'))
+  expect(order).toContain('That turn used 14% of the 5-hour allowance (now 44%).')
+  expect(order.indexOf('That turn used 14% of the 5-hour allowance (now 44%).')).toBeLessThan(order.indexOf('theirs'))
 })
 
 test('a pace that fills the window before it resets says so once', async ($, on) => {
@@ -172,7 +172,7 @@ test('a pace that fills the window before it resets says so once', async ($, on)
   await start($, 'terminal')
   await measureFive($, clock, [40, 45, 50, 55, 60])
   const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  const lines = (await band.findAll({ type: 'Text', text: /^At this pace the 5-hour window fills/ })) as unknown[]
+  const lines = (await band.findAll({ type: 'Text', text: /^At this pace the 5-hour allowance runs out/ })) as unknown[]
 
   expect(lines.length).toBe(1)
 })

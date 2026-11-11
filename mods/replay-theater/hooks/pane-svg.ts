@@ -1,4 +1,6 @@
 import { countChanges } from './diff'
+import { plainCall } from './kit/plain'
+import { lang } from './lang'
 import type { ReplayExplain, ReplayStep } from '../types'
 import { escape, fit, measure, wrap } from './ui/svg'
 import { DOT_CSS, stepDot, stepRail } from './ui/steps'
@@ -145,11 +147,14 @@ function planPill(model: PaneModel, step: ReplayStep, top: number): { svg: strin
   return { svg: `<rect x="0.5" y="${top + 0.5}" width="${width - 1}" height="${PILL_H - 1}" rx="${PILL_H / 2}" fill="var(--track)"/>${flag}${label}`, height: PILL_H + 12 }
 }
 
-// "Edit 2 / 4", the file, where it lives and the tool, what the change does and the plan step it served.
+// What the step did in plain words, with the tool's own name kept last for whoever wants it.
+export const doingOf = (step: ReplayStep): string => plainCall(step.tool, { file_path: step.file, notebook_path: step.file }, lang())
+
+// "Edit 2 / 4", the file, what was done, where it lives and the tool, what the change does and the plan step it served.
 export function detailSvg(model: PaneModel): { source: string; height: number } {
   const step = model.steps[model.index] as ReplayStep
   const { add, del } = countChanges(step.diff)
-  const meta = [step.file, step.tool, step.note].filter(Boolean).join(' · ')
+  const meta = [doingOf(step), step.file, step.note, step.tool].filter(Boolean).join(' · ')
   // A deep path wraps under the name rather than losing its middle.
   const metaLines = wrap(meta, { width: model.width, size: 12, maxLines: 2 })
   const head = [

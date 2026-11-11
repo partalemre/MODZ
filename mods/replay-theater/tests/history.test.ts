@@ -78,7 +78,7 @@ test('past steps show what the transcript holds, and say so', async () => {
   expect(first[0]).toMatchObject({ tool: 'Edit', file: 'src/greet.js', note: 'edited part only', toolUseId: 'e1' })
   expect(first[0]?.diff.map(line => line.op)).toEqual(['-', '+'])
   expect(first[1]).toMatchObject({ file: 'docs/guide.md', agentId: 'x1', said: 'Updating the guide' })
-  expect(second.map(step => step.note)).toEqual(['new file', 'rewrite', 'whole file; earlier text not in transcript'])
+  expect(second.map(step => step.note)).toEqual(['new file', 'rewrite', 'whole file; earlier text not in the saved conversation'])
   expect(second[0]?.diff.every(line => line.op === '+')).toBe(true)
   expect(second[1]?.diff).toEqual([{ op: '-', t: 'notes v1', span: { start: 6, end: 8 } }, { op: '+', t: 'notes v2', span: { start: 6, end: 8 } }, { op: ' ', t: 'same' }])
   expect(second[2]?.diff).toEqual([{ op: '+', t: 'only the new text' }])
@@ -97,7 +97,7 @@ test('a notebook cell edit keeps only its new source', async () => {
   }
   const steps = await stepsOfTurn(turn, '/w')
 
-  expect(steps.map(step => [step.file, step.note])).toEqual([['a.ipynb', 'new cell'], ['a.ipynb', 'cell deleted; its text not recorded'], ['(unknown file)', 'edited part only']])
+  expect(steps.map(step => [step.file, step.note])).toEqual([['a.ipynb', 'new notebook cell'], ['a.ipynb', 'notebook cell deleted; its text not recorded'], ['(unknown file)', 'edited part only']])
   expect(steps[1]?.diff).toEqual([])
   setLang('tr')
 })

@@ -69,7 +69,7 @@ for (const surface of SURFACES) {
     expect(await ui.find({ type: 'Text', text: 'Theme' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: 'Options' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: 'Colors' })).toBeDefined()
-    expect(await labelOf(ui, 'toggle-rail')).toBe('● Reply rail')
+    expect(await labelOf(ui, 'toggle-rail')).toBe('● Reply line')
     expect(await labelOf(ui, 'skin-off')).toBe('Off')
     expect(await labelOf(ui, 'gallery')).toBe('Open the gallery')
     expect(await ui.find({ type: 'Text', text: /add rate limiting to the hub api/ })).toBeDefined()
@@ -81,9 +81,9 @@ for (const surface of SURFACES) {
     await skin($, 'gallery')
     const ui = await $.ui.mount(pane(surface, 'skins-gallery'))
 
-    expect(world.opened[0]?.title).toBe('Skin gallery')
-    expect(await ui.find({ type: 'Text', text: /^1 {2}Your prompt$/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /^11 {2}Turn footer \(terminal\)$/ })).toBeDefined()
+    expect(world.opened[0]?.title).toBe('Look gallery')
+    expect(await ui.find({ type: 'Text', text: /^1 {2}Your message$/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^11 {2}Line under each turn \(terminal\)$/ })).toBeDefined()
     expect(JSON.stringify(await ui.drawn())).not.toMatch(TURKISH_ONLY)
   })
 
@@ -93,8 +93,8 @@ for (const surface of SURFACES) {
     const props = { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 100, scroll: { offset: 0, bodyRows: 4 }, view: {} }
     const ui = await $.ui.mount({ ...SITE, surface, component: 'AbovePrompt', requestId: 'band', props })
 
-    expect(await ui.find({ type: 'Text', text: 'Context 85% full' })).toBeDefined()
-    expect(await labelOf(ui, 'compact')).toBe('Compact now')
+    expect(await ui.find({ type: 'Text', text: 'Chat memory 85% full' })).toBeDefined()
+    expect(await labelOf(ui, 'compact')).toBe('Summarize now')
     expect(JSON.stringify(await ui.drawn())).toContain('5h')
     expect(JSON.stringify(await ui.drawn())).not.toMatch(TURKISH_ONLY)
   })
@@ -124,10 +124,10 @@ test('terminal: the house skin works and finishes in English words', async ($, o
 test('/skin answers and the hub row read in English', async ($, on) => {
   const world = await english($, on, 'desktop')
 
-  expect((await skin($, 'nope')).text).toBe('unknown skin "nope". /skin list shows them all')
-  expect((await skin($, 'rail maybe')).text).toBe('usage: /skin rail on|off')
+  expect((await skin($, 'nope')).text).toBe('no look called "nope". /skin list shows them all')
+  expect((await skin($, 'rail maybe')).text).toBe('write it as: /skin rail on|off')
   await skin($, 'off')
-  expect(world.toasts.at(-1)).toBe('skin off')
+  expect(world.toasts.at(-1)).toBe('look off')
   await skin($, 'tidemark')
   await skin($, 'pin')
   expect(world.toasts.at(-1)).toBe('this folder keeps its own look')

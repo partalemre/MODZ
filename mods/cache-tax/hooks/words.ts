@@ -23,7 +23,7 @@ export const coldFor = (s: State, now: number): number => now - s.lastRequestAt 
 
 export function rateText(s: State, model = s.lastModel): string {
   const price = priceOf(model, s.ctx)
-  return price ? `$${decimal(price[1])}/MTok` : say().rateUnknown
+  return price ? say().perMillion(decimal(price[1])) : say().rateUnknown
 }
 
 /** Why the send is cold, and the model it is priced at: the one a switch sends it to. */

@@ -28,7 +28,7 @@ test('a short turn stays quiet, and the threshold is configurable', async ($, on
 
   const answer = await $.command.run({ command: 'done-ping', args: '10' } as any)
   await turn($, spy, 20_000)
-  expect(answer.text).toBe('done-ping: 10sn üstü turlarda bildirir')
+  expect(answer.text).toBe('done-ping: 10sn’den uzun süren turlarda haber verir')
   expect(banners(spy)).toHaveLength(1)
 })
 
@@ -39,7 +39,7 @@ test('/done-ping turns it off', async ($, on) => {
   const answer = await $.command.run({ command: 'done-ping', args: '' } as any)
   await turn($, spy, 90_000)
 
-  expect(answer.text).toBe('done-ping kapalı · eşik 60sn')
+  expect(answer.text).toBe('done-ping kapalı · 60sn’den uzun turlarda')
   expect(banners(spy)).toHaveLength(0)
 })
 
@@ -52,7 +52,7 @@ test('a permission ask pings once per burst and never shows the command', async 
   await spy.clock.advance(5)
 
   expect(banners(spy)).toHaveLength(1)
-  expect(banners(spy)[0]?.slice(-4)).toEqual(['komut izni', 'Onay bekliyor', 'eliti', 'Glass'])
+  expect(banners(spy)[0]?.slice(-4)).toEqual(['komut çalıştırma izni', 'Onay bekliyor', 'eliti', 'Glass'])
 })
 
 test('on the desktop a permission ask sends nothing: the app notifies on its own', async ($, on) => {

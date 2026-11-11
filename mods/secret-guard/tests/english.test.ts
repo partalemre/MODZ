@@ -22,7 +22,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(setup.asked).toEqual(['How do you want to go on?'])
     for (const text of ['Leak blocked', 'This write has 2 secret keys', 'line 3']) expect(drawn).toContain(text)
     expect(TURKISH_ONLY.test(drawn)).toBe(false)
-    expect(options?.map((option: any) => option.label)).toEqual(['Move keys to .env', 'Allow once', 'Cancel'])
+    expect(options?.map((option: any) => option.label)).toEqual(['Move keys to the secrets file', 'Allow once', 'Cancel'])
     expect(options?.[0]?.description).toMatch(/^Recommended/)
     expect(denied.deny).toMatch(/blocked/)
     expect(setup.ran).toHaveLength(0)
@@ -37,8 +37,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await ($ as any).tool.call({ tool: 'Bash', command: 'git add .' })
     const drawn = JSON.stringify(setup.trees[0])
 
-    for (const text of ['Env file', '.env.local is being added to git']) expect(drawn).toContain(text)
-    if (surface === 'terminal') expect(setup.cards[0]?.[2]).toBe('  env file  .env.local')
+    for (const text of ['Secrets file', '.env.local is about to go into a saved version']) expect(drawn).toContain(text)
+    if (surface === 'terminal') expect(setup.cards[0]?.[2]).toBe('  secrets file  .env.local')
     expect(TURKISH_ONLY.test(drawn)).toBe(false)
   })
 

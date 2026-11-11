@@ -19,7 +19,7 @@ test('English: the banner, the permission ping and the app notification', async 
   await spy.clock.advance(20_000)
   await $.tool.check({ tool: 'Bash', input: { command: 'npm publish' }, tool_use_id: 'u1' })
   await spy.clock.advance(5)
-  expect(banners(spy)[1]?.slice(-4)).toEqual(['command permission', 'Waiting for approval', 'eliti', 'Glass'])
+  expect(banners(spy)[1]?.slice(-4)).toEqual(['permission to run a command', 'Waiting for approval', 'eliti', 'Glass'])
 })
 
 test('English: the desktop app notification', async ($, on) => {
@@ -44,8 +44,8 @@ for (const surface of ['terminal', 'desktop'] as const) {
 test('English: the command answers', async ($, on) => {
   const spy = spyOf({ lang: null })
   await setup($, on, spy)
-  expect((await $.command.run({ command: 'done-ping', args: '90' } as any)).text).toBe('done-ping: pings after turns longer than 90s')
-  expect((await $.command.run({ command: 'done-ping', args: 'soon' } as any)).text).toBe('Usage: /done-ping [seconds | 2m | test]')
-  expect((await $.command.run({ command: 'done-ping', args: '' } as any)).text).toBe('done-ping off · threshold 90s')
+  expect((await $.command.run({ command: 'done-ping', args: '90' } as any)).text).toBe('done-ping: tells you when a turn runs longer than 90s')
+  expect((await $.command.run({ command: 'done-ping', args: 'soon' } as any)).text).toBe('Write it as: /done-ping [seconds | 2m | test]')
+  expect((await $.command.run({ command: 'done-ping', args: '' } as any)).text).toBe('done-ping off · for turns over 90s')
   expect((await $.command.run({ command: 'done-ping', args: 'test' } as any)).text).toBe('done-ping: test notification sent')
 })

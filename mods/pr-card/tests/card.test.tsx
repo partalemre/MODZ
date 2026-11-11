@@ -123,7 +123,7 @@ test('Turkish with MODZ_LANG=tr, and no Turkish without it', async ($: any, on: 
   const text = await textOf(await $.ui.mount(groupOf('terminal')))
 
   expect(text).toContain('Açık acme/shop #7 · Add the checkout page')
-  expect(text).toContain('Kontroller: 2/2 geçti · İnceleme: Bekliyor · Birleştirme: Tabandan geride')
+  expect(text).toContain('Kontroller: 2/2 geçti · İnceleme: Bekliyor · Birleştirme: Güncel değil')
   const desk = await $.ui.mount(groupOf('desktop'))
   expect(await altOf(desk)).toBe('acme/shop #7 · 2 dosya +120 −8 · checkout.tsx · a.ts')
   expect((await desk.find({ key: `r-${PR_URL}` })).props.label).toBe('Yenile')

@@ -1,4 +1,5 @@
 import type { AgentRun } from '../types'
+import { t } from './i18n'
 
 type Who = Pick<AgentRun, 'type' | 'effort'>
 
@@ -49,9 +50,10 @@ export const tierOf = (a: Who): string => savvyTierOf(a.type) ?? effortTierOf(a.
 export const costumeOf = (a: Who): string => savvyTierOf(a.type) ?? (a.type === 'Explore' ? 'explore' : tierOf(a))
 
 // The coloured word before the model: the tier when one is known, else the agent type.
-export const tierWordOf = (a: Who): string => {
-  const tier = tierOf(a)
-  return tier === 'other' ? a.type : tier
-}
+/** "orta düşünme" for the engine's `medium`; a word the table lacks stays as it is. */
+export const effortWord = (effort = ''): string => t().efforts[effort] ?? effort
+
+// A savvy tier is the agent's own name for itself; without one the thinking level is said in words.
+export const tierWordOf = (a: Who): string => savvyTierOf(a.type) ?? (effortTierOf(a.effort) ? effortWord(a.effort) : a.type)
 
 export const plannedTierOf = (tier: string): string => (Object.hasOwn(TIER_MODEL, tier) ? tier : 'other')

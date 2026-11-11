@@ -29,8 +29,8 @@ test('a bad marketplace entry becomes an unhealthy row and the others still load
   expect(mods).toHaveLength(6)
   expect(mods.filter(mod => !mod.isHealthy)).toHaveLength(5)
   expect(byName(mods, 'good')?.isHealthy).toBe(true)
-  expect(mods[0]?.description).toBe('marketplace kaydı geçersiz')
-  expect(byName(mods, 'noSource')?.description).toBe('marketplace kaydı geçersiz')
+  expect(mods[0]?.description).toBe('mod listesindeki satırı bozuk')
+  expect(byName(mods, 'noSource')?.description).toBe('mod listesindeki satırı bozuk')
   expect(byName(mods, 'remote')?.description).toContain('o/r')
   expect(new Set(mods.map(mod => mod.name)).size).toBe(6)
 })
@@ -55,8 +55,8 @@ test('plugin.json okunamadı is shown only when the manifest cannot be read', as
   const read = async (path: string) => (path.endsWith('plugin.json') ? '{ not json' : base.read(path))
 
   expect(byName(mods, 'gone')).toMatchObject({ isHealthy: false, description: 'from market' })
-  expect(byName(mods, 'bare')).toMatchObject({ isHealthy: false, description: 'plugin.json okunamadı' })
-  expect((await loadCatalog({ read, root: ROOT })).mods[0]).toMatchObject({ isHealthy: false, description: 'plugin.json okunamadı' })
+  expect(byName(mods, 'bare')).toMatchObject({ isHealthy: false, description: 'ayar dosyası (plugin.json) okunamadı' })
+  expect((await loadCatalog({ read, root: ROOT })).mods[0]).toMatchObject({ isHealthy: false, description: 'ayar dosyası (plugin.json) okunamadı' })
 })
 
 test('enabled state: settings false wins, settings true or a skills link is on, else unknown', async () => {

@@ -33,7 +33,7 @@ test('a running agent unheard for two minutes is quiet; a minute and a half is f
 test('one call open fifteen minutes is worth a look; a shorter open call is not quiet', () => {
   const open = run('a1', { history: [call('Read', 0, SECOND), call('Bash', MINUTE)] })
   expect(stuckOf(open, MINUTE + 5 * MINUTE)).toBeNull()
-  expect(stuckOf(open, MINUTE + LONG_TOOL_MS)?.reason).toBe('Bash 15 dk sürüyor')
+  expect(stuckOf(open, MINUTE + LONG_TOOL_MS)?.reason).toBe('tek adım 15 dk sürüyor')
 })
 
 test('an agent that ended is never stuck', () => {

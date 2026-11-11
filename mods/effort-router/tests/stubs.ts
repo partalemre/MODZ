@@ -81,5 +81,5 @@ export const stateOf = async ($: any, key: 'turns' | 'mode' | 'hub') => JSON.par
 export const paneOf = (surface: string, columns = 80) => ({
   plugin: 'effort-router', component: 'Pane', requestId: 'effort', surface,
   viewport: { columns: columns + 10, rows: 40 },
-  props: { title: 'Effort', isFocused: true, bodyColumns: columns, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} },
+  props: { title: 'Thinking level', isFocused: true, bodyColumns: columns, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} },
 })

@@ -47,10 +47,10 @@ const band = { plugin: 'effort-router', component: 'AbovePrompt', surface: 'term
 test('the section names the mode with its buttons, then the newest turns; before one, what it will show', () => {
   setLang('en')
   const empty = effortSection([], 'show')
-  expect(empty).toMatchObject({ id: 'effort', title: 'Effort', isEmpty: true, lines: ['No turns yet. The next turn shows here.', 'Mode: Show only. Shows the effort each turn was sent with. No tokens.'] })
-  expect(empty.actions).toEqual([{ id: 'show', label: 'Show only', isOn: true }, { id: 'auto', label: 'Route', isOn: false }, { id: 'off', label: 'Off', isOn: false }])
+  expect(empty).toMatchObject({ id: 'effort', title: 'Thinking level', isEmpty: true, lines: ['No turns yet. The next turn shows here.', 'Mode: Show only. Shows the thinking level each turn was sent with. Uses no tokens.'] })
+  expect(empty.actions).toEqual([{ id: 'show', label: 'Show only', isOn: true }, { id: 'auto', label: 'Auto', isOn: false }, { id: 'off', label: 'Off', isOn: false }])
   expect(effortSection([row('a', 'low', 'high'), row('b', 'high')], 'auto').lines.slice(1)).toEqual(['low from high · opus-5-5 · Rename it', 'high · opus-5-5 · Rename it'])
-  expect(effortSection([row('a', 'high')], 'off').lines).toEqual(['Mode: Off. Effort is neither shown nor changed.'])
+  expect(effortSection([row('a', 'high')], 'off').lines).toEqual(['Mode: Off. The thinking level is neither shown nor changed.'])
 })
 
 test('while hud-pro runs: no hub card, the command and the hub row open no pane, and the command asks for Usage', { plugins: [spy, HUD, HUB] } as any, async ($: any, on: any) => {
@@ -88,13 +88,13 @@ test('a lowered turn waits behind a live budget notice, shows once it clears, an
   await begin($)
   await run($, 'sb-notice')
   await turn($, { text: 'What does this regex match?', turnId: 'light' })
-  expect(await read($, 'hud-notice')).toMatchObject({ text: 'Sent at low effort (yours: high): the judge called it light', expiresAt: 0 })
+  expect(await read($, 'hud-notice')).toMatchObject({ text: 'Sent at low thinking (yours: high): it looked simple', expiresAt: 0 })
   const held = await $.ui.mount({ ...band, requestId: 'held' })
-  expect(await held.find({ type: 'Text', text: /Sent at low effort/ })).toBeUndefined()
+  expect(await held.find({ type: 'Text', text: /Sent at low thinking/ })).toBeUndefined()
 
   await run($, 'sb-notice', 'off')
   const shown = await $.ui.mount({ ...band, requestId: 'shown' })
-  expect(await shown.find({ type: 'Text', text: /Sent at low effort/ })).toBeDefined()
+  expect(await shown.find({ type: 'Text', text: /Sent at low thinking/ })).toBeDefined()
 
   await $.prompt.submit({ text: 'Thanks, now explain the second group', wait: false, origin: { kind: 'composer' } })
   expect(await read($, 'hud-notice')).toBeNull()

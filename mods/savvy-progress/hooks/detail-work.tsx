@@ -96,8 +96,8 @@ function eventTree(ui: Ui, e: ToolEvent, ctx: EventContext) {
       <Text dimColor>{KIND_GLYPH[kind]}</Text>
       <Box flexGrow={1} flexShrink={1}>
         <Text wrap="truncate-end">
-          <Text bold>{e.tool}</Text>
-          {e.target ? <Text dimColor>{` ${e.target}`}</Text> : null}
+          {e.plain ? <Text>{e.plain}</Text> : <Text bold>{e.tool}</Text>}
+          {e.plain || e.target ? <Text dimColor>{`${e.plain ? ` · ${e.tool}` : ''}${e.target ? ` ${e.target}` : ''}`}</Text> : null}
         </Text>
       </Box>
       <Box flexShrink={0} flexDirection="row" columnGap={1} alignItems="center">

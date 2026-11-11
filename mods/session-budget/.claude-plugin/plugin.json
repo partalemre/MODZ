@@ -1,6 +1,6 @@
 {
   "name": "session-budget",
-  "description": "A per-session spend budget (% of the 5h limit or $): notice at 80%, Continue anyway / Stop at 100% on a new prompt",
+  "description": "A spending cap for one chat (a share of the 5-hour usage allowance, or dollars): a note at 80%, and at 100% it asks Continue anyway or Stop before your next message goes",
   "author": { "name": "Faik Emre Partal" },
   "types": "./types/index.d.ts"
 }

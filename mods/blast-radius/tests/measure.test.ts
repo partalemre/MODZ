@@ -28,7 +28,7 @@ test('reset --hard to an older ref on a clean tree counts the commits it drops a
   await start($, w)
   const { drawn, deny } = await heldCard($, w, 'git reset --hard origin/main')
 
-  expect(drawn).toContain('This would drop 2 commits from main.')
+  expect(drawn).toContain('This would erase 2 saved versions from main.')
   expect(drawn).toContain('add the parser')
   expect(deny).toMatch(/move main back to origin\/main, dropping 2 commits/)
   expect(w.ran).toHaveLength(0)
@@ -60,7 +60,7 @@ test('a write over a file git cannot bring back is held and names it; one git ha
   await start($, w)
   const { drawn, deny } = await heldCard($, w, 'echo hi > notes.md')
 
-  expect(drawn).toContain('This would write over 1 file (2.0 KB) whose contents git can\'t bring back.')
+  expect(drawn).toContain('This would write over 1 file (2.0 KB) whose current contents were never saved, so they can\'t be brought back.')
   expect(deny).toMatch(/overwrite 1 file git can't bring back: notes.md/)
   w.answers.writes = 'P\t2048\tclean\tnotes.md\n'
   expect(((await call($, 'cp other.md notes.md')) as any)?.deny).toBeUndefined()
@@ -150,7 +150,7 @@ test('a held command is told to the MODZ panel while it waits, and the line goes
   expect(await hub()).toBeNull()
   const pending = call($, 'rm -rf build')
   await pass(w, 0)
-  expect(await hub()).toMatchObject({ pane: 'blast-radius', detail: 'rm -rf build is waiting', tone: 'warn', section: 'safety', isBandOnly: true })
+  expect(await hub()).toMatchObject({ pane: 'blast-radius', detail: 'Waiting for your answer: rm -rf build', tone: 'warn', section: 'safety', isBandOnly: true })
 
   const ui = await mountBand($, 'desktop')
   await ui.press({ key: 'cancel' })

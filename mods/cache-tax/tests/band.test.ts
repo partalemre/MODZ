@@ -7,8 +7,8 @@ import { HOUR, MIN, START, bandProps, prompt, run, session, themeChange, turn, u
 
 tier('user')
 
-const WORD = /^(sıcak|soğuk|bilinmiyor|durdu)$/
-const ROW = { type: 'Text', text: 'Önbellek · ' } as const
+const WORD = /^(hazır|süresi doldu|bilinmiyor|durdu)$/
+const ROW = { type: 'Text', text: 'Sohbet · ' } as const
 const LO = '#8E8A80'
 const MOSS = '#6FC593'
 const AMBER_LIGHT = '#8A6000'
@@ -81,11 +81,11 @@ describe('status row', () => {
       await clock.advance(HOUR)
       if (surface === 'terminal') expect((await ui.find({ type }))?.props.source).toEqual({ png: statusIcons.light.cold.png })
       else expect(await lid()).toContain(`fill="${AMBER_LIGHT}"`)
-      expect((await ui.find({ type: 'Text', text: /^soğuk$/ }))?.props.color).toBe(surface === 'terminal' ? 'warning' : AMBER_LIGHT)
+      expect((await ui.find({ type: 'Text', text: /^süresi doldu$/ }))?.props.color).toBe(surface === 'terminal' ? 'warning' : AMBER_LIGHT)
       expect(w.forks.length).toBe(1)
       await $.command.run(run('keepwarm', 'off'))
       // keepwarm is off, but a cold cache this big still earns its row.
-      expect((await ui.find(ROW))?.text).toMatch(/soğuk · 0 dk önce soğudu · sonraki mesaj en fazla \$4,01/)
+      expect((await ui.find(ROW))?.text).toMatch(/süresi doldu · 0 dk önce · sonraki mesaj en fazla \$4,01/)
     })
 
     test(`${surface}: NO_COLOR uses a bold text icon and uncolored state`, async ($, on) => {
@@ -98,7 +98,7 @@ describe('status row', () => {
       expect(await ui.find({ type: 'Image' })).toBe(undefined)
       expect(await ui.find({ type: 'Svg' })).toBe(undefined)
       expect((await ui.find({ type: 'Text', text: /^\[>\]$/ }))?.props.bold).toBe(true)
-      expect((await ui.find({ type: 'Text', text: /^sıcak$/ }))?.props.color).toBe(undefined)
+      expect((await ui.find({ type: 'Text', text: /^hazır$/ }))?.props.color).toBe(undefined)
     })
   }
 
@@ -108,25 +108,25 @@ describe('status row', () => {
       const w = world(on, [{ isAnswered: false, reason: 'nothing-to-fork' } satisfies ModelForkResult], { bandText: 'other mod' })
       await $.session.start({ ...session, surface, isInteractive: true })
       const ui = await $.ui.mount({ plugin: 'cache-tax', surface, component: 'AbovePrompt', props: bandProps })
-      expect(await ui.find({ text: 'Önbellek · ' })).toBe(undefined)
+      expect(await ui.find({ text: 'Sohbet · ' })).toBe(undefined)
       await $.command.run(run('keepwarm', '3h'))
       expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(undefined)
       expect((await ui.find(ROW))?.text).toMatch(/bilinmiyor.*ilk tur bekleniyor/)
       await $.turn.complete(turn())
       expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(MOSS_OF[surface])
-      expect((await ui.find(ROW))?.text).toMatch(/sıcak.*tazeleme 50 dk sonra/)
+      expect((await ui.find(ROW))?.text).toMatch(/hazır.*tazeleme 50 dk sonra/)
       await clock.advance(HOUR)
       expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(AMBER_OF[surface])
-      expect((await ui.find(ROW))?.text).toMatch(/soğuk.*şimdi soğuk/)
-      expect((await $.command.run(run('cache-tax', ''))).text).toMatch(/durum       SOĞUK/)
+      expect((await ui.find(ROW))?.text).toMatch(/süresi doldu.*artık hazır değil/)
+      expect((await $.command.run(run('cache-tax', ''))).text).toMatch(/hazır mı    HAYIR/)
       expect(w.forks.length).toBe(1)
       expect((await ui.find({ text: /^other mod$/ }))?.text).toBe('other mod')
       await $.turn.complete(turn())
       expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(MOSS_OF[surface])
-      expect((await $.command.run(run('cache-tax', ''))).text).toMatch(/durum       sıcak/)
+      expect((await $.command.run(run('cache-tax', ''))).text).toMatch(/hazır mı    evet/)
       expect(w.status.filter(Boolean)).toEqual([])
       await $.command.run(run('keepwarm', 'off'))
-      expect(await ui.find({ text: 'Önbellek · ' })).toBe(undefined)
+      expect(await ui.find({ text: 'Sohbet · ' })).toBe(undefined)
       expect(w.forks.length).toBe(1)
     })
   }
@@ -140,13 +140,13 @@ describe('status row', () => {
     expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe('warning')
     await $.session.compact({ trigger: 'manual', messages: [{ role: 'user', text: 'summary', toolUses: [] }] })
     expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(undefined)
-    expect((await ui.find(ROW))?.text).toMatch(/bilinmiyor.*sıkıştırmadan sonraki/)
+    expect((await ui.find(ROW))?.text).toMatch(/bilinmiyor.*sohbet özetlendikten sonraki/)
     await clock.advance(HOUR)
     expect(w.forks.length).toBe(0)
     await $.turn.complete(turn())
     expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe('success')
     await $.classic.SessionStart({ source: 'clear' })
-    expect(await ui.find({ text: 'Önbellek · ' })).toBe(undefined)
+    expect(await ui.find({ text: 'Sohbet · ' })).toBe(undefined)
     await clock.advance(HOUR)
     expect(w.forks.length).toBe(0)
   })
@@ -159,10 +159,10 @@ describe('status row', () => {
     await $.command.run(run('keepwarm', '10m'))
     const ui = await $.ui.mount({ plugin: 'cache-tax', surface: 'terminal', component: 'AbovePrompt', props: bandProps })
     const survey = await $.ui.mount({ plugin: 'cache-tax', surface: 'terminal', component: 'AbovePrompt', props: { ...bandProps, hasSurvey: true } })
-    expect(await survey.find({ text: 'Önbellek · ' })).toBe(undefined)
+    expect(await survey.find({ text: 'Sohbet · ' })).toBe(undefined)
     expect((await survey.find({ text: 'survey' }))?.text).toBe('survey')
     await clock.advance(10 * MIN)
-    expect(await ui.find({ text: 'Önbellek · ' })).toBe(undefined)
+    expect(await ui.find({ text: 'Sohbet · ' })).toBe(undefined)
     expect(w.forks.length).toBe(0)
   })
 
@@ -187,7 +187,7 @@ describe('status row', () => {
       await $.session.start({ ...session, surface })
       await $.turn.complete(turn())
       await $.command.run(run('keepwarm', '90m'))
-      expect(w.status.at(-1)).toBe('sıcak tutma: 1 sa 30 dk kaldı · tazeleme 50 dk sonra')
+      expect(w.status.at(-1)).toBe('hazır tutma: 1 sa 30 dk kaldı · tazeleme 50 dk sonra')
       expect(w.status.at(-1)).not.toMatch(/\x1b/)
       expect(w.forks.length).toBe(0)
     })
@@ -205,7 +205,7 @@ describe('status row', () => {
     expect((await ui.find(ROW))?.text).toMatch(/son tazeleme 200k token okudu/)
     await clock.advance(50 * MIN)
     expect((await ui.find({ type: 'Text', text: WORD }))?.props.color).toBe(undefined)
-    expect((await ui.find(ROW))?.text).toMatch(/durdu.*önbellek zaten soğumuştu/)
+    expect((await ui.find(ROW))?.text).toMatch(/durdu.*sohbetin süresi zaten dolmuştu/)
     await clock.advance(HOUR)
     expect(w.forks.length).toBe(2)
   })
@@ -282,9 +282,9 @@ describe('status row visibility', () => {
     await clock.advance(49 * MIN)
     expect(await ui.find(ROW)).toBe(undefined)
     await clock.advance(2 * MIN)
-    expect((await ui.find(ROW))?.text).toBe('Önbellek · sıcak · 9 dk içinde soğuyacak · /keepwarm ile sıcak tut')
+    expect((await ui.find(ROW))?.text).toBe('Sohbet · hazır · 9 dk sonra süresi dolar · /keepwarm ile hazır tut')
     await clock.advance(10 * MIN)
-    expect((await ui.find(ROW))?.text).toBe('Önbellek · soğuk · 1 dk önce soğudu · sonraki mesaj en fazla $4,01')
+    expect((await ui.find(ROW))?.text).toBe('Sohbet · süresi doldu · 1 dk önce · sonraki mesaj en fazla $4,01')
     expect(w.forks.length).toBe(0)
   })
 
@@ -305,7 +305,7 @@ describe('status row visibility', () => {
     await $.turn.complete(turn())
     await $.command.run(run('keepwarm', '90m'))
     const ui = await $.ui.mount({ plugin: 'cache-tax', surface: 'terminal', component: 'AbovePrompt', props: { ...bandProps, bodyColumns: 50 } })
-    expect((await ui.find(ROW))?.text).toBe(' Önbellek · sıcak · sıcak tutma: 1 sa 30 dk kaldı')
+    expect((await ui.find(ROW))?.text).toBe(' Sohbet · hazır · hazır tutma: 1 sa 30 dk kaldı')
   })
 })
 
@@ -326,23 +326,23 @@ describe('hold card', () => {
   for (const surface of ['terminal', 'desktop'] as const) {
     test(`${surface}: a cold send waits on the card, and pay sends it as the person's own words`, async ($, on) => {
       const { w, ui, dropped } = await holdOn($, on, surface)
-      expect(dropped.drop).toBe('cache-tax: mesajın bekletiliyor, kartta seç (soğuk önbellek, en fazla $4,01).')
+      expect(dropped.drop).toBe('cache-tax: mesajın bekletiliyor, kartta seç (sohbet artık hazır tutulmuyor, en fazla $4,01).')
       expect(await ui.find({ key: 'cache-tax:hold' })).not.toBe(undefined)
       expect(await ui.find(ROW)).toBe(undefined)
       if (surface === 'desktop') {
         const header = String((await ui.find({ type: 'Svg' }))?.props.source)
         expect(header).toContain('Mesajın bekletiliyor')
-        expect(header).toContain('Önbellek 6 sa önce soğudu.')
+        expect(header).toContain('Sohbet 6 sa önce hazır tutulmayı bıraktı.')
         expect(header).not.toContain('ÖNBELLEK VERGİSİ')
-      } else expect((await ui.find({ type: 'Text', text: 'Önbellek vergisi' }))?.props.dimColor).toBe(true)
+      } else expect((await ui.find({ type: 'Text', text: 'Baştan okuma bedeli' }))?.props.dimColor).toBe(true)
       expect((await ui.find({ type: 'Text', text: /^(⏸ )?Bekleyen: / }))?.text).toContain(`“${HELD}”`)
-      expect((await ui.findAll({ type: 'Button' })).map(b => b.props.label)).toEqual(['Öde ve gönder', 'Yeni başla', 'Önbellek durumu'])
+      expect((await ui.findAll({ type: 'Button' })).map(b => b.props.label)).toEqual(['Öde ve gönder', 'Yeni başla', 'Durumu göster'])
       await ui.press({ key: 'cache-tax:pay' })
       expect(w.entered).toEqual([HELD])
       expect(w.origins.at(-1)).toMatchObject({ kind: 'plugin', name: 'cache-tax', asUser: true })
       expect(await ui.find({ key: 'cache-tax:hold' })).toBe(undefined)
       await $.turn.complete(turn({ usage: usage({ cache_read_input_tokens: 0, cache_creation_input_tokens: 200502 }) }))
-      expect(w.logs.at(-1)).toMatch(/201k token önbelleğe baştan yazıldı \(\$4,01\)/)
+      expect(w.logs.at(-1)).toMatch(/Claude sohbetin 201k token'ını baştan okudu \(\$4,01\)/)
     })
   }
 
@@ -369,7 +369,7 @@ describe('hold card', () => {
   test('the comparison shows both prices, the token span, the price ratio and a visible warm sliver', async ($, on) => {
     const { ui } = await holdOn($, on, 'desktop')
     const compare = String((await ui.findAll({ type: 'Svg' }))[1]?.props.source)
-    for (const part of ['Şimdi gönder', '$4,01', 'Sıcak bir tur', '$0,05', '~200.502 token', 'yeniden yazılır · $20/MTok', 'sıcakken olurdu · 80 kat ucuz']) {
+    for (const part of ['Şimdi gönder', '$4,01', 'Olağan bir tur', '$0,05', '~200.502 token', 'baştan okunur · milyon token başına $20', 'sohbet hazırken · 80 kat ucuz']) {
       expect(compare).toContain(part)
     }
   })
@@ -377,7 +377,7 @@ describe('hold card', () => {
   test('the terminal card says the same prices and ratio in text', async ($, on) => {
     const { ui } = await holdOn($, on, 'terminal')
     const drawn = JSON.stringify(await ui.drawn())
-    for (const part of ['Önbellek vergisi', '$4,01', '$0,05', '80 kat ucuz', 'keepwarm önbelleği 3 sa tutsun']) {
+    for (const part of ['Baştan okuma bedeli', '$4,01', '$0,05', '80 kat ucuz', 'keepwarm sohbeti 3 sa hazır tutsun']) {
       expect(drawn).toContain(part)
     }
   })

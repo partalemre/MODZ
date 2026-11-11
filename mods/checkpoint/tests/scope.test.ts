@@ -88,7 +88,7 @@ test('the card says when commits were made since, and that ignored files stay; u
   const fake = newFake({ refs: `${scopeOf('/w', 'sess-1')}1\tc1\t100\tfix login`, diff: 'M\0a.ts\0', body: 'fix login\n\nCheckpoint-Head: aaa111\nCheckpoint-Index: bbb222\n', ahead: '2' })
   const pane = await confirmUndo($, on, fake)
   const card = textOf(await pane.drawn())
-  expect(card).toContain('2 commit git geçmişinde kalır')
+  expect(card).toContain('sonraki 2 kayıt (commit) geçmişte kalır')
   expect(card).toContain('.env gibi')
   expect(lines(fake)).toContain('git rev-list --count aaa111..HEAD')
 

@@ -74,7 +74,7 @@ for (const surface of SURFACES) {
     expect(await words(ui)).not.toContain('Şu an')
     expect(await words(ui)).not.toContain('İş geçmişi')
     await tool($, { tool: 'Read', file_path: '/w/README.md', agentId: 'a1' })
-    expect(await words(ui)).toContain('İş geçmişi · 1 araç')
+    expect(await words(ui)).toContain('İş geçmişi · 1 adım')
   })
 }
 
@@ -100,6 +100,6 @@ test('desktop: no percent is guessed before the first tool call', async ($, on) 
 test('a model the spawn did not name is left out, never drawn as "—"', () => {
   expect(modelLine(run())).toBe('')
   expect(modelLine(run({ model: 'inherit' }))).toBe('')
-  expect(modelLine(run({ effort: 'high' }))).toBe('high')
-  expect(modelLine(run({ model: 'claude-opus-5-5', effort: 'high', round: 2 }))).toBe('Opus 5.5 · high · tur 2')
+  expect(modelLine(run({ effort: 'high' }))).toBe('derin düşünme')
+  expect(modelLine(run({ model: 'claude-opus-5-5', effort: 'high', round: 2 }))).toBe('Opus 5.5 · derin düşünme · tur 2')
 })

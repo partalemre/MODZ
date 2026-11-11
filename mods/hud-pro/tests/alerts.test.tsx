@@ -29,7 +29,7 @@ test('band: alerts keeps only the window that needs a look, without the cost', {
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const svg = (await ui.find({ type: 'Svg' })) as Drawn
 
-  expect(svg?.props.alt).toBe('7 gün %91, 3g 22sa sonra sıfırlanır')
+  expect(svg?.props.alt).toBe('haftalık hak %91, 3g 22sa sonra yenilenir')
 })
 
 test('band: alerts on the terminal shows the warned window as text and drops the calm ones', { options: { band: 'alerts' } }, async ($, on) => {
@@ -50,6 +50,6 @@ test('band: alerts leaves Compact to others even when the context is past 70%', 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const svg = (await ui.find({ type: 'Svg' })) as Drawn
 
-  expect(svg?.props.alt).toContain('bağlam %75')
+  expect(svg?.props.alt).toContain('sohbet hafızası %75')
   expect(await ui.find({ key: 'compact' })).toBeUndefined()
 })

@@ -60,7 +60,7 @@ const GLYPH: Record<string, string> = { running: '●', done: '✓', failed: '�
 // Claude's accent while running, quiet once done, red after a failure (DESIGN.md §0), as the bar beside it.
 const STATUS_KEY: Record<string, ThemeKey> = { running: 'claude', done: 'subtle', failed: 'error' }
 
-// The tier and the model, the effort said once ("medium · Sonnet 5.5", not "medium · Sonnet 5.5 · medium").
+// The tier and the model, the thinking level said once ("orta düşünme · Sonnet 5.5", not twice).
 const whoLine = (a: AgentRun): string => {
   const tier = tierWordOf(a)
   return [tier, ...modelLine(a).split(' · ').filter(part => part !== tier)].join(' · ')
@@ -92,7 +92,7 @@ const headOf = (a: AgentRun, stuck: Stuck | null): CardHead => ({
 const nowLine = (a: AgentRun, isOpen: boolean): string => {
   const answer = a.status === 'done' && !isOpen ? a.answer?.split('\n').find(line => line.trim()) : undefined
   if (answer) return clip(answer.trim(), ANSWER_LINE)
-  if (a.status === 'failed' && a.lastTool) return `› ${a.lastTool}${a.lastTarget ? ' ' + a.lastTarget : ''}`
+  if (a.status === 'failed' && a.lastTool) return `› ${a.lastPlain ?? `${a.lastTool}${a.lastTarget ? ' ' + a.lastTarget : ''}`}`
   return activityOf(a)
 }
 
@@ -144,8 +144,7 @@ function termSummary(ui: Ui, a: AgentRun, ctx: RowContext) {
       <Box flexDirection="row" justifyContent="space-between" columnGap={1}>
         <Text wrap="truncate-end">
           <Text bold>{lookOf(a).name}</Text>
-          <Text dimColor>{` · ${tierWordOf(a)}`}</Text>
-          <Text dimColor>{` · ${[modelLine(a), t().tools(a.toolCount || 0)].filter(Boolean).join(' · ')}`}</Text>
+          <Text dimColor>{` · ${[whoLine(a), t().tools(a.toolCount || 0)].filter(Boolean).join(' · ')}`}</Text>
         </Text>
         <Text dimColor>{clockOf(a, ctx.at)}</Text>
       </Box>

@@ -1,6 +1,6 @@
 {
   "name": "done-ping",
-  "description": "A notification when a long turn finishes or Claude waits on you (permission or a question): the desktop app's own notification where it can, else a macOS banner with project, what happened and a short detail",
+  "description": "A notification when a long turn (your message and its answer) finishes or Claude waits on you (a permission or a question): the desktop app's own notification where it can, else a macOS banner with the project, what happened and a short detail",
   "author": {
     "name": "Faik Emre Partal"
   },
@@ -8,7 +8,7 @@
   "userConfig": {
     "thresholdSeconds": {
       "type": "number",
-      "title": "Threshold (seconds)",
+      "title": "Shortest turn to notify (seconds)",
       "description": "A finished turn pings only when it ran at least this long",
       "default": 60
     },
@@ -34,13 +34,13 @@
     "quietWhenFocused": {
       "type": "boolean",
       "title": "Quiet while you look",
-      "description": "Skip the banner while the app this session runs in (Claude, your terminal) is the frontmost app",
+      "description": "Skip the banner while the app this chat runs in (Claude, your terminal) is the one in front",
       "default": true
     },
     "appNotification": {
       "type": "boolean",
       "title": "Use the app's notification",
-      "description": "In the desktop app, notify through Claude's own notification (Claude icon) when it is available without a prompt",
+      "description": "In the desktop app, notify through Claude's own notification (Claude icon) when it can do so without asking you first",
       "default": true
     }
   }

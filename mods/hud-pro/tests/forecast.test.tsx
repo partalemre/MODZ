@@ -57,9 +57,9 @@ test('the breakdown keeps the four largest used rows, folds the rest into Other,
 
   expect(view?.segments.map(segment => [segment.label, segment.tokens, segment.kind])).toEqual([
     ['Mesajlar', 46_000, 'used'],
-    ['Sistem araçları', 18_000, 'used'],
-    ['MCP araçları', 9_000, 'used'],
-    ['Bellek dosyaları', 4_000, 'used'],
+    ['Yerleşik araçlar', 18_000, 'used'],
+    ['Bağlı araçlar (MCP)', 9_000, 'used'],
+    ['Hafıza dosyaları', 4_000, 'used'],
     ['Diğer', 5_000, 'other'],
     ['Boş', 85_000, 'free'],
     ['Yedek pay', 33_000, 'reserve'],
@@ -161,18 +161,18 @@ for (const surface of SURFACES) {
     expect(breakdowns).toEqual(['summary', 'summary'])
   })
 
-  test(`"Şimdi sıkıştır" compacts once and shows what it came to (${surface})`, async ($, on) => {
+  test(`"Şimdi özetle" compacts once and shows what it came to (${surface})`, async ($, on) => {
     setLang('tr')
     const clock = stubSession(on, withBreakdown())
     await start($, surface)
     const pane = await $.ui.mount({ ...PANE, surface })
-    expect((await pane.find({ key: 'compact-now' }))?.props?.label).toBe('Şimdi sıkıştır')
+    expect((await pane.find({ key: 'compact-now' }))?.props?.label).toBe('Şimdi özetle')
 
     await pane.press({ key: 'compact-now' })
     expect(await pane.find({ key: 'compact-now' })).toBeUndefined()
     await clock.advance(1)
     expect(compactions.count).toBe(1)
-    expect(await pane.find({ type: 'Text', text: 'Sıkıştırıldı: 152k → 38k' })).toBeDefined()
+    expect(await pane.find({ type: 'Text', text: 'Özetlendi: 152k → 38k' })).toBeDefined()
     expect(await pane.find({ key: 'compact-now' })).toBeDefined()
   })
 
@@ -206,7 +206,7 @@ for (const surface of SURFACES) {
     expect(await textOf(await $.ui.mount({ ...BAND, surface }))).toContain('~full ')
 
     const drawn = await textOf(await $.ui.mount({ ...PANE, surface }))
-    for (const text of ['Messages', 'System tools', 'Other', 'Free', '~11 turns left', 'last 3 turns', '~full at ', 'Compact now']) expect(drawn).toContain(text)
+    for (const text of ['Messages', 'Built-in tools', 'Other', 'Free', '~11 turns left', 'last 3 turns', '~full at ', 'Summarize now']) expect(drawn).toContain(text)
     expect(drawn).not.toMatch(/Mesajlar|kaldı|sıkıştır/)
   })
 }

@@ -51,7 +51,7 @@ const capital = (s: string): string => upper(s.charAt(0)) + s.slice(1)
 
 // The tool bright, its target in mono after it; the target gives way first, from its end.
 const callLine = (now: NowView, x: number, room: number): string => {
-  const tool = now.tool ? `${now.tool} ` : ''
+  const tool = now.tool ? `${fitText(now.tool, NOW.line2 * BOLD, room)} ` : ''
   const used = textWidth(tool, NOW.line2) * BOLD
   const shown = fitMono(now.target, { size: NOW.mono, maxW: Math.max(0, room - used), isFromStart: now.isPath })
   return `<text x="${x}" y="${NOW.lineY}" font-family="${FONT}" font-size="${NOW.line2}" font-weight="620"><tspan class="t">${xml(tool)}</tspan><tspan class="s" font-family="${MONO}" font-size="${NOW.mono}" font-weight="450">${xml(shown)}</tspan></text>`

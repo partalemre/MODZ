@@ -1,6 +1,8 @@
 import type { AgentRun, ThreadTurn } from '../types'
 import { clip, norm, toolDetail, toolName, toolTarget } from './format'
+import { plainLang } from './i18n'
 import { nextLook } from './identity'
+import { plainCall } from './kit/plain'
 import { costOf, tokensOf, windowOf } from './pricing'
 import type { Usage } from './pricing'
 import { MAX_RUNS } from './state'
@@ -106,6 +108,7 @@ export const toolActivity = (a: AgentRun, call: Record<string, unknown>): AgentR
   lastTool: toolName(String(call.tool ?? '')),
   lastTarget: toolTarget(call) || undefined,
   lastDetail: toolDetail(call) || undefined,
+  lastPlain: plainCall(String(call.tool ?? ''), call, plainLang()),
 })
 
 export const ownTasks = (a: AgentRun, call: Record<string, unknown>, result: unknown): AgentRun => ({

@@ -83,7 +83,7 @@ test('the MODZ card names the skin and its background, once per change', async (
   await runSkin($, 'dracula')
   expect(world.cards[1]).toMatchObject({ detail: 'dracula · koyu', tone: 'idle' })
   await runSkin($, 'off')
-  expect(world.cards[2]).toMatchObject({ detail: 'skin kapalı' })
+  expect(world.cards[2]).toMatchObject({ detail: 'görünüm kapalı' })
 })
 
 test('on a light theme the card says açık; a long name stays within 40 characters', async ($, on) => {

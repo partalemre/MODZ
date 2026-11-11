@@ -29,7 +29,7 @@ for (const surface of SURFACES) {
     await editAndRun($, await setup($, on, world))
 
     const band = await $.ui.mount(bandOf(surface))
-    expect(await shown(band, surface)).toMatch(/✕ 1\/42 failed[\s\S]*lint 2 errors[\s\S]*\ds ago/)
+    expect(await shown(band, surface)).toMatch(/✕ 1\/42 failed[\s\S]*style rules: 2 errors[\s\S]*\ds ago/)
     expect((await band.find({ key: 'tb-details' }))?.props?.label).toBe('Details')
     expect(await drawnText(band)).not.toMatch(TURKISH)
 
@@ -38,9 +38,9 @@ for (const surface of SURFACES) {
     expect(text).toMatch(/1 test failing[\s\S]*1 of 42 failed/)
     expect(text).toMatch(/On this computer[\s\S]*npm run --silent test/)
     expect((await pane.find({ key: 'tb-filter-all' }))?.text).toBe('All 3')
-    expect((await pane.find({ key: 'tb-rerun' }))?.props?.label).toBe('Run tests and code check')
+    expect((await pane.find({ key: 'tb-rerun' }))?.props?.label).toBe('Run tests and style-rule check')
     expect(await drawnText(pane)).not.toMatch(TURKISH)
-    expect(world.statuses.at(-1)).toBe('tests 41/42 · lint 2 errors · 0s ago')
+    expect(world.statuses.at(-1)).toBe('tests 41/42 · style rules: 2 errors · 0s ago')
   })
 
   test(`${surface}: a green run and an empty pane read in English`, async ($: any, on: any) => {
@@ -50,12 +50,12 @@ for (const surface of SURFACES) {
     const sentence = 'No tests run yet'
     if (surface === 'desktop') expect((await empty.find({ type: 'Svg' }))?.props?.alt).toBe(sentence)
     else expect((await empty.find({ key: 'tb-verdict' }))?.text).toBe(sentence)
-    expect((await empty.find({ key: 'tb-rerun' }))?.props?.label).toBe('Run tests and code check')
+    expect((await empty.find({ key: 'tb-rerun' }))?.props?.label).toBe('Run tests and style-rule check')
     await empty.unmount()
 
     await editAndRun($, clock)
     const band = await $.ui.mount(bandOf(surface))
-    expect(await shown(band, surface)).toMatch(/✓ 42\/42 passed[\s\S]*lint clean/)
+    expect(await shown(band, surface)).toMatch(/✓ 42\/42 passed[\s\S]*style rules ok/)
     const pane = await $.ui.mount(paneOf(surface))
     expect(await shown(pane, surface)).toMatch(/All tests pass on this computer[\s\S]*42 tests passed[\s\S]*clean/)
     expect(await drawnText(pane)).not.toMatch(TURKISH)
@@ -80,6 +80,6 @@ test('the hub card and the status line read like the film', () => {
   expect(hubOf(badge)).toEqual({ detail: '128/128 passed', tone: 'ok' })
 
   const failing = { ...badge, tests: outcome({ status: 'fail', passed: 41, total: 42 }), lint: outcome({ status: 'fail', errors: 1 }) }
-  expect(hubOf(failing).detail).toBe('41/42 passed · lint 1 error')
-  expect(badgeText(failing, 41 * 60_000 + 1000)).toBe('tests 41/42 · lint 1 error · 41m ago')
+  expect(hubOf(failing).detail).toBe('41/42 passed · style rules: 1 error')
+  expect(badgeText(failing, 41 * 60_000 + 1000)).toBe('tests 41/42 · style rules: 1 error · 41m ago')
 })

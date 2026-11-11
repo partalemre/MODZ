@@ -23,7 +23,7 @@ describe('a cold write is one request rewriting the context (upstream b05ec14)',
     for (let i = 0; i < 3; i++) await step($, MODEL)
     await $.turn.complete(turn({ usage: usage({ cache_creation_input_tokens: 120000 }) }))
     const card = await $.command.run(run('cache-tax', 'status'))
-    expect(card.text).toMatch(/önbellek 0 kez baştan yazıldı/)
+    expect(card.text).toMatch(/sohbet 0 kez baştan okundu/)
   })
 
   test('one request that rewrites half the context is one', async ($, on) => {
@@ -35,7 +35,7 @@ describe('a cold write is one request rewriting the context (upstream b05ec14)',
     await step($, MODEL)
     await $.turn.complete(turn({ usage: usage({ cache_read_input_tokens: 0, cache_creation_input_tokens: 150000 }) }))
     const card = await $.command.run(run('cache-tax', 'status'))
-    expect(card.text).toMatch(/önbellek 1 kez baştan yazıldı/)
+    expect(card.text).toMatch(/sohbet 1 kez baştan okundu/)
   })
 
   test('a subagent\'s large write does not count as the main loop\'s', async ($, on) => {
@@ -49,7 +49,7 @@ describe('a cold write is one request rewriting the context (upstream b05ec14)',
     await step($, MODEL)
     await $.turn.complete(turn({ usage: usage({ cache_creation_input_tokens: 150500 }) }))
     const card = await $.command.run(run('cache-tax', 'status'))
-    expect(card.text).toMatch(/önbellek 0 kez baştan yazıldı/)
+    expect(card.text).toMatch(/sohbet 0 kez baştan okundu/)
   })
 })
 
@@ -63,7 +63,7 @@ describe('keepwarm with nothing to fork yet (upstream 1cbbc79)', () => {
     await $.turn.complete(turn())
     await $.command.run(run('keepwarm', '3h every 1m'))
     await clock.advance(MIN)
-    const said = w.logs.filter(line => /henüz tazelenecek bir konuşma yok/.test(line))
+    const said = w.logs.filter(line => /henüz tazelenecek bir sohbet yok/.test(line))
     expect(said.length).toBe(1)
     await clock.advance(30 * MIN)
     expect(w.forks.length).toBe(1)
@@ -81,7 +81,7 @@ describe('keepwarm with nothing to fork yet (upstream 1cbbc79)', () => {
     await $.turn.complete(turn())
     await $.command.run(run('keepwarm', '3h every 1m'))
     await clock.advance(MIN)
-    expect(w.logs).toContain('keepwarm is on, but there is no conversation to refresh yet, so no refresh goes out until your next message. Send one more message and the refreshes start.')
+    expect(w.logs).toContain('keepwarm is on, but there is no chat to refresh yet, so nothing goes out until your next message. Send one more message and the refreshes start.')
   })
 })
 
@@ -92,9 +92,9 @@ describe('the countdown moves while idle (upstream 0f432b0)', () => {
     await $.session.start(session)
     await $.turn.complete(turn())
     await $.command.run(run('keepwarm', '3h'))
-    expect(w.status.at(-1)).toMatch(/^sıcak tutma: 3 sa kaldı/)
+    expect(w.status.at(-1)).toMatch(/^hazır tutma: 3 sa kaldı/)
     await clock.advance(5 * MIN)
-    expect(w.status.at(-1)).toMatch(/^sıcak tutma: 2 sa 55 dk kaldı · tazeleme 45 dk sonra/)
+    expect(w.status.at(-1)).toMatch(/^hazır tutma: 2 sa 55 dk kaldı · tazeleme 45 dk sonra/)
     expect(w.forks.length).toBe(0)
   })
 
@@ -182,12 +182,12 @@ describe('/keepwarm always takes a window of its own (upstream 90bcd45)', () => 
     await $.session.start(session)
     await $.turn.complete(turn())
     const r = await $.command.run(run('keepwarm', 'always 24h'))
-    expect(r.text).toBe('keepwarm hep açık: her oturum 24 sa pencereyle başlar; /keepwarm off kalıcı olarak kapatır; en fazla 12 tazeleme, 1000 çıktı tokenından fazlasını yazan tazeleme pencereyi kapatır')
+    expect(r.text).toBe('keepwarm hep açık: her sohbet 24 sa hazır tutularak başlar; /keepwarm off kalıcı olarak kapatır; en fazla 12 tazeleme, 1000 tokendan fazlasını yazan tazeleme bunu bitirir')
     expect(store.get('always')).toBe(24 * HOUR)
-    expect(w.status.at(-1)).toMatch(/^sıcak tutma: 24 sa kaldı/)
+    expect(w.status.at(-1)).toMatch(/^hazır tutma: 24 sa kaldı/)
     await clock.advance(30 * MIN)
     await $.turn.complete(turn())
-    expect(w.status.at(-1)).toMatch(/^sıcak tutma: 24 sa kaldı/)
+    expect(w.status.at(-1)).toMatch(/^hazır tutma: 24 sa kaldı/)
   })
 
   test('a bare always is still stored as true; a window out of range or with more after it is refused', async ($, on) => {
@@ -196,7 +196,7 @@ describe('/keepwarm always takes a window of its own (upstream 90bcd45)', () => 
     world(on, [], { store })
     await $.session.start(session)
     for (const args of ['always 30m', 'always 169h', 'always 24h now', 'always soon']) {
-      expect((await $.command.run(run('keepwarm', args))).text).toBe('always 1h ile 168h arası tek bir pencere alır, örneğin always 24h')
+      expect((await $.command.run(run('keepwarm', args))).text).toBe('always 1h ile 168h arası tek bir süre alır, örneğin always 24h')
     }
     expect(store.has('always')).toBe(false)
     await $.command.run(run('keepwarm', 'always'))
@@ -212,9 +212,9 @@ describe('/keepwarm always takes a window of its own (upstream 90bcd45)', () => 
     await clock.advance(2 * HOUR)
     store.set('always', 12 * HOUR)
     await $.session.start(session)
-    expect(w.status.at(-1)).toMatch(/^sıcak tutma: 12 sa kaldı/)
+    expect(w.status.at(-1)).toMatch(/^hazır tutma: 12 sa kaldı/)
     const r = await $.prompt.submit(prompt('hi'))
-    expect(r.drop).toMatch(/sonra \/keepwarm önbelleği sıcak tutar/)
+    expect(r.drop).toMatch(/sonra \/keepwarm sohbeti hazır tutar/)
     const card = await $.command.run(run('cache-tax', ''))
     expect(card.text).toMatch(/keepwarm    açık, 12 sa kaldı.*\(always\)/)
   })

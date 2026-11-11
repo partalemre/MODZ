@@ -22,6 +22,18 @@ test('a guard that fails denies the write with a clear reason instead of letting
   expect(setup.ran).toHaveLength(0)
 })
 
+test('a session moved out of the folder it started in has its commits checked in the folder it works in now', async ($, on) => {
+  // The desktop parks a new session in a spare folder, moves it to the project and deletes the spare.
+  const setup = { ...english('Allow once'), cwd: '/project', gitDirs: [] as string[] }
+  await start($, on, setup)
+
+  const ran: any = await ($ as any).tool.call({ tool: 'Bash', command: 'git commit -m "x"' })
+
+  expect(ran.deny).toBeUndefined()
+  expect(setup.gitDirs.length).toBeGreaterThan(0)
+  expect(setup.gitDirs).toEqual(setup.gitDirs.map(() => "/project"))
+})
+
 test('a failed guard still lets a call that writes nothing run', async ($, on) => {
   const setup = english('Allow once')
   await start($, on, setup)
@@ -87,6 +99,6 @@ test('a write that waits on the question is told to the MODZ panel, and the line
   await $.tool.call({ tool: 'Write', file_path: '/work/src/a.ts', content: `const k = "${ANT}"\n` })
   const heard: any[] = JSON.parse((await $.command.run({ command: 'hub-heard', args: '' })).text)
 
-  expect(heard.map(card => [card.detail, card.tone, card.isBandOnly])).toEqual([['secret in src/a.ts is waiting', 'warn', true], ['', 'idle', true]])
+  expect(heard.map(card => [card.detail, card.tone, card.isBandOnly])).toEqual([['A secret key in src/a.ts is waiting for you', 'warn', true], ['', 'idle', true]])
   expect(heard[0]).toMatchObject({ pane: 'secret-guard', title: 'Secret Guard', icon: 'key', section: 'safety' })
 })

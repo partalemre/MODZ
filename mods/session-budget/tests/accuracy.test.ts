@@ -63,6 +63,33 @@ test('without a five_hour reading the spawn brake reads the weekly window', asyn
   expect(world.asked[0]).toMatch(/^weekly usage allowance 90% used/)
 })
 
+const DAY = 24 * 60 * 60_000
+const FIVE_MINUTES = 5 * 60_000
+
+// Ten minutes that climb from 50% to 60% of a weekly window resetting `resetsInDays` from the start, then a spawn.
+async function burst($: any, clock: any, resetsInDays: number) {
+  const resetsAt = new Date(resetsInDays * DAY).toISOString()
+  for (const percentUsed of [50, 55, 60]) {
+    await $.session.measure({ context: {}, rateLimits: [{ kind: 'seven_day', percentUsed, resetsAt }], cost: { usd: 1 }, changed: ['rateLimits'] })
+    await clock.advance(FIVE_MINUTES)
+  }
+  await $.tool.call({ tool: 'Agent', description: 'one', prompt: 'look', subagent_type: 'Explore' })
+}
+
+test('a burst in a week that was mostly idle does not brake: the weekly average would not fill it', async ($: any, on: any) => {
+  const world: World = { asked: [], answer: 'Stop', submitted: [] }
+  // 60% in five days is 12 points a day: two more days end near 84%.
+  await burst($, await setup($, on, world), 2)
+  expect(world.asked).toEqual([])
+})
+
+test('a burst in a week whose average also fills it still brakes', async ($: any, on: any) => {
+  const world: World = { asked: [], answer: 'Stop', submitted: [] }
+  // 60% in one day: full within the next day, six days before the reset.
+  await burst($, await setup($, on, world), 6)
+  expect(world.asked[0]).toMatch(/^Spawn brake: weekly window at 60%, full by .+ at this pace/)
+})
+
 // A stand-in for reflect whose notice owns the line for the first 30 seconds.
 const LOUDER = {
   name: 'reflect',

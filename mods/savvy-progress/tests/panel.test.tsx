@@ -46,7 +46,7 @@ for (const surface of SURFACES) {
     const ui = await mount($)
     await ui.press({ key: 'done' })
     const seen = await words(ui)
-    for (const part of ['Pip', 'Mako', 'Nori', 'heavy', 'medium', 'light', 'Opus 5.5', 'çalışıyor', 'bitti']) expect(seen).toContain(part)
+    for (const part of ['Pip', 'Mako', 'Nori', 'çok derin düşünme', 'orta düşünme', 'az düşünme', 'Opus 5.5', 'çalışıyor', 'bitti']) expect(seen).toContain(part)
   })
 
   test(`${surface}: an open running card sends a message to that agent and adds it to the conversation`, async ($, on) => {

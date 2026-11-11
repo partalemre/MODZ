@@ -37,12 +37,13 @@ for (const surface of SURFACES) {
     const seen = await all(ui)
     expect(seen).toContain('Build the landing page')
     expect(seen).not.toContain('general-purpose')
-    expect(seen).toContain('heavy')
-    expect(seen).toContain('Opus 5.5 · xhigh')
+    // The thinking level is said in words, once, before the model.
+    expect(seen).toContain('çok derin düşünme · Opus 5.5')
+    expect(seen).not.toContain('xhigh')
     // What it does now is said in plain words, not as the tool's name.
     expect(seen).toContain('› hero.tsx dosyasını değiştiriyor')
     expect(seen).not.toContain('› Edit')
-    expect(seen).toContain('1 araç')
+    expect(seen).toContain('1 adım')
     expect(seen).toMatch(/≈\$0,\d\d/)
     expect(seen).toContain('2:36')
     // Context and tokens wait in the detail, so the card reads name, status, progress and cost.
@@ -124,7 +125,7 @@ for (const surface of SURFACES) {
     expect(await isShownOpen(ui, true, 'Build the landing page')).toBe(true)
     expect(open).toContain('Görev')
     expect(open).toContain('do it')
-    expect(open).toContain('İş geçmişi · 2 araç')
+    expect(open).toContain('İş geçmişi · 2 adım')
     // Each step leads with its plain sentence; the tool's own name and target follow it.
     expect(open).toContain('a.ts dosyasını okuyor')
     expect(open).toContain('Edit')

@@ -30,6 +30,7 @@ const TOOLS: Readonly<Record<string, Tool>> = {
   WebSearch: [['Searching the web for “{x}”', 'İnternette “{x}” arıyor'], 'query'],
   WebFetch: [['Reading a web page[: {x}]', 'Bir internet sayfasını okuyor[: {x}]'], 'url', 'host'],
   Agent: HELPER, Task: HELPER,
+  SubagentHandback: [['Handing its finished report back to the chat that started it', 'Bitirdiği işin raporunu kendisini başlatan sohbete teslim ediyor']],
   SendMessage: [['Sending a message to another agent', 'Başka bir ajana mesaj gönderiyor']],
   TodoWrite: TASKS, TaskCreate: TASKS, TaskUpdate: TASKS, TaskList: TASKS, TaskGet: TASKS, update_plan: TASKS,
   Skill: [['Loading a ready-made set of instructions[: {x}]', 'Hazır bir talimat paketini (skill) yüklüyor[: {x}]'], 'skill'],

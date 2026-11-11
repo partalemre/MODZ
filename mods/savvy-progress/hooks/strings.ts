@@ -92,6 +92,8 @@ export type Strings = {
   limit: string
   limitTile: string
   kinds: Kinds
+  /** The thinking level an agent runs at, by the engine's word for it. */
+  efforts: Readonly<Record<string, string>>
   cheerFailed: string
   /** Section toggles and the card's disclosure. */
   show: string

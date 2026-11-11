@@ -10,7 +10,7 @@ import { homeCrab, levelPill, levelWidth } from './mood-svg'
 import type { HomeMark } from './mood-svg'
 import { countTasks } from './tasks'
 import { FONT, paneSvg } from './theme'
-import { TIER_MODEL, plannedTierOf } from './tiers'
+import { TIER_MODEL, effortWord, plannedTierOf } from './tiers'
 
 // The agents panel's small drawings: the crab, the open call's dot and the compact strip. The
 // words around them are native text; each drawing keeps one source while its state holds, so its
@@ -48,7 +48,7 @@ const UNNAMED = ['', 'inherit']
 export const modelLine = (a: AgentRun): string => {
   const round = a.round > 1 ? `${t().round} ${a.round}` : ''
   const model = UNNAMED.includes(a.model) ? '' : modelName(a.model)
-  return [model, a.effort ?? '', round].filter(Boolean).join(' · ')
+  return [model, effortWord(a.effort), round].filter(Boolean).join(' · ')
 }
 
 export const clockOf = (a: AgentRun, at: number): string => {

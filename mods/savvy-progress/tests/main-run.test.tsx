@@ -39,7 +39,7 @@ test('the main loop is a row: named for what it is, titled by the request, its c
 
   await ui.press({ key: 'open-main' })
   const open = await text(ui)
-  expect(open).toContain('İş geçmişi · 1 araç')
+  expect(open).toContain('İş geçmişi · 1 adım')
   expect(open).toContain('Testleri çalıştırıyor')
   // It is talked to in the chat and stopped there: its card offers neither.
   expect(await ui.find({ key: 'stop-main' })).toBeUndefined()
@@ -73,7 +73,7 @@ test('a new request starts the row over; a turn that woke on a background notice
   const ui = await mount($)
   await ui.press({ key: 'open-main' })
   expect(await text(ui)).toContain('First job')
-  expect(await text(ui)).toContain('İş geçmişi · 1 araç')
+  expect(await text(ui)).toContain('İş geçmişi · 1 adım')
 
   await mainEnd($)
   await prompt($, 'Second job')

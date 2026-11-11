@@ -58,7 +58,7 @@ for (const surface of SURFACES) {
     const ui = await mount($)
     await ui.press({ key: 'open-a1' })
     const all = await text(ui)
-    const order = ['Görev', 'Pip\nok', 'Son adım', 'İş geçmişi · 2 araç', 'Dokunduğu dosyalar · 1'].map(word => all.indexOf(word))
+    const order = ['Görev', 'Pip\nok', 'Son adım', 'İş geçmişi · 2 adım', 'Dokunduğu dosyalar · 1'].map(word => all.indexOf(word))
     expect(order.every(at => at >= 0)).toBe(true)
     expect([...order].sort((x, y) => x - y)).toEqual(order)
     expect(all).toContain('12 sn önce')
@@ -153,6 +153,9 @@ test('now: an open call is what it does, a closed one means thinking, an ended r
   expect(nowOf(closed, 61_000)).toMatchObject({ state: 'thinking', verb: 'Düşünüyor', span: '1 dk önce' })
   expect(nowOf({ ...closed, status: 'done' }, 61_000)).toMatchObject({ state: 'done', verb: 'tamamlandı', tool: 'Edit' })
   expect(nowOf(run(), 5000)).toMatchObject({ state: 'starting', tool: '', span: '' })
+  // Between calls the line under the verb is the last step's sentence, not the tool's name and raw target.
+  const said = run({ ...open, history: [{ tool: 'Edit', target: 'src/hero.tsx', plain: 'hero.tsx dosyasını değiştiriyor', at: 1000, endAt: 2000 }] })
+  expect(nowOf(said, 61_000)).toMatchObject({ state: 'thinking', tool: 'hero.tsx dosyasını değiştiriyor', target: '', isPath: false })
 })
 
 test('files: one entry per path counting reads and edits; folders and other tools do not count', () => {

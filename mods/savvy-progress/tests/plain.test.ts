@@ -72,3 +72,7 @@ test('input it cannot read still gives a sentence, never a throw or a broken one
     expect(plainShell(odd, 'en')).not.toContain('{x}')
   }
 })
+
+test('a subagent handing its report back is said in words', () => {
+  expect(plainCall('SubagentHandback', { message: 'done' }, 'tr')).toBe('Bitirdiği işin raporunu kendisini başlatan sohbete teslim ediyor')
+})

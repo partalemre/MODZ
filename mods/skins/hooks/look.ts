@@ -15,6 +15,8 @@ export type Look = {
   icons: Icons
   prefs: Prefs
   surface: RenderSurface
+  // Its Svg draws frames the desktop keeps across redraws (a pane's, moving-look.tsx), not images.
+  isFramed?: true
   // The vector element where the surface draws one: icons replace glyphs there.
   svg?: SvgElement
   // Puts text on the clipboard of the surface drawing; absent where nothing can copy.

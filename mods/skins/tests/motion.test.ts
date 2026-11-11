@@ -51,3 +51,22 @@ test('the transcript row the panes sample stays a plain image', async ($, on) =>
   expect(svg.props.isInteractive).toBeUndefined()
   expect(svg.props.source).not.toContain('m-in')
 })
+
+// The desktop draws a plain Svg as a new image each time the transcript redraws, which any mod's `$.ui.invalidate`
+// makes it do: an entrance left in the card would play again each time, the table loading over and over.
+test('a reply\'s table card is drawn settled, while the gallery\'s frames keep their entrance', async ($, on) => {
+  stubEngine(on)
+  on('ui.render', { component: 'AssistantMessage' }, () => ({ type: 'engine', ref: 0 }) as never)
+  await start($)
+  const reply = await $.ui.mount({ ...paneOf('settled'), component: 'AssistantMessage', props: { text: '| A | B |\n|---|---|\n| 1 | 2 |', isFirstOfReply: true } })
+  const [card] = await sources(reply)
+
+  expect(card).toContain('animation:rise')
+  expect(card).toContain('.rise,.card,.row,.rule{animation:none!important;opacity:1!important}')
+
+  await runSkin($, 'gallery')
+  const framed = (await sources(await $.ui.mount(paneOf('skins-gallery')))).filter(source => source.includes('animation:rise'))
+
+  expect(framed.length).toBeGreaterThan(0)
+  expect(framed.some(source => source.includes('animation:none!important;opacity'))).toBe(false)
+})

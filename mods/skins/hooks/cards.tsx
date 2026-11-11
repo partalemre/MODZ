@@ -5,13 +5,19 @@ import { copyButton, copyRow, tableMarkdown, tableRows } from './row-table'
 import { codeSvg } from './svg-code'
 import { diffSvg } from './svg-diff'
 import type { DiffInput } from './svg-diff'
-import { cardWidth } from './svg-kit'
+import { cardWidth, settled } from './svg-kit'
 import { tableSvg } from './svg-table'
 import { say } from './words'
 import { terminalSvg } from './svg-terminal'
 import type { ShellOutput } from './svg-terminal'
 
 type Built = { source: string; alt: string }
+
+// The desktop draws a plain Svg as a new image each time the transcript redraws, which any mod's `$.ui.invalidate`
+// makes it do, and the engine answers from its cache, the hook not run again. An entrance left in a card's source
+// played again each time: a table loading over and over while agents worked. So a transcript card is drawn
+// settled; a pane's frame is kept across redraws and keeps its entrance.
+const sourceFor = (look: Look, built: Built): string => (look.isFramed === true ? built.source : settled(built.source))
 
 type Copyable = { Svg: SvgElement; built: Built; key: string; text: string }
 
@@ -25,7 +31,7 @@ function cardWithCopy(look: Look, { Svg, built, key, text }: Copyable) {
 
   return (
     <Box marginY={1} alignSelf="flex-start">
-      <Svg source={built.source} alt={built.alt} />
+      <Svg source={sourceFor(look, built)} alt={built.alt} />
       {copy === undefined ? (
         ''
       ) : (
@@ -46,12 +52,12 @@ function tableCard(look: Look, table: Table, { Svg, columns, key }: Placed) {
 }
 
 // A vector card in a reply or under a tool row, a line's breath above and below it.
-function card(look: Look, Svg: SvgElement, built: { source: string; alt: string }) {
+function card(look: Look, Svg: SvgElement, built: Built) {
   const { Box } = look.ui
 
   return (
     <Box marginY={1}>
-      <Svg source={built.source} alt={built.alt} />
+      <Svg source={sourceFor(look, built)} alt={built.alt} />
     </Box>
   )
 }

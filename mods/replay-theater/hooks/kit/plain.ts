@@ -123,3 +123,5 @@ export function plainCall(tool: string, input: unknown, lang: Lang): string {
 }
 
 export { plainShell } from './plain-shell'
+export { KIND_ICON, kindOf, kindWord, purposeOf } from './plain-kind'
+export type { Kind } from './plain-kind'

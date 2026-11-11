@@ -156,6 +156,10 @@ test('now: an open call is what it does, a closed one means thinking, an ended r
   // Between calls the line under the verb is the last step's sentence, not the tool's name and raw target.
   const said = run({ ...open, history: [{ tool: 'Edit', target: 'src/hero.tsx', plain: 'hero.tsx dosyasını değiştiriyor', at: 1000, endAt: 2000 }] })
   expect(nowOf(said, 61_000)).toMatchObject({ state: 'thinking', tool: 'hero.tsx dosyasını değiştiriyor', target: '', isPath: false })
+  // The agent's own words for a call lead over the rule-made sentence, while it runs and after.
+  const why = { tool: 'Bash', target: 'gh pr merge 70', plain: 'Bir değişiklik isteğini (PR) ana koda birleştiriyor', why: "70 numaralı isteği main'e birleştir", at: 1000 }
+  expect(nowOf(run({ ...open, lastTool: 'Bash', history: [why] }), 13_000)).toMatchObject({ state: 'call', verb: "70 numaralı isteği main'e birleştir" })
+  expect(nowOf(run({ ...open, lastTool: 'Bash', history: [{ ...why, endAt: 2000 }] }), 61_000)).toMatchObject({ state: 'thinking', tool: "70 numaralı isteği main'e birleştir" })
 })
 
 test('files: one entry per path counting reads and edits; folders and other tools do not count', () => {

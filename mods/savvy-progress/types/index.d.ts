@@ -34,6 +34,8 @@ export type ToolEvent = {
   target: string
   /** The call in plain words ("Testleri çalıştırıyor"), worked out by rules when it opened. */
   plain?: string
+  /** What the call is for, in the words the agent wrote with it (a command's description); absent when it wrote none. */
+  why?: string
   at: number
   endAt?: number
   isError?: boolean

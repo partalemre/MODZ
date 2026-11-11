@@ -87,6 +87,10 @@ function eventTree(ui: Ui, e: ToolEvent, ctx: EventContext) {
   const { Box, Text } = ui
   const kind = kindOf(e.tool)
   const outcome = outcomeOf(e, ctx.isLive)
+  // The agent's own words lead and the rule-made sentence explains them; without them the sentence leads and the
+  // tool with its target is the fine print.
+  const said = e.why ?? e.plain
+  const fine = e.why && e.plain ? ` · ${e.plain}` : `${said ? ` · ${e.tool}` : ''}${e.target ? ` ${e.target}` : ''}`
   const pulse = { source: pulseSvg(), alt: t().isRunning, width: PULSE, height: PULSE }
   const end = e.endAt === undefined && ctx.isLive && ctx.isDesktop
     ? picture(ui, { key: 'live', at: `live-${ctx.id}-${ctx.index}`, pic: pulse })
@@ -96,8 +100,8 @@ function eventTree(ui: Ui, e: ToolEvent, ctx: EventContext) {
       <Text dimColor>{KIND_GLYPH[kind]}</Text>
       <Box flexGrow={1} flexShrink={1}>
         <Text wrap="truncate-end">
-          {e.plain ? <Text>{e.plain}</Text> : <Text bold>{e.tool}</Text>}
-          {e.plain || e.target ? <Text dimColor>{`${e.plain ? ` · ${e.tool}` : ''}${e.target ? ` ${e.target}` : ''}`}</Text> : null}
+          {said ? <Text>{said}</Text> : <Text bold>{e.tool}</Text>}
+          {fine ? <Text dimColor>{fine}</Text> : null}
         </Text>
       </Box>
       <Box flexShrink={0} flexDirection="row" columnGap={1} alignItems="center">

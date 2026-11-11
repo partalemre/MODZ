@@ -87,7 +87,7 @@ test('a burst in a week whose average also fills it still brakes', async ($: any
   const world: World = { asked: [], answer: 'Stop', submitted: [] }
   // 60% in one day: full within the next day, six days before the reset.
   await burst($, await setup($, on, world), 6)
-  expect(world.asked[0]).toMatch(/^Spawn brake: weekly window at 60%, full by .+ at this pace/)
+  expect(world.asked[0]).toMatch(/^weekly usage allowance 60% used, runs out by .+ at this pace/)
 })
 
 // A stand-in for reflect whose notice owns the line for the first 30 seconds.

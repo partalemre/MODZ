@@ -41,7 +41,7 @@ test('the language setting wins over MODZ_LANG; English or nothing means no targ
   const japanese = targetOf({ setting: 'japanese', uiLang: 'en' })!
   expect(japanese).toEqual({ name: 'japanese' })
   expect(needsReminder({ text: ENGLISH_OUT, target: japanese })).toBe(true)
-  expect(reminderOf(japanese)).toBe("Reply in japanese, the user's language; keep code, paths and identifiers as they are.")
+  expect(reminderOf(japanese)).toBe("Reply in japanese, the user's language; keep code, paths and identifiers as they are. Write each tool call's description in japanese too, in plain words.")
 })
 
 const OUTPUTS: Record<string, string> = { english: ENGLISH_OUT, turkish: TURKISH_OUT, code: CODE_OUT }

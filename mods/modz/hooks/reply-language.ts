@@ -58,5 +58,8 @@ export function needsReminder(opts: { text: string; target: Target }): boolean {
   return opts.target.profile === undefined || shareOf(words, opts.target.profile) < PROSE_SHARE
 }
 
+// The second sentence is for the trail under the tool rows (plain-rows.tsx): it shows each call's description
+// as the step's own words, so the description is asked for in the person's language too.
 export const reminderOf = (target: Target): string =>
-  `Reply in ${target.name}, the user's language; keep code, paths and identifiers as they are.`
+  `Reply in ${target.name}, the user's language; keep code, paths and identifiers as they are. ` +
+  `Write each tool call's description in ${target.name} too, in plain words.`

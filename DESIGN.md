@@ -91,7 +91,7 @@ Text ile: başlık = bold text.hi · gövde = text.mid · meta = text.lo · vurg
   gövde → düğme sırası. Kararlı/riskli işlemde (blast-radius, secret-guard) kenar `single` + Flare.line.
 - **İkon:** çıplak 16–18px çizgi ikon (stroke 1.5, text.mid); `iconTile` yalnızca yer tutan kareyi verir, zemin çizmez.
   İkonlar kit'te özgün çizim: trash, shield, key, eye, pencil, check, x, clock, cube, bookmark, bulb, play,
-  pause, folder, file, branch, terminal, bell, sparkle, list, flag, bolt, gauge, rewind, plug.
+  pause, folder, file, branch, terminal, bell, sparkle, list, flag, bolt, gauge, rewind, plug, search, globe.
 - **Etiket satırı:** Svg h16: (ops. durum noktası) + cümle düzeninde text.lo etiket + sağda meta ("2 dk önce"); çizgi yok.
 - **Stat kutusu:** Svg ~120×58 rx 10, inset zemin: eyebrow, Display değer, birim; ops. ince alan grafiği.
 - **Pill:** Svg h20 rx 10, nötr track zemin, kenarsız, 11/600 metin (durum varsa durum rengi, yoksa text.mid).
@@ -294,5 +294,11 @@ MODZ'un amacı: ajanın ne yaptığını, hiç kod yazmamış biri de net anlas�
 
 4. **Araç çağrıları.** Bir araç çağrısı gösterilen her yerde (satır, kart, geçmiş) `kit/plain.ts` `plainCall(tool, input, lang)`
    cümlesi öne gelir; aracın kendi adı ve hedefi isteyen için arkasında, soluk durur. Kural tablosudur: model çağrısı yok.
+   Ajan çağrıyla birlikte kendi açıklamasını yazdıysa (`purposeOf(input)`: komutun `description` alanı) o söz öne
+   geçer, kural cümlesi "bu ne demek" olarak arkasında soluk durur; açıklama çağrının içinden okunur, token harcamaz.
+   **İşin resmi:** her adımın başında işin türünü gösteren çıplak ikon durur (`kindOf`: inceleme, arama, değişiklik,
+   komut, kontrol, sürüm kaydı, GitHub, kurulum, silme, internet…); katlanmış bir grup, türlerin sırasını tek küçük
+   çizimde verir ("inceleme ×2 — GitHub ×2"). Renk yine yalnızca durumdur (§0): süren adım vurgu, başarısız adım Flare.
+   Tek tek az şey söyleyen çağrılar (dosya okuma, arama) sayısıyla tek adıma toplanır; iki adım arasındaki bekleme söylenmez.
 5. **Kısa kalır.** Sade olmak uzun olmak değildir; Svg'de ölçülen yuvalara sığar (§3). Sığmıyorsa cümle kısalır, yuva büyümez.
 6. **Komut ve ayar adları değişmez.** `/hud`, `MODZ_LANG`, seçenek anahtarları oldukları gibi kalır; açıklamaları sadeleşir.

@@ -39,7 +39,8 @@ const stateOf = (a: AgentRun, last: ToolEvent | undefined): NowState => {
 // An ended run's eyebrow says how it ended; a run the person stopped says so, not that it failed.
 const verbOf = (a: AgentRun, state: NowState, kind: Kind): string => {
   const s = t()
-  if (state === 'call') return a.history?.at(-1)?.plain ?? s.doing[kind]
+  const last = a.history?.at(-1)
+  if (state === 'call') return last?.why ?? last?.plain ?? s.doing[kind]
   if (state === 'thinking') return s.thinking
   if (state === 'starting') return s.starting
   if (state === 'done') return s.completed
@@ -57,7 +58,7 @@ export function nowOf(a: AgentRun, at: number): NowView {
   if (!last) return { state, kind, verb, tool: '', target: '', isPath: false, span: '' }
   const span = state === 'call' ? roughSpan(at - last.at) : agoOf(at - last.at)
   // Between calls the line under "Düşünüyor" says the step it just made, in words, not the tool's name.
-  const said = state === 'call' ? undefined : last.plain
+  const said = state === 'call' ? undefined : last.why ?? last.plain
   if (said) return { state, kind, verb, tool: said, target: '', isPath: false, span }
   return { state, kind, verb, tool: last.tool, target, isPath: PATH.test(target), span }
 }

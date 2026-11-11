@@ -30,7 +30,7 @@ return Card(draw, {
 })
 ```
 
-Copy is Turkish; labels pass through `toLocaleUpperCase('tr')` (İ stays İ).
+Copy is English and Turkish (`lang.ts`), in plain words (DESIGN.md §10); labels pass through `upper()` (İ stays İ in Turkish).
 
 ## tokens.ts
 
@@ -189,6 +189,20 @@ const verdict = (await judge(io, { text, labels: ['allow', 'ask'], instructions:
 Fewer than two labels, a repeated or blank label, a reply naming no label (case and a trailing stop are forgiven), a
 failed or aborted call, a non-2xx or non-JSON Jev reply, or a timeout: `undefined`. Tested in
 `tools/kit-gallery/tests/judge.test.ts`.
+
+## plain.ts (a tool call in plain words)
+
+Any tool call as one sentence that someone who has never coded follows, worked out from the call's own name and
+input by rules (DESIGN.md §10). No model is asked and nothing is run. `plain-shell.ts` splits a shell line into its
+steps and names the first two; `plain-words.ts` holds the words, English and Turkish. The language is passed in.
+
+| Export | Example |
+|---|---|
+| `plainCall(tool, input, lang)` | `plainCall('Bash', { command: 'git checkout -b fix/x' }, 'tr')` → `Yeni bir çalışma dalı (branch) açıyor: fix/x` |
+| `plainShell(command, lang)` | `plainShell('npm test && git push', 'en')` → `Running the tests, then sending the saved versions to the shared copy (push)` |
+
+A command the tables do not know is named as it is (`Running the “foo” command`), never guessed at. To teach it a
+command, add one line to `COMMANDS` (one word) or a `Family` (`git commit`) in `plain-words.ts`.
 
 ## Visual QA
 

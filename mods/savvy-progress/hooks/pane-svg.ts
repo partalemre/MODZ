@@ -37,7 +37,7 @@ export const activityOf = (a: AgentRun): string => {
   const steps = stepsOf(a)
   if (a.status === 'failed') return [steps, a.endReason === 'aborted' ? s.aborted : s.failed].filter(Boolean).join(' · ')
   if (a.status === 'done') return steps || s.completed
-  const tool = a.lastTool ? `› ${a.lastTool}${a.lastTarget ? ' ' + a.lastTarget : ''}` : s.starting
+  const tool = a.lastTool ? `› ${a.lastPlain ?? `${a.lastTool}${a.lastTarget ? ' ' + a.lastTarget : ''}`}` : s.starting
   return steps ? `${steps}  ${tool}` : tool
 }
 

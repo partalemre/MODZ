@@ -38,7 +38,7 @@ const stateOf = (a: AgentRun, last: ToolEvent | undefined): NowState => {
 // An ended run's eyebrow says how it ended; a run the person stopped says so, not that it failed.
 const verbOf = (a: AgentRun, state: NowState, kind: Kind): string => {
   const s = t()
-  if (state === 'call') return s.doing[kind]
+  if (state === 'call') return a.history?.at(-1)?.plain ?? s.doing[kind]
   if (state === 'thinking') return s.thinking
   if (state === 'starting') return s.starting
   if (state === 'done') return s.completed

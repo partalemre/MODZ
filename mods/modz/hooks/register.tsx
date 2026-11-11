@@ -23,6 +23,7 @@ import { HUB_PANE, paneOf } from './kit/stage'
 import { pinned } from './kit/pin'
 import { stableDrawings } from './kit/stable'
 import { modzTree } from './pane'
+import { wirePlainRows } from './plain-rows'
 import { noteAnswer, openPane, stepAside, toggleHub } from './swap'
 import type { Swap } from './swap'
 import { themeOf } from './theme'
@@ -286,4 +287,5 @@ export const register: Register = (on, options) => {
   paneHooks(on)
   footerHooks(on)
   wireLanguageKeeper(on, options)
+  wirePlainRows(on, options)
 }

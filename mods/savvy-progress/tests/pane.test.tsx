@@ -39,7 +39,9 @@ for (const surface of SURFACES) {
     expect(seen).not.toContain('general-purpose')
     expect(seen).toContain('heavy')
     expect(seen).toContain('Opus 5.5 · xhigh')
-    expect(seen).toContain('› Edit src/hero.tsx')
+    // What it does now is said in plain words, not as the tool's name.
+    expect(seen).toContain('› hero.tsx dosyasını değiştiriyor')
+    expect(seen).not.toContain('› Edit')
     expect(seen).toContain('1 araç')
     expect(seen).toMatch(/≈\$0,\d\d/)
     expect(seen).toContain('2:36')
@@ -123,6 +125,8 @@ for (const surface of SURFACES) {
     expect(open).toContain('Görev')
     expect(open).toContain('do it')
     expect(open).toContain('İş geçmişi · 2 araç')
+    // Each step leads with its plain sentence; the tool's own name and target follow it.
+    expect(open).toContain('a.ts dosyasını okuyor')
     expect(open).toContain('Edit')
     expect(open).toContain(' src/hero.tsx')
     expect(open).toContain(' src/a.ts')

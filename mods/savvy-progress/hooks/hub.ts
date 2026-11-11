@@ -5,6 +5,7 @@ import { clip, fmtCost } from './format'
 import { t } from './i18n'
 import { deriveJob } from './job'
 import type { JobView } from './job'
+import { crewOf, isMain } from './main-run'
 import { isSame } from './same'
 import { HUB_PANE } from './state'
 
@@ -58,10 +59,12 @@ const COST_MIN = 0.005
  * time itself, so a running clock costs no write) and its cost once it has one; a few by name, the rest counted.
  */
 export const hubLiveOf = (agents: AgentRun[]): HubLive | undefined => {
-  const running = agents.filter(isRunning)
+  // The main loop leads: what this chat itself does now is the first thing asked of the hub.
+  const running = [...agents.filter(a => isRunning(a) && isMain(a)), ...crewOf(agents).filter(isRunning)]
   if (running.length === 0) return undefined
   const lines = running.slice(0, LIVE_LINES).map(a => ({
-    label: clip(a.description || a.type, LABEL_MAX),
+    // The main loop's line says what it does now, in plain words; an agent's line, the task it was handed.
+    label: clip((isMain(a) && a.lastPlain) || a.description || a.type, LABEL_MAX),
     since: a.startedAt,
     ...(a.costUsd >= COST_MIN ? { value: fmtCost(a.costUsd) } : {}),
   }))
@@ -74,9 +77,9 @@ export type HubShown = Pick<HubCard, 'detail' | 'tone' | 'live'>
 export const hubCardOf = (src: HubSources): HubShown => {
   const view = deriveJob({ flow: src.flow, agents: src.agents, job: src.job, tasks: src.tasks })
   const others = { waiting: waitingOf(src.chats).length, working: quietOf(src.chats).filter(chat => chat.state === 'working').length }
-  const tone = !view && others.working > 0 ? 'live' : toneOf(view)
   const live = hubLiveOf(src.agents)
-  return { detail: hubDetailOf(view, src.agents.filter(isRunning).length, others), tone, ...(live ? { live } : {}) }
+  const tone = !view && (others.working > 0 || live !== undefined) ? 'live' : toneOf(view)
+  return { detail: hubDetailOf(view, crewOf(src.agents).filter(isRunning).length, others), tone, ...(live ? { live } : {}) }
 }
 
 /** Whether the stored card already shows this, so it is not written again. */

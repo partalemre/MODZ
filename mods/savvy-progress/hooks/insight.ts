@@ -29,7 +29,8 @@ export const roughSpan = (ms: number): string => {
 
 /** Why a running agent looks stuck, or null while it looks fine: its oldest open call ran long, or it went quiet. */
 export function stuckOf(a: AgentRun, at: number): Stuck | null {
-  if (a.status !== 'running') return null
+  // The session's own loop waits on the person's answers: quiet there is not trouble.
+  if (a.status !== 'running' || a.isMain === true) return null
   const open = (a.history ?? []).find(e => e.endAt === undefined)
   if (open) return at - open.at >= LONG_TOOL_MS ? { reason: t().longTool(open.tool, roughSpan(at - open.at)), since: open.at } : null
   // A model request still streaming is work, not quiet, until it has run as long as a long tool call.

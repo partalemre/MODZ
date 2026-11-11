@@ -1,5 +1,7 @@
 import type { AgentRun, ToolEvent } from '../types'
 import { toolName, toolTarget } from './format'
+import { plainLang } from './i18n'
+import { plainCall } from './kit/plain'
 
 // Each agent's work history: one entry per tool call, opened at the call and closed by its result.
 
@@ -24,7 +26,7 @@ export const KIND_GLYPH: Record<Kind, string> = { read: '◇', edit: '✎', run:
 export type CallFacts = { call: Record<string, unknown>; at: number; id?: string }
 
 export const openEvent = (a: AgentRun, facts: CallFacts): AgentRun => {
-  const event: ToolEvent = { id: facts.id, tool: toolName(String(facts.call.tool ?? '')), target: toolTarget(facts.call), at: facts.at }
+  const event: ToolEvent = { id: facts.id, tool: toolName(String(facts.call.tool ?? '')), target: toolTarget(facts.call), plain: plainCall(String(facts.call.tool ?? ''), facts.call, plainLang()), at: facts.at }
   return { ...a, history: [...(a.history ?? []), event].slice(-HISTORY_MAX) }
 }
 

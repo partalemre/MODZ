@@ -92,7 +92,7 @@ const headOf = (a: AgentRun, stuck: Stuck | null): CardHead => ({
 const nowLine = (a: AgentRun, isOpen: boolean): string => {
   const answer = a.status === 'done' && !isOpen ? a.answer?.split('\n').find(line => line.trim()) : undefined
   if (answer) return clip(answer.trim(), ANSWER_LINE)
-  if (a.status === 'failed' && a.lastTool) return `› ${a.lastTool}${a.lastTarget ? ' ' + a.lastTarget : ''}`
+  if (a.status === 'failed' && a.lastTool) return `› ${a.lastPlain ?? `${a.lastTool}${a.lastTarget ? ' ' + a.lastTarget : ''}`}`
   return activityOf(a)
 }
 

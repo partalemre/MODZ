@@ -58,7 +58,7 @@ export const withoutAsk = (self: SelfChat, id: string): SelfChat =>
 
 /** This session's running agents as the others are told; a title goes through the same mask as the chat's. */
 export const sharedOf = (list: readonly AgentRun[]): SharedAgent[] =>
-  list.filter(isRunning).map(a => ({ id: a.id, name: lookOf(a).name, title: titleOf(a.description || a.type), startedAt: a.startedAt, costUsd: a.costUsd }))
+  list.filter(a => isRunning(a) && a.isMain !== true).map(a => ({ id: a.id, name: lookOf(a).name, title: titleOf(a.description || a.type), startedAt: a.startedAt, costUsd: a.costUsd }))
 
 export const beatOf = (self: SelfChat, at: number, agents: SharedAgent[] = []): Heartbeat => ({
   project: self.project,

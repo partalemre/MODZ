@@ -32,6 +32,8 @@ function metricsTree(ui: Ui, a: AgentRun, ctx: RowContext) {
 // The field is left out where a surface has none.
 function actionsTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box, Button, Input } = ui
+  // The session's own loop is talked to in the chat itself and stopped there.
+  if (a.isMain === true) return null
   const s = t()
   const name = lookOf(a).name
   const isRunning = a.status === 'running'

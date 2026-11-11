@@ -73,6 +73,10 @@ export type Strings = {
   total: string
   completed: string
   starting: string
+  /** The main loop's row: its name, its type word, and its task when the request named none. */
+  mainName: string
+  mainType: string
+  mainTask: string
   dismiss: string
   brief: string
   history: string

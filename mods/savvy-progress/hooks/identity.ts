@@ -1,4 +1,5 @@
 import type { AgentRun } from '../types'
+import { t } from './i18n'
 
 // Each agent gets a look of its own: a shell colour, a pair of eyes and a name, handed out in order
 // of arrival so agents working side by side never wear the same one. The costume still says the tier.
@@ -23,7 +24,12 @@ export const lookAt = (slot: number): Look => ({
   name: NAMES[slot % NAMES.length] ?? 'Pip',
 })
 
-export const lookOf = (a: Pick<AgentRun, 'id' | 'look'>): Look => lookAt(a.look ?? hashOf(a.id))
+// The session's own loop is no crab with a pet name: it is called what it is.
+export const lookOf = (a: Pick<AgentRun, 'id' | 'look' | 'isMain'>): Look => {
+  const look = lookAt(a.look ?? hashOf(a.id))
+
+  return a.isMain === true ? { ...look, name: t().mainName } : look
+}
 
 // The next free slot: one past the highest the list holds.
 export const nextLook = (list: Pick<AgentRun, 'look'>[]): number =>

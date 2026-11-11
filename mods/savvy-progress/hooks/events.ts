@@ -9,6 +9,7 @@ import { readingOf, trackLimit } from './limit'
 import type { LimitReading } from './limit'
 import type { ProgressInput } from './flow'
 import { deriveJob, joinJob, sealJob } from './job'
+import { MAIN_ID, mainAwake, titleOf } from './main-run'
 import { STEP_TOOL, TOOL } from './state'
 import { TASK_TOOLS, applyTaskTool, openTasks } from './tasks'
 import { isSame } from './same'
@@ -29,6 +30,10 @@ type On = Parameters<Register>[0]
 // The effort an Agent call asked for, held from the call until its spawn picks it up.
 // Lost on a reload, harmlessly: the first model request reports the effort again.
 const launchEffort = new Map<string, string>()
+
+// What the person asked, held from the prompt until the main loop's first model request names its row after it.
+// Lost on a reload, harmlessly: the row then keeps the title it had.
+let asked: string | undefined
 
 // Added to the end of each savvy worker's brief. Their system prompt words step reporting
 // as a condition and they skip it even with the tool listed; the same request in the brief is followed.
@@ -98,6 +103,7 @@ function onLaunches(on: On): void {
   on('prompt.submit', async ($, e, next) => {
     const result = await next(e)
     if (e.origin.kind === 'task-notification') return result
+    asked = titleOf(e.text)
     const list = await read($, agents)
     // Each write redraws its readers, so one that would change nothing is left out.
     const before = await read($, job)
@@ -115,17 +121,19 @@ function onActivity(on: On): void {
     const call = e as unknown as Record<string, unknown>
     const name = String(e.tool)
     const agentId = e.agentId
+    // The main loop's calls go on its own row, which exists once its turn made a model request.
+    const who = agentId ?? MAIN_ID
     const id = typeof call.tool_use_id === 'string' ? call.tool_use_id : undefined
-    const isTracked = name !== STEP_TOOL
-    if (agentId && isTracked) {
+    const isTracked = name !== STEP_TOOL && (await read($, agents)).some(a => a.agentId === who)
+    if (isTracked) {
       const at = await $.clock.now()
       const facts = { call, at, id }
-      await update($, agents, list => patchRun(list, agentId, a => heard(openEvent(touchFile(toolActivity(a, call), facts), facts), at)))
+      await update($, agents, list => patchRun(list, who, a => heard(openEvent(touchFile(toolActivity(a, call), facts), facts), at)))
     }
     const result = await next(e)
-    if (agentId && isTracked) {
+    if (isTracked) {
       const facts = { id, tool: name, at: await $.clock.now(), isError: result.deny !== undefined || result.isError === true }
-      await update($, agents, list => patchRun(list, agentId, a => heard(closeEvent(a, facts), facts.at)))
+      await update($, agents, list => patchRun(list, who, a => heard(closeEvent(a, facts), facts.at)))
     }
     if (!TASK_TOOLS.includes(name) || result.deny !== undefined || result.isError) return result
     if (agentId) await update($, agents, list => patchRun(list, agentId, a => ownTasks(a, call, result.result)))
@@ -138,14 +146,17 @@ function onActivity(on: On): void {
 function onSteps(on: On): void {
   // Each model request of a subagent: live context, tokens and cost.
   on('turn.step', async function* ($, e, next) {
-    const agentId = e.agentId
-    // A request in flight is heard from as it goes out: a long stream is not a quiet agent.
-    if (agentId) {
-      const sent = await $.clock.now()
-      await update($, agents, list => patchRun(list, agentId, a => ({ ...heard(a, sent), stepAt: sent })))
+    const agentId = e.agentId ?? MAIN_ID
+    const sent = await $.clock.now()
+    // The main loop's row opens with its turn's first request: named after a new prompt, reopened for a turn that woke on its own.
+    if (!e.agentId && e.index === 0) {
+      const title = asked
+      asked = undefined
+      await update($, agents, list => mainAwake(list, { title, at: sent }))
     }
+    // A request in flight is heard from as it goes out: a long stream is not a quiet agent.
+    await update($, agents, list => patchRun(list, agentId, a => ({ ...heard(a, sent), stepAt: sent })))
     const result = yield* next(e)
-    if (!agentId) return result
     const usage = result.usage
     const facts = usage && { model: usage.model || e.model, effort: e.effort, usage }
     const at = await $.clock.now()
@@ -154,11 +165,9 @@ function onSteps(on: On): void {
   })
 
   on('turn.complete', async ($, e, next) => {
-    const agentId = e.agentId
-    if (agentId) {
-      const at = await stamp($)
-      await update($, agents, list => patchRun(list, agentId, a => endRun(a, { reason: e.reason, at, answer: e.answer, usage: e.usage })))
-    }
+    const agentId = e.agentId ?? MAIN_ID
+    const at = await stamp($)
+    await update($, agents, list => patchRun(list, agentId, a => endRun(a, { reason: e.reason, at, answer: e.answer, usage: e.usage })))
     return next(e)
   })
 }

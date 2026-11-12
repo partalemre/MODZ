@@ -124,7 +124,9 @@ function onActivity(on: On): void {
     // The main loop's calls go on its own row, which exists once its turn made a model request.
     const who = agentId ?? MAIN_ID
     const id = typeof call.tool_use_id === 'string' ? call.tool_use_id : undefined
-    const isTracked = name !== STEP_TOOL && (await read($, agents)).some(a => a.agentId === who)
+    // A mod's own background calls (transceiver polling ArtifactData) are no loop's work.
+    const isModelCall = next.origin.plugin === 'engine'
+    const isTracked = isModelCall && name !== STEP_TOOL && (await read($, agents)).some(a => a.agentId === who)
     if (isTracked) {
       const at = await $.clock.now()
       const facts = { call, at, id }

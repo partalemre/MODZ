@@ -8,8 +8,8 @@ import { GLYPH } from './kit/icons'
 import { lang, pick } from './kit/lang'
 import { KIND_ICON, kindOf, plainCall } from './kit/plain'
 import { flowPic, kindPic } from './plain-flow'
-import { isTold, stateOf, trailOf } from './plain-trail'
-import type { Step, StepState, ToldCall } from './plain-trail'
+import { fileOf, isTold, stateOf, trailOf } from './plain-trail'
+import type { Step, StepFile, StepState, ToldCall } from './plain-trail'
 
 type On = Parameters<Register>[0]
 type Options = Parameters<Register>[1]
@@ -34,7 +34,9 @@ export function endOf(state: StepState): string {
 
 /** A single call's step: its sentence alone, since the engine's row above already carries the agent's words. */
 export function stepOfCall(call: ToldCall): Step {
-  return { kind: kindOf(call.tool, call.input), text: plainCall(call.tool, call.input, lang()), note: '', count: 1, state: stateOf(call) }
+  const file = fileOf(call.input)
+
+  return { kind: kindOf(call.tool, call.input), text: plainCall(call.tool, call.input, lang()), note: '', count: 1, state: stateOf(call), files: file === undefined ? [] : [file] }
 }
 
 function iconOf(draw: Draw, step: Step): RenderElement {
@@ -43,6 +45,59 @@ function iconOf(draw: Draw, step: Step): RenderElement {
   const pic = kindPic(step.kind, step.state)
 
   return <Svg source={pic.source} alt={pic.alt} width={pic.width} height={pic.height} />
+}
+
+const FILES_SHOWN = 3
+const MARKDOWN_MARKS = /([\\`*_{}[\]<>#|~])/g
+
+const hrefOf = (file: StepFile): string => `file://${encodeURI(file.path)}`
+const escaped = (text: string): string => text.replace(MARKDOWN_MARKS, '\\$1')
+const markdownLink = (file: StepFile): string => `[${escaped(file.name)}](<${hrefOf(file)}>)`
+
+// The words with the step's one file pressed open where they name it; unchanged where they do not.
+function linkedWords(text: string, file: StepFile | undefined): string {
+  const at = file === undefined ? -1 : text.indexOf(file.name)
+  if (file === undefined || at < 0) return escaped(text)
+
+  return escaped(text.slice(0, at)) + markdownLink(file) + escaped(text.slice(at + file.name.length))
+}
+
+/**
+ * A step about files as one line of markdown, each file's name a link to the file. The desktop is sent a file
+ * link only inside markdown (a `Link` to a file is drawn there as plain text), so the line is written this way.
+ */
+export function stepMarkdown(step: Step): string {
+  if (step.files.length > 1) {
+    const rest = step.files.length - FILES_SHOWN
+
+    return `${escaped(step.text)} · ${step.files.slice(0, FILES_SHOWN).map(markdownLink).join(', ')}${rest > 0 ? ` +${rest}` : ''}`
+  }
+  const file = step.files[0]
+  const line = [step.text, step.note].filter(part => part !== '').map(part => linkedWords(part, file)).join(' · ')
+
+  return file === undefined || line.includes('](<') ? line : `${line} · ${markdownLink(file)}`
+}
+
+// The terminal draws a link to a file in place, inside the sentence.
+function named(draw: Draw, text: string, step: Step): Array<RenderElement | string> {
+  const { Link } = draw.ui
+  const file = step.files.length === 1 ? step.files[0] : undefined
+  const at = file === undefined || !draw.isText || Link === undefined ? -1 : text.indexOf(file.name)
+  if (file === undefined || at < 0) return [text]
+
+  return [text.slice(0, at), <Link key={`file-${at}`} href={hrefOf(file)}>{file.name}</Link>, text.slice(at + file.name.length)]
+}
+
+function wordsOf(draw: Draw, step: Step, key: string): RenderElement {
+  const { Markdown, Text } = draw.ui
+  if (!draw.isText && step.files.length > 0 && Markdown !== undefined) return <Markdown key={`${key}-words`} text={stepMarkdown(step)} />
+
+  return (
+    <Text wrap="truncate-end">
+      <Text>{named(draw, step.text, step)}</Text>
+      {step.note === '' ? null : <Text dimColor>{' · '}{named(draw, step.note, step)}</Text>}
+    </Text>
+  )
 }
 
 // icon · the step in the agent's words · what that means, quiet · how many calls · how it ended. The ending sits
@@ -54,12 +109,7 @@ function stepRow(draw: Draw, step: Step, key: string, hasEnd: boolean): RenderEl
   return (
     <Box key={key} flexDirection="row" alignItems="center" columnGap={1}>
       {iconOf(draw, step)}
-      <Box flexShrink={1}>
-        <Text wrap="truncate-end">
-          <Text>{step.text}</Text>
-          {step.note === '' ? null : <Text dimColor>{` · ${step.note}`}</Text>}
-        </Text>
-      </Box>
+      <Box flexShrink={1}>{wordsOf(draw, step, key)}</Box>
       {tail === '' ? null : <Box flexShrink={0}><Text color={MARK_KEY[step.state]} dimColor={MARK_KEY[step.state] === undefined}>{tail}</Text></Box>}
     </Box>
   )

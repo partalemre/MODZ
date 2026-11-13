@@ -100,3 +100,16 @@ export function purposeOf(input: unknown): string {
 
   return text.length > PURPOSE_MAX ? `${text.slice(0, PURPOSE_MAX - 1)}…` : text
 }
+
+const REASON_MAX = 160
+
+/**
+ * Why a step's calls were made, in the agent's own words: the last sentence it wrote before making them ("Önce
+ * yayın planına bakıyorum."); empty when it called its tools without a word. Read from the reply, so it costs nothing.
+ */
+export function reasonOf(answer: string): string {
+  const line = answer.split('\n').map(part => part.replace(/[*_`#>]+/g, '').trim()).filter(part => part !== '').at(-1) ?? ''
+  const text = line.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').replace(/[:：]$/, '').trim()
+
+  return text.length > REASON_MAX ? `${text.slice(0, REASON_MAX - 1)}…` : text
+}

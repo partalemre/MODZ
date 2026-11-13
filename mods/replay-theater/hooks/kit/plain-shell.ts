@@ -80,7 +80,7 @@ export function wordsOf(command: string): string[] {
   return found.map(word => word.replace(/^(['"])([\s\S]*)\1$/, '$2'))
 }
 
-type Call = { name: string; args: string[]; out: string }
+export type Call = { name: string; args: string[]; out: string }
 
 // The file a `>` or `>>` writes to, with the redirections taken out of the words.
 function splitRedirects(words: string[]): { kept: string[]; out: string } {
@@ -191,12 +191,26 @@ function leadOf(pipe: string[]): Call | null {
   return calls.find(call => !FILTERS.has(base(call.name)) && !SILENT.has(base(call.name))) ?? calls[0] ?? null
 }
 
+// A pause between two steps (`sleep 5; gh pr merge`) is not something the line does; neither is a line printed
+// between two outputs to tell them apart (`echo ---`), unless it is written into a file.
+const WAITS = new Set(['sleep'])
+const MARKERS = new Set(['echo', 'printf'])
+const isWait = (call: Call): boolean => WAITS.has(base(call.name)) || (MARKERS.has(base(call.name)) && call.out === '')
+
+/** The commands of a line that do its work, one per step; a wait or a printed marker is left out when the line does anything else. */
+export function leadsOf(command: string): Call[] {
+  const leads = stepsOf(command).map(pipe => leadOf(pipe)).filter((call): call is Call => call !== null)
+  const hasWork = leads.some(call => !isWait(call) && !SILENT.has(base(call.name)))
+
+  return hasWork ? leads.filter(call => !isWait(call)) : leads
+}
+
 const lowerFirst = (text: string, lang: Lang): string => (PROPER.test(text) ? text : text.charAt(0).toLocaleLowerCase(lang) + text.slice(1))
 
 /** A whole command line in a sentence: "Yeni bir çalışma dalı (branch) açıyor: fix/x, sonra bir dosyaya yazıyor". */
 export function plainShell(command: string, lang: Lang): string {
   const steps = stepsOf(command)
-  const said = steps.map(pipe => leadOf(pipe)).flatMap(call => (call === null ? [] : [callSay(call, lang) ?? '']))
+  const said = leadsOf(command).map(call => callSay(call, lang) ?? '')
   const unique = said.filter((text, i) => text !== '' && said.indexOf(text) === i)
   if (unique.length === 0) return say(steps.some(pipe => pipe.some(c => /^cd\b/.test(c))) ? (COMMANDS.cd as Entry) : SHELL.any, lang)
   const shown = unique.slice(0, STEPS_SHOWN).map((text, i) => (i === 0 ? text : lowerFirst(text, lang)))

@@ -6,6 +6,7 @@ import { shortPath } from './format'
 import { KIND_GLYPH, kindOf } from './history'
 import type { Kind } from './history'
 import { upper } from './lang'
+import { filesMarkdown, logButton, logTree } from './log'
 import { t } from './i18n'
 import { MIX_H, mixSvg } from './metrics-svg'
 import type { MixPart } from './metrics-svg'
@@ -87,6 +88,10 @@ function eventTree(ui: Ui, e: ToolEvent, ctx: EventContext) {
   const { Box, Text } = ui
   const kind = kindOf(e.tool)
   const outcome = outcomeOf(e, ctx.isLive)
+  // The agent's own words lead and the rule-made sentence explains them; without them the sentence leads and the
+  // tool with its target is the fine print.
+  const said = e.why ?? e.plain
+  const fine = e.why && e.plain ? ` · ${e.plain}` : `${said ? ` · ${e.tool}` : ''}${e.target ? ` ${e.target}` : ''}`
   const pulse = { source: pulseSvg(), alt: t().isRunning, width: PULSE, height: PULSE }
   const end = e.endAt === undefined && ctx.isLive && ctx.isDesktop
     ? picture(ui, { key: 'live', at: `live-${ctx.id}-${ctx.index}`, pic: pulse })
@@ -96,8 +101,8 @@ function eventTree(ui: Ui, e: ToolEvent, ctx: EventContext) {
       <Text dimColor>{KIND_GLYPH[kind]}</Text>
       <Box flexGrow={1} flexShrink={1}>
         <Text wrap="truncate-end">
-          {e.plain ? <Text>{e.plain}</Text> : <Text bold>{e.tool}</Text>}
-          {e.plain || e.target ? <Text dimColor>{`${e.plain ? ` · ${e.tool}` : ''}${e.target ? ` ${e.target}` : ''}`}</Text> : null}
+          {said ? <Text>{said}</Text> : <Text bold>{e.tool}</Text>}
+          {fine ? <Text dimColor>{fine}</Text> : null}
         </Text>
       </Box>
       <Box flexShrink={0} flexDirection="row" columnGap={1} alignItems="center">
@@ -130,7 +135,7 @@ function mixTree(ui: Ui, parts: MixPart[], ctx: RowContext & { id: string }) {
   )
 }
 
-/** Its latest calls, the newest last, under the mix of all it did. */
+/** Its latest calls, the newest last, under the mix of all it did; every call, step by step, once its log is opened. */
 export function historyTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const { Box, Text } = ui
   const s = t()
@@ -138,14 +143,18 @@ export function historyTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const shown = list.slice(-RECENT_SHOWN)
   const hidden = list.length - shown.length
   const isLive = a.status === 'running'
+  const isLog = ctx.logOpen === a.id
   return (
     <Box flexDirection="column" rowGap={1}>
-      <Text bold>{`${s.history} · ${s.tools(list.length)}`}</Text>
+      <Text bold>{`${isLog ? s.log : s.history} · ${s.tools(list.length)}`}</Text>
       {mixTree(ui, mixOf(list), { ...ctx, id: a.id })}
-      <Box flexDirection="column">
-        {hidden > 0 && <Text dimColor>{s.earlier(hidden)}</Text>}
-        {shown.map((e, i) => eventTree(ui, e, { ...ctx, id: a.id, isLive, index: hidden + i }))}
-      </Box>
+      {isLog ? logTree(ui, a) : (
+        <Box flexDirection="column">
+          {hidden > 0 && <Text dimColor>{s.earlier(hidden)}</Text>}
+          {shown.map((e, i) => eventTree(ui, e, { ...ctx, id: a.id, isLive, index: hidden + i }))}
+        </Box>
+      )}
+      {logButton(ui, a, ctx)}
     </Box>
   )
 }
@@ -179,10 +188,13 @@ export function filesTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   const more = all.length - shown.length
   const drawn = ctx.isDesktop ? filesSvg(ctx.inner, shown) : null
   const alt = shown.map(f => `${f.path} (${fileWords(f)})`).join(', ')
+  // The drawing cannot be pressed, so the same files follow it as links that open them.
+  const links = filesMarkdown(shown.map(f => f.path))
   return (
     <Box flexDirection="column" rowGap={ctx.isDesktop ? 1 : 0}>
       <Text bold>{`${s.files} · ${all.length}`}</Text>
       {drawn ? picture(ui, { key: 'files', at: `files-${a.id}`, pic: { source: drawn.source, alt, width: ctx.inner, height: drawn.height } }) : shown.map(f => fileText(ui, f))}
+      {ui.Markdown && links ? <ui.Markdown key={`file-links-${a.id}`} dimColor text={links} /> : null}
       {more > 0 && <Text dimColor>{s.moreFiles(more)}</Text>}
     </Box>
   )

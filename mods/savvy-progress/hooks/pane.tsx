@@ -145,6 +145,7 @@ function handlersOf($: EngineInterface, d: PaneData): PaneHandlers {
     onBrief: id => void update($, panel, prev => ({ ...prev, briefOpen: prev.briefOpen === id ? undefined : id })),
     onSend: (id, text) => void sendTo($, id, text),
     onStop: id => void stopAgent($, id),
+    onLog: id => void update($, panel, prev => ({ ...prev, logOpen: prev.logOpen === id ? undefined : id })),
     onCompact: flip(prev => ({ ...prev, isCompact: !prev.isCompact })),
     onDone: flip(prev => ({ ...prev, isDoneOpen: !isDoneOpenIn(prev, d) })),
     onTimeline: flip(prev => ({ ...prev, isTimelineHidden: prev.isTimelineHidden !== true })),
@@ -164,7 +165,7 @@ function listTree(ui: Ui, view: PaneView) {
   const { d, layout, on } = view
   const s = t()
   // The desktop's rows have no frame: they take the pane's whole width.
-  const ctx: RowContext = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.isDesktop ? layout.W : layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen }
+  const ctx: RowContext = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.isDesktop ? layout.W : layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen, logOpen: d.panel.logOpen }
   const isDoneOpen = isDoneOpenIn(d.panel, d)
   const running = d.running.slice(0, ROWS_MAX)
   const finished = isDoneOpen ? d.finished.slice(0, ROWS_MAX - running.length) : []

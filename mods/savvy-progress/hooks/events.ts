@@ -4,7 +4,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { StepInput } from './agents'
 import { addRun, endRun, heard, isRunning, ownTasks, patchRun, stepReport, stepUsage, toolActivity } from './agents'
 import { isNewFlow, mergeFlow } from './flow'
-import { closeEvent, openEvent } from './history'
+import { closeEvent, openEvent, withReason } from './history'
 import { readingOf, trackLimit } from './limit'
 import type { LimitReading } from './limit'
 import type { ProgressInput } from './flow'
@@ -162,7 +162,9 @@ function onSteps(on: On): void {
     const usage = result.usage
     const facts = usage && { model: usage.model || e.model, effort: e.effort, usage }
     const at = await $.clock.now()
-    await update($, agents, list => patchRun(list, agentId, a => heard({ ...(facts ? stepUsage(reopen(a), facts) : a), stepAt: undefined }, at)))
+    // What it wrote before this step's calls is their reason, in its own words.
+    const step = { answer: result.answer, calls: result.toolUses.length, sentAt: sent }
+    await update($, agents, list => patchRun(list, agentId, a => heard({ ...withReason(facts ? stepUsage(reopen(a), facts) : a, step), stepAt: undefined }, at)))
     return result
   })
 

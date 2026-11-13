@@ -9,8 +9,9 @@ import type { Entry } from './plain-words'
 const NAME_MAX = 48
 
 type Fields = Readonly<Record<string, unknown>>
-// Which input field `{x}` names, and whether it is a path (its file name is kept) or an address (its host).
-type Tool = readonly [entry: Entry, field?: string, as?: 'file' | 'host']
+// Which input field `{x}` names, and whether it is a path (its file name is kept), an address (its host) or a
+// search for tools (the tools' own names).
+type Tool = readonly [entry: Entry, field?: string, as?: 'file' | 'host' | 'tools']
 
 const EDIT: Tool = [['Changing the file {x}', '{x} dosyasını değiştiriyor'], 'file_path', 'file']
 const TASKS: Tool = [['Updating its to-do list', 'Yapılacaklar listesini güncelliyor']]
@@ -34,7 +35,7 @@ const TOOLS: Readonly<Record<string, Tool>> = {
   SendMessage: [['Sending a message to another agent', 'Başka bir ajana mesaj gönderiyor']],
   TodoWrite: TASKS, TaskCreate: TASKS, TaskUpdate: TASKS, TaskList: TASKS, TaskGet: TASKS, update_plan: TASKS,
   Skill: [['Loading a ready-made set of instructions[: {x}]', 'Hazır bir talimat paketini (skill) yüklüyor[: {x}]'], 'skill'],
-  ToolSearch: [['Looking for the right tool for the job', 'İş için gereken aracı arıyor']],
+  ToolSearch: [['Looking for a tool it needs[: {x}]', 'İhtiyaç duyduğu aracı arıyor[: {x}]'], 'query', 'tools'],
   AskUserQuestion: [['Asking you a question', 'Sana bir soru soruyor']],
   EnterPlanMode: [['Starting to write a plan before it acts', 'İşe başlamadan önce plan yazmaya geçiyor']],
   ExitPlanMode: [['Showing you its plan for approval', 'Hazırladığı planı onayına sunuyor']],
@@ -82,6 +83,8 @@ function namedOf(value: unknown, as: Tool[2]): string {
   const text = typeof value === 'string' ? firstLine(value) : ''
   if (as === 'file') return text.split('/').filter(Boolean).at(-1) ?? ''
   if (as === 'host') return /^[a-z]+:\/\/([^/?#]+)/i.exec(text)?.[1] ?? ''
+  // `select:mcp__ccd_session__start_session,Monitor` asks for those tools by name: "start session, Monitor".
+  if (as === 'tools') return clip(text.replace(/^select:/, '').split(',').map(name => (name.split('__').at(-1) ?? name).replace(/_+/g, ' ').trim()).join(', '))
 
   return clip(text)
 }
@@ -123,3 +126,5 @@ export function plainCall(tool: string, input: unknown, lang: Lang): string {
 }
 
 export { plainShell } from './plain-shell'
+export { KIND_ICON, kindOf, kindWord, purposeOf, reasonOf } from './plain-kind'
+export type { Kind } from './plain-kind'

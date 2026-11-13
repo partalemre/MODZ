@@ -1,78 +1,168 @@
-// The plain-words line in the conversation: under each tool call's row, one sentence that says what the call does
-// in words anyone follows ("↳ Modun testlerini çalıştırıyor" under `Bash cd … && claude plugin test …`). The
-// sentence is worked out by rules from the call's own input (kit/plain.ts): no model call, no tokens, and the
-// engine's row stays as it is, with the line beneath it.
+// The trail in the conversation: under a tool call's row, what the call is in words anyone follows, with a small
+// picture of the kind of work it is; under a folded run of calls, the order of the work as one picture and then
+// its steps, each led by the agent's own words for it. Worked out from the calls themselves (plain-trail.ts):
+// no model call, no tokens, and the engine's row stays as it is, with the trail beneath it.
 import type { Register, RenderElement } from 'claude-code'
 
+import { GLYPH } from './kit/icons'
 import { lang, pick } from './kit/lang'
-import { plainCall } from './kit/plain'
+import { KIND_ICON, kindOf, plainCall } from './kit/plain'
+import { flowPic, kindPic } from './plain-flow'
+import { fileOf, isTold, stateOf, trailOf } from './plain-trail'
+import type { Step, StepFile, StepState, ToldCall } from './plain-trail'
 
 type On = Parameters<Register>[0]
 type Options = Parameters<Register>[1]
 type Ui = Record<string, any>
-
-/** One call as a row or a group hands it over. */
-export type ToldCall = { tool: string; input: unknown; isErrored?: boolean; isInterrupted?: boolean }
-
-// How many sentences a folded run of calls shows before it counts the rest.
-const GROUP_LINES = 4
-const MARK = '↳'
-
-// Calls that only keep the app's own displays current (the task list, a progress bar): nothing to tell a person.
-const HOUSEKEEPING = /^mcp__(ccd_|savvy-progress__)/
+type Draw = { ui: Ui; isText: boolean }
 
 const WORDS = {
-  en: { failed: 'did not work', interrupted: 'stopped halfway', more: (n: number) => `+${n} more ${n === 1 ? 'step' : 'steps'}` },
-  tr: { failed: 'başarısız oldu', interrupted: 'yarıda kesildi', more: (n: number) => `+${n} adım daha` },
+  en: { failed: 'did not work', stopped: 'stopped halfway', more: (n: number) => `+${n} more ${n === 1 ? 'step' : 'steps'}` },
+  tr: { failed: 'başarısız oldu', stopped: 'yarıda kesildi', more: (n: number) => `+${n} adım daha` },
 }
 
-export const isTold = (tool: string): boolean => !HOUSEKEEPING.test(tool)
+const MARK: Record<StepState, string> = { done: '✓', live: '●', failed: '✗', stopped: '—' }
+const MARK_KEY: Record<StepState, string | undefined> = { done: undefined, live: 'claude', failed: 'error', stopped: undefined }
 
-/** The call's sentence, with how it ended when it ended badly: "Testleri çalıştırıyor · başarısız oldu". */
-export function lineOf(call: ToldCall): string {
+/** How a step ended, in words where it ended badly: "✗ başarısız oldu". */
+export function endOf(state: StepState): string {
   const words = pick(WORDS)
-  const said = plainCall(call.tool, call.input, lang())
-  if (call.isInterrupted === true) return `${said} · ${words.interrupted}`
+  if (state === 'failed') return `${MARK.failed} ${words.failed}`
 
-  return call.isErrored === true ? `${said} · ${words.failed}` : said
+  return state === 'stopped' ? `${MARK.stopped} ${words.stopped}` : MARK[state]
 }
 
-/** A folded run's sentences in the order the calls were made, each said once; then how many more there are. */
-export function groupLines(calls: readonly ToldCall[]): string[] {
-  const said = calls.filter(call => isTold(call.tool)).map(lineOf)
-  const unique = said.filter((line, i) => said.indexOf(line) === i)
-  const more = unique.length - GROUP_LINES
+/** A single call's step: its sentence alone, since the engine's row above already carries the agent's words. */
+export function stepOfCall(call: ToldCall): Step {
+  const file = fileOf(call.input)
 
-  return more > 0 ? [...unique.slice(0, GROUP_LINES), pick(WORDS).more(more)] : unique
+  return { kind: kindOf(call.tool, call.input), text: plainCall(call.tool, call.input, lang()), note: '', count: 1, state: stateOf(call), files: file === undefined ? [] : [file] }
 }
 
-// The row (or whatever a mod beneath drew) with the sentences under it, quiet so the row still leads.
-function withLines(ui: Ui, row: RenderElement, lines: string[]): RenderElement {
-  const { Box, Text } = ui
+function iconOf(draw: Draw, step: Step): RenderElement {
+  const { Svg, Text } = draw.ui
+  if (draw.isText) return <Text dimColor>{GLYPH[KIND_ICON[step.kind]]}</Text>
+  const pic = kindPic(step.kind, step.state)
+
+  return <Svg source={pic.source} alt={pic.alt} width={pic.width} height={pic.height} />
+}
+
+const FILES_SHOWN = 3
+const MARKDOWN_MARKS = /([\\`*_{}[\]<>#|~])/g
+
+const hrefOf = (file: StepFile): string => `file://${encodeURI(file.path)}`
+const escaped = (text: string): string => text.replace(MARKDOWN_MARKS, '\\$1')
+const markdownLink = (file: StepFile): string => `[${escaped(file.name)}](<${hrefOf(file)}>)`
+
+// The words with the step's one file pressed open where they name it; unchanged where they do not.
+function linkedWords(text: string, file: StepFile | undefined): string {
+  const at = file === undefined ? -1 : text.indexOf(file.name)
+  if (file === undefined || at < 0) return escaped(text)
+
+  return escaped(text.slice(0, at)) + markdownLink(file) + escaped(text.slice(at + file.name.length))
+}
+
+/**
+ * A step about files as one line of markdown, each file's name a link to the file. The desktop is sent a file
+ * link only inside markdown (a `Link` to a file is drawn there as plain text), so the line is written this way.
+ */
+export function stepMarkdown(step: Step): string {
+  if (step.files.length > 1) {
+    const rest = step.files.length - FILES_SHOWN
+
+    return `${escaped(step.text)} · ${step.files.slice(0, FILES_SHOWN).map(markdownLink).join(', ')}${rest > 0 ? ` +${rest}` : ''}`
+  }
+  const file = step.files[0]
+  const line = [step.text, step.note].filter(part => part !== '').map(part => linkedWords(part, file)).join(' · ')
+
+  return file === undefined || line.includes('](<') ? line : `${line} · ${markdownLink(file)}`
+}
+
+// The terminal draws a link to a file in place, inside the sentence.
+function named(draw: Draw, text: string, step: Step): Array<RenderElement | string> {
+  const { Link } = draw.ui
+  const file = step.files.length === 1 ? step.files[0] : undefined
+  const at = file === undefined || !draw.isText || Link === undefined ? -1 : text.indexOf(file.name)
+  if (file === undefined || at < 0) return [text]
+
+  return [text.slice(0, at), <Link key={`file-${at}`} href={hrefOf(file)}>{file.name}</Link>, text.slice(at + file.name.length)]
+}
+
+function wordsOf(draw: Draw, step: Step, key: string): RenderElement {
+  const { Markdown, Text } = draw.ui
+  if (!draw.isText && step.files.length > 0 && Markdown !== undefined) return <Markdown key={`${key}-words`} text={stepMarkdown(step)} />
 
   return (
-    <Box flexDirection="column">
-      {row}
-      {lines.map((line, i) => <Text key={`plain-${i}`} dimColor wrap="truncate-end">{`${MARK} ${line}`}</Text>)}
+    <Text wrap="truncate-end">
+      <Text>{named(draw, step.text, step)}</Text>
+      {step.note === '' ? null : <Text dimColor>{' · '}{named(draw, step.note, step)}</Text>}
+    </Text>
+  )
+}
+
+// icon · the step in the agent's words · what that means, quiet · how many calls · how it ended. The ending sits
+// right after the words, not at the row's far edge, so the eye reads the step and its result together.
+function stepRow(draw: Draw, step: Step, key: string, hasEnd: boolean): RenderElement {
+  const { Box, Text } = draw.ui
+  const tail = [step.count > 1 ? `×${step.count}` : '', hasEnd ? endOf(step.state) : ''].filter(Boolean).join(' ')
+
+  return (
+    <Box key={key} flexDirection="row" alignItems="center" columnGap={1}>
+      {iconOf(draw, step)}
+      <Box flexShrink={1}>{wordsOf(draw, step, key)}</Box>
+      {tail === '' ? null : <Box flexShrink={0}><Text color={MARK_KEY[step.state]} dimColor={MARK_KEY[step.state] === undefined}>{tail}</Text></Box>}
     </Box>
   )
+}
+
+function under(draw: Draw, row: RenderElement, trail: RenderElement[]): RenderElement {
+  const { Box } = draw.ui
+
+  return <Box flexDirection="column">{row}{trail}</Box>
+}
+
+// A single row says its ending itself, so the step adds one only when the call went wrong.
+function callTrail(draw: Draw, call: ToldCall): RenderElement[] {
+  const step = stepOfCall(call)
+
+  return [stepRow(draw, step, 'plain-0', step.state === 'failed' || step.state === 'stopped')]
+}
+
+function groupTrail(draw: Draw, calls: readonly ToldCall[]): RenderElement[] {
+  const { Svg, Text } = draw.ui
+  const trail = trailOf(calls, lang())
+  const flow = draw.isText ? null : flowPic(trail.flow)
+
+  return [
+    flow === null ? null : <Svg key="plain-flow" source={flow.source} alt={flow.alt} width={flow.width} height={flow.height} />,
+    ...trail.steps.map((step, i) => stepRow(draw, step, `plain-${i}`, true)),
+    trail.more > 0 ? <Text key="plain-more" dimColor>{pick(WORDS).more(trail.more)}</Text> : null,
+  ].filter((part): part is RenderElement => part !== null)
+}
+
+const drawOf = ($: any, e: any): Draw => {
+  const ui = $.ui.resolve(e) as Ui
+
+  return { ui, isText: e.surface === 'terminal' || !('Svg' in ui) }
 }
 
 export function wirePlainRows(on: On, options: Options): void {
   if (options.plainWords === false) return
 
-  // A hook that fails costs its line, never the row: the engine's own drawing stands.
+  // A hook that fails costs its trail, never the row: the engine's own drawing stands.
   on('ui.render', { component: 'ToolUse' }, async ($, e, next) => {
     const row = await next(e)
+    const draw = drawOf($, e)
 
-    return isTold(e.props.tool) ? withLines($.ui.resolve(e) as Ui, row, [lineOf(e.props)]) : row
+    return isTold(e.props.tool) ? under(draw, row, callTrail(draw, e.props)) : row
   }).catch(($, e, next) => next(e))
 
   // A run folded into one line tells its steps under it; unfolded, each row tells its own.
   on('ui.render', { component: 'ToolGroup' }, async ($, e, next) => {
     const row = await next(e)
-    const lines = e.props.isExpanded ? [] : groupLines(e.props.calls)
+    const draw = drawOf($, e)
+    const trail = e.props.isExpanded ? [] : groupTrail(draw, e.props.calls)
 
-    return lines.length === 0 ? row : withLines($.ui.resolve(e) as Ui, row, lines)
+    return trail.length === 0 ? row : under(draw, row, trail)
   }).catch(($, e, next) => next(e))
 }

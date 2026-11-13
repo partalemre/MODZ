@@ -36,6 +36,8 @@ export type PaneHandlers = {
   onBrief: (id: string) => void
   onSend: (id: string, text: string) => void
   onStop: (id: string) => void
+  /** Opens one agent's whole step-by-step log, or folds it back to its latest steps. */
+  onLog: (id: string) => void
   onCompact: () => void
   onDone: () => void
   onTimeline: () => void

@@ -201,6 +201,12 @@ steps and names the first two; `plain-words.ts` holds the words, English and Tur
 | `plainCall(tool, input, lang)` | `plainCall('Bash', { command: 'git checkout -b fix/x' }, 'tr')` → `Yeni bir çalışma dalı (branch) açıyor: fix/x` |
 | `plainShell(command, lang)` | `plainShell('npm test && git push', 'en')` → `Running the tests, then sending the saved versions to the shared copy (push)` |
 
+| `kindOf(tool, input)` | `kindOf('Bash', { command: 'sleep 5; gh pr merge 70' })` → `github`; `KIND_ICON[kind]` is its icon, `kindWord(kind, lang)` its name |
+| `purposeOf(input)` | `purposeOf({ command: 'npm test', description: 'Run the tests' })` → `Run the tests` (the agent's own words; empty when it wrote none) |
+
+`plain-kind.ts` holds the kinds. A shell line of several steps is the kind of its weightiest one (`ls && git commit`
+saves a version), and a pause before a step (`sleep 5; …`) is left out of both the sentence and the kind.
+
 A command the tables do not know is named as it is (`Running the “foo” command`), never guessed at. To teach it a
 command, add one line to `COMMANDS` (one word) or a `Family` (`git commit`) in `plain-words.ts`.
 

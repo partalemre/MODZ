@@ -48,6 +48,9 @@ export function wireLanguageKeeper(on: On, options: Options): void {
   // A subagent's report reaches the main loop as the Agent call's result, so that call is heard here too.
   on('tool.call', async (_$, e, next) => {
     const result = await next(e)
+    // A mod's own background call (transceiver polling ArtifactData) is not Claude's step: a note riding it
+    // reaches nobody and would spend the turn's one request.
+    if (next.origin.plugin !== 'engine') return result
     const why = asksWhy && unasked.delete(e.agentId ?? MAIN) ? [whyReminderOf(armed)] : []
     const target = armed
     const needsLanguage = keepsLanguage && target !== undefined && e.agentId === undefined && typeof result.text === 'string' && needsReminder({ text: result.text, target })

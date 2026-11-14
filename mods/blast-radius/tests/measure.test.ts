@@ -100,12 +100,24 @@ test('a subagent\'s risky call is refused at once, naming the command and why; a
   expect(w.ran).toHaveLength(1)
 })
 
-test('a chat with no screen attached is refused at once and told why, not called a claude -p run', async ($, on) => {
+test('a chat with no screen attached asks in the dialog, and runs the command when the person says run', async ($, on) => {
+  const w = world({ ...EN, surfaces: [], answers: { files: BUILD_SCAN }, choice: 'Run it' })
+  stub(on, w)
+  await start($, w)
+  const result: any = await call($, 'bash -c "rm -rf build"')
+
+  expect(w.questions).toEqual([expect.stringMatching(/^This command would delete 9 files.*Run it\?$/)])
+  expect(result.deny).toBeUndefined()
+  expect(w.ran).toHaveLength(1)
+})
+
+test('a chat with no screen attached whose question nobody answers is refused and told why, not called a claude -p run', async ($, on) => {
   const w = world({ ...EN, surfaces: [], answers: { files: BUILD_SCAN } })
   stub(on, w)
   await start($, w)
   const result: any = await call($, 'bash -c "rm -rf build"')
 
+  expect(w.questions).toHaveLength(1)
   expect(result.deny).toMatch(/no screen is attached to this chat right now.*Command: bash -c "rm -rf build"/)
   expect(result.deny).toMatch(/Tell the user what you wanted to run and why/)
   expect(result.deny).not.toMatch(/run it from the main chat/)

@@ -20,8 +20,12 @@ const row = (props: ReturnType<typeof call>, surface: 'terminal' | 'desktop') =>
 const group = (calls: ReturnType<typeof call>[], more: { isExpanded?: boolean; surface?: 'terminal' | 'desktop' } = {}) =>
   ({ ...SITE, surface: more.surface ?? 'desktop', component: 'ToolGroup', requestId: 'group:1', props: { calls, isActive: false, isExpanded: more.isExpanded === true } }) as const
 
-// Every piece of text the drawing holds, in order, as one string.
-const leaves = (node: any): string[] => (typeof node === 'string' ? [node] : (node?.children ?? []).flatMap(leaves))
+// Every piece of text the drawing holds, in order, as one string; a markdown line is its text.
+const leaves = (node: any): string[] => {
+  if (typeof node === 'string') return [node]
+
+  return node?.type === 'Markdown' ? [String(node.props.text)] : (node?.children ?? []).flatMap(leaves)
+}
 const said = async (ui: any): Promise<string> => leaves(await ui.drawn()).join(' ').replace(/\s+/g, ' ').trim()
 const pictures = async (ui: any): Promise<string[]> => (await ui.findAll({ type: 'Svg' })).map((pic: any) => String(pic.props?.alt ?? ''))
 
@@ -53,7 +57,7 @@ test('a call that ended badly says so after its sentence; one that went well add
   expect(await said(failed)).toBe('engine row Testleri çalıştırıyor ✗ başarısız oldu')
   await failed.unmount()
   const cut = await $.ui.mount(row(call('Read', { file_path: '/w/a.ts' }, { isInterrupted: true }), 'desktop'))
-  expect(await said(cut)).toBe('engine row a.ts dosyasını okuyor — yarıda kesildi')
+  expect(await said(cut)).toBe('engine row [a.ts](<file:///w/a.ts>) dosyasını okuyor — yarıda kesildi')
 })
 
 test("a folded run leads each step with the agent's own words, then what that means, and how it ended", async ($, on) => {
@@ -80,11 +84,36 @@ test('calls that say little one by one fold into one step with a count and their
   expect(await said(ui)).toBe('engine row ⌕ Searching inside files for “login” ×2 ✓ ◉ Reading 5 files · a.ts, b.ts, c.ts +2 ✓')
 })
 
+// The desktop is sent a link to a file only inside markdown, so a step about files is one markdown line there.
+test('desktop: a step about files names each as a link that opens the file', async ($, on) => {
+  await start($, on)
+  const one = await $.ui.mount(row(call('Read', { file_path: '/w/docs/RELEASE_PLAN v2.md' }), 'desktop'))
+  expect((await one.findAll({ type: 'Markdown' })).map((line: any) => line.props.text)).toEqual(['[RELEASE\\_PLAN v2.md](<file:///w/docs/RELEASE_PLAN%20v2.md>) dosyasını okuyor'])
+  const reads = ['a', 'b', 'c', 'd'].map(name => call('Read', { file_path: `/w/${name}.ts` }))
+  const many = await $.ui.mount(group(reads))
+  expect((await many.findAll({ type: 'Markdown' })).map((line: any) => line.props.text)).toEqual([
+    '4 dosya okuyor · [a.ts](<file:///w/a.ts>), [b.ts](<file:///w/b.ts>), [c.ts](<file:///w/c.ts>) +1',
+  ])
+})
+
+test('terminal: the file a step names is a link inside its sentence', async ($, on) => {
+  await start($, on)
+  const ui = await $.ui.mount(row(call('Edit', { file_path: '/w/src/app.ts' }), 'terminal'))
+  expect(await said(ui)).toBe('engine row ✎ app.ts dosyasını değiştiriyor')
+  expect((await ui.findAll({ type: 'Link' })).map((link: any) => link.props.href)).toEqual(['file:///w/src/app.ts'])
+})
+
+test('a search for tools names the tools; a line printed only to part two outputs is not a step', () => {
+  expect(plainCall('ToolSearch', { query: 'select:mcp__ccd_session__start_session,Monitor' }, 'tr')).toBe('İhtiyaç duyduğu aracı arıyor: start session, Monitor')
+  expect(plainCall('Bash', { command: 'cat docs/RELEASE_PLAN.md; echo ---; git log --oneline -3' }, 'tr')).toBe('Bir dosyayı okuyor: RELEASE_PLAN.md, sonra daha önce kaydedilmiş sürümlere bakıyor')
+  expect(plainCall('Bash', { command: 'echo "hazır"' }, 'tr')).toBe('Ekrana bir yazı yazdırıyor: “hazır”')
+})
+
 test('a run with more steps than it has room for counts the rest', () => {
   setLang(undefined)
-  const calls = [1, 2, 3, 4, 5, 6, 7].map(n => bash(`./step-${n}.sh`, `Step ${n}`))
+  const calls = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => bash(`./step-${n}.sh`, `Step ${n}`))
   const trail = trailOf(calls, 'en')
-  expect(trail.steps.map(step => step.text)).toEqual(['Step 1', 'Step 2', 'Step 3', 'Step 4', 'Step 5'])
+  expect(trail.steps.map(step => step.text)).toEqual(['Step 1', 'Step 2', 'Step 3', 'Step 4', 'Step 5', 'Step 6', 'Step 7', 'Step 8'])
   expect(trail.more).toBe(2)
 })
 

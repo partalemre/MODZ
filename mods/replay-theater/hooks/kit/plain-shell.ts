@@ -191,11 +191,13 @@ function leadOf(pipe: string[]): Call | null {
   return calls.find(call => !FILTERS.has(base(call.name)) && !SILENT.has(base(call.name))) ?? calls[0] ?? null
 }
 
-// A pause between two steps (`sleep 5; gh pr merge`) is not something the line does.
+// A pause between two steps (`sleep 5; gh pr merge`) is not something the line does; neither is a line printed
+// between two outputs to tell them apart (`echo ---`), unless it is written into a file.
 const WAITS = new Set(['sleep'])
-const isWait = (call: Call): boolean => WAITS.has(base(call.name))
+const MARKERS = new Set(['echo', 'printf'])
+const isWait = (call: Call): boolean => WAITS.has(base(call.name)) || (MARKERS.has(base(call.name)) && call.out === '')
 
-/** The commands of a line that do its work, one per step; a wait is left out when the line does anything else. */
+/** The commands of a line that do its work, one per step; a wait or a printed marker is left out when the line does anything else. */
 export function leadsOf(command: string): Call[] {
   const leads = stepsOf(command).map(pipe => leadOf(pipe)).filter((call): call is Call => call !== null)
   const hasWork = leads.some(call => !isWait(call) && !SILENT.has(base(call.name)))

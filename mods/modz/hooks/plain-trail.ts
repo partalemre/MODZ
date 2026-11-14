@@ -11,14 +11,17 @@ export type ToldCall = { tool: string; input: unknown; isRunning?: boolean; isEr
 
 export type StepState = 'live' | 'done' | 'failed' | 'stopped'
 
-/** `note` is the quiet half of the line; `count` is how many calls the step stands for. */
-export type Step = { kind: Kind; text: string; note: string; count: number; state: StepState }
+/** A file a step reads or changes: its name as the line says it, and its whole path, so the name can be pressed open. */
+export type StepFile = { name: string; path: string }
+
+/** `note` is the quiet half of the line; `count` is how many calls the step stands for; `files` are the ones it is about. */
+export type Step = { kind: Kind; text: string; note: string; count: number; state: StepState; files: StepFile[] }
 
 export type Trail = { steps: Step[]; more: number; flow: Array<{ kind: Kind; count: number; state: StepState }> }
 
 // Calls that only keep the app's own displays current (the task list, a progress bar): nothing to tell a person.
 const HOUSEKEEPING = /^mcp__(ccd_|savvy-progress__)/
-const STEPS_SHOWN = 5
+const STEPS_SHOWN = 8
 const NAMES_SHOWN = 3
 const NAME_MAX = 28
 const NAMED_BY = ['file_path', 'notebook_path', 'pattern', 'query', 'url'] as const
@@ -34,7 +37,7 @@ const MANY: Partial<Record<Kind, Record<Lang, (n: number) => string>>> = {
 // The worst that happened among a step's calls is what the step shows.
 const RANK: readonly StepState[] = ['done', 'live', 'stopped', 'failed']
 
-type Told = { kind: Kind; why: string; said: string; name: string; state: StepState }
+type Told = { kind: Kind; why: string; said: string; name: string; file?: StepFile; state: StepState }
 
 export const isTold = (tool: string): boolean => !HOUSEKEEPING.test(tool)
 
@@ -62,11 +65,21 @@ function nameOf(input: unknown): string {
   return name.length > NAME_MAX ? `${name.slice(0, NAME_MAX - 1)}…` : name
 }
 
+/** The file a call reads or changes, when its input names one by its whole path. */
+export function fileOf(input: unknown): StepFile | undefined {
+  const fields = typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : {}
+  const path = fields.file_path ?? fields.notebook_path
+  if (typeof path !== 'string' || !path.startsWith('/')) return undefined
+
+  return { name: path.split('/').filter(Boolean).at(-1) ?? path, path }
+}
+
 const toldOf = (call: ToldCall, lang: Lang): Told => ({
   kind: kindOf(call.tool, call.input),
   why: purposeOf(call.input),
   said: plainCall(call.tool, call.input, lang),
   name: nameOf(call.input),
+  file: fileOf(call.input),
   state: stateOf(call),
 })
 
@@ -83,12 +96,13 @@ const listOf = (names: readonly string[]): string =>
 function stepOf(bucket: readonly Told[], lang: Lang): Step {
   const first = bucket[0] as Told
   const state = worst(bucket.map(told => told.state))
-  if (first.why !== '') return { kind: first.kind, text: first.why, note: first.said, count: bucket.length, state }
+  const files = bucket.flatMap(told => (told.file === undefined ? [] : [told.file])).filter((file, i, all) => all.findIndex(other => other.path === file.path) === i)
+  if (first.why !== '') return { kind: first.kind, text: first.why, note: first.said, count: bucket.length, state, files }
   const names = unique(bucket.map(told => told.name).filter(name => name !== ''))
   const many = MANY[first.kind]
-  if (many !== undefined && names.length > 1) return { kind: first.kind, text: many[lang](names.length), note: listOf(names), count: 1, state }
+  if (many !== undefined && names.length > 1) return { kind: first.kind, text: many[lang](names.length), note: listOf(names), count: 1, state, files }
 
-  return { kind: first.kind, text: first.said, note: '', count: bucket.length, state }
+  return { kind: first.kind, text: first.said, note: '', count: bucket.length, state, files }
 }
 
 // The order of the work as a picture: neighbours of one kind are one stop.

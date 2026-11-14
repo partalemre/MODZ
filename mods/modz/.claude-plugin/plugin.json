@@ -24,6 +24,12 @@
       "description": "After English tool output or a subagent's English report, remind Claude once per turn to reply in your language (Claude Code's language setting, else MODZ_LANG=tr). No model call.",
       "default": true
     },
+    "sayWhy": {
+      "type": "boolean",
+      "title": "Have Claude say why it does each step",
+      "description": "Once a turn, ask Claude to write one short sentence before each step saying what it is about to do and why, in your language. The sentence shows above the step and in the Agents pane's log. Costs a few words of output per step; turn it off to spend none.",
+      "default": true
+    },
     "plainWords": {
       "type": "boolean",
       "title": "Say each step in plain words",

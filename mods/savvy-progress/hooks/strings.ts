@@ -134,6 +134,12 @@ export type Strings = {
   builtins: Record<string, string>
   shareOf: (share: string) => string
   earlier: (n: number) => string
+  /** The buttons that open and fold an agent's whole step-by-step log, and the log's heading. */
+  logOpen: (n: number) => string
+  logClose: string
+  log: string
+  /** Leads the sentence the agent wrote before a step: "Neden: …". */
+  because: string
   after: (list: string) => string
   tools: (n: number) => string
   errors: (n: number) => string

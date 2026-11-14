@@ -37,10 +37,13 @@ export type RowContext = {
   selected?: string
   /** The agent whose task text is shown whole. */
   briefOpen?: string
+  /** The agent whose every step is listed. */
+  logOpen?: string
   onToggle: (id: string) => void
   onBrief: (id: string) => void
   onSend: (id: string, text: string) => void
   onStop: (id: string) => void
+  onLog: (id: string) => void
 }
 
 // A card's frame (the new-task form's): two cells of padding and a border on each side (DESIGN.md §4).

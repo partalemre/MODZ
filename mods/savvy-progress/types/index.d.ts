@@ -36,6 +36,10 @@ export type ToolEvent = {
   plain?: string
   /** What the call is for, in the words the agent wrote with it (a command's description); absent when it wrote none. */
   why?: string
+  /** Why it was made: the sentence the agent wrote just before the call; absent when it wrote none. */
+  because?: string
+  /** The file the call reads or changes, as a whole path, so its name can be pressed open. */
+  path?: string
   at: number
   endAt?: number
   isError?: boolean
@@ -81,6 +85,8 @@ export type AgentRun = {
   toolCount: number
   lastTool?: string
   lastTarget?: string
+  /** What the agent wrote before its latest step's calls, and how many of those calls have yet to open. */
+  reason?: { text: string; left: number }
   /** The latest call in plain words. */
   lastPlain?: string
   /** The session's own loop, not a subagent: never stopped, written to or counted as crew. */
@@ -143,6 +149,8 @@ export type Panel = {
   isDoneOpen?: boolean
   /** The agent whose work history is open. */
   selected?: string
+  /** The agent whose every step is listed, in place of its latest few. */
+  logOpen?: string
   /** The agent whose task text is shown whole rather than cut short. */
   briefOpen?: string
   isTimelineHidden?: boolean

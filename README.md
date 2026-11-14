@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/img/hero-dark.svg">
-    <img src="docs/img/hero-light.svg" width="520" alt="MODZ">
+    <img src="docs/img/hero-light.svg" width="520" alt="modz">
   </picture>
 </p>
 
@@ -10,7 +10,7 @@
 <p align="center">See every move Claude makes: agents, files, plans, tests and risky commands, live, beside the chat.</p>
 
 <p align="center">
-  <a href="https://partalemre.github.io/MODZ/"><img src="docs/img/film-preview.webp" width="760" alt="16 seconds of the MODZ film: pixels fall into a small crab, the agent, which runs into Claude Code; its tool calls land one by one, the MODZ panel slides in beside the chat, and the Agents row opens into the Agents pane"></a>
+  <a href="https://partalemre.github.io/MODZ/"><img src="docs/img/film-preview.webp" width="760" alt="16 seconds of the modz film: pixels fall into a small crab, the agent, which runs into Claude Code; its tool calls land one by one, the modz panel slides in beside the chat, and the Agents row opens into the Agents pane"></a>
   <br>
   <sub><a href="https://partalemre.github.io/MODZ/">Watch the whole film</a> · 73 seconds, with sound · <a href="https://github.com/partalemre/MODZ/releases/latest">download it</a></sub>
 </p>
@@ -49,9 +49,9 @@ for m in savvy-flow projects handoff transceiver test-badge pr-card replay-theat
 done
 ```
 
-Or ask your coding agent: *Install MODZ for me. Follow https://partalemre.github.io/MODZ/llms.txt and ask me which mods I want.*
+Or ask your coding agent: *Install modz for me. Follow https://partalemre.github.io/MODZ/llms.txt and ask me which mods I want.*
 
-Start a new session. The MODZ panel opens on the right with a line from every mod you installed.
+Start a new session. The modz panel opens on the right with a line from every mod you installed.
 
 - **Where it draws.** The Claude desktop app's Code tab draws everything. The terminal draws the same panels as text.
 - **Requirements.** Claude Code 2.1.295 or later, tested on 2.1.296 (terminal) and 2.1.317 (desktop app). `terminal-browser` draws in the terminal only and needs the external `terminal-browser` CLI (without it, the mod asks you to install it first). Outside the desktop app, `done-ping` falls back to a macOS banner.
@@ -67,7 +67,7 @@ Both variables go in the `env` block of `~/.claude/settings.json`:
 
 ## One panel. Every mod, live.
 
-<img src="docs/img/panel.jpg" alt="The MODZ panel beside a Claude Code session, showing Agents, Files, Plan, Tests, Checkpoints and Usage">
+<img src="docs/img/panel.jpg" alt="The modz panel beside a Claude Code session, showing Agents, Files, Plan, Tests, Checkpoints and Usage">
 
 The panel opens beside the chat when a session starts. If a mod does not open its pane, its row says so instead of doing nothing. Each mod reports one honest line: what it measured, never a guess. One click opens that mod's own pane next to the panel.
 
@@ -105,7 +105,7 @@ The eight in **bold** are the core set. Everything else is an optional extra.
 | | **`plan-steps`** | The plan's steps as Claude works through them; the plan comes back after `/clear` and compaction, and a turn that ends with steps open offers to go on (it waits while background agents or commands still run) |
 | | `projects` | Every project in one place: percent, plans, where it stopped, tokens and agents, in the pane and on a full board |
 | | `handoff` | Saves working notes before every compaction (yours, automatic or idle) with no model call, and offers them back after with one press. Near auto-compaction it asks once: compact now, or hand off to a fresh chat; your next chat in the repo is offered the note (**Continue from handoff**). Notes live in the main repository, so a worktree finds them too |
-| | `replay-theater` | Replays the last turn's edits step by step, and earlier turns and past sessions. Opens from `/replay` or the MODZ row; changes made by shell commands are named as not replayable |
+| | `replay-theater` | Replays the last turn's edits step by step, and earlier turns and past sessions. Opens from `/replay` or the modz row; changes made by shell commands are named as not replayable |
 | | `transceiver` | Chat and zero-token agent questions between your own computers; team rooms across accounts are experimental (beta; from its own repo) |
 | **Safety** | **`blast-radius`** | Holds a shell command that would lose work (`rm -rf`, `find -delete`, `git reset`/`checkout`/`clean`/`stash drop`/`branch -D`, force or deleting pushes, writes over files, docker, terraform, kubectl and database drops) and shows exactly what it would lose; a command that loses nothing runs, and one nobody can answer (a subagent, `claude -p`) is refused at once. Also holds an edit to a file another chat just changed, and checks other commands against your `.claude/house-rules.md` |
 | | **`secret-guard`** | Stops keys and tokens in writes, edits, `git add` and commits, including text a Bash command writes with `echo`, `printf`, `tee` or a heredoc; covers Slack, Google, GitLab, Hugging Face, SendGrid, Supabase, Stripe, database URLs and more. If the guard itself fails, the write is blocked. Keeps pasted keys out of the chat as placeholders; `/rec` masks keys, env values and e-mail addresses on screen |
@@ -126,7 +126,7 @@ The eight in **bold** are the core set. Everything else is an optional extra.
 
 | Command | Mod | What it does |
 |---|---|---|
-| `/modz [help]` | `modz` | Opens the MODZ panel; `help` lists every installed mod's commands and settings |
+| `/modz [help]` | `modz` | Opens the modz panel; `help` lists every installed mod's commands and settings |
 | `/agents-info` | `savvy-progress` | Opens or closes the Agents pane |
 | `/filetree [path]` | `filetree` | Opens the file tree |
 | `/steps` | `plan-steps` | Opens the plan steps pane |
@@ -198,13 +198,13 @@ Jev is TypeSafe's classifier: set `MODZ_JUDGE=jev` and `TYPESAFE_API_KEY` to use
 
 ## Make it yours
 
-- **Arrange the panel.** Press **Customize** at the bottom of the MODZ panel: move rows up, hide the ones you do not use, and bring them back from **Hidden**. **Reset** puts everything back. Your layout is kept across sessions.
-- **Get back from any pane.** Every pane the panel opens has a **← MODZ** button at the top. It brings the panel forward, and opens it again if it was closed. `/modz` does the same.
+- **Arrange the panel.** Press **Customize** at the bottom of the modz panel: move rows up, hide the ones you do not use, and bring them back from **Hidden**. **Reset** puts everything back. Your layout is kept across sessions.
+- **Get back from any pane.** Every pane the panel opens has a **← modz** button at the top. It brings the panel forward, and opens it again if it was closed. `/modz` does the same.
 - **Choose what loads.** Each mod is its own plugin: install or uninstall any of them, and the panel follows. `/plugin configure modz@modz` turns off opening at session start.
 
 ## Add your own mod to the panel
 
-The panel lists any mod that reports to it, with no change to MODZ. Your mod talks to it through `$.state`:
+The panel lists any mod that reports to it, with no change to modz. Your mod talks to it through `$.state`:
 
 1. **Report a line.** Write your own `{ plugin: '<your-mod>', key: 'hub' }` value: `{ pane, detail, tone, at }`, plus your row's `title`, `hint`, `icon` (a kit icon name), `section` (`work`, `safety` or `meter`) and an optional `badge`. `tone` is `idle`, `live`, `ok`, `warn` or `bad`; write it only when the text changes. A card may also carry `live: { lines: [{ label, since?, value? }], more? }` to put running work on the panel itself; give `since` (a start time in ms) and the panel tells the elapsed time.
 2. **Open on request.** Hook `state.set` on `{ plugin: 'modz', key: 'open' }`; when its `pane` is yours, call `$.ui.open({ id, title, focus: true })`.
@@ -214,7 +214,7 @@ The panel lists any mod that reports to it, with no change to MODZ. Your mod tal
 
 ## For AI agents
 
-If a person asks you to install MODZ, do exactly this. Every step is safe to repeat.
+If a person asks you to install modz, do exactly this. Every step is safe to repeat.
 
 1. Check the version: `claude --version` must print 2.1.295 or later. If it is older, ask the person to update Claude Code first.
 2. Add the marketplace: `claude plugin marketplace add partalemre/MODZ`.
@@ -257,4 +257,4 @@ Several mods are adaptations of open-source projects, each under its original li
 Everything else is [MIT](LICENSE).
 
 `upstreams.json` records the upstream date each adaptation is synced to; a weekly workflow (`.github/workflows/upstream-watch.yml`) keeps one open `upstream` issue per mod listing the newer upstream commits.
-A second weekly workflow (`.github/workflows/mod-radar.yml`) keeps one `radar` issue with the most-starred new mods from the [awesome-claude-code-mods](https://github.com/karanb192/awesome-claude-code-mods) catalogue that MODZ has not adapted. MODZ keeps one mod per job: an idea worth taking is folded into the mod that already does that job.
+A second weekly workflow (`.github/workflows/mod-radar.yml`) keeps one `radar` issue with the most-starred new mods from the [awesome-claude-code-mods](https://github.com/karanb192/awesome-claude-code-mods) catalogue that modz has not adapted. modz keeps one mod per job: an idea worth taking is folded into the mod that already does that job.

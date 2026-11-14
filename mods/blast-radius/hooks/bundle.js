@@ -447,6 +447,7 @@ const EN = {
   showLess: "Show less",
   showMore: "Show more",
   cancel: { label: "Keep my work", hotkey: "k" },
+  askRun: { question: (summary) => `This command would ${summary}. Run it?`, header: "Blast Radius", run: "Run it", keep: "Keep my work" },
   doing: (isDelete) => isDelete ? "Deleting…" : "Running…",
   fullCommand: (command) => `full command: ${command}`,
   kept: "Kept. Nothing was thrown away.",
@@ -563,6 +564,7 @@ const TR = {
   showLess: "Daha az göster",
   showMore: "Daha fazla göster",
   cancel: { label: "Vazgeç", hotkey: "v" },
+  askRun: { question: (summary) => `Bu komut şunu yapacak: ${summary}. Çalıştırılsın mı?`, header: "Blast Radius", run: "Çalıştır", keep: "Vazgeç" },
   doing: (isDelete) => isDelete ? "Siliniyor…" : "Çalıştırılıyor…",
   fullCommand: (command) => `tam komut: ${command}`,
   kept: "Tutuldu. Hiçbir şey kaybolmadı.",
@@ -2576,10 +2578,21 @@ async function survey($, risky) {
   return false;
 }
 const isUnattended = async ($, agentId) => agentId !== undefined || (await $.session.surfaces()).length === 0;
+async function askedToRun($, summary) {
+  const ask = words().askRun;
+  try {
+    return await $.ui.ask(ask.question(summary), { options: [ask.run, ask.keep], header: ask.header }) === ask.run;
+  } catch {
+    $.ui.log("blast-radius: no one answered the run question, so the command is refused", { to: "debug" });
+    return false;
+  }
+}
 async function refuseUnattended($, input) {
   const risky = { mine: unheld(input.command), risks: input.risks, summary: input.risks[0]?.label ?? "a risky command" };
   const isLossy = await survey($, risky).catch(() => true);
   if (!isLossy)
+    return null;
+  if (!input.isSubagent && await askedToRun($, risky.summary))
     return null;
   const who = input.isSubagent ? "it came from a subagent, and only the main chat can answer its card" : "no screen is attached to this chat right now (it is in the background, driven remotely, or a claude -p run), so nobody can answer its card";
   const then = input.isSubagent ? "ask the user to run it, or run it from the main chat" : "Tell the user what you wanted to run and why, and run it again only when they ask";

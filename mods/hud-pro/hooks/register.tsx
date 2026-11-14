@@ -23,6 +23,7 @@ import type { HudUsage } from '../types'
 const HISTORY_KEY = 'hud-pro.history'
 // Reset countdowns move by the minute, so the idle line redraws once a minute.
 const REFRESH_MS = 60_000
+const MINUTE_MS = 60_000
 
 const usageAtom = atom({ plugin: 'hud-pro', key: 'usage' } as const, null)
 const hiddenAtom = atom({ plugin: 'hud-pro', key: 'isHidden' } as const, false)
@@ -30,6 +31,7 @@ const historyAtom = atom({ plugin: 'hud-pro', key: 'history' } as const, [])
 const contextTurnsAtom = atom({ plugin: 'hud-pro', key: 'contextTurns' } as const, [])
 const hubAtom = atom({ plugin: 'hud-pro', key: 'hub' } as const, EMPTY_HUB)
 const noticesAtom = atom({ plugin: 'hud-pro', key: 'notices' } as const, [])
+const paceAtom = atom({ plugin: 'hud-pro', key: 'pace' } as const, null)
 
 const noticed = new Set<string>()
 // The windows (by reset) whose fill-before-reset line was already said.
@@ -66,7 +68,12 @@ async function noticeHigh($: EngineInterface, fresh: HudUsage): Promise<void> {
 // A pace that fills the window before it resets earns one line per window, once the history holds the reading.
 async function noticeFill($: EngineInterface, fresh: HudUsage): Promise<void> {
   const nowMs = await $.clock.now()
-  const fill = fillNotice(paceOf({ usage: fresh, history: await read($, historyAtom), nowMs }), nowMs)
+  const pace = paceOf({ usage: fresh, history: await read($, historyAtom), nowMs })
+  // To the minute, so a measure that moves the estimate by seconds writes nothing.
+  const told = pace === null ? null : { window: pace.gauge.id, fullAt: pace.fullAt === null ? null : Math.round(pace.fullAt / MINUTE_MS) * MINUTE_MS }
+  const before = await read($, paceAtom)
+  if (before?.window !== told?.window || before?.fullAt !== told?.fullAt) await update($, paceAtom, () => told)
+  const fill = fillNotice(pace, nowMs)
   if (fill === null || filled.has(fill.key)) return
   filled.add(fill.key)
   await update($, noticesAtom, queue => enqueue(queue, fill.text))

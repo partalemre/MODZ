@@ -1,5 +1,7 @@
 import { expect } from 'claude-code/testing'
 
+import { BAND_H } from '../hooks/band-svg'
+
 import { HEARTBEAT_MS } from '../hooks/chats'
 import { REST_MS, TURNS_KEY, ended, levelOf, rested, restingCrab } from '../hooks/mood'
 import { test, BAND, PANE, SURFACES, finish, mainEnd, mainStart, setup, spawn, svgOf } from './fixtures'
@@ -88,7 +90,10 @@ for (const surface of SURFACES) {
     await mainEnd($, 'error')
   }
   // The terminal's face, the desktop's sweat drop: only the home crab draws either.
-  const hasHomeCrab = async (ui: any) => (surface === 'terminal' ? (await seen(ui)).includes('(°_°;)') : (await svgOf(ui)).includes('fill="#7FB6E8"'))
+  // The session strip's scene always shows the session's crab, so only the job row's own drawing is asked.
+  const rowSvgs = async (ui: any) => (await ui.findAll({ type: 'Svg' })).filter((s: any) => s.props.height === BAND_H)
+  const hasHomeCrab = async (ui: any) =>
+    surface === 'terminal' ? (await seen(ui)).includes('(°_°;)') : (await rowSvgs(ui)).some((s: any) => s.props.source.includes('fill="#7FB6E8"'))
 
   test(`${surface}: the progress row keeps its own crab unless crabInBand is on`, async ($, on) => {
     await worried($, on)
@@ -99,8 +104,8 @@ for (const surface of SURFACES) {
     await worried($, on)
     const ui = await band($)
     expect(await hasHomeCrab(ui)).toBe(true)
-    // The job's row and the session strip: one Svg each, the home crab in the row.
-    expect((await ui.findAll({ type: 'Svg' })).length).toBeLessThanOrEqual(2)
+    // The job's row is one Svg, the home crab in it.
+    expect((await rowSvgs(ui)).length).toBeLessThanOrEqual(1)
     await mainStart($, 'More', 'main-2')
     expect(await hasHomeCrab(await band($, 'band-2'))).toBe(false)
   })

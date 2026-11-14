@@ -153,6 +153,17 @@ export type Strings = {
   stripPerTurn: (span: string) => string
   /** What a crab on the strip is doing, by the kind of its last tool. */
   stripDoing: Record<'read' | 'edit' | 'run' | 'agent' | 'other', string>
+  /** The strip's plan and plan-window chips, and what the resting crab is said to do. */
+  stripPlan: string
+  stripPlanDone: string
+  stripWeek: string
+  stripFive: string
+  stripRunsOut: (when: string) => string
+  stripFull: string
+  /** Short weekday names, Sunday first. */
+  stripDays: string[]
+  stripResting: Record<'sleeping' | 'working' | 'happy' | 'worried', string>
+  stripStep: (n: number, subject: string) => string
   /** The hub card's running count: "2 ajan", "2 running". */
   hubCrew: (n: number) => string
   liveCount: (n: number) => string

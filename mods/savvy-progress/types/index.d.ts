@@ -235,8 +235,9 @@ declare module 'claude-code' {
       limit: LimitTrack | null
       hub: HubCard
       types: AgentType[]
-      // The person pressed "← MODZ" in the Agents pane; the hub hears it and comes forward.
-      home: { at: number }
+      // The person pressed "← MODZ" in the Agents pane; the hub hears it and comes forward. With `pane` (a chip
+      // on the session strip) the hub opens that mod's pane in its panel instead.
+      home: { at: number; pane?: string }
       // The Agents pane is open: the MODZ hub puts it in its one panel and closes the rest (kit/stage.ts).
       shown: { pane: string; at: number }
       self: SelfChat | null
@@ -247,5 +248,9 @@ declare module 'claude-code' {
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
     modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
+    // The plan's steps as plan-steps keeps them; the session strip draws them as its path.
+    // The Usage mod's forecast for the plan window it watches: when it runs out at its recent pace, if before the reset.
+    'hud-pro': { pace: { window: string; fullAt: number | null } | null }
+    'plan-steps': { tasks: { id: string; subject: string; status: string }[] }
   }
 }

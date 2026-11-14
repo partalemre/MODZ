@@ -1048,6 +1048,8 @@ function bandRow(ui, input) {
 const SEVEN_DAY = "seven_day";
 const HOUR_MS = 3600000;
 const DAY_HOURS = 24;
+const WEEK_HOURS = 7 * DAY_HOURS;
+const WEEK_MIN_EVEN_PERCENT = 5;
 const LOOKBACK_MS = { [FIVE_HOUR]: HOUR_MS, [SEVEN_DAY]: DAY_HOURS * HOUR_MS };
 const NOTABLE_SHARE = { [FIVE_HOUR]: 10, [SEVEN_DAY]: 3 };
 const SHARES_KEPT = 5;
@@ -1061,15 +1063,28 @@ function shareOf(before, after) {
 }
 const isNotable = (share) => share.share >= (NOTABLE_SHARE[share.window] ?? Number.POSITIVE_INFINITY);
 const addShare = (shares, share) => [...shares, share].slice(-SHARES_KEPT);
+function weekPaceOf(gauge, nowMs) {
+  const even = paceOf$1(gauge, nowMs);
+  if (even === null || even < WEEK_MIN_EVEN_PERCENT || gauge.resetsAt === null)
+    return { perHour: null, fullAt: null };
+  const perHour = gauge.percent / (even / PERCENT$1 * WEEK_HOURS);
+  if (perHour <= 0 || gauge.percent >= PERCENT$1)
+    return { perHour, fullAt: null };
+  const fullAt = nowMs + (PERCENT$1 - gauge.percent) / perHour * HOUR_MS;
+  return { perHour, fullAt: fullAt < Date.parse(gauge.resetsAt) ? Math.round(fullAt) : null };
+}
 function paceOf(spec) {
   const gauge = paceWindow(spec.usage);
   if (gauge === null)
     return null;
   const burn = { points: pointsOf(spec.history, gauge.id), nowMs: spec.nowMs, lookbackMs: LOOKBACK_MS[gauge.id] ?? HOUR_MS };
+  const readings = recentOf(burn).length;
+  if (gauge.id === SEVEN_DAY)
+    return { gauge, readings, ...weekPaceOf(gauge, spec.nowMs) };
   const slope = burnOf(burn);
   return {
     gauge,
-    readings: recentOf(burn).length,
+    readings,
     perHour: slope === null ? null : slope * HOUR_MS,
     fullAt: fullAtOf({ ...burn, percent: gauge.percent, resetsAt: gauge.resetsAt })
   };
@@ -1107,7 +1122,7 @@ const TR = {
 };
 const usageWords = () => pick({ en: EN, tr: TR });
 
-const MINUTE_MS = 60000;
+const MINUTE_MS$1 = 60000;
 const TENTHS = 10;
 const BEFORE_SEPARATOR = " · ";
 function rateText(perHour) {
@@ -1119,7 +1134,7 @@ function rateText(perHour) {
 function rateLines(pace, nowMs) {
   const says = usageWords();
   if (pace.perHour === null)
-    return [says.tooFew(pace.readings, PACE_MIN_SAMPLES, PACE_MIN_SPAN_MS / MINUTE_MS)];
+    return [says.tooFew(pace.readings, PACE_MIN_SAMPLES, PACE_MIN_SPAN_MS / MINUTE_MS$1)];
   const head = says.rate(longLabelOf(pace.gauge.id), percentText(pace.gauge.percent), rateText(pace.perHour));
   const resetMs = pace.gauge.resetsAt === null ? Number.NaN : Date.parse(pace.gauge.resetsAt);
   if (Number.isNaN(resetMs))
@@ -2419,12 +2434,14 @@ function onTurns(on) {
 
 const HISTORY_KEY = "hud-pro.history";
 const REFRESH_MS = 60000;
+const MINUTE_MS = 60000;
 const usageAtom = atom({ plugin: "hud-pro", key: "usage" }, null);
 const hiddenAtom = atom({ plugin: "hud-pro", key: "isHidden" }, false);
 const historyAtom = atom({ plugin: "hud-pro", key: "history" }, []);
 const contextTurnsAtom = atom({ plugin: "hud-pro", key: "contextTurns" }, []);
 const hubAtom = atom({ plugin: "hud-pro", key: "hub" }, EMPTY_HUB);
 const noticesAtom = atom({ plugin: "hud-pro", key: "notices" }, []);
+const paceAtom = atom({ plugin: "hud-pro", key: "pace" }, null);
 const noticed = new Set;
 const filled = new Set;
 let shownGauges = null;
@@ -2454,7 +2471,12 @@ async function noticeHigh($, fresh) {
 }
 async function noticeFill($, fresh) {
   const nowMs = await $.clock.now();
-  const fill = fillNotice(paceOf({ usage: fresh, history: await read($, historyAtom), nowMs }), nowMs);
+  const pace = paceOf({ usage: fresh, history: await read($, historyAtom), nowMs });
+  const told = pace === null ? null : { window: pace.gauge.id, fullAt: pace.fullAt === null ? null : Math.round(pace.fullAt / MINUTE_MS) * MINUTE_MS };
+  const before = await read($, paceAtom);
+  if (before?.window !== told?.window || before?.fullAt !== told?.fullAt)
+    await update($, paceAtom, () => told);
+  const fill = fillNotice(pace, nowMs);
   if (fill === null || filled.has(fill.key))
     return;
   filled.add(fill.key);

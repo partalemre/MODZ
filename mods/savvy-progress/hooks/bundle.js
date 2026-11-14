@@ -101,6 +101,15 @@ const en = {
   stripTurns: (n) => plural(n, "turn", "turns"),
   stripPerTurn: (span) => `${span} per turn`,
   stripDoing: { read: "reading", edit: "writing", run: "command", agent: "leading agents", other: "thinking" },
+  stripPlan: "plan",
+  stripPlanDone: "done",
+  stripWeek: "week",
+  stripFive: "5 hours",
+  stripRunsOut: (when) => `runs out ${when}`,
+  stripFull: "used up",
+  stripDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  stripResting: { sleeping: "asleep", working: "working", happy: "pleased", worried: "uneasy" },
+  stripStep: (n, subject) => `Step ${n}: ${subject}`,
   hubCrew: (n) => `${n} running`,
   pct: (n) => `${n}%`,
   minutes: (n) => `${n} min`,
@@ -238,6 +247,15 @@ const ru = {
   stripTurns: (n) => `ходов: ${n}`,
   stripPerTurn: (span) => `${span} за ход`,
   stripDoing: { read: "читает", edit: "пишет", run: "команда", agent: "ведёт агентов", other: "думает" },
+  stripPlan: "план",
+  stripPlanDone: "готов",
+  stripWeek: "неделя",
+  stripFive: "5 часов",
+  stripRunsOut: (when) => `кончится ${when}`,
+  stripFull: "исчерпан",
+  stripDays: ["вс", "пн", "вт", "ср", "чт", "пт", "сб"],
+  stripResting: { sleeping: "спит", working: "работает", happy: "доволен", worried: "встревожен" },
+  stripStep: (n, subject) => `Шаг ${n}: ${subject}`,
   hubCrew: (n) => `агентов: ${n}`,
   minutes: (n) => `${n} мин`,
   seconds: (n) => `${n} с`,
@@ -384,6 +402,15 @@ const tr = {
   stripTurns: (n) => `${n} tur`,
   stripPerTurn: (span) => `tur başına ${span}`,
   stripDoing: { read: "okuyor", edit: "yazıyor", run: "komut", agent: "ajan yönetiyor", other: "düşünüyor" },
+  stripPlan: "plan",
+  stripPlanDone: "tamam",
+  stripWeek: "hafta",
+  stripFive: "5 saat",
+  stripRunsOut: (when) => `${when} biter`,
+  stripFull: "doldu",
+  stripDays: ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"],
+  stripResting: { sleeping: "uyuyor", working: "çalışıyor", happy: "keyifli", worried: "tedirgin" },
+  stripStep: (n, subject) => `${n}. adım: ${subject}`,
   hubCrew: (n) => `${n} ajan`,
   pct: (n) => `%${n}`,
   minutes: (n) => `${n} dk`,
@@ -1048,7 +1075,7 @@ function callSay(call, lang) {
     return say(SHELL.ownScript, lang, clip$1([name, ...call.args.filter((arg) => !isFlag(arg)).slice(0, 1)].join(" ")));
   return say(SHELL.unknown, lang, clip$1(name));
 }
-function leadOf(pipe) {
+function leadOf$1(pipe) {
   const calls = pipe.map(callOf).filter((call) => call !== null);
   return calls.find((call) => !FILTERS.has(base(call.name)) && !SILENT.has(base(call.name))) ?? calls[0] ?? null;
 }
@@ -1056,7 +1083,7 @@ const WAITS = new Set(["sleep"]);
 const MARKERS = new Set(["echo", "printf"]);
 const isWait = (call) => WAITS.has(base(call.name)) || MARKERS.has(base(call.name)) && call.out === "";
 function leadsOf(command) {
-  const leads = stepsOf$1(command).map((pipe) => leadOf(pipe)).filter((call) => call !== null);
+  const leads = stepsOf$1(command).map((pipe) => leadOf$1(pipe)).filter((call) => call !== null);
   const hasWork = leads.some((call) => !isWait(call) && !SILENT.has(base(call.name)));
   return hasWork ? leads.filter((call) => !isWait(call)) : leads;
 }
@@ -1613,7 +1640,7 @@ const moodBody = (f, look, mood) => {
   f([4, 8, 1, 1], SWEAT);
   f([3, 9, 3, 2], SWEAT);
 };
-const CRAB_SCALE$1 = 1.1;
+const CRAB_SCALE = 1.1;
 const crab$3 = (x, y, opts) => {
   const groups = new Map([["bd", []]]);
   const f = ([cx, cy, w, h], c, cls = "bd") => {
@@ -1632,7 +1659,7 @@ const crab$3 = (x, y, opts) => {
   const props = [...groups.keys()].filter((k) => k !== "bd" && k !== "la" && k !== "lb");
   const body = `<g class="bd">${(groups.get("bd") ?? []).join("")}${props.map(group).join("")}</g>`;
   const walk = opts.isWalking ? " run" : "";
-  return `<g transform="translate(${x},${y}) scale(${opts.scale ?? CRAB_SCALE$1})" opacity="${opts.isDim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${opts.costume}${walk}">${body}${group("la")}${group("lb")}</g></g>`;
+  return `<g transform="translate(${x},${y}) scale(${opts.scale ?? CRAB_SCALE})" opacity="${opts.isDim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${opts.costume}${walk}">${body}${group("la")}${group("lb")}</g></g>`;
 };
 
 const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,system-ui,sans-serif";
@@ -1676,12 +1703,12 @@ ${rulesOf(0)}
 const paneSvg = (W, H, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${TIDEMARK_CSS}${CRAB_CSS}${body}</svg>`;
 
 const HOME_LOOK = lookAt(0);
-const SNOOZE = { x1: 27, y1: 6, x2: 30, y2: 2.6, size1: 4.8, size2: 3.5, min1: 9, min2: 7 };
+const SNOOZE$1 = { x1: 27, y1: 6, x2: 30, y2: 2.6, size1: 4.8, size2: 3.5, min1: 9, min2: 7 };
 const snoozeSvg = (x, y, scale) => {
-  const big = Math.max(SNOOZE.min1, SNOOZE.size1 * scale);
-  const small = Math.max(SNOOZE.min2, SNOOZE.size2 * scale);
+  const big = Math.max(SNOOZE$1.min1, SNOOZE$1.size1 * scale);
+  const small = Math.max(SNOOZE$1.min2, SNOOZE$1.size2 * scale);
   const z = (zx, zy, size) => `<text class="m" x="${x + zx * scale}" y="${y + zy * scale}" font-family="${FONT}" font-size="${size}" font-weight="700">z</text>`;
-  return z(SNOOZE.x1, SNOOZE.y1, big) + z(SNOOZE.x2, SNOOZE.y2, small);
+  return z(SNOOZE$1.x1, SNOOZE$1.y1, big) + z(SNOOZE$1.x2, SNOOZE$1.y2, small);
 };
 const homeCrab = (x, y, opts) => {
   const { mood, isMoving } = opts.home;
@@ -1689,8 +1716,8 @@ const homeCrab = (x, y, opts) => {
   return mood === "sleeping" ? body + snoozeSvg(x, y, opts.scale) : body;
 };
 const LEVEL_PILL = { h: 16, padX: 7, size: 10 };
-const BOLD$5 = 1.06;
-const levelWidth = (text) => Math.ceil(textWidth(text, LEVEL_PILL.size) * BOLD$5 + LEVEL_PILL.padX * 2);
+const BOLD$6 = 1.06;
+const levelWidth = (text) => Math.ceil(textWidth(text, LEVEL_PILL.size) * BOLD$6 + LEVEL_PILL.padX * 2);
 const levelPill = (text, x, y) => {
   const w = levelWidth(text);
   const r = (LEVEL_PILL.h - 1) / 2;
@@ -1698,7 +1725,7 @@ const levelPill = (text, x, y) => {
 };
 const FACES = { sleeping: "(-_-) zz", working: "(•_•)", happy: "(^_^)", worried: "(°_°;)" };
 
-const GAP$2 = 3;
+const GAP$3 = 3;
 const MIN_SEG = 6;
 const classOf = (view, i) => {
   const ok = view.done - view.failed;
@@ -1725,11 +1752,11 @@ const meterSvg = (view, track) => {
   const units = view.units;
   if (units < 1)
     return rect(track, { x: track.x, w: track.w, cls: "k" });
-  const seg = (track.w - GAP$2 * (units - 1)) / units;
+  const seg = (track.w - GAP$3 * (units - 1)) / units;
   if (seg < MIN_SEG)
     return solid(view, track);
   return Array.from({ length: units }, (_, i) => {
-    const x = track.x + i * (seg + GAP$2);
+    const x = track.x + i * (seg + GAP$3);
     const cls = classOf(view, i);
     return cls === "f-edit" ? running(track, x, seg) : rect(track, { x, w: seg, cls });
   }).join("");
@@ -1920,14 +1947,14 @@ const sealJob = (prev, list) => {
 };
 
 const BAND_H = 26;
-const BASELINE = 17.5;
+const BASELINE$1 = 17.5;
 const TITLE_X = 11;
 const TITLE_SIZE = 13;
 const TITLE_MIN = 64;
-const BOLD$4 = 1.06;
-const GAP$1 = 8;
+const BOLD$5 = 1.06;
+const GAP$2 = 8;
 const PILL$1 = { y: 3, h: 20, padX: 9, size: 11 };
-const METER$1 = { h: 6, min: 36, max: 360 };
+const METER$2 = { h: 6, min: 36, max: 360 };
 const PERCENT_SIZE = 12.5;
 const MONO_EM$1 = 0.6;
 const CRAB$1 = { w: 24, y: 2, scale: 0.8 };
@@ -1939,34 +1966,34 @@ const pillRole = (view) => {
 };
 const PILL_INK$1 = { run: "f-edit", ok: "s", warn: "f-warn", danger: "f-danger" };
 const pillSvg = ({ label, role, x, w }) => `<rect class="k" x="${x}" y="${PILL$1.y}" width="${w}" height="${PILL$1.h}" rx="${PILL$1.h / 2}"/>
-<text class="${PILL_INK$1[role]}" x="${x + w / 2}" y="${BASELINE - 0.5}" text-anchor="middle" font-family="${FONT}" font-size="${PILL$1.size}" font-weight="600">${xml(label)}</text>`;
+<text class="${PILL_INK$1[role]}" x="${x + w / 2}" y="${BASELINE$1 - 0.5}" text-anchor="middle" font-family="${FONT}" font-size="${PILL$1.size}" font-weight="600">${xml(label)}</text>`;
 const planOf = (view, maxW) => {
-  const pillW = Math.ceil(textWidth(view.label, PILL$1.size) * BOLD$4 + PILL$1.padX * 2);
+  const pillW = Math.ceil(textWidth(view.label, PILL$1.size) * BOLD$5 + PILL$1.padX * 2);
   const pctW = percentText(view) === UNKNOWN$1 ? 0 : Math.ceil(percentText(view).length * PERCENT_SIZE * MONO_EM$1);
-  const avail = maxW - TITLE_X - pillW - pctW - CRAB$1.w - GAP$1 * 4;
-  const natural = Math.ceil(textWidth(view.title, TITLE_SIZE) * BOLD$4);
-  if (avail - natural >= METER$1.min)
-    return { title: view.title, titleW: natural, meterW: Math.min(METER$1.max, avail - natural), pillW, pctW };
-  const titleW = Math.max(TITLE_MIN, avail - METER$1.min);
+  const avail = maxW - TITLE_X - pillW - pctW - CRAB$1.w - GAP$2 * 4;
+  const natural = Math.ceil(textWidth(view.title, TITLE_SIZE) * BOLD$5);
+  if (avail - natural >= METER$2.min)
+    return { title: view.title, titleW: natural, meterW: Math.min(METER$2.max, avail - natural), pillW, pctW };
+  const titleW = Math.max(TITLE_MIN, avail - METER$2.min);
   const meterW = avail - titleW;
-  const fits = meterW >= METER$1.min;
-  const room = fits ? titleW : Math.max(TITLE_MIN, avail + GAP$1);
-  const title = fitText(view.title, TITLE_SIZE * BOLD$4, room);
-  return { title, titleW: Math.min(room, Math.ceil(textWidth(title, TITLE_SIZE) * BOLD$4)), meterW: fits ? meterW : 0, pillW, pctW };
+  const fits = meterW >= METER$2.min;
+  const room = fits ? titleW : Math.max(TITLE_MIN, avail + GAP$2);
+  const title = fitText(view.title, TITLE_SIZE * BOLD$5, room);
+  return { title, titleW: Math.min(room, Math.ceil(textWidth(title, TITLE_SIZE) * BOLD$5)), meterW: fits ? meterW : 0, pillW, pctW };
 };
 const bandCrab = (x, mood) => crab$3(x, CRAB$1.y, { costume: "other", look: HOME_LOOK, mood, scale: CRAB$1.scale });
 const bandSvg = (view, maxW, mood) => {
   const plan = planOf(view, maxW);
-  const pillX = TITLE_X + plan.titleW + GAP$1;
-  const meterX = pillX + plan.pillW + GAP$1;
-  const pctX = meterX + (plan.meterW ? plan.meterW + GAP$1 : 0);
-  const crabX = pctX + (plan.pctW ? plan.pctW + GAP$1 : 0);
-  const width = Math.ceil(mood ? crabX + CRAB$1.w : crabX - GAP$1);
+  const pillX = TITLE_X + plan.titleW + GAP$2;
+  const meterX = pillX + plan.pillW + GAP$2;
+  const pctX = meterX + (plan.meterW ? plan.meterW + GAP$2 : 0);
+  const crabX = pctX + (plan.pctW ? plan.pctW + GAP$2 : 0);
+  const width = Math.ceil(mood ? crabX + CRAB$1.w : crabX - GAP$2);
   const body = [
-    `<text class="t" x="${TITLE_X}" y="${BASELINE}" font-family="${FONT}" font-size="${TITLE_SIZE}" font-weight="600">${xml(plan.title)}</text>`,
+    `<text class="t" x="${TITLE_X}" y="${BASELINE$1}" font-family="${FONT}" font-size="${TITLE_SIZE}" font-weight="600">${xml(plan.title)}</text>`,
     pillSvg({ label: view.label, role: pillRole(view), x: pillX, w: plan.pillW }),
-    plan.meterW ? meterSvg(view, { x: meterX, y: (BAND_H - METER$1.h) / 2, w: plan.meterW, h: METER$1.h }) : "",
-    plan.pctW ? `<text class="t" x="${pctX}" y="${BASELINE}" font-family="${MONO}" font-size="${PERCENT_SIZE}" font-weight="650">${xml(percentText(view))}</text>` : "",
+    plan.meterW ? meterSvg(view, { x: meterX, y: (BAND_H - METER$2.h) / 2, w: plan.meterW, h: METER$2.h }) : "",
+    plan.pctW ? `<text class="t" x="${pctX}" y="${BASELINE$1}" font-family="${MONO}" font-size="${PERCENT_SIZE}" font-weight="650">${xml(percentText(view))}</text>` : "",
     mood ? bandCrab(crabX, mood) : ""
   ];
   return { source: paneSvg(width, BAND_H, body.join(`
@@ -2247,7 +2274,7 @@ const CLASS = /\sclass="([^"]*)"/;
 const STYLE = /\sstyle="([^"]*)"/;
 const MIN_RATIO_STEP = 0.02;
 const RATIO_DIGITS = 3;
-const widthOf = (tag) => Number(WIDTH.exec(tag)?.[1] ?? 0);
+const widthOf$1 = (tag) => Number(WIDTH.exec(tag)?.[1] ?? 0);
 function withClass(tag, name, extra = "") {
   const tagged = CLASS.test(tag) ? tag.replace(CLASS, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
   return tagged.replace(/\s*\/?>$/, `${extra}$&`);
@@ -2259,8 +2286,8 @@ function slideFills(before, now) {
   let index = 0;
   return now.replace(FILL$1, (tag) => {
     const was = old[index++];
-    const from = was === undefined ? 0 : widthOf(was);
-    const to = widthOf(tag);
+    const from = was === undefined ? 0 : widthOf$1(was);
+    const to = widthOf$1(tag);
     if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP)
       return tag;
     const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS)}`;
@@ -2326,7 +2353,7 @@ function stableDrawings() {
 
 const TAG_WIDTH = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
 const SVG = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
-const SCHEME = "<style>:root{color-scheme:light dark}</style>";
+const SCHEME$1 = "<style>:root{color-scheme:light dark}</style>";
 const SAYS_SCHEME = /(^|[^-\w])color-scheme\s*:/;
 const PASS_MS = 120;
 const MAX_ORDER = 12;
@@ -2337,7 +2364,7 @@ function animate(source, spec) {
   if (parts === null)
     return source;
   const [, open, inner = "", close] = parts;
-  const scheme = SAYS_SCHEME.test(inner) ? "" : SCHEME;
+  const scheme = SAYS_SCHEME.test(inner) ? "" : SCHEME$1;
   const lit = `${spec.isRow === true ? WASH : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH : ""}${inner}`;
   const body = entering(lit, spec.cue);
   const css = motionCss(body);
@@ -2431,6 +2458,244 @@ function pinned(site, tree) {
   return pinNode(tree, ctx);
 }
 
+const HOUR$2 = 3600000;
+const DAY = 24 * HOUR$2;
+const FIVE_HOUR$1 = "five_hour";
+const SEVEN_DAY = "seven_day";
+const SPAN_MS = { [FIVE_HOUR$1]: 5 * HOUR$2, [SEVEN_DAY]: 7 * DAY };
+const MIN_ELAPSED = 0.05;
+const MIN_PERCENT = 3;
+const FULL$2 = 100;
+const TWO_DIGITS = 2;
+function runwayOf(limit, now) {
+  const span = SPAN_MS[limit.kind];
+  if (span === undefined)
+    return null;
+  const reset = limit.resetsAt === undefined ? Number.NaN : Date.parse(limit.resetsAt);
+  if (Number.isNaN(reset))
+    return { kind: limit.kind, percent: limit.percentUsed, resetsAt: null, endsAt: null };
+  const base = { kind: limit.kind, percent: limit.percentUsed, resetsAt: reset };
+  if (limit.percentUsed >= FULL$2)
+    return { ...base, endsAt: now };
+  const elapsed = now - (reset - span);
+  if (elapsed < span * MIN_ELAPSED || limit.percentUsed < MIN_PERCENT)
+    return { ...base, endsAt: null };
+  const endsAt = now + elapsed * (FULL$2 - limit.percentUsed) / limit.percentUsed;
+  return { ...base, endsAt: endsAt < reset ? endsAt : null };
+}
+function whenText(at, now) {
+  const moment = new Date(at);
+  const clock = `${String(moment.getHours()).padStart(TWO_DIGITS, "0")}:${String(moment.getMinutes()).padStart(TWO_DIGITS, "0")}`;
+  const isToday = moment.toDateString() === new Date(now).toDateString();
+  return isToday ? clock : `${t().stripDays[moment.getDay()] ?? ""} ${clock}`.trim();
+}
+
+const CHIP_H = 28;
+const CHIP_GAP$1 = 0;
+const BUTTON_PAD = 28;
+const CELL_PX$1 = 11.9;
+const PAD$2 = 12;
+const GAP$1 = 6;
+const BASELINE = 18.5;
+const LABEL_SIZE = 11.5;
+const VALUE_SIZE = 13;
+const BOLD$4 = 1.14;
+const VALUE_SLACK = 3;
+const METER$1 = { w: 34, h: 4 };
+const WARN_AT = 70;
+const DANGER_AT = 90;
+const FULL$1 = 100;
+const NOTE_MIN = 28;
+const LETTERS = {
+  m: [".....", ".....", "XX.X.", "X.X.X", "X.X.X", "X.X.X", "X.X.X"],
+  o: [".....", ".....", ".XXX.", "X...X", "X...X", "X...X", ".XXX."],
+  d: ["....X", "....X", ".XXXX", "X...X", "X...X", "X...X", ".XXXX"],
+  z: [".....", ".....", "XXXXX", "...X.", "..X..", ".X...", "XXXXX"]
+};
+const PIXEL = { pitch: 2.3, cell: 1.9, cols: 5, rows: 7, gap: 1 };
+const label = (cls, s) => ({
+  w: Math.ceil(textWidth(s, LABEL_SIZE)),
+  draw: (x) => `<text class="${cls}" x="${x}" y="${BASELINE}" font-family="${FONT}" font-size="${LABEL_SIZE}">${xml(s)}</text>`
+});
+const value = (cls, s, widest = s) => ({
+  w: Math.ceil(Math.max(textWidth(s, VALUE_SIZE), textWidth(widest, VALUE_SIZE)) * BOLD$4) + VALUE_SLACK,
+  draw: (x) => `<text class="${cls}" x="${x}" y="${BASELINE}" font-family="${FONT}" font-size="${VALUE_SIZE}" font-weight="600" style="font-variant-numeric:tabular-nums">${xml(s)}</text>`
+});
+const wordmark = (word) => {
+  const advance = (PIXEL.cols + PIXEL.gap) * PIXEL.pitch;
+  const top = (CHIP_H - PIXEL.rows * PIXEL.pitch) / 2 - 1;
+  return {
+    w: Math.ceil([...word].length * advance - PIXEL.gap * PIXEL.pitch),
+    draw: (x) => [...word].flatMap((ch, i) => (LETTERS[ch] ?? []).flatMap((row, r) => [...row].flatMap((cell, c) => cell === "X" ? [`<rect class="f-edit" x="${(x + i * advance + c * PIXEL.pitch).toFixed(1)}" y="${(top + r * PIXEL.pitch).toFixed(1)}" width="${PIXEL.cell}" height="${PIXEL.cell}" rx=".4"/>`] : []))).join("")
+  };
+};
+const meterTone = (percent) => {
+  if (percent >= DANGER_AT)
+    return "f-danger";
+  return percent >= WARN_AT ? "f-warn" : "s";
+};
+const meter = (percent) => ({
+  w: METER$1.w,
+  draw: (x) => {
+    const y = (CHIP_H - METER$1.h) / 2;
+    const filled = Math.max(METER$1.h, METER$1.w * Math.min(FULL$1, percent) / FULL$1);
+    const r = METER$1.h / 2;
+    return `<rect class="m" x="${x}" y="${y}" width="${METER$1.w}" height="${METER$1.h}" rx="${r}" opacity=".3"/><rect class="${meterTone(percent)}" x="${x}" y="${y}" width="${filled.toFixed(1)}" height="${METER$1.h}" rx="${r}"/>`;
+  }
+});
+const partsOf = (chip, note) => {
+  if (chip.isWordmark === true)
+    return [wordmark(chip.value)];
+  const ink = chip.tone === undefined ? "t" : `f-${chip.tone}`;
+  return [
+    ...chip.label === "" ? [] : [label("m", chip.label)],
+    value(ink, chip.value, chip.widest),
+    ...chip.meter === undefined ? [] : [meter(chip.meter)],
+    ...note === "" ? [] : [label(chip.tone === undefined ? "s" : ink, note)]
+  ];
+};
+const widthOf = (parts) => Math.ceil(PAD$2 * 2 + parts.reduce((sum, part) => sum + part.w, 0) + GAP$1 * (parts.length - 1));
+const chipCells = (width) => Math.max(1, Math.floor((width - BUTTON_PAD) / CELL_PX$1));
+const chipWidth$1 = (chip) => widthOf(partsOf(chip, chip.note ?? ""));
+function chipSvg(chip, maxW = Number.POSITIVE_INFINITY) {
+  const room = maxW - widthOf(partsOf(chip, "")) - GAP$1;
+  const fitted = chip.note === undefined || room < NOTE_MIN ? "" : fitText(chip.note, LABEL_SIZE, room);
+  const parts = partsOf(chip, fitted);
+  const width = widthOf(parts);
+  let x = PAD$2;
+  const drawn = parts.map((part) => {
+    const at = x;
+    x += part.w + GAP$1;
+    return part.draw(at);
+  });
+  const alt = [chip.label, chip.value, chip.note ?? ""].filter(Boolean).join(" ");
+  return { source: paneSvg(width, CHIP_H, drawn.join("")), width, alt };
+}
+
+const SCENE_H = 84;
+const BASE = 60;
+const STEP = 8;
+const RADIUS$1 = 12;
+const FADE_END = 8;
+const groundY = (x) => BASE + 4 * Math.sin(x / 61 + 1.3) + 2.2 * Math.sin(x / 23 + 0.4);
+const hillY = (x) => BASE - 12 + 6 * Math.sin(x / 97 + 0.2) + 3 * Math.sin(x / 41 + 2);
+const farY = (x) => BASE - 24 + 9 * Math.sin(x / 151 + 2.4) + 3 * Math.sin(x / 67 + 0.9);
+const curve = (y, from, to, lift = 0) => {
+  const xs = Array.from({ length: Math.max(1, Math.ceil((to - from) / STEP)) + 1 }, (_, i) => Math.min(to, from + i * STEP));
+  return xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${(y(x) + lift).toFixed(1)}`).join("");
+};
+const groundLine = (from, to, lift) => curve(groundY, from, to, lift);
+const HOURS = { dawn: 5, day: 8, dusk: 17, night: 21 };
+const phaseOf = (hour) => {
+  if (hour >= HOURS.night || hour < HOURS.dawn)
+    return "night";
+  if (hour < HOURS.day)
+    return "dawn";
+  return hour < HOURS.dusk ? "day" : "dusk";
+};
+const SKY = {
+  dawn: { light: ["#C9D4F2", "#FFD9C2", 0.95], dark: ["#3A4470", "#C9826A", 0.42] },
+  day: { light: ["#BBDCFA", "#EAF6FF", 0.95], dark: ["#3F78B8", "#7FB2DC", 0.44] },
+  dusk: { light: ["#B9B4E6", "#FFC9A6", 0.95], dark: ["#2E2A5C", "#D9774F", 0.46] },
+  night: { light: ["#1E2A52", "#3B4A7A", 0.5], dark: ["#02040A", "#141C36", 0.78] }
+};
+const landCss = (phase) => {
+  const { light, dark } = SKY[phase];
+  return `<style>
+.s0{stop-color:${light[0]}}.s1{stop-color:${light[1]}}.sky{opacity:${light[2]}}.hill{fill:#5A6B7A;opacity:.1}.hill2{fill:#5A6B7A;opacity:.16}
+.pine{fill:#52647A;opacity:.4}.sg{stop-color:#E6E0D2}.turf{stroke:#C4BCAA}.speck{fill:#000;opacity:.14}.bird{stroke:#5A6B7A;opacity:.6}
+.tuft{fill:#5E9B5A}.rock{fill:#A8A294}.stem{fill:#D8D2C4}.cloud{fill:#fff;opacity:.95}.star{fill:#fff}
+@media (prefers-color-scheme: dark){.s0{stop-color:${dark[0]}}.s1{stop-color:${dark[1]}}.sky{opacity:${dark[2]}}.hill{fill:#fff;opacity:.04}.hill2{fill:#0B0E14;opacity:.3}
+.pine{fill:#0B0E14;opacity:.5}.sg{stop-color:#36342D}.turf{stroke:#5A564C}.speck{fill:#fff;opacity:.06}.bird{stroke:#fff;opacity:.45}
+.tuft{fill:#5FA86A}.rock{fill:#6B675E}.stem{fill:#CFCABD}.cloud{opacity:.12}}
+</style>`;
+};
+const rnd = (i, salt) => {
+  const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
+  return v - Math.floor(v);
+};
+const px = (cls, box) => `<rect class="${cls}" x="${box[0]}" y="${box[1]}" width="${box[2]}" height="${box[3]}"/>`;
+const THINGS = [
+  { isFront: true, isSwaying: true, draw: () => px("tuft", [-3, -4, 1.5, 4]) + px("tuft", [0, -6, 1.5, 6]) + px("tuft", [3, -3, 1.5, 3]) },
+  { draw: () => px("rock", [-4, -3, 8, 3]) + px("rock", [-2, -5, 4, 2]) },
+  { isSwaying: true, draw: (i) => px("tuft", [0, -7, 1.2, 7]) + px(i % 2 === 0 ? "f-plan" : "f-warn", [-1.4, -10, 4, 3.4]) },
+  { draw: () => px("stem", [-1, -4, 2, 4]) + px("f-danger", [-3.5, -7, 7, 3]) + px("f-danger", [-2, -8.5, 4, 1.5]) },
+  { isFront: true, isSwaying: true, draw: () => px("tuft", [-2, -3, 1.5, 3]) + px("tuft", [1, -5, 1.5, 5]) },
+  { draw: () => px("tuft", [-6, -5, 12, 5]) + px("tuft", [-4, -8, 8, 3]) }
+];
+const SPACING = 54;
+const JITTER = 30;
+function decorOf(width) {
+  const layers = { back: "", front: "" };
+  for (let i = 0;40 + i * SPACING < width - 24; i += 1) {
+    const x = 40 + i * SPACING + rnd(i, 1) * JITTER;
+    const thing = THINGS[(i * 5 + Math.floor(rnd(i, 2) * 2)) % THINGS.length];
+    if (thing === undefined)
+      continue;
+    const inner = thing.isSwaying === true ? `<g class="sway" style="animation-delay:-${(rnd(i, 3) * 4).toFixed(1)}s">${thing.draw(i)}</g>` : thing.draw(i);
+    layers[thing.isFront === true ? "front" : "back"] += `<g transform="translate(${x.toFixed(1)},${(groundY(x) + 0.5).toFixed(1)})" shape-rendering="crispEdges">${inner}</g>`;
+  }
+  return layers;
+}
+const STARS = 16;
+const stars = (width) => Array.from({ length: STARS }, (_, i) => {
+  const size = rnd(i, 6) > 0.7 ? 1.8 : 1.2;
+  return `<rect class="star tw${i % 3}" x="${(16 + rnd(i, 4) * (width - 32)).toFixed(1)}" y="${(5 + rnd(i, 5) * 30).toFixed(1)}" width="${size}" height="${size}"/>`;
+}).join("");
+const cloud = (x, y, cls) => `<g class="${cls}"><g transform="translate(${x},${y})" shape-rendering="crispEdges">${px("cloud", [0, 4, 26, 5])}${px("cloud", [5, 0, 12, 5])}${px("cloud", [15, 2, 7, 3])}</g></g>`;
+const SUN = "#F5C542";
+const LOW_SUN = "#F08A4B";
+const MOON = "#E8E6DA";
+const glow = (x, y, r, color) => `<circle class="halo" cx="${x.toFixed(1)}" cy="${y}" r="${r}" fill="url(#glow)" color="${color}"/>`;
+const sun = (x, y, r, color) => `${glow(x, y, r * 3.2, color)}<circle cx="${x.toFixed(1)}" cy="${y}" r="${r}" fill="${color}" opacity=".92"/>`;
+const bird = (x, y, cls) => `<g class="${cls}"><path class="bird" d="M${x} ${y}l3.5 2.2 3.5-2.2" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+function heavens(phase, width, avoidX) {
+  const right = width - 64;
+  if (phase === "night") {
+    const fall = `<line class="shoot" x1="${(width * 0.62).toFixed(0)}" y1="8" x2="${(width * 0.62 + 16).toFixed(0)}" y2="2" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>`;
+    return `${stars(width)}${fall}${glow(right, 18, 20, MOON)}<path fill="${MOON}" transform="translate(${right},18)" d="M0-7a7 7 0 1 0 7 7 5.4 5.4 0 0 1-7-7z"/>`;
+  }
+  if (phase === "day")
+    return `${sun(right, 18, 6, SUN)}${cloud(width * 0.3, 8, "drift")}${cloud(width * 0.62, 15, "drift drift2")}${bird(width * 0.46, 22, "drift drift2")}${bird(width * 0.46 + 12, 17, "drift drift2")}`;
+  const places = (phase === "dawn" ? [0.27, 0.42] : [0.71, 0.52]).map((at) => width * at);
+  const x = places.reduce((best, at) => Math.abs(at - avoidX) > Math.abs(best - avoidX) ? at : best);
+  return `${sun(x, BASE - 25, 9, LOW_SUN)}${cloud(width * 0.45, 10, "drift")}${cloud(width * 0.8, 20, "drift drift2")}`;
+}
+const PINE = [
+  [-1, -2, 2, 2],
+  [-4, -5, 8, 3],
+  [-3, -8, 6, 3],
+  [-2, -11, 4, 3],
+  [-1, -13, 2, 2]
+];
+const PINE_STEP = 46;
+const pines = (width) => {
+  let out = "";
+  for (let i = 0;20 + i * PINE_STEP < width - 10; i += 1) {
+    if (rnd(i, 7) < 0.42)
+      continue;
+    const x = 20 + i * PINE_STEP + rnd(i, 8) * 24;
+    const size = 0.75 + rnd(i, 9) * 0.5;
+    out += `<g transform="translate(${x.toFixed(1)},${(hillY(x) + 1).toFixed(1)}) scale(${size.toFixed(2)})" shape-rendering="crispEdges">${PINE.map((box) => px("pine", box)).join("")}</g>`;
+  }
+  return out;
+};
+const SPECKS = 26;
+const specks = (width) => Array.from({ length: SPECKS }, (_, i) => {
+  const x = 10 + rnd(i, 10) * (width - 20);
+  return `<rect class="speck" x="${x.toFixed(1)}" y="${(groundY(x) + 4 + rnd(i, 11) * 9).toFixed(1)}" width="1.6" height="1.6"/>`;
+}).join("");
+const fireflies = (width) => [0.24, 0.58, 0.83].map((at, i) => `<circle class="fly fly${i}" cx="${(width * at).toFixed(0)}" cy="${(groundY(width * at) - 12).toFixed(1)}" r="1.3" fill="#F5E07A"/>`).join("");
+function landOf(width, phase, avoidX) {
+  const under = (y) => `${curve(y, 0, width)}L${width} ${SCENE_H}L0 ${SCENE_H}Z`;
+  const fadeOut = `<stop offset="0" stop-color="#fff"/><stop offset=".66" stop-color="#fff" stop-opacity=".6"/><stop offset=".9" stop-color="#fff" stop-opacity="0"/>`;
+  const defs = `<defs><clipPath id="win"><rect width="${width}" height="${SCENE_H}" rx="${RADIUS$1}"/></clipPath><linearGradient id="skf" x1="0" y1="0" x2="0" y2="1">${fadeOut}</linearGradient><mask id="skm"><rect width="${width}" height="${SCENE_H}" fill="url(#skf)"/></mask><linearGradient id="skc" x1="0" y1="0" x2="0" y2="1"><stop class="s0" offset="0"/><stop class="s1" offset=".72"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="currentColor" stop-opacity=".5"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient><linearGradient id="sof" gradientUnits="userSpaceOnUse" x1="0" y1="${BASE - 6}" x2="0" y2="${SCENE_H - FADE_END}"><stop class="sg" offset="0"/><stop class="sg" offset="1" stop-opacity="0"/></linearGradient></defs>`;
+  const decor = decorOf(width);
+  const sky = `<g mask="url(#skm)"><rect class="sky" width="${width}" height="${SCENE_H}" fill="url(#skc)"/>${heavens(phase, width, avoidX)}<path class="hill" d="${under(farY)}"/><path class="hill2" d="${under(hillY)}"/>${pines(width)}</g>`;
+  const ground = `<path d="${under(groundY)}" fill="url(#sof)"/>${specks(width)}<path class="turf" d="${curve(groundY, 0, width)}" fill="none" stroke-width="1.5" stroke-linecap="round"/>`;
+  return { open: `${landCss(phase)}${defs}<g clip-path="url(#win)">${sky}${ground}`, back: decor.back, front: decor.front + (phase === "night" ? fireflies(width) : ""), close: "</g>" };
+}
+
 const HISTORY_MAX = 150;
 const READ = ["Read", "Grep", "Glob", "LS", "WebFetch", "WebSearch", "NotebookRead"];
 const EDIT = ["Edit", "Write", "MultiEdit", "NotebookEdit"];
@@ -2476,20 +2741,204 @@ const closeEvent = (a, facts) => {
   return { ...a, history: closed };
 };
 
+const STROLL_S = 24;
+const WALKS = [
+  [12, 32],
+  [58, 78]
+];
+const STEPS = 10;
+const SAMPLES = 8;
+const eased = (f) => f * f * (3 - 2 * f);
+const wayFrames = (way) => Array.from({ length: SAMPLES + 1 }, (_, k) => {
+  const x = way.fromX + (way.toX - way.fromX) * eased(k / SAMPLES);
+  const at = way.t0 + (way.t1 - way.t0) * k / SAMPLES;
+  return `${at.toFixed(1)}%{transform:translate(${(x - way.home).toFixed(1)}px,${(groundY(x) - groundY(way.home)).toFixed(1)}px)}`;
+}).join("");
+const WALK_S = { min: 1.2, max: 3.2, perPx: 1 / 200 };
+const walkInCss = (fromX, home) => {
+  const seconds = Math.min(WALK_S.max, WALK_S.min + Math.abs(home - fromX) * WALK_S.perPx);
+  return `<style>.walkin{animation:walkin ${seconds.toFixed(2)}s linear both}@keyframes walkin{${wayFrames({ fromX, toX: home, home, t0: 0, t1: 100 })}}</style>`;
+};
+const strollCss = (home, distance) => {
+  const [out, back] = WALKS;
+  if (out === undefined || back === undefined)
+    return "";
+  const far = home + distance;
+  return `<style>@keyframes amble{${wayFrames({ fromX: home, toX: far, home, t0: out[0], t1: out[1] })}${wayFrames({ fromX: far, toX: home, home, t0: back[0], t1: back[1] })}}</style>`;
+};
+const legFrames = (isFirstPair) => WALKS.flatMap(([from, to]) => Array.from({ length: STEPS + 1 }, (_, k) => {
+  const isUp = k < STEPS && k % 2 === 0 === isFirstPair;
+  return `${(from + (to - from) * k / STEPS).toFixed(1)}%{transform:translateY(${isUp ? -1 : 0}px)}`;
+})).join("");
+const SCENE_CSS = `<style>
+.br{animation:br 2.8s ease-in-out infinite}.sl{animation:br 4.6s ease-in-out infinite}
+@keyframes br{50%{transform:translateY(-1.5px)}}
+.lift{transition:transform .2s cubic-bezier(.2,.8,.2,1)}.who:hover .lift{transform:translateY(-4px)}
+.tip{opacity:0;pointer-events:none;transition:opacity .12s ease-out}.who:hover .tip{opacity:1}
+.st{transform-box:fill-box;transform-origin:center;transition:transform .18s cubic-bezier(.2,.8,.2,1)}.st:hover{transform:scale(1.6)}
+.now{transform-box:fill-box;transform-origin:center;animation:now 2.2s ease-in-out infinite}
+@keyframes now{50%{transform:scale(1.35);opacity:.5}}
+.d1,.d2,.d3{animation:dot 1.6s ease-in-out infinite}.d2{animation-delay:.2s}.d3{animation-delay:.4s}
+@keyframes dot{0%,60%,100%{transform:translateY(0);opacity:.6}30%{transform:translateY(-2.5px);opacity:1}}
+.car{animation:car 1.1s steps(1) infinite}@keyframes car{50%{opacity:0}}
+.ty1{animation:ty1 2.4s steps(1) infinite}.ty2{animation:ty2 2.4s steps(1) infinite}.ty3{animation:ty3 2.4s steps(1) infinite}
+@keyframes ty1{0%,92%{opacity:1}93%,100%{opacity:0}}
+@keyframes ty2{0%,24%{opacity:0}25%,92%{opacity:1}93%,100%{opacity:0}}
+@keyframes ty3{0%,49%{opacity:0}50%,92%{opacity:1}93%,100%{opacity:0}}
+.chk{stroke-dasharray:14;animation:chk .7s cubic-bezier(.2,.8,.2,1) both}@keyframes chk{from{stroke-dashoffset:14}}
+.zz{animation:zz 3.4s ease-in infinite}.zz2{animation-delay:-1.7s}
+@keyframes zz{0%{transform:translate(0,2px);opacity:0}25%{opacity:.9}100%{transform:translate(5px,-8px);opacity:0}}
+.amble{animation:amble ${STROLL_S}s linear infinite}
+.sway{transform-box:fill-box;transform-origin:50% 100%;animation:sway 4s ease-in-out infinite}
+@keyframes sway{0%,100%{transform:skewX(-5deg)}50%{transform:skewX(6deg)}}
+.drift{animation:drift 46s ease-in-out infinite alternate}.drift2{animation-duration:64s;animation-delay:-20s}
+@keyframes drift{to{transform:translateX(18px)}}
+.shoot{animation:shoot 13s ease-in infinite}
+@keyframes shoot{0%,90%{opacity:0;transform:translate(0,0)}92%{opacity:.9}100%{opacity:0;transform:translate(-70px,26px)}}
+.halo{transform-box:fill-box;transform-origin:center;animation:halo 6s ease-in-out infinite}
+@keyframes halo{50%{transform:scale(1.12);opacity:.75}}
+.tw0,.tw1,.tw2{animation:tw 4.2s ease-in-out infinite}.tw1{animation-delay:-1.4s}.tw2{animation-delay:-2.8s;animation-duration:5.6s}
+@keyframes tw{0%,100%{opacity:.9}50%{opacity:.25}}
+.fly{animation:fly 9s ease-in-out infinite}.fly1{animation-delay:-3s;animation-duration:11s}.fly2{animation-delay:-6s;animation-duration:13s}
+@keyframes fly{0%,100%{transform:translate(0,0);opacity:0}20%{opacity:.9}50%{transform:translate(14px,-9px);opacity:.3}75%{transform:translate(26px,-3px);opacity:.9}}
+.wave{transform-box:fill-box;transform-origin:0 50%;animation:wave 2.4s ease-in-out infinite}
+@keyframes wave{50%{transform:skewY(-9deg) scaleX(.88)}}
+.amble .la{animation:la ${STROLL_S}s steps(1) infinite}.amble .lb{animation:lb ${STROLL_S}s steps(1) infinite}
+@keyframes la{0%{transform:translateY(0)}${legFrames(true)}}
+@keyframes lb{0%{transform:translateY(0)}${legFrames(false)}}
+</style>`;
+
+const PAD$1 = 14;
+const EDGE = 36;
+const PATH_LIFT = 8;
+const GRID = { w: 30, feet: 26 };
+const LEAD_SCALE = 1.3;
+const LEAD_W = GRID.w * LEAD_SCALE;
+const CREW = { scale: 1, step: 38, shown: 4, lead: 26, more: 24 };
+const AMBLE_MAX = 240;
+const STONES_MAX = 24;
+const PIPS = { shown: 4, size: 3, step: 4.5, y: 6.5 };
+const SCHEME = "<style>:root{color-scheme:light dark}</style>";
+const isDone = (step) => step.status === "completed";
+const standIndexOf = (steps) => {
+  const current = steps.findIndex((step) => step.status === "in_progress");
+  if (current >= 0)
+    return current;
+  const next = steps.findIndex((step) => !isDone(step));
+  return next >= 0 ? next : steps.length - 1;
+};
+function layoutOf$1(spec) {
+  const helpers = spec.crew.filter((a) => a.isMain !== true);
+  const shown = Math.min(CREW.shown, helpers.length);
+  const bench = shown === 0 ? 0 : CREW.lead + shown * CREW.step + (helpers.length > shown ? CREW.more : 0);
+  const x0 = PAD$1 + EDGE;
+  const x1 = Math.max(x0, spec.width - PAD$1 - EDGE - bench);
+  const last = spec.steps.length - 1;
+  const at = spec.steps.map((_, i) => last <= 0 ? (x0 + x1) / 2 : x0 + (x1 - x0) * i / last);
+  const standIndex = standIndexOf(spec.steps);
+  return { x0, x1, at, stand: Math.round(at[standIndex] ?? x0), standIndex, benchX: x1 + EDGE + CREW.lead };
+}
+const titled = (title, body) => `<title>${xml(title)}</title>${body}`;
+const markOf = (step, isCurrent) => {
+  if (isDone(step))
+    return '<circle class="f-ok" r="3.5"/>';
+  if (isCurrent)
+    return '<circle class="i-run now" r="5" fill="none" stroke-width="1.5"/><circle class="f-run" r="2.5"/>';
+  return '<circle class="card i-m" r="3" stroke-width="1.2"/>';
+};
+const stone = (step, i, lay) => {
+  const x = lay.at[i] ?? lay.x0;
+  const crew = (step.crew ?? []).slice(0, PIPS.shown);
+  const pips = crew.map((a, k) => `<rect x="${((k - (crew.length - 1) / 2) * PIPS.step - PIPS.size / 2).toFixed(1)}" y="${PIPS.y}" width="${PIPS.size}" height="${PIPS.size}" rx=".6" fill="${a.shell}"/>`).join("");
+  const names = (step.crew ?? []).map((a) => a.name).join(", ");
+  const said = names === "" ? t().stripStep(i + 1, step.subject) : `${t().stripStep(i + 1, step.subject)} · ${names}`;
+  const body = `<circle r="9" fill="transparent"/>${markOf(step, i === lay.standIndex)}${pips}`;
+  return `<g transform="translate(${x.toFixed(1)},${(groundY(x) + PATH_LIFT).toFixed(1)})"><g class="st">${titled(said, body)}</g></g>`;
+};
+const goal = (x, isReached) => `<g transform="translate(${x.toFixed(1)},${groundY(x).toFixed(1)})" shape-rendering="crispEdges"><rect class="m" x="0" y="-17" width="1.5" height="17"/><g class="wave"><rect class="${isReached ? "f-ok" : "m"}" x="1.5" y="-17" width="8" height="5.5"/></g></g>`;
+function trackSvg(spec, lay) {
+  if (spec.steps.length === 0)
+    return "";
+  const line = (cls, to, more = "") => `<path class="${cls}" d="${groundLine(lay.x0, to, PATH_LIFT)}" fill="none" stroke-width="2" stroke-linecap="round"${more}/>`;
+  const isReached = spec.steps.every(isDone);
+  const stones = spec.steps.length > STONES_MAX ? "" : spec.steps.map((step, i) => stone(step, i, lay)).join("");
+  return line("i-m", lay.x1, ' opacity=".4"') + (isReached || lay.stand > lay.x0 ? line("i-ok", isReached ? lay.x1 : lay.stand) : "") + stones + goal(lay.x1 + EDGE + 2, isReached);
+}
+const THOUGHT = {
+  other: [7, 12, 17].map((cx, i) => `<circle class="s d${i + 1}" cx="${cx}" cy="7.5" r="1.6"/>`).join(""),
+  read: `<rect class="i-read" x="7" y="2.5" width="10" height="10" rx="1.5" fill="none" stroke-width="1.2"/>${[5, 7.5, 10].map((y, i) => `<rect class="f-read ty${i + 1}" x="9.5" y="${y}" width="5" height="1"/>`).join("")}`,
+  edit: [5.5, 10.25, 15].map((x, i) => `<rect class="f-edit ty${i + 1}" x="${x}" y="5.5" width="3.5" height="4" rx=".8"/>`).join(""),
+  run: '<polyline class="i-run" points="6.5,4.5 10,7.5 6.5,10.5" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect class="f-run car" x="12.5" y="9" width="5.5" height="1.6"/>',
+  agent: [6, 11, 16].map((x, i) => `<rect class="f-plan d${i + 1}" x="${x}" y="6" width="3" height="3"/>`).join("")
+};
+const HAPPY = '<path class="i-ok chk" d="M7.5 7.8l3 3 6-6.2" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>';
+const WORRIED = '<rect class="f-warn live" x="11" y="3" width="2" height="6" rx="1"/><rect class="f-warn live" x="11" y="10.4" width="2" height="2" rx="1"/>';
+const BUBBLE = { x: -19, y: -45, w: 24, h: 15 };
+const bubble = (inner) => `<g transform="translate(${BUBBLE.x},${BUBBLE.y})"><rect class="card ln" x=".5" y=".5" width="${BUBBLE.w - 1}" height="${BUBBLE.h - 1}" rx="7" stroke-width="1"/><circle class="card ln" cx="21" cy="17.5" r="1.8" stroke-width="1"/><circle class="card ln" cx="24.5" cy="21" r="1.1" stroke-width="1"/>${inner}</g>`;
+const SNOOZE = [
+  { x: 34, y: -31, size: 9, cls: "zz" },
+  { x: 39, y: -37, size: 7, cls: "zz zz2" }
+].map((z) => `<text class="m ${z.cls}" x="${z.x}" y="${z.y}" font-size="${z.size}" font-weight="700" font-family="sans-serif">z</text>`).join("");
+const RESTING = { sleeping: SNOOZE, working: bubble(THOUGHT.other), happy: bubble(HAPPY), worried: bubble(WORRIED) };
+const IS_BUSY = { read: false, run: true, edit: true, agent: false, other: false };
+function leadOf(spec, isWalkingIn) {
+  const main = spec.crew.find((a) => a.isMain === true);
+  if (main === undefined) {
+    const isAwake = spec.mood === "happy" || spec.mood === "worried";
+    const body = crab$3(0, -GRID.feet * LEAD_SCALE, { costume: "other", look: HOME_LOOK, mood: spec.mood, isWalking: isWalkingIn, scale: LEAD_SCALE });
+    return { body, extra: RESTING[spec.mood], title: `${t().mainName} · ${t().stripResting[spec.mood]}`, breath: spec.mood === "sleeping" ? "sl" : "br", canAmble: isAwake && spec.steps.length === 0 };
+  }
+  const kind = kindOf(main.lastTool ?? "");
+  const body = crab$3(0, -GRID.feet * LEAD_SCALE, { costume: costumeOf(main), look: lookOf(main), isWalking: IS_BUSY[kind] || isWalkingIn, scale: LEAD_SCALE });
+  return { body, extra: bubble(THOUGHT[kind]), title: `${t().mainName} · ${main.lastPlain || t().stripDoing[kind]}`, breath: IS_BUSY[kind] ? "" : "br", canAmble: false };
+}
+const TIP = { h: 18, size: 10.5, pad: 7, max: 40, gap: 6 };
+const tip = (text, at) => {
+  const said = clip$2(text, TIP.max);
+  const w = Math.ceil(textWidth(said, TIP.size)) + TIP.pad * 2;
+  return `<g class="tip" transform="translate(${at.isLeft ? at.x - w : at.x},${at.y})"><rect class="card ln" x=".5" y=".5" width="${w - 1}" height="${TIP.h - 1}" rx="5" stroke-width="1"/><text class="t" x="${TIP.pad}" y="12.5" font-family="${FONT}" font-size="${TIP.size}">${xml(said)}</text></g>`;
+};
+const standing = (x, w, body) => `<g transform="translate(${(x - w / 2).toFixed(1)},${(groundY(x) + 1).toFixed(1)})">${body}</g>`;
+function leadSvg(spec, lay) {
+  const isWalkingIn = spec.from !== undefined && Math.round(spec.from) !== lay.stand;
+  const lead = leadOf(spec, isWalkingIn);
+  const isLeft = lay.stand > spec.width * 0.6;
+  const said = tip(lead.title, { x: isLeft ? BUBBLE.x - TIP.gap : LEAD_W + TIP.gap, y: -GRID.feet * LEAD_SCALE + 4, isLeft });
+  const who = `<g class="who"><g class="lift"><g class="${lead.breath}">${lead.body}</g>${lead.extra}</g>${said}</g>`;
+  const stroll = lead.canAmble ? strollCss(lay.stand, Math.min(AMBLE_MAX, lay.x1 - lay.x0)) : "";
+  const amble = stroll === "" ? who : `${stroll}<g class="amble">${who}</g>`;
+  const walk = isWalkingIn && spec.from !== undefined ? `${walkInCss(spec.from, lay.stand)}<g class="walkin">${amble}</g>` : amble;
+  return standing(lay.stand, LEAD_W, walk);
+}
+function benchSvg(spec, lay) {
+  const helpers = spec.crew.filter((a) => a.isMain !== true);
+  const shown = helpers.slice(0, CREW.shown);
+  const w = GRID.w * CREW.scale;
+  const crabs = shown.map((a, i) => {
+    const kind = kindOf(a.lastTool ?? "");
+    const body = crab$3(0, -GRID.feet * CREW.scale, { costume: costumeOf(a), look: lookOf(a), isWalking: IS_BUSY[kind], scale: CREW.scale });
+    const x = lay.benchX + i * CREW.step + w / 2;
+    const isLeft = x > spec.width * 0.6;
+    const said = tip(`${lookOf(a).name} · ${a.lastPlain || a.description || t().stripDoing[kind]}`, { x: isLeft ? w : 0, y: -GRID.feet * CREW.scale - TIP.h - TIP.gap, isLeft });
+    return standing(x, w, `<g class="who"><g class="lift"><g class="${IS_BUSY[kind] ? "" : "br"}">${body}</g></g>${said}</g>`);
+  });
+  const rest = helpers.length - shown.length;
+  const moreX = lay.benchX + shown.length * CREW.step;
+  const more = rest > 0 ? `<text class="s" x="${moreX}" y="${(groundY(moreX) - 8).toFixed(1)}" font-size="11" font-weight="650" font-family="ui-monospace,Menlo,monospace">+${rest}</text>` : "";
+  return crabs.join("") + more;
+}
+function sceneSvg(spec) {
+  const lay = layoutOf$1(spec);
+  const land = landOf(spec.width, spec.phase, lay.stand);
+  const done = spec.steps.filter(isDone).length;
+  const plan = spec.steps.length === 0 ? "" : `${t().stripPlan} ${done}/${spec.steps.length}`;
+  const names = spec.crew.map((a) => lookOf(a).name).join(", ");
+  const alt = [plan, names === "" ? `${t().mainName} · ${t().stripResting[spec.mood]}` : names].filter(Boolean).join(" · ");
+  const body = land.open + land.back + trackSvg(spec, lay) + benchSvg(spec, lay) + leadSvg(spec, lay) + land.front + land.close;
+  return { source: paneSvg(spec.width, SCENE_H, SCHEME + SCENE_CSS + body), alt };
+}
+
 const NO_TALLY = { tokens: 0, busyMs: 0, turns: 0, lastCost: 0, costBefore: 0 };
-const STRIP_H = 70;
-const PAD$1 = 12;
-const COL_W = 140;
-const LABEL$4 = { y: 18, size: 11 };
-const VALUE = { y: 41, size: 19 };
-const SUB = { y: 58, size: 11 };
-const CRAB_SCALE = 1.5;
-const CRAB_W = 30 * CRAB_SCALE;
-const CRAB_Y = 2;
-const NAME = { y: 62, size: 10.5 };
-const STAGE_MIN = 90;
-const CREW_SHOWN = 5;
-const LAP_S = 7;
 const SECOND$3 = 1000;
 const MINUTE$2 = 60;
 const HOUR$1 = 60 * MINUTE$2;
@@ -2502,70 +2951,209 @@ const spanText = (ms) => {
     return `${words.minutes(Math.floor(s / MINUTE$2))} ${words.seconds(s % MINUTE$2)}`;
   return words.seconds(s);
 };
-const columnsOf$1 = (cost, tally) => {
-  const words = t();
-  const perTurn = tally.turns > 0 ? spanText(tally.busyMs / tally.turns) : "";
-  return [
-    { label: words.stripCost, value: fmtCost(cost), sub: tally.lastCost > 0 ? words.stripLast(fmtCost(tally.lastCost)) : "" },
-    { label: words.stripTokens, value: fmtTokens(tally.tokens), sub: words.stripTurns(tally.turns) },
-    { label: words.stripTime, value: spanText(tally.busyMs), sub: perTurn === "" ? "" : words.stripPerTurn(perTurn) }
-  ];
+
+const PX_PER_COL$2 = 8.8;
+const DEFAULT_COLS$2 = 100;
+const FULL = 100;
+const PLAN_MIN = 150;
+const PLAN_MAX = 340;
+const PLAN_PANE = "plan";
+const USAGE_PANE = "usage";
+const COMMAND = { [PLAN_PANE]: { command: "steps" }, [USAGE_PANE]: { command: "hud", args: "full" } };
+const stepsFrom = (value) => Array.isArray(value) ? value.flatMap((one) => {
+  const step = one;
+  return typeof step?.subject === "string" && typeof step.status === "string" ? [{ subject: step.subject, status: step.status }] : [];
+}) : [];
+const withPace = (limits, pace) => {
+  const told = pace;
+  if (typeof told?.window !== "string" || told.fullAt !== null && typeof told.fullAt !== "number")
+    return limits;
+  return limits.map((run) => run.kind === told.window && run.percent < FULL ? { ...run, endsAt: told.fullAt } : run);
 };
-const columnSvg = (c, x, i) => [
-  i === 0 ? "" : `<line class="ln" x1="${x - PAD$1}" y1="10" x2="${x - PAD$1}" y2="${STRIP_H - 10}" stroke-width="1"/>`,
-  `<text class="m" x="${x}" y="${LABEL$4.y}" font-family="${FONT}" font-size="${LABEL$4.size}">${xml(c.label)}</text>`,
-  `<text class="t" x="${x}" y="${VALUE.y}" font-family="${MONO}" font-size="${VALUE.size}" font-weight="650">${xml(c.value)}</text>`,
-  `<text class="m" x="${x}" y="${SUB.y}" font-family="${FONT}" font-size="${SUB.size}">${xml(c.sub)}</text>`
-].join("");
-const STAGE_CSS = `<style>
-.lane{animation:lane ${LAP_S}s ease-in-out infinite alternate}
-.m-read .lane{animation-duration:${LAP_S * 2}s}
-.m-run .lane{animation-duration:${LAP_S / 3}s;animation-timing-function:linear}
-.m-edit .lane,.m-agent .lane,.m-other .lane{animation:none;transform:translateX(calc(var(--d) / 2))}
-.hop{transform-box:fill-box;transform-origin:50% 100%}
-.m-read .hop{animation:peek 3s ease-in-out infinite}
-.m-edit .hop{animation:hammer .45s ease-in-out infinite}
-.m-agent .hop{animation:hop 1s ease-in-out infinite}
-.m-other .hop{animation:sway 2.4s ease-in-out infinite}
-@keyframes lane{from{transform:translateX(0)}to{transform:translateX(var(--d))}}
-@keyframes peek{0%,70%,100%{transform:translateY(0)}80%{transform:translateY(-3px)}}
-@keyframes hammer{0%,100%{transform:rotate(0)}50%{transform:rotate(-9deg) translateY(-2px)}}
-@keyframes hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-9px)}}
-@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
-@media (prefers-reduced-motion: reduce){.lane,.hop,.run *{animation:none!important}}
-</style>`;
-const IS_WALKING = { read: true, run: true, edit: false, agent: false, other: false };
-function walker(a, at) {
-  const look = lookOf(a);
-  const kind = kindOf(a.lastTool ?? "");
-  const said = `${a.isMain ? t().mainName : look.name} · ${t().stripDoing[kind]}`;
-  const name = fitText(said, NAME.size, at.laneW - 4);
-  const free = Math.max(0, at.laneW - Math.max(CRAB_W, textWidth(name, NAME.size)));
-  const delay = (at.index * LAP_S / CREW_SHOWN).toFixed(2);
-  const body = crab$3(0, CRAB_Y, { costume: costumeOf(a), look, isWalking: IS_WALKING[kind], scale: CRAB_SCALE });
-  const label = `<text class="s" x="${CRAB_W / 2}" y="${NAME.y}" text-anchor="middle" font-family="${FONT}" font-size="${NAME.size}" font-weight="600">${xml(name)}</text>`;
-  return `<g class="m-${kind}" transform="translate(${at.x},0)"><g class="lane" style="--d:${free.toFixed(1)}px;animation-delay:-${delay}s"><g class="hop" style="animation-delay:-${delay}s">${body}</g>${label}</g></g>`;
+async function factsOf(io) {
+  const usage = await io.usage().catch(() => {
+    return;
+  });
+  const now = await io.now();
+  return {
+    cost: usage?.cost?.usd ?? 0,
+    tally: { ...NO_TALLY, ...await io.tally() },
+    crew: (await io.agents()).filter((a) => a.status === "running"),
+    mood: await io.mood(),
+    steps: stepsFrom(await io.plan().catch(() => {
+      return;
+    })),
+    limits: withPace((usage?.rateLimits ?? []).flatMap((limit) => runwayOf(limit, now) ?? []), await io.pace().catch(() => {
+      return;
+    })),
+    now,
+    isHubOn: await io.isHubOn().catch(() => false)
+  };
 }
-function stageSvg(crew, x, w) {
-  if (crew.length === 0)
-    return "";
-  const shown = crew.slice(0, CREW_SHOWN);
-  const rest = crew.length - shown.length;
-  const restW = rest > 0 ? 34 : 0;
-  const laneW = (w - restW) / shown.length;
-  const walkers = shown.map((a, index) => walker(a, { x: x + index * laneW, laneW, index }));
-  const more = rest > 0 ? `<text class="m" x="${x + w}" y="${VALUE.y}" text-anchor="end" font-family="${MONO}" font-size="12">+${rest}</text>` : "";
-  return STAGE_CSS + walkers.join("") + more;
+function planSlot(facts, presses) {
+  if (facts.steps.length === 0)
+    return [];
+  const done = facts.steps.filter((step) => step.status === "completed").length;
+  const current = facts.steps.find((step) => step.status === "in_progress") ?? facts.steps.find((step) => step.status !== "completed");
+  const base = { id: "plan", label: t().stripPlan, value: `${done}/${facts.steps.length}`, widest: `${facts.steps.length}/${facts.steps.length}` };
+  const chip = current === undefined ? { ...base, note: t().stripPlanDone, tone: "ok" } : { ...base, note: current.subject };
+  return [{ chip, rank: 0, isNoteKept: true, press: presses.open(PLAN_PANE) }];
 }
-function stripSvg(opts) {
-  const cols = columnsOf$1(opts.cost, opts.tally);
-  const body = cols.map((c, i) => columnSvg(c, PAD$1 + i * (COL_W + PAD$1), i)).join("");
-  const stageX = PAD$1 + cols.length * (COL_W + PAD$1) + PAD$1;
-  const stageW = opts.width - stageX - PAD$1;
-  const stage = stageW >= STAGE_MIN ? stageSvg(opts.crew, stageX, stageW) : "";
-  const names = opts.crew.map((a) => a.isMain ? t().mainName : lookOf(a).name).join(", ");
-  const alt = [...cols.map((c) => `${c.label} ${c.value}`), names === "" ? "" : t().crew(opts.crew.length) + `: ${names}`].filter(Boolean).join(" · ");
-  return { source: paneSvg(opts.width, STRIP_H, body + stage), alt };
+function limitSlot(run, facts, presses) {
+  const isWeek = run.kind === SEVEN_DAY;
+  const base = { id: run.kind, label: isWeek ? t().stripWeek : t().stripFive, value: t().pct(Math.round(run.percent)), widest: widest().percent, meter: run.percent };
+  const rank = isWeek ? 2 : 5;
+  const press = presses.open(USAGE_PANE);
+  if (run.percent >= FULL)
+    return { chip: { ...base, note: t().stripFull, tone: "danger" }, rank, isNoteKept: true, press };
+  if (run.endsAt === null)
+    return { chip: base, rank, press };
+  return { chip: { ...base, note: t().stripRunsOut(whenText(run.endsAt, facts.now)), tone: "warn" }, rank, isNoteKept: true, press };
+}
+const widest = () => ({ cost: fmtCost(8888.8), tokens: fmtTokens(888800000), time: spanText(3599000), percent: t().pct(100) });
+function slotsOf(facts, presses) {
+  const helpers = facts.crew.filter((a) => a.isMain !== true).length;
+  const { tally: counted } = facts;
+  const usage = presses.open(USAGE_PANE);
+  const windows = [SEVEN_DAY, FIVE_HOUR$1].flatMap((kind) => facts.limits.find((run) => run.kind === kind) ?? []);
+  const room = widest();
+  return [
+    ...planSlot(facts, presses),
+    { chip: { id: "cost", label: t().stripCost, value: fmtCost(facts.cost), widest: room.cost }, rank: 1, press: usage },
+    { chip: { id: "tokens", label: t().stripTokens, value: fmtTokens(counted.tokens), widest: room.tokens }, rank: 3, press: usage },
+    { chip: { id: "time", label: t().stripTime, value: spanText(counted.busyMs), widest: room.time, ...helpers > 0 ? { note: t().crew(helpers) } : {} }, rank: 4, press: presses.onAgents },
+    ...windows.map((run) => limitSlot(run, facts, presses)),
+    ...presses.onHub === null ? [] : [{ chip: { id: "modz", label: "", value: "modz", isWordmark: true }, rank: 0, press: presses.onHub }]
+  ];
+}
+const withoutNote = (slot) => {
+  const { note: _dropped, ...chip } = slot.chip;
+  return slot.isNoteKept === true ? slot : { ...slot, chip };
+};
+const fitW = (slot) => slot.chip.id === "plan" ? PLAN_MIN : chipWidth$1(slot.chip);
+const rowW = (row) => row.reduce((sum, slot) => sum + fitW(slot), 0) + CHIP_GAP$1 * Math.max(0, row.length - 1);
+function fitRow(slots, width) {
+  let row = rowW(slots) > width ? slots.map(withoutNote) : [...slots];
+  while (rowW(row) > width && row.some((slot) => slot.rank > 0)) {
+    const top = Math.max(...row.map((slot) => slot.rank));
+    row = row.filter((slot) => slot.rank !== top);
+  }
+  const spare = Math.max(0, width - rowW(row));
+  return row.map((slot) => ({ slot, maxW: slot.chip.id === "plan" ? Math.min(PLAN_MAX, PLAN_MIN + spare) : Number.POSITIVE_INFINITY }));
+}
+const worked = new Map;
+function withCrew(steps, crew) {
+  const current = steps.find((step) => step.status === "in_progress");
+  for (const subject of worked.keys())
+    if (!steps.some((step) => step.subject === subject))
+      worked.delete(subject);
+  if (current !== undefined) {
+    const seen = worked.get(current.subject) ?? new Map;
+    for (const a of crew)
+      if (a.isMain !== true)
+        seen.set(a.id, { name: lookOf(a).name, shell: lookOf(a).shell });
+    worked.set(current.subject, seen);
+  }
+  return steps.map((step) => ({ ...step, crew: [...worked.get(step.subject)?.values() ?? []] }));
+}
+const WALK_MS = 3600;
+const stood = { x: Number.NaN, from: Number.NaN, at: 0 };
+function walkFrom(x, now) {
+  if (!Number.isNaN(stood.x) && x !== stood.x) {
+    stood.from = stood.x;
+    stood.at = now;
+  }
+  stood.x = x;
+  return now - stood.at < WALK_MS ? stood.from : undefined;
+}
+function pressesOf(io, facts) {
+  const failed = (cause) => io.log(`a strip chip could not open its pane: ${String(cause)}`);
+  const viaHub = (pane) => async () => io.home(pane === undefined ? { at: await io.now() } : { at: await io.now(), pane }).catch(failed);
+  const viaCommand = (pane) => () => {
+    const command = COMMAND[pane];
+    return command === undefined ? undefined : io.run(command).catch(failed);
+  };
+  return { open: facts.isHubOn ? viaHub : viaCommand, onAgents: io.onAgents, onHub: facts.isHubOn ? viaHub() : null };
+}
+function stripText(facts) {
+  const done = facts.steps.filter((step) => step.status === "completed").length;
+  const week = facts.limits.find((run) => run.kind === SEVEN_DAY);
+  return [
+    facts.steps.length === 0 ? "" : `${t().stripPlan} ${done}/${facts.steps.length}`,
+    `${t().stripCost} ${fmtCost(facts.cost)}`,
+    `${t().stripTokens} ${fmtTokens(facts.tally.tokens)}`,
+    `${t().stripTime} ${spanText(facts.tally.busyMs)}`,
+    week === undefined ? "" : `${t().stripWeek} ${t().pct(Math.round(week.percent))}`
+  ].filter(Boolean).join(" · ");
+}
+const BLANK$1 = "ㅤ";
+function chipPress(ui, slot, maxW) {
+  const { Box, Button, Svg } = ui;
+  const drawing = chipSvg(slot.chip, maxW);
+  const { id } = slot.chip;
+  return h(Box, {
+    key: `savvy-chip-${id}`,
+    flexShrink: 0,
+    alignSelf: "flex-start"
+  }, h(Svg, {
+    key: `savvy-chip-pic-${id}`,
+    source: drawing.source,
+    alt: drawing.alt,
+    width: drawing.width,
+    height: CHIP_H
+  }), h(Box, {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center"
+  }, h(Button, {
+    key: `savvy-chip-press-${id}`,
+    label: BLANK$1.repeat(chipCells(drawing.width)),
+    plain: true,
+    onPress: slot.press
+  })));
+}
+async function stripOf(io, ui, site) {
+  const seen = await factsOf(io);
+  const facts = { ...seen, steps: withCrew(seen.steps, seen.crew) };
+  if (!site.isDesktop) {
+    const { Text } = ui;
+    return h(Text, {
+      key: "savvy-strip",
+      dimColor: true
+    }, stripText(facts));
+  }
+  const { Box, Svg } = ui;
+  const width = Math.floor((site.cols || DEFAULT_COLS$2) * PX_PER_COL$2);
+  const from = facts.steps.length === 0 ? undefined : walkFrom(layoutOf$1({ width, steps: facts.steps, crew: facts.crew }).stand, facts.now);
+  const phase = phaseOf(new Date(facts.now).getHours());
+  const scene = sceneSvg({ width, crew: facts.crew, mood: facts.mood, steps: facts.steps, phase, ...from === undefined ? {} : { from } });
+  const fitted = fitRow(slotsOf(facts, pressesOf(io, facts)), width);
+  const chips = fitted.flatMap(({ slot, maxW }, i) => [
+    ...i > 0 && i === fitted.length - 1 ? [h(Box, {
+      key: "savvy-chip-spring",
+      flexGrow: 1
+    })] : [],
+    chipPress(ui, slot, maxW)
+  ]);
+  return h(Box, {
+    key: "savvy-strip",
+    flexDirection: "column"
+  }, h(Svg, {
+    key: "savvy-scene",
+    source: scene.source,
+    alt: scene.alt,
+    width,
+    height: SCENE_H,
+    isInteractive: true
+  }), h(Box, {
+    key: "savvy-chips",
+    flexDirection: "row"
+  }, chips));
 }
 
 const agents$4 = atom({ plugin: "savvy-progress", key: "agents" }, []);
@@ -2575,6 +3163,7 @@ const tasks$4 = atom({ plugin: "savvy-progress", key: "tasks" }, []);
 const now$3 = atom({ plugin: "savvy-progress", key: "now" }, 0);
 const crab$2 = atom({ plugin: "savvy-progress", key: "crab" }, restingCrab(0));
 const tally$1 = atom({ plugin: "savvy-progress", key: "tally" }, NO_TALLY);
+const HOME$1 = { plugin: "savvy-progress", key: "home" };
 const PX_PER_COL$1 = 8;
 const BUTTONS_PX = 128;
 const DEFAULT_COLS$1 = 100;
@@ -2802,30 +3391,20 @@ async function bandMood($, isCrabInBand) {
   const { mood } = await read($, crab$2);
   return isIdleMood(mood) ? mood : undefined;
 }
-const working = (list) => list.filter((a) => a.status === "running");
-async function stripOf($, ui, isDesktop, cols) {
-  const cost = (await $.session.usage().catch(() => {
-    return;
-  }))?.cost?.usd ?? 0;
-  const counted = { ...NO_TALLY, ...await read($, tally$1) };
-  if (!isDesktop) {
-    const { Text } = ui;
-    return h(Text, {
-      key: "savvy-strip",
-      dimColor: true
-    }, columnsOf$1(cost, counted).map((c) => `${c.label} ${c.value}`).join(" · "));
-  }
-  const { Svg } = ui;
-  const width = (cols || DEFAULT_COLS$1) * PX_PER_COL$1;
-  const drawing = stripSvg({ width, cost, tally: counted, crew: working(await read($, agents$4)) });
-  return h(Svg, {
-    key: "savvy-strip",
-    source: drawing.source,
-    alt: drawing.alt,
-    width,
-    height: STRIP_H
-  });
-}
+const stripIo = ($) => ({
+  usage: () => $.session.usage(),
+  now: () => $.clock.now(),
+  plan: async () => (await $.state.get({ plugin: "plan-steps", key: "tasks" })).value,
+  isHubOn: async () => (await $.state.get({ plugin: "modz", key: "isOn" })).value === true,
+  pace: async () => (await $.state.get({ plugin: "hud-pro", key: "pace" })).value,
+  tally: () => read($, tally$1),
+  agents: () => read($, agents$4),
+  mood: async () => (await read($, crab$2)).mood,
+  home: (value) => $.state.set(HOME$1, value),
+  run: (command) => $.command.run(command),
+  log: (text) => $.ui.log(`savvy-progress: ${text}`, { to: "debug" }),
+  onAgents: () => void togglePane($)
+});
 function onBand(on, opts) {
   onOpen(on);
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
@@ -2838,10 +3417,10 @@ function onBand(on, opts) {
     const view = await viewOf($);
     const input = view === null ? null : { view, cols: e.props.bodyColumns, mood: await bandMood($, opts.isCrabInBand) };
     const job = input === null ? null : isDesktop ? desktopBand(ui, $, input) : terminalBand(ui, $, input);
-    const strip = await stripOf($, ui, isDesktop, e.props.bodyColumns);
+    const strip = await stripOf(stripIo($), ui, { isDesktop, cols: e.props.bodyColumns });
     return h(Box, {
       flexDirection: "column"
-    }, job === null ? null : pinned(e, job), strip, theirs);
+    }, job === null ? null : pinned(e, job), pinned(e, strip), theirs);
   });
 }
 

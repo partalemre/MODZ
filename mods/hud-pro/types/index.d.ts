@@ -87,6 +87,9 @@ declare module 'claude-code' {
       pastRoot: string
       // True once this mod runs: the other meter mods then show through the Usage pane instead of their own.
       host: boolean
+      // The window this mod watches and when it runs out at its recent pace (null: it lasts to the reset, or the
+      // pace is not known yet). Other mods read it, so every surface names the same moment.
+      pace: { window: string; fullAt: number | null } | null
       press: UsagePress
       // The newest turns' shares of the window, newest last; the notices waiting for the line, oldest first.
       shares: TurnShare[]

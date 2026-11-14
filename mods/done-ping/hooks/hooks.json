@@ -1,3 +1,5 @@
 {
-  "modules": ["./register.tsx"]
+  "modules": [
+    "./bundle.js"
+  ]
 }

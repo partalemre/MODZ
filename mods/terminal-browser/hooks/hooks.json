@@ -1,4 +1,6 @@
 {
   "description": "Extends claude code to render terminal-browser inside the claude code Pane and exposes an api for other plugins to control terminal-browser",
-  "modules": ["./register.tsx"]
+  "modules": [
+    "./bundle.js"
+  ]
 }

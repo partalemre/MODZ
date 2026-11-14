@@ -231,6 +231,7 @@ To remove a mod: `claude plugin uninstall <name>@modz`. To remove everything: al
 
 `mods/<name>/` holds each mod; `kit/` is the shared drawing kit, copied into the mods by `bin/kit-sync`.
 
+- **Build.** A session loads `mods/<name>/hooks/bundle.js`, never the `.ts` files beside it: one plain file per mod starts a session many times faster than the engine reading each source file. After any edit under `hooks/`, run `bin/modz build [name]` (needs [bun](https://bun.sh)) and commit the bundle with the change; `bin/modz check` builds first.
 - **Unit checks.** `bin/modz check [name]` validates each mod and runs its tests, on both the terminal engine and the desktop app's engine.
 - **End to end.** `bin/modz desk` starts a real session, speaks the desktop app's own protocol to it, and clicks through every panel. Run both before opening a pull request.
 - **Seeing it.** An agent cannot see the desktop app, so `bin/modz shot [--pane] [--title t]` saves the Claude window as a PNG, even when another window covers it. Mods load when a session starts: to look at fresh code, open a new session in its own window and shoot it with `--title`.

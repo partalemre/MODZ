@@ -16,7 +16,9 @@ usage() {
 modz <command>
   list                 list the mods (version, when pinned, + description)
   new <name> [desc]    make a mod from templates/blank and add it to the marketplace
-  check [name]         validate + test on the CLI and the desktop engine, then tsc (all mods without a name)
+  build [name ...]     join each mod's hooks into the one hooks/bundle.js a session loads (all mods without a name)
+                       a path instead of a name builds a plugin folder outside mods/
+  check [name]         build, then validate + test on the CLI and the desktop engine, then tsc (all mods without a name)
   desk                 end to end on the desktop engine: hub rows, panes, the band and presses
   tour [row ...]       click tour on the desktop engine: every panel's buttons pressed, opened and closed
   shot [--pane] [--title t] [out]
@@ -77,6 +79,24 @@ PY
   echo "made: $MODS/$name"
 }
 
+# A session loads hooks/bundle.js, never the .ts files beside it: read file by file, 21 mods held every session's
+# start for ~14 s; as one plain-JS file each, ~1.5 s. Run after any edit under hooks/ (check does it first).
+ROLLUP_VERSION="4.24.0"
+cmd_build() {
+  local targets=("$@")
+  [[ $# -eq 0 ]] && targets=($(mod_names))
+  command -v bunx >/dev/null || { echo "modz build: bunx not found (https://bun.sh)" >&2; return 1; }
+  MODZ_BUILD="${targets[*]}" bunx --bun -p "rollup@$ROLLUP_VERSION" rollup -c "$ROOT/tools/build/rollup.config.mjs" --silent
+  local hooks
+  for m in "${targets[@]}"; do
+    # A path is a plugin folder outside mods/ (transceiver, in its own repo).
+    [[ "$m" == */* ]] && hooks="$m/hooks" || hooks="$MODS/$m/hooks"
+    [[ -f "$hooks/bundle.js" ]] || continue
+    python3 -c 'import json,sys;p=sys.argv[1];d=json.load(open(p));d["modules"]=["./bundle.js"];json.dump(d,open(p,"w"),indent=2,ensure_ascii=False);open(p,"a").write("\n")' "$hooks/hooks.json"
+  done
+  echo "built: ${targets[*]}"
+}
+
 # The desktop app carries its own engine, often a release behind the CLI: a tree one accepts the other may
 # refuse. The engine in the newest version folder; empty when there is none.
 desktop_engine() {
@@ -116,6 +136,7 @@ cmd_check() {
   [[ -z "${1:-}" ]] && targets=($(mod_names))
   desktop="$(desktop_engine)"
   local failed=0
+  cmd_build "${targets[@]}" || return 1
   # A pinned version freezes every user's copy until it is bumped; without one, each commit updates them.
   if grep -l '"version"' "$MODS"/*/.claude-plugin/plugin.json 2>/dev/null; then
     echo "✘ the files above pin a version; remove it so auto-update follows each commit"
@@ -222,6 +243,7 @@ cmd_unlink() {
 case "${1:-}" in
   list) cmd_list ;;
   new) shift; cmd_new "$@" ;;
+  build) shift; cmd_build "$@" ;;
   check) shift; cmd_check "$@" ;;
   desk) cmd_desk ;;
   tour) shift; cmd_tour "$@" ;;

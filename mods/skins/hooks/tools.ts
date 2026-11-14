@@ -27,6 +27,8 @@ export function kindOf(tool: string): ToolKind | null {
 // What a folded group counts a call as: an MCP call still reads as MCP there.
 export const groupKindOf = (tool: string): Kind => kindOf(tool) ?? (tool.startsWith('mcp__') ? 'mcp' : 'other')
 
+export const mcpServer = (tool: string): string => tool.split('__')[1] ?? ''
+
 // `mcp__github__search_code` reads as `github:search_code`.
 export function toolLabel(tool: string): string {
   if (!tool.startsWith('mcp__')) {

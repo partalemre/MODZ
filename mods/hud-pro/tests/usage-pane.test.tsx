@@ -86,14 +86,16 @@ test('a notable turn is 10 points of the 5-hour window or 3 of the weekly one', 
   expect(isNotable({ window: 'spend_limit', share: 99, percent: 99 })).toBe(false)
 })
 
-test('a weekly window is paced over a day of readings; too few readings give no rate', () => {
-  const week = { gauges: [gauge('seven_day', 24, new Date(100 * MS_PER_HOUR).toISOString())], costUsd: null, context: null }
-  const history = [20, 21, 22, 23, 24].map((value, index) => ({ t: index * 2 * MS_PER_HOUR, percents: { seven_day: value } }))
-  const pace = paceOf({ usage: week, history, nowMs: 8 * MS_PER_HOUR })
-  expect(Math.round((pace?.perHour ?? 0) * 100)).toBe(50)
-  // 76 points left at half a point an hour is 152 hours: past the reset, so no fill time.
-  expect(pace?.fullAt).toBeNull()
-  expect(paceOf({ usage: week, history: history.slice(0, 2), nowMs: 8 * MS_PER_HOUR })?.perHour).toBeNull()
+test('a weekly window is paced at its whole-window average, idle hours included', () => {
+  // Reset in 130 h: the week opened 38 h ago, so 28 % is 0.74 points an hour, not the burst of the readings.
+  const week = { gauges: [gauge('seven_day', 28, new Date(130 * MS_PER_HOUR).toISOString())], costUsd: null, context: null }
+  const burst = [20, 24, 28].map((value, index) => ({ t: index * 10 * 60_000, percents: { seven_day: value } }))
+  const pace = paceOf({ usage: week, history: burst, nowMs: 0 })
+  expect(Math.round((pace?.perHour ?? 0) * 100)).toBe(74)
+  // 72 points left at 0.74 an hour is about 98 hours: before the reset, so a fill time about four days out.
+  expect(Math.round(((pace?.fullAt ?? 0) / MS_PER_HOUR))).toBe(98)
+  const fresh = { ...week, gauges: [gauge('seven_day', 28, new Date(165 * MS_PER_HOUR).toISOString())] }
+  expect(paceOf({ usage: fresh, history: burst, nowMs: 0 })?.perHour).toBeNull()
 })
 
 test('a published section is checked before it is drawn', () => {

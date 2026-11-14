@@ -21,11 +21,13 @@ const typescript = {
   transform: (code, id) => transpilers[id.endsWith('x') ? 'tsx' : 'ts'].transformSync(code),
 }
 
-const entryOf = mod => ENTRIES.map(name => join(MODS, mod, 'hooks', name)).find(isFile)
+// A name is a mod under mods/; a path is a plugin folder of its own (transceiver lives in its own repo).
+const hooksOf = mod => (mod.includes('/') ? join(resolve(mod), 'hooks') : join(MODS, mod, 'hooks'))
+const entryOf = mod => ENTRIES.map(name => join(hooksOf(mod), name)).find(isFile)
 
 export default (process.env.MODZ_BUILD ?? '').split(' ').filter(mod => entryOf(mod) !== undefined).map(mod => ({
   input: entryOf(mod),
   external: ['claude-code'],
   plugins: [typescript],
-  output: { file: join(MODS, mod, 'hooks', 'bundle.js'), format: 'es', banner: '// Built by `bin/modz build` from the files beside it. Never edited by hand.' },
+  output: { file: join(hooksOf(mod), 'bundle.js'), format: 'es', banner: '// Built by `bin/modz build` from the files beside it. Never edited by hand.' },
 }))

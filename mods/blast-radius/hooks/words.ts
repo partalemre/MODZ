@@ -14,6 +14,8 @@ export type Words = {
   showLess: string
   showMore: string
   cancel: { label: string; hotkey: string }
+  // Asked in the engine's own dialog where no card can be drawn; run is the first option.
+  askRun: { question: (summary: string) => string; header: string; run: string; keep: string }
   doing: (isDelete: boolean) => string
   fullCommand: (command: string) => string
   // Said once the person kept their work.

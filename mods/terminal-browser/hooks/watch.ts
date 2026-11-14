@@ -34,7 +34,7 @@ async function drawFrame(host: Host, frame: Frame, denials: Denials): Promise<vo
     return
   }
   denials.count += 1
-  if (denials.count === DENIALS_BEFORE_LOGGING) host.log(`terminal-browser: kare çizimi reddedildi: ${result.deny}`)
+  if (denials.count === DENIALS_BEFORE_LOGGING) host.log(`terminal-browser: a frame draw was refused: ${result.deny}`)
   const now = Date.now()
   if (now - denials.lastRedraw >= DENIED_REDRAW_MS) {
     denials.lastRedraw = now

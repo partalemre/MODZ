@@ -2,14 +2,17 @@ import { pick } from './kit/lang'
 
 // The interface's words; every label has both languages (kit/lang.ts).
 
+// "1 project", "3 projects": the count with the word in the right number.
+const many = (n: number, one: string, other: string): string => `${n} ${n === 1 ? one : other}`
+
 const EN = {
   title: 'Projects',
   command: 'Every project: percent done, plans, where it stopped, usage, helper agents',
   hubTitle: 'Projects',
   hubHint: 'Percent, plans, usage and helper agents of every project',
-  hubDetail: (count: number, live: number) => `${count} projects${live > 0 ? ` · ${live} live` : ''}`,
+  hubDetail: (count: number, live: number) => `${many(count, 'project', 'projects')}${live > 0 ? ` · ${live} live` : ''}`,
   openBoard: 'Open full board',
-  estimateAll: (count: number) => `Estimate ${count} percent${count === 1 ? '' : 's'} · ${count} model call${count === 1 ? '' : 's'}`,
+  estimateAll: (count: number) => `Estimate ${many(count, 'percent', 'percents')} · ${many(count, 'model call', 'model calls')}`,
   estimatedAgo: (when: string) => `estimated ${when}`,
   estimate: 'Estimate',
   estimateAgain: 'Estimate again',
@@ -55,11 +58,11 @@ const EN = {
   sessions: 'Sessions',
   agents: 'Helper agents',
   noAgents: 'No helper agent ran in this project.',
-  agentLine: (runs: number, tokens: string, time: string) => `${runs} runs · ${tokens} · ${time}`,
+  agentLine: (runs: number, tokens: string, time: string) => `${many(runs, 'run', 'runs')} · ${tokens} · ${time}`,
   recent: 'Latest runs',
   hide: 'Hide from the list',
   showHidden: (count: number) => `Show ${count} hidden`,
-  other: (folders: number, tokens: string) => `${folders} other folders, ${tokens}: no version history or plan`,
+  other: (folders: number, tokens: string) => `${many(folders, 'other folder', 'other folders')}, ${tokens}: no version history or plan`,
   mapHint: 'Hover a column for details',
   mapAlt: 'Each column is a project; the fill is its percent.',
   noPercentShort: 'no number',

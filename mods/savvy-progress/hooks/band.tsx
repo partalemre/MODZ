@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, ThemeKey } from 'claude-code'
 
-import type { AgentRun, CrabMood } from '../types'
+import type { CrabMood } from '../types'
 import { bandSvg, BAND_H } from './band-svg'
 import { isOwnOpen } from './hub'
 import { HEARTBEAT_MS, SCAN_MS } from './chats'
@@ -15,7 +15,9 @@ import { FACES } from './mood-svg'
 import { motion } from './pane-motion'
 import { paneHeld } from './pane-held'
 import { pinned } from './pin'
-import { columnsOf, NO_TALLY, STRIP_H, stripSvg } from './strip-svg'
+import { stripOf } from './strip'
+import type { StripIo } from './strip'
+import { NO_TALLY } from './strip-svg'
 import { HUB_PANE, PANE } from './state'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
@@ -27,6 +29,7 @@ const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
 const crab = atom({ plugin: 'savvy-progress', key: 'crab' } as const, restingCrab(0))
 // shortcut: kept in session state, so an engine restart starts tokens and time over; cost is the engine's own total.
 const tally = atom({ plugin: 'savvy-progress', key: 'tally' } as const, NO_TALLY)
+const HOME = { plugin: 'savvy-progress', key: 'home' } as const
 
 type On = Parameters<Register>[0]
 type Ui = Record<string, any>
@@ -268,20 +271,21 @@ async function bandMood($: EngineInterface, isCrabInBand: boolean): Promise<Crab
 
 export type BandOptions = { isCrabInBand: boolean }
 
-const working = (list: readonly AgentRun[]): AgentRun[] => list.filter(a => a.status === 'running')
-
-async function stripOf($: EngineInterface, ui: Ui, isDesktop: boolean, cols: number) {
-  const cost = (await $.session.usage().catch(() => undefined))?.cost?.usd ?? 0
-  const counted = { ...NO_TALLY, ...(await read($, tally)) }
-  if (!isDesktop) {
-    const { Text } = ui
-    return <Text key="savvy-strip" dimColor>{columnsOf(cost, counted).map(c => `${c.label} ${c.value}`).join(' · ')}</Text>
-  }
-  const { Svg } = ui
-  const width = (cols || DEFAULT_COLS) * PX_PER_COL
-  const drawing = stripSvg({ width, cost, tally: counted, crew: working(await read($, agents)) })
-  return <Svg key="savvy-strip" source={drawing.source} alt={drawing.alt} width={width} height={STRIP_H} />
-}
+// What the session strip asks of the engine (strip.tsx); built here, where `$` is.
+const stripIo = ($: EngineInterface): StripIo => ({
+  usage: () => $.session.usage(),
+  now: () => $.clock.now(),
+  plan: async () => (await $.state.get({ plugin: 'plan-steps', key: 'tasks' })).value,
+  isHubOn: async () => (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true,
+  pace: async () => (await $.state.get({ plugin: 'hud-pro', key: 'pace' })).value,
+  tally: () => read($, tally),
+  agents: () => read($, agents),
+  mood: async () => (await read($, crab)).mood,
+  home: value => $.state.set(HOME, value),
+  run: command => $.command.run(command),
+  log: text => $.ui.log(`savvy-progress: ${text}`, { to: 'debug' }),
+  onAgents: () => void togglePane($),
+})
 
 export function onBand(on: On, opts: BandOptions): void {
   onOpen(on)
@@ -295,11 +299,11 @@ export function onBand(on: On, opts: BandOptions): void {
     const view = await viewOf($)
     const input = view === null ? null : { view, cols: e.props.bodyColumns, mood: await bandMood($, opts.isCrabInBand) }
     const job = input === null ? null : isDesktop ? desktopBand(ui, $, input) : terminalBand(ui, $, input)
-    const strip = await stripOf($, ui, isDesktop, e.props.bodyColumns)
+    const strip = await stripOf(stripIo($), ui, { isDesktop, cols: e.props.bodyColumns })
     return (
       <Box flexDirection="column">
         {job === null ? null : pinned(e, job)}
-        {strip}
+        {pinned(e, strip)}
         {theirs}
       </Box>
     )

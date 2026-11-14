@@ -1584,14 +1584,15 @@ const eyebrow = (o) => toPic(eyebrowPart(o));
 
 const isTextSurface = (ui, surface) => surface === "terminal" || !("Svg" in ui);
 
+const many = (n, one, other) => `${n} ${n === 1 ? one : other}`;
 const EN = {
   title: "Projects",
   command: "Every project: percent done, plans, where it stopped, usage, helper agents",
   hubTitle: "Projects",
   hubHint: "Percent, plans, usage and helper agents of every project",
-  hubDetail: (count, live) => `${count} projects${live > 0 ? ` · ${live} live` : ""}`,
+  hubDetail: (count, live) => `${many(count, "project", "projects")}${live > 0 ? ` · ${live} live` : ""}`,
   openBoard: "Open full board",
-  estimateAll: (count) => `Estimate ${count} percent${count === 1 ? "" : "s"} · ${count} model call${count === 1 ? "" : "s"}`,
+  estimateAll: (count) => `Estimate ${many(count, "percent", "percents")} · ${many(count, "model call", "model calls")}`,
   estimatedAgo: (when) => `estimated ${when}`,
   estimate: "Estimate",
   estimateAgain: "Estimate again",
@@ -1637,11 +1638,11 @@ const EN = {
   sessions: "Sessions",
   agents: "Helper agents",
   noAgents: "No helper agent ran in this project.",
-  agentLine: (runs, tokens, time) => `${runs} runs · ${tokens} · ${time}`,
+  agentLine: (runs, tokens, time) => `${many(runs, "run", "runs")} · ${tokens} · ${time}`,
   recent: "Latest runs",
   hide: "Hide from the list",
   showHidden: (count) => `Show ${count} hidden`,
-  other: (folders, tokens) => `${folders} other folders, ${tokens}: no version history or plan`,
+  other: (folders, tokens) => `${many(folders, "other folder", "other folders")}, ${tokens}: no version history or plan`,
   mapHint: "Hover a column for details",
   mapAlt: "Each column is a project; the fill is its percent.",
   noPercentShort: "no number",

@@ -1,3 +1,4 @@
+import { pick } from './kit/lang'
 import { agentCrab, box, C, circle, ease, fitSize, H, INNER, PAD, rise, sheet, txt, W, wrapBody } from './film-parts'
 import type { SlideCtx } from './film-parts'
 import { storyWords, weekdayName, weekdayShort } from './story-words'
@@ -15,7 +16,8 @@ const INTRO_RADIUS = 250
 
 /** A figure that counts up to its real value and stops there, written in full so it reads as the number it is. */
 export function counted(value: number, t: number, span = COUNT_S): string {
-  return Math.round(value * ease(t, 0.2, span)).toLocaleString('en-US').replaceAll(',', '.')
+  // Thousands are grouped as the language writes them: 12,345 in English, 12.345 in Turkish.
+  return Math.round(value * ease(t, 0.2, span)).toLocaleString('en-US').replaceAll(',', pick({ en: ',', tr: '.' }))
 }
 
 export function quote(text: string, o: { y: number; fill: string; size?: number; lines?: number; anchor?: 'start' | 'middle' }): string {

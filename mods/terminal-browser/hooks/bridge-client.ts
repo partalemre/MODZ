@@ -1,13 +1,14 @@
 import { isBridgeState, type BridgeState } from './bridge-protocol'
 import type { Host } from './host'
 import { authHeaders, bridgeUrl, state } from './session'
+import { word } from './words'
 
 // A watcher that stopped (the session unloading, the bridge gone) leaves nothing to talk to:
 // the next /browser launches a bridge again instead of posting to a dead port.
 export function forgetBridge(cause: unknown): void {
   state.port = null
   state.token = null
-  state.last = state.last === null ? null : { ...state.last, alive: false, error: `terminal-browser bağlantısı koptu: ${String(cause)}` }
+  state.last = state.last === null ? null : { ...state.last, alive: false, error: `${word('lost')}: ${String(cause)}` }
 }
 
 export async function post(host: Host, path: string, body: unknown): Promise<unknown> {

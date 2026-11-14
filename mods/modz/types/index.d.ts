@@ -38,8 +38,9 @@ export type ModzOpen = { pane: string; at: number }
 export type ModzStage = { pane: string; at: number }
 
 // Written by a mod under `{ plugin: '<mod>', key: 'home' }` when its pane's "MODZ" button is pressed: the hub
-// comes forward (and opens again if it was closed).
-export type ModzHome = { at: number }
+// comes forward (and opens again if it was closed). With `pane` the hub opens that mod's pane in its panel
+// instead, as a press on its own row would: a mod's way to another mod's pane.
+export type ModzHome = { at: number; pane?: string }
 
 // The person's arrangement of the hub, kept across sessions: rows moved (`order`, by pane) and rows hidden.
 export type HubLayout = { hidden: string[]; order: string[] }

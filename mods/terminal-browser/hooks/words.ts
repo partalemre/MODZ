@@ -17,6 +17,7 @@ const EN = {
   upgrade: 'This needs a newer terminal-browser: run terminal-browser upgrade',
   install: 'Install terminal-browser first',
   noStart: 'terminal-browser could not start',
+  lost: 'The terminal-browser connection was lost',
 }
 
 const TR: typeof EN = {
@@ -34,6 +35,7 @@ const TR: typeof EN = {
   upgrade: 'Daha yeni bir terminal-browser gerekiyor: terminal-browser upgrade çalıştır',
   install: "Önce terminal-browser'ı kur",
   noStart: 'terminal-browser başlatılamadı',
+  lost: 'terminal-browser bağlantısı koptu',
 }
 
 export type Word = keyof typeof EN

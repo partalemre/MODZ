@@ -78,14 +78,14 @@ function onSessionStart(on: On, agentToolEnabled: boolean): void {
       description: word('command'),
       argumentHint: '[url]',
       immediate: true,
-    }).catch(err => $.ui.log(`terminal-browser: /browser kaydedilemedi: ${err}`))
+    }).catch(err => $.ui.log(`terminal-browser: could not register /browser: ${err}`))
     if (agentToolEnabled) {
       await $.tool.register({
         name: 'open',
         description: 'Open terminal-browser directly inside claude code. Control the open page with the terminal-browser action CLI.',
         inputSchema: { type: 'object', properties: { url: { type: 'string', description: 'The page to open, as a full url or a host name' } } },
-      }).catch(err => $.ui.log(`terminal-browser: open aracı kaydedilemedi: ${err}`))
-      await $.tool.register({ name: 'close', description: 'Close the terminal-browser pane.' }).catch(err => $.ui.log(`terminal-browser: close aracı kaydedilemedi: ${err}`))
+      }).catch(err => $.ui.log(`terminal-browser: could not register the open tool: ${err}`))
+      await $.tool.register({ name: 'close', description: 'Close the terminal-browser pane.' }).catch(err => $.ui.log(`terminal-browser: could not register the close tool: ${err}`))
     }
     return r
   })

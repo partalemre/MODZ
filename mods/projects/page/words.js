@@ -1,4 +1,7 @@
 // The board's words in both languages. A plain script: a page opened from disk may not load modules.
+// "1 project", "3 projects": the count with the word in the right number.
+const boardMany = (n, one, other) => `${n} ${n === 1 ? one : other}`
+
 window.BOARD_WORDS = {
   tr: {
     title: 'Projeler', project: 'Proje', progress: 'İlerleme', tokens: 'Token', last: 'Son çalışma',
@@ -29,23 +32,23 @@ window.BOARD_WORDS = {
     progressTip: 'With ~ it is Claude\'s estimate; without, the share of ticked steps in plan files. With neither, no number is made up.',
     tokensTip: 'Tokens are word pieces, the unit AI text is measured in. This is the total spent on the project.',
     lastTip: 'When the project was last worked on.',
-    summary: (n, l, w) => `${n} projects${l ? `, ${l} live` : ''}. ${w} tokens in the last 7 days.`,
+    summary: (n, l, w) => `${boardMany(n, 'project', 'projects')}${l ? `, ${l} live` : ''}. ${w} tokens in the last 7 days.`,
     updated: t => `Updated ${t}`,
-    notice: n => `${n} projects have no percent, because no plan has ticked steps to count. Press Estimate on the Projects screen in the MODZ panel; the numbers arrive here by themselves.`,
+    notice: n => `${boardMany(n, 'project has', 'projects have')} no percent, because no plan has ticked steps to count. Press Estimate on the Projects screen in the MODZ panel; the numbers arrive here by themselves.`,
     week: 'Last 7 days', month: 'Last 30 days', older: 'Older',
-    other: (n, t) => `Also ${n} folders, ${t} tokens: no version history or plan, not listed.`,
+    other: (n, t) => `Also ${boardMany(n, 'folder', 'folders')}, ${t} tokens: no version history or plan, not listed.`,
     estimated: 'Claude\'s estimate', steps: b => `${b} steps`, noNumber: 'not estimated',
     none: 'No percent yet', noneHow: 'No ticked plan steps to count. Open this project in the MODZ panel and press Estimate: one small model call reads the README, plans and saved versions.',
     est: (w, b) => `Claude's estimate, ${w}${b ? `: ${b}` : ''}`, ticks: b => `${b} plan steps ticked.`,
-    skipped: n => ` ${n} plans with no ticks were not counted.`,
+    skipped: n => ` ${boardMany(n, 'plan with no ticks was', 'plans with no ticks were')} not counted.`,
     stale: 'New saved versions since this estimate; estimate again from the panel.',
     next: 'Next', done: 'Done so far', stopped: 'Where it stopped', asked: 'Last asked', commit: 'Last saved version', when: 'When', branchLabel: 'Line of work',
     branch: (b, d) => `${b}${d ? `, ${d} not saved yet` : ''}`, noStop: 'No session to read for this project.',
     tasks: (d, t) => `Last task list, ${d}/${t} done`,
-    plans: 'Plans', noPlans: 'No plan file found.', unmarked: t => `${t} steps, not ticked`,
+    plans: 'Plans', noPlans: 'No plan file found.', unmarked: t => `${boardMany(t, 'step', 'steps')}, not ticked`,
     spentWord: 'spent', spentHow: 'Spent adds fresh input, what went into the chat kept ready (cache) and what Claude wrote. Rereads of that kept chat run far larger, so they are shown apart.',
     input: 'Fresh input', cacheW: 'Kept ready (cache)', output: 'Written by Claude', cacheR: 'Reused (cache)', weekSpent: 'Last 7 days', sessions: 'Sessions', models: 'By model',
-    agents: 'Helper agents', noAgents: 'No helper agent ran on this project.', kind: 'Type', runsHead: 'Runs', took: 'Time', recent: 'Latest runs', tools: n => `${n} actions`,
+    agents: 'Helper agents', noAgents: 'No helper agent ran on this project.', kind: 'Type', runsHead: 'Runs', took: 'Time', recent: 'Latest runs', tools: n => `${boardMany(n, 'action', 'actions')}`,
     live: 'live', ago: { now: 'just now', m: n => `${n} min ago`, h: n => `${n} h ago`, d: n => `${n} d ago` }, units: { s: 's', m: 'min', h: 'h' },
   },
 }

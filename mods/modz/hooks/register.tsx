@@ -193,7 +193,10 @@ function stageHooks(on: On): void {
     const done = await next(e)
     const from: string = e.plugin
     if (from !== 'modz') {
-      $.clock.after(0, () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: 'debug' })))
+      // A value that names a pane asks for that mod's pane, as a press on its row here would.
+      const pane = paneOf(e.value)
+      const go = () => (pane === null ? openHub($) : openPane(swapOf($), pane))
+      $.clock.after(0, () => void go().catch(cause => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: 'debug' })))
     }
 
     return done

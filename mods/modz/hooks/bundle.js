@@ -3617,7 +3617,9 @@ function stageHooks(on) {
     const done = await next(e);
     const from = e.plugin;
     if (from !== "modz") {
-      $.clock.after(0, () => void openHub($).catch((cause) => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: "debug" })));
+      const pane = paneOf(e.value);
+      const go = () => pane === null ? openHub($) : openPane(swapOf($), pane);
+      $.clock.after(0, () => void go().catch((cause) => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: "debug" })));
     }
     return done;
   }).catch(($, e, next) => next(e));

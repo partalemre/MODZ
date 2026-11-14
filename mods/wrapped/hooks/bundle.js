@@ -395,6 +395,7 @@ function compact(value) {
     return `${(value / THOUSAND).toFixed(1).replace(/\.0$/, "")}k`;
   return String(Math.round(value));
 }
+const some = (value, one, other) => `${compact(value)} ${Math.round(value) === 1 ? one : other}`;
 const MONTHS = {
   en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
   tr: ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
@@ -442,11 +443,11 @@ const shortMonth = (month) => pick(MONTHS)[Number(month.split("-")[1]) - 1] ?? m
 const words = () => pick({
   en: {
     agentsTitle: "Agents",
-    agentsLine: (runs, tools) => `${compact(runs)} runs, ${compact(tools)} tool calls`,
-    agentRun: (runs) => `${compact(runs)} runs`,
-    agentMeta: (tools, tokens) => `${compact(tools)} tools · ${compact(tokens)} tokens`,
+    agentsLine: (runs, tools) => `${some(runs, "run", "runs")}, ${some(tools, "tool call", "tool calls")}`,
+    agentRun: (runs) => `${some(runs, "run", "runs")}`,
+    agentMeta: (tools, tokens) => `${some(tools, "tool", "tools")} · ${some(tokens, "token", "tokens")}`,
     monthsTitle: "Month by month",
-    monthMeta: (prompts, runs) => `${compact(prompts)} prompts · ${compact(runs)} agents`,
+    monthMeta: (prompts, runs) => `${some(prompts, "prompt", "prompts")} · ${some(runs, "agent", "agents")}`,
     projectKind: (kind) => ({ claude: "Claude tool", game: "Game", mobile: "Mobile app", web: "Web app", tool: "Code tool", writing: "Research", other: "Project" })[kind],
     fileKind: ({ kind, language }) => language !== null ? `${language} file` : { test: "Test file", agent: "Agent instructions", doc: "Document", config: "Settings file", style: "Stylesheet", data: "Data file", script: "Shell script", code: "Code file" }[kind],
     filmMake: "Make the video",
@@ -457,7 +458,7 @@ const words = () => pick({
     paneTitle: "Wrapped",
     commandHelp: "Your year with Claude Code: a card and a video. /wrapped 2025 picks a year",
     hubHint: "Your year with Claude Code on one card",
-    hubDetail: (w) => `${w.year}: ${personaName(w.persona)}, ${compact(w.prompts)} prompts`,
+    hubDetail: (w) => `${w.year}: ${personaName(w.persona)}, ${some(w.prompts, "prompt", "prompts")}`,
     opened: "Wrapped pane opened.",
     badYear: "Give a year like 2026, or nothing for this one.",
     reading: (year) => `Reading your ${year} transcripts…`,
@@ -476,23 +477,23 @@ const words = () => pick({
     linesAdded: "lines added",
     apiValue: "at API prices",
     rightRow: "Claude said I was right",
-    rightValue: (count) => `${compact(count)} times`,
+    rightValue: (count) => `${some(count, "time", "times")}`,
     stopsRow: "I stopped Claude",
-    stopsValue: (count) => `${compact(count)} times`,
+    stopsValue: (count) => `${some(count, "time", "times")}`,
     hourRow: "Busiest hour",
     hourValue: hourText,
     nightRow: "Prompts after midnight",
     percent: (value) => `${value}%`,
     toolRow: "Favorite tool",
-    toolValue: (name, count) => `${name}, ${compact(count)} times`,
+    toolValue: (name, count) => `${name}, ${some(count, "time", "times")}`,
     novelsRow: "Claude wrote about",
-    novelsValue: (count) => `${compact(count)} novels`,
+    novelsValue: (count) => `${some(count, "novel", "novels")}`,
     fileRow: "Most-edited file",
-    fileValue: (name, count) => `${name}, ${compact(count)} edits`,
+    fileValue: (name, count) => `${name}, ${some(count, "edit", "edits")}`,
     projectRow: "Top project",
-    projectValue: (name, count) => `${name}, ${compact(count)} prompts`,
+    projectValue: (name, count) => `${name}, ${some(count, "prompt", "prompts")}`,
     chatRow: "Longest chat",
-    chatValue: (count) => `${compact(count)} prompts`,
+    chatValue: (count) => `${some(count, "prompt", "prompts")}`,
     made: "made with MODZ",
     showNames: "Show real names",
     hideNames: "Back to categories",
@@ -881,34 +882,34 @@ const weekdayShort = (index) => pick(DAY_SHORT)[index] ?? "";
 const storyWords = () => pick({
   en: {
     intro: "with Claude Code",
-    introSub: (chats) => `${compact(chats)} chats later, here is your year.`,
+    introSub: (chats) => `${some(chats, "chat", "chats")} later, here is your year.`,
     prompts: "prompts you sent this year",
     promptsSub: (perDay) => `About ${compact(perDay)} a day. Claude never got bored.`,
-    replies: (count) => `Claude answered ${compact(count)} times.`,
+    replies: (count) => `Claude answered ${some(count, "time", "times")}.`,
     day: "Your busiest day",
-    dayCount: (count) => `${compact(count)} prompts`,
+    dayCount: (count) => `${some(count, "prompt", "prompts")}`,
     daySub: (count) => count >= 200 ? "Did you eat that day?" : "A good day to have a good day.",
     weekday: "Your favorite day to build",
-    streak: (days) => `${days} days in a row`,
-    active: (days) => `${days} active days in all`,
+    streak: (days) => `${some(days, "day", "days")} in a row`,
+    active: (days) => `${some(days, "active day", "active days")} in all`,
     hour: "Your busiest hour",
     night: (share) => `${share}% of your prompts came after midnight.`,
     projects: "Where you spent your year",
-    promptsCount: (count) => `${compact(count)} prompts`,
+    promptsCount: (count) => `${some(count, "prompt", "prompts")}`,
     months: "How the year went",
-    monthPeak: (project, count) => `${project}, ${compact(count)} prompts`,
+    monthPeak: (project, count) => `${project}, ${some(count, "prompt", "prompts")}`,
     tools: "Your favorite tool",
-    times: (count) => `${compact(count)} times`,
+    times: (count) => `${some(count, "time", "times")}`,
     lines: "lines added",
     file: "The file you could not leave alone",
-    fileCount: (count) => `${compact(count)} edits`,
-    novels: (count) => `Claude wrote about ${compact(count)} novels of text.`,
+    fileCount: (count) => `${some(count, "edit", "edits")}`,
+    novels: (count) => `Claude wrote about ${some(count, "novel", "novels")} of text.`,
     crew: "agents went to work",
-    crewEach: (each) => `each crab is ${compact(each)} agents`,
-    crewMeta: (tools) => `${compact(tools)} tool calls between them`,
-    runs: (count) => `${compact(count)} runs`,
+    crewEach: (each) => `each crab is ${some(each, "agent", "agents")}`,
+    crewMeta: (tools) => `${some(tools, "tool call", "tool calls")} between them`,
+    runs: (count) => `${some(count, "run", "runs")}`,
     hardest: "Hardest single shift",
-    hardestMeta: (tokens) => `tool calls, ${compact(tokens)} tokens, one agent`,
+    hardestMeta: (tokens) => `tool calls, ${some(tokens, "token", "tokens")}, one agent`,
     model: "Who you talked to most",
     modelShare: (share) => `${share}% of all replies`,
     funRight: "times Claude said you were right",
@@ -1002,7 +1003,7 @@ const CELL_MAX = 30;
 const DAYS = 7;
 const INTRO_RADIUS = 250;
 function counted(value, t, span = COUNT_S) {
-  return Math.round(value * ease(t, 0.2, span)).toLocaleString("en-US").replaceAll(",", ".");
+  return Math.round(value * ease(t, 0.2, span)).toLocaleString("en-US").replaceAll(",", pick({ en: ",", tr: "." }));
 }
 function quote(text, o) {
   const size = o.size ?? 25;

@@ -15,6 +15,9 @@ export function compact(value: number): string {
   return String(Math.round(value))
 }
 
+// "1 prompt", "3 prompts", "12k prompts": the short count with its word in the right number (English).
+export const some = (value: number, one: string, other: string): string => `${compact(value)} ${Math.round(value) === 1 ? one : other}`
+
 const MONTHS = {
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   tr: ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'],
@@ -75,11 +78,11 @@ export const words = () =>
   pick({
     en: {
       agentsTitle: 'Agents',
-      agentsLine: (runs: number, tools: number) => `${compact(runs)} runs, ${compact(tools)} tool calls`,
-      agentRun: (runs: number) => `${compact(runs)} runs`,
-      agentMeta: (tools: number, tokens: number) => `${compact(tools)} tools · ${compact(tokens)} tokens`,
+      agentsLine: (runs: number, tools: number) => `${some(runs, 'run', 'runs')}, ${some(tools, 'tool call', 'tool calls')}`,
+      agentRun: (runs: number) => `${some(runs, 'run', 'runs')}`,
+      agentMeta: (tools: number, tokens: number) => `${some(tools, 'tool', 'tools')} · ${some(tokens, 'token', 'tokens')}`,
       monthsTitle: 'Month by month',
-      monthMeta: (prompts: number, runs: number) => `${compact(prompts)} prompts · ${compact(runs)} agents`,
+      monthMeta: (prompts: number, runs: number) => `${some(prompts, 'prompt', 'prompts')} · ${some(runs, 'agent', 'agents')}`,
       projectKind: (kind: ProjectKind): string => ({ claude: 'Claude tool', game: 'Game', mobile: 'Mobile app', web: 'Web app', tool: 'Code tool', writing: 'Research', other: 'Project' })[kind],
       fileKind: ({ kind, language }: FileLook): string => (language !== null ? `${language} file` : { test: 'Test file', agent: 'Agent instructions', doc: 'Document', config: 'Settings file', style: 'Stylesheet', data: 'Data file', script: 'Shell script', code: 'Code file' }[kind]),
       filmMake: 'Make the video',
@@ -90,7 +93,7 @@ export const words = () =>
       paneTitle: 'Wrapped',
       commandHelp: 'Your year with Claude Code: a card and a video. /wrapped 2025 picks a year',
       hubHint: 'Your year with Claude Code on one card',
-      hubDetail: (w: Wrapped) => `${w.year}: ${personaName(w.persona)}, ${compact(w.prompts)} prompts`,
+      hubDetail: (w: Wrapped) => `${w.year}: ${personaName(w.persona)}, ${some(w.prompts, 'prompt', 'prompts')}`,
       opened: 'Wrapped pane opened.',
       badYear: 'Give a year like 2026, or nothing for this one.',
       reading: (year: number) => `Reading your ${year} transcripts…`,
@@ -109,23 +112,23 @@ export const words = () =>
       linesAdded: 'lines added',
       apiValue: 'at API prices',
       rightRow: 'Claude said I was right',
-      rightValue: (count: number) => `${compact(count)} times`,
+      rightValue: (count: number) => `${some(count, 'time', 'times')}`,
       stopsRow: 'I stopped Claude',
-      stopsValue: (count: number) => `${compact(count)} times`,
+      stopsValue: (count: number) => `${some(count, 'time', 'times')}`,
       hourRow: 'Busiest hour',
       hourValue: hourText,
       nightRow: 'Prompts after midnight',
       percent: (value: number) => `${value}%`,
       toolRow: 'Favorite tool',
-      toolValue: (name: string, count: number) => `${name}, ${compact(count)} times`,
+      toolValue: (name: string, count: number) => `${name}, ${some(count, 'time', 'times')}`,
       novelsRow: 'Claude wrote about',
-      novelsValue: (count: number) => `${compact(count)} novels`,
+      novelsValue: (count: number) => `${some(count, 'novel', 'novels')}`,
       fileRow: 'Most-edited file',
-      fileValue: (name: string, count: number) => `${name}, ${compact(count)} edits`,
+      fileValue: (name: string, count: number) => `${name}, ${some(count, 'edit', 'edits')}`,
       projectRow: 'Top project',
-      projectValue: (name: string, count: number) => `${name}, ${compact(count)} prompts`,
+      projectValue: (name: string, count: number) => `${name}, ${some(count, 'prompt', 'prompts')}`,
       chatRow: 'Longest chat',
-      chatValue: (count: number) => `${compact(count)} prompts`,
+      chatValue: (count: number) => `${some(count, 'prompt', 'prompts')}`,
       made: 'made with MODZ',
       showNames: 'Show real names',
       hideNames: 'Back to categories',

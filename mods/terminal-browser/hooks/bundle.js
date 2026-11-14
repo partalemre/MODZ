@@ -29,10 +29,58 @@ const bridgeUrl = (path) => `http://127.0.0.1:${state.port}${path}`;
 const authHeaders = () => ({ authorization: `Bearer ${state.token}` });
 const viewKey = () => `view${state.viewGeneration}`;
 
+let current = "en";
+const langOf = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
+function setLang(value) {
+  current = langOf(value);
+  return current;
+}
+const pick = (table) => table[current];
+
+const EN = {
+  command: "Opens a browser on the right",
+  closed: "Browser closed",
+  alreadyClosed: "The browser is already closed",
+  opened: "Browser opened",
+  startPage: "Start page",
+  paneTitle: "Browser",
+  eyebrow: "Browser",
+  loading: "Loading the page…",
+  died: "The browser closed",
+  retry: "Try again with /browser · /browser close closes it",
+  terminalOnly: "terminal-browser runs only in the terminal",
+  upgrade: "This needs a newer terminal-browser: run terminal-browser upgrade",
+  install: "Install terminal-browser first",
+  noStart: "terminal-browser could not start",
+  lost: "The terminal-browser connection was lost"
+};
+const TR = {
+  command: "Sağda bir tarayıcı açar",
+  closed: "Tarayıcı kapatıldı",
+  alreadyClosed: "Tarayıcı zaten kapalı",
+  opened: "Tarayıcı açıldı",
+  startPage: "Başlangıç sayfası",
+  paneTitle: "Tarayıcı",
+  eyebrow: "Tarayıcı",
+  loading: "Sayfa yükleniyor…",
+  died: "Tarayıcı kapandı",
+  retry: "/browser ile yeniden dene · /browser close kapatır",
+  terminalOnly: "terminal-browser yalnızca terminalde çalışır",
+  upgrade: "Daha yeni bir terminal-browser gerekiyor: terminal-browser upgrade çalıştır",
+  install: "Önce terminal-browser'ı kur",
+  noStart: "terminal-browser başlatılamadı",
+  lost: "terminal-browser bağlantısı koptu"
+};
+const word = (key) => pick({ en: EN, tr: TR })[key];
+function openedText(url, isStart) {
+  const startPage = pick({ en: "start page", tr: "başlangıç sayfası" });
+  return `${word("opened")}: ${isStart ? startPage : url}`;
+}
+
 function forgetBridge(cause) {
   state.port = null;
   state.token = null;
-  state.last = state.last === null ? null : { ...state.last, alive: false, error: `terminal-browser bağlantısı koptu: ${String(cause)}` };
+  state.last = state.last === null ? null : { ...state.last, alive: false, error: `${word("lost")}: ${String(cause)}` };
 }
 async function post(host, path, body) {
   if (state.port === null)
@@ -121,7 +169,7 @@ async function drawFrame(host, frame, denials) {
   }
   denials.count += 1;
   if (denials.count === DENIALS_BEFORE_LOGGING)
-    host.log(`terminal-browser: kare çizimi reddedildi: ${result.deny}`);
+    host.log(`terminal-browser: a frame draw was refused: ${result.deny}`);
   const now = Date.now();
   if (now - denials.lastRedraw >= DENIED_REDRAW_MS) {
     denials.lastRedraw = now;
@@ -159,52 +207,6 @@ async function watchBridge(host) {
     }
     await drawFrame(host, frame, denials);
   }
-}
-
-let current = "en";
-const langOf = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
-function setLang(value) {
-  current = langOf(value);
-  return current;
-}
-const pick = (table) => table[current];
-
-const EN = {
-  command: "Opens a browser on the right",
-  closed: "Browser closed",
-  alreadyClosed: "The browser is already closed",
-  opened: "Browser opened",
-  startPage: "Start page",
-  paneTitle: "Browser",
-  eyebrow: "Browser",
-  loading: "Loading the page…",
-  died: "The browser closed",
-  retry: "Try again with /browser · /browser close closes it",
-  terminalOnly: "terminal-browser runs only in the terminal",
-  upgrade: "This needs a newer terminal-browser: run terminal-browser upgrade",
-  install: "Install terminal-browser first",
-  noStart: "terminal-browser could not start"
-};
-const TR = {
-  command: "Sağda bir tarayıcı açar",
-  closed: "Tarayıcı kapatıldı",
-  alreadyClosed: "Tarayıcı zaten kapalı",
-  opened: "Tarayıcı açıldı",
-  startPage: "Başlangıç sayfası",
-  paneTitle: "Tarayıcı",
-  eyebrow: "Tarayıcı",
-  loading: "Sayfa yükleniyor…",
-  died: "Tarayıcı kapandı",
-  retry: "/browser ile yeniden dene · /browser close kapatır",
-  terminalOnly: "terminal-browser yalnızca terminalde çalışır",
-  upgrade: "Daha yeni bir terminal-browser gerekiyor: terminal-browser upgrade çalıştır",
-  install: "Önce terminal-browser'ı kur",
-  noStart: "terminal-browser başlatılamadı"
-};
-const word = (key) => pick({ en: EN, tr: TR })[key];
-function openedText(url, isStart) {
-  const startPage = pick({ en: "start page", tr: "başlangıç sayfası" });
-  return `${word("opened")}: ${isStart ? startPage : url}`;
 }
 
 const INSTALL_URL = "https://terminal-browser.sh";
@@ -418,14 +420,14 @@ function onSessionStart(on, agentToolEnabled) {
       description: word("command"),
       argumentHint: "[url]",
       immediate: true
-    }).catch((err) => $.ui.log(`terminal-browser: /browser kaydedilemedi: ${err}`));
+    }).catch((err) => $.ui.log(`terminal-browser: could not register /browser: ${err}`));
     if (agentToolEnabled) {
       await $.tool.register({
         name: "open",
         description: "Open terminal-browser directly inside claude code. Control the open page with the terminal-browser action CLI.",
         inputSchema: { type: "object", properties: { url: { type: "string", description: "The page to open, as a full url or a host name" } } }
-      }).catch((err) => $.ui.log(`terminal-browser: open aracı kaydedilemedi: ${err}`));
-      await $.tool.register({ name: "close", description: "Close the terminal-browser pane." }).catch((err) => $.ui.log(`terminal-browser: close aracı kaydedilemedi: ${err}`));
+      }).catch((err) => $.ui.log(`terminal-browser: could not register the open tool: ${err}`));
+      await $.tool.register({ name: "close", description: "Close the terminal-browser pane." }).catch((err) => $.ui.log(`terminal-browser: could not register the close tool: ${err}`));
     }
     return r;
   });

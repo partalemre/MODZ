@@ -99,6 +99,7 @@ export const EN: Words = {
   showLess: 'Show less',
   showMore: 'Show more',
   cancel: { label: 'Keep my work', hotkey: 'k' },
+  askRun: { question: summary => `This command would ${summary}. Run it?`, header: 'Blast Radius', run: 'Run it', keep: 'Keep my work' },
   doing: isDelete => (isDelete ? 'Deleting…' : 'Running…'),
   fullCommand: command => `full command: ${command}`,
   kept: 'Kept. Nothing was thrown away.',

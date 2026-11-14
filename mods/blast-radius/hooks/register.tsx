@@ -123,12 +123,26 @@ async function survey($: EngineInterface, risky: Risky): Promise<boolean> {
 const isUnattended = async ($: EngineInterface, agentId: string | undefined): Promise<boolean> =>
   agentId !== undefined || (await $.session.surfaces()).length === 0
 
+/** True only when the person chose to run it; a dismissed dialog or a -p run (it rejects) keeps the work. */
+async function askedToRun($: EngineInterface, summary: string): Promise<boolean> {
+  const ask = words().askRun
+  try {
+    return (await $.ui.ask(ask.question(summary), { options: [ask.run, ask.keep], header: ask.header })) === ask.run
+  } catch {
+    $.ui.log('blast-radius: no one answered the run question, so the command is refused', { to: 'debug' })
+
+    return false
+  }
+}
+
 /** A call nobody can answer: refused at once when it would lose something, never held. Null when it loses nothing. */
 async function refuseUnattended($: EngineInterface, input: { command: string; risks: Risk[]; isSubagent: boolean }): Promise<{ deny: string } | null> {
   const risky: Risky = { mine: unheld(input.command), risks: input.risks, summary: input.risks[0]?.label ?? 'a risky command' }
   // A measurement that broke can't say it is harmless: refuse.
   const isLossy = await survey($, risky).catch(() => true)
   if (!isLossy) return null
+  // A desktop chat can report no surface while the person is right there: its own dialog still reaches them.
+  if (!input.isSubagent && (await askedToRun($, risky.summary))) return null
   const who = input.isSubagent
     ? 'it came from a subagent, and only the main chat can answer its card'
     : 'no screen is attached to this chat right now (it is in the background, driven remotely, or a claude -p run), so nobody can answer its card'

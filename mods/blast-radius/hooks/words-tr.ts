@@ -101,6 +101,7 @@ export const TR: Words = {
   showLess: 'Daha az göster',
   showMore: 'Daha fazla göster',
   cancel: { label: 'Vazgeç', hotkey: 'v' },
+  askRun: { question: summary => `Bu komut şunu yapacak: ${summary}. Çalıştırılsın mı?`, header: 'Blast Radius', run: 'Çalıştır', keep: 'Vazgeç' },
   doing: isDelete => (isDelete ? 'Siliniyor…' : 'Çalıştırılıyor…'),
   fullCommand: command => `tam komut: ${command}`,
   kept: 'Tutuldu. Hiçbir şey kaybolmadı.',

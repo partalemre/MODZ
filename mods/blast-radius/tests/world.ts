@@ -42,12 +42,15 @@ export type World = {
   // What Jev answers, and every request sent to it.
   jevChoice: string
   fetched: any[]
+  // The label picked in the engine's own question dialog (null: dismissed), and every question shown.
+  choice: string | null
+  questions: string[]
 }
 
 export const SURFACES = ['terminal', 'desktop'] as const
 
 export function world(over: Partial<World> = {}): World {
-  return { cwd: '/work/demo-app', beneath: { type: 'Text', children: [''] }, hasNoSleep: false, failing: [], isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], panes: [], ran: [], toasts: [], clock: null, sessionId: 'chat-a', root: '/work/demo-app', surfaces: ['desktop'], store: {}, links: {}, isToolError: false, logs: [], files: {}, reply: 'allow', asked: [], jevChoice: 'allow', fetched: [], ...over }
+  return { cwd: '/work/demo-app', beneath: { type: 'Text', children: [''] }, hasNoSleep: false, failing: [], isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], panes: [], ran: [], toasts: [], clock: null, sessionId: 'chat-a', root: '/work/demo-app', surfaces: ['desktop'], store: {}, links: {}, isToolError: false, logs: [], files: {}, reply: 'allow', asked: [], jevChoice: 'allow', fetched: [], choice: null, questions: [], ...over }
 }
 
 const SECOND = 1000
@@ -184,6 +187,13 @@ export function stub(on: any, w: World): void {
     return ok(w.answers[keyOf(e.argv)] ?? '')
   })
   on('tool.call', (_: any, e: any) => {
+    if (e.tool === 'AskUserQuestion') {
+      const question = e.questions[0].question
+      w.questions.push(question)
+      if (w.choice === null) throw new Error('dismissed')
+
+      return { result: { answers: { [question]: w.choice } } }
+    }
     w.ran.push(e)
 
     return e.tool !== 'Bash' && w.isToolError ? { isError: true, result: 'failed', text: 'failed' } : { result: 'ran' }

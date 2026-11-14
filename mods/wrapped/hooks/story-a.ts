@@ -1,5 +1,5 @@
 import { pick } from './kit/lang'
-import { agentCrab, box, C, circle, ease, fitSize, H, INNER, PAD, rise, sheet, txt, W, wrapBody } from './film-parts'
+import { agentCrab, box, C, circle, dust, ease, fitSize, H, INNER, PAD, pop, pulse, rise, sheet, txt, W, wrapBody } from './film-parts'
 import type { SlideCtx } from './film-parts'
 import { storyWords, weekdayName, weekdayShort } from './story-words'
 import { shortDay } from './words'
@@ -37,8 +37,9 @@ export function introSlide({ w, t, step }: SlideCtx): string {
 
   return [
     sheet(C.ink),
-    circle(MID, 370, INTRO_RADIUS * ease(t, 0, 0.9) + Math.sin(t * 1.1) * 8, C.clay),
-    rise(txt(String(w.year), { x: MID, y: 420, size: fitSize(String(w.year), 190, INNER), fill: C.ink, isDisplay: true, anchor: 'middle' }), ease(t, 0.25)),
+    dust(t, C.cream),
+    circle(MID, 370, INTRO_RADIUS * ease(t, 0, 0.9) + pulse(t) * 12, C.clay),
+    pop(txt(String(w.year), { x: MID, y: 420, size: fitSize(String(w.year), 190, INNER), fill: C.ink, isDisplay: true, anchor: 'middle' }), t, { start: 0.25, x: MID, y: 370 }),
     rise(txt(s.intro, { x: MID, y: 480, size: 38, fill: C.ink, isBold: true, anchor: 'middle' }), ease(t, 0.5)),
     rise(quote(s.introSub(w.sessions), { y: 720, fill: C.cream, anchor: 'middle' }), ease(t, 0.8)),
     walkers.join(''),
@@ -46,7 +47,7 @@ export function introSlide({ w, t, step }: SlideCtx): string {
 }
 
 function rings(cx: number, cy: number, t: number, fill: string): string {
-  return [0, 1, 2, 3].map(index => `<circle cx="${cx}" cy="${cy}" r="${(120 + index * 110 + Math.sin(t * 0.9 + index) * 12).toFixed(1)}" fill="none" stroke="${fill}" stroke-opacity="0.22" stroke-width="30"/>`).join('')
+  return [0, 1, 2, 3].map(index => `<circle cx="${cx}" cy="${cy}" r="${(120 + index * 110 + pulse(t + index * 0.125) * 16).toFixed(1)}" fill="none" stroke="${fill}" stroke-opacity="0.22" stroke-width="30"/>`).join('')
 }
 
 export function promptsSlide({ w, t }: SlideCtx): string {
@@ -96,9 +97,9 @@ export function daySlide(c: SlideCtx): string {
 
   return [
     sheet(C.violet),
-    circle(W - 40, 170, 150 + Math.sin(t) * 10, C.rose, 0.9),
+    circle(W - 40, 170, 150 + pulse(t) * 16, C.rose, 0.9),
     rise(txt(s.day, { x: PAD, y: 250, size: 34, fill: C.cream, isBold: true }), ease(t, 0)),
-    rise(txt(day, { x: PAD, y: 400, size: fitSize(day, 128, INNER), fill: C.cream, isDisplay: true }), ease(t, 0.3)),
+    pop(txt(day, { x: PAD, y: 400, size: fitSize(day, 128, INNER), fill: C.cream, isDisplay: true }), t, { start: 0.3, x: PAD, y: 400 }),
     rise(txt(s.dayCount(best.count), { x: PAD, y: 480, size: 54, fill: C.amber, isDisplay: true }), ease(t, 0.7)),
     rise(quote(s.daySub(best.count), { y: 545, fill: C.cream }), ease(t, 1.1)),
     calendar(c, { y: 620, on: C.cream, peak: C.amber }),
@@ -120,8 +121,10 @@ export function weekdaySlide({ w, t }: SlideCtx): string {
 
   return [
     sheet(C.moss),
+    circle(W, 0, 200 + pulse(t) * 16, C.amber, 0.18),
+    dust(t, C.cream),
     rise(txt(s.weekday, { x: PAD, y: 160, size: 32, fill: C.cream, isBold: true }), ease(t, 0)),
-    rise(txt(name, { x: PAD, y: 280, size: fitSize(name, 96, INNER), fill: C.amber, isDisplay: true }), ease(t, 0.25)),
+    pop(txt(name, { x: PAD, y: 280, size: fitSize(name, 96, INNER), fill: C.amber, isDisplay: true }), t, { start: 0.25, x: PAD, y: 280 }),
     bars.join(''),
     rise(txt(s.streak(w.streak), { x: PAD, y: 790, size: fitSize(s.streak(w.streak), 50, INNER), fill: C.cream, isDisplay: true }), ease(t, 1.3)),
     rise(txt(s.active(w.activeDays), { x: PAD, y: 840, size: 26, fill: C.cream }), ease(t, 1.5)),
@@ -148,6 +151,8 @@ export function hourSlide({ w, t }: SlideCtx): string {
 
   return [
     sheet(C.ink),
+    dust(t, C.amber),
+    circle(CLOCK.x, CLOCK.y, CLOCK.inner - 14 + pulse(t) * 8, C.violet, 0.5),
     rise(txt(s.hour, { x: PAD, y: 130, size: 34, fill: C.cream, isBold: true }), ease(t, 0)),
     spokes.join(''),
     rise(txt(`${pad2(best)}:00`, { x: CLOCK.x, y: CLOCK.y + 20, size: 58, fill: C.amber, isDisplay: true, anchor: 'middle' }), ease(t, 0.9)),

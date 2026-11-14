@@ -17,7 +17,7 @@ This is the one loud page in MODZ: a year in review earns colour blocks, where t
 
 - **Copy image** puts the last page on your clipboard, ready to paste anywhere, and keeps it at `~/Downloads/wrapped-<year>.png`. The clipboard needs macOS; elsewhere you get the `.svg`.
 - **Share on X** does the same and opens a post in your browser with the words filled in; press Cmd+V there to add the image. Nothing is uploaded or sent for you.
-- **Make the video** builds a vertical story of about a minute at 60 frames a second, 1080×1920, `~/Downloads/wrapped-<year>.mp4`, and opens it. It needs macOS and `ffmpeg` (`brew install ffmpeg`), takes about two minutes and has no sound.
+- **Make the video** builds a vertical story of about a minute at 60 frames a second, 1080×1920, `~/Downloads/wrapped-<year>.mp4`, and opens it. It needs macOS and `ffmpeg` (`brew install ffmpeg`), and takes a few minutes. It has its own music, made on your machine: one song whose arrangement changes with every page, each page turning on a downbeat and the shapes moving on the beat.
 - **Hide names** masks your project and file names and your hardest agent's task everywhere, the pages, image, video and text included: projects read Project A, Project B. They show until you press it, so press it before you share if a name is private. The post's words never name a project.
 
 ## What the figures mean

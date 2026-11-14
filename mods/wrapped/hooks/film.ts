@@ -1,12 +1,14 @@
 import { standalone } from './card'
 import type { CardSpec } from './card'
 import { ease, H, W } from './film-parts'
+import { scoreFor } from './score'
 import { segments, slidesFor } from './story'
 import type { Slide } from './story'
 import { toPic } from './kit/svg'
 
 // The film: the story's pages one after another, each next page sliding up over the last. Sixty frames a second, for
 // the moves and the counters; crabs keep their pixel gait. A frame the same as the one before is not drawn twice.
+// Under it plays the score, a new arrangement of one song for every page.
 
 export const FPS = 60
 const STEP_FPS = 8
@@ -114,6 +116,9 @@ export async function makeFilm(io: FilmIo, spec: CardSpec, where: { dir: string;
   const holds = await drawFrames(io, spec, where.dir)
   const list = `${where.dir}/list.txt`
   await io.write(list, concatList(where.dir, holds))
-  const argv = ['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-vf', `fps=${FPS},format=yuv420p`, '-c:v', 'libx264', '-preset', 'fast', '-crf', '18', '-movflags', '+faststart', where.out]
+  const sound = `${where.dir}/score.wav`
+  await io.write(`${sound}.b64`, scoreFor(slidesFor(spec.wrapped)))
+  fail('base64', await io.run(['base64', '-d', '-i', `${sound}.b64`, '-o', sound]))
+  const argv = ['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', list, '-i', sound, '-vf', `fps=${FPS},format=yuv420p`, '-c:v', 'libx264', '-preset', 'fast', '-crf', '18', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', where.out]
   fail('ffmpeg', await io.run(argv))
 }

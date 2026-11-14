@@ -61,7 +61,58 @@ export function wrapBody(text: string, o: { size: number; room: number; lines: n
   return [...out.slice(0, o.lines - 1), fitBody(out.slice(o.lines - 1).join(' '), o.size, o.room)].filter(part => part !== '')
 }
 
-export const sheet = (fill: string): string => `<rect width="${W}" height="${H}" fill="${fill}"/>`
+/** One beat of the film's music; pages are whole bars of four, so every page turns on a downbeat. */
+export const BEAT_S = 0.5
+
+/** The beat as the eye gets it: 1 on each beat, gone before the next. A page at rest holds still. */
+export const pulse = (t: number): number => (t >= SETTLED ? 0 : Math.exp(-((t % BEAT_S) / BEAT_S) * 5))
+
+// A page's colour with light falling on it from the top left, so a flat block reads as a lit surface.
+export const sheet = (fill: string): string =>
+  `<defs><radialGradient id="lit" cx="0.15" cy="0.08" r="1.1"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.16"/><stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="1" stop-color="#000000" stop-opacity="0.2"/></radialGradient></defs><rect width="${W}" height="${H}" fill="${fill}"/><rect width="${W}" height="${H}" fill="url(#lit)"/>`
+
+/** Pixel dust drifting up the page, squares like the crabs' own. */
+export function dust(t: number, fill: string, count = 18): string {
+  const time = t >= SETTLED ? 0 : t
+  let body = ''
+  for (let index = 0; index < count; index += 1) {
+    const size = 6 + (index % 3) * 5
+    const y = H - ((index * 173.1 + time * (16 + (index % 5) * 9)) % (H + size))
+    body += `<rect x="${((index * 97.3) % W).toFixed(1)}" y="${y.toFixed(1)}" width="${size}" height="${size}" rx="1.5" fill="${fill}" fill-opacity="${(0.07 + (index % 4) * 0.03).toFixed(2)}"/>`
+  }
+
+  return body
+}
+
+const POP_S = 0.5
+const BACK = 1.70158
+
+/** A headline lands: it grows past its size and settles, around the point it is set from. */
+export function pop(body: string, t: number, o: { start: number; x: number; y: number }): string {
+  const raw = clamp((t - o.start) / POP_S)
+  const scale = 0.6 + 0.4 * (1 + (BACK + 1) * (raw - 1) ** 3 + BACK * (raw - 1) ** 2)
+
+  return `<g opacity="${clamp(raw * 3).toFixed(3)}" transform="translate(${o.x} ${o.y}) scale(${scale.toFixed(4)}) translate(${-o.x} ${-o.y})">${body}</g>`
+}
+
+const BURST = { count: 36, fall: 520, life: 2.4 } as const
+
+/** Confetti thrown from a point at `start`; gone by the time a page rests. */
+export function burst(t: number, o: { start: number; x: number; y: number }): string {
+  const age = t - o.start
+  if (age < 0 || age > BURST.life) return ''
+  const paints = [C.amber, C.rose, C.cream, C.sky, C.violet]
+  let body = ''
+  for (let index = 0; index < BURST.count; index += 1) {
+    const turn = index * 2.399
+    const speed = 240 + (index % 7) * 70
+    const x = o.x + Math.cos(turn) * speed * age
+    const y = o.y + Math.sin(turn) * speed * age + BURST.fall * age * age
+    body += `<rect x="-7" y="-7" width="14" height="14" rx="2" fill="${paints[index % paints.length]}" fill-opacity="${clamp(1 - age / BURST.life).toFixed(2)}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${((age * 300 + index * 40) % 360).toFixed(0)})"/>`
+  }
+
+  return body
+}
 export const circle = (x: number, y: number, r: number, fill: string, opacity = 1): string => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${Math.max(0, r).toFixed(1)}" fill="${fill}" fill-opacity="${opacity}"/>`
 export const box = (o: { x: number; y: number; w: number; h: number; fill: string; r?: number; opacity?: number }): string => `<rect x="${o.x.toFixed(1)}" y="${o.y.toFixed(1)}" width="${Math.max(0, o.w).toFixed(1)}" height="${Math.max(0, o.h).toFixed(1)}" rx="${o.r ?? 0}" fill="${o.fill}" fill-opacity="${o.opacity ?? 1}"/>`
 

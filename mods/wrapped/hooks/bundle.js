@@ -775,7 +775,7 @@ const H = 960;
 const PAD = 40;
 const INNER = W - 2 * PAD;
 const SETTLED = 100;
-const C = { ink: "#16140F", clay: "#E2653A", violet: "#4B2FD6", moss: "#0E6B4A", sky: "#1677C9", amber: "#F5B81F", rose: "#E8467C", cream: "#F4EEDF", white: "#FFFFFF" };
+const C$1 = { ink: "#16140F", clay: "#E2653A", violet: "#4B2FD6", moss: "#0E6B4A", sky: "#1677C9", amber: "#F5B81F", rose: "#E8467C", cream: "#F4EEDF", white: "#FFFFFF" };
 const DISPLAY = "Arial Black,Arial,sans-serif";
 const BODY = "Helvetica Neue,Helvetica,Arial,sans-serif";
 const DISPLAY_EM = 0.74;
@@ -805,7 +805,42 @@ function wrapBody(text, o) {
   out.push(line);
   return [...out.slice(0, o.lines - 1), fitBody(out.slice(o.lines - 1).join(" "), o.size, o.room)].filter((part) => part !== "");
 }
-const sheet = (fill) => `<rect width="${W}" height="${H}" fill="${fill}"/>`;
+const BEAT_S = 0.5;
+const pulse = (t) => t >= SETTLED ? 0 : Math.exp(-(t % BEAT_S / BEAT_S) * 5);
+const sheet = (fill) => `<defs><radialGradient id="lit" cx="0.15" cy="0.08" r="1.1"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.16"/><stop offset="0.55" stop-color="#FFFFFF" stop-opacity="0"/><stop offset="1" stop-color="#000000" stop-opacity="0.2"/></radialGradient></defs><rect width="${W}" height="${H}" fill="${fill}"/><rect width="${W}" height="${H}" fill="url(#lit)"/>`;
+function dust(t, fill, count = 18) {
+  const time = t >= SETTLED ? 0 : t;
+  let body = "";
+  for (let index = 0;index < count; index += 1) {
+    const size = 6 + index % 3 * 5;
+    const y = H - (index * 173.1 + time * (16 + index % 5 * 9)) % (H + size);
+    body += `<rect x="${(index * 97.3 % W).toFixed(1)}" y="${y.toFixed(1)}" width="${size}" height="${size}" rx="1.5" fill="${fill}" fill-opacity="${(0.07 + index % 4 * 0.03).toFixed(2)}"/>`;
+  }
+  return body;
+}
+const POP_S = 0.5;
+const BACK$1 = 1.70158;
+function pop(body, t, o) {
+  const raw = clamp((t - o.start) / POP_S);
+  const scale = 0.6 + 0.4 * (1 + (BACK$1 + 1) * (raw - 1) ** 3 + BACK$1 * (raw - 1) ** 2);
+  return `<g opacity="${clamp(raw * 3).toFixed(3)}" transform="translate(${o.x} ${o.y}) scale(${scale.toFixed(4)}) translate(${-o.x} ${-o.y})">${body}</g>`;
+}
+const BURST = { count: 36, fall: 520, life: 2.4 };
+function burst(t, o) {
+  const age = t - o.start;
+  if (age < 0 || age > BURST.life)
+    return "";
+  const paints = [C$1.amber, C$1.rose, C$1.cream, C$1.sky, C$1.violet];
+  let body = "";
+  for (let index = 0;index < BURST.count; index += 1) {
+    const turn = index * 2.399;
+    const speed = 240 + index % 7 * 70;
+    const x = o.x + Math.cos(turn) * speed * age;
+    const y = o.y + Math.sin(turn) * speed * age + BURST.fall * age * age;
+    body += `<rect x="-7" y="-7" width="14" height="14" rx="2" fill="${paints[index % paints.length]}" fill-opacity="${clamp(1 - age / BURST.life).toFixed(2)}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${((age * 300 + index * 40) % 360).toFixed(0)})"/>`;
+  }
+  return body;
+}
 const circle = (x, y, r, fill, opacity = 1) => `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${Math.max(0, r).toFixed(1)}" fill="${fill}" fill-opacity="${opacity}"/>`;
 const box = (o) => `<rect x="${o.x.toFixed(1)}" y="${o.y.toFixed(1)}" width="${Math.max(0, o.w).toFixed(1)}" height="${Math.max(0, o.h).toFixed(1)}" rx="${o.r ?? 0}" fill="${o.fill}" fill-opacity="${o.opacity ?? 1}"/>`;
 function rise(body, amount) {
@@ -870,6 +905,338 @@ function pixelText(text, o) {
 }
 function agentCrab(type, rank, o) {
   return crab(o.x, o.y, { costume: costumeFor(type, rank), look: lookAt(rank), scale: o.scale, step: o.step });
+}
+
+const RATE = 44100;
+const TAU = 2 * Math.PI;
+const ECHO_S = 0.375;
+const ECHO_BACK = 0.34;
+const DUCK = { depth: 0.42, fall: 9 };
+const DRIVE = 0.9;
+const CEILING = 0.89;
+const FADE_S = 1.6;
+const BLOCK = 32;
+function bus(seconds) {
+  const count = Math.ceil(seconds * RATE);
+  return { l: new Float32Array(count), r: new Float32Array(count) };
+}
+const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
+function blep(phase, step) {
+  if (phase < step) {
+    const x = phase / step;
+    return x + x - x * x - 1;
+  }
+  if (phase > 1 - step) {
+    const x = (phase - 1) / step;
+    return x * x + x + x + 1;
+  }
+  return 0;
+}
+function osc(wave, phase, step) {
+  if (wave === "sine")
+    return Math.sin(TAU * phase);
+  if (wave === "tri")
+    return 1 - 4 * Math.abs(phase - 0.5);
+  if (wave === "saw")
+    return 2 * phase - 1 - blep(phase, step);
+  return (phase < 0.5 ? 1 : -1) + blep(phase, step) - blep((phase + 0.5) % 1, step);
+}
+const sides = (gain, pan = 0) => ({ left: gain * Math.cos((pan + 1) * Math.PI / 4), right: gain * Math.sin((pan + 1) * Math.PI / 4) });
+function play(out, n) {
+  const start = Math.round(n.at * RATE);
+  const attack = n.attack ?? 0.004;
+  const release = n.release ?? 0.06;
+  const count = Math.min(out.l.length - start, Math.round((n.len + release) * RATE));
+  const voices = n.detune === undefined ? [0] : [-n.detune, n.detune];
+  const { left, right } = sides(n.gain / voices.length, n.pan);
+  for (const cents of voices) {
+    const step = hz(n.midi + cents / 100) / RATE;
+    let phase = cents > 0 ? 0.37 : 0;
+    let low = 0;
+    let mix = 1;
+    const fall = n.decay === undefined ? 1 : Math.exp(-n.decay / RATE);
+    let faded = 1;
+    for (let i = 0;i < count; i += 1) {
+      const t = i / RATE;
+      if (n.cutoff !== undefined && i % BLOCK === 0)
+        mix = 1 - Math.exp(-TAU * n.cutoff * (1 + (n.sweep ?? 0) * Math.exp(-t * 14)) / RATE);
+      const env = Math.min(1, t / attack) * (t > n.len ? Math.max(0, 1 - (t - n.len) / release) : 1) * faded;
+      faded *= fall;
+      low += (osc(n.wave, phase, step) - low) * mix;
+      phase += step;
+      if (phase >= 1)
+        phase -= 1;
+      out.l[start + i] = out.l[start + i] + low * env * left;
+      out.r[start + i] = out.r[start + i] + low * env * right;
+    }
+  }
+}
+function hiss(out, n) {
+  const start = Math.round(n.at * RATE);
+  const count = Math.min(out.l.length - start, Math.round(n.len * RATE));
+  const { left, right } = sides(n.gain, n.pan);
+  const lowMix = 1 - Math.exp(-TAU * (n.low ?? 16000) / RATE);
+  const highMix = 1 - Math.exp(-TAU * (n.high ?? 20) / RATE);
+  let seed = start * 2654435761 >>> 0 || 1;
+  let low = 0;
+  let under = 0;
+  for (let i = 0;i < count; i += 1) {
+    seed ^= seed << 13;
+    seed ^= seed >>> 17;
+    seed ^= seed << 5;
+    seed >>>= 0;
+    low += (seed / 2147483648 - 1 - low) * lowMix;
+    under += (low - under) * highMix;
+    const share = i / count;
+    const env = n.isRising === true ? share * share : Math.exp(-(i / RATE) * (n.decay ?? 0)) * Math.min(1, (1 - share) * 20);
+    out.l[start + i] = out.l[start + i] + (low - under) * env * left;
+    out.r[start + i] = out.r[start + i] + (low - under) * env * right;
+  }
+}
+function kick(out, at, gain) {
+  const start = Math.round(at * RATE);
+  const count = Math.min(out.l.length - start, Math.round(0.34 * RATE));
+  let phase = 0;
+  for (let i = 0;i < count; i += 1) {
+    const t = i / RATE;
+    phase += (46 + 120 * Math.exp(-t * 36)) / RATE;
+    const sample = Math.sin(TAU * phase) * Math.exp(-t * 9) * Math.min(1, (count - i) / 400) * gain;
+    out.l[start + i] = out.l[start + i] + sample;
+    out.r[start + i] = out.r[start + i] + sample;
+  }
+}
+function echo(wet) {
+  const gap = Math.round(ECHO_S * RATE);
+  for (let i = gap;i < wet.l.length; i += 1) {
+    wet.l[i] = wet.l[i] + wet.r[i - gap] * ECHO_BACK;
+    wet.r[i] = wet.r[i] + wet.l[i - gap] * ECHO_BACK;
+  }
+}
+function ducking(length, kicks) {
+  const gain = new Float32Array(length).fill(1);
+  for (const at of kicks) {
+    const start = Math.round(at * RATE);
+    const count = Math.min(length - start, Math.round(0.4 * RATE));
+    for (let i = 0;i < count; i += 1)
+      gain[start + i] = Math.min(gain[start + i], 1 - DUCK.depth * Math.exp(-i / RATE * DUCK.fall));
+  }
+  return gain;
+}
+function mixdown(m) {
+  echo(m.wet);
+  const length = m.music.l.length;
+  const duck = ducking(length, m.kicks);
+  const out = { l: new Float32Array(length), r: new Float32Array(length) };
+  let peak = 0;
+  for (const side of ["l", "r"]) {
+    for (let i = 0;i < length; i += 1) {
+      const sample = Math.tanh(((m.music[side][i] + m.wet[side][i]) * duck[i] + m.drums[side][i]) * DRIVE);
+      out[side][i] = sample;
+      peak = Math.max(peak, Math.abs(sample));
+    }
+  }
+  const fade = Math.round(FADE_S * RATE);
+  for (const side of ["l", "r"]) {
+    for (let i = 0;i < length; i += 1)
+      out[side][i] = out[side][i] * CEILING * Math.min(1, (length - i) / fade) / Math.max(peak, 0.000001);
+  }
+  return out;
+}
+const CHUNK = 24000;
+function wavBase64(track) {
+  const frames = track.l.length;
+  const bytes = new Uint8Array(44 + frames * 4);
+  const view = new DataView(bytes.buffer);
+  const tag = (at, text) => [...text].forEach((char, index) => view.setUint8(at + index, char.charCodeAt(0)));
+  tag(0, "RIFF");
+  view.setUint32(4, 36 + frames * 4, true);
+  tag(8, "WAVEfmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 2, true);
+  view.setUint32(24, RATE, true);
+  view.setUint32(28, RATE * 4, true);
+  view.setUint16(32, 4, true);
+  view.setUint16(34, 16, true);
+  tag(36, "data");
+  view.setUint32(40, frames * 4, true);
+  for (let i = 0;i < frames; i += 1) {
+    view.setInt16(44 + i * 4, Math.round(track.l[i] * 32767), true);
+    view.setInt16(46 + i * 4, Math.round(track.r[i] * 32767), true);
+  }
+  let text = "";
+  for (let at = 0;at < bytes.length; at += CHUNK)
+    text += btoa(String.fromCharCode(...bytes.subarray(at, at + CHUNK)));
+  return text;
+}
+
+const BAR = BEAT_S * 4;
+const STEP = BAR / 16;
+const BAR_STEPS = 16;
+const COUNT_STEPS = { from: 2, to: 12 };
+const ARP_GAIN = 1.7;
+const LEAD_GAIN = 1.6;
+const AM = { bass: 33, tones: [57, 60, 64, 67] };
+const F = { bass: 29, tones: [53, 57, 60, 64] };
+const C = { bass: 36, tones: [55, 60, 64, 67] };
+const G = { bass: 31, tones: [55, 59, 62, 67] };
+const HOOK = [[0, 76, 2], [2, 79, 2], [4, 81, 3], [7, 79, 1], [8, 76, 4], [12, 74, 2], [14, 72, 2], [16, 74, 2], [18, 76, 2], [20, 79, 4], [24, 76, 6]];
+const ANSWER = [[0, 81, 2], [2, 79, 2], [4, 76, 4], [8, 79, 2], [10, 81, 2], [12, 84, 4], [16, 81, 2], [18, 79, 2], [20, 76, 2], [22, 74, 2], [24, 72, 8]];
+const PENTA = [72, 74, 76, 79, 81, 84, 86, 88, 91, 93];
+const FOUR = "x...x...x...x...";
+const BACK = "....x.......x...";
+const OFF = "..x...x...x...x.";
+const OPEN = "..o...o...o...o.";
+const EIGHT = "x.x.x.x.x.x.x.x.";
+const SIXTEEN = "xxxxxxxxxxxxxxxx";
+const BOUNCE = "x.o.x.o.x.o.x.o.";
+const PUSH = "x..x..x...x..x..";
+const UP = [0, 1, 2, 3];
+const UP_DOWN = [0, 1, 2, 3, 2, 1];
+const CLIMB = [0, 1, 2, 3, 4, 5, 6, 7];
+const STYLES = {
+  intro: { pad: 2, keys: 1.4, arp: { order: UP, span: 2, lift: 12, wave: "tri", gain: 0.3 }, end: "riser" },
+  prompts: { kick: FOUR, hat: OFF, bass: EIGHT, pad: 0.6, arp: { order: UP_DOWN, lift: 12, wave: "saw", gain: 0.11 }, hasCount: true },
+  day: { kick: FOUR, clap: BACK, hat: OFF, bass: EIGHT, pad: 0.7, arp: { order: [0, 2, 1, 3], span: 2, lift: 12, wave: "saw", gain: 0.09 }, lead: { tune: HOOK, wave: "tri", lift: 0, gain: 0.21 } },
+  weekday: { kick: FOUR, clap: BACK, hat: SIXTEEN, bass: "x..x..x.x..x..x.", stab: "..x..x....x..x..", pad: 0.5 },
+  hour: { kick: "x.........x.....", snare: "........x.......", hat: BACK, pad: 1, keys: 1, lead: { tune: ANSWER, wave: "sine", lift: -12, gain: 0.24 }, tone: 0.45 },
+  projects: { kick: FOUR, clap: BACK, hat: OPEN, bass: BOUNCE, pad: 0.6, arp: { order: UP, lift: 24, wave: "saw", gain: 0.07 }, lead: { tune: HOOK, wave: "saw", lift: 0, gain: 0.12 } },
+  months: { kick: FOUR, hat: EIGHT, bass: EIGHT, pad: 0.7, arp: { order: CLIMB, lift: 12, wave: "saw", gain: 0.1 }, end: "roll" },
+  tools: { kick: PUSH, clap: BACK, hat: SIXTEEN, bass: PUSH, stab: "..x...x.....x.x.", pad: 0.4 },
+  code: { kick: FOUR, hat: SIXTEEN, bass: EIGHT, arp: { order: [0, 4, 2, 5, 1, 4, 3, 6], lift: 12, wave: "square", gain: 0.07 }, hasCount: true },
+  crew: { kick: FOUR, snare: "....x..x....x.xx", bass: BOUNCE, bassWave: "square", arp: { order: UP_DOWN, span: 2, lift: 12, wave: "square", gain: 0.06 }, lead: { tune: HOOK, wave: "square", lift: 0, gain: 0.11 }, hasCount: true },
+  hardest: { kick: FOUR, clap: BACK, hat: OFF, bass: "xxx.xxx.xxx.xxo.", lead: { tune: ANSWER, wave: "saw", lift: -12, gain: 0.13 }, tone: 0.7, hasCount: true },
+  model: { kick: "x.......x.......", hat: EIGHT, bass: "x.......x.......", pad: 1, keys: 1, lead: { tune: ANSWER, wave: "tri", lift: 0, gain: 0.19 } },
+  fun: { kick: FOUR, clap: BACK, hat: "x.xxx.xxx.xxx.xx", bass: BOUNCE, stab: OFF, lead: { tune: ANSWER, wave: "square", lift: 0, gain: 0.1 } },
+  persona: { from: 1, kick: FOUR, clap: BACK, hat: OPEN, bass: EIGHT, pad: 1.4, keys: 1, arp: { order: UP, lift: 24, wave: "saw", gain: 0.07 }, lead: { tune: HOOK, wave: "saw", lift: 0, gain: 0.13 } },
+  summary: { kick: FOUR, clap: BACK, hat: OPEN, bass: BOUNCE, pad: 1, arp: { order: UP_DOWN, lift: 12, wave: "saw", gain: 0.09 }, lead: { tune: HOOK, wave: "tri", lift: 0, gain: 0.2 }, hasRing: true }
+};
+function chordsOf(key, index, bars) {
+  const pair = key === "intro" ? [F, G] : key === "persona" ? [F, G, AM] : key === "summary" ? [F, G, C] : index % 2 === 1 ? [AM, F] : [C, G];
+  return Array.from({ length: bars }, (_, bar) => pair[Math.min(bar, pair.length - 1)]);
+}
+const hits = (pattern, mark) => [...pattern ?? ""].flatMap((char, step) => char === mark ? [step] : []);
+function drumBar(b, { at, style }) {
+  for (const step of hits(style.kick, "x")) {
+    kick(b.drums, at + step * STEP, 0.7);
+    b.kicks.push(at + step * STEP);
+  }
+  for (const step of hits(style.snare, "x")) {
+    hiss(b.drums, { at: at + step * STEP, len: 0.2, gain: 0.3, high: 1400, decay: 20 });
+    play(b.drums, { at: at + step * STEP, len: 0.05, midi: 55, wave: "tri", gain: 0.22, decay: 30 });
+  }
+  for (const step of hits(style.clap, "x"))
+    hiss(b.drums, { at: at + step * STEP, len: 0.22, gain: 0.34, high: 900, low: 5000, decay: 24 });
+  for (const step of hits(style.hat, "x"))
+    hiss(b.drums, { at: at + step * STEP, len: 0.05, gain: step % 4 === 0 ? 0.26 : 0.18, high: 7000, decay: 70, pan: 0.25 });
+  for (const step of hits(style.hat, "o"))
+    hiss(b.drums, { at: at + step * STEP, len: 0.22, gain: 0.18, high: 6000, decay: 13, pan: -0.25 });
+}
+function bassBar(b, { at, chord, style, tone }) {
+  for (const mark of ["x", "o"]) {
+    for (const step of hits(style.bass, mark)) {
+      const midi = chord.bass + (mark === "o" ? 12 : 0);
+      play(b.music, { at: at + step * STEP, len: STEP * 1.5, midi: midi + 12, wave: style.bassWave ?? "saw", gain: 0.26, cutoff: 750 * tone, sweep: 2.5 });
+      play(b.music, { at: at + step * STEP, len: STEP * 1.5, midi, wave: "sine", gain: 0.2 });
+    }
+  }
+}
+function chordBar(b, { at, chord, style, tone }) {
+  chord.tones.forEach((midi, index) => {
+    const pan = (index - 1.5) * 0.4;
+    if (style.pad !== undefined)
+      play(b.music, { at, len: BAR, midi, wave: "saw", gain: style.pad * 0.13, pan, attack: 0.25, release: 0.5, cutoff: 2600 * tone, detune: 9 });
+    for (const step of style.keys === undefined ? [] : [0, 6, 10])
+      play(b.wet, { at: at + step * STEP, len: 0.5, midi, wave: "tri", gain: (style.keys ?? 0) * 0.13, pan: -pan, decay: 4, cutoff: 3200 * tone });
+    for (const step of hits(style.stab, "x"))
+      play(b.wet, { at: at + step * STEP, len: 0.12, midi: midi + 12, wave: "saw", gain: 0.15, pan: -pan, decay: 12, cutoff: 3000 * tone, sweep: 3 });
+  });
+}
+function arpBar(b, { at, chord, tone }, o) {
+  const span = o.arp.span ?? 1;
+  for (let step = 0;step < BAR_STEPS; step += span) {
+    const turn = (o.bar * BAR_STEPS + step) / span;
+    const place = o.arp.order[turn % o.arp.order.length];
+    const midi = chord.tones[place % chord.tones.length] + 12 * Math.floor(place / chord.tones.length) + o.arp.lift;
+    play(b.wet, { at: at + step * STEP, len: STEP * span * 0.9, midi, wave: o.arp.wave, gain: o.arp.gain * ARP_GAIN, pan: turn % 2 === 0 ? -0.35 : 0.35, decay: 9 / span, cutoff: 2800 * tone, sweep: 4 });
+  }
+}
+function leadFrom(b, o) {
+  for (let loop = 0;loop * 2 * BAR_STEPS < o.steps; loop += 1) {
+    for (const [step, midi, length] of o.lead.tune) {
+      const place = loop * 2 * BAR_STEPS + step;
+      if (place < o.steps)
+        play(b.wet, { at: o.at + place * STEP, len: Math.min(length, o.steps - place) * STEP * 0.92, midi: midi + o.lead.lift, wave: o.lead.wave, gain: o.lead.gain * LEAD_GAIN, attack: 0.012, release: 0.09, cutoff: 4800 * o.tone });
+    }
+  }
+}
+function countUp(b, at) {
+  for (let step = COUNT_STEPS.from;step < COUNT_STEPS.to; step += 1)
+    play(b.wet, { at: at + step * STEP, len: 0.05, midi: PENTA[step - COUNT_STEPS.from], wave: "square", gain: 0.06 + step * 0.005, decay: 26, cutoff: 5000 });
+  for (const midi of [84, 91])
+    play(b.wet, { at: at + COUNT_STEPS.to * STEP, len: 0.7, midi, wave: "sine", gain: 0.13, decay: 5 });
+}
+function roll(b, at, steps) {
+  for (let step = 0;step < steps; step += 1)
+    hiss(b.drums, { at: at + step * STEP, len: 0.11, gain: 0.07 + 0.24 * (step / steps), high: 1400, decay: 26 });
+}
+function landing(b, at, gain) {
+  hiss(b.drums, { at, len: 1.1, gain, high: 4500, decay: 5 });
+}
+function ring(b, at, chord) {
+  kick(b.drums, at, 0.9);
+  b.kicks.push(at);
+  landing(b, at, 0.3);
+  play(b.music, { at, len: BAR, midi: chord.bass, wave: "sine", gain: 0.34, release: 0.4 });
+  chord.tones.forEach((midi, index) => {
+    play(b.music, { at, len: BAR, midi, wave: "saw", gain: 0.1, pan: (index - 1.5) * 0.4, attack: 0.01, release: 0.3, cutoff: 2200, sweep: 2, detune: 9 });
+    play(b.wet, { at: at + index * BEAT_S * 0.5, len: 1, midi: midi + 24, wave: "sine", gain: 0.14, decay: 3.5 });
+  });
+}
+function pageInto(b, page, o) {
+  const style = STYLES[page.key] ?? STYLES["day"];
+  const steps = Math.round(page.dur / STEP);
+  const bars = Math.ceil(steps / BAR_STEPS);
+  const chords = chordsOf(page.key, o.index, bars);
+  const from = style.from ?? 0;
+  const tone = style.tone ?? 1;
+  chords.forEach((chord, bar) => {
+    const part = { at: o.at + bar * BAR, chord, style, tone };
+    if (style.hasRing === true && bar === bars - 1)
+      return ring(b, part.at, chord);
+    chordBar(b, part);
+    if (bar < from)
+      return;
+    drumBar(b, part);
+    bassBar(b, part);
+    if (style.arp !== undefined)
+      arpBar(b, part, { arp: style.arp, bar });
+  });
+  if (o.index > 0)
+    landing(b, o.at, 0.13);
+  if (style.lead !== undefined)
+    leadFrom(b, { at: o.at + from * BAR, steps: (bars - from - (style.hasRing === true ? 1 : 0)) * BAR_STEPS, lead: style.lead, tone });
+  if (style.hasCount === true)
+    countUp(b, o.at);
+  if (from > 0) {
+    hiss(b.drums, { at: o.at, len: from * BAR, gain: 0.2, high: 1800, isRising: true });
+    roll(b, o.at + from * BAR - BAR / 2, BAR_STEPS / 2);
+    landing(b, o.at + from * BAR, 0.3);
+  }
+  if (style.end === "riser")
+    hiss(b.drums, { at: o.at + page.dur - BAR, len: BAR, gain: 0.2, high: 1800, isRising: true });
+  if (style.end === "roll")
+    roll(b, o.at + page.dur - BAR / 2, BAR_STEPS / 2);
+}
+function scoreFor(pages) {
+  const total = pages.reduce((sum, page) => sum + page.dur, 0);
+  const b = { music: bus(total), wet: bus(total), drums: bus(total), kicks: [] };
+  let at = 0;
+  pages.forEach((page, index) => {
+    pageInto(b, page, { at, index });
+    at += page.dur;
+  });
+  return wavBase64(mixdown(b));
 }
 
 const WEEKDAYS = {
@@ -1017,27 +1384,28 @@ function introSlide({ w, t, step }) {
     return agentCrab(agent.type, index, { x, y: 760, scale: 3.3, step: step + index });
   });
   return [
-    sheet(C.ink),
-    circle(MID$2, 370, INTRO_RADIUS * ease(t, 0, 0.9) + Math.sin(t * 1.1) * 8, C.clay),
-    rise(txt(String(w.year), { x: MID$2, y: 420, size: fitSize(String(w.year), 190, INNER), fill: C.ink, isDisplay: true, anchor: "middle" }), ease(t, 0.25)),
-    rise(txt(s.intro, { x: MID$2, y: 480, size: 38, fill: C.ink, isBold: true, anchor: "middle" }), ease(t, 0.5)),
-    rise(quote(s.introSub(w.sessions), { y: 720, fill: C.cream, anchor: "middle" }), ease(t, 0.8)),
+    sheet(C$1.ink),
+    dust(t, C$1.cream),
+    circle(MID$2, 370, INTRO_RADIUS * ease(t, 0, 0.9) + pulse(t) * 12, C$1.clay),
+    pop(txt(String(w.year), { x: MID$2, y: 420, size: fitSize(String(w.year), 190, INNER), fill: C$1.ink, isDisplay: true, anchor: "middle" }), t, { start: 0.25, x: MID$2, y: 370 }),
+    rise(txt(s.intro, { x: MID$2, y: 480, size: 38, fill: C$1.ink, isBold: true, anchor: "middle" }), ease(t, 0.5)),
+    rise(quote(s.introSub(w.sessions), { y: 720, fill: C$1.cream, anchor: "middle" }), ease(t, 0.8)),
     walkers.join("")
   ].join("");
 }
 function rings(cx, cy, t, fill) {
-  return [0, 1, 2, 3].map((index) => `<circle cx="${cx}" cy="${cy}" r="${(120 + index * 110 + Math.sin(t * 0.9 + index) * 12).toFixed(1)}" fill="none" stroke="${fill}" stroke-opacity="0.22" stroke-width="30"/>`).join("");
+  return [0, 1, 2, 3].map((index) => `<circle cx="${cx}" cy="${cy}" r="${(120 + index * 110 + pulse(t + index * 0.125) * 16).toFixed(1)}" fill="none" stroke="${fill}" stroke-opacity="0.22" stroke-width="30"/>`).join("");
 }
 function promptsSlide({ w, t }) {
   const s = storyWords();
   const total = counted(w.prompts, t);
   return [
-    sheet(C.clay),
-    rings(W, H, t, C.ink),
-    txt(total, { x: PAD, y: 400, size: fitSize(w.prompts.toLocaleString("en-US"), 170, INNER), fill: C.ink, isDisplay: true }),
-    rise(txt(s.prompts, { x: PAD, y: 462, size: 34, fill: C.ink, isBold: true }), ease(t, 0.5)),
-    rise(quote(s.promptsSub(Math.round(w.prompts / Math.max(1, w.activeDays))), { y: 590, fill: C.ink }), ease(t, 1.2)),
-    rise(quote(s.replies(w.replies), { y: 680, fill: C.ink }), ease(t, 1.6))
+    sheet(C$1.clay),
+    rings(W, H, t, C$1.ink),
+    txt(total, { x: PAD, y: 400, size: fitSize(w.prompts.toLocaleString("en-US"), 170, INNER), fill: C$1.ink, isDisplay: true }),
+    rise(txt(s.prompts, { x: PAD, y: 462, size: 34, fill: C$1.ink, isBold: true }), ease(t, 0.5)),
+    rise(quote(s.promptsSub(Math.round(w.prompts / Math.max(1, w.activeDays))), { y: 590, fill: C$1.ink }), ease(t, 1.2)),
+    rise(quote(s.replies(w.replies), { y: 680, fill: C$1.ink }), ease(t, 1.6))
   ].join("");
 }
 function calendar(c, o) {
@@ -1067,16 +1435,16 @@ function daySlide(c) {
   const s = storyWords();
   const best = w.busiestDay;
   if (best === null)
-    return sheet(C.violet);
+    return sheet(C$1.violet);
   const day = shortDay(best.name);
   return [
-    sheet(C.violet),
-    circle(W - 40, 170, 150 + Math.sin(t) * 10, C.rose, 0.9),
-    rise(txt(s.day, { x: PAD, y: 250, size: 34, fill: C.cream, isBold: true }), ease(t, 0)),
-    rise(txt(day, { x: PAD, y: 400, size: fitSize(day, 128, INNER), fill: C.cream, isDisplay: true }), ease(t, 0.3)),
-    rise(txt(s.dayCount(best.count), { x: PAD, y: 480, size: 54, fill: C.amber, isDisplay: true }), ease(t, 0.7)),
-    rise(quote(s.daySub(best.count), { y: 545, fill: C.cream }), ease(t, 1.1)),
-    calendar(c, { y: 620, on: C.cream, peak: C.amber })
+    sheet(C$1.violet),
+    circle(W - 40, 170, 150 + pulse(t) * 16, C$1.rose, 0.9),
+    rise(txt(s.day, { x: PAD, y: 250, size: 34, fill: C$1.cream, isBold: true }), ease(t, 0)),
+    pop(txt(day, { x: PAD, y: 400, size: fitSize(day, 128, INNER), fill: C$1.cream, isDisplay: true }), t, { start: 0.3, x: PAD, y: 400 }),
+    rise(txt(s.dayCount(best.count), { x: PAD, y: 480, size: 54, fill: C$1.amber, isDisplay: true }), ease(t, 0.7)),
+    rise(quote(s.daySub(best.count), { y: 545, fill: C$1.cream }), ease(t, 1.1)),
+    calendar(c, { y: 620, on: C$1.cream, peak: C$1.amber })
   ].join("");
 }
 function weekdaySlide({ w, t }) {
@@ -1087,16 +1455,18 @@ function weekdaySlide({ w, t }) {
   const barW = INNER / DAYS;
   const bars = w.weekdays.map((count, index) => {
     const height = 230 * (count / peak) * ease(t, 0.5 + index * 0.08, 0.7);
-    const fill = index === best ? C.amber : C.cream;
-    return box({ x: PAD + index * barW, y: 640 - height, w: barW - 8, h: height, r: 6, fill }) + txt(weekdayShort(index), { x: PAD + index * barW + (barW - 8) / 2, y: 672, size: 21, fill: C.cream, anchor: "middle" });
+    const fill = index === best ? C$1.amber : C$1.cream;
+    return box({ x: PAD + index * barW, y: 640 - height, w: barW - 8, h: height, r: 6, fill }) + txt(weekdayShort(index), { x: PAD + index * barW + (barW - 8) / 2, y: 672, size: 21, fill: C$1.cream, anchor: "middle" });
   });
   return [
-    sheet(C.moss),
-    rise(txt(s.weekday, { x: PAD, y: 160, size: 32, fill: C.cream, isBold: true }), ease(t, 0)),
-    rise(txt(name, { x: PAD, y: 280, size: fitSize(name, 96, INNER), fill: C.amber, isDisplay: true }), ease(t, 0.25)),
+    sheet(C$1.moss),
+    circle(W, 0, 200 + pulse(t) * 16, C$1.amber, 0.18),
+    dust(t, C$1.cream),
+    rise(txt(s.weekday, { x: PAD, y: 160, size: 32, fill: C$1.cream, isBold: true }), ease(t, 0)),
+    pop(txt(name, { x: PAD, y: 280, size: fitSize(name, 96, INNER), fill: C$1.amber, isDisplay: true }), t, { start: 0.25, x: PAD, y: 280 }),
     bars.join(""),
-    rise(txt(s.streak(w.streak), { x: PAD, y: 790, size: fitSize(s.streak(w.streak), 50, INNER), fill: C.cream, isDisplay: true }), ease(t, 1.3)),
-    rise(txt(s.active(w.activeDays), { x: PAD, y: 840, size: 26, fill: C.cream }), ease(t, 1.5))
+    rise(txt(s.streak(w.streak), { x: PAD, y: 790, size: fitSize(s.streak(w.streak), 50, INNER), fill: C$1.cream, isDisplay: true }), ease(t, 1.3)),
+    rise(txt(s.active(w.activeDays), { x: PAD, y: 840, size: 26, fill: C$1.cream }), ease(t, 1.5))
   ].join("");
 }
 const pad2 = (value) => String(value).padStart(2, "0");
@@ -1112,14 +1482,16 @@ function hourSlide({ w, t }) {
     const sin = Math.sin(turn);
     const from = CLOCK.inner;
     const to = from + length;
-    return `<line x1="${(CLOCK.x + cos * from).toFixed(1)}" y1="${(CLOCK.y + sin * from).toFixed(1)}" x2="${(CLOCK.x + cos * to).toFixed(1)}" y2="${(CLOCK.y + sin * to).toFixed(1)}" stroke="${hour === best ? C.amber : C.cream}" stroke-opacity="${hour === best ? 1 : 0.55}" stroke-width="${CLOCK.width}" stroke-linecap="round"/>`;
+    return `<line x1="${(CLOCK.x + cos * from).toFixed(1)}" y1="${(CLOCK.y + sin * from).toFixed(1)}" x2="${(CLOCK.x + cos * to).toFixed(1)}" y2="${(CLOCK.y + sin * to).toFixed(1)}" stroke="${hour === best ? C$1.amber : C$1.cream}" stroke-opacity="${hour === best ? 1 : 0.55}" stroke-width="${CLOCK.width}" stroke-linecap="round"/>`;
   });
   return [
-    sheet(C.ink),
-    rise(txt(s.hour, { x: PAD, y: 130, size: 34, fill: C.cream, isBold: true }), ease(t, 0)),
+    sheet(C$1.ink),
+    dust(t, C$1.amber),
+    circle(CLOCK.x, CLOCK.y, CLOCK.inner - 14 + pulse(t) * 8, C$1.violet, 0.5),
+    rise(txt(s.hour, { x: PAD, y: 130, size: 34, fill: C$1.cream, isBold: true }), ease(t, 0)),
     spokes.join(""),
-    rise(txt(`${pad2(best)}:00`, { x: CLOCK.x, y: CLOCK.y + 20, size: 58, fill: C.amber, isDisplay: true, anchor: "middle" }), ease(t, 0.9)),
-    rise(quote(s.night(Math.round(w.nightShare * 100)), { y: 800, fill: C.cream, size: 27 }), ease(t, 1.5))
+    rise(txt(`${pad2(best)}:00`, { x: CLOCK.x, y: CLOCK.y + 20, size: 58, fill: C$1.amber, isDisplay: true, anchor: "middle" }), ease(t, 0.9)),
+    rise(quote(s.night(Math.round(w.nightShare * 100)), { y: 800, fill: C$1.cream, size: 27 }), ease(t, 1.5))
   ].join("");
 }
 
@@ -1142,10 +1514,11 @@ function projectsSlide({ w, t, isNamed }) {
   const labels = projectLabels(w, isNamed);
   const rows = w.projects.map((row) => ({ title: labels.get(row.name) ?? row.name, meta: s.promptsCount(row.count) }));
   return [
-    sheet(C.cream),
-    circle(W, 90, 170 + Math.sin(t) * 10, C.clay),
-    rise(txt(s.projects, { x: PAD, y: 200, size: fitSize(s.projects, 46, INNER), fill: C.ink, isDisplay: true }), ease(t, 0)),
-    rankedRows(rows, t, { y: 275, rowH: 122, title: C.ink, meta: C.ink, rank: C.clay, start: 0.4 })
+    sheet(C$1.cream),
+    circle(W, 90, 170 + pulse(t) * 16, C$1.clay),
+    circle(0, H, 120 + pulse(t + 0.25) * 12, C$1.amber),
+    rise(txt(s.projects, { x: PAD, y: 200, size: fitSize(s.projects, 46, INNER), fill: C$1.ink, isDisplay: true }), ease(t, 0)),
+    rankedRows(rows, t, { y: 275, rowH: 122, title: C$1.ink, meta: C$1.ink, rank: C$1.clay, start: 0.4 })
   ].join("");
 }
 function monthsSlide({ w, t, isNamed }) {
@@ -1157,15 +1530,17 @@ function monthsSlide({ w, t, isNamed }) {
   const bars = w.months.map((month, index) => {
     const height = 370 * (month.prompts / most) * ease(t, 0.4 + index * 0.1, 0.7);
     const x = PAD + index * each;
-    return box({ x, y: 810 - height, w: each - 8, h: height, r: 8, fill: month === peak ? C.amber : C.cream }) + txt(shortMonth(month.month), { x: x + (each - 8) / 2, y: 846, size: 20, fill: C.cream, anchor: "middle" });
+    return box({ x, y: 810 - height, w: each - 8, h: height, r: 8, fill: month === peak ? C$1.amber : C$1.cream }) + txt(shortMonth(month.month), { x: x + (each - 8) / 2, y: 846, size: 20, fill: C$1.cream, anchor: "middle" });
   });
   const name = peak === undefined ? "" : monthName(peak.month);
   const project = peak?.project === null || peak === undefined ? "—" : labels.get(peak.project) ?? "—";
   return [
-    sheet(C.sky),
-    rise(txt(s.months, { x: PAD, y: 130, size: 34, fill: C.cream, isBold: true }), ease(t, 0)),
-    rise(txt(name, { x: PAD, y: 245, size: fitSize(name, 92, INNER), fill: C.amber, isDisplay: true }), ease(t, 0.25)),
-    rise(txt(fitBody(s.monthPeak(project, peak?.prompts ?? 0), 27, INNER), { x: PAD, y: 300, size: 27, fill: C.cream }), ease(t, 0.5)),
+    sheet(C$1.sky),
+    circle(W, 60, 150 + pulse(t) * 16, C$1.violet, 0.45),
+    dust(t, C$1.cream),
+    rise(txt(s.months, { x: PAD, y: 130, size: 34, fill: C$1.cream, isBold: true }), ease(t, 0)),
+    pop(txt(name, { x: PAD, y: 245, size: fitSize(name, 92, INNER), fill: C$1.amber, isDisplay: true }), t, { start: 0.25, x: PAD, y: 245 }),
+    rise(txt(fitBody(s.monthPeak(project, peak?.prompts ?? 0), 27, INNER), { x: PAD, y: 300, size: 27, fill: C$1.cream }), ease(t, 0.5)),
     bars.join("")
   ].join("");
 }
@@ -1176,14 +1551,16 @@ function toolsSlide({ w, t }) {
   const rows = w.tools.slice(1).map((row, index) => {
     const y = 470 + index * 92;
     const width = INNER * (row.count / most) * ease(t, 0.7 + index * 0.2, 0.7);
-    return rise(txt(fitBody(toolName(row.name), 28, INNER - 110), { x: PAD, y, size: 28, fill: C.ink, isBold: true }) + txt(compact(row.count), { x: W - PAD, y, size: 25, fill: C.ink, anchor: "end" }), ease(t, 0.6 + index * 0.2)) + box({ x: PAD, y: y + 16, w: INNER, h: 16, r: 8, fill: C.ink, opacity: 0.15 }) + box({ x: PAD, y: y + 16, w: width, h: 16, r: 8, fill: C.ink });
+    return rise(txt(fitBody(toolName(row.name), 28, INNER - 110), { x: PAD, y, size: 28, fill: C$1.ink, isBold: true }) + txt(compact(row.count), { x: W - PAD, y, size: 25, fill: C$1.ink, anchor: "end" }), ease(t, 0.6 + index * 0.2)) + box({ x: PAD, y: y + 16, w: INNER, h: 16, r: 8, fill: C$1.ink, opacity: 0.15 }) + box({ x: PAD, y: y + 16, w: width, h: 16, r: 8, fill: C$1.ink });
   });
   const name = toolName(top?.name ?? "—");
   return [
-    sheet(C.amber),
-    rise(txt(s.tools, { x: PAD, y: 150, size: 34, fill: C.ink, isBold: true }), ease(t, 0)),
-    rise(txt(name, { x: PAD, y: 280, size: fitSize(name, 112, INNER), fill: C.ink, isDisplay: true }), ease(t, 0.25)),
-    rise(txt(s.times(top?.count ?? 0), { x: PAD, y: 345, size: 36, fill: C.ink }), ease(t, 0.5)),
+    sheet(C$1.amber),
+    circle(W, H, 190 + pulse(t) * 16, C$1.clay, 0.85),
+    dust(t, C$1.ink),
+    rise(txt(s.tools, { x: PAD, y: 150, size: 34, fill: C$1.ink, isBold: true }), ease(t, 0)),
+    pop(txt(name, { x: PAD, y: 280, size: fitSize(name, 112, INNER), fill: C$1.ink, isDisplay: true }), t, { start: 0.25, x: PAD, y: 280 }),
+    rise(txt(s.times(top?.count ?? 0), { x: PAD, y: 345, size: 36, fill: C$1.ink }), ease(t, 0.5)),
     rows.join("")
   ].join("");
 }
@@ -1192,12 +1569,13 @@ function codeSlide({ w, t, isNamed }) {
   const file = w.files[0];
   const fileName = file === undefined ? "" : fileLabel(file.name, isNamed);
   return [
-    sheet(C.rose),
-    circle(0, H, 170 + Math.sin(t) * 12, C.violet),
-    txt(counted(w.linesAdded, t), { x: PAD, y: 300, size: fitSize(w.linesAdded.toLocaleString("en-US"), 120, INNER), fill: C.ink, isDisplay: true }),
-    rise(txt(s.lines, { x: PAD, y: 360, size: 36, fill: C.ink, isBold: true }), ease(t, 0.6)),
-    file === undefined ? "" : rise(txt(s.file, { x: PAD, y: 490, size: 28, fill: C.ink }) + txt(fitBody(fileName, 40, INNER), { x: PAD, y: 545, size: 40, fill: C.cream, isBold: true }) + txt(s.fileCount(file.count), { x: PAD, y: 590, size: 28, fill: C.ink }), ease(t, 1)),
-    rise(quote(s.novels(Math.max(1, Math.round(w.outputTokens / NOVEL_TOKENS))), { y: 700, fill: C.ink, size: 27 }), ease(t, 1.5))
+    sheet(C$1.rose),
+    circle(0, H, 170 + pulse(t) * 16, C$1.violet),
+    circle(W, 40, 110 + pulse(t + 0.25) * 12, C$1.amber, 0.9),
+    txt(counted(w.linesAdded, t), { x: PAD, y: 300, size: fitSize(w.linesAdded.toLocaleString("en-US"), 120, INNER), fill: C$1.ink, isDisplay: true }),
+    rise(txt(s.lines, { x: PAD, y: 360, size: 36, fill: C$1.ink, isBold: true }), ease(t, 0.6)),
+    file === undefined ? "" : rise(txt(s.file, { x: PAD, y: 490, size: 28, fill: C$1.ink }) + txt(fitBody(fileName, 40, INNER), { x: PAD, y: 545, size: 40, fill: C$1.cream, isBold: true }) + txt(s.fileCount(file.count), { x: PAD, y: 590, size: 28, fill: C$1.ink }), ease(t, 1)),
+    rise(quote(s.novels(Math.max(1, Math.round(w.outputTokens / NOVEL_TOKENS))), { y: 700, fill: C$1.ink, size: 27 }), ease(t, 1.5))
   ].join("");
 }
 const CREW = { max: 40, columns: 8 };
@@ -1210,32 +1588,34 @@ function crewSlide({ w, t, step }) {
     const agent = w.agents[index % Math.max(1, w.agents.length)];
     return agentCrab(agent?.type ?? "agent", index, { x: PAD + index % CREW.columns * size, y: 350 + Math.floor(index / CREW.columns) * size, scale: (size - 6) / CRAB_W$1, step: step + index });
   });
-  const top = w.agents.slice(0, 3).map((agent, index) => txt(fitBody(`${agent.type}: ${s.runs(agent.runs)}`, 25, INNER), { x: PAD, y: 700 + index * 38, size: 25, fill: index === 0 ? C.amber : C.cream }));
+  const top = w.agents.slice(0, 3).map((agent, index) => txt(fitBody(`${agent.type}: ${s.runs(agent.runs)}`, 25, INNER), { x: PAD, y: 700 + index * 38, size: 25, fill: index === 0 ? C$1.amber : C$1.cream }));
   return [
-    sheet(C.ink),
-    txt(counted(w.agentRuns, t), { x: PAD, y: 220, size: fitSize(w.agentRuns.toLocaleString("en-US"), 120, INNER), fill: C.amber, isDisplay: true }),
-    rise(txt(s.crew, { x: PAD, y: 280, size: 36, fill: C.cream, isBold: true }), ease(t, 0.5)),
+    sheet(C$1.ink),
+    dust(t, C$1.clay),
+    txt(counted(w.agentRuns, t), { x: PAD, y: 220, size: fitSize(w.agentRuns.toLocaleString("en-US"), 120, INNER), fill: C$1.amber, isDisplay: true }),
+    rise(txt(s.crew, { x: PAD, y: 280, size: 36, fill: C$1.cream, isBold: true }), ease(t, 0.5)),
     crabs.join(""),
     rise(top.join(""), ease(t, 2)),
-    rise(txt(each > 1 ? `${s.crewEach(each)} · ${s.crewMeta(w.agentTools)}` : s.crewMeta(w.agentTools), { x: PAD, y: 860, size: 21, fill: C.cream, opacity: 0.7 }), ease(t, 2.2))
+    rise(txt(each > 1 ? `${s.crewEach(each)} · ${s.crewMeta(w.agentTools)}` : s.crewMeta(w.agentTools), { x: PAD, y: 860, size: 21, fill: C$1.cream, opacity: 0.7 }), ease(t, 2.2))
   ].join("");
 }
 function hardestSlide({ w, t, step, isNamed }) {
   const s = storyWords();
   const hardest = w.hardest;
   if (hardest === null)
-    return sheet(C.clay);
+    return sheet(C$1.clay);
   const rank = Math.max(0, w.agents.findIndex((agent) => agent.type === hardest.type));
   const scale = 8;
   const title = isNamed && hardest.description !== "" ? hardest.description : hardest.type;
   return [
-    sheet(C.clay),
-    circle(MID$1, 370, 190 + Math.sin(t * 1.4) * 10, C.amber),
-    rise(txt(s.hardest, { x: MID$1, y: 130, size: 34, fill: C.ink, isBold: true, anchor: "middle" }), ease(t, 0)),
+    sheet(C$1.clay),
+    circle(MID$1, 370, 250 + pulse(t) * 20, C$1.amber, 0.35),
+    circle(MID$1, 370, 190 + pulse(t) * 14, C$1.amber),
+    rise(txt(s.hardest, { x: MID$1, y: 130, size: 34, fill: C$1.ink, isBold: true, anchor: "middle" }), ease(t, 0)),
     rise(agentCrab(hardest.type, rank, { x: MID$1 - CRAB_W$1 * scale / 2, y: 262, scale, step }), ease(t, 0.2)),
-    txt(counted(hardest.tools, t), { x: MID$1, y: 700, size: 110, fill: C.ink, isDisplay: true, anchor: "middle" }),
-    rise(txt(s.hardestMeta(hardest.tokens), { x: MID$1, y: 755, size: 25, fill: C.ink, anchor: "middle" }), ease(t, 1.2)),
-    rise(quote(title, { y: 815, fill: C.ink, size: 25, anchor: "middle" }), ease(t, 1.5))
+    txt(counted(hardest.tools, t), { x: MID$1, y: 700, size: 110, fill: C$1.ink, isDisplay: true, anchor: "middle" }),
+    rise(txt(s.hardestMeta(hardest.tokens), { x: MID$1, y: 755, size: 25, fill: C$1.ink, anchor: "middle" }), ease(t, 1.2)),
+    rise(quote(title, { y: 815, fill: C$1.ink, size: 25, anchor: "middle" }), ease(t, 1.5))
   ].join("");
 }
 function modelSlide({ w, t }) {
@@ -1243,7 +1623,7 @@ function modelSlide({ w, t }) {
   const total = Math.max(1, w.models.reduce((sum, row) => sum + row.count, 0));
   const top = w.models[0];
   const share = Math.round((top?.count ?? 0) / total * 100);
-  const paints = [C.ink, C.clay, C.violet, C.moss, C.sky];
+  const paints = [C$1.ink, C$1.clay, C$1.violet, C$1.moss, C$1.sky];
   let x = PAD;
   const stack = w.models.map((row, index) => {
     const width = INNER * row.count / total;
@@ -1251,12 +1631,14 @@ function modelSlide({ w, t }) {
     x += width;
     return part;
   });
-  const rows = w.models.slice(0, 4).map((row, index) => txt(`${row.name} · %${Math.round(row.count / total * 100)}`, { x: PAD, y: 625 + index * 44, size: 26, fill: C.ink }));
+  const rows = w.models.slice(0, 4).map((row, index) => txt(`${row.name} · %${Math.round(row.count / total * 100)}`, { x: PAD, y: 625 + index * 44, size: 26, fill: C$1.ink }));
   return [
-    sheet(C.cream),
-    rise(txt(s.model, { x: PAD, y: 160, size: 34, fill: C.ink, isBold: true }), ease(t, 0)),
-    rise(txt(top?.name ?? "—", { x: PAD, y: 300, size: fitSize(top?.name ?? "—", 92, INNER), fill: C.violet, isDisplay: true }), ease(t, 0.25)),
-    rise(txt(s.modelShare(share), { x: PAD, y: 365, size: 30, fill: C.ink }), ease(t, 0.5)),
+    sheet(C$1.cream),
+    circle(W, 0, 180 + pulse(t) * 16, C$1.violet, 0.9),
+    dust(t, C$1.ink),
+    rise(txt(s.model, { x: PAD, y: 160, size: 34, fill: C$1.ink, isBold: true }), ease(t, 0)),
+    pop(txt(top?.name ?? "—", { x: PAD, y: 300, size: fitSize(top?.name ?? "—", 92, INNER), fill: C$1.violet, isDisplay: true }), t, { start: 0.25, x: PAD, y: 300 }),
+    rise(txt(s.modelShare(share), { x: PAD, y: 365, size: 30, fill: C$1.ink }), ease(t, 0.5)),
     stack.join(""),
     rise(rows.join(""), ease(t, 1.3))
   ].join("");
@@ -1265,6 +1647,7 @@ function modelSlide({ w, t }) {
 const MID = W / 2;
 const CRAB_W = 30;
 const SEGMENT = { y: 24, h: 5, gap: 4 };
+const REVEAL_S = 2;
 function funSlide({ w, t }) {
   const s = storyWords();
   const rows = [
@@ -1275,21 +1658,23 @@ function funSlide({ w, t }) {
   ].filter((row) => row.on);
   const body = rows.map((row, index) => {
     const y = 120 + index * 200;
-    return rise(txt(row.value, { x: PAD, y: y + 100, size: fitSize(row.value, 96, INNER), fill: index % 2 === 0 ? C.amber : C.cream, isDisplay: true }) + txt(fitBody(row.label, 27, INNER), { x: PAD, y: y + 145, size: 27, fill: C.cream }), ease(t, 0.15 + index * 0.55));
+    return rise(txt(row.value, { x: PAD, y: y + 100, size: fitSize(row.value, 96, INNER), fill: index % 2 === 0 ? C$1.amber : C$1.cream, isDisplay: true }) + txt(fitBody(row.label, 27, INNER), { x: PAD, y: y + 145, size: 27, fill: C$1.cream }), ease(t, 0.15 + index * 0.55));
   });
-  return [sheet(C.violet), circle(W, H, 130 + Math.sin(t) * 10, C.rose), body.join("")].join("");
+  return [sheet(C$1.violet), circle(W, H, 130 + pulse(t) * 16, C$1.rose), circle(0, 0, 90 + pulse(t + 0.25) * 10, C$1.sky, 0.55), body.join("")].join("");
 }
 function personaSlide({ w, t, step }) {
   const s = storyWords();
   const scale = 8;
   const name = personaName(w.persona);
   return [
-    sheet(C.ink),
-    circle(MID, 540, 480 * ease(t, 0.5, 1) + Math.sin(t) * 8, C.clay),
-    rise(txt(s.persona, { x: MID, y: 90, size: 32, fill: C.cream, isBold: true, anchor: "middle" }), ease(t, 0)),
-    rise(txt(name, { x: MID, y: 270, size: fitSize(name, 90, INNER), fill: C.ink, isDisplay: true, anchor: "middle" }), ease(t, 1.1)),
-    rise(agentCrab(w.agents[0]?.type ?? "agent", 1, { x: MID - CRAB_W * scale / 2, y: 345, scale, step }), ease(t, 1.3)),
-    rise(quote(personaLine(w.persona), { y: 690, fill: C.ink, size: 30, lines: 3, anchor: "middle" }), ease(t, 1.7))
+    sheet(C$1.ink),
+    dust(t, C$1.cream),
+    circle(MID, 540, 480 * ease(t, 0.5, REVEAL_S - 0.5) + pulse(t) * 12, C$1.clay),
+    rise(txt(s.persona, { x: MID, y: 90, size: 32, fill: C$1.cream, isBold: true, anchor: "middle" }), ease(t, 0)),
+    pop(txt(name, { x: MID, y: 270, size: fitSize(name, 90, INNER), fill: C$1.ink, isDisplay: true, anchor: "middle" }), t, { start: REVEAL_S, x: MID, y: 240 }),
+    rise(agentCrab(w.agents[0]?.type ?? "agent", 1, { x: MID - CRAB_W * scale / 2, y: 345, scale, step }), ease(t, REVEAL_S + 0.2)),
+    rise(quote(personaLine(w.persona), { y: 690, fill: C$1.ink, size: 30, lines: 3, anchor: "middle" }), ease(t, REVEAL_S + 0.7)),
+    burst(t, { start: REVEAL_S, x: MID, y: 300 })
   ].join("");
 }
 function statGrid(w, y) {
@@ -1305,13 +1690,13 @@ function statGrid(w, y) {
   return stats.map((stat, index) => {
     const x = PAD + index % 3 * (INNER / 3);
     const top = y + Math.floor(index / 3) * 104;
-    return txt(stat.value, { x, y: top + 44, size: fitSize(stat.value, 44, INNER / 3 - 12), fill: C.amber, isDisplay: true }) + txt(stat.label, { x, y: top + 76, size: 21, fill: C.cream });
+    return txt(stat.value, { x, y: top + 44, size: fitSize(stat.value, 44, INNER / 3 - 12), fill: C$1.amber, isDisplay: true }) + txt(stat.label, { x, y: top + 76, size: 21, fill: C$1.cream });
   }).join("");
 }
 function topList(o) {
   const room = INNER / 2 - 14;
-  const rows = o.rows.map((row, index) => txt(fitBody(`${index + 1}  ${row}`, 24, room), { x: o.x, y: o.y + 40 + index * 36, size: 24, fill: C.cream, isBold: index === 0 }));
-  return txt(o.title, { x: o.x, y: o.y, size: 21, fill: C.cream, opacity: 0.65 }) + rows.join("");
+  const rows = o.rows.map((row, index) => txt(fitBody(`${index + 1}  ${row}`, 24, room), { x: o.x, y: o.y + 40 + index * 36, size: 24, fill: C$1.cream, isBold: index === 0 }));
+  return txt(o.title, { x: o.x, y: o.y, size: 21, fill: C$1.cream, opacity: 0.65 }) + rows.join("");
 }
 function summarySlide({ w, t, isNamed, step }) {
   const s = storyWords();
@@ -1319,40 +1704,43 @@ function summarySlide({ w, t, isNamed, step }) {
   const name = personaName(w.persona);
   const crabX = W - PAD - CRAB_W * 3.4;
   return [
-    sheet(C.ink),
-    box({ x: 0, y: 0, w: W, h: 330, fill: C.clay }),
-    rise(txt(s.shareTitle(w.year), { x: PAD, y: 110, size: 27, fill: C.ink, isBold: true }), ease(t, 0)),
-    rise(txt(name, { x: PAD, y: 205, size: fitSize(name, 72, INNER - 60), fill: C.ink, isDisplay: true }), ease(t, 0.2)),
-    rise(quote(personaLine(w.persona), { y: 256, fill: C.ink, size: 23 }), ease(t, 0.4)),
+    sheet(C$1.ink),
+    box({ x: 0, y: 0, w: W, h: 330, fill: C$1.clay }),
+    rise(txt(s.shareTitle(w.year), { x: PAD, y: 110, size: 27, fill: C$1.ink, isBold: true }), ease(t, 0)),
+    rise(txt(name, { x: PAD, y: 205, size: fitSize(name, 72, INNER - 60), fill: C$1.ink, isDisplay: true }), ease(t, 0.2)),
+    rise(quote(personaLine(w.persona), { y: 256, fill: C$1.ink, size: 23 }), ease(t, 0.4)),
     agentCrab(w.agents[0]?.type ?? "agent", 1, { x: crabX, y: 50, scale: 3.4, step }),
+    burst(t, { start: 0.1, x: MID, y: 330 }),
     rise(statGrid(w, 365), ease(t, 0.6)),
     rise(topList({ x: PAD, y: 625, title: s.shareProjects, rows: w.projects.slice(0, 3).map((row) => labels.get(row.name) ?? row.name) }) + topList({ x: PAD + INNER / 2 + 14, y: 625, title: s.shareTools, rows: w.tools.slice(0, 3).map((row) => toolName(row.name)) }), ease(t, 0.9)),
-    rise(pixelText("modz", { x: PAD, y: 860, cell: 4, paint: "edit" }) + txt("/wrapped", { x: W - PAD, y: 885, size: 25, fill: C.cream, anchor: "end" }), ease(t, 1.2))
+    rise(pixelText("modz", { x: PAD, y: 860, cell: 4, paint: "edit" }) + txt("/wrapped", { x: W - PAD, y: 885, size: 25, fill: C$1.cream, anchor: "end" }), ease(t, 1.2))
   ].join("");
 }
 const hasAgents = (w) => w.agentRuns > 0;
+const PAGE_S = 4;
+const LONG_PAGE_S = 6;
 const SLIDES = [
-  { key: "intro", draw: introSlide, dur: 3.4 },
-  { key: "prompts", draw: promptsSlide, dur: 3.6 },
-  { key: "day", draw: daySlide, dur: 3.8, isFor: (w) => w.busiestDay !== null },
-  { key: "weekday", draw: weekdaySlide, dur: 3.6 },
-  { key: "hour", draw: hourSlide, dur: 3.6 },
-  { key: "projects", isLight: true, draw: projectsSlide, dur: 3.8, isFor: (w) => w.projects.length > 0 },
-  { key: "months", draw: monthsSlide, dur: 3.8, isFor: (w) => w.months.length > 1 },
-  { key: "tools", isLight: true, draw: toolsSlide, dur: 3.6, isFor: (w) => w.tools.length > 0 },
-  { key: "code", draw: codeSlide, dur: 3.6, isFor: (w) => w.linesAdded > 0 },
-  { key: "crew", draw: crewSlide, dur: 4.2, isFor: hasAgents },
-  { key: "hardest", draw: hardestSlide, dur: 3.4, isFor: (w) => w.hardest !== null },
-  { key: "model", isLight: true, draw: modelSlide, dur: 3.4, isFor: (w) => w.models.length > 0 },
-  { key: "fun", draw: funSlide, dur: 3.6 },
-  { key: "persona", draw: personaSlide, dur: 3.8 },
-  { key: "summary", draw: summarySlide, dur: 4.6 }
+  { key: "intro", draw: introSlide, dur: PAGE_S },
+  { key: "prompts", draw: promptsSlide, dur: PAGE_S },
+  { key: "day", draw: daySlide, dur: PAGE_S, isFor: (w) => w.busiestDay !== null },
+  { key: "weekday", draw: weekdaySlide, dur: PAGE_S },
+  { key: "hour", draw: hourSlide, dur: PAGE_S },
+  { key: "projects", isLight: true, draw: projectsSlide, dur: PAGE_S, isFor: (w) => w.projects.length > 0 },
+  { key: "months", draw: monthsSlide, dur: PAGE_S, isFor: (w) => w.months.length > 1 },
+  { key: "tools", isLight: true, draw: toolsSlide, dur: PAGE_S, isFor: (w) => w.tools.length > 0 },
+  { key: "code", draw: codeSlide, dur: PAGE_S, isFor: (w) => w.linesAdded > 0 },
+  { key: "crew", draw: crewSlide, dur: PAGE_S, isFor: hasAgents },
+  { key: "hardest", draw: hardestSlide, dur: PAGE_S, isFor: (w) => w.hardest !== null },
+  { key: "model", isLight: true, draw: modelSlide, dur: PAGE_S, isFor: (w) => w.models.length > 0 },
+  { key: "fun", draw: funSlide, dur: PAGE_S },
+  { key: "persona", draw: personaSlide, dur: LONG_PAGE_S },
+  { key: "summary", draw: summarySlide, dur: LONG_PAGE_S }
 ];
 const slidesFor = (w) => SLIDES.filter((slide) => slide.isFor === undefined || slide.isFor(w));
 function segments(slides, at, share) {
   const count = slides.length;
   const width = (W - 2 * 16 - (count - 1) * SEGMENT.gap) / count;
-  const fill = slides[at]?.isLight === true ? C.ink : C.white;
+  const fill = slides[at]?.isLight === true ? C$1.ink : C$1.white;
   let body = "";
   for (let index = 0;index < count; index += 1) {
     const x = 16 + index * (width + SEGMENT.gap);
@@ -1467,7 +1855,10 @@ async function makeFilm(io, spec, where) {
   const holds = await drawFrames(io, spec, where.dir);
   const list = `${where.dir}/list.txt`;
   await io.write(list, concatList(where.dir, holds));
-  const argv = ["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list, "-vf", `fps=${FPS},format=yuv420p`, "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-movflags", "+faststart", where.out];
+  const sound = `${where.dir}/score.wav`;
+  await io.write(`${sound}.b64`, scoreFor(slidesFor(spec.wrapped)));
+  fail("base64", await io.run(["base64", "-d", "-i", `${sound}.b64`, "-o", sound]));
+  const argv = ["ffmpeg", "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list, "-i", sound, "-vf", `fps=${FPS},format=yuv420p`, "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", where.out];
   fail("ffmpeg", await io.run(argv));
 }
 

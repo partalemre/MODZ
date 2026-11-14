@@ -1,4 +1,4 @@
-import { agentCrab, box, C, circle, ease, fitBody, fitSize, H, INNER, PAD, pixelText, rise, SETTLED, sheet, txt, W } from './film-parts'
+import { agentCrab, box, burst, C, circle, dust, ease, fitBody, fitSize, H, INNER, PAD, pixelText, pop, pulse, rise, SETTLED, sheet, txt, W } from './film-parts'
 import type { SlideCtx } from './film-parts'
 import { projectLabels } from './card'
 import { daySlide, hourSlide, introSlide, promptsSlide, weekdaySlide, quote } from './story-a'
@@ -14,6 +14,8 @@ import type { Wrapped } from '../types'
 const MID = W / 2
 const CRAB_W = 30
 const SEGMENT = { y: 24, h: 5, gap: 4 } as const
+// The persona is named on the downbeat of its second bar, where the score's band comes in.
+const REVEAL_S = 2
 
 export type Slide = { key: string; draw: (c: SlideCtx) => string; dur: number; isFor?: (w: Wrapped) => boolean; isLight?: boolean }
 
@@ -31,7 +33,7 @@ function funSlide({ w, t }: SlideCtx): string {
     return rise(txt(row.value, { x: PAD, y: y + 100, size: fitSize(row.value, 96, INNER), fill: index % 2 === 0 ? C.amber : C.cream, isDisplay: true }) + txt(fitBody(row.label, 27, INNER), { x: PAD, y: y + 145, size: 27, fill: C.cream }), ease(t, 0.15 + index * 0.55))
   })
 
-  return [sheet(C.violet), circle(W, H, 130 + Math.sin(t) * 10, C.rose), body.join('')].join('')
+  return [sheet(C.violet), circle(W, H, 130 + pulse(t) * 16, C.rose), circle(0, 0, 90 + pulse(t + 0.25) * 10, C.sky, 0.55), body.join('')].join('')
 }
 
 function personaSlide({ w, t, step }: SlideCtx): string {
@@ -41,11 +43,13 @@ function personaSlide({ w, t, step }: SlideCtx): string {
 
   return [
     sheet(C.ink),
-    circle(MID, 540, 480 * ease(t, 0.5, 1) + Math.sin(t) * 8, C.clay),
+    dust(t, C.cream),
+    circle(MID, 540, 480 * ease(t, 0.5, REVEAL_S - 0.5) + pulse(t) * 12, C.clay),
     rise(txt(s.persona, { x: MID, y: 90, size: 32, fill: C.cream, isBold: true, anchor: 'middle' }), ease(t, 0)),
-    rise(txt(name, { x: MID, y: 270, size: fitSize(name, 90, INNER), fill: C.ink, isDisplay: true, anchor: 'middle' }), ease(t, 1.1)),
-    rise(agentCrab(w.agents[0]?.type ?? 'agent', 1, { x: MID - (CRAB_W * scale) / 2, y: 345, scale, step }), ease(t, 1.3)),
-    rise(quote(personaLine(w.persona), { y: 690, fill: C.ink, size: 30, lines: 3, anchor: 'middle' }), ease(t, 1.7)),
+    pop(txt(name, { x: MID, y: 270, size: fitSize(name, 90, INNER), fill: C.ink, isDisplay: true, anchor: 'middle' }), t, { start: REVEAL_S, x: MID, y: 240 }),
+    rise(agentCrab(w.agents[0]?.type ?? 'agent', 1, { x: MID - (CRAB_W * scale) / 2, y: 345, scale, step }), ease(t, REVEAL_S + 0.2)),
+    rise(quote(personaLine(w.persona), { y: 690, fill: C.ink, size: 30, lines: 3, anchor: 'middle' }), ease(t, REVEAL_S + 0.7)),
+    burst(t, { start: REVEAL_S, x: MID, y: 300 }),
   ].join('')
 }
 
@@ -89,6 +93,7 @@ export function summarySlide({ w, t, isNamed, step }: SlideCtx): string {
     rise(txt(name, { x: PAD, y: 205, size: fitSize(name, 72, INNER - 60), fill: C.ink, isDisplay: true }), ease(t, 0.2)),
     rise(quote(personaLine(w.persona), { y: 256, fill: C.ink, size: 23 }), ease(t, 0.4)),
     agentCrab(w.agents[0]?.type ?? 'agent', 1, { x: crabX, y: 50, scale: 3.4, step }),
+    burst(t, { start: 0.1, x: MID, y: 330 }),
     rise(statGrid(w, 365), ease(t, 0.6)),
     rise(topList({ x: PAD, y: 625, title: s.shareProjects, rows: w.projects.slice(0, 3).map(row => labels.get(row.name) ?? row.name) }) + topList({ x: PAD + INNER / 2 + 14, y: 625, title: s.shareTools, rows: w.tools.slice(0, 3).map(row => toolName(row.name)) }), ease(t, 0.9)),
     rise(pixelText('modz', { x: PAD, y: 860, cell: 4, paint: 'edit' }) + txt('/wrapped', { x: W - PAD, y: 885, size: 25, fill: C.cream, anchor: 'end' }) , ease(t, 1.2)),
@@ -97,22 +102,26 @@ export function summarySlide({ w, t, isNamed, step }: SlideCtx): string {
 
 const hasAgents = (w: Wrapped): boolean => w.agentRuns > 0
 
+// A page lasts two bars of the score, the two that end the story three: `score.ts` writes whole bars.
+const PAGE_S = 4
+const LONG_PAGE_S = 6
+
 const SLIDES: Slide[] = [
-  { key: 'intro', draw: introSlide, dur: 3.4 },
-  { key: 'prompts', draw: promptsSlide, dur: 3.6 },
-  { key: 'day', draw: daySlide, dur: 3.8, isFor: w => w.busiestDay !== null },
-  { key: 'weekday', draw: weekdaySlide, dur: 3.6 },
-  { key: 'hour', draw: hourSlide, dur: 3.6 },
-  { key: 'projects', isLight: true, draw: projectsSlide, dur: 3.8, isFor: w => w.projects.length > 0 },
-  { key: 'months', draw: monthsSlide, dur: 3.8, isFor: w => w.months.length > 1 },
-  { key: 'tools', isLight: true, draw: toolsSlide, dur: 3.6, isFor: w => w.tools.length > 0 },
-  { key: 'code', draw: codeSlide, dur: 3.6, isFor: w => w.linesAdded > 0 },
-  { key: 'crew', draw: crewSlide, dur: 4.2, isFor: hasAgents },
-  { key: 'hardest', draw: hardestSlide, dur: 3.4, isFor: w => w.hardest !== null },
-  { key: 'model', isLight: true, draw: modelSlide, dur: 3.4, isFor: w => w.models.length > 0 },
-  { key: 'fun', draw: funSlide, dur: 3.6 },
-  { key: 'persona', draw: personaSlide, dur: 3.8 },
-  { key: 'summary', draw: summarySlide, dur: 4.6 },
+  { key: 'intro', draw: introSlide, dur: PAGE_S },
+  { key: 'prompts', draw: promptsSlide, dur: PAGE_S },
+  { key: 'day', draw: daySlide, dur: PAGE_S, isFor: w => w.busiestDay !== null },
+  { key: 'weekday', draw: weekdaySlide, dur: PAGE_S },
+  { key: 'hour', draw: hourSlide, dur: PAGE_S },
+  { key: 'projects', isLight: true, draw: projectsSlide, dur: PAGE_S, isFor: w => w.projects.length > 0 },
+  { key: 'months', draw: monthsSlide, dur: PAGE_S, isFor: w => w.months.length > 1 },
+  { key: 'tools', isLight: true, draw: toolsSlide, dur: PAGE_S, isFor: w => w.tools.length > 0 },
+  { key: 'code', draw: codeSlide, dur: PAGE_S, isFor: w => w.linesAdded > 0 },
+  { key: 'crew', draw: crewSlide, dur: PAGE_S, isFor: hasAgents },
+  { key: 'hardest', draw: hardestSlide, dur: PAGE_S, isFor: w => w.hardest !== null },
+  { key: 'model', isLight: true, draw: modelSlide, dur: PAGE_S, isFor: w => w.models.length > 0 },
+  { key: 'fun', draw: funSlide, dur: PAGE_S },
+  { key: 'persona', draw: personaSlide, dur: LONG_PAGE_S },
+  { key: 'summary', draw: summarySlide, dur: LONG_PAGE_S },
 ]
 
 export const slidesFor = (w: Wrapped): Slide[] => SLIDES.filter(slide => slide.isFor === undefined || slide.isFor(w))

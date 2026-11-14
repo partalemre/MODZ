@@ -1,5 +1,5 @@
 import { fileLabel, projectLabels } from './card'
-import { agentCrab, box, C, circle, ease, fitBody, fitSize, H, INNER, PAD, rise, sheet, txt, W } from './film-parts'
+import { agentCrab, box, C, circle, dust, ease, fitBody, fitSize, H, INNER, PAD, pop, pulse, rise, sheet, txt, W } from './film-parts'
 import type { SlideCtx } from './film-parts'
 import { counted, quote } from './story-a'
 import { storyWords } from './story-words'
@@ -40,7 +40,8 @@ export function projectsSlide({ w, t, isNamed }: SlideCtx): string {
 
   return [
     sheet(C.cream),
-    circle(W, 90, 170 + Math.sin(t) * 10, C.clay),
+    circle(W, 90, 170 + pulse(t) * 16, C.clay),
+    circle(0, H, 120 + pulse(t + 0.25) * 12, C.amber),
     rise(txt(s.projects, { x: PAD, y: 200, size: fitSize(s.projects, 46, INNER), fill: C.ink, isDisplay: true }), ease(t, 0)),
     rankedRows(rows, t, { y: 275, rowH: 122, title: C.ink, meta: C.ink, rank: C.clay, start: 0.4 }),
   ].join('')
@@ -63,8 +64,10 @@ export function monthsSlide({ w, t, isNamed }: SlideCtx): string {
 
   return [
     sheet(C.sky),
+    circle(W, 60, 150 + pulse(t) * 16, C.violet, 0.45),
+    dust(t, C.cream),
     rise(txt(s.months, { x: PAD, y: 130, size: 34, fill: C.cream, isBold: true }), ease(t, 0)),
-    rise(txt(name, { x: PAD, y: 245, size: fitSize(name, 92, INNER), fill: C.amber, isDisplay: true }), ease(t, 0.25)),
+    pop(txt(name, { x: PAD, y: 245, size: fitSize(name, 92, INNER), fill: C.amber, isDisplay: true }), t, { start: 0.25, x: PAD, y: 245 }),
     rise(txt(fitBody(s.monthPeak(project, peak?.prompts ?? 0), 27, INNER), { x: PAD, y: 300, size: 27, fill: C.cream }), ease(t, 0.5)),
     bars.join(''),
   ].join('')
@@ -85,8 +88,10 @@ export function toolsSlide({ w, t }: SlideCtx): string {
 
   return [
     sheet(C.amber),
+    circle(W, H, 190 + pulse(t) * 16, C.clay, 0.85),
+    dust(t, C.ink),
     rise(txt(s.tools, { x: PAD, y: 150, size: 34, fill: C.ink, isBold: true }), ease(t, 0)),
-    rise(txt(name, { x: PAD, y: 280, size: fitSize(name, 112, INNER), fill: C.ink, isDisplay: true }), ease(t, 0.25)),
+    pop(txt(name, { x: PAD, y: 280, size: fitSize(name, 112, INNER), fill: C.ink, isDisplay: true }), t, { start: 0.25, x: PAD, y: 280 }),
     rise(txt(s.times(top?.count ?? 0), { x: PAD, y: 345, size: 36, fill: C.ink }), ease(t, 0.5)),
     rows.join(''),
   ].join('')
@@ -99,7 +104,8 @@ export function codeSlide({ w, t, isNamed }: SlideCtx): string {
 
   return [
     sheet(C.rose),
-    circle(0, H, 170 + Math.sin(t) * 12, C.violet),
+    circle(0, H, 170 + pulse(t) * 16, C.violet),
+    circle(W, 40, 110 + pulse(t + 0.25) * 12, C.amber, 0.9),
     txt(counted(w.linesAdded, t), { x: PAD, y: 300, size: fitSize(w.linesAdded.toLocaleString('en-US'), 120, INNER), fill: C.ink, isDisplay: true }),
     rise(txt(s.lines, { x: PAD, y: 360, size: 36, fill: C.ink, isBold: true }), ease(t, 0.6)),
     file === undefined ? '' : rise(txt(s.file, { x: PAD, y: 490, size: 28, fill: C.ink }) + txt(fitBody(fileName, 40, INNER), { x: PAD, y: 545, size: 40, fill: C.cream, isBold: true }) + txt(s.fileCount(file.count), { x: PAD, y: 590, size: 28, fill: C.ink }), ease(t, 1)),
@@ -123,6 +129,7 @@ export function crewSlide({ w, t, step }: SlideCtx): string {
 
   return [
     sheet(C.ink),
+    dust(t, C.clay),
     txt(counted(w.agentRuns, t), { x: PAD, y: 220, size: fitSize(w.agentRuns.toLocaleString('en-US'), 120, INNER), fill: C.amber, isDisplay: true }),
     rise(txt(s.crew, { x: PAD, y: 280, size: 36, fill: C.cream, isBold: true }), ease(t, 0.5)),
     crabs.join(''),
@@ -141,7 +148,8 @@ export function hardestSlide({ w, t, step, isNamed }: SlideCtx): string {
 
   return [
     sheet(C.clay),
-    circle(MID, 370, 190 + Math.sin(t * 1.4) * 10, C.amber),
+    circle(MID, 370, 250 + pulse(t) * 20, C.amber, 0.35),
+    circle(MID, 370, 190 + pulse(t) * 14, C.amber),
     rise(txt(s.hardest, { x: MID, y: 130, size: 34, fill: C.ink, isBold: true, anchor: 'middle' }), ease(t, 0)),
     rise(agentCrab(hardest.type, rank, { x: MID - (CRAB_W * scale) / 2, y: 262, scale, step }), ease(t, 0.2)),
     txt(counted(hardest.tools, t), { x: MID, y: 700, size: 110, fill: C.ink, isDisplay: true, anchor: 'middle' }),
@@ -168,8 +176,10 @@ export function modelSlide({ w, t }: SlideCtx): string {
 
   return [
     sheet(C.cream),
+    circle(W, 0, 180 + pulse(t) * 16, C.violet, 0.9),
+    dust(t, C.ink),
     rise(txt(s.model, { x: PAD, y: 160, size: 34, fill: C.ink, isBold: true }), ease(t, 0)),
-    rise(txt(top?.name ?? '—', { x: PAD, y: 300, size: fitSize(top?.name ?? '—', 92, INNER), fill: C.violet, isDisplay: true }), ease(t, 0.25)),
+    pop(txt(top?.name ?? '—', { x: PAD, y: 300, size: fitSize(top?.name ?? '—', 92, INNER), fill: C.violet, isDisplay: true }), t, { start: 0.25, x: PAD, y: 300 }),
     rise(txt(s.modelShare(share), { x: PAD, y: 365, size: 30, fill: C.ink }), ease(t, 0.5)),
     stack.join(''),
     rise(rows.join(''), ease(t, 1.3)),

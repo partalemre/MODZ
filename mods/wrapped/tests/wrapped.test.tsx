@@ -4,7 +4,9 @@ import { cardText, fileLabel, projectLabels, rowsOf, standalone } from '../hooks
 import { projectKindOf, projectKinds } from '../hooks/kinds'
 import { setLang } from '../hooks/kit/lang'
 import { concatList, FPS, frameAt, frameCount, holdsOf } from '../hooks/film'
+import { scoreFor } from '../hooks/score'
 import { postUrl } from '../hooks/share'
+import { RATE } from '../hooks/synth'
 import { pagePic, pageWidth, slidesFor, summaryPic } from '../hooks/story'
 import { parseOutput, rootOf, transcriptPaths } from '../hooks/scan'
 import { isWrapped, longestStreak, modelLabel, monthsOf, personaOf, weekdaysOf, wrappedOf } from '../hooks/stats'
@@ -94,7 +96,7 @@ test('the film runs at 60 frames, hides names on every frame when masked, and sh
     expect(hold.source).not.toContain('<style>')
   }
   expect(holds.some(hold => hold.source.includes('Project'))).toBe(true)
-  expect(frameAt({ wrapped: w, isNamed: true }, slides, Math.round(slides.slice(0, 5).reduce((sum, slide) => sum + slide.dur, 0) * FPS) + 240)).toContain('secret-client')
+  expect(frameAt({ wrapped: w, isNamed: true }, slides, Math.round(slides.slice(0, 5).reduce((sum, slide) => sum + slide.dur, 0) * FPS) + 180)).toContain('secret-client')
 })
 
 test('a year with no agents drops their pages and still has a film', FILM_TEST, () => {
@@ -126,6 +128,23 @@ test('a saved reading from before the new figures is refused, so it is read agai
   if (w === null) throw new Error('expected a reading')
   const { projects: _gone, ...older } = w
   expect(isWrapped(older)).toBe(false)
+})
+
+test('the score is a WAV as long as its pages, the same every time, and each page sounds its own way', FILM_TEST, () => {
+  const pages = [{ key: 'prompts', dur: 4 }, { key: 'hour', dur: 4 }]
+  const bytes = Uint8Array.from(atob(scoreFor(pages)), char => char.charCodeAt(0))
+  const samples = new Int16Array(bytes.buffer, 44)
+  const loudness = (from: number) => samples.subarray(from * RATE * 2, (from + 4) * RATE * 2).reduce((sum, sample) => sum + Math.abs(sample), 0)
+  expect(String.fromCharCode(...bytes.subarray(0, 4))).toBe('RIFF')
+  expect(samples.length).toBe(8 * RATE * 2)
+  expect(scoreFor([{ key: 'crew', dur: 0.5 }])).toBe(scoreFor([{ key: 'crew', dur: 0.5 }]))
+  expect(loudness(0)).toBeGreaterThan(0)
+  expect(loudness(4)).toBeGreaterThan(0)
+  // The second page's key alone changes what is heard there.
+  const same = Uint8Array.from(atob(scoreFor([{ key: 'prompts', dur: 4 }, { key: 'prompts', dur: 4 }])), char => char.charCodeAt(0))
+  const tail = (all: Uint8Array) => all.subarray(44 + 5 * RATE * 4, 44 + 7 * RATE * 4)
+  expect(tail(bytes).some((byte, index) => byte !== tail(same)[index])).toBe(true)
+  expect(samples.every(sample => Math.abs(sample) < 32_767)).toBe(true)
 })
 
 test('the concat list holds each picture and repeats the last', () => {
@@ -348,7 +367,9 @@ test('the film button draws, encodes, opens the video and removes its frames', F
   for (let tick = 0; tick < 5; tick += 1) await clock.advance(1)
   const commands = runs.map(run => run[0])
   expect(commands).toContain('sips')
-  expect(commands.slice(-3)).toEqual(['ffmpeg', 'open', 'rm'])
+  expect(commands.slice(-4)).toEqual(['base64', 'ffmpeg', 'open', 'rm'])
+  expect(runs.at(-3)).toContain('/tmp/wrapped-film-2026/score.wav')
+  expect(written.has('/tmp/wrapped-film-2026/score.wav.b64')).toBe(true)
   expect(runs.at(-3)).toContain('/home/me/Downloads/wrapped-2026.mp4')
   expect(runs.at(-1)?.at(-1)).toBe('/tmp/wrapped-film-2026')
   expect([...written.keys()].some(path => path.startsWith('/tmp/wrapped-film-2026/f'))).toBe(true)

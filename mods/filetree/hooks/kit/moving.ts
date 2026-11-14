@@ -35,16 +35,20 @@ const SAYS_SCHEME = /(^|[^-\w])color-scheme\s*:/
 const PASS_MS = 120
 // The cascade stops lengthening here, so a long list is in place soon.
 const MAX_ORDER = 12
+// A drawing that changed again this soon after its last change shows live data (tokens, the call under way): its
+// flash would replay on every update and read as a pane that never stops loading, so only the first one flashes.
+const LIVE_MS = 30_000
 
 // `source` with its scheme said and, per its cue, its entrance or its flash; the hover wash for a row. A change
 // given the source it replaces (`before`) also moves what moved: its meters slide, a new done mark draws itself.
-export function animate(source: string, spec: { cue: Cue; isRow?: boolean; before?: string }): string {
+// `isLive`: the change follows another closely, so it moves without the flash.
+export function animate(source: string, spec: { cue: Cue; isRow?: boolean; before?: string; isLive?: boolean }): string {
   const moved = spec.cue.phase === 'change' && spec.before !== undefined ? markChanges(spec.before, source) : source
   const parts = SVG.exec(moved)
   if (parts === null) return source
   const [, open, inner = '', close] = parts
   const scheme = SAYS_SCHEME.test(inner) ? '' : SCHEME
-  const lit = `${spec.isRow === true ? WASH : ''}${spec.cue.phase === 'change' ? FLASH : ''}${inner}`
+  const lit = `${spec.isRow === true ? WASH : ''}${spec.cue.phase === 'change' && spec.isLive !== true ? FLASH : ''}${inner}`
   const body = entering(lit, spec.cue)
   const css = motionCss(body)
 
@@ -53,7 +57,7 @@ export function animate(source: string, spec: { cue: Cue; isRow?: boolean; befor
 
 export function paneMotion(): PaneMotion {
   const drawings = stableDrawings<string>()
-  const shown = new Map<string, { shows: string; width: string; source: string }>()
+  const shown = new Map<string, { shows: string; width: string; source: string; changedAt: number }>()
   const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 }
   const begin = () => {
     const now = Date.now()
@@ -75,9 +79,11 @@ export function paneMotion(): PaneMotion {
         const before = shown.get(key)
         const isQuiet = before !== undefined && (before.shows === now.shows || before.width !== now.width)
         const phase = built === 'change' && isQuiet ? 'still' : built
-        shown.set(key, now)
+        const lastChange = before?.changedAt ?? Number.NEGATIVE_INFINITY
+        const isLive = phase === 'change' && pass.at - lastChange < LIVE_MS
+        shown.set(key, { ...now, changedAt: phase === 'change' ? pass.at : lastChange })
 
-        return animate(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source })
+        return animate(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive })
       })
 
       return { ...pic, source, isInteractive: true }

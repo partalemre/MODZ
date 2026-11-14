@@ -7,8 +7,8 @@ import { t } from './i18n'
 import { lookOf } from './identity'
 import { HOME_LOOK } from './mood-svg'
 import { groundLine, groundY, landOf, SCENE_H } from './strip-land'
-import type { Phase } from './strip-land'
 import { SCENE_CSS, strollCss, walkInCss } from './strip-motion'
+import type { Sky } from './sun'
 import { FONT, paneSvg } from './theme'
 import { costumeOf } from './tiers'
 
@@ -38,7 +38,7 @@ const SCHEME = '<style>:root{color-scheme:light dark}</style>'
 export type Step = { subject: string; status: string; crew?: readonly { name: string; shell: string }[] }
 
 /** `from` is where the crab stood before the plan moved on: it walks in from there. */
-export type SceneSpec = { width: number; crew: readonly AgentRun[]; mood: CrabMood; steps: readonly Step[]; phase: Phase; from?: number }
+export type SceneSpec = { width: number; crew: readonly AgentRun[]; mood: CrabMood; steps: readonly Step[]; sky: Sky; from?: number }
 
 type Layout = { x0: number; x1: number; at: number[]; stand: number; standIndex: number; benchX: number }
 
@@ -193,7 +193,7 @@ function benchSvg(spec: SceneSpec, lay: Layout): string {
 /** The scene at `width` px, and what it says in words. */
 export function sceneSvg(spec: SceneSpec): { source: string; alt: string } {
   const lay = layoutOf(spec)
-  const land = landOf(spec.width, spec.phase, lay.stand)
+  const land = landOf(spec.width, spec.sky)
   const done = spec.steps.filter(isDone).length
   const plan = spec.steps.length === 0 ? '' : `${t().stripPlan} ${done}/${spec.steps.length}`
   const names = spec.crew.map(a => lookOf(a).name).join(', ')

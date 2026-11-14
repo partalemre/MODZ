@@ -58,7 +58,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     world.opened.length = 0
     const answer = await $.command.run({ command: 'modz', args: 'help' })
 
-    expect(answer.text).toContain('MODZ: commands and settings')
+    expect(answer.text).toContain('modz: commands and settings')
     expect(answer.text).toContain('/hud: Shows or hides the HUD line')
     expect(answer.text).toContain('Options under /plugin: thresholdSeconds, pingOnPermission')
     expect(world.opened).toEqual([])

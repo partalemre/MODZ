@@ -110,7 +110,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(await stateOf($, 'mode')).toBe('auto')
   })
 
-  test(`${surface}: with the hub on, "← MODZ" comes first and writes home`, WITH, async ($: any, on: any) => {
+  test(`${surface}: with the hub on, "← modz" comes first and writes home`, WITH, async ($: any, on: any) => {
     stub(on, worldOf())
     await begin($, surface)
     const off = await $.ui.mount(paneOf(surface))

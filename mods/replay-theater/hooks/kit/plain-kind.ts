@@ -44,7 +44,8 @@ const WEIGHT: readonly Kind[] = ['wait', 'read', 'search', 'run', 'web', 'test',
 
 const last = (path: string): string => path.split('/').filter(Boolean).at(-1) ?? path
 
-function commandKind(call: Call): Kind {
+/** The kind of one command of a line: `rm` deletes, `git commit` saves a version. */
+export function commandKind(call: Call): Kind {
   const name = last(call.name)
   const verb = call.args.find(arg => !arg.startsWith('-')) ?? ''
   if (name === 'sleep') return 'wait'

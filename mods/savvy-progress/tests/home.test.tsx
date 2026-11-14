@@ -2,7 +2,7 @@ import { expect } from 'claude-code/testing'
 
 import { test, PANE, SURFACES, setup, threeRunning } from './fixtures'
 
-// The Agents pane opens with a "← MODZ" button while the hub runs; pressing it writes this mod's own `home` value.
+// The Agents pane opens with a "← modz" button while the hub runs; pressing it writes this mod's own `home` value.
 
 // Stands for the MODZ hub: it says it runs, and records the home values it hears.
 const HUB_STAND_IN = {
@@ -32,14 +32,14 @@ for (const surface of SURFACES) {
     expect(await ui.find({ key: 'modz-home' })).toBeUndefined()
   })
 
-  test(`${surface}: with the hub on "← MODZ" comes first, and pressing it writes this mod's home`, { plugins: [HUB_STAND_IN] }, async ($, on) => {
+  test(`${surface}: with the hub on "← modz" comes first, and pressing it writes this mod's home`, { plugins: [HUB_STAND_IN] }, async ($, on) => {
     const { clock } = await setup($, on)
     await threeRunning($)
     await $.command.run({ command: 'hub-on', args: '' } as never)
     const ui = await $.ui.mount({ ...PANE, surface })
     const [first] = await buttons(ui)
 
-    expect(first?.label).toBe('← MODZ')
+    expect(first?.label).toBe('← modz')
     await ui.press({ key: 'modz-home' })
     const heard = JSON.parse(((await $.command.run({ command: 'heard-home', args: '' } as never)).text ?? '[]'))
 
@@ -51,6 +51,6 @@ for (const surface of SURFACES) {
     await $.command.run({ command: 'hub-on', args: '' } as never)
     const ui = await $.ui.mount({ ...PANE, surface })
 
-    expect((await buttons(ui))[0]?.label).toBe('← MODZ')
+    expect((await buttons(ui))[0]?.label).toBe('← modz')
   })
 }

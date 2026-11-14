@@ -8,6 +8,11 @@ const LETTERS: Record<string, readonly string[]> = {
   O: ['.XXX.', 'X...X', 'X...X', 'X...X', 'X...X', 'X...X', '.XXX.'],
   D: ['XXXX.', 'X...X', 'X...X', 'X...X', 'X...X', 'X...X', 'XXXX.'],
   Z: ['XXXXX', '....X', '...X.', '..X..', '.X...', 'X....', 'XXXXX'],
+  // The wordmark is lowercase: x-height letters sit on the same baseline as the tall `d`.
+  m: ['.....', '.....', 'XX.X.', 'X.X.X', 'X.X.X', 'X.X.X', 'X.X.X'],
+  o: ['.....', '.....', '.XXX.', 'X...X', 'X...X', 'X...X', '.XXX.'],
+  d: ['....X', '....X', '.XXXX', 'X...X', 'X...X', 'X...X', '.XXXX'],
+  z: ['.....', '.....', 'XXXXX', '...X.', '..X..', '.X...', 'XXXXX'],
 }
 
 // One glyph per kit icon name the hub uses, on a grid of at most 7×7; centred in their box when drawn.
@@ -26,6 +31,16 @@ export const PIXEL_GLYPHS: Record<string, readonly string[]> = {
   cube: ['XX.XX', 'XX.XX', '.....', 'XX.XX', 'XX.XX'],
   layers: ['..XXXXX', '.......', '.XXXXX.', '.......', 'XXXXX..'],
   star: ['...X...', '...X...', 'XXXXXXX', '..XXX..', '.XX.XX.'],
+  // The kinds of work a step is (kit/plain-kind.ts), so a transcript step wears the same cells as the hub.
+  search: ['.XXX...', 'X...X..', 'X...X..', 'X...X..', '.XXXX..', '....XX.', '.....XX'],
+  pencil: ['.....XX', '....XXX', '...XXX.', '..XXX..', '.XXX...', 'XX.....', 'X......'],
+  terminal: ['X......', '.X.....', '..X....', '.X.....', 'X..XXXX'],
+  shield: ['XXXXXXX', 'XXXXX.X', 'X.XX.XX', 'XX..XXX', '.XXXXX.', '..XXX..', '...X...'],
+  branch: ['X....X.', 'X....X.', 'X....X.', 'X...X..', 'XXXX...', 'X......', 'X......'],
+  trash: ['..XXX..', 'XXXXXXX', '.......', '.X.X.X.', '.X.X.X.', '.X.X.X.', '.XXXXX.'],
+  globe: ['..XXX..', '.X.X.X.', 'X..X..X', 'XXXXXXX', 'X..X..X', '.X.X.X.', '..XXX..'],
+  clock: ['..XXX..', '.X...X.', 'X..X..X', 'X..XX.X', 'X.....X', '.X...X.', '..XXX..'],
+  plug: ['.X.X.', '.X.X.', 'XXXXX', 'XXXXX', '.XXX.', '..X..', '..X..'],
 }
 
 const FALLBACK = PIXEL_GLYPHS.cube as readonly string[]
@@ -62,8 +77,8 @@ export function pixelGlyph(name: string, o: PixelOpts & { box: number }): string
 // A word in the film's letters from (x, y), `gap` px between letters; its width, to place what follows it.
 export function pixelWord(word: string, o: PixelOpts & { gap: number }): { svg: string; width: number } {
   let x = o.x
-  const parts = [...word.toUpperCase()].map((letter, index) => {
-    const grid = LETTERS[letter] ?? LETTERS.M as readonly string[]
+  const parts = [...word].map((letter, index) => {
+    const grid = LETTERS[letter] ?? LETTERS[letter.toUpperCase()] ?? LETTERS.M as readonly string[]
     const svg = cells(grid, { ...o, x }, index)
     x += sizeOf(grid, o.pitch, o.cell).width + o.gap
 

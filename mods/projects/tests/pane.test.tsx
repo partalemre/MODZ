@@ -91,11 +91,11 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await setup($, on)
     await $.command.run({ command: 'hub-on', args: '' })
     const pane = await $.ui.mount(paneOf(surface))
-    expect(JSON.stringify(await pane.drawn())).toContain('← MODZ')
+    expect(JSON.stringify(await pane.drawn())).toContain('← modz')
     await pane.press({ key: 'row:/w/app:b' })
     const drawn = JSON.stringify(await pane.drawn())
     expect(drawn).toContain('← Projects')
-    expect(drawn).not.toContain('← MODZ')
+    expect(drawn).not.toContain('← modz')
   })
 
   test(`${surface}: a long stop note folds, opens whole, and folds again; the next project starts folded`, async ($: any, on: any) => {

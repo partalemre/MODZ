@@ -33,7 +33,7 @@ import type { Frame, Parts } from './view'
 import { catalogWords, hubWords } from './words'
 
 const PANE = HUB_PANE
-const TITLE = 'MODZ'
+const TITLE = 'modz'
 
 const OPEN = { plugin: 'modz', key: 'open' } as const
 const STAGE = { plugin: 'modz', key: 'stage' } as const

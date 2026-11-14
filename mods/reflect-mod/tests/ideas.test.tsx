@@ -95,7 +95,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect((await wordsOf(pane)).buttons).toContain('idea-copy:1=Copy')
   })
 
-  test(`${surface}: with the hub on, "← MODZ" heads the pane and writes home`, { plugins: [hubOn] }, async ($: any, on: any) => {
+  test(`${surface}: with the hub on, "← modz" heads the pane and writes home`, { plugins: [hubOn] }, async ($: any, on: any) => {
     const w = mineWorld(on, { ideas: IDEAS, lang: null })
     await start($)
     await mine($, w)

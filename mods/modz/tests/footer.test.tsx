@@ -29,7 +29,7 @@ test('the desktop footer keeps the engine’s labels and adds a dim MODZ control
   const tree = await ui.drawn()
 
   expect(textOf(tree)).toContain('focus & memory paused')
-  expect(toggleOf(tree)?.props).toMatchObject({ label: 'MODZ', plain: true, dimColor: true })
+  expect(toggleOf(tree)?.props).toMatchObject({ label: 'modz', plain: true, dimColor: true })
 })
 
 test('with no labels the footer holds the control alone', async ($: any, on: any) => {

@@ -40,12 +40,12 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(buttonsOf(await pane.drawn()).length).toBeGreaterThan(0)
   })
 
-  test(`${surface}: with the hub on "← MODZ" is the first button, and pressing it writes home`, { plugins: [modz] }, async ($: any, on: any) => {
+  test(`${surface}: with the hub on "← modz" is the first button, and pressing it writes home`, { plugins: [modz] }, async ($: any, on: any) => {
     await setup($, on, newWorld({ surface }))
     await $.command.run({ command: 'hub-on', args: '' })
     const pane = await $.ui.mount(paneOf(surface))
 
-    expect(buttonsOf(await pane.drawn())[0]).toEqual({ key: 'modz-home', label: '← MODZ' })
+    expect(buttonsOf(await pane.drawn())[0]).toEqual({ key: 'modz-home', label: '← modz' })
     await pane.press({ key: 'modz-home' })
     const heard = JSON.parse((await $.command.run({ command: 'hub-heard', args: '' })).text)
     expect(heard).toHaveLength(1)

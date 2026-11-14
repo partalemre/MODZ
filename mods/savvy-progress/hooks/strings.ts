@@ -144,6 +144,15 @@ export type Strings = {
   tools: (n: number) => string
   errors: (n: number) => string
   crew: (n: number) => string
+  /** The session strip above the prompt: its three measures and what sits under each. */
+  stripCost: string
+  stripTokens: string
+  stripTime: string
+  stripLast: (cost: string) => string
+  stripTurns: (n: number) => string
+  stripPerTurn: (span: string) => string
+  /** What a crab on the strip is doing, by the kind of its last tool. */
+  stripDoing: Record<'read' | 'edit' | 'run' | 'agent' | 'other', string>
   /** The hub card's running count: "2 ajan", "2 running". */
   hubCrew: (n: number) => string
   liveCount: (n: number) => string

@@ -99,7 +99,8 @@ for (const surface of SURFACES) {
     await worried($, on)
     const ui = await band($)
     expect(await hasHomeCrab(ui)).toBe(true)
-    expect((await ui.findAll({ type: 'Svg' })).length).toBeLessThanOrEqual(1)
+    // The job's row and the session strip: one Svg each, the home crab in the row.
+    expect((await ui.findAll({ type: 'Svg' })).length).toBeLessThanOrEqual(2)
     await mainStart($, 'More', 'main-2')
     expect(await hasHomeCrab(await band($, 'band-2'))).toBe(false)
   })

@@ -6,7 +6,7 @@ import type { Register, RenderElement } from 'claude-code'
 
 import { GLYPH } from './kit/icons'
 import { lang, pick } from './kit/lang'
-import { KIND_ICON, kindOf, plainCall } from './kit/plain'
+import { KIND_ICON, kindOf, partsOf, plainCall } from './kit/plain'
 import { flowPic, kindPic } from './plain-flow'
 import { fileOf, isTold, stateOf, trailOf } from './plain-trail'
 import type { Step, StepFile, StepState, ToldCall } from './plain-trail'
@@ -121,11 +121,16 @@ function under(draw: Draw, row: RenderElement, trail: RenderElement[]): RenderEl
   return <Box flexDirection="column">{row}{trail}</Box>
 }
 
-// A single row says its ending itself, so the step adds one only when the call went wrong.
+// A single row says its ending itself, so the step adds one only when the call went wrong. A command line that
+// does several jobs tells each on its own numbered line, in order, none hidden behind a count.
 function callTrail(draw: Draw, call: ToldCall): RenderElement[] {
   const step = stepOfCall(call)
+  const hasEnd = step.state === 'failed' || step.state === 'stopped'
+  const parts = partsOf(call.tool, call.input, lang())
+  if (parts.length < 2) return [stepRow(draw, step, 'plain-0', hasEnd)]
 
-  return [stepRow(draw, step, 'plain-0', step.state === 'failed' || step.state === 'stopped')]
+  return parts.map((part, i) =>
+    stepRow(draw, { ...step, kind: part.kind, text: `${i + 1}. ${part.text}`, files: [] }, `plain-${i}`, hasEnd && i === parts.length - 1))
 }
 
 function groupTrail(draw: Draw, calls: readonly ToldCall[]): RenderElement[] {

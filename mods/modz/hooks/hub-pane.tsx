@@ -252,7 +252,7 @@ function terminalTree(ui: Ui, view: HubView) {
   return (
     <Box flexDirection="column" rowGap={1}>
       <Box flexDirection="row" columnGap={2}>
-        <Text color="claude" bold>MODZ</Text>
+        <Text color="claude" bold>modz</Text>
         {focus === null ? <Text dimColor>{words.idleTitle}</Text> : null}
         {said === null ? null : <Text dimColor>{`${words.now} · ${said.row.entry.title}`}</Text>}
         {said === null ? null : detailText(ui, said.tone, said.row.card?.detail ?? '')}

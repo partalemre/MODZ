@@ -91,7 +91,7 @@ export function summarySlide({ w, t, isNamed, step }: SlideCtx): string {
     agentCrab(w.agents[0]?.type ?? 'agent', 1, { x: crabX, y: 50, scale: 3.4, step }),
     rise(statGrid(w, 365), ease(t, 0.6)),
     rise(topList({ x: PAD, y: 625, title: s.shareProjects, rows: w.projects.slice(0, 3).map(row => labels.get(row.name) ?? row.name) }) + topList({ x: PAD + INNER / 2 + 14, y: 625, title: s.shareTools, rows: w.tools.slice(0, 3).map(row => toolName(row.name)) }), ease(t, 0.9)),
-    rise(pixelText('MODZ', { x: PAD, y: 860, cell: 4, paint: 'edit' }) + txt('/wrapped', { x: W - PAD, y: 885, size: 25, fill: C.cream, anchor: 'end' }) , ease(t, 1.2)),
+    rise(pixelText('modz', { x: PAD, y: 860, cell: 4, paint: 'edit' }) + txt('/wrapped', { x: W - PAD, y: 885, size: 25, fill: C.cream, anchor: 'end' }) , ease(t, 1.2)),
   ].join('')
 }
 

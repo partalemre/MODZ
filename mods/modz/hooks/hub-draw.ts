@@ -85,12 +85,12 @@ export function hubHeadSvg(spec: { width: number; theme: Theme; meta: string; cu
   // As the film's title does: each letter's pixels drop in row by row, a letter after the one before it.
   const cellAttrs = isDropping ? (at: { row: number; col: number; index: number }) => ` class="m-px" style="${delayOf(spec.cue, at.index * LETTER_MS + at.row * ROW_MS + at.col * COLUMN_MS)}"` : undefined
   const z = sizesOf(spec.width)
-  const mark = pixelWord('MODZ', { x: z.inset, y: (z.head - 7 * z.mark.pitch) / 2, ...z.mark, className: 'fg-edit', cellAttrs })
+  const mark = pixelWord('modz', { x: z.inset, y: (z.head - 7 * z.mark.pitch) / 2, ...z.mark, className: 'fg-edit', cellAttrs })
   const meta = `<text x="${spec.width - z.inset}" y="${z.head / 2 + 4}" text-anchor="end" style="font-size:${z.meta}px" class="num lo">${esc(spec.meta)}</text>`
   const body = mark.svg + entering(meta, { ...spec.cue, order: spec.cue.order + 4 }, 'fade')
   const css = HUB_CSS + motionCss(body)
 
-  return { source: svgDoc({ width: spec.width, height: z.head, theme: spec.theme, body, css }), alt: `MODZ · ${spec.meta}`, height: z.head }
+  return { source: svgDoc({ width: spec.width, height: z.head, theme: spec.theme, body, css }), alt: `modz · ${spec.meta}`, height: z.head }
 }
 
 // A group's label: the section's name in sentence case, quiet, on the icon column, more air above than below.

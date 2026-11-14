@@ -3,7 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { world } from './world'
 import type { World } from './world'
 
-// The Files pane opens with a "← MODZ" button while the hub runs; pressing it writes this mod's own `home` value.
+// The Files pane opens with a "← modz" button while the hub runs; pressing it writes this mod's own `home` value.
 
 // Stands for the MODZ hub: it says it runs, and records the home values it hears.
 const modz = {
@@ -44,11 +44,11 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(await ui.find({ key: 'modz-home' })).toBeUndefined()
   })
 
-  test(`${surface}: with the hub on "← MODZ" comes first, and pressing it writes this mod's home`, { plugins: [modz], timeoutMs: 20_000 }, async ($, on) => {
+  test(`${surface}: with the hub on "← modz" comes first, and pressing it writes this mod's home`, { plugins: [modz], timeoutMs: 20_000 }, async ($, on) => {
     const { clock, ui } = await mount($, on, true)
     const [first] = await ui.findAll({ type: 'Button' })
 
-    expect(first?.props.label).toBe('← MODZ')
+    expect(first?.props.label).toBe('← modz')
     await ui.press({ key: 'modz-home' })
     const heard = JSON.parse((await $.command.run({ command: 'heard-home', args: '' } as any)).text ?? '[]')
 

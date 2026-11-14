@@ -4,7 +4,8 @@
 import { lang } from './kit/lang'
 import { KIND_ICON, kindWord } from './kit/plain'
 import type { Kind } from './kit/plain'
-import { baseline, iconEl, rectEl, sans, textEl, toPic } from './kit/svg-core'
+import { pixelGlyph } from './kit/pixels'
+import { baseline, rectEl, sans, textEl, toPic } from './kit/svg-core'
 import type { SvgPic } from './kit/svg-core'
 import type { StepState, Trail } from './plain-trail'
 
@@ -18,10 +19,15 @@ const LABEL_GAP = 4
 const STOPS_SHOWN = 6
 
 const PAINT: Record<StepState, string> = { done: 'mid', live: 'edit', failed: 'danger', stopped: 'lo' }
+// The hub's own pixel cells (kit/pixels.ts), sized so a 7-cell glyph fills the 16 px box.
+const CELLS = { cell: 1.8, pitch: 2.2 }
+
+const glyphAt = (kind: Kind, state: StepState, x: number, y: number): string =>
+  pixelGlyph(KIND_ICON[kind], { x, y, box: ICON, ...CELLS, className: `f-${PAINT[state]}` })
 
 /** One kind's icon alone, for the head of a step's line. */
 export function kindPic(kind: Kind, state: StepState): SvgPic {
-  const body = iconEl({ name: KIND_ICON[kind], x: 0, y: 0, size: ICON, paint: PAINT[state] })
+  const body = glyphAt(kind, state, 0, 0)
 
   return toPic({ body, width: ICON, height: ICON, alt: kindWord(kind, lang()) })
 }
@@ -29,7 +35,7 @@ export function kindPic(kind: Kind, state: StepState): SvgPic {
 type Drawn = { body: string; x: number }
 
 function stopAt(stop: Trail['flow'][number], x: number): Drawn {
-  const icon = iconEl({ name: KIND_ICON[stop.kind], x, y: (HEIGHT - ICON) / 2, size: ICON, paint: PAINT[stop.state] })
+  const icon = glyphAt(stop.kind, stop.state, x, (HEIGHT - ICON) / 2)
   const word = kindWord(stop.kind, lang())
   const wordX = x + ICON + LABEL_GAP
   const label = textEl({ x: wordX, y: baseline(0, HEIGHT, LABEL.size), text: word, paint: 'mid', ...LABEL })

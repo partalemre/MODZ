@@ -71,7 +71,10 @@ export const whyReminderOf = (target: Target | undefined): string => {
 
   return (
     `The person follows your work step by step and has never coded. Before each tool call or batch of calls, write ` +
-    `one short sentence in ${language} saying what you are about to do and why, in everyday words. ` +
-    `Write each tool call's description the same way: what it does and what for.`
+    `one short sentence in ${language} (at most 15 words, no sizes or file lists) saying what you are about to do and why, in everyday words. ` +
+    `Write each tool call's description the same way: what it does and what for. ` +
+    `End the turn with a short summary they take in at a glance: at most four lines, each one fact (what you did, ` +
+    `the result, what is left or needs them). When the work had three or more parts or used helper agents, put a ` +
+    `small text tree above the summary: the job, its parts with ✓ or ✗, and who did each part.`
   )
 }

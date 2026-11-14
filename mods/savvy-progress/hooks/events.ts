@@ -4,6 +4,8 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { StepInput } from './agents'
 import { addRun, endRun, heard, isRunning, ownTasks, patchRun, stepReport, stepUsage, toolActivity } from './agents'
 import { isNewFlow, mergeFlow } from './flow'
+import { tokensOf } from './pricing'
+import { NO_TALLY } from './strip-svg'
 import { closeEvent, openEvent, withReason } from './history'
 import { readingOf, trackLimit } from './limit'
 import type { LimitReading } from './limit'
@@ -18,6 +20,8 @@ import { savvyTierOf } from './tiers'
 import { touchFile } from './touched'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
+// shortcut: kept in session state, so an engine restart starts tokens and time over; cost is the engine's own total.
+const tally = atom({ plugin: 'savvy-progress', key: 'tally' } as const, NO_TALLY)
 const agents = atom({ plugin: 'savvy-progress', key: 'agents' } as const, [])
 const flow = atom({ plugin: 'savvy-progress', key: 'flow' } as const, null)
 const job = atom({ plugin: 'savvy-progress', key: 'job' } as const, null)
@@ -124,7 +128,9 @@ function onActivity(on: On): void {
     // The main loop's calls go on its own row, which exists once its turn made a model request.
     const who = agentId ?? MAIN_ID
     const id = typeof call.tool_use_id === 'string' ? call.tool_use_id : undefined
-    const isTracked = name !== STEP_TOOL && (await read($, agents)).some(a => a.agentId === who)
+    // A mod's own background calls (transceiver polling ArtifactData) are no loop's work.
+    const isModelCall = next.origin.plugin === 'engine'
+    const isTracked = isModelCall && name !== STEP_TOOL && (await read($, agents)).some(a => a.agentId === who)
     if (isTracked) {
       const at = await $.clock.now()
       const facts = { call, at, id }
@@ -143,6 +149,19 @@ function onActivity(on: On): void {
 }
 
 // Each loop's model requests and its end.
+// Every turn's tokens count, a subagent's too; the main loop's turns also count the time and the turn's cost.
+// Called from the one turn.complete hook below: the engine allows one per event without a matcher.
+async function countTurn($: EngineInterface, e: { agentId?: string; usage?: Parameters<typeof tokensOf>[0]; durationMs?: number }): Promise<void> {
+  const used = e.usage === undefined ? 0 : tokensOf(e.usage)
+  const isMain = e.agentId === undefined
+  const cost = isMain ? ((await $.session.usage().catch(() => undefined))?.cost?.usd ?? 0) : 0
+  await update($, tally, x => {
+    const was = { ...NO_TALLY, ...x }
+    if (!isMain) return { ...was, tokens: was.tokens + used }
+    return { tokens: was.tokens + used, busyMs: was.busyMs + (e.durationMs ?? 0), turns: was.turns + 1, lastCost: was.costBefore > 0 ? Math.max(0, cost - was.costBefore) : 0, costBefore: cost }
+  })
+}
+
 function onSteps(on: On): void {
   // Each model request of a subagent: live context, tokens and cost.
   on('turn.step', async function* ($, e, next) {
@@ -170,6 +189,7 @@ function onSteps(on: On): void {
     const agentId = e.agentId ?? MAIN_ID
     const at = await stamp($)
     await update($, agents, list => patchRun(list, agentId, a => endRun(a, { reason: e.reason, at, answer: e.answer, usage: e.usage })))
+    await countTurn($, e).catch(cause => $.ui.log(`savvy-progress: could not count the turn: ${String(cause)}`, { to: 'debug' }))
     return next(e)
   })
 }

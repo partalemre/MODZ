@@ -51,6 +51,15 @@ test('terminal: the same row with a glyph where the picture would be', async ($,
   expect(await pictures(ui)).toEqual([])
 })
 
+test('a command line of several jobs tells each on its own numbered line, none hidden behind a count', async ($, on) => {
+  await start($, on)
+  const ui = await $.ui.mount(row(bash('du -sh . && git status && rm -rf demo', undefined, { isErrored: true }), 'desktop'))
+  const text = await said(ui)
+  expect(text).not.toContain('adım daha')
+  expect(text).toMatch(/1\. .+ 2\. .+ 3\. .+ ✗ başarısız oldu$/)
+  expect(await pictures(ui)).toEqual(['inceleme', 'inceleme', 'silme'])
+})
+
 test('a call that ended badly says so after its sentence; one that went well adds no mark of its own', async ($, on) => {
   await start($, on)
   const failed = await $.ui.mount(row(bash('npm test', undefined, { isErrored: true }), 'desktop'))
@@ -142,7 +151,7 @@ test('the order picture is drawn only when the run changed its kind of work', ()
   const mixed = flowPic(trailOf([call('Read', { file_path: '/w/a.ts' }), call('Edit', { file_path: '/w/a.ts' }, { isErrored: true })], 'tr').flow)
   expect(mixed?.alt).toBe('inceleme → değişiklik')
   // Colour is state: the failed stop is the only one in Flare.
-  expect(mixed?.source.match(/s-danger/g)?.length).toBe(2)
+  expect(mixed?.source.match(/f-danger/g)?.length).toBe(2)
   setLang(undefined)
 })
 

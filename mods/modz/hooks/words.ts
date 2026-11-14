@@ -58,8 +58,8 @@ const HUB = {
     openPane: (title: string) => `Open ${title}`,
     modsOn: (n: number) => `${count(n, 'mod', 'mods')} on`,
     unreadable: 'the mod list could not be read',
-    command: 'Opens the MODZ hub: agents, files, plan, tests and every mod',
-    opened: 'Opened the MODZ panel.',
+    command: 'Opens the modz hub: agents, files, plan, tests and every mod',
+    opened: 'Opened the modz panel.',
     customize: 'Customize',
     done: 'Done',
     up: 'Up',
@@ -80,7 +80,7 @@ const HUB = {
     },
     firstRun: 'Only the hub is installed. Each mod adds a row here.',
     addMods: 'Add mods',
-    helpTitle: 'MODZ: commands and settings',
+    helpTitle: 'modz: commands and settings',
     helpHub: '/modz opens the hub · /modz help prints this list',
     helpNone: 'No installed mod has a command or an option.',
     helpInstall: 'Not installed:',
@@ -94,8 +94,8 @@ const HUB = {
     openPane: (title: string) => `${title} panelini aç`,
     modsOn: (n: number) => `${n} mod açık`,
     unreadable: 'mod listesi okunamadı',
-    command: 'MODZ ana panelini açar: ajanlar, dosyalar, plan, testler ve tüm modlar',
-    opened: 'MODZ paneli açıldı.',
+    command: 'modz ana panelini açar: ajanlar, dosyalar, plan, testler ve tüm modlar',
+    opened: 'modz paneli açıldı.',
     customize: 'Düzenle',
     done: 'Bitti',
     up: 'Yukarı',
@@ -116,7 +116,7 @@ const HUB = {
     },
     firstRun: 'Yalnızca ana panel kurulu. Her mod buraya bir satır ekler.',
     addMods: 'Mod ekle',
-    helpTitle: 'MODZ: komutlar ve ayarlar',
+    helpTitle: 'modz: komutlar ve ayarlar',
     helpHub: '/modz ana paneli açar · /modz help bu listeyi yazar',
     helpNone: 'Kurulu hiçbir modun komutu ya da seçeneği yok.',
     helpInstall: 'Kurulu değil:',
@@ -196,7 +196,7 @@ export const catalogWords = () => pick(CATALOG)
 // Where a mod draws and where it comes from, as the catalog's quiet line says it.
 export function placeLine(mod: { surfaces: Surface[]; upstream: string | null }): string {
   const words = catalogWords()
-  const source = mod.upstream === null ? 'MODZ' : words.from(mod.upstream)
+  const source = mod.upstream === null ? 'modz' : words.from(mod.upstream)
 
   return `${mod.surfaces.map(surface => words.surfaces[surface]).join(' · ')} · ${source}`
 }

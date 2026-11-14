@@ -44,7 +44,8 @@ for (const surface of SURFACES) {
     const ui = await mount($)
     const tree = (await ui.drawn()) as any
     expect(tree.children.at(-1)).toEqual(OTHERS)
-    expect(tree.children.length).toBe(2)
+    // The job's row, the session strip, then theirs.
+    expect(tree.children.length).toBe(3)
     const survey = await mount($, { hasSurvey: true })
     expect(await survey.drawn()).toEqual(OTHERS)
   })
@@ -87,7 +88,7 @@ for (const surface of SURFACES) {
     await setup($, on)
     await spawn($, 'One')
     await prompt($, 'more', 'task-notification')
-    expect(((await (await mount($)).drawn()) as any).children?.length).toBe(2)
+    expect(((await (await mount($)).drawn()) as any).children?.length).toBe(3)
     await finish($, 'a1')
     await prompt($, 'next thing')
     await shows(await mount($), 'Bitti')
@@ -95,7 +96,10 @@ for (const surface of SURFACES) {
     const ui = await mount($)
     await shows(ui, 'Ajanlar 0/1')
     await ui.press({ key: 'savvy-dismiss' })
-    expect(await (await mount($)).drawn()).toEqual(OTHERS)
+    // ✕ takes the job's row away; the session strip stays above theirs.
+    const after = (await (await mount($)).drawn()) as any
+    expect(after.children.length).toBe(2)
+    expect(after.children.at(-1)).toEqual(OTHERS)
   })
 
   test(`${surface}: the crew button opens the İlerleme pane`, async ($, on) => {

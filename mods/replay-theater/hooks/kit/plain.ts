@@ -2,7 +2,9 @@
 // follows ("Dosyaların içinde “login” arıyor"), worked out from the call's own name and input by rules. No model
 // is asked and nothing is run, so it costs no tokens and can be drawn on every row. The language is passed in.
 import type { Lang } from './lang'
-import { plainShell } from './plain-shell'
+import { commandKind, kindOf } from './plain-kind'
+import type { Kind } from './plain-kind'
+import { callSay, leadsOf, plainShell } from './plain-shell'
 import { fill, textOf } from './plain-words'
 import type { Entry } from './plain-words'
 
@@ -123,6 +125,22 @@ export function plainCall(tool: string, input: unknown, lang: Lang): string {
   const template = textOf(entry, lang)
 
   return named === '' && /(^|[^[])\{x\}/.test(template.replace(/\[[^\]]*\]/g, '')) ? fill(textOf(OTHER.tool, lang), tool) : fill(template, named)
+}
+
+export type Part = { kind: Kind; text: string }
+
+/**
+ * Each piece of work a call does, in order, one sentence and kind apiece: a command line of three jobs is three
+ * parts, so a row can tell all of them instead of "+2 more". Any other call is one part.
+ *
+ * @example partsOf('Bash', { command: 'du -sh . && df -h' }, 'tr').length // 2
+ */
+export function partsOf(tool: string, input: unknown, lang: Lang): Part[] {
+  const command = tool === 'Bash' || tool === 'PowerShell' ? fieldsOf(input).command : undefined
+  const parts = typeof command === 'string' ? leadsOf(command).map(call => ({ kind: commandKind(call), text: callSay(call, lang) ?? '' })) : []
+  const unique = parts.filter((part, i) => part.text !== '' && parts.findIndex(other => other.text === part.text) === i)
+
+  return unique.length > 1 ? unique : [{ kind: kindOf(tool, input), text: plainCall(tool, input, lang) }]
 }
 
 export { plainShell } from './plain-shell'

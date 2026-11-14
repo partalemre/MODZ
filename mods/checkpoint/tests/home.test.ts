@@ -44,14 +44,14 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(buttonsOf(await pane.drawn()).length).toBeGreaterThan(0)
   })
 
-  test(`${surface}: with the hub on "← MODZ" is the first button, and pressing it writes home`, { plugins: [modz] }, async ($: any, on: any) => {
+  test(`${surface}: with the hub on "← modz" is the first button, and pressing it writes home`, { plugins: [modz] }, async ($: any, on: any) => {
     stub(on, newFake({ refs: REFS, diff: 'M\0a.ts\0' }))
     await $.session.start({ surface, isInteractive: true, cwd: '/w' })
     await $.command.run({ command: 'checkpoints', args: '' })
     await $.command.run({ command: 'hub-on', args: '' })
     const pane = await $.ui.mount(paneOf(surface))
 
-    expect(buttonsOf(await pane.drawn())[0]).toEqual({ key: 'modz-home', label: '← MODZ' })
+    expect(buttonsOf(await pane.drawn())[0]).toEqual({ key: 'modz-home', label: '← modz' })
     await pane.press({ key: 'modz-home' })
     const heard = JSON.parse((await $.command.run({ command: 'hub-heard', args: '' })).text)
     expect(heard).toHaveLength(1)

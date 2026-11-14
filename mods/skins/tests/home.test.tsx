@@ -2,10 +2,10 @@ import { expect, test } from 'claude-code/testing'
 
 import { start, stubEngine } from './world'
 
-// The Look pane draws "← MODZ" first while the hub runs; pressing it writes this mod's `home`.
+// The Look pane draws "← modz" first while the hub runs; pressing it writes this mod's `home`.
 
 const SURFACES = ['terminal', 'desktop'] as const
-const HOME_LABEL = '← MODZ'
+const HOME_LABEL = '← modz'
 
 const pane = (surface: (typeof SURFACES)[number]) =>
   ({

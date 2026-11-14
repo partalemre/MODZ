@@ -95,8 +95,8 @@ test('/modz answers in English and the catalog tab opens as Mods', async ($: any
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'open-modz-mods' })
 
-  expect(answer?.text).toBe('Opened the MODZ panel.')
-  expect(w.titles['modz']).toBe('MODZ')
+  expect(answer?.text).toBe('Opened the modz panel.')
+  expect(w.titles['modz']).toBe('modz')
   expect(w.titles['modz-mods']).toBe('Mods')
 })
 
@@ -107,7 +107,7 @@ test('MODZ_LANG=tr keeps the Turkish tab title and answer', async ($: any, on: a
   const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
   await ui.press({ key: 'open-modz-mods' })
 
-  expect(answer?.text).toBe('MODZ paneli açıldı.')
+  expect(answer?.text).toBe('modz paneli açıldı.')
   expect(w.titles['modz-mods']).toBe('Modlar')
   expect(await drawnText(ui)).toMatch(/17 mod açık/)
 })

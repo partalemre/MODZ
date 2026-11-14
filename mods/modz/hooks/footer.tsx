@@ -10,7 +10,7 @@ import { HUB_PANE } from './kit/stage'
 type Ui = Record<string, any>
 
 export const TOGGLE_KEY = 'modz-toggle'
-const TOGGLE_LABEL = 'MODZ'
+const TOGGLE_LABEL = 'modz'
 // The engine's own joint between footer labels.
 const JOINT = ' & '
 const HUB_PANES = new Set<string>([HUB_PANE, MODS_PANE, HOLD_PANE])

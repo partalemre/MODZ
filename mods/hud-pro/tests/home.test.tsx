@@ -2,11 +2,11 @@ import { expect, test } from 'claude-code/testing'
 
 import { PANE, USAGE, start, stubSession } from './stubs'
 
-// Every pane the MODZ hub opens draws "← MODZ" first while the hub runs; pressing it writes this mod's `home`.
+// Every pane the MODZ hub opens draws "← modz" first while the hub runs; pressing it writes this mod's `home`.
 // While the hub runs the pane also takes turns in its one panel (kit/stage.ts).
 
 const SURFACES = ['terminal', 'desktop'] as const
-const HOME_LABEL = '← MODZ'
+const HOME_LABEL = '← modz'
 
 // A stand-in for the hub: it switches `isOn`, hears `home`, and reports what it heard.
 const HUB_STAND_IN = {

@@ -1,5 +1,5 @@
 // The person arranges the hub (move a row up, hide it, show it again, reset), kept across sessions; a mod the
-// hub does not know gets a row from its own card; Transceiver wears its Beta badge; any mod's "← MODZ" brings the hub back.
+// hub does not know gets a row from its own card; Transceiver wears its Beta badge; any mod's "← modz" brings the hub back.
 import { expect, mock, test } from 'claude-code/testing'
 
 import { cardOf, rowsOf } from '../hooks/hub'
@@ -98,7 +98,7 @@ test('a layout kept from an earlier session arranges the hub as it starts', asyn
   expect(keys).not.toContain('"open-tests"')
 })
 
-// A mod's "← MODZ" button writes its own `home` value; the hub opens itself, with the keyboard, in answer.
+// A mod's "← modz" button writes its own `home` value; the hub opens itself, with the keyboard, in answer.
 const homeMod = {
   name: 'checkpoint',
   register(on: any) {
@@ -129,7 +129,7 @@ test('the catalog tab has its own way back to the hub', async ($: any, on: any) 
   const ui = await $.ui.mount({ ...PANE, requestId: 'modz-mods', surface: 'desktop' })
   const before = world.opened.length
 
-  expect((await ui.find({ key: 'modz-home' }))?.props.label).toBe('← MODZ')
+  expect((await ui.find({ key: 'modz-home' }))?.props.label).toBe('← modz')
   await ui.press({ key: 'modz-home' })
   expect(world.opened.slice(before)).toContain('modz')
 })

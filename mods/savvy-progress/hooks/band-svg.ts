@@ -60,11 +60,9 @@ const planOf = (view: JobView, maxW: number): Plan => {
   return { title, titleW: Math.min(room, Math.ceil(textWidth(title, TITLE_SIZE) * BOLD)), meterW: fits ? meterW : 0, pillW, pctW }
 }
 
-// The row's crab: the job's own, or with `crabInBand` on and the session idle, the home crab's face.
-const bandCrab = (x: number, view: JobView, mood?: CrabMood): string =>
-  mood
-    ? crab(x, CRAB.y, { costume: 'other', look: HOME_LOOK, mood, scale: CRAB.scale })
-    : crab(x, CRAB.y, { costume: 'other', isWalking: view.isWorking, scale: CRAB.scale })
+// The row's crab only with `crabInBand` on and the session idle: the home crab's face. The working crabs walk
+// the session strip beneath (strip-svg.ts), so the row draws none of its own.
+const bandCrab = (x: number, mood: CrabMood): string => crab(x, CRAB.y, { costume: 'other', look: HOME_LOOK, mood, scale: CRAB.scale })
 
 export const bandSvg = (view: JobView, maxW: number, mood?: CrabMood): BandDrawing => {
   const plan = planOf(view, maxW)
@@ -72,13 +70,13 @@ export const bandSvg = (view: JobView, maxW: number, mood?: CrabMood): BandDrawi
   const meterX = pillX + plan.pillW + GAP
   const pctX = meterX + (plan.meterW ? plan.meterW + GAP : 0)
   const crabX = pctX + (plan.pctW ? plan.pctW + GAP : 0)
-  const width = Math.ceil(crabX + CRAB.w)
+  const width = Math.ceil(mood ? crabX + CRAB.w : crabX - GAP)
   const body = [
     `<text class="t" x="${TITLE_X}" y="${BASELINE}" font-family="${FONT}" font-size="${TITLE_SIZE}" font-weight="600">${xml(plan.title)}</text>`,
     pillSvg({ label: view.label, role: pillRole(view), x: pillX, w: plan.pillW }),
     plan.meterW ? meterSvg(view, { x: meterX, y: (BAND_H - METER.h) / 2, w: plan.meterW, h: METER.h }) : '',
     plan.pctW ? `<text class="t" x="${pctX}" y="${BASELINE}" font-family="${MONO}" font-size="${PERCENT_SIZE}" font-weight="650">${xml(percentText(view))}</text>` : '',
-    bandCrab(crabX, view, mood),
+    mood ? bandCrab(crabX, mood) : '',
   ]
   return { source: paneSvg(width, BAND_H, body.join('\n')), width }
 }

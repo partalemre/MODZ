@@ -7,7 +7,7 @@
 // The resolved element table of the surface that draws the pane.
 type Table = Record<string, any>
 
-export const HOME_LABEL = '← MODZ'
+export const HOME_LABEL = '← modz'
 
 // A button's padding is a cell a side: one cell back, its arrow starts where the text under it does.
 

@@ -46,7 +46,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(buttonsOf(await pane.drawn())).toEqual(['handoff-write-now'])
   })
 
-  test(`${surface}: with the hub on "← MODZ" comes first and writes home; a hub press opens the pane`, { plugins: [modz] }, async ($: any, on: any) => {
+  test(`${surface}: with the hub on "← modz" comes first and writes home; a hub press opens the pane`, { plugins: [modz] }, async ($: any, on: any) => {
     const world = newWorld()
     stub(on, world)
     await start($, surface)

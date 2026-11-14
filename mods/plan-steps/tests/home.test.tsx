@@ -1,7 +1,7 @@
 import { expect, mock, test } from 'claude-code/testing'
 import type { CommandRunInput } from 'claude-code'
 
-// The Plan pane opens with a "← MODZ" button while the hub runs; pressing it writes this mod's own `home` value.
+// The Plan pane opens with a "← modz" button while the hub runs; pressing it writes this mod's own `home` value.
 // While the hub runs the pane also takes turns in its one panel (kit/stage.ts).
 
 const SURFACES = ['terminal', 'desktop'] as const
@@ -70,12 +70,12 @@ for (const surface of SURFACES) {
     expect(await pane.find({ key: 'modz-home' })).toBeUndefined()
   })
 
-  test(`${surface}: with the hub on "← MODZ" comes first, and pressing it writes this mod's home`, { plugins: [modz] }, async ($, on) => {
+  test(`${surface}: with the hub on "← modz" comes first, and pressing it writes this mod's home`, { plugins: [modz] }, async ($, on) => {
     const clock = await setup($, on, { isHubOn: true })
     const pane = await $.ui.mount(paneOf(surface))
     const [first] = await pane.findAll({ type: 'Button' })
 
-    expect(first?.props.label).toBe('← MODZ')
+    expect(first?.props.label).toBe('← modz')
     await pane.press({ key: 'modz-home' })
     const heard = JSON.parse((await $.command.run({ command: 'heard-home', args: '' } as never)).text ?? '[]')
 

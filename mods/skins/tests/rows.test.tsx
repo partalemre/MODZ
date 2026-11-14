@@ -155,6 +155,15 @@ test('a folded group is one node, an expanded one keeps its rows', async ($, on)
   expect(await expanded.find({ type: 'Text', text: 'stock row' })).toBeDefined()
 })
 
+test('a folded group names each MCP server it called', async ($, on) => {
+  stubEngine(on)
+
+  const calls = [call('mcp__computer-use__app_click', {}), call('mcp__computer-use__app_screenshot', {}), call('mcp__github__get_me', {})]
+  const ui = await $.ui.mount({ ...SITE, surface: 'terminal', component: 'ToolGroup', requestId: 'g2', props: { calls, isActive: false, isExpanded: false } })
+
+  expect(await ui.find({ type: 'Text', text: /MCP computer-use 2 · MCP github 1/ })).toBeDefined()
+})
+
 test('a folded group keeps what a mod beneath it draws, and adds nothing to the engine\u2019s own row', async ($, on) => {
   stubEngine(on)
 

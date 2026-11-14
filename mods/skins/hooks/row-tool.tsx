@@ -2,7 +2,7 @@ import type { Kind } from './skin'
 import { toolIcon } from './icons'
 import type { Call, Look, Meta, SvgElement, Ui } from './look'
 import { formatMs } from './format'
-import { groupKindOf, toolLabel } from './tools'
+import { groupKindOf, mcpServer, toolLabel } from './tools'
 import { say } from './words'
 
 const KIND_LABEL: Readonly<Record<Kind, string>> = {
@@ -175,21 +175,24 @@ export function toolRow(look: Look, { call, kind, target, meta }: ToolLine) {
 export function groupRow(look: Look, calls: readonly Call[]) {
   const { Text } = look.ui
   const { palette } = look.skin
-  const counts = new Map<Kind, number>()
+  // Keyed by label so calls to two MCP servers stay two parts, each named.
+  const counts = new Map<string, { kind: Kind; count: number }>()
 
   for (const call of calls) {
     const kind = groupKindOf(call.tool)
-    counts.set(kind, (counts.get(kind) ?? 0) + 1)
+    const label = kind === 'mcp' ? `${KIND_LABEL.mcp} ${mcpServer(call.tool)}` : KIND_LABEL[kind]
+    const seen = counts.get(label)
+    counts.set(label, { kind, count: (seen?.count ?? 0) + 1 })
   }
 
-  const parts = [...counts].flatMap(([kind, count], i) => [
+  const parts = [...counts].flatMap(([label, { kind, count }], i) => [
     ...(i === 0 ? [] : [<Text color={palette.muted}>{' · '}</Text>]),
-    <Text color={palette[kind]}>{KIND_LABEL[kind]}</Text>,
+    <Text color={palette[kind]}>{label}</Text>,
     <Text color={palette.muted}>{` ${count}`}</Text>,
   ])
 
   if (look.svg !== undefined) {
-    const lead = [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'other'
+    const lead = [...counts.values()].sort((a, b) => b.count - a.count)[0]?.kind ?? 'other'
 
     return iconRow(look, { Svg: look.svg, kind: lead, calls, line: <Text wrap="truncate-end">{parts}</Text> })
   }

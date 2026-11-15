@@ -48,3 +48,4 @@ every change shows on screen the moment the call returns.
 - `{"action": "delete", "name": "sunset"}` removes a made skin.
 - `{"action": "settings", "settings": {"rail": false, "shimmer": true, "tables": true, "clip": false, "icons": "ascii"}}`
   switches the parts on and off. `icons: "ascii"` helps terminals whose font lacks the glyphs.
+  `"app": true` also colours the whole desktop or mobile app (page, cards, words) from the skin; `false` gives the app's own colours back.

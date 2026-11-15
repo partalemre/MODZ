@@ -1524,11 +1524,13 @@ const stepReport = (a, input) => {
 };
 const heard = (a, at) => ({ ...a, heardAt: Math.max(a.heardAt ?? 0, at) });
 const isRunning = (a) => a.status === "running";
-const KEY_TAIL = 60;
+const KEY_TAIL = 240;
+const KEY_MARK = "text:";
 function textKey(text) {
   const words = text.replace(/\s+/g, " ").trim();
-  return words === "" ? "" : `text:${words.slice(-KEY_TAIL)}`;
+  return words === "" ? "" : `${KEY_MARK}${words.slice(-KEY_TAIL)}`;
 }
+const isNewestWords = (row, newest) => row !== "" && newest.startsWith(KEY_MARK) && newest.endsWith(row.slice(KEY_MARK.length));
 const elapsed = (a, at) => (a.endedAt ?? Math.max(at, a.startedAt)) - a.startedAt;
 const ctxOf = (a) => a.contextMax ? Math.min(100, Math.round(a.contextTokens / a.contextMax * 100)) : 0;
 const totals = (list, at) => {
@@ -6322,7 +6324,9 @@ function onTranscript(on) {
     }, await next(e), crewOf(ui, crew));
   });
   on("ui.render", { component: "AssistantMessage" }, async ($, e, next) => {
-    const crew = e.surface === "desktop" ? crewAt(await read($, agents$1), [textKey(e.props.text)], await read($, crewRow)) : [];
+    const newest = await read($, crewRow);
+    const row = textKey(e.props.text);
+    const crew = e.surface === "desktop" ? crewAt(await read($, agents$1), [isNewestWords(row, newest) ? newest : row], newest) : [];
     if (crew.length === 0)
       return next(e);
     const ui = $.ui.resolve(e);

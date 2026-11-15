@@ -1,7 +1,7 @@
 import { expect } from 'claude-code/testing'
 
 import { test, OTHERS, SURFACES, setup } from './fixtures'
-import { planStepOf, textKey } from '../hooks/agents'
+import { isNewestWords, planStepOf, textKey } from '../hooks/agents'
 import { benchCard, rowCrab } from '../hooks/row-crab'
 import { workKindOf } from '../hooks/work-kind'
 import { crewAt } from '../hooks/transcript'
@@ -173,4 +173,18 @@ test('an Agent row keeps the engine row and adds the crab with its words beneath
   // Folded into a run of calls its row is not drawn, so the card stands under the run's fold line.
   const folded = { plugin: 'savvy-progress', surface: 'desktop' as const, component: 'ToolGroup' as const, requestId: 'g-live', props: { calls: [{ tool_use_id: 'tu-live', tool: 'Agent', input: {}, isRunning: true, isErrored: false, isInterrupted: false }, { tool: 'Read', input: {}, isRunning: false, isErrored: false, isInterrupted: false }], isActive: true, isExpanded: false } }
   expect(JSON.stringify(await (await $.ui.mount(folded)).drawn())).toContain('Look around')
+})
+
+test('two messages that close with the same sentence are two rows: helpers stand under the newer one only', async () => {
+  const close = '\n\n- Bitince düzenlemeleri, boyutunu ve ne duyman gerektiğini aktaracağım.\n- Senden beklenen bir şey yok.'
+  const earlier = textKey(`Ara haber: müzik yardımcısı son yeniden üretimi ve denetimini bekliyor; sonuç henüz yok.${close}`)
+  const newest = textKey(`Ara haber: müzik yardımcısı şimdi iki kavimin müziğinin aynı maçta karşılaşma denemelerini koşturuyor; sonuç henüz yok.${close}`)
+
+  expect(earlier).not.toBe(newest)
+  expect(isNewestWords(earlier, newest)).toBe(false)
+  expect(isNewestWords(newest, newest)).toBe(true)
+  // A row that holds only the last block of what was written is still the newest words.
+  expect(isNewestWords(textKey('Sonuçlar gelince hepsini kontrol edeceğim.'), textKey('Beş ajan çalışıyor.\n\nSonuçlar gelince hepsini kontrol edeceğim.'))).toBe(true)
+  expect(isNewestWords('', newest)).toBe(false)
+  expect(isNewestWords(newest, 'tu-new')).toBe(false)
 })

@@ -144,7 +144,10 @@ export const heard = (a: AgentRun, at: number): AgentRun => ({ ...a, heardAt: Ma
 
 export const isRunning = (a: AgentRun): boolean => a.status === 'running'
 
-const KEY_TAIL = 60
+// Long enough to tell apart messages that close with the same sentence (two status notes, each ending "nothing is
+// needed from you"): a short message is named by all of it.
+const KEY_TAIL = 240
+const KEY_MARK = 'text:'
 
 /**
  * A name for a piece of the main loop's writing, by how it ends: the event that says it was written and the row
@@ -153,8 +156,15 @@ const KEY_TAIL = 60
 export function textKey(text: string): string {
   const words = text.replace(/\s+/g, ' ').trim()
 
-  return words === '' ? '' : `text:${words.slice(-KEY_TAIL)}`
+  return words === '' ? '' : `${KEY_MARK}${words.slice(-KEY_TAIL)}`
 }
+
+/**
+ * Whether a row's words are the newest written. A row may hold only the last block of what was written, so the
+ * newest need only end with the row's words.
+ */
+export const isNewestWords = (row: string, newest: string): boolean =>
+  row !== '' && newest.startsWith(KEY_MARK) && newest.endsWith(row.slice(KEY_MARK.length))
 
 export const elapsed = (a: AgentRun, at: number): number => (a.endedAt ?? Math.max(at, a.startedAt)) - a.startedAt
 

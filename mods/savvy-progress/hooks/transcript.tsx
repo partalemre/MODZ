@@ -2,7 +2,7 @@ import { atom, read } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import type { AgentRun } from '../types'
-import { isRunning, textKey } from './agents'
+import { isNewestWords, isRunning, textKey } from './agents'
 import { benchCard, rowCrab } from './row-crab'
 import type { RowCrab } from './row-crab'
 import { STEP_TOOL, TOOL } from './state'
@@ -81,7 +81,9 @@ export function onTranscript(on: On): void {
 
   // The main loop's newest words, when they are the newest thing in the conversation: the helpers at work stand under them.
   on('ui.render', { component: 'AssistantMessage' }, async ($, e, next) => {
-    const crew = e.surface === 'desktop' ? crewAt(await read($, agents), [textKey(e.props.text)], await read($, crewRow)) : []
+    const newest = await read($, crewRow)
+    const row = textKey(e.props.text)
+    const crew = e.surface === 'desktop' ? crewAt(await read($, agents), [isNewestWords(row, newest) ? newest : row], newest) : []
     if (crew.length === 0) return next(e)
     const ui = $.ui.resolve(e) as Ui
     const { Box } = ui

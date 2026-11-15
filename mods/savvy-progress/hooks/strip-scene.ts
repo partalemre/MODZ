@@ -13,7 +13,7 @@ import { FONT, paneSvg } from './theme'
 import { costumeOf } from './tiers'
 
 // The strip's scene: a small world (strip-land.ts) with the plan as a path of stones in its ground, the session's
-// crab standing at the step under way, and the helper agents further along. Nothing dashes about: the crab works
+// crab standing at the step under way. Helper agents stand on their own rows of the conversation (row-crab.ts). Nothing dashes about: the crab works
 // in place (a thought bubble says what kind of work), walks one stretch over the hills when the plan moves on,
 // and strolls with long rests when idle. The scene is drawn in a frame (an interactive Svg), so its loops run on
 // while its source stays the same: nothing that ticks (cost, time) is drawn here.
@@ -27,7 +27,6 @@ const PATH_LIFT = 8
 const GRID = { w: 30, feet: 26 }
 const LEAD_SCALE = 1.3
 const LEAD_W = GRID.w * LEAD_SCALE
-const CREW = { scale: 1, step: 38, shown: 4, lead: 26, more: 24 }
 const AMBLE_MAX = 240
 // Past this many steps the stones would touch: the path alone tells how far the plan is.
 const STONES_MAX = 24
@@ -40,7 +39,7 @@ export type Step = { subject: string; status: string; crew?: readonly { name: st
 /** `from` is where the crab stood before the plan moved on: it walks in from there. */
 export type SceneSpec = { width: number; crew: readonly AgentRun[]; mood: CrabMood; steps: readonly Step[]; sky: Sky; from?: number }
 
-type Layout = { x0: number; x1: number; at: number[]; stand: number; standIndex: number; benchX: number }
+type Layout = { x0: number; x1: number; at: number[]; stand: number; standIndex: number }
 
 const isDone = (step: Step): boolean => step.status === 'completed'
 
@@ -53,17 +52,14 @@ const standIndexOf = (steps: readonly Step[]): number => {
   return next >= 0 ? next : steps.length - 1
 }
 
-export function layoutOf(spec: Pick<SceneSpec, 'width' | 'steps' | 'crew'>): Layout {
-  const helpers = spec.crew.filter(a => a.isMain !== true)
-  const shown = Math.min(CREW.shown, helpers.length)
-  const bench = shown === 0 ? 0 : CREW.lead + shown * CREW.step + (helpers.length > shown ? CREW.more : 0)
+export function layoutOf(spec: Pick<SceneSpec, 'width' | 'steps'>): Layout {
   const x0 = PAD + EDGE
-  const x1 = Math.max(x0, spec.width - PAD - EDGE - bench)
+  const x1 = Math.max(x0, spec.width - PAD - EDGE)
   const last = spec.steps.length - 1
   const at = spec.steps.map((_, i) => (last <= 0 ? (x0 + x1) / 2 : x0 + ((x1 - x0) * i) / last))
   const standIndex = standIndexOf(spec.steps)
 
-  return { x0, x1, at, stand: Math.round(at[standIndex] ?? x0), standIndex, benchX: x1 + EDGE + CREW.lead }
+  return { x0, x1, at, stand: Math.round(at[standIndex] ?? x0), standIndex }
 }
 
 const titled = (title: string, body: string): string => `<title>${xml(title)}</title>${body}`
@@ -101,7 +97,7 @@ function trackSvg(spec: SceneSpec, lay: Layout): string {
 }
 
 // What the crab's thought bubble shows, by the kind of its work: each a small loop that starts and ends at rest.
-const THOUGHT: Record<Kind, string> = {
+export const THOUGHT: Record<Kind, string> = {
   other: [7, 12, 17].map((cx, i) => `<circle class="s d${i + 1}" cx="${cx}" cy="7.5" r="1.6"/>`).join(''),
   read: `<rect class="i-read" x="7" y="2.5" width="10" height="10" rx="1.5" fill="none" stroke-width="1.2"/>${[5, 7.5, 10].map((y, i) => `<rect class="f-read ty${i + 1}" x="9.5" y="${y}" width="5" height="1"/>`).join('')}`,
   edit: [5.5, 10.25, 15].map((x, i) => `<rect class="f-edit ty${i + 1}" x="${x}" y="5.5" width="3.5" height="4" rx=".8"/>`).join(''),
@@ -113,7 +109,7 @@ const WORRIED = '<rect class="f-warn live" x="11" y="3" width="2" height="6" rx=
 const BUBBLE = { x: -19, y: -45, w: 24, h: 15 }
 
 // A thought bubble up and to the left of the crab, where no costume holds a prop.
-const bubble = (inner: string): string =>
+export const bubble = (inner: string): string =>
   `<g transform="translate(${BUBBLE.x},${BUBBLE.y})"><rect class="card ln" x=".5" y=".5" width="${BUBBLE.w - 1}" height="${BUBBLE.h - 1}" rx="7" stroke-width="1"/><circle class="card ln" cx="21" cy="17.5" r="1.8" stroke-width="1"/><circle class="card ln" cx="24.5" cy="21" r="1.1" stroke-width="1"/>${inner}</g>`
 
 const SNOOZE = [
@@ -123,7 +119,7 @@ const SNOOZE = [
 
 const RESTING: Record<CrabMood, string> = { sleeping: SNOOZE, working: bubble(THOUGHT.other), happy: bubble(HAPPY), worried: bubble(WORRIED) }
 // Legs step only where the work is hands-on; reading, thinking and leading agents breathe.
-const IS_BUSY: Record<Kind, boolean> = { read: false, run: true, edit: true, agent: false, other: false }
+export const IS_BUSY: Record<Kind, boolean> = { read: false, run: true, edit: true, agent: false, other: false }
 
 type Lead = { body: string; extra: string; title: string; breath: string; canAmble: boolean }
 
@@ -170,26 +166,6 @@ function leadSvg(spec: SceneSpec, lay: Layout): string {
   return standing(lay.stand, LEAD_W, walk)
 }
 
-function benchSvg(spec: SceneSpec, lay: Layout): string {
-  const helpers = spec.crew.filter(a => a.isMain !== true)
-  const shown = helpers.slice(0, CREW.shown)
-  const w = GRID.w * CREW.scale
-  const crabs = shown.map((a, i) => {
-    const kind = kindOf(a.lastTool ?? '')
-    const body = crab(0, -GRID.feet * CREW.scale, { costume: costumeOf(a), look: lookOf(a), isWalking: IS_BUSY[kind], scale: CREW.scale })
-    const x = lay.benchX + i * CREW.step + w / 2
-    const isLeft = x > spec.width * 0.6
-    const said = tip(`${lookOf(a).name} · ${a.lastPlain || a.description || t().stripDoing[kind]}`, { x: isLeft ? w : 0, y: -GRID.feet * CREW.scale - TIP.h - TIP.gap, isLeft })
-
-    return standing(x, w, `<g class="who"><g class="lift"><g class="${IS_BUSY[kind] ? '' : 'br'}">${body}</g></g>${said}</g>`)
-  })
-  const rest = helpers.length - shown.length
-  const moreX = lay.benchX + shown.length * CREW.step
-  const more = rest > 0 ? `<text class="s" x="${moreX}" y="${(groundY(moreX) - 8).toFixed(1)}" font-size="11" font-weight="650" font-family="ui-monospace,Menlo,monospace">+${rest}</text>` : ''
-
-  return crabs.join('') + more
-}
-
 /** The scene at `width` px, and what it says in words. */
 export function sceneSvg(spec: SceneSpec): { source: string; alt: string } {
   const lay = layoutOf(spec)
@@ -198,7 +174,7 @@ export function sceneSvg(spec: SceneSpec): { source: string; alt: string } {
   const plan = spec.steps.length === 0 ? '' : `${t().stripPlan} ${done}/${spec.steps.length}`
   const names = spec.crew.map(a => lookOf(a).name).join(', ')
   const alt = [plan, names === '' ? `${t().mainName} · ${t().stripResting[spec.mood]}` : names].filter(Boolean).join(' · ')
-  const body = land.open + land.back + trackSvg(spec, lay) + benchSvg(spec, lay) + leadSvg(spec, lay) + land.front + land.close
+  const body = land.open + land.back + trackSvg(spec, lay) + leadSvg(spec, lay) + land.front + land.close
 
   return { source: paneSvg(spec.width, SCENE_H, SCHEME + SCENE_CSS + body), alt }
 }

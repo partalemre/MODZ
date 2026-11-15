@@ -250,9 +250,10 @@ export async function stripOf(io: StripIo, ui: Ui, site: StripSite) {
   }
   const { Box, Svg } = ui
   const width = Math.floor((site.cols || DEFAULT_COLS) * PX_PER_COL)
-  const from = facts.steps.length === 0 ? undefined : walkFrom(layoutOf({ width, steps: facts.steps, crew: facts.crew }).stand, facts.now)
+  const from = facts.steps.length === 0 ? undefined : walkFrom(layoutOf({ width, steps: facts.steps }).stand, facts.now)
   const sky = { ...skyOf(facts.now, await io.place().catch(() => undefined)), weather: await io.weather().catch(() => undefined) }
-  const scene = sceneSvg({ width, crew: facts.crew, mood: facts.mood, steps: facts.steps, sky, ...(from === undefined ? {} : { from }) })
+  // The strip is the session's own: its helpers stand on their rows of the conversation (row-crab.ts).
+  const scene = sceneSvg({ width, crew: facts.crew.filter(a => a.isMain === true), mood: facts.mood, steps: facts.steps, sky, ...(from === undefined ? {} : { from }) })
   // The last chip (the way to the hub) sits at the row's right end, so the row ends where the scene does.
   const fitted = fitRow(slotsOf(facts, pressesOf(io, facts)), width)
   const chips = fitted.flatMap(({ slot, maxW }, i) => [

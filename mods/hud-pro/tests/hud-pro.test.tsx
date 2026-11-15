@@ -60,7 +60,7 @@ test('desktop: one transparent Svg line of pills with meters and pace ticks, und
   expect(await ui.find({ key: 'compact' })).toBeUndefined()
 })
 
-test('a narrow band drops bars first, then the reset and cost; the desktop line never overflows', async ($, on) => {
+test('a narrow band drops bars first, then the reset and cost; the desktop line never overflows', ALWAYS, async ($, on) => {
   stubSession(on)
   await start($, 'terminal')
 

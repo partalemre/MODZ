@@ -1,8 +1,10 @@
 import { atom, memberOf, read, update } from 'claude-code'
 import type { EngineInterface, Frozen, On, Register, RenderInput } from 'claude-code'
 
-import type { SkinSlot, UsageSnap } from '../types'
+import type { Prefs, SkinSlot, UsageSnap } from '../types'
+import { type AppTheme, appPainter } from './app-look'
 import { DEFAULT_PREFS } from './command'
+import { resolveSkin } from './custom'
 import { DESIGN_TOOL, runDesign } from './designer'
 import { EMPTY_HUB, HUB_PANE, isOwnOpen } from './hub'
 import { lookOf } from './look'
@@ -294,6 +296,33 @@ function onRenders(on: On, live: Live): void {
   on('ui.render', { component: 'AskUserQuestion' }, ($, e, next) => askView({ view: viewOf($, e, live), e, pass: next }))
 }
 
+// The app's own colours follow the skin while `app` is on (app-look.ts). Every way the prefs change (the load,
+// /skin, the pane, the design tool, unpin) writes them, so the write is where the app is painted.
+function onAppLook(on: On): void {
+  const painter = appPainter()
+
+  on('state.set', { plugin: 'skins', key: 'prefs' }, async ($, e, next) => {
+    const done = await next(e)
+    // The types this is checked against (Claude Code 2.1.296) have no `$.theme`; on such an engine the call throws.
+    const theme: AppTheme = {
+      // @ts-ignore -- no `theme` on $ in the 2.1.296 types
+      set: look => $.theme.set(look),
+      // @ts-ignore -- as above
+      clear: () => $.theme.clear(),
+    }
+    const prefs = e.value as Prefs
+    const skin = prefs.app ? resolveSkin(prefs.skin, await read($, customAtom)) : undefined
+
+    try {
+      if (!(await painter.paint(theme, skin))) $.ui.toast(say().appUnfit(prefs.skin))
+    } catch (error) {
+      $.ui.log(`skins: app colours not set: ${String(error)}`, { to: 'debug' })
+    }
+
+    return done
+  })
+}
+
 export const register: Register = on => {
   const live: Live = { stats: NO_STATS, isWorking: false }
   const loaded = sessionLoad()
@@ -303,4 +332,5 @@ export const register: Register = on => {
   onTurnEnd(on, live)
   onCommands(on, live)
   onRenders(on, live)
+  onAppLook(on)
 }

@@ -150,6 +150,7 @@ function optionButtons({ look, ui, actions }: Parts) {
       {toggle('shimmer', 's', prefs.shimmer)}
       {toggle('band', 'b', prefs.band)}
       {toggle('clip', 'c', prefs.clipOutput)}
+      {toggle('app', 'a', prefs.app)}
       <Button key="icons" label={say().icons(prefs.icons)} hotkey="i" plain onPress={() => actions.icons()} />
       <Button key="scene" label={say().scene(sceneNamed(prefs.scene)?.label ?? say().off)} hotkey="w" plain dimColor={prefs.scene === 'off'} onPress={() => actions.scene()} />
       {/* Cycling to "off" walks every scene first: a scene on gets its own way out. */}

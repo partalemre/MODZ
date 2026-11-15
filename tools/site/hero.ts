@@ -1,4 +1,4 @@
-// Draws the MODZ hero (the film's pixel wordmark and its six crabs) from savvy-progress's own sprites:
+// Draws the modz hero (the film's pixel wordmark and its six crabs) from savvy-progress's own sprites:
 // docs/img/hero-dark.svg and hero-light.svg for the README, and the scheme-aware intro the page inlines.
 // Run: bun tools/site/hero.ts
 import { CRAB_CSS, crab } from '../../mods/savvy-progress/hooks/crabs'
@@ -8,6 +8,10 @@ const LETTERS: Record<string, string[]> = {
   O: ['.XXX.', 'X...X', 'X...X', 'X...X', 'X...X', 'X...X', '.XXX.'],
   D: ['XXXX.', 'X...X', 'X...X', 'X...X', 'X...X', 'X...X', 'XXXX.'],
   Z: ['XXXXX', '....X', '...X.', '..X..', '.X...', 'X....', 'XXXXX'],
+  m: ['.....', '.....', 'XX.X.', 'X.X.X', 'X.X.X', 'X.X.X', 'X.X.X'],
+  o: ['.....', '.....', '.XXX.', 'X...X', 'X...X', 'X...X', '.XXX.'],
+  d: ['....X', '....X', '.XXXX', 'X...X', 'X...X', 'X...X', '.XXXX'],
+  z: ['.....', '.....', 'XXXXX', '...X.', '..X..', '.X...', 'XXXXX'],
 }
 const CELL = 22, PITCH = 26, GAP_LETTER = 44
 const CREW = [
@@ -17,7 +21,7 @@ const CREW = [
 ] as const
 
 function hero(ink: string, isIntro = false): string {
-  const word = 'MODZ'
+  const word = 'modz'
   const letterW = 5 * PITCH - (PITCH - CELL)
   const wordW = word.length * letterW + (word.length - 1) * GAP_LETTER
   const width = 760, x0 = (width - wordW) / 2, y0 = 10
@@ -29,7 +33,7 @@ function hero(ink: string, isIntro = false): string {
   const height = crewY + 28 * crabScale + 8
   const intro = isIntro ? '<style>.px{animation:px .32s cubic-bezier(.2,.8,.2,1) both}@keyframes px{from{opacity:0;transform:translateY(-14px)}}.crew{animation:crew .6s 1.1s cubic-bezier(.2,.8,.2,1) both}@keyframes crew{from{opacity:0;transform:translateX(-24px)}}@media (prefers-reduced-motion: reduce){.px,.crew{animation:none}}</style>' : ''
   const size = isIntro ? `viewBox="0 0 ${width} ${height}"` : `width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"`
-  return `<svg xmlns="http://www.w3.org/2000/svg" ${size} role="img" aria-label="MODZ">${CRAB_CSS}${intro}${squares.join('')}<g class="crew">${crabs.join('')}</g></svg>\n`
+  return `<svg xmlns="http://www.w3.org/2000/svg" ${size} role="img" aria-label="modz">${CRAB_CSS}${intro}${squares.join('')}<g class="crew">${crabs.join('')}</g></svg>\n`
 }
 
 const IMG = `${import.meta.dir}/../../docs/img`

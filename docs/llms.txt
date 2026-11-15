@@ -1,4 +1,4 @@
-# MODZ
+# modz
 
 > 23 mods for Claude Code, and one panel that shows them all. Agents, files, plans, tests and risky commands, live, beside the chat. Claude Code plugins, installed from the `modz` marketplace at https://github.com/partalemre/MODZ.
 
@@ -14,7 +14,7 @@ Every step is safe to repeat.
    - `"CLAUDE_CODE_ARTIFACT": "1"`: needed for transceiver when Claude Code is driven by an SDK host (an IDE, `claude -p`, T3 Code). The desktop app and the plain terminal do not need it.
 5. Updates are automatic: the panel's first session turns on Claude Code's auto-update for the `modz` marketplace (unless the person already chose under `/plugin` > Marketplaces). Do not edit `extraKnownMarketplaces` yourself.
 6. Verify: `claude plugin list` lists each `<name>@modz` as enabled.
-7. Tell the person to start a new session (or run `/reload-plugins`). The MODZ panel opens on the right.
+7. Tell the person to start a new session (or run `/reload-plugins`). The modz panel opens on the right.
 
 Inside Claude Code the same steps are slash commands: `/plugin marketplace add partalemre/MODZ`, then `/plugin install <name>@modz`.
 
@@ -54,7 +54,7 @@ Core set (recommended install): modz, savvy-progress, plan-steps, filetree, blas
 
 ## Customize and extend
 
-- The MODZ panel's Customize button moves rows up, hides and shows them, and resets; the layout is kept across sessions. Every pane it opens has a "← MODZ" button back; `/modz` opens the panel too.
+- The modz panel's Customize button moves rows up, hides and shows them, and resets; the layout is kept across sessions. Every pane it opens has a "← modz" button back; `/modz` opens the panel too.
 - Any mod can add itself to the panel: write `{ plugin: '<mod>', key: 'hub' }` with `{ pane, detail, tone, at, title, hint, icon, section, badge }`, open its pane on `state.set { plugin: 'modz', key: 'open' }`, and draw kit/home.tsx's HomeButton while `{ plugin: 'modz', key: 'isOn' }` is true. Contract: DESIGN.md §9 and mods/modz/types/index.d.ts in the repo.
 
 ## Facts

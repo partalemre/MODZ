@@ -318,17 +318,17 @@ const DETAIL_MAX = 60;
 const TITLE_MAX = 32;
 const BADGE_MAX = 12;
 const PANE_ID = /^[\w-]{1,64}$/;
-const textOf$2 = (value, max) => typeof value === "string" && value.trim() !== "" ? value.trim().slice(0, max) : undefined;
+const textOf$3 = (value, max) => typeof value === "string" && value.trim() !== "" ? value.trim().slice(0, max) : undefined;
 const LINES_MAX = 4;
 const VALUE_MAX = 16;
 function lineOf(value) {
   if (typeof value !== "object" || value === null)
     return null;
   const line = value;
-  const label = textOf$2(line.label, DETAIL_MAX);
+  const label = textOf$3(line.label, DETAIL_MAX);
   if (label === undefined)
     return null;
-  const short = textOf$2(line.value, VALUE_MAX);
+  const short = textOf$3(line.value, VALUE_MAX);
   return { label, ...typeof line.since === "number" && Number.isFinite(line.since) ? { since: line.since } : {}, ...short === undefined ? {} : { value: short } };
 }
 function liveOf(value) {
@@ -347,11 +347,11 @@ function cardOf(value) {
   if (typeof card.pane !== "string" || !PANE_ID.test(card.pane) || typeof card.detail !== "string" || !TONES.includes(card.tone))
     return null;
   const own = {
-    title: textOf$2(card.title, TITLE_MAX),
-    hint: textOf$2(card.hint, DETAIL_MAX),
-    icon: textOf$2(card.icon, TITLE_MAX),
+    title: textOf$3(card.title, TITLE_MAX),
+    hint: textOf$3(card.hint, DETAIL_MAX),
+    icon: textOf$3(card.icon, TITLE_MAX),
     section: SECTIONS.includes(card.section) ? card.section : undefined,
-    badge: textOf$2(card.badge, BADGE_MAX),
+    badge: textOf$3(card.badge, BADGE_MAX),
     live: liveOf(card.live),
     isBandOnly: card.isBandOnly === true ? true : undefined
   };
@@ -1920,7 +1920,7 @@ async function skillLinks(disk) {
   });
   return linkCheck({ roots: [home, cwd], exists: (path) => disk.exists(path) });
 }
-async function textOf$1(disk, path) {
+async function textOf$2(disk, path) {
   return await disk.exists(path) ? String(await disk.read(path)) : undefined;
 }
 async function marketOf(disk) {
@@ -1929,7 +1929,7 @@ async function marketOf(disk) {
       return;
     }) ?? disk.root;
     const install = installOf(real);
-    const root = install === undefined ? marketRoot(real) : installedMarketRoot(install, await textOf$1(disk, `${install.pluginsDir}/known_marketplaces.json`).catch(() => {
+    const root = install === undefined ? marketRoot(real) : installedMarketRoot(install, await textOf$2(disk, `${install.pluginsDir}/known_marketplaces.json`).catch(() => {
       return;
     }));
     return await loadCatalog({ read: (path) => disk.read(path), root, enabledPlugins: await enabledPlugins(disk), hasLink: await skillLinks(disk) });
@@ -1960,8 +1960,8 @@ async function keepUpdated(disk) {
   const settingsPath = `${configDir}/settings.json`;
   const next = autoUpdateSettings({
     market: install.market,
-    settingsText: await textOf$1(disk, settingsPath),
-    knownText: await textOf$1(disk, `${install.pluginsDir}/known_marketplaces.json`)
+    settingsText: await textOf$2(disk, settingsPath),
+    knownText: await textOf$2(disk, `${install.pluginsDir}/known_marketplaces.json`)
   });
   if (next === undefined)
     return;
@@ -2327,7 +2327,7 @@ function catalogTree(ui, view) {
   return view.surface === "desktop" ? desktopTree(ui, view) : terminalTree(ui, view);
 }
 
-const textOf = (entry, lang) => entry[lang === "tr" ? 1 : 0];
+const textOf$1 = (entry, lang) => entry[lang === "tr" ? 1 : 0];
 function fill(template, x = "") {
   const named = x.trim();
   return template.replace(/\[([^\]]*)\]/g, (_, part) => named ? part : "").replace(/\{x\}/g, named);
@@ -2697,7 +2697,7 @@ const namedOf$1 = (kind, args) => {
     return clip$1(base(plain.at(-1) ?? ""));
   return kind === "arg" ? clip$1(plain[0] ?? "") : "";
 };
-const say = (entry, lang, x = "") => fill(textOf(entry, lang), x);
+const say = (entry, lang, x = "") => fill(textOf$1(entry, lang), x);
 function familySay(family, args, lang) {
   const words = args.filter((arg) => !isFlag(arg) || arg === "-m");
   const at = words.findIndex((word) => !PASS_ON.has(word));
@@ -2788,7 +2788,7 @@ function plainShell(command, lang) {
     return say(steps.some((pipe) => pipe.some((c) => /^cd\b/.test(c))) ? COMMANDS.cd : SHELL.any, lang);
   const shown = unique.slice(0, STEPS_SHOWN$1).map((text, i) => i === 0 ? text : lowerFirst(text, lang));
   const more = unique.length - shown.length;
-  return shown.join(textOf(SHELL.then, lang)) + (more > 0 ? say(SHELL.more, lang, String(more)) : "");
+  return shown.join(textOf$1(SHELL.then, lang)) + (more > 0 ? say(SHELL.more, lang, String(more)) : "");
 }
 
 const KIND_ICON = {
@@ -2808,7 +2808,7 @@ const KIND_ICON = {
   plan: "list",
   service: "plug"
 };
-const WORDS$1 = {
+const WORDS$2 = {
   read: ["look", "inceleme"],
   search: ["search", "arama"],
   edit: ["change", "değişiklik"],
@@ -2825,7 +2825,7 @@ const WORDS$1 = {
   plan: ["plan", "plan"],
   service: ["connected service", "bağlı servis"]
 };
-const kindWord = (kind, lang) => WORDS$1[kind][lang === "tr" ? 1 : 0];
+const kindWord = (kind, lang) => WORDS$2[kind][lang === "tr" ? 1 : 0];
 const TOOL_KIND = {
   Read: "read",
   NotebookRead: "read",
@@ -2982,7 +2982,7 @@ const OTHER = {
   tool: ["Using the “{x}” tool", "“{x}” aracını kullanıyor"],
   command: ["Running a terminal command", "Bir terminal komutu çalıştırıyor"]
 };
-const fieldsOf = (input) => typeof input === "object" && input !== null ? input : {};
+const fieldsOf$1 = (input) => typeof input === "object" && input !== null ? input : {};
 const clip = (text) => text.length > NAME_MAX$1 ? `${text.slice(0, NAME_MAX$1 - 1)}…` : text;
 const firstLine = (text) => text.split(`
 `)[0]?.trim() ?? "";
@@ -3001,33 +3001,82 @@ function serviceSay(tool, lang) {
   const name = rest.join(" ");
   const known = SERVERS.find(([pattern]) => pattern.test(server))?.[1];
   if (known === BROWSER)
-    return textOf(BROWSER_ACTS.find(([pattern]) => pattern.test(name))?.[1] ?? BROWSER, lang);
+    return textOf$1(BROWSER_ACTS.find(([pattern]) => pattern.test(name))?.[1] ?? BROWSER, lang);
   if (known !== undefined)
-    return textOf(known, lang);
+    return textOf$1(known, lang);
   const isId = /^[0-9a-f-]{20,}$/i.test(server);
-  return fill(textOf(isId ? OTHER.tool : OTHER.service, lang), clip((isId ? name : server).replace(/[_-]+/g, " ")));
+  return fill(textOf$1(isId ? OTHER.tool : OTHER.service, lang), clip((isId ? name : server).replace(/[_-]+/g, " ")));
 }
 function plainCall(tool, input, lang) {
-  const fields = fieldsOf(input);
+  const fields = fieldsOf$1(input);
   if (tool === "Bash" || tool === "PowerShell") {
     const command = typeof fields.command === "string" ? fields.command : "";
-    return command.trim() === "" ? textOf(OTHER.command, lang) : plainShell(command, lang);
+    return command.trim() === "" ? textOf$1(OTHER.command, lang) : plainShell(command, lang);
   }
   if (tool.startsWith("mcp__"))
     return serviceSay(tool, lang);
   const known = TOOLS[tool];
   if (known === undefined)
-    return fill(textOf(OTHER.tool, lang), clip(tool));
+    return fill(textOf$1(OTHER.tool, lang), clip(tool));
   const [entry, field, as] = known;
   const named = field === undefined ? "" : namedOf(fields[field], as);
-  const template = textOf(entry, lang);
-  return named === "" && /(^|[^[])\{x\}/.test(template.replace(/\[[^\]]*\]/g, "")) ? fill(textOf(OTHER.tool, lang), tool) : fill(template, named);
+  const template = textOf$1(entry, lang);
+  return named === "" && /(^|[^[])\{x\}/.test(template.replace(/\[[^\]]*\]/g, "")) ? fill(textOf$1(OTHER.tool, lang), tool) : fill(template, named);
 }
 function partsOf$1(tool, input, lang) {
-  const command = tool === "Bash" || tool === "PowerShell" ? fieldsOf(input).command : undefined;
+  const command = tool === "Bash" || tool === "PowerShell" ? fieldsOf$1(input).command : undefined;
   const parts = typeof command === "string" ? leadsOf(command).map((call) => ({ kind: commandKind(call), text: callSay(call, lang) ?? "" })) : [];
   const unique = parts.filter((part, i) => part.text !== "" && parts.findIndex((other) => other.text === part.text) === i);
   return unique.length > 1 ? unique : [{ kind: kindOf(tool, input), text: plainCall(tool, input, lang) }];
+}
+
+const FILES_MAX = 4;
+const RESULT_MAX = 110;
+const FILE_WORD = /(?:~|\.{1,2})?\/?[\w@.-]+(?:\/[\w@.-]+)*\.(?:tsx?|jsx?|mjs|cjs|json|md|py|sh|html|css|ya?ml|toml|swift|dart|cs|go|rs|txt|svg|png)\b/g;
+const LEADING_CD = /^\s*cd\s+("([^"]+)"|'([^']+)'|(\/\S+))/;
+const fieldsOf = (value) => typeof value === "object" && value !== null ? value : {};
+function folderOf(command) {
+  const moved = LEADING_CD.exec(command);
+  const folder = moved?.[2] ?? moved?.[3] ?? moved?.[4];
+  return folder?.startsWith("/") === true ? folder.replace(/[;&]+$/, "").replace(/\/$/, "") : undefined;
+}
+function commandFiles(input) {
+  const command = fieldsOf(input).command;
+  if (typeof command !== "string")
+    return [];
+  const folder = folderOf(command);
+  const files = (command.match(FILE_WORD) ?? []).flatMap((word) => {
+    const path = word.startsWith("/") ? word : folder === undefined || word.startsWith("~") ? undefined : `${folder}/${word.replace(/^\.\//, "")}`;
+    return path === undefined ? [] : [{ name: path.split("/").at(-1) ?? path, path }];
+  });
+  return files.filter((file, i) => files.findIndex((other) => other.path === file.path) === i).slice(0, FILES_MAX);
+}
+function textOf(output) {
+  if (typeof output === "string")
+    return output;
+  if (Array.isArray(output))
+    return output.map(textOf).join(`
+`);
+  const fields = fieldsOf(output);
+  return ["stdout", "stderr", "text", "content", "output", "result"].map((key) => fields[key] === undefined ? "" : textOf(fields[key])).filter(Boolean).join(`
+`);
+}
+const WORDS$1 = {
+  en: { none: "found nothing", more: (n) => `(+${n} more ${n === 1 ? "line" : "lines"})` },
+  tr: { none: "hiçbir şey bulamadı", more: (n) => `(+${n} satır daha)` }
+};
+function resultLine(call, lang) {
+  const isSearch = call.tool === "Grep" || call.tool === "Glob";
+  if (call.tool !== "Bash" && !isSearch || call.output === undefined)
+    return "";
+  const words = WORDS$1[lang === "tr" ? "tr" : "en"];
+  const lines = textOf(call.output).split(`
+`).map((line) => line.trim()).filter((line) => line !== "");
+  const first = lines[0];
+  if (first === undefined)
+    return isSearch ? `→ ${words.none}` : "";
+  const shown = first.length > RESULT_MAX ? `${first.slice(0, RESULT_MAX - 1)}…` : first;
+  return `→ ${shown}${lines.length > 1 ? ` ${words.more(lines.length - 1)}` : ""}`;
 }
 
 const ROLES = ["read", "edit", "run", "ok", "warn", "danger", "plan"];
@@ -3261,7 +3310,7 @@ function stepOf(bucket, lang) {
   const state = worst(bucket.map((told) => told.state));
   const files = bucket.flatMap((told) => told.file === undefined ? [] : [told.file]).filter((file, i, all) => all.findIndex((other) => other.path === file.path) === i);
   if (first.why !== "")
-    return { kind: first.kind, text: first.why, note: first.said, count: bucket.length, state, files };
+    return { kind: first.kind, text: first.why, note: first.said.includes(first.why) ? "" : first.said, count: bucket.length, state, files };
   const names = unique(bucket.map((told) => told.name).filter((name) => name !== ""));
   const many = MANY[first.kind];
   if (many !== undefined && names.length > 1)
@@ -3356,11 +3405,19 @@ function wordsOf(draw, step, key) {
       key: `${key}-words`,
       text: stepMarkdown(step)
     });
-  return h(Text, {
-    wrap: "truncate-end"
-  }, h(Text, null, named(draw, step.text, step)), step.note === "" ? null : h(Text, {
+  if (draw.isText) {
+    return h(Text, {
+      wrap: "truncate-end"
+    }, h(Text, null, named(draw, step.text, step)), step.note === "" ? null : h(Text, {
+      dimColor: true
+    }, " · ", named(draw, step.note, step)));
+  }
+  const { Box } = draw.ui;
+  return h(Box, {
+    flexDirection: "column"
+  }, h(Text, null, step.text), step.note === "" ? null : h(Text, {
     dimColor: true
-  }, " · ", named(draw, step.note, step)));
+  }, step.note));
 }
 function stepRow(draw, step, key, hasEnd) {
   const { Box, Text } = draw.ui;
@@ -3368,7 +3425,7 @@ function stepRow(draw, step, key, hasEnd) {
   return h(Box, {
     key,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: draw.isText ? "center" : "flex-start",
     columnGap: 1
   }, iconOf(draw, step), h(Box, {
     flexShrink: 1
@@ -3386,12 +3443,20 @@ function under(draw, row, trail) {
   }, row, trail);
 }
 function callTrail(draw, call) {
+  const { Text } = draw.ui;
   const step = stepOfCall(call);
   const hasEnd = step.state === "failed" || step.state === "stopped";
   const parts = partsOf$1(call.tool, call.input, lang());
-  if (parts.length < 2)
-    return [stepRow(draw, step, "plain-0", hasEnd)];
-  return parts.map((part, i) => stepRow(draw, { ...step, kind: part.kind, text: `${i + 1}. ${part.text}`, files: [] }, `plain-${i}`, hasEnd && i === parts.length - 1));
+  const why = purposeOf(call.input);
+  const files = step.files.length > 0 ? step.files : commandFiles(call.input);
+  const isSaid = why === "" || step.text.includes(why);
+  const lead = isSaid ? [] : [stepRow(draw, { ...step, text: why, note: "", files }, "plain-why", false)];
+  const told = parts.length < 2 ? [stepRow(draw, isSaid ? { ...step, files } : { ...step, files: [] }, "plain-0", hasEnd)] : parts.map((part, i) => stepRow(draw, { ...step, kind: part.kind, text: `${i + 1}. ${part.text}`, files: [] }, `plain-${i}`, hasEnd && i === parts.length - 1));
+  const result = resultLine(call, lang());
+  return [...lead, ...told, ...result === "" ? [] : [h(Text, {
+    key: "plain-result",
+    dimColor: true
+  }, result)]];
 }
 function groupTrail(draw, calls) {
   const { Svg, Text } = draw.ui;

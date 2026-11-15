@@ -7,7 +7,7 @@ import { kindOf, plainCall, purposeOf } from './kit/plain'
 import type { Kind } from './kit/plain'
 
 /** One call as a row or a group hands it over. */
-export type ToldCall = { tool: string; input: unknown; isRunning?: boolean; isErrored?: boolean; isInterrupted?: boolean }
+export type ToldCall = { tool: string; input: unknown; isRunning?: boolean; isErrored?: boolean; isInterrupted?: boolean; output?: unknown }
 
 export type StepState = 'live' | 'done' | 'failed' | 'stopped'
 
@@ -97,7 +97,8 @@ function stepOf(bucket: readonly Told[], lang: Lang): Step {
   const first = bucket[0] as Told
   const state = worst(bucket.map(told => told.state))
   const files = bucket.flatMap(told => (told.file === undefined ? [] : [told.file])).filter((file, i, all) => all.findIndex(other => other.path === file.path) === i)
-  if (first.why !== '') return { kind: first.kind, text: first.why, note: first.said, count: bucket.length, state, files }
+  // The rule-made sentence often only repeats the agent's own words ("gives a helper agent the job: <those words>"): said once then.
+  if (first.why !== '') return { kind: first.kind, text: first.why, note: first.said.includes(first.why) ? '' : first.said, count: bucket.length, state, files }
   const names = unique(bucket.map(told => told.name).filter(name => name !== ''))
   const many = MANY[first.kind]
   if (many !== undefined && names.length > 1) return { kind: first.kind, text: many[lang](names.length), note: listOf(names), count: 1, state, files }

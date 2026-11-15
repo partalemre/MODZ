@@ -78,9 +78,9 @@ test("a folded run leads each step with the agent's own words, then what that me
   ]))
   expect(await said(ui)).toBe([
     'engine row',
-    "İki isteğin birleştirilebilir olduğuna bak · GitHub’daki değişiklik isteklerine (PR) bakıyor ✓",
-    "70 numaralı isteği main'e birleştir · Bir değişiklik isteğini (PR) ana koda birleştiriyor ✓",
-    'Birleşmiş halde skins modunu dene · Modun testlerini çalıştırıyor ✗ başarısız oldu',
+    "İki isteğin birleştirilebilir olduğuna bak GitHub’daki değişiklik isteklerine (PR) bakıyor ✓",
+    "70 numaralı isteği main'e birleştir Bir değişiklik isteğini (PR) ana koda birleştiriyor ✓",
+    'Birleşmiş halde skins modunu dene Modun testlerini çalıştırıyor ✗ başarısız oldu',
   ].join(' '))
   // The first picture is the order of the work: two GitHub steps, then a check.
   expect(await pictures(ui)).toEqual(['GitHub ×2 → kontrol', 'GitHub', 'GitHub', 'kontrol'])

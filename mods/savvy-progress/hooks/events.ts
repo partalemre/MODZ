@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { StepInput } from './agents'
-import { addRun, endRun, heard, isRunning, ownTasks, patchRun, stepReport, stepUsage, toolActivity } from './agents'
+import { addRun, endRun, heard, isRunning, ownTasks, patchRun, planStepOf, stepReport, stepUsage, textKey, toolActivity } from './agents'
 import { isNewFlow, mergeFlow } from './flow'
 import { tokensOf } from './pricing'
 import { NO_TALLY } from './strip-svg'
@@ -27,6 +27,9 @@ const flow = atom({ plugin: 'savvy-progress', key: 'flow' } as const, null)
 const job = atom({ plugin: 'savvy-progress', key: 'job' } as const, null)
 const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
 const tasks = atom({ plugin: 'savvy-progress', key: 'tasks' } as const, [])
+const crewRow = atom({ plugin: 'savvy-progress', key: 'crewRow' } as const, '')
+// Calls that draw no row in the conversation (the app's own lists, this mod's progress): helpers cannot stand there.
+const NO_ROW = /^mcp__(ccd_|savvy-progress__)/
 const limit = atom({ plugin: 'savvy-progress', key: 'limit' } as const, null)
 
 type On = Parameters<Register>[0]
@@ -78,6 +81,9 @@ function onReports(on: On): void {
   })
 }
 
+// The plan as the plan-steps mod keeps it; it throws where that mod is not loaded.
+const planOf = async ($: EngineInterface): Promise<unknown> => (await $.state.get({ plugin: 'plan-steps', key: 'tasks' })).value
+
 // Launches: the Agent call's effort, the spawn itself, and where one request ends.
 function onLaunches(on: On): void {
   on('tool.call', { tool: 'Agent' }, async ($, e, next) => {
@@ -95,9 +101,13 @@ function onLaunches(on: On): void {
     if (started.deny !== undefined) return started
     const at = await stamp($)
     const id = started.agentId ?? e.tool_use_id
+    // A helper is born on the row that started it; from there it follows the conversation down.
+    if (!e.parentAgentId && e.tool_use_id) await update($, crewRow, () => e.tool_use_id)
     const spawn = { id, agentId: started.agentId, toolUseId: e.tool_use_id, parentId: e.parentAgentId, at }
     const who = { type: e.subagentType, description: e.description, brief: e.prompt, model: started.model, effort: launchEffort.get(e.tool_use_id) }
-    await update($, agents, list => addRun(list, { ...spawn, ...who }))
+    // The plan belongs to the main loop, so only its own launches are part of a step of it.
+    const plan = e.parentAgentId ? undefined : await planOf($).catch(() => undefined)
+    await update($, agents, list => addRun(list, { ...spawn, ...who, planStep: planStepOf(plan) }))
     // Only the main loop's launches make up the request's job; nested ones show in the panel.
     if (!e.parentAgentId) await update($, job, prev => joinJob(prev, id, at))
     return started
@@ -130,6 +140,9 @@ function onActivity(on: On): void {
     const id = typeof call.tool_use_id === 'string' ? call.tool_use_id : undefined
     // A mod's own background calls (transceiver polling ArtifactData) are no loop's work.
     const isModelCall = next.origin.plugin === 'engine'
+    // While helpers work, each new row of the main loop's own work becomes the place they stand.
+    const isNewRow = isModelCall && agentId === undefined && id !== undefined && !NO_ROW.test(name) && (await read($, crewRow)) !== id
+    if (isNewRow && (await read($, agents)).some(a => a.isMain !== true && isRunning(a))) await update($, crewRow, () => id ?? '')
     const isTracked = isModelCall && name !== STEP_TOOL && (await read($, agents)).some(a => a.agentId === who)
     if (isTracked) {
       const at = await $.clock.now()
@@ -181,6 +194,9 @@ function onSteps(on: On): void {
     const at = await $.clock.now()
     // What it wrote before this step's calls is their reason, in its own words.
     const step = { answer: result.answer, calls: result.toolUses.length, sentAt: sent }
+    // The main loop wrote: while helpers work, its newest words are where they stand, until its next call.
+    const wrote = e.agentId ? '' : textKey(result.answer)
+    if (wrote !== '' && (await read($, agents)).some(a => a.isMain !== true && isRunning(a))) await update($, crewRow, () => wrote)
     await update($, agents, list => patchRun(list, agentId, a => heard({ ...withReason(facts ? stepUsage(reopen(a), facts) : a, step), stepAt: undefined }, at)))
     return result
   })

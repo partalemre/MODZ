@@ -5,7 +5,7 @@ export type Lang = 'tr' | 'en' | 'ru'
 
 export type Kinds = Record<'read' | 'edit' | 'run' | 'agent' | 'other', string>
 
-import type { ChatState, CrabMood } from '../types'
+import type { ChatState, CrabMood, WorkKind } from '../types'
 
 /** Other chats on this machine: the card of those waiting on the person and the folded list of the rest. */
 export type ChatWords = {
@@ -153,6 +153,11 @@ export type Strings = {
   stripPerTurn: (span: string) => string
   /** What a crab on the strip is doing, by the kind of its last tool. */
   stripDoing: Record<'read' | 'edit' | 'run' | 'agent' | 'other', string>
+  /** An agent's crab on its own row of the conversation: its work in a word, its step, its part of the plan, its end. */
+  rowDoing: Record<WorkKind, string>
+  rowStep: (done: number, total: number) => string
+  rowPlan: (at: number, of: number, subject: string) => string
+  rowEnded: { done: string; failed: string }
   /** The strip's plan and plan-window chips, and what the resting crab is said to do. */
   stripPlan: string
   stripPlanDone: string

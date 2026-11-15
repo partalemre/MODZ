@@ -1,8 +1,9 @@
-import type { AgentRun, ThreadTurn } from '../types'
+import type { AgentRun, PlanStep, ThreadTurn } from '../types'
 import { clip, norm, toolDetail, toolName, toolTarget } from './format'
 import { plainLang } from './i18n'
 import { nextLook } from './identity'
 import { plainCall, purposeOf } from './kit/plain'
+import { workKindOf } from './work-kind'
 import { costOf, tokensOf, windowOf } from './pricing'
 import type { Usage } from './pricing'
 import { MAX_RUNS } from './state'
@@ -26,7 +27,17 @@ export type Spawn = {
   effort?: string
   brief?: string
   isAsked?: boolean
+  planStep?: PlanStep
   at: number
+}
+
+/** The step under way in a plan as the plan-steps mod keeps it, or none: where an agent sent out now belongs. */
+export function planStepOf(plan: unknown): PlanStep | undefined {
+  const steps = Array.isArray(plan) ? (plan as { subject?: unknown; status?: unknown }[]) : []
+  const at = steps.findIndex(step => step?.status === 'in_progress')
+  const subject = steps[at]?.subject
+
+  return typeof subject === 'string' ? { subject, at: at + 1, of: steps.length } : undefined
 }
 
 export function addRun(list: AgentRun[], spawn: Spawn): AgentRun[] {
@@ -42,6 +53,7 @@ export function addRun(list: AgentRun[], spawn: Spawn): AgentRun[] {
     effort: spawn.effort,
     brief: spawn.brief?.trim() ? clip(spawn.brief.trim(), BRIEF_MAX) : undefined,
     isAsked: spawn.isAsked,
+    planStep: spawn.planStep,
     status: 'running',
     startedAt: spawn.at,
     contextTokens: 0,
@@ -106,6 +118,7 @@ export const toolActivity = (a: AgentRun, call: Record<string, unknown>): AgentR
   ...a,
   toolCount: (a.toolCount || 0) + 1,
   lastTool: toolName(String(call.tool ?? '')),
+  lastKind: workKindOf(String(call.tool ?? ''), call),
   lastTarget: toolTarget(call) || undefined,
   lastDetail: toolDetail(call) || undefined,
   // The agent's own words for the call lead; the rule-made sentence stands in when it wrote none.
@@ -130,6 +143,18 @@ export const stepReport = (a: AgentRun, input: StepInput): AgentRun => {
 export const heard = (a: AgentRun, at: number): AgentRun => ({ ...a, heardAt: Math.max(a.heardAt ?? 0, at) })
 
 export const isRunning = (a: AgentRun): boolean => a.status === 'running'
+
+const KEY_TAIL = 60
+
+/**
+ * A name for a piece of the main loop's writing, by how it ends: the event that says it was written and the row
+ * that draws it carry no id in common, so its last words stand for it. Empty for nothing written.
+ */
+export function textKey(text: string): string {
+  const words = text.replace(/\s+/g, ' ').trim()
+
+  return words === '' ? '' : `text:${words.slice(-KEY_TAIL)}`
+}
 
 export const elapsed = (a: AgentRun, at: number): number => (a.endedAt ?? Math.max(at, a.startedAt)) - a.startedAt
 

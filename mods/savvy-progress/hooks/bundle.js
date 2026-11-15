@@ -101,6 +101,10 @@ const en = {
   stripTurns: (n) => plural(n, "turn", "turns"),
   stripPerTurn: (span) => `${span} per turn`,
   stripDoing: { read: "reading", edit: "writing", run: "command", agent: "leading agents", other: "thinking" },
+  rowDoing: { read: "reading", search: "searching", edit: "writing", run: "running a command", test: "checking", save: "saving a version", web: "on the internet", message: "sending word", agent: "leading agents", wait: "waiting", other: "thinking" },
+  rowStep: (done, total) => `step ${done}/${total}`,
+  rowPlan: (at, of, subject) => `plan step ${at}/${of}: ${subject}`,
+  rowEnded: { done: "finished", failed: "did not finish" },
   stripPlan: "plan",
   stripPlanDone: "done",
   stripWeek: "week",
@@ -247,6 +251,10 @@ const ru = {
   stripTurns: (n) => `ходов: ${n}`,
   stripPerTurn: (span) => `${span} за ход`,
   stripDoing: { read: "читает", edit: "пишет", run: "команда", agent: "ведёт агентов", other: "думает" },
+  rowDoing: { read: "читает", search: "ищет", edit: "пишет", run: "выполняет команду", test: "проверяет", save: "сохраняет версию", web: "в интернете", message: "передаёт сообщение", agent: "ведёт агентов", wait: "ждёт", other: "думает" },
+  rowStep: (done, total) => `шаг ${done}/${total}`,
+  rowPlan: (at, of, subject) => `шаг плана ${at}/${of}: ${subject}`,
+  rowEnded: { done: "закончил", failed: "не закончил" },
   stripPlan: "план",
   stripPlanDone: "готов",
   stripWeek: "неделя",
@@ -402,6 +410,10 @@ const tr = {
   stripTurns: (n) => `${n} tur`,
   stripPerTurn: (span) => `tur başına ${span}`,
   stripDoing: { read: "okuyor", edit: "yazıyor", run: "komut", agent: "ajan yönetiyor", other: "düşünüyor" },
+  rowDoing: { read: "okuyor", search: "arıyor", edit: "yazıyor", run: "komut çalıştırıyor", test: "kontrol ediyor", save: "sürüm kaydediyor", web: "internette", message: "haber gönderiyor", agent: "ajan yönetiyor", wait: "bekliyor", other: "düşünüyor" },
+  rowStep: (done, total) => `adım ${done}/${total}`,
+  rowPlan: (at, of, subject) => `planın ${at}/${of}. adımı: ${subject}`,
+  rowEnded: { done: "işini bitirdi", failed: "işi yarıda kaldı" },
   stripPlan: "plan",
   stripPlanDone: "tamam",
   stripWeek: "hafta",
@@ -966,7 +978,7 @@ function stepsOf$1(command) {
   close(false);
   return steps.map((pipe) => pipe.filter(Boolean)).filter((pipe) => pipe.length > 0);
 }
-function wordsOf(command) {
+function wordsOf$1(command) {
   const found = command.match(/(?:\$\([^)]*\)|"(?:\\.|[^"\\])*"|'[^']*'|\S)+/g) ?? [];
   return found.map((word) => word.replace(/^(['"])([\s\S]*)\1$/, "$2"));
 }
@@ -988,7 +1000,7 @@ function splitRedirects(words) {
   return { kept, out };
 }
 function callOf(command) {
-  const { kept, out } = splitRedirects(wordsOf(command));
+  const { kept, out } = splitRedirects(wordsOf$1(command));
   const words = [...kept];
   while (words.length > 0 && (WRAPPERS.has(words[0] ?? "") || /^\w+\+?=/.test(words[0] ?? "")))
     words.shift();
@@ -1099,10 +1111,88 @@ function plainShell(command, lang) {
   return shown.join(textOf(SHELL.then, lang)) + (more > 0 ? say(SHELL.more, lang, String(more)) : "");
 }
 
+const TOOL_KIND = {
+  Read: "read",
+  NotebookRead: "read",
+  Skill: "read",
+  BashOutput: "read",
+  TaskOutput: "read",
+  Monitor: "read",
+  Glob: "search",
+  Grep: "search",
+  LS: "search",
+  ToolSearch: "search",
+  Write: "edit",
+  Edit: "edit",
+  MultiEdit: "edit",
+  NotebookEdit: "edit",
+  WebSearch: "web",
+  WebFetch: "web",
+  Artifact: "web",
+  Agent: "agent",
+  Task: "agent",
+  SendMessage: "agent",
+  SubagentHandback: "agent",
+  TodoWrite: "plan",
+  TaskCreate: "plan",
+  TaskUpdate: "plan",
+  TaskList: "plan",
+  TaskGet: "plan",
+  EnterPlanMode: "plan",
+  ExitPlanMode: "plan",
+  AskUserQuestion: "ask",
+  ScheduleWakeup: "wait",
+  CronCreate: "wait"
+};
+const LOOKS = new Set(["cat", "head", "tail", "less", "ls", "wc", "stat", "file", "tree", "du", "which", "pwd", "echo", "diff"]);
+const SEARCHES = new Set(["grep", "rg", "find", "fd", "ag"]);
+const GIT_LOOKS = new Set(["status", "log", "diff", "show", "branch", "ls-files", "remote", "blame", "worktree", "rev-parse", "fetch"]);
+const INSTALLERS = new Set(["npm", "pnpm", "yarn", "bun", "pip", "pip3", "brew", "cargo", "gem", "apt", "apt-get", "flutter", "dart"]);
+const INSTALL_VERBS = new Set(["install", "add", "i", "ci", "get", "upgrade"]);
+const CHECK_WORD = /^(tests?|check|validate|lint|tsc|jest|vitest|pytest|typecheck|analyze)$/;
+const WEIGHT = ["wait", "read", "search", "run", "web", "test", "install", "github", "save", "delete"];
+const last = (path) => path.split("/").filter(Boolean).at(-1) ?? path;
+function commandKind(call) {
+  const name = last(call.name);
+  const verb = call.args.find((arg) => !arg.startsWith("-")) ?? "";
+  if (name === "sleep")
+    return "wait";
+  if (name === "gh")
+    return "github";
+  if (name === "git")
+    return GIT_LOOKS.has(verb) ? "read" : "save";
+  if (name === "rm" || name === "rmdir" || name === "find" && call.args.includes("-delete"))
+    return "delete";
+  if (name === "curl" || name === "wget")
+    return "web";
+  if ([name, ...call.args].some((word) => CHECK_WORD.test(last(word))))
+    return "test";
+  if (INSTALLERS.has(name) && call.args.some((arg) => INSTALL_VERBS.has(arg)))
+    return "install";
+  if (SEARCHES.has(name))
+    return "search";
+  return LOOKS.has(name) ? "read" : "run";
+}
+function shellKind(command) {
+  const kinds = leadsOf(command).map(commandKind);
+  return kinds.reduce((top, kind) => WEIGHT.indexOf(kind) > WEIGHT.indexOf(top) ? kind : top, kinds[0] ?? "run");
+}
+function serviceKind(tool) {
+  if (/browser|chrome|playwright|web_|exa|fetch/i.test(tool))
+    return "web";
+  return /github/i.test(tool) ? "github" : "service";
+}
 const fieldOf = (input, name) => {
   const value = typeof input === "object" && input !== null ? input[name] : undefined;
   return typeof value === "string" ? value.trim() : "";
 };
+function kindOf$1(tool, input) {
+  if (tool === "Bash" || tool === "PowerShell")
+    return shellKind(fieldOf(input, "command"));
+  if (tool.startsWith("mcp__"))
+    return serviceKind(tool);
+  return TOOL_KIND[tool] ?? "service";
+}
 const PURPOSE_MAX = 96;
 function purposeOf(input) {
   const text = (fieldOf(input, "description") || fieldOf(input, "action_summary")).split(`
@@ -1226,6 +1316,26 @@ function plainCall(tool, input, lang) {
   return named === "" && /(^|[^[])\{x\}/.test(template.replace(/\[[^\]]*\]/g, "")) ? fill(textOf(OTHER.tool, lang), tool) : fill(template, named);
 }
 
+const FROM = {
+  read: "read",
+  search: "search",
+  edit: "edit",
+  delete: "edit",
+  run: "run",
+  install: "run",
+  test: "test",
+  save: "save",
+  github: "save",
+  web: "web",
+  service: "web",
+  agent: "agent",
+  wait: "wait",
+  ask: "message",
+  plan: "other"
+};
+const MESSAGE = /SendMessage|transceiver|send_message|start_session|slack|(^|_)(send|reply|ask|inbox)$/i;
+const workKindOf = (tool, input) => MESSAGE.test(tool) ? "message" : FROM[kindOf$1(tool, input)] ?? "other";
+
 const PRICES_5 = {
   "fable-5-2": [8, 40, 0.2, 16],
   "mythos-5-2": [8, 40, 0.2, 16],
@@ -1330,6 +1440,12 @@ const openTasks = (list) => list.filter((task) => task.status !== "completed");
 const BRIEF_MAX = 800;
 const ANSWER_MAX = 1500;
 const THREAD_MAX = 12;
+function planStepOf(plan) {
+  const steps = Array.isArray(plan) ? plan : [];
+  const at = steps.findIndex((step) => step?.status === "in_progress");
+  const subject = steps[at]?.subject;
+  return typeof subject === "string" ? { subject, at: at + 1, of: steps.length } : undefined;
+}
 function addRun(list, spawn) {
   const same = list.filter((a) => spawn.description && norm(a.description) === norm(spawn.description));
   const run = {
@@ -1343,6 +1459,7 @@ function addRun(list, spawn) {
     effort: spawn.effort,
     brief: spawn.brief?.trim() ? clip$2(spawn.brief.trim(), BRIEF_MAX) : undefined,
     isAsked: spawn.isAsked,
+    planStep: spawn.planStep,
     status: "running",
     startedAt: spawn.at,
     contextTokens: 0,
@@ -1391,6 +1508,7 @@ const toolActivity = (a, call) => ({
   ...a,
   toolCount: (a.toolCount || 0) + 1,
   lastTool: toolName(String(call.tool ?? "")),
+  lastKind: workKindOf(String(call.tool ?? ""), call),
   lastTarget: toolTarget(call) || undefined,
   lastDetail: toolDetail(call) || undefined,
   lastPlain: purposeOf(call) || plainCall(String(call.tool ?? ""), call, plainLang())
@@ -1406,6 +1524,11 @@ const stepReport = (a, input) => {
 };
 const heard = (a, at) => ({ ...a, heardAt: Math.max(a.heardAt ?? 0, at) });
 const isRunning = (a) => a.status === "running";
+const KEY_TAIL = 60;
+function textKey(text) {
+  const words = text.replace(/\s+/g, " ").trim();
+  return words === "" ? "" : `text:${words.slice(-KEY_TAIL)}`;
+}
 const elapsed = (a, at) => (a.endedAt ?? Math.max(at, a.startedAt)) - a.startedAt;
 const ctxOf = (a) => a.contextMax ? Math.min(100, Math.round(a.contextTokens / a.contextMax * 100)) : 0;
 const totals = (list, at) => {
@@ -1469,7 +1592,7 @@ function reconcile(list, roster, at) {
 const MAIN_ID = "main";
 const TITLE_MAX$1 = 80;
 const isMain = (a) => a.isMain === true;
-const crewOf = (list) => list.filter((a) => !isMain(a));
+const crewOf$1 = (list) => list.filter((a) => !isMain(a));
 const titleOf$1 = (prompt) => {
   const line = prompt.split(`
 `).find((text) => text.trim())?.trim() ?? "";
@@ -1967,7 +2090,7 @@ const pillRole = (view) => {
 const PILL_INK$1 = { run: "f-edit", ok: "s", warn: "f-warn", danger: "f-danger" };
 const pillSvg = ({ label, role, x, w }) => `<rect class="k" x="${x}" y="${PILL$1.y}" width="${w}" height="${PILL$1.h}" rx="${PILL$1.h / 2}"/>
 <text class="${PILL_INK$1[role]}" x="${x + w / 2}" y="${BASELINE$1 - 0.5}" text-anchor="middle" font-family="${FONT}" font-size="${PILL$1.size}" font-weight="600">${xml(label)}</text>`;
-const planOf = (view, maxW) => {
+const planOf$1 = (view, maxW) => {
   const pillW = Math.ceil(textWidth(view.label, PILL$1.size) * BOLD$5 + PILL$1.padX * 2);
   const pctW = percentText(view) === UNKNOWN$1 ? 0 : Math.ceil(percentText(view).length * PERCENT_SIZE * MONO_EM$1);
   const avail = maxW - TITLE_X - pillW - pctW - CRAB$1.w - GAP$2 * 4;
@@ -1983,7 +2106,7 @@ const planOf = (view, maxW) => {
 };
 const bandCrab = (x, mood) => crab$3(x, CRAB$1.y, { costume: "other", look: HOME_LOOK, mood, scale: CRAB$1.scale });
 const bandSvg = (view, maxW, mood) => {
-  const plan = planOf(view, maxW);
+  const plan = planOf$1(view, maxW);
   const pillX = TITLE_X + plan.titleW + GAP$2;
   const meterX = pillX + plan.pillW + GAP$2;
   const pctX = meterX + (plan.meterW ? plan.meterW + GAP$2 : 0);
@@ -2138,7 +2261,7 @@ const LIVE_LINES = 3;
 const LABEL_MAX = 48;
 const COST_MIN = 0.005;
 const hubLiveOf = (agents) => {
-  const running = [...agents.filter((a) => isRunning(a) && isMain(a)), ...crewOf(agents).filter(isRunning)];
+  const running = [...agents.filter((a) => isRunning(a) && isMain(a)), ...crewOf$1(agents).filter(isRunning)];
   if (running.length === 0)
     return;
   const lines = running.slice(0, LIVE_LINES).map((a) => ({
@@ -2153,7 +2276,7 @@ const hubCardOf = (src) => {
   const others = { waiting: waitingOf(src.chats).length, working: quietOf(src.chats).filter((chat) => chat.state === "working").length };
   const live = hubLiveOf(src.agents);
   const tone = !view && (others.working > 0 || live !== undefined) ? "live" : toneOf$1(view);
-  return { detail: hubDetailOf(view, crewOf(src.agents).filter(isRunning).length, others), tone, ...live ? { live } : {} };
+  return { detail: hubDetailOf(view, crewOf$1(src.agents).filter(isRunning).length, others), tone, ...live ? { live } : {} };
 };
 const isShowing = (card, shown) => card.detail === shown.detail && card.tone === shown.tone && isSame(card.live, shown.live);
 
@@ -2845,10 +2968,9 @@ const SCENE_CSS = `<style>
 const PAD$1 = 14;
 const EDGE = 36;
 const PATH_LIFT = 8;
-const GRID = { w: 30, feet: 26 };
+const GRID$1 = { w: 30, feet: 26 };
 const LEAD_SCALE = 1.3;
-const LEAD_W = GRID.w * LEAD_SCALE;
-const CREW = { scale: 1, step: 38, shown: 4, lead: 26, more: 24 };
+const LEAD_W = GRID$1.w * LEAD_SCALE;
 const AMBLE_MAX = 240;
 const STONES_MAX = 24;
 const PIPS = { shown: 4, size: 3, step: 4.5, y: 6.5 };
@@ -2862,15 +2984,12 @@ const standIndexOf = (steps) => {
   return next >= 0 ? next : steps.length - 1;
 };
 function layoutOf$1(spec) {
-  const helpers = spec.crew.filter((a) => a.isMain !== true);
-  const shown = Math.min(CREW.shown, helpers.length);
-  const bench = shown === 0 ? 0 : CREW.lead + shown * CREW.step + (helpers.length > shown ? CREW.more : 0);
   const x0 = PAD$1 + EDGE;
-  const x1 = Math.max(x0, spec.width - PAD$1 - EDGE - bench);
+  const x1 = Math.max(x0, spec.width - PAD$1 - EDGE);
   const last = spec.steps.length - 1;
   const at = spec.steps.map((_, i) => last <= 0 ? (x0 + x1) / 2 : x0 + (x1 - x0) * i / last);
   const standIndex = standIndexOf(spec.steps);
-  return { x0, x1, at, stand: Math.round(at[standIndex] ?? x0), standIndex, benchX: x1 + EDGE + CREW.lead };
+  return { x0, x1, at, stand: Math.round(at[standIndex] ?? x0), standIndex };
 }
 const titled = (title, body) => `<title>${xml(title)}</title>${body}`;
 const markOf = (step, isCurrent) => {
@@ -2919,11 +3038,11 @@ function leadOf(spec, isWalkingIn) {
   const main = spec.crew.find((a) => a.isMain === true);
   if (main === undefined) {
     const isAwake = spec.mood === "happy" || spec.mood === "worried";
-    const body = crab$3(0, -GRID.feet * LEAD_SCALE, { costume: "other", look: HOME_LOOK, mood: spec.mood, isWalking: isWalkingIn, scale: LEAD_SCALE });
+    const body = crab$3(0, -GRID$1.feet * LEAD_SCALE, { costume: "other", look: HOME_LOOK, mood: spec.mood, isWalking: isWalkingIn, scale: LEAD_SCALE });
     return { body, extra: RESTING[spec.mood], title: `${t().mainName} · ${t().stripResting[spec.mood]}`, breath: spec.mood === "sleeping" ? "sl" : "br", canAmble: isAwake && spec.steps.length === 0 };
   }
   const kind = kindOf(main.lastTool ?? "");
-  const body = crab$3(0, -GRID.feet * LEAD_SCALE, { costume: costumeOf(main), look: lookOf(main), isWalking: IS_BUSY[kind] || isWalkingIn, scale: LEAD_SCALE });
+  const body = crab$3(0, -GRID$1.feet * LEAD_SCALE, { costume: costumeOf(main), look: lookOf(main), isWalking: IS_BUSY[kind] || isWalkingIn, scale: LEAD_SCALE });
   return { body, extra: bubble(THOUGHT[kind]), title: `${t().mainName} · ${main.lastPlain || t().stripDoing[kind]}`, breath: IS_BUSY[kind] ? "" : "br", canAmble: false };
 }
 const TIP = { h: 18, size: 10.5, pad: 7, max: 40, gap: 6 };
@@ -2937,29 +3056,12 @@ function leadSvg(spec, lay) {
   const isWalkingIn = spec.from !== undefined && Math.round(spec.from) !== lay.stand;
   const lead = leadOf(spec, isWalkingIn);
   const isLeft = lay.stand > spec.width * 0.6;
-  const said = tip(lead.title, { x: isLeft ? BUBBLE.x - TIP.gap : LEAD_W + TIP.gap, y: -GRID.feet * LEAD_SCALE + 4, isLeft });
+  const said = tip(lead.title, { x: isLeft ? BUBBLE.x - TIP.gap : LEAD_W + TIP.gap, y: -GRID$1.feet * LEAD_SCALE + 4, isLeft });
   const who = `<g class="who"><g class="lift"><g class="${lead.breath}">${lead.body}</g>${lead.extra}</g>${said}</g>`;
   const stroll = lead.canAmble ? strollCss(lay.stand, Math.min(AMBLE_MAX, lay.x1 - lay.x0)) : "";
   const amble = stroll === "" ? who : `${stroll}<g class="amble">${who}</g>`;
   const walk = isWalkingIn && spec.from !== undefined ? `${walkInCss(spec.from, lay.stand)}<g class="walkin">${amble}</g>` : amble;
   return standing(lay.stand, LEAD_W, walk);
-}
-function benchSvg(spec, lay) {
-  const helpers = spec.crew.filter((a) => a.isMain !== true);
-  const shown = helpers.slice(0, CREW.shown);
-  const w = GRID.w * CREW.scale;
-  const crabs = shown.map((a, i) => {
-    const kind = kindOf(a.lastTool ?? "");
-    const body = crab$3(0, -GRID.feet * CREW.scale, { costume: costumeOf(a), look: lookOf(a), isWalking: IS_BUSY[kind], scale: CREW.scale });
-    const x = lay.benchX + i * CREW.step + w / 2;
-    const isLeft = x > spec.width * 0.6;
-    const said = tip(`${lookOf(a).name} · ${a.lastPlain || a.description || t().stripDoing[kind]}`, { x: isLeft ? w : 0, y: -GRID.feet * CREW.scale - TIP.h - TIP.gap, isLeft });
-    return standing(x, w, `<g class="who"><g class="lift"><g class="${IS_BUSY[kind] ? "" : "br"}">${body}</g></g>${said}</g>`);
-  });
-  const rest = helpers.length - shown.length;
-  const moreX = lay.benchX + shown.length * CREW.step;
-  const more = rest > 0 ? `<text class="s" x="${moreX}" y="${(groundY(moreX) - 8).toFixed(1)}" font-size="11" font-weight="650" font-family="ui-monospace,Menlo,monospace">+${rest}</text>` : "";
-  return crabs.join("") + more;
 }
 function sceneSvg(spec) {
   const lay = layoutOf$1(spec);
@@ -2968,7 +3070,7 @@ function sceneSvg(spec) {
   const plan = spec.steps.length === 0 ? "" : `${t().stripPlan} ${done}/${spec.steps.length}`;
   const names = spec.crew.map((a) => lookOf(a).name).join(", ");
   const alt = [plan, names === "" ? `${t().mainName} · ${t().stripResting[spec.mood]}` : names].filter(Boolean).join(" · ");
-  const body = land.open + land.back + trackSvg(spec, lay) + benchSvg(spec, lay) + leadSvg(spec, lay) + land.front + land.close;
+  const body = land.open + land.back + trackSvg(spec, lay) + leadSvg(spec, lay) + land.front + land.close;
   return { source: paneSvg(spec.width, SCENE_H, SCHEME + SCENE_CSS + body), alt };
 }
 
@@ -3226,13 +3328,13 @@ async function stripOf(io, ui, site) {
   }
   const { Box, Svg } = ui;
   const width = Math.floor((site.cols || DEFAULT_COLS$2) * PX_PER_COL$2);
-  const from = facts.steps.length === 0 ? undefined : walkFrom(layoutOf$1({ width, steps: facts.steps, crew: facts.crew }).stand, facts.now);
+  const from = facts.steps.length === 0 ? undefined : walkFrom(layoutOf$1({ width, steps: facts.steps }).stand, facts.now);
   const sky = { ...skyOf(facts.now, await io.place().catch(() => {
     return;
   })), weather: await io.weather().catch(() => {
     return;
   }) };
-  const scene = sceneSvg({ width, crew: facts.crew, mood: facts.mood, steps: facts.steps, sky, ...from === undefined ? {} : { from } });
+  const scene = sceneSvg({ width, crew: facts.crew.filter((a) => a.isMain === true), mood: facts.mood, steps: facts.steps, sky, ...from === undefined ? {} : { from } });
   const fitted = fitRow(slotsOf(facts, pressesOf(io, facts)), width);
   const chips = fitted.flatMap(({ slot, maxW }, i) => [
     ...i > 0 && i === fitted.length - 1 ? [h(Box, {
@@ -3283,7 +3385,7 @@ function weatherOfText(text) {
   return KINDS.findLast(([from]) => code >= from)?.[1];
 }
 
-const agents$4 = atom({ plugin: "savvy-progress", key: "agents" }, []);
+const agents$5 = atom({ plugin: "savvy-progress", key: "agents" }, []);
 const flow$4 = atom({ plugin: "savvy-progress", key: "flow" }, null);
 const job$4 = atom({ plugin: "savvy-progress", key: "job" }, null);
 const tasks$4 = atom({ plugin: "savvy-progress", key: "tasks" }, []);
@@ -3478,7 +3580,7 @@ function terminalBand(ui, $, { view, cols, mood }) {
   }, face), buttons(ui, $, view));
 }
 async function viewOf($) {
-  return deriveJob({ flow: await read($, flow$4), agents: await read($, agents$4), job: await read($, job$4), tasks: await read($, tasks$4) });
+  return deriveJob({ flow: await read($, flow$4), agents: await read($, agents$5), job: await read($, job$4), tasks: await read($, tasks$4) });
 }
 function onOpen(on) {
   on("command.run", { command: "agents-info" }, async ($) => {
@@ -3550,7 +3652,7 @@ const stripIo = ($) => ({
   isHubOn: async () => (await $.state.get({ plugin: "modz", key: "isOn" })).value === true,
   pace: async () => (await $.state.get({ plugin: "hud-pro", key: "pace" })).value,
   tally: () => read($, tally$1),
-  agents: () => read($, agents$4),
+  agents: () => read($, agents$5),
   mood: async () => (await read($, crab$2)).mood,
   home: (value) => $.state.set(HOME$1, value),
   run: (command) => $.command.run(command),
@@ -3769,11 +3871,13 @@ const EXT = /\.([a-z0-9]{1,5})$/i;
 const extOf = (path) => (EXT.exec(path)?.[1] ?? "").toUpperCase();
 
 const tally = atom({ plugin: "savvy-progress", key: "tally" }, NO_TALLY);
-const agents$3 = atom({ plugin: "savvy-progress", key: "agents" }, []);
+const agents$4 = atom({ plugin: "savvy-progress", key: "agents" }, []);
 const flow$3 = atom({ plugin: "savvy-progress", key: "flow" }, null);
 const job$3 = atom({ plugin: "savvy-progress", key: "job" }, null);
 const now$2 = atom({ plugin: "savvy-progress", key: "now" }, 0);
 const tasks$3 = atom({ plugin: "savvy-progress", key: "tasks" }, []);
+const crewRow$1 = atom({ plugin: "savvy-progress", key: "crewRow" }, "");
+const NO_ROW = /^mcp__(ccd_|savvy-progress__)/;
 const limit$2 = atom({ plugin: "savvy-progress", key: "limit" }, null);
 const launchEffort = new Map;
 let asked;
@@ -3792,7 +3896,7 @@ function onReports(on) {
     const input = e;
     const prev = await read($, flow$3);
     if (isNewFlow(prev, input) && input.title !== undefined)
-      await update($, agents$3, (list) => list.filter(isRunning));
+      await update($, agents$4, (list) => list.filter(isRunning));
     const next = await update($, flow$3, (p) => mergeFlow(p, input));
     const view = deriveJob({ flow: next, agents: [], job: null, tasks: [] });
     return { result: `ok: ${view?.label ?? ""}` };
@@ -3803,10 +3907,11 @@ function onReports(on) {
       return { result: "ignored: only subagents report steps" };
     const input = e;
     const at = await $.clock.now();
-    const list = await update($, agents$3, (all) => patchRun(all, agentId, (a) => heard(stepReport(a, input), at)));
+    const list = await update($, agents$4, (all) => patchRun(all, agentId, (a) => heard(stepReport(a, input), at)));
     return { result: list.some((a) => a.agentId === agentId) ? "ok" : `ignored: no panel row for agent ${agentId}` };
   });
 }
+const planOf = async ($) => (await $.state.get({ plugin: "plan-steps", key: "tasks" })).value;
 function onLaunches(on) {
   on("tool.call", { tool: "Agent" }, async ($, e, next) => {
     if (typeof e.effort === "string" && e.tool_use_id)
@@ -3824,9 +3929,14 @@ function onLaunches(on) {
       return started;
     const at = await stamp($);
     const id = started.agentId ?? e.tool_use_id;
+    if (!e.parentAgentId && e.tool_use_id)
+      await update($, crewRow$1, () => e.tool_use_id);
     const spawn = { id, agentId: started.agentId, toolUseId: e.tool_use_id, parentId: e.parentAgentId, at };
     const who = { type: e.subagentType, description: e.description, brief: e.prompt, model: started.model, effort: launchEffort.get(e.tool_use_id) };
-    await update($, agents$3, (list) => addRun(list, { ...spawn, ...who }));
+    const plan = e.parentAgentId ? undefined : await planOf($).catch(() => {
+      return;
+    });
+    await update($, agents$4, (list) => addRun(list, { ...spawn, ...who, planStep: planStepOf(plan) }));
     if (!e.parentAgentId)
       await update($, job$3, (prev) => joinJob(prev, id, at));
     return started;
@@ -3836,7 +3946,7 @@ function onLaunches(on) {
     if (e.origin.kind === "task-notification")
       return result;
     asked = titleOf$1(e.text);
-    const list = await read($, agents$3);
+    const list = await read($, agents$4);
     const before = await read($, job$3);
     const kept = isSame(sealJob(before, list), before) ? before : await update($, job$3, (prev) => sealJob(prev, list));
     const open = await read($, tasks$3);
@@ -3855,21 +3965,24 @@ function onActivity(on) {
     const who = agentId ?? MAIN_ID;
     const id = typeof call.tool_use_id === "string" ? call.tool_use_id : undefined;
     const isModelCall = next.origin.plugin === "engine";
-    const isTracked = isModelCall && name !== STEP_TOOL && (await read($, agents$3)).some((a) => a.agentId === who);
+    const isNewRow = isModelCall && agentId === undefined && id !== undefined && !NO_ROW.test(name) && await read($, crewRow$1) !== id;
+    if (isNewRow && (await read($, agents$4)).some((a) => a.isMain !== true && isRunning(a)))
+      await update($, crewRow$1, () => id ?? "");
+    const isTracked = isModelCall && name !== STEP_TOOL && (await read($, agents$4)).some((a) => a.agentId === who);
     if (isTracked) {
       const at = await $.clock.now();
       const facts = { call, at, id };
-      await update($, agents$3, (list) => patchRun(list, who, (a) => heard(openEvent(touchFile(toolActivity(a, call), facts), facts), at)));
+      await update($, agents$4, (list) => patchRun(list, who, (a) => heard(openEvent(touchFile(toolActivity(a, call), facts), facts), at)));
     }
     const result = await next(e);
     if (isTracked) {
       const facts = { id, tool: name, at: await $.clock.now(), isError: result.deny !== undefined || result.isError === true };
-      await update($, agents$3, (list) => patchRun(list, who, (a) => heard(closeEvent(a, facts), facts.at)));
+      await update($, agents$4, (list) => patchRun(list, who, (a) => heard(closeEvent(a, facts), facts.at)));
     }
     if (!TASK_TOOLS.includes(name) || result.deny !== undefined || result.isError)
       return result;
     if (agentId)
-      await update($, agents$3, (list) => patchRun(list, agentId, (a) => ownTasks(a, call, result.result)));
+      await update($, agents$4, (list) => patchRun(list, agentId, (a) => ownTasks(a, call, result.result)));
     else
       await update($, tasks$3, (list) => applyTaskTool(list, call, result.result));
     return result;
@@ -3895,21 +4008,24 @@ function onSteps(on) {
     if (!e.agentId && e.index === 0) {
       const title = asked;
       asked = undefined;
-      await update($, agents$3, (list) => mainAwake(list, { title, at: sent }));
+      await update($, agents$4, (list) => mainAwake(list, { title, at: sent }));
     }
-    await update($, agents$3, (list) => patchRun(list, agentId, (a) => ({ ...heard(a, sent), stepAt: sent })));
+    await update($, agents$4, (list) => patchRun(list, agentId, (a) => ({ ...heard(a, sent), stepAt: sent })));
     const result = yield* next(e);
     const usage = result.usage;
     const facts = usage && { model: usage.model || e.model, effort: e.effort, usage };
     const at = await $.clock.now();
     const step = { answer: result.answer, calls: result.toolUses.length, sentAt: sent };
-    await update($, agents$3, (list) => patchRun(list, agentId, (a) => heard({ ...withReason(facts ? stepUsage(reopen(a), facts) : a, step), stepAt: undefined }, at)));
+    const wrote = e.agentId ? "" : textKey(result.answer);
+    if (wrote !== "" && (await read($, agents$4)).some((a) => a.isMain !== true && isRunning(a)))
+      await update($, crewRow$1, () => wrote);
+    await update($, agents$4, (list) => patchRun(list, agentId, (a) => heard({ ...withReason(facts ? stepUsage(reopen(a), facts) : a, step), stepAt: undefined }, at)));
     return result;
   });
   on("turn.complete", async ($, e, next) => {
     const agentId = e.agentId ?? MAIN_ID;
     const at = await stamp($);
-    await update($, agents$3, (list) => patchRun(list, agentId, (a) => endRun(a, { reason: e.reason, at, answer: e.answer, usage: e.usage })));
+    await update($, agents$4, (list) => patchRun(list, agentId, (a) => endRun(a, { reason: e.reason, at, answer: e.answer, usage: e.usage })));
     await countTurn$1($, e).catch((cause) => $.ui.log(`savvy-progress: could not count the turn: ${String(cause)}`, { to: "debug" }));
     return next(e);
   });
@@ -5622,7 +5738,7 @@ function plannedRow(ui, p, ctx) {
 
 const deliveryText = (result) => result.isDelivered ? t().delivered : t().notDelivered(result.reason ?? "");
 
-const agents$2 = atom({ plugin: "savvy-progress", key: "agents" }, []);
+const agents$3 = atom({ plugin: "savvy-progress", key: "agents" }, []);
 const flow$2 = atom({ plugin: "savvy-progress", key: "flow" }, null);
 const job$2 = atom({ plugin: "savvy-progress", key: "job" }, null);
 const now$1 = atom({ plugin: "savvy-progress", key: "now" }, 0);
@@ -5641,14 +5757,14 @@ async function sendTo($, id, text) {
   const message = text.trim();
   if (!message)
     return;
-  const run = (await read($, agents$2)).find((a) => a.id === id);
+  const run = (await read($, agents$3)).find((a) => a.id === id);
   const sent = await $.session.send({ to: { agentId: run?.agentId ?? id }, text: message });
   if (!sent.isDelivered) {
     $.ui.toast(deliveryText(sent));
     return;
   }
   const at = await $.clock.now();
-  await update($, agents$2, (list) => list.map((a) => a.id === id ? askedAgain(a, message, at) : a));
+  await update($, agents$3, (list) => list.map((a) => a.id === id ? askedAgain(a, message, at) : a));
 }
 async function requestStop($, agentId) {
   const ran = await $.tool.call({ tool: "TaskStop", task_id: agentId });
@@ -5665,7 +5781,7 @@ async function stopAgent($, agentId) {
 }
 async function paneData($) {
   return paneDataOf({
-    list: await read($, agents$2),
+    list: await read($, agents$3),
     flow: await read($, flow$2),
     job: await read($, job$2),
     tasks: await read($, tasks$2),
@@ -5695,7 +5811,7 @@ async function startTask($, type, text) {
     const at = await $.clock.now();
     const spawn = { id: id ?? `task-${at}`, agentId: id, type, description, brief: prompt, model: started.model, isAsked: true, at };
     const isKnown = (a) => a.agentId !== undefined && a.agentId === id;
-    const list = await update($, agents$2, (prev) => prev.some(isKnown) ? prev.map((a) => isKnown(a) ? { ...a, isAsked: true } : a) : addRun(prev, spawn));
+    const list = await update($, agents$3, (prev) => prev.some(isKnown) ? prev.map((a) => isKnown(a) ? { ...a, isAsked: true } : a) : addRun(prev, spawn));
     await update($, panel, (prev) => ({ ...prev, selected: spawn.id, draft: { ...draftOf(prev.draft), isOpen: false, notice: undefined } }));
     const run = list.find((a) => a.id === spawn.id);
     $.ui.toast(t().launched(run ? lookOf(run).name : type));
@@ -5800,7 +5916,7 @@ async function drawnPane($, ui, room) {
   }, home, body);
 }
 async function plainOf($, ui) {
-  const list = await read($, agents$2).catch(() => []);
+  const list = await read($, agents$3).catch(() => []);
   const lines = [...list].sort((a, b) => Number(b.status === "running") - Number(a.status === "running"));
   return plainPane(ui, { notice: t().paneFailed, lines: lines.map((a) => `${a.status === "running" ? "● " : ""}${a.description || a.type}`) });
 }
@@ -5833,7 +5949,7 @@ function onPane(on) {
 const self = atom({ plugin: "savvy-progress", key: "self" }, null);
 const chats$1 = atom({ plugin: "savvy-progress", key: "chats" }, []);
 const crab = atom({ plugin: "savvy-progress", key: "crab" }, restingCrab(0));
-const agents$1 = atom({ plugin: "savvy-progress", key: "agents" }, []);
+const agents$2 = atom({ plugin: "savvy-progress", key: "agents" }, []);
 const flow$1 = atom({ plugin: "savvy-progress", key: "flow" }, null);
 const job$1 = atom({ plugin: "savvy-progress", key: "job" }, null);
 const tasks$1 = atom({ plugin: "savvy-progress", key: "tasks" }, []);
@@ -5860,7 +5976,7 @@ async function publish($, isBeat) {
   const id = await $.session.id();
   if (id === mine.endedId)
     return;
-  const beat = beatOf(mine, await $.clock.now(), sharedOf(await read($, agents$1)));
+  const beat = beatOf(mine, await $.clock.now(), sharedOf(await read($, agents$2)));
   if (!isBeat && id === mine.id && isSame(bodyOf(beat), mine.sent))
     return;
   if (mine.id && mine.id !== id)
@@ -5892,7 +6008,7 @@ async function scan($) {
   await syncHub$1($);
 }
 async function syncHub$1($) {
-  const sources = { flow: await read($, flow$1), agents: await read($, agents$1), job: await read($, job$1), tasks: await read($, tasks$1) };
+  const sources = { flow: await read($, flow$1), agents: await read($, agents$2), job: await read($, job$1), tasks: await read($, tasks$1) };
   const shown = hubCardOf({ ...sources, chats: await read($, chats$1) });
   if (isShowing(await read($, hub$1), shown))
     return;
@@ -6031,18 +6147,189 @@ function onPresence(on) {
   onAsks(on);
 }
 
+const stroke$1 = (cls, d, width = 1.3) => `<path class="${cls}" d="${d}" fill="none" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>`;
+const MORE = {
+  search: `<g class="swp"><circle class="i-read" cx="10.5" cy="6.8" r="3.2" fill="none" stroke-width="1.4"/>${stroke$1("i-read", "M12.9 9.2l2.6 2.6", 1.6)}</g>`,
+  test: [4.5, 9.5, 14.5].map((x, i) => stroke$1(`i-ok ty${i + 1}`, `M${x} 7.6l1.6 1.6 3-3.4`, 1.5)).join(""),
+  save: '<path class="f-warn drop" d="M9 2.8h6v9.6l-3-2.4-3 2.4z"/>',
+  web: `<circle class="i-read" cx="12" cy="7.5" r="4.6" fill="none" stroke-width="1.2"/>${stroke$1("i-read", "M7.4 7.5h9.2", 1)}<ellipse class="i-read spin" cx="12" cy="7.5" rx="2.2" ry="4.6" fill="none" stroke-width="1"/>`,
+  message: `${stroke$1("i-plan trail", "M3.2 6h2M2.6 9h2.6", 1)}<g class="fly"><rect class="i-plan" x="7" y="4" width="10" height="7" rx="1" fill="none" stroke-width="1.2"/>${stroke$1("i-plan", "M7.5 4.6l4.5 3.6 4.5-3.6", 1.2)}</g>`,
+  wait: `<circle class="i-m" cx="12" cy="7.5" r="4.6" fill="none" stroke-width="1.2"/>${stroke$1("i-m hand", "M12 7.5V4.4")}`
+};
+const thoughtOf = (kind) => kind === "read" || kind === "edit" || kind === "run" || kind === "agent" || kind === "other" ? THOUGHT[kind] : MORE[kind];
+const along = (cls, line, lead, body) => `<g class="${cls}" style="--d:${Math.max(0, line.width - lead).toFixed(0)}px">${body}</g>`;
+const after = (line, body) => `<g transform="translate(${(line.x + line.width + 8).toFixed(1)},${line.y - 11})">${body}</g>`;
+const DOTS = [0, 6, 12].map((x, i) => `<circle class="s d${i + 1}" cx="${x + 2}" cy="7.5" r="1.6"/>`).join("");
+function lineAct(kind, line) {
+  const band = (cls, w) => `<rect class="${cls}" x="${line.x - 2}" y="${line.y - 12}" width="${w}" height="16" rx="4" opacity=".2"/>`;
+  switch (kind) {
+    case "read":
+      return along("go-read", line, 22, band("f-read", 26));
+    case "search":
+      return along("go-search", line, 8, `<g transform="translate(${line.x},${line.y - 11})"><circle class="i-read" cx="4" cy="5" r="3.6" fill="none" stroke-width="1.5"/>${stroke$1("i-read", "M6.8 7.8l3 3", 1.7)}</g>`);
+    case "web":
+      return along("go-read", line, 22, band("f-plan", 26));
+    case "edit":
+      return `<rect class="f-edit car" x="${(line.x + line.width + 3).toFixed(1)}" y="${line.y - 11}" width="1.8" height="13" rx=".9"/>`;
+    case "run":
+      return `<rect class="f-run" x="${line.x}" y="${line.y + 3.5}" width="${line.width.toFixed(0)}" height="1.6" rx=".8" opacity=".18"/>${along("go-run", line, 30, `<rect class="f-run" x="${line.x}" y="${line.y + 3.5}" width="30" height="1.6" rx=".8"/>`)}`;
+    case "test":
+      return after(line, [0, 10, 20].map((x, i) => stroke$1(`i-ok ty${i + 1}`, `M${x} 6.4l2 2 3.6-4.2`, 1.6)).join(""));
+    case "save":
+      return after(line, '<path class="f-warn drop" d="M1 1.5h7v11l-3.5-2.8L1 12.5z"/>');
+    case "message":
+      return after(line, `<g class="post"><rect class="i-plan" x="1" y="2" width="13" height="9" rx="1.2" fill="none" stroke-width="1.3"/>${stroke$1("i-plan", "M1.6 2.8l5.9 4.6 5.9-4.6")}</g>`);
+    case "wait":
+      return after(line, `<circle class="i-m" cx="6" cy="7" r="5" fill="none" stroke-width="1.3"/>${stroke$1("i-m hand", "M6 7V3.6")}`);
+    default:
+      return after(line, DOTS);
+  }
+}
+const ROW_CSS = `<style>
+.swp{animation:swp 1.8s ease-in-out infinite}@keyframes swp{0%,100%{transform:translateX(-2.5px)}50%{transform:translateX(3px)}}
+.drop{animation:drop 1.8s cubic-bezier(.3,1.4,.5,1) infinite}@keyframes drop{0%{transform:translateY(-5px);opacity:0}35%,100%{transform:translateY(0);opacity:1}}
+.spin{transform-box:fill-box;transform-origin:center;animation:spin 2.2s ease-in-out infinite}@keyframes spin{50%{transform:scaleX(.15)}}
+.fly{animation:fly 1.8s ease-in infinite}@keyframes fly{0%{transform:translateX(-3px);opacity:0}20%{opacity:1}70%{transform:translateX(2px);opacity:1}100%{transform:translateX(8px);opacity:0}}
+.trail{animation:trail 1.8s ease-in infinite}@keyframes trail{0%,55%{opacity:0}75%{opacity:.9}100%{opacity:0}}
+.hand{transform-box:fill-box;transform-origin:50% 100%;animation:hand 4s steps(12) infinite}@keyframes hand{to{transform:rotate(360deg)}}
+.go-read{animation:go 3.4s ease-in-out infinite alternate}.go-search{animation:go 1.5s ease-in-out infinite alternate}.go-run{animation:go 1.1s ease-in-out infinite alternate}
+@keyframes go{to{transform:translateX(var(--d))}}
+.post{animation:post 2s ease-in infinite}@keyframes post{0%{transform:translateX(-4px);opacity:0}18%{opacity:1}60%{transform:translateX(10px);opacity:1}100%{transform:translateX(46px);opacity:0}}
+.mv-read,.mv-web{animation:hops 3.4s ease-in-out infinite}.mv-search{animation:hops 1.7s ease-in-out infinite}
+.mv-edit,.mv-run,.mv-test,.mv-save{animation:hops 1.3s ease-in-out infinite}.mv-agent,.mv-other{animation:hops 4.2s ease-in-out infinite}
+@keyframes hops{0%,100%{transform:translate(0,0)}12%{transform:translate(2.5px,-5px)}25%{transform:translate(5px,0)}37%{transform:translate(7.5px,-5px)}50%{transform:translate(10px,0)}62%{transform:translate(7.5px,-5px)}75%{transform:translate(5px,0)}87%{transform:translate(2.5px,-5px)}}
+.mv-message{animation:nod 2s ease-out infinite}@keyframes nod{0%,30%,100%{transform:translateY(0)}12%{transform:translateY(-5px)}}
+.wig{transform-box:fill-box;transform-origin:50% 100%}.who:hover .wig{animation:wig .45s ease-in-out 2}
+@keyframes wig{25%{transform:rotate(-7deg)}75%{transform:rotate(7deg)}}
+.born{transform-box:fill-box;transform-origin:50% 100%;animation:born .5s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes born{from{transform:scale(0);opacity:0}}
+.down{animation:down 1s ease-in-out both}
+@keyframes down{0%{transform:translate(0,-19px)}22%{transform:translate(4px,-22px)}45%{transform:translate(6px,-9px)}68%{transform:translate(3px,-13px)}100%{transform:translate(0,0)}}
+.fresh{animation:fresh .45s ease-out both}@keyframes fresh{from{opacity:0}}
+</style>`;
+
+const CARD_W = 520;
+const GRID = { w: 30, feet: 26 };
+const LANE = { crabX: 24, textX: 74 };
+const LINE_H = 19;
+const TITLE_Y = 14;
+const SIZE = { title: 13, line: 12.5, why: 11.5 };
+const PAD_BOTTOM = 7;
+const THOUGHT_DROP = 7;
+const ACT_ROOM = 74;
+const TEXT_W = CARD_W - LANE.textX - 6;
+const MARK_GAP = 13;
+const text = (cls, at, size, said, weight = 400) => `<text class="${cls}" x="${at.x}" y="${at.y}" font-family="${FONT}" font-size="${size}" font-weight="${weight}">${xml(said)}</text>`;
+const stroke = (cls, d) => `<path class="${cls}" d="${d}" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+const DONE_MARK = stroke("i-ok", "M-3 0l2.2 2.2 4-4.4");
+const FAILED_MARK = stroke("i-danger", "M-2.6 -2.6l5.2 5.2M2.6 -2.6l-5.2 5.2");
+const wordsOf = (event) => event.why || event.plain || event.tool;
+const pastLine = (event, y) => `<g transform="translate(${LANE.textX + 4},${y - 4})">${event.isError === true ? FAILED_MARK : DONE_MARK}</g>${text("m", { x: LANE.textX + MARK_GAP, y }, SIZE.line, fitText(wordsOf(event), SIZE.line, TEXT_W - MARK_GAP))}`;
+function liveLine(said, y, kind) {
+  const x = LANE.textX + MARK_GAP;
+  const fitted = fitText(said, SIZE.line, TEXT_W - MARK_GAP - ACT_ROOM);
+  return `<g class="fresh"><circle class="f-run live" cx="${LANE.textX + 4}" cy="${y - 4}" r="3"/>${text("t", { x, y }, SIZE.line, fitted)}${lineAct(kind, { x, y, width: textWidth(fitted, SIZE.line) })}</g>`;
+}
+function whyOf(run, event) {
+  if (event?.because)
+    return event.because;
+  if (run.stepNote)
+    return run.stepTotal ? `${t().rowStep(run.stepDone ?? 0, run.stepTotal)}: ${run.stepNote}` : run.stepNote;
+  return run.planStep === undefined ? "" : t().rowPlan(run.planStep.at, run.planStep.of, run.planStep.subject);
+}
+function crabAt(run, stand) {
+  const isWalking = stand.kind === "edit" || stand.kind === "run" || stand.kind === "test" || stand.kind === "save";
+  const body = crab$3(0, -GRID.feet, { costume: costumeOf(run), look: lookOf(run), isWalking });
+  const thought = stand.thought === "" ? "" : `<g transform="translate(0,${THOUGHT_DROP})">${bubble(stand.thought)}</g>`;
+  const who = `<g class="lift"><g class="wig"><g class="${isWalking ? "" : "br"}">${body}</g></g>${thought}</g>`;
+  const moving = stand.kind === undefined ? who : `<g class="mv-${stand.kind}">${who}</g>`;
+  return `<g transform="translate(${stand.x},${stand.feetY}) scale(${stand.scale})"><g class="${stand.arrival}">${moving}</g></g>`;
+}
+const card = (height, body) => paneSvg(CARD_W, height, SCENE_CSS + ROW_CSS + `<g class="who"><rect width="${CARD_W}" height="${height}" fill="transparent"/>${body}</g>`);
+function rowCrab(run) {
+  const kind = run.lastKind ?? "other";
+  const name = lookOf(run).name;
+  const history = run.history ?? [];
+  const now = history.at(-1);
+  const before = history.at(-2);
+  const nowY = TITLE_Y + (before === undefined ? 1 : 2) * LINE_H;
+  const doing = now === undefined ? run.lastPlain || t().rowDoing[kind] : wordsOf(now);
+  const why = whyOf(run, now);
+  const whyY = nowY + LINE_H - 3;
+  const lines = (before === undefined ? "" : pastLine(before, TITLE_Y + LINE_H)) + liveLine(doing, nowY, kind) + (why === "" ? "" : text("m", { x: LANE.textX + MARK_GAP, y: whyY }, SIZE.why, fitText(`↳ ${why}`, SIZE.why, TEXT_W - MARK_GAP)));
+  const height = Math.max(why === "" ? nowY : whyY, nowY + 4) + PAD_BOTTOM;
+  const title = text("t", { x: LANE.textX, y: TITLE_Y }, SIZE.title, fitText(`${name} · ${run.description}`, SIZE.title, TEXT_W), 600);
+  const stand = { x: LANE.crabX, feetY: nowY + 7, scale: 1, thought: thoughtOf(kind), kind, arrival: history.length <= 1 ? "born" : "down" };
+  return { source: card(height, title + lines + crabAt(run, stand)), alt: [name, run.description, doing, why].filter(Boolean).join(" · "), width: CARD_W, height };
+}
+const BENCH = { slot: 104, h: 28, scale: 0.72, nameX: 30 };
+function benchCard(runs) {
+  const perRow = Math.floor(CARD_W / BENCH.slot);
+  const height = Math.ceil(runs.length / perRow) * BENCH.h;
+  const seats = runs.map((run, i) => {
+    const isDone = run.status === "done";
+    const at = { x: i % perRow * BENCH.slot, y: Math.floor(i / perRow) * BENCH.h };
+    const mark = `<g transform="translate(${BENCH.nameX + textWidth(lookOf(run).name, SIZE.line) + 9},${BENCH.h - 14})">${isDone ? DONE_MARK : FAILED_MARK}</g>`;
+    const seat = crabAt(run, { x: 2, feetY: BENCH.h - 3, scale: BENCH.scale, thought: "", arrival: "" });
+    return `<g transform="translate(${at.x},${at.y})"><title>${xml(`${lookOf(run).name} · ${run.description}`)}</title>${seat}${text(isDone ? "s" : "t", { x: BENCH.nameX, y: BENCH.h - 10 }, SIZE.line, lookOf(run).name, 600)}${mark}</g>`;
+  });
+  const alt = runs.map((run) => `${lookOf(run).name} · ${run.status === "done" ? t().rowEnded.done : t().rowEnded.failed}`).join(", ");
+  return { source: paneSvg(CARD_W, height, SCENE_CSS + ROW_CSS + seats.map((seat) => `<g class="who">${seat}</g>`).join("")), alt, width: CARD_W, height };
+}
+
 const OWN = new Set([TOOL, STEP_TOOL]);
+const agents$1 = atom({ plugin: "savvy-progress", key: "agents" }, []);
+const crewRow = atom({ plugin: "savvy-progress", key: "crewRow" }, "");
+function crewAt(list, rows, newest) {
+  const helpers = list.filter((run) => run.isMain !== true);
+  const isHere = (run) => run.toolUseId !== undefined && rows.includes(run.toolUseId);
+  const atWork = helpers.filter(isRunning);
+  const following = newest === "" ? atWork.filter(isHere) : rows.includes(newest) ? atWork : [];
+  return [...following, ...helpers.filter((run) => !isRunning(run) && isHere(run))];
+}
 const isOwnTool = (tool) => OWN.has(tool);
 const isQuietCall = (call) => isOwnTool(call.tool) && !call.isErrored && call.isInterrupted !== true;
+const framed = (ui, key, pic) => {
+  const { Svg } = ui;
+  return h(Svg, {
+    key,
+    source: pic.source,
+    alt: pic.alt,
+    width: pic.width,
+    height: pic.height,
+    isInteractive: true
+  });
+};
+const crewOf = (ui, workers) => {
+  const ended = workers.filter((worker) => !isRunning(worker));
+  return [...workers.filter(isRunning).map((worker) => framed(ui, `crab-${worker.id}`, rowCrab(worker))), ...ended.length === 0 ? [] : [framed(ui, "crabs-ended", benchCard(ended))]];
+};
 const nothing = (ui) => {
   const { Box } = ui;
   return h(Box, null);
 };
 function onTranscript(on) {
   on("ui.render", { component: "ToolUse" }, async ($, e, next) => {
-    if (!isQuietCall(e.props))
+    if (isQuietCall(e.props))
+      return nothing($.ui.resolve(e));
+    const crew = e.surface === "desktop" ? crewAt(await read($, agents$1), [e.props.tool_use_id], await read($, crewRow)) : [];
+    if (crew.length === 0)
       return next(e);
-    return nothing($.ui.resolve(e));
+    const ui = $.ui.resolve(e);
+    const { Box } = ui;
+    return h(Box, {
+      flexDirection: "column"
+    }, await next(e), crewOf(ui, crew));
+  });
+  on("ui.render", { component: "AssistantMessage" }, async ($, e, next) => {
+    const crew = e.surface === "desktop" ? crewAt(await read($, agents$1), [textKey(e.props.text)], await read($, crewRow)) : [];
+    if (crew.length === 0)
+      return next(e);
+    const ui = $.ui.resolve(e);
+    const { Box } = ui;
+    return h(Box, {
+      flexDirection: "column"
+    }, await next(e), crewOf(ui, crew));
   });
   on("ui.render", { component: "ToolResult" }, async ($, e, next) => {
     if (!isQuietCall(e.props))
@@ -6051,9 +6338,17 @@ function onTranscript(on) {
   });
   on("ui.render", { component: "ToolGroup" }, async ($, e, next) => {
     const calls = e.props.calls;
-    if (calls.length === 0 || !calls.every(isQuietCall))
+    if (calls.length > 0 && calls.every(isQuietCall))
+      return nothing($.ui.resolve(e));
+    const rows = calls.flatMap((call) => call.tool_use_id ?? []);
+    const workers = e.surface === "desktop" ? crewAt(await read($, agents$1), rows, await read($, crewRow)) : [];
+    if (workers.length === 0)
       return next(e);
-    return nothing($.ui.resolve(e));
+    const ui = $.ui.resolve(e);
+    const { Box } = ui;
+    return h(Box, {
+      flexDirection: "column"
+    }, await next(e), crewOf(ui, workers));
   });
 }
 
@@ -6185,7 +6480,7 @@ function startBeat($) {
   let idleBeats = 0;
   $.clock.every(TICK_MS, () => {
     (async () => {
-      const isBusy = crewOf(await read($, agents)).some(isRunning);
+      const isBusy = crewOf$1(await read($, agents)).some(isRunning);
       idleBeats = isBusy ? 0 : idleBeats + 1;
       if (isBusy || idleBeats >= IDLE_ROSTER_BEATS) {
         idleBeats = 0;

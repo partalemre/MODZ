@@ -60,6 +60,12 @@ export type TouchedFile = {
   at: number
 }
 
+/** What an agent is doing right now, as the one picture its crab shows for it (hooks/work-kind.ts). */
+export type WorkKind = 'read' | 'search' | 'edit' | 'run' | 'test' | 'save' | 'web' | 'message' | 'agent' | 'wait' | 'other'
+
+/** The plan's step that was under way when an agent was sent out: its words, its place and the plan's length. */
+export type PlanStep = { subject: string; at: number; of: number }
+
 export type AgentRun = {
   id: string
   agentId?: string
@@ -84,6 +90,10 @@ export type AgentRun = {
   look?: number
   toolCount: number
   lastTool?: string
+  /** The kind of work its latest call is. */
+  lastKind?: WorkKind
+  /** The part of the plan it was sent out for. */
+  planStep?: PlanStep
   lastTarget?: string
   /** What the agent wrote before its latest step's calls, and how many of those calls have yet to open. */
   reason?: { text: string; left: number }
@@ -228,6 +238,8 @@ declare module 'claude-code' {
     'savvy-progress': {
       flow: Flow | null
       agents: AgentRun[]
+      // The conversation's newest row of the main loop's work: where the helpers at work stand (hooks/transcript.tsx).
+      crewRow: string
       panel: Panel
       now: number
       job: Job | null

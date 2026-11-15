@@ -18,6 +18,10 @@ import { pinned } from './pin'
 import { stripOf } from './strip'
 import type { StripIo } from './strip'
 import { NO_TALLY } from './strip-svg'
+import { placeFromText, placeOfZone } from './sun'
+import type { Place } from './sun'
+import { WEATHER_EVERY_MS, weatherOfText, weatherUrl } from './weather'
+import type { Weather } from './weather'
 import { HUB_PANE, PANE } from './state'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
@@ -271,10 +275,39 @@ async function bandMood($: EngineInterface, isCrabInBand: boolean): Promise<Crab
 
 export type BandOptions = { isCrabInBand: boolean }
 
+const ZONE_TAB = '/usr/share/zoneinfo/zone.tab'
+// The place does not move within a run: looked up once. MODZ_PLACE ("lat,lon") wins over the time zone's city.
+let placeFound: Promise<Place | undefined> | undefined
+const placeOf = async ($: EngineInterface): Promise<Place | undefined> =>
+  placeFromText(await $.env.get('MODZ_PLACE')) ?? placeOfZone(await $.fs.read(ZONE_TAB), Intl.DateTimeFormat().resolvedOptions().timeZone)
+
+// The weather last heard is drawn at once; a new one is asked for in the background, so no draw waits on the
+// network, and the strip is drawn again when the answer differs.
+let weatherSeen: { at: number; kind: Weather | undefined } = { at: 0, kind: undefined }
+async function askWeather($: EngineInterface): Promise<void> {
+  if ((await $.env.get('MODZ_WEATHER')) === 'off') return
+  const place = await (placeFound ??= placeOf($))
+  if (place === undefined) return
+  const kind = weatherOfText((await $.http.fetch(weatherUrl(place))).text)
+  if (kind === weatherSeen.kind) return
+  weatherSeen = { ...weatherSeen, kind }
+  await $.ui.invalidate('ui.render')
+}
+const weatherOf = ($: EngineInterface, now: number): Weather | undefined => {
+  if (now - weatherSeen.at >= WEATHER_EVERY_MS) {
+    weatherSeen = { ...weatherSeen, at: now }
+    void askWeather($).catch((cause: unknown) => $.ui.log(`savvy-progress: the weather could not be read: ${String(cause)}`, { to: 'debug' }))
+  }
+
+  return weatherSeen.kind
+}
+
 // What the session strip asks of the engine (strip.tsx); built here, where `$` is.
 const stripIo = ($: EngineInterface): StripIo => ({
   usage: () => $.session.usage(),
   now: () => $.clock.now(),
+  place: () => (placeFound ??= placeOf($)),
+  weather: async () => weatherOf($, await $.clock.now()),
   plan: async () => (await $.state.get({ plugin: 'plan-steps', key: 'tasks' })).value,
   isHubOn: async () => (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true,
   pace: async () => (await $.state.get({ plugin: 'hud-pro', key: 'pace' })).value,

@@ -3,6 +3,7 @@ import { lineTree } from './line'
 import type { Ui } from './line'
 import { gaugeViews } from './model'
 import type { Forecasts, GaugeView } from './model'
+import { SEVEN_DAY } from './pace'
 import { lineSvg } from './svg-line'
 import { words } from './words'
 import type { HudUsage } from '../types'
@@ -27,8 +28,9 @@ const needsLook = (gauge: GaugeView): boolean => gauge.tone !== 'neutral' || gau
 
 function shownGauges(input: BandInput): GaugeView[] {
   const gauges = gaugeViews(input.usage, input.nowMs, input.forecasts)
-
-  return input.isAlertsOnly === true ? gauges.filter(needsLook) : gauges
+  if (input.isAlertsOnly !== true) return gauges
+  // The desktop's session strip (and the app's own usage ring) already shows the week, so it is not said twice.
+  return gauges.filter(gauge => needsLook(gauge) && !(input.isDesktop && gauge.id === SEVEN_DAY))
 }
 
 const shownCost = (input: BandInput): number | null => (input.isAlertsOnly === true ? null : input.usage.costUsd)

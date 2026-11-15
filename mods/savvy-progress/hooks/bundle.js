@@ -2160,9 +2160,9 @@ const isShowing = (card, shown) => card.detail === shown.detail && card.tone ===
 const paneKept = () => ({ isHeld: false, needsDraw: true });
 const NOTE_PREFIX = "pane-open/";
 const noteKey = (sessionId) => `${NOTE_PREFIX}${sessionId}`;
-const DAY_MS = 24 * 60 * 60 * 1000;
-const NOTE_FRESH_MS = DAY_MS;
-const NOTE_TTL_MS = 7 * DAY_MS;
+const DAY_MS$1 = 24 * 60 * 60 * 1000;
+const NOTE_FRESH_MS = DAY_MS$1;
+const NOTE_TTL_MS = 7 * DAY_MS$1;
 const isNoted = (value) => value === true || typeof value === "number";
 async function drawSafely(kept, o) {
   try {
@@ -2572,130 +2572,6 @@ function chipSvg(chip, maxW = Number.POSITIVE_INFINITY) {
   return { source: paneSvg(width, CHIP_H, drawn.join("")), width, alt };
 }
 
-const SCENE_H = 84;
-const BASE = 60;
-const STEP = 8;
-const RADIUS$1 = 12;
-const FADE_END = 8;
-const groundY = (x) => BASE + 4 * Math.sin(x / 61 + 1.3) + 2.2 * Math.sin(x / 23 + 0.4);
-const hillY = (x) => BASE - 12 + 6 * Math.sin(x / 97 + 0.2) + 3 * Math.sin(x / 41 + 2);
-const farY = (x) => BASE - 24 + 9 * Math.sin(x / 151 + 2.4) + 3 * Math.sin(x / 67 + 0.9);
-const curve = (y, from, to, lift = 0) => {
-  const xs = Array.from({ length: Math.max(1, Math.ceil((to - from) / STEP)) + 1 }, (_, i) => Math.min(to, from + i * STEP));
-  return xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${(y(x) + lift).toFixed(1)}`).join("");
-};
-const groundLine = (from, to, lift) => curve(groundY, from, to, lift);
-const HOURS = { dawn: 5, day: 8, dusk: 17, night: 21 };
-const phaseOf = (hour) => {
-  if (hour >= HOURS.night || hour < HOURS.dawn)
-    return "night";
-  if (hour < HOURS.day)
-    return "dawn";
-  return hour < HOURS.dusk ? "day" : "dusk";
-};
-const SKY = {
-  dawn: { light: ["#C9D4F2", "#FFD9C2", 0.95], dark: ["#3A4470", "#C9826A", 0.42] },
-  day: { light: ["#BBDCFA", "#EAF6FF", 0.95], dark: ["#3F78B8", "#7FB2DC", 0.44] },
-  dusk: { light: ["#B9B4E6", "#FFC9A6", 0.95], dark: ["#2E2A5C", "#D9774F", 0.46] },
-  night: { light: ["#1E2A52", "#3B4A7A", 0.5], dark: ["#02040A", "#141C36", 0.78] }
-};
-const landCss = (phase) => {
-  const { light, dark } = SKY[phase];
-  return `<style>
-.s0{stop-color:${light[0]}}.s1{stop-color:${light[1]}}.sky{opacity:${light[2]}}.hill{fill:#5A6B7A;opacity:.1}.hill2{fill:#5A6B7A;opacity:.16}
-.pine{fill:#52647A;opacity:.4}.sg{stop-color:#E6E0D2}.turf{stroke:#C4BCAA}.speck{fill:#000;opacity:.14}.bird{stroke:#5A6B7A;opacity:.6}
-.tuft{fill:#5E9B5A}.rock{fill:#A8A294}.stem{fill:#D8D2C4}.cloud{fill:#fff;opacity:.95}.star{fill:#fff}
-@media (prefers-color-scheme: dark){.s0{stop-color:${dark[0]}}.s1{stop-color:${dark[1]}}.sky{opacity:${dark[2]}}.hill{fill:#fff;opacity:.04}.hill2{fill:#0B0E14;opacity:.3}
-.pine{fill:#0B0E14;opacity:.5}.sg{stop-color:#36342D}.turf{stroke:#5A564C}.speck{fill:#fff;opacity:.06}.bird{stroke:#fff;opacity:.45}
-.tuft{fill:#5FA86A}.rock{fill:#6B675E}.stem{fill:#CFCABD}.cloud{opacity:.12}}
-</style>`;
-};
-const rnd = (i, salt) => {
-  const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
-  return v - Math.floor(v);
-};
-const px = (cls, box) => `<rect class="${cls}" x="${box[0]}" y="${box[1]}" width="${box[2]}" height="${box[3]}"/>`;
-const THINGS = [
-  { isFront: true, isSwaying: true, draw: () => px("tuft", [-3, -4, 1.5, 4]) + px("tuft", [0, -6, 1.5, 6]) + px("tuft", [3, -3, 1.5, 3]) },
-  { draw: () => px("rock", [-4, -3, 8, 3]) + px("rock", [-2, -5, 4, 2]) },
-  { isSwaying: true, draw: (i) => px("tuft", [0, -7, 1.2, 7]) + px(i % 2 === 0 ? "f-plan" : "f-warn", [-1.4, -10, 4, 3.4]) },
-  { draw: () => px("stem", [-1, -4, 2, 4]) + px("f-danger", [-3.5, -7, 7, 3]) + px("f-danger", [-2, -8.5, 4, 1.5]) },
-  { isFront: true, isSwaying: true, draw: () => px("tuft", [-2, -3, 1.5, 3]) + px("tuft", [1, -5, 1.5, 5]) },
-  { draw: () => px("tuft", [-6, -5, 12, 5]) + px("tuft", [-4, -8, 8, 3]) }
-];
-const SPACING = 54;
-const JITTER = 30;
-function decorOf(width) {
-  const layers = { back: "", front: "" };
-  for (let i = 0;40 + i * SPACING < width - 24; i += 1) {
-    const x = 40 + i * SPACING + rnd(i, 1) * JITTER;
-    const thing = THINGS[(i * 5 + Math.floor(rnd(i, 2) * 2)) % THINGS.length];
-    if (thing === undefined)
-      continue;
-    const inner = thing.isSwaying === true ? `<g class="sway" style="animation-delay:-${(rnd(i, 3) * 4).toFixed(1)}s">${thing.draw(i)}</g>` : thing.draw(i);
-    layers[thing.isFront === true ? "front" : "back"] += `<g transform="translate(${x.toFixed(1)},${(groundY(x) + 0.5).toFixed(1)})" shape-rendering="crispEdges">${inner}</g>`;
-  }
-  return layers;
-}
-const STARS = 16;
-const stars = (width) => Array.from({ length: STARS }, (_, i) => {
-  const size = rnd(i, 6) > 0.7 ? 1.8 : 1.2;
-  return `<rect class="star tw${i % 3}" x="${(16 + rnd(i, 4) * (width - 32)).toFixed(1)}" y="${(5 + rnd(i, 5) * 30).toFixed(1)}" width="${size}" height="${size}"/>`;
-}).join("");
-const cloud = (x, y, cls) => `<g class="${cls}"><g transform="translate(${x},${y})" shape-rendering="crispEdges">${px("cloud", [0, 4, 26, 5])}${px("cloud", [5, 0, 12, 5])}${px("cloud", [15, 2, 7, 3])}</g></g>`;
-const SUN = "#F5C542";
-const LOW_SUN = "#F08A4B";
-const MOON = "#E8E6DA";
-const glow = (x, y, r, color) => `<circle class="halo" cx="${x.toFixed(1)}" cy="${y}" r="${r}" fill="url(#glow)" color="${color}"/>`;
-const sun = (x, y, r, color) => `${glow(x, y, r * 3.2, color)}<circle cx="${x.toFixed(1)}" cy="${y}" r="${r}" fill="${color}" opacity=".92"/>`;
-const bird = (x, y, cls) => `<g class="${cls}"><path class="bird" d="M${x} ${y}l3.5 2.2 3.5-2.2" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></g>`;
-function heavens(phase, width, avoidX) {
-  const right = width - 64;
-  if (phase === "night") {
-    const fall = `<line class="shoot" x1="${(width * 0.62).toFixed(0)}" y1="8" x2="${(width * 0.62 + 16).toFixed(0)}" y2="2" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>`;
-    return `${stars(width)}${fall}${glow(right, 18, 20, MOON)}<path fill="${MOON}" transform="translate(${right},18)" d="M0-7a7 7 0 1 0 7 7 5.4 5.4 0 0 1-7-7z"/>`;
-  }
-  if (phase === "day")
-    return `${sun(right, 18, 6, SUN)}${cloud(width * 0.3, 8, "drift")}${cloud(width * 0.62, 15, "drift drift2")}${bird(width * 0.46, 22, "drift drift2")}${bird(width * 0.46 + 12, 17, "drift drift2")}`;
-  const places = (phase === "dawn" ? [0.27, 0.42] : [0.71, 0.52]).map((at) => width * at);
-  const x = places.reduce((best, at) => Math.abs(at - avoidX) > Math.abs(best - avoidX) ? at : best);
-  return `${sun(x, BASE - 25, 9, LOW_SUN)}${cloud(width * 0.45, 10, "drift")}${cloud(width * 0.8, 20, "drift drift2")}`;
-}
-const PINE = [
-  [-1, -2, 2, 2],
-  [-4, -5, 8, 3],
-  [-3, -8, 6, 3],
-  [-2, -11, 4, 3],
-  [-1, -13, 2, 2]
-];
-const PINE_STEP = 46;
-const pines = (width) => {
-  let out = "";
-  for (let i = 0;20 + i * PINE_STEP < width - 10; i += 1) {
-    if (rnd(i, 7) < 0.42)
-      continue;
-    const x = 20 + i * PINE_STEP + rnd(i, 8) * 24;
-    const size = 0.75 + rnd(i, 9) * 0.5;
-    out += `<g transform="translate(${x.toFixed(1)},${(hillY(x) + 1).toFixed(1)}) scale(${size.toFixed(2)})" shape-rendering="crispEdges">${PINE.map((box) => px("pine", box)).join("")}</g>`;
-  }
-  return out;
-};
-const SPECKS = 26;
-const specks = (width) => Array.from({ length: SPECKS }, (_, i) => {
-  const x = 10 + rnd(i, 10) * (width - 20);
-  return `<rect class="speck" x="${x.toFixed(1)}" y="${(groundY(x) + 4 + rnd(i, 11) * 9).toFixed(1)}" width="1.6" height="1.6"/>`;
-}).join("");
-const fireflies = (width) => [0.24, 0.58, 0.83].map((at, i) => `<circle class="fly fly${i}" cx="${(width * at).toFixed(0)}" cy="${(groundY(width * at) - 12).toFixed(1)}" r="1.3" fill="#F5E07A"/>`).join("");
-function landOf(width, phase, avoidX) {
-  const under = (y) => `${curve(y, 0, width)}L${width} ${SCENE_H}L0 ${SCENE_H}Z`;
-  const fadeOut = `<stop offset="0" stop-color="#fff"/><stop offset=".66" stop-color="#fff" stop-opacity=".6"/><stop offset=".9" stop-color="#fff" stop-opacity="0"/>`;
-  const defs = `<defs><clipPath id="win"><rect width="${width}" height="${SCENE_H}" rx="${RADIUS$1}"/></clipPath><linearGradient id="skf" x1="0" y1="0" x2="0" y2="1">${fadeOut}</linearGradient><mask id="skm"><rect width="${width}" height="${SCENE_H}" fill="url(#skf)"/></mask><linearGradient id="skc" x1="0" y1="0" x2="0" y2="1"><stop class="s0" offset="0"/><stop class="s1" offset=".72"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="currentColor" stop-opacity=".5"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient><linearGradient id="sof" gradientUnits="userSpaceOnUse" x1="0" y1="${BASE - 6}" x2="0" y2="${SCENE_H - FADE_END}"><stop class="sg" offset="0"/><stop class="sg" offset="1" stop-opacity="0"/></linearGradient></defs>`;
-  const decor = decorOf(width);
-  const sky = `<g mask="url(#skm)"><rect class="sky" width="${width}" height="${SCENE_H}" fill="url(#skc)"/>${heavens(phase, width, avoidX)}<path class="hill" d="${under(farY)}"/><path class="hill2" d="${under(hillY)}"/>${pines(width)}</g>`;
-  const ground = `<path d="${under(groundY)}" fill="url(#sof)"/>${specks(width)}<path class="turf" d="${curve(groundY, 0, width)}" fill="none" stroke-width="1.5" stroke-linecap="round"/>`;
-  return { open: `${landCss(phase)}${defs}<g clip-path="url(#win)">${sky}${ground}`, back: decor.back, front: decor.front + (phase === "night" ? fireflies(width) : ""), close: "</g>" };
-}
-
 const HISTORY_MAX = 150;
 const READ = ["Read", "Grep", "Glob", "LS", "WebFetch", "WebSearch", "NotebookRead"];
 const EDIT = ["Edit", "Write", "MultiEdit", "NotebookEdit"];
@@ -2741,12 +2617,166 @@ const closeEvent = (a, facts) => {
   return { ...a, history: closed };
 };
 
+const SCENE_H = 84;
+const BASE = 60;
+const STEP = 8;
+const RADIUS$1 = 12;
+const FADE_END = 8;
+const groundY = (x) => BASE + 4 * Math.sin(x / 61 + 1.3) + 2.2 * Math.sin(x / 23 + 0.4);
+const hillY = (x) => BASE - 12 + 6 * Math.sin(x / 97 + 0.2) + 3 * Math.sin(x / 41 + 2);
+const farY = (x) => BASE - 24 + 9 * Math.sin(x / 151 + 2.4) + 3 * Math.sin(x / 67 + 0.9);
+const curve = (y, from, to, lift = 0) => {
+  const xs = Array.from({ length: Math.max(1, Math.ceil((to - from) / STEP)) + 1 }, (_, i) => Math.min(to, from + i * STEP));
+  return xs.map((x, i) => `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${(y(x) + lift).toFixed(1)}`).join("");
+};
+const groundLine = (from, to, lift) => curve(groundY, from, to, lift);
+const SKY = {
+  dawn: { light: ["#C9D4F2", "#FFD9C2", 0.95], dark: ["#3A4470", "#C9826A", 0.42] },
+  day: { light: ["#BBDCFA", "#EAF6FF", 0.95], dark: ["#3F78B8", "#7FB2DC", 0.44] },
+  dusk: { light: ["#B9B4E6", "#FFC9A6", 0.95], dark: ["#2E2A5C", "#D9774F", 0.46] },
+  night: { light: ["#1E2A52", "#3B4A7A", 0.5], dark: ["#02040A", "#141C36", 0.78] }
+};
+const landCss = (phase) => {
+  const { light, dark } = SKY[phase];
+  return `<style>
+.s0{stop-color:${light[0]}}.s1{stop-color:${light[1]}}.sky{opacity:${light[2]}}.hill{fill:#5A6B7A;opacity:.1}.hill2{fill:#5A6B7A;opacity:.16}
+.pine{fill:#52647A;opacity:.4}.sg{stop-color:#E6E0D2}.turf{stroke:#C4BCAA}.speck{fill:#000;opacity:.14}.bird{stroke:#5A6B7A;opacity:.6}
+.tuft{fill:#5E9B5A}.rock{fill:#A8A294}.stem{fill:#D8D2C4}.cloud{fill:#fff;opacity:.95}.star{fill:#fff}
+.veil{fill:#7F8A99;opacity:.3}.drop{stroke:#4F6F96}.flake{fill:#7C8FA6}.fg{stop-color:#B8C0CA}.fog{opacity:.6}
+@media (prefers-color-scheme: dark){.s0{stop-color:${dark[0]}}.s1{stop-color:${dark[1]}}.sky{opacity:${dark[2]}}.hill{fill:#fff;opacity:.04}.hill2{fill:#0B0E14;opacity:.3}
+.pine{fill:#0B0E14;opacity:.5}.sg{stop-color:#36342D}.turf{stroke:#5A564C}.speck{fill:#fff;opacity:.06}.bird{stroke:#fff;opacity:.45}
+.tuft{fill:#5FA86A}.rock{fill:#6B675E}.stem{fill:#CFCABD}.cloud{opacity:.12}
+.veil{fill:#3C434D;opacity:.5}.drop{stroke:#A9C2E0}.flake{fill:#fff}.fg{stop-color:#AEB6C0}.fog{opacity:.3}}
+</style>`;
+};
+const rnd = (i, salt) => {
+  const v = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453;
+  return v - Math.floor(v);
+};
+const px = (cls, box) => `<rect class="${cls}" x="${box[0]}" y="${box[1]}" width="${box[2]}" height="${box[3]}"/>`;
+const THINGS = [
+  { isFront: true, isSwaying: true, draw: () => px("tuft", [-3, -4, 1.5, 4]) + px("tuft", [0, -6, 1.5, 6]) + px("tuft", [3, -3, 1.5, 3]) },
+  { draw: () => px("rock", [-4, -3, 8, 3]) + px("rock", [-2, -5, 4, 2]) },
+  { isSwaying: true, draw: (i) => px("tuft", [0, -7, 1.2, 7]) + px(i % 2 === 0 ? "f-plan" : "f-warn", [-1.4, -10, 4, 3.4]) },
+  { draw: () => px("stem", [-1, -4, 2, 4]) + px("f-danger", [-3.5, -7, 7, 3]) + px("f-danger", [-2, -8.5, 4, 1.5]) },
+  { isFront: true, isSwaying: true, draw: () => px("tuft", [-2, -3, 1.5, 3]) + px("tuft", [1, -5, 1.5, 5]) },
+  { draw: () => px("tuft", [-6, -5, 12, 5]) + px("tuft", [-4, -8, 8, 3]) }
+];
+const SPACING = 54;
+const JITTER = 30;
+function decorOf(width) {
+  const layers = { back: "", front: "" };
+  for (let i = 0;40 + i * SPACING < width - 24; i += 1) {
+    const x = 40 + i * SPACING + rnd(i, 1) * JITTER;
+    const thing = THINGS[(i * 5 + Math.floor(rnd(i, 2) * 2)) % THINGS.length];
+    if (thing === undefined)
+      continue;
+    const inner = thing.isSwaying === true ? `<g class="sway" style="animation-delay:-${(rnd(i, 3) * 4).toFixed(1)}s">${thing.draw(i)}</g>` : thing.draw(i);
+    layers[thing.isFront === true ? "front" : "back"] += `<g transform="translate(${x.toFixed(1)},${(groundY(x) + 0.5).toFixed(1)})" shape-rendering="crispEdges">${inner}</g>`;
+  }
+  return layers;
+}
+const STARS = 16;
+const stars = (width) => Array.from({ length: STARS }, (_, i) => {
+  const size = rnd(i, 6) > 0.7 ? 1.8 : 1.2;
+  return `<rect class="star tw${i % 3}" x="${(16 + rnd(i, 4) * (width - 32)).toFixed(1)}" y="${(5 + rnd(i, 5) * 30).toFixed(1)}" width="${size}" height="${size}"/>`;
+}).join("");
+const cloud = (x, y, cls) => `<g class="${cls}"><g transform="translate(${x},${y})" shape-rendering="crispEdges">${px("cloud", [0, 4, 26, 5])}${px("cloud", [5, 0, 12, 5])}${px("cloud", [15, 2, 7, 3])}</g></g>`;
+const SUN = "#F5C542";
+const LOW_SUN = "#F08A4B";
+const MOON = "#E8E6DA";
+const glow = (x, y, r, color) => `<circle class="halo" cx="${x.toFixed(1)}" cy="${y}" r="${r}" fill="url(#glow)" color="${color}"/>`;
+const sun = (x, y, r, color) => `${glow(x, y, r * 3.2, color)}<circle cx="${x.toFixed(1)}" cy="${y}" r="${r}" fill="${color}" opacity=".92"/>`;
+const bird = (x, y, cls) => `<g class="${cls}"><path class="bird" d="M${x} ${y}l3.5 2.2 3.5-2.2" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+const ARC = { side: 56, low: BASE - 25, high: 16 };
+const arcAt = (at, width) => ({
+  x: ARC.side + at * (width - 2 * ARC.side),
+  y: Math.round(ARC.low - (ARC.low - ARC.high) * Math.sin(Math.PI * at))
+});
+const CLOUDS = {
+  day: [[0.3, 8], [0.62, 15]],
+  low: [[0.45, 10], [0.8, 20]],
+  dull: [[0.06, 7], [0.22, 14], [0.38, 5], [0.54, 13], [0.7, 6], [0.86, 15]]
+};
+const cloudsAt = (places, width) => places.map(([at, y], i) => cloud(width * at, y, i % 2 === 0 ? "drift" : "drift drift2")).join("");
+const isDullOf = (weather) => weather !== undefined && weather !== "clear" && weather !== "cloudy";
+function heavens(sky, width) {
+  const { x, y } = arcAt(sky.at, width);
+  const isNight = sky.phase === "night";
+  const isDull = isDullOf(sky.weather);
+  const moon = `${glow(x, y, 20, MOON)}<path fill="${MOON}" transform="translate(${x.toFixed(1)},${y})" d="M0-7a7 7 0 1 0 7 7 5.4 5.4 0 0 1-7-7z"/>`;
+  const light = isNight ? moon : sky.phase === "day" ? sun(x, y, 6, SUN) : sun(x, y, 9, LOW_SUN);
+  const fall = `<line class="shoot" x1="${(width * 0.62).toFixed(0)}" y1="8" x2="${(width * 0.62 + 16).toFixed(0)}" y2="2" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>`;
+  const fair = isNight ? [] : sky.phase === "day" ? CLOUDS.day : CLOUDS.low;
+  const clouds = sky.weather === "clear" ? "" : cloudsAt(isDull ? CLOUDS.dull : fair, width);
+  if (isDull)
+    return `<g opacity=".35">${light}</g><rect class="veil" width="${width}" height="${SCENE_H}"/>${clouds}`;
+  const birds = sky.phase === "day" ? `${bird(width * 0.46, 22, "drift drift2")}${bird(width * 0.46 + 12, 17, "drift drift2")}` : "";
+  return (isNight ? stars(width) + fall : "") + light + clouds + birds;
+}
+const FALLS = {
+  rain: { cls: "drop", every: 13, seconds: 0.7 },
+  storm: { cls: "drop", every: 9, seconds: 0.55 },
+  snow: { cls: "flake", every: 16, seconds: 4.5 }
+};
+const falling = (weather, width) => {
+  const fall = weather === undefined ? undefined : FALLS[weather];
+  if (fall === undefined)
+    return "";
+  let out = "";
+  for (let i = 0;i * fall.every < width; i += 1) {
+    const x = ((i + rnd(i, 12)) * fall.every).toFixed(1);
+    const y = (4 + rnd(i, 13) * (BASE - 12)).toFixed(1);
+    const beat = `style="animation-duration:${(fall.seconds * (0.8 + rnd(i, 14) * 0.4)).toFixed(2)}s;animation-delay:-${(rnd(i, 15) * fall.seconds).toFixed(2)}s"`;
+    out += fall.cls === "drop" ? `<path class="drop" d="M${x} ${y}l-1.6 5" fill="none" stroke-width="1" stroke-linecap="round" ${beat}/>` : `<rect class="flake" x="${x}" y="${y}" width="1.8" height="1.8" ${beat}/>`;
+  }
+  const bolt = weather === "storm" ? `<rect class="bolt" width="${width}" height="${SCENE_H}" fill="#fff" opacity="0"/>` : "";
+  return out + bolt;
+};
+const FOG = { top: BASE - 42, h: 54 };
+const fog = (width) => `<rect class="fog" y="${FOG.top}" width="${width}" height="${FOG.h}" fill="url(#fogg)"/>`;
+const PINE = [
+  [-1, -2, 2, 2],
+  [-4, -5, 8, 3],
+  [-3, -8, 6, 3],
+  [-2, -11, 4, 3],
+  [-1, -13, 2, 2]
+];
+const PINE_STEP = 46;
+const pines = (width) => {
+  let out = "";
+  for (let i = 0;20 + i * PINE_STEP < width - 10; i += 1) {
+    if (rnd(i, 7) < 0.42)
+      continue;
+    const x = 20 + i * PINE_STEP + rnd(i, 8) * 24;
+    const size = 0.75 + rnd(i, 9) * 0.5;
+    out += `<g transform="translate(${x.toFixed(1)},${(hillY(x) + 1).toFixed(1)}) scale(${size.toFixed(2)})" shape-rendering="crispEdges">${PINE.map((box) => px("pine", box)).join("")}</g>`;
+  }
+  return out;
+};
+const SPECKS = 26;
+const specks = (width) => Array.from({ length: SPECKS }, (_, i) => {
+  const x = 10 + rnd(i, 10) * (width - 20);
+  return `<rect class="speck" x="${x.toFixed(1)}" y="${(groundY(x) + 4 + rnd(i, 11) * 9).toFixed(1)}" width="1.6" height="1.6"/>`;
+}).join("");
+const fireflies = (width) => [0.24, 0.58, 0.83].map((at, i) => `<circle class="fly fly${i}" cx="${(width * at).toFixed(0)}" cy="${(groundY(width * at) - 12).toFixed(1)}" r="1.3" fill="#F5E07A"/>`).join("");
+function landOf(width, sky) {
+  const { phase } = sky;
+  const under = (y) => `${curve(y, 0, width)}L${width} ${SCENE_H}L0 ${SCENE_H}Z`;
+  const fadeOut = `<stop offset="0" stop-color="#fff"/><stop offset=".66" stop-color="#fff" stop-opacity=".6"/><stop offset=".9" stop-color="#fff" stop-opacity="0"/>`;
+  const defs = `<defs><clipPath id="win"><rect width="${width}" height="${SCENE_H}" rx="${RADIUS$1}"/></clipPath><linearGradient id="skf" x1="0" y1="0" x2="0" y2="1">${fadeOut}</linearGradient><mask id="skm"><rect width="${width}" height="${SCENE_H}" fill="url(#skf)"/></mask><linearGradient id="skc" x1="0" y1="0" x2="0" y2="1"><stop class="s0" offset="0"/><stop class="s1" offset=".72"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="currentColor" stop-opacity=".5"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient><linearGradient id="fogg" x1="0" y1="0" x2="0" y2="1"><stop class="fg" offset="0" stop-opacity="0"/><stop class="fg" offset=".55"/><stop class="fg" offset="1" stop-opacity="0"/></linearGradient><linearGradient id="sof" gradientUnits="userSpaceOnUse" x1="0" y1="${BASE - 6}" x2="0" y2="${SCENE_H - FADE_END}"><stop class="sg" offset="0"/><stop class="sg" offset="1" stop-opacity="0"/></linearGradient></defs>`;
+  const decor = decorOf(width);
+  const air = `<g mask="url(#skm)"><rect class="sky" width="${width}" height="${SCENE_H}" fill="url(#skc)"/>${heavens(sky, width)}<path class="hill" d="${under(farY)}"/><path class="hill2" d="${under(hillY)}"/>${pines(width)}</g>`;
+  const ground = `<path d="${under(groundY)}" fill="url(#sof)"/>${specks(width)}<path class="turf" d="${curve(groundY, 0, width)}" fill="none" stroke-width="1.5" stroke-linecap="round"/>`;
+  return { open: `${landCss(phase)}${defs}<g clip-path="url(#win)">${air}${ground}`, back: decor.back, front: decor.front + (phase === "night" && !isDullOf(sky.weather) ? fireflies(width) : "") + (sky.weather === "fog" ? fog(width) : "") + falling(sky.weather, width), close: "</g>" };
+}
+
 const STROLL_S = 24;
 const WALKS = [
   [12, 32],
   [58, 78]
 ];
-const STEPS = 10;
+const STEPS$1 = 10;
 const SAMPLES = 8;
 const eased = (f) => f * f * (3 - 2 * f);
 const wayFrames = (way) => Array.from({ length: SAMPLES + 1 }, (_, k) => {
@@ -2766,9 +2796,9 @@ const strollCss = (home, distance) => {
   const far = home + distance;
   return `<style>@keyframes amble{${wayFrames({ fromX: home, toX: far, home, t0: out[0], t1: out[1] })}${wayFrames({ fromX: far, toX: home, home, t0: back[0], t1: back[1] })}}</style>`;
 };
-const legFrames = (isFirstPair) => WALKS.flatMap(([from, to]) => Array.from({ length: STEPS + 1 }, (_, k) => {
-  const isUp = k < STEPS && k % 2 === 0 === isFirstPair;
-  return `${(from + (to - from) * k / STEPS).toFixed(1)}%{transform:translateY(${isUp ? -1 : 0}px)}`;
+const legFrames = (isFirstPair) => WALKS.flatMap(([from, to]) => Array.from({ length: STEPS$1 + 1 }, (_, k) => {
+  const isUp = k < STEPS$1 && k % 2 === 0 === isFirstPair;
+  return `${(from + (to - from) * k / STEPS$1).toFixed(1)}%{transform:translateY(${isUp ? -1 : 0}px)}`;
 })).join("");
 const SCENE_CSS = `<style>
 .br{animation:br 2.8s ease-in-out infinite}.sl{animation:br 4.6s ease-in-out infinite}
@@ -2801,6 +2831,10 @@ const SCENE_CSS = `<style>
 @keyframes tw{0%,100%{opacity:.9}50%{opacity:.25}}
 .fly{animation:fly 9s ease-in-out infinite}.fly1{animation-delay:-3s;animation-duration:11s}.fly2{animation-delay:-6s;animation-duration:13s}
 @keyframes fly{0%,100%{transform:translate(0,0);opacity:0}20%{opacity:.9}50%{transform:translate(14px,-9px);opacity:.3}75%{transform:translate(26px,-3px);opacity:.9}}
+.drop{animation:drop .7s linear infinite}.flake{animation:flake 4.5s linear infinite}
+@keyframes drop{from{transform:translate(4px,-14px);opacity:0}20%,80%{opacity:.8}to{transform:translate(-4px,14px);opacity:0}}
+@keyframes flake{from{transform:translate(-3px,-12px);opacity:0}20%,80%{opacity:.9}to{transform:translate(4px,12px);opacity:0}}
+.bolt{animation:bolt 11s steps(1) infinite}@keyframes bolt{0%,100%{opacity:0}90%{opacity:.16}91%{opacity:0}93%{opacity:.1}94%{opacity:0}}
 .wave{transform-box:fill-box;transform-origin:0 50%;animation:wave 2.4s ease-in-out infinite}
 @keyframes wave{50%{transform:skewY(-9deg) scaleX(.88)}}
 .amble .la{animation:la ${STROLL_S}s steps(1) infinite}.amble .lb{animation:lb ${STROLL_S}s steps(1) infinite}
@@ -2929,7 +2963,7 @@ function benchSvg(spec, lay) {
 }
 function sceneSvg(spec) {
   const lay = layoutOf$1(spec);
-  const land = landOf(spec.width, spec.phase, lay.stand);
+  const land = landOf(spec.width, spec.sky);
   const done = spec.steps.filter(isDone).length;
   const plan = spec.steps.length === 0 ? "" : `${t().stripPlan} ${done}/${spec.steps.length}`;
   const names = spec.crew.map((a) => lookOf(a).name).join(", ");
@@ -2951,6 +2985,69 @@ const spanText = (ms) => {
     return `${words.minutes(Math.floor(s / MINUTE$2))} ${words.seconds(s % MINUTE$2)}`;
   return words.seconds(s);
 };
+
+const DAY_MS = 86400000;
+const RAD = Math.PI / 180;
+const J2000 = 2451545;
+const UNIX_EPOCH_JULIAN = 2440587.5;
+const RISE_ANGLE = -0.833 * RAD;
+const TILT = 23.4397 * RAD;
+function sunTimes(now, place) {
+  const turn = -place.lon / 360;
+  const days = Math.round(now / DAY_MS + UNIX_EPOCH_JULIAN - J2000 - 0.0009 - turn) + 0.0009 + turn;
+  const anomaly = RAD * (357.5291 + 0.98560028 * days);
+  const centre = RAD * (1.9148 * Math.sin(anomaly) + 0.02 * Math.sin(2 * anomaly) + 0.0003 * Math.sin(3 * anomaly));
+  const longitude = anomaly + centre + RAD * 102.9372 + Math.PI;
+  const noon = J2000 + days + 0.0053 * Math.sin(anomaly) - 0.0069 * Math.sin(2 * longitude);
+  const tilt = Math.asin(Math.sin(longitude) * Math.sin(TILT));
+  const lat = place.lat * RAD;
+  const cos = (Math.sin(RISE_ANGLE) - Math.sin(lat) * Math.sin(tilt)) / (Math.cos(lat) * Math.cos(tilt));
+  if (cos > 1)
+    return "night";
+  if (cos < -1)
+    return "day";
+  const half = Math.acos(cos) / (2 * Math.PI);
+  const toMs = (julian) => (julian - UNIX_EPOCH_JULIAN) * DAY_MS;
+  return { rise: toMs(noon - half), set: toMs(noon + half) };
+}
+const clockTimes = (now) => ({ rise: new Date(now).setHours(6, 30, 0, 0), set: new Date(now).setHours(18, 30, 0, 0) });
+const GLOW_MS = 45 * 60000;
+const STEPS = 120;
+const stepped = (at) => Math.round(Math.min(1, Math.max(0, at)) * STEPS) / STEPS;
+function skyOf(now, place) {
+  const times = place === undefined ? clockTimes(now) : sunTimes(now, place);
+  if (times === "day" || times === "night")
+    return { phase: times, at: 0.5 };
+  const { rise, set } = times;
+  if (now >= rise && now <= set) {
+    const phase = now < rise + GLOW_MS ? "dawn" : now > set - GLOW_MS ? "dusk" : "day";
+    return { phase, at: stepped((now - rise) / (set - rise)) };
+  }
+  if (now < rise && now >= rise - GLOW_MS)
+    return { phase: "dawn", at: 0 };
+  if (now > set && now <= set + GLOW_MS)
+    return { phase: "dusk", at: 1 };
+  const dusk = now < rise ? set - DAY_MS : set;
+  const dawn = now < rise ? rise : rise + DAY_MS;
+  return { phase: "night", at: stepped((now - dusk) / (dawn - dusk)) };
+}
+function placeFromText(text) {
+  const [lat, lon] = (text ?? "").split(",").map(Number);
+  if (lat === undefined || lon === undefined || !(Math.abs(lat) <= 90) || !(Math.abs(lon) <= 180))
+    return;
+  return { lat, lon };
+}
+const ZONE_PLACE = /^([+-])(\d{2})(\d{2})(\d{2})?([+-])(\d{3})(\d{2})(\d{2})?$/;
+const degrees = (sign, deg, min, sec = "0") => (sign === "-" ? -1 : 1) * (Number(deg) + Number(min) / 60 + Number(sec) / 3600);
+function placeOfZone(zoneTab, zone) {
+  const row = zoneTab.split(`
+`).find((line) => line.split("\t")[2] === zone);
+  const found = ZONE_PLACE.exec(row?.split("\t")[1] ?? "");
+  if (found === null)
+    return;
+  const [, latSign = "+", latDeg = "0", latMin = "0", latSec, lonSign = "+", lonDeg = "0", lonMin = "0", lonSec] = found;
+  return { lat: degrees(latSign, latDeg, latMin, latSec), lon: degrees(lonSign, lonDeg, lonMin, lonSec) };
+}
 
 const PX_PER_COL$2 = 8.8;
 const DEFAULT_COLS$2 = 100;
@@ -3130,8 +3227,12 @@ async function stripOf(io, ui, site) {
   const { Box, Svg } = ui;
   const width = Math.floor((site.cols || DEFAULT_COLS$2) * PX_PER_COL$2);
   const from = facts.steps.length === 0 ? undefined : walkFrom(layoutOf$1({ width, steps: facts.steps, crew: facts.crew }).stand, facts.now);
-  const phase = phaseOf(new Date(facts.now).getHours());
-  const scene = sceneSvg({ width, crew: facts.crew, mood: facts.mood, steps: facts.steps, phase, ...from === undefined ? {} : { from } });
+  const sky = { ...skyOf(facts.now, await io.place().catch(() => {
+    return;
+  })), weather: await io.weather().catch(() => {
+    return;
+  }) };
+  const scene = sceneSvg({ width, crew: facts.crew, mood: facts.mood, steps: facts.steps, sky, ...from === undefined ? {} : { from } });
   const fitted = fitRow(slotsOf(facts, pressesOf(io, facts)), width);
   const chips = fitted.flatMap(({ slot, maxW }, i) => [
     ...i > 0 && i === fitted.length - 1 ? [h(Box, {
@@ -3154,6 +3255,32 @@ async function stripOf(io, ui, site) {
     key: "savvy-chips",
     flexDirection: "row"
   }, chips));
+}
+
+const WEATHER_EVERY_MS = 30 * 60000;
+const weatherUrl = (place) => `https://api.open-meteo.com/v1/forecast?latitude=${place.lat.toFixed(1)}&longitude=${place.lon.toFixed(1)}&current=weather_code`;
+const KINDS = [
+  [0, "clear"],
+  [2, "cloudy"],
+  [3, "overcast"],
+  [45, "fog"],
+  [51, "rain"],
+  [71, "snow"],
+  [80, "rain"],
+  [85, "snow"],
+  [95, "storm"]
+];
+const CODE_MAX = 99;
+function weatherOfText(text) {
+  let code;
+  try {
+    code = JSON.parse(text)?.current?.weather_code;
+  } catch {
+    return;
+  }
+  if (typeof code !== "number" || !(code >= 0 && code <= CODE_MAX))
+    return;
+  return KINDS.findLast(([from]) => code >= from)?.[1];
 }
 
 const agents$4 = atom({ plugin: "savvy-progress", key: "agents" }, []);
@@ -3391,9 +3518,34 @@ async function bandMood($, isCrabInBand) {
   const { mood } = await read($, crab$2);
   return isIdleMood(mood) ? mood : undefined;
 }
+const ZONE_TAB = "/usr/share/zoneinfo/zone.tab";
+let placeFound;
+const placeOf = async ($) => placeFromText(await $.env.get("MODZ_PLACE")) ?? placeOfZone(await $.fs.read(ZONE_TAB), Intl.DateTimeFormat().resolvedOptions().timeZone);
+let weatherSeen = { at: 0, kind: undefined };
+async function askWeather($) {
+  if (await $.env.get("MODZ_WEATHER") === "off")
+    return;
+  const place = await (placeFound ??= placeOf($));
+  if (place === undefined)
+    return;
+  const kind = weatherOfText((await $.http.fetch(weatherUrl(place))).text);
+  if (kind === weatherSeen.kind)
+    return;
+  weatherSeen = { ...weatherSeen, kind };
+  await $.ui.invalidate("ui.render");
+}
+const weatherOf = ($, now) => {
+  if (now - weatherSeen.at >= WEATHER_EVERY_MS) {
+    weatherSeen = { ...weatherSeen, at: now };
+    askWeather($).catch((cause) => $.ui.log(`savvy-progress: the weather could not be read: ${String(cause)}`, { to: "debug" }));
+  }
+  return weatherSeen.kind;
+};
 const stripIo = ($) => ({
   usage: () => $.session.usage(),
   now: () => $.clock.now(),
+  place: () => placeFound ??= placeOf($),
+  weather: async () => weatherOf($, await $.clock.now()),
   plan: async () => (await $.state.get({ plugin: "plan-steps", key: "tasks" })).value,
   isHubOn: async () => (await $.state.get({ plugin: "modz", key: "isOn" })).value === true,
   pace: async () => (await $.state.get({ plugin: "hud-pro", key: "pace" })).value,

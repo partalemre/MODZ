@@ -22,14 +22,27 @@ test('band: alerts draws nothing of its own while every window is calm', { optio
   expect(await ui.find({ type: 'Text', text: 'theirs' })).toBeDefined()
 })
 
-test('band: alerts keeps only the window that needs a look, without the cost', { options: { band: 'alerts' } }, async ($, on) => {
+test('band: alerts on the desktop leaves the week to the session strip, even at 91%', { options: { band: 'alerts' } }, async ($, on) => {
   stubSession(on)
+  await start($, 'desktop')
+
+  const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
+
+  expect(await ui.find({ type: 'Svg' })).toBeUndefined()
+})
+
+test('band: alerts on the desktop keeps the 5-hour window that needs a look, without the cost', { options: { band: 'alerts' } }, async ($, on) => {
+  const rateLimits = [
+    { kind: 'five_hour', percentUsed: 91, resetsAt: new Date(2 * MS_PER_HOUR).toISOString() },
+    { kind: 'seven_day', percentUsed: 91, resetsAt: new Date(94 * MS_PER_HOUR).toISOString() },
+  ]
+  stubSession(on, { ...USAGE, rateLimits })
   await start($, 'desktop')
 
   const ui = await $.ui.mount({ ...BAND, surface: 'desktop' })
   const svg = (await ui.find({ type: 'Svg' })) as Drawn
 
-  expect(svg?.props.alt).toBe('haftalık hak %91, 3g 22sa sonra yenilenir')
+  expect(svg?.props.alt).toBe('5 saatlik hak %91, 2sa 0dk sonra yenilenir')
 })
 
 test('band: alerts on the terminal shows the warned window as text and drops the calm ones', { options: { band: 'alerts' } }, async ($, on) => {

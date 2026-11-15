@@ -6,11 +6,13 @@ import { FIVE_HOUR, runwayOf, SEVEN_DAY, whenText } from './runway'
 import type { Runway } from './runway'
 import { CHIP_GAP, CHIP_H, chipCells, chipSvg, chipWidth } from './strip-chips'
 import type { Chip } from './strip-chips'
-import { phaseOf } from './strip-land'
 import { layoutOf, SCENE_H, sceneSvg } from './strip-scene'
 import type { Step } from './strip-scene'
 import { NO_TALLY, spanText } from './strip-svg'
 import type { Tally } from './strip-svg'
+import { skyOf } from './sun'
+import type { Place } from './sun'
+import type { Weather } from './weather'
 
 // The session strip above the prompt (desktop): a living scene over a row of chips. The scene shows the plan as
 // a path and the crabs at work; the chips say the session's numbers, and each is a way in to the pane that tells
@@ -20,6 +22,10 @@ import type { Tally } from './strip-svg'
 export type StripIo = {
   usage: () => Promise<{ cost?: { usd: number }; rateLimits: { kind: string; percentUsed: number; resetsAt?: string }[] } | undefined>
   now: () => Promise<number>
+  // Where the machine is, for the scene's sunrise and sunset; undefined where it cannot be told.
+  place: () => Promise<Place | undefined>
+  // The weather there as last heard; undefined until it is known, or where it is not asked for.
+  weather: () => Promise<Weather | undefined>
   // plan-steps' task list and whether the modz hub runs; undefined where that mod is not loaded.
   plan: () => Promise<unknown>
   isHubOn: () => Promise<boolean>
@@ -245,8 +251,8 @@ export async function stripOf(io: StripIo, ui: Ui, site: StripSite) {
   const { Box, Svg } = ui
   const width = Math.floor((site.cols || DEFAULT_COLS) * PX_PER_COL)
   const from = facts.steps.length === 0 ? undefined : walkFrom(layoutOf({ width, steps: facts.steps, crew: facts.crew }).stand, facts.now)
-  const phase = phaseOf(new Date(facts.now).getHours())
-  const scene = sceneSvg({ width, crew: facts.crew, mood: facts.mood, steps: facts.steps, phase, ...(from === undefined ? {} : { from }) })
+  const sky = { ...skyOf(facts.now, await io.place().catch(() => undefined)), weather: await io.weather().catch(() => undefined) }
+  const scene = sceneSvg({ width, crew: facts.crew, mood: facts.mood, steps: facts.steps, sky, ...(from === undefined ? {} : { from }) })
   // The last chip (the way to the hub) sits at the row's right end, so the row ends where the scene does.
   const fitted = fitRow(slotsOf(facts, pressesOf(io, facts)), width)
   const chips = fitted.flatMap(({ slot, maxW }, i) => [

@@ -86,6 +86,10 @@ export const SCENE_CSS = `<style>
 @keyframes tw{0%,100%{opacity:.9}50%{opacity:.25}}
 .fly{animation:fly 9s ease-in-out infinite}.fly1{animation-delay:-3s;animation-duration:11s}.fly2{animation-delay:-6s;animation-duration:13s}
 @keyframes fly{0%,100%{transform:translate(0,0);opacity:0}20%{opacity:.9}50%{transform:translate(14px,-9px);opacity:.3}75%{transform:translate(26px,-3px);opacity:.9}}
+.drop{animation:drop .7s linear infinite}.flake{animation:flake 4.5s linear infinite}
+@keyframes drop{from{transform:translate(4px,-14px);opacity:0}20%,80%{opacity:.8}to{transform:translate(-4px,14px);opacity:0}}
+@keyframes flake{from{transform:translate(-3px,-12px);opacity:0}20%,80%{opacity:.9}to{transform:translate(4px,12px);opacity:0}}
+.bolt{animation:bolt 11s steps(1) infinite}@keyframes bolt{0%,100%{opacity:0}90%{opacity:.16}91%{opacity:0}93%{opacity:.1}94%{opacity:0}}
 .wave{transform-box:fill-box;transform-origin:0 50%;animation:wave 2.4s ease-in-out infinite}
 @keyframes wave{50%{transform:skewY(-9deg) scaleX(.88)}}
 .amble .la{animation:la ${STROLL_S}s steps(1) infinite}.amble .lb{animation:lb ${STROLL_S}s steps(1) infinite}

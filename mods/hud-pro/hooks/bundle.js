@@ -849,6 +849,51 @@ function lineTree(ui, input) {
   }, costText(input.costUsd)));
 }
 
+const SEVEN_DAY = "seven_day";
+const HOUR_MS = 3600000;
+const DAY_HOURS = 24;
+const WEEK_HOURS = 7 * DAY_HOURS;
+const WEEK_MIN_EVEN_PERCENT = 5;
+const LOOKBACK_MS = { [FIVE_HOUR]: HOUR_MS, [SEVEN_DAY]: DAY_HOURS * HOUR_MS };
+const NOTABLE_SHARE = { [FIVE_HOUR]: 10, [SEVEN_DAY]: 3 };
+const SHARES_KEPT = 5;
+function paceWindow(usage) {
+  const gauges = usage?.gauges ?? [];
+  return gauges.find((gauge) => gauge.id === FIVE_HOUR) ?? gauges.find((gauge) => gauge.id === SEVEN_DAY) ?? null;
+}
+function shareOf(before, after) {
+  const isSameWindow = before !== null && before.id === after.id && before.resetsAt === after.resetsAt;
+  return Math.max(0, isSameWindow ? after.percent - before.percent : after.percent);
+}
+const isNotable = (share) => share.share >= (NOTABLE_SHARE[share.window] ?? Number.POSITIVE_INFINITY);
+const addShare = (shares, share) => [...shares, share].slice(-SHARES_KEPT);
+function weekPaceOf(gauge, nowMs) {
+  const even = paceOf$1(gauge, nowMs);
+  if (even === null || even < WEEK_MIN_EVEN_PERCENT || gauge.resetsAt === null)
+    return { perHour: null, fullAt: null };
+  const perHour = gauge.percent / (even / PERCENT$1 * WEEK_HOURS);
+  if (perHour <= 0 || gauge.percent >= PERCENT$1)
+    return { perHour, fullAt: null };
+  const fullAt = nowMs + (PERCENT$1 - gauge.percent) / perHour * HOUR_MS;
+  return { perHour, fullAt: fullAt < Date.parse(gauge.resetsAt) ? Math.round(fullAt) : null };
+}
+function paceOf(spec) {
+  const gauge = paceWindow(spec.usage);
+  if (gauge === null)
+    return null;
+  const burn = { points: pointsOf(spec.history, gauge.id), nowMs: spec.nowMs, lookbackMs: LOOKBACK_MS[gauge.id] ?? HOUR_MS };
+  const readings = recentOf(burn).length;
+  if (gauge.id === SEVEN_DAY)
+    return { gauge, readings, ...weekPaceOf(gauge, spec.nowMs) };
+  const slope = burnOf(burn);
+  return {
+    gauge,
+    readings,
+    perHour: slope === null ? null : slope * HOUR_MS,
+    fullAt: fullAtOf({ ...burn, percent: gauge.percent, resetsAt: gauge.resetsAt })
+  };
+}
+
 const AREA_OPACITY = 0.12;
 const LABEL_SIZE$1 = 12;
 const LABEL_WEIGHT = 600;
@@ -1004,7 +1049,9 @@ function lineSvg(spec) {
 const needsLook = (gauge) => gauge.tone !== "neutral" || gauge.alert !== "";
 function shownGauges$1(input) {
   const gauges = gaugeViews(input.usage, input.nowMs, input.forecasts);
-  return input.isAlertsOnly === true ? gauges.filter(needsLook) : gauges;
+  if (input.isAlertsOnly !== true)
+    return gauges;
+  return gauges.filter((gauge) => needsLook(gauge) && !(input.isDesktop && gauge.id === SEVEN_DAY));
 }
 const shownCost = (input) => input.isAlertsOnly === true ? null : input.usage.costUsd;
 const PX_PER_COLUMN$1 = 6.4;
@@ -1043,51 +1090,6 @@ function bandRow(ui, input) {
     onPress: input.compact,
     ...input.isDesktop ? {} : { plain: true }
   }));
-}
-
-const SEVEN_DAY = "seven_day";
-const HOUR_MS = 3600000;
-const DAY_HOURS = 24;
-const WEEK_HOURS = 7 * DAY_HOURS;
-const WEEK_MIN_EVEN_PERCENT = 5;
-const LOOKBACK_MS = { [FIVE_HOUR]: HOUR_MS, [SEVEN_DAY]: DAY_HOURS * HOUR_MS };
-const NOTABLE_SHARE = { [FIVE_HOUR]: 10, [SEVEN_DAY]: 3 };
-const SHARES_KEPT = 5;
-function paceWindow(usage) {
-  const gauges = usage?.gauges ?? [];
-  return gauges.find((gauge) => gauge.id === FIVE_HOUR) ?? gauges.find((gauge) => gauge.id === SEVEN_DAY) ?? null;
-}
-function shareOf(before, after) {
-  const isSameWindow = before !== null && before.id === after.id && before.resetsAt === after.resetsAt;
-  return Math.max(0, isSameWindow ? after.percent - before.percent : after.percent);
-}
-const isNotable = (share) => share.share >= (NOTABLE_SHARE[share.window] ?? Number.POSITIVE_INFINITY);
-const addShare = (shares, share) => [...shares, share].slice(-SHARES_KEPT);
-function weekPaceOf(gauge, nowMs) {
-  const even = paceOf$1(gauge, nowMs);
-  if (even === null || even < WEEK_MIN_EVEN_PERCENT || gauge.resetsAt === null)
-    return { perHour: null, fullAt: null };
-  const perHour = gauge.percent / (even / PERCENT$1 * WEEK_HOURS);
-  if (perHour <= 0 || gauge.percent >= PERCENT$1)
-    return { perHour, fullAt: null };
-  const fullAt = nowMs + (PERCENT$1 - gauge.percent) / perHour * HOUR_MS;
-  return { perHour, fullAt: fullAt < Date.parse(gauge.resetsAt) ? Math.round(fullAt) : null };
-}
-function paceOf(spec) {
-  const gauge = paceWindow(spec.usage);
-  if (gauge === null)
-    return null;
-  const burn = { points: pointsOf(spec.history, gauge.id), nowMs: spec.nowMs, lookbackMs: LOOKBACK_MS[gauge.id] ?? HOUR_MS };
-  const readings = recentOf(burn).length;
-  if (gauge.id === SEVEN_DAY)
-    return { gauge, readings, ...weekPaceOf(gauge, spec.nowMs) };
-  const slope = burnOf(burn);
-  return {
-    gauge,
-    readings,
-    perHour: slope === null ? null : slope * HOUR_MS,
-    fullAt: fullAtOf({ ...burn, percent: gauge.percent, resetsAt: gauge.resetsAt })
-  };
 }
 
 const EN = {

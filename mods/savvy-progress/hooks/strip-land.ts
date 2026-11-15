@@ -3,6 +3,9 @@
 // in front of the crab so it walks among them. Everything is placed by its x alone, so the same width always
 // draws the same land and the frame's source stays stable.
 
+import type { Phase, Sky } from './sun'
+import type { Weather } from './weather'
+
 export const SCENE_H = 84
 const BASE = 60
 const STEP = 8
@@ -25,17 +28,6 @@ const curve = (y: (x: number) => number, from: number, to: number, lift = 0): st
 /** The ground's line from `from` to `to`, `lift` px under the surface: the plan's path runs along it. */
 export const groundLine = (from: number, to: number, lift: number): string => curve(groundY, from, to, lift)
 
-export type Phase = 'dawn' | 'day' | 'dusk' | 'night'
-
-const HOURS = { dawn: 5, day: 8, dusk: 17, night: 21 } as const
-
-export const phaseOf = (hour: number): Phase => {
-  if (hour >= HOURS.night || hour < HOURS.dawn) return 'night'
-  if (hour < HOURS.day) return 'dawn'
-
-  return hour < HOURS.dusk ? 'day' : 'dusk'
-}
-
 // The sky per phase, on a light panel and on a dark one: its colour overhead, its colour at the horizon and how
 // strongly it washes the panel. Day is a little lighter than the panel, night darker; dawn and dusk glow low.
 type Wash = readonly [top: string, horizon: string, opacity: number]
@@ -53,9 +45,11 @@ const landCss = (phase: Phase): string => {
 .s0{stop-color:${light[0]}}.s1{stop-color:${light[1]}}.sky{opacity:${light[2]}}.hill{fill:#5A6B7A;opacity:.1}.hill2{fill:#5A6B7A;opacity:.16}
 .pine{fill:#52647A;opacity:.4}.sg{stop-color:#E6E0D2}.turf{stroke:#C4BCAA}.speck{fill:#000;opacity:.14}.bird{stroke:#5A6B7A;opacity:.6}
 .tuft{fill:#5E9B5A}.rock{fill:#A8A294}.stem{fill:#D8D2C4}.cloud{fill:#fff;opacity:.95}.star{fill:#fff}
+.veil{fill:#7F8A99;opacity:.3}.drop{stroke:#4F6F96}.flake{fill:#7C8FA6}.fg{stop-color:#B8C0CA}.fog{opacity:.6}
 @media (prefers-color-scheme: dark){.s0{stop-color:${dark[0]}}.s1{stop-color:${dark[1]}}.sky{opacity:${dark[2]}}.hill{fill:#fff;opacity:.04}.hill2{fill:#0B0E14;opacity:.3}
 .pine{fill:#0B0E14;opacity:.5}.sg{stop-color:#36342D}.turf{stroke:#5A564C}.speck{fill:#fff;opacity:.06}.bird{stroke:#fff;opacity:.45}
-.tuft{fill:#5FA86A}.rock{fill:#6B675E}.stem{fill:#CFCABD}.cloud{opacity:.12}}
+.tuft{fill:#5FA86A}.rock{fill:#6B675E}.stem{fill:#CFCABD}.cloud{opacity:.12}
+.veil{fill:#3C434D;opacity:.5}.drop{stroke:#A9C2E0}.flake{fill:#fff}.fg{stop-color:#AEB6C0}.fog{opacity:.3}}
 </style>`
 }
 
@@ -118,22 +112,69 @@ const sun = (x: number, y: number, r: number, color: string): string => `${glow(
 const bird = (x: number, y: number, cls: string): string =>
   `<g class="${cls}"><path class="bird" d="M${x} ${y}l3.5 2.2 3.5-2.2" fill="none" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></g>`
 
+// The sun's way over the sky, and the moon's: up from the left horizon, highest halfway, down to the right one.
+const ARC = { side: 56, low: BASE - 25, high: 16 }
+const arcAt = (at: number, width: number): { x: number; y: number } => ({
+  x: ARC.side + at * (width - 2 * ARC.side),
+  y: Math.round(ARC.low - (ARC.low - ARC.high) * Math.sin(Math.PI * at)),
+})
+
+// Where the clouds hang, as a share of the width and a height: two on a fair day, a sky full when it is dull.
+const CLOUDS = {
+  day: [[0.3, 8], [0.62, 15]],
+  low: [[0.45, 10], [0.8, 20]],
+  dull: [[0.06, 7], [0.22, 14], [0.38, 5], [0.54, 13], [0.7, 6], [0.86, 15]],
+} as const
+const cloudsAt = (places: readonly (readonly [at: number, y: number])[], width: number): string =>
+  places.map(([at, y], i) => cloud(width * at, y, i % 2 === 0 ? 'drift' : 'drift drift2')).join('')
+
+// Weather that greys the whole sky: the sun or the moon only glimmers through, no stars, no birds.
+const isDullOf = (weather: Weather | undefined): boolean => weather !== undefined && weather !== 'clear' && weather !== 'cloudy'
+
 // What hangs in the sky: a sun, two slow clouds and two birds by day, a low sun at dawn and dusk, a moon, stars
-// and now and then a falling star at night.
-function heavens(phase: Phase, width: number, avoidX: number): string {
-  const right = width - 64
-  if (phase === 'night') {
-    const fall = `<line class="shoot" x1="${(width * 0.62).toFixed(0)}" y1="8" x2="${(width * 0.62 + 16).toFixed(0)}" y2="2" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>`
+// and now and then a falling star at night. The sun and the moon stand where the hour puts them (sun.ts); the
+// weather takes the clouds away, or fills the sky with them.
+function heavens(sky: Sky, width: number): string {
+  const { x, y } = arcAt(sky.at, width)
+  const isNight = sky.phase === 'night'
+  const isDull = isDullOf(sky.weather)
+  const moon = `${glow(x, y, 20, MOON)}<path fill="${MOON}" transform="translate(${x.toFixed(1)},${y})" d="M0-7a7 7 0 1 0 7 7 5.4 5.4 0 0 1-7-7z"/>`
+  const light = isNight ? moon : sky.phase === 'day' ? sun(x, y, 6, SUN) : sun(x, y, 9, LOW_SUN)
+  const fall = `<line class="shoot" x1="${(width * 0.62).toFixed(0)}" y1="8" x2="${(width * 0.62 + 16).toFixed(0)}" y2="2" stroke="#fff" stroke-width="1.2" stroke-linecap="round"/>`
+  const fair = isNight ? [] : sky.phase === 'day' ? CLOUDS.day : CLOUDS.low
+  const clouds = sky.weather === 'clear' ? '' : cloudsAt(isDull ? CLOUDS.dull : fair, width)
+  if (isDull) return `<g opacity=".35">${light}</g><rect class="veil" width="${width}" height="${SCENE_H}"/>${clouds}`
+  const birds = sky.phase === 'day' ? `${bird(width * 0.46, 22, 'drift drift2')}${bird(width * 0.46 + 12, 17, 'drift drift2')}` : ''
 
-    return `${stars(width)}${fall}${glow(right, 18, 20, MOON)}<path fill="${MOON}" transform="translate(${right},18)" d="M0-7a7 7 0 1 0 7 7 5.4 5.4 0 0 1-7-7z"/>`
-  }
-  if (phase === 'day') return `${sun(right, 18, 6, SUN)}${cloud(width * 0.3, 8, 'drift')}${cloud(width * 0.62, 15, 'drift drift2')}${bird(width * 0.46, 22, 'drift drift2')}${bird(width * 0.46 + 12, 17, 'drift drift2')}`
-  // The low sun rises on the left and sets on the right, at whichever of its two places is further from the crab.
-  const places = (phase === 'dawn' ? [0.27, 0.42] : [0.71, 0.52]).map(at => width * at)
-  const x = places.reduce((best, at) => (Math.abs(at - avoidX) > Math.abs(best - avoidX) ? at : best))
-
-  return `${sun(x, BASE - 25, 9, LOW_SUN)}${cloud(width * 0.45, 10, 'drift')}${cloud(width * 0.8, 20, 'drift drift2')}`
+  return (isNight ? stars(width) + fall : '') + light + clouds + birds
 }
+
+// What falls through the air, in front of everything: one piece per `every` px of width, each on its own beat.
+const FALLS: Partial<Record<Weather, { cls: string; every: number; seconds: number }>> = {
+  rain: { cls: 'drop', every: 13, seconds: 0.7 },
+  storm: { cls: 'drop', every: 9, seconds: 0.55 },
+  snow: { cls: 'flake', every: 16, seconds: 4.5 },
+}
+
+const falling = (weather: Weather | undefined, width: number): string => {
+  const fall = weather === undefined ? undefined : FALLS[weather]
+  if (fall === undefined) return ''
+  let out = ''
+  for (let i = 0; i * fall.every < width; i += 1) {
+    const x = ((i + rnd(i, 12)) * fall.every).toFixed(1)
+    const y = (4 + rnd(i, 13) * (BASE - 12)).toFixed(1)
+    const beat = `style="animation-duration:${(fall.seconds * (0.8 + rnd(i, 14) * 0.4)).toFixed(2)}s;animation-delay:-${(rnd(i, 15) * fall.seconds).toFixed(2)}s"`
+    out += fall.cls === 'drop' ? `<path class="drop" d="M${x} ${y}l-1.6 5" fill="none" stroke-width="1" stroke-linecap="round" ${beat}/>` : `<rect class="flake" x="${x}" y="${y}" width="1.8" height="1.8" ${beat}/>`
+  }
+  // Lightning is a faint flash of the whole scene, twice in quick succession, a few times a minute.
+  const bolt = weather === 'storm' ? `<rect class="bolt" width="${width}" height="${SCENE_H}" fill="#fff" opacity="0"/>` : ''
+
+  return out + bolt
+}
+
+const FOG = { top: BASE - 42, h: 54 }
+// Fog lies over the hills and the ground, thickest at the horizon; `#fogg` fades it out above and below.
+const fog = (width: number): string => `<rect class="fog" y="${FOG.top}" width="${width}" height="${FOG.h}" fill="url(#fogg)"/>`
 
 // Pines along the near hills: dark shapes against the sky, each its own size.
 const PINE = [
@@ -170,14 +211,15 @@ const fireflies = (width: number): string =>
 
 export type Land = { open: string; back: string; front: string; close: string }
 
-/** The world at `width` in `phase`, in the layers the scene draws its crabs between; the low sun keeps off `avoidX`. */
-export function landOf(width: number, phase: Phase, avoidX: number): Land {
+/** The world at `width` under `sky`, in the layers the scene draws its crabs between. */
+export function landOf(width: number, sky: Sky): Land {
+  const { phase } = sky
   const under = (y: (x: number) => number): string => `${curve(y, 0, width)}L${width} ${SCENE_H}L0 ${SCENE_H}Z`
   const fadeOut = `<stop offset="0" stop-color="#fff"/><stop offset=".66" stop-color="#fff" stop-opacity=".6"/><stop offset=".9" stop-color="#fff" stop-opacity="0"/>`
-  const defs = `<defs><clipPath id="win"><rect width="${width}" height="${SCENE_H}" rx="${RADIUS}"/></clipPath><linearGradient id="skf" x1="0" y1="0" x2="0" y2="1">${fadeOut}</linearGradient><mask id="skm"><rect width="${width}" height="${SCENE_H}" fill="url(#skf)"/></mask><linearGradient id="skc" x1="0" y1="0" x2="0" y2="1"><stop class="s0" offset="0"/><stop class="s1" offset=".72"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="currentColor" stop-opacity=".5"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient><linearGradient id="sof" gradientUnits="userSpaceOnUse" x1="0" y1="${BASE - 6}" x2="0" y2="${SCENE_H - FADE_END}"><stop class="sg" offset="0"/><stop class="sg" offset="1" stop-opacity="0"/></linearGradient></defs>`
+  const defs = `<defs><clipPath id="win"><rect width="${width}" height="${SCENE_H}" rx="${RADIUS}"/></clipPath><linearGradient id="skf" x1="0" y1="0" x2="0" y2="1">${fadeOut}</linearGradient><mask id="skm"><rect width="${width}" height="${SCENE_H}" fill="url(#skf)"/></mask><linearGradient id="skc" x1="0" y1="0" x2="0" y2="1"><stop class="s0" offset="0"/><stop class="s1" offset=".72"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="currentColor" stop-opacity=".5"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient><linearGradient id="fogg" x1="0" y1="0" x2="0" y2="1"><stop class="fg" offset="0" stop-opacity="0"/><stop class="fg" offset=".55"/><stop class="fg" offset="1" stop-opacity="0"/></linearGradient><linearGradient id="sof" gradientUnits="userSpaceOnUse" x1="0" y1="${BASE - 6}" x2="0" y2="${SCENE_H - FADE_END}"><stop class="sg" offset="0"/><stop class="sg" offset="1" stop-opacity="0"/></linearGradient></defs>`
   const decor = decorOf(width)
-  const sky = `<g mask="url(#skm)"><rect class="sky" width="${width}" height="${SCENE_H}" fill="url(#skc)"/>${heavens(phase, width, avoidX)}<path class="hill" d="${under(farY)}"/><path class="hill2" d="${under(hillY)}"/>${pines(width)}</g>`
+  const air = `<g mask="url(#skm)"><rect class="sky" width="${width}" height="${SCENE_H}" fill="url(#skc)"/>${heavens(sky, width)}<path class="hill" d="${under(farY)}"/><path class="hill2" d="${under(hillY)}"/>${pines(width)}</g>`
   const ground = `<path d="${under(groundY)}" fill="url(#sof)"/>${specks(width)}<path class="turf" d="${curve(groundY, 0, width)}" fill="none" stroke-width="1.5" stroke-linecap="round"/>`
 
-  return { open: `${landCss(phase)}${defs}<g clip-path="url(#win)">${sky}${ground}`, back: decor.back, front: decor.front + (phase === 'night' ? fireflies(width) : ''), close: '</g>' }
+  return { open: `${landCss(phase)}${defs}<g clip-path="url(#win)">${air}${ground}`, back: decor.back, front: decor.front + (phase === 'night' && !isDullOf(sky.weather) ? fireflies(width) : '') + (sky.weather === 'fog' ? fog(width) : '') + falling(sky.weather, width), close: '</g>' }
 }

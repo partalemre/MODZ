@@ -30,6 +30,12 @@ export const SECTIONS: Section[] = ['work', 'safety', 'meter']
 // The catalog is this mod's own second pane, a tab beside the hub.
 export const MODS_PANE = 'modz-mods'
 
+// The hub's own side panes: connections to outside tools, and what is installed but unused. Each fills its row with
+// a card the hub writes itself, kept under the pane's own id (upkeep.tsx).
+export const LINKS_PANE = 'modz-links'
+export const WEIGHT_PANE = 'modz-weight'
+export const SIDE_PANES: readonly string[] = [LINKS_PANE, WEIGHT_PANE]
+
 // A blank pane of the hub's that stands in while a person's click on the hub holds the panel (register.tsx: openPane).
 export const HOLD_PANE = 'modz-hold'
 
@@ -48,6 +54,8 @@ const BASES: EntryBase[] = [
   { pane: 'handoff', mod: 'handoff', icon: 'flag', role: 'plan', section: 'meter' },
   { pane: 'skins', mod: 'skins', icon: 'eye', role: 'edit', section: 'meter' },
   { pane: MODS_PANE, mod: 'modz', icon: 'cube', role: 'edit', section: 'meter' },
+  { pane: LINKS_PANE, mod: LINKS_PANE, icon: 'plug', role: 'read', section: 'meter' },
+  { pane: WEIGHT_PANE, mod: WEIGHT_PANE, icon: 'trash', role: 'warn', section: 'meter' },
 ]
 
 // The hub's own rows with their title and hint in the interface language, read when drawn.

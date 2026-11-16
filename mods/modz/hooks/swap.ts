@@ -4,13 +4,13 @@
 import type { UiPane } from 'claude-code'
 
 import { isHubShown } from './footer'
-import { HOLD_PANE, MODS_PANE } from './hub'
+import { HOLD_PANE, MODS_PANE, SIDE_PANES } from './hub'
 import { HUB_PANE, paneOf } from './kit/stage'
 
 export type Swap = {
   panes: () => Promise<readonly UiPane[]>
-  // Puts one of the hub's own panes in the panel and closes the other (register.tsx: show).
-  show: (pane: typeof HUB_PANE | typeof MODS_PANE, isFocused?: boolean) => Promise<void>
+  // Puts one of the hub's own panes in the panel and closes its others (own-panes.ts: show).
+  show: (pane: string, isFocused?: boolean) => Promise<void>
   // Opens the blank stand-in that holds the panel while a click still holds the hub.
   hold: () => Promise<unknown>
   // Closes a pane; one that will not close is logged there, never thrown.
@@ -36,6 +36,12 @@ export function noteAnswer(pane: string | null): void {
   answered = pane ?? answered
 }
 
+// The hub's side panes that are up, closed: they rarely are, so nothing is closed blind.
+const closeSides = async (io: Swap): Promise<void> => {
+  const up = new Set((await io.panes()).map(each => each.id))
+  for (const side of SIDE_PANES) if (up.has(side)) await io.close(side)
+}
+
 const clearUnanswered = async (io: Swap): Promise<void> => {
   if ((await io.unanswered.read()) !== null) await io.unanswered.write(null)
 }
@@ -46,6 +52,7 @@ export async function stepAside(io: Swap, pane: string): Promise<void> {
   await io.stage.write(pane)
   await io.close(HUB_PANE)
   await io.close(MODS_PANE)
+  await closeSides(io)
   await clearUnanswered(io)
 }
 
@@ -58,11 +65,11 @@ async function watchAnswer(io: Swap, ask: { pane: string }): Promise<void> {
   if (!isHubShown(await io.panes())) await io.show(HUB_PANE, false)
 }
 
-// A row press puts that pane in the panel: the catalog is this mod's own pane; any other is its
+// A row press puts that pane in the panel: the catalog and the side panes are this mod's own; any other is its
 // mod's to open, asked through `modz.open`. The hub steps aside once the mod's pane is up, so a mod that does not
 // answer leaves the hub where it is rather than an empty panel.
 export async function openPane(io: Swap, pane: string): Promise<void> {
-  if (pane === MODS_PANE) return io.show(MODS_PANE)
+  if (pane === MODS_PANE || SIDE_PANES.includes(pane)) return io.show(pane)
   const ask = { pane }
   asked = ask
   await clearUnanswered(io)
@@ -91,4 +98,5 @@ export async function toggleHub(io: Swap): Promise<void> {
   if (!isHubShown(await io.panes())) return io.show(HUB_PANE, false)
   await io.close(HUB_PANE)
   await io.close(MODS_PANE)
+  await closeSides(io)
 }

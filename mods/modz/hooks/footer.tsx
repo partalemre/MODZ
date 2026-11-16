@@ -4,7 +4,7 @@
 // without asking for the keyboard, so the composer keeps it. The engine's labels stay, in its order and joint.
 import type { UiPane } from 'claude-code'
 
-import { HOLD_PANE, MODS_PANE } from './hub'
+import { HOLD_PANE, MODS_PANE, SIDE_PANES } from './hub'
 import { HUB_PANE } from './kit/stage'
 
 type Ui = Record<string, any>
@@ -13,7 +13,7 @@ export const TOGGLE_KEY = 'modz-toggle'
 const TOGGLE_LABEL = 'modz'
 // The engine's own joint between footer labels.
 const JOINT = ' & '
-const HUB_PANES = new Set<string>([HUB_PANE, MODS_PANE, HOLD_PANE])
+const HUB_PANES = new Set<string>([HUB_PANE, MODS_PANE, HOLD_PANE, ...SIDE_PANES])
 
 export type FooterView = { modes: readonly string[]; onPress: () => void }
 

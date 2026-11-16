@@ -7,10 +7,10 @@ import type { EngineInterface, Register } from 'claude-code'
 
 import type { HubCard } from '../types'
 import { wireCards } from './cards'
-import type { Drawing } from './draw'
 import { footerTree } from './footer'
+import { checkFacts, checkText } from './check'
 import { helpText } from './guide'
-import { HOLD_PANE, MODS_PANE, modsTitle } from './hub'
+import { HOLD_PANE, MODS_PANE, SIDE_PANES } from './hub'
 import { hubTree } from './hub-pane'
 import type { HubActions } from './hub-pane'
 import { keepMarket, keepUpdated, marketOf, marketSoon } from './market'
@@ -21,12 +21,13 @@ import type { HubLayout } from './layout'
 import { setLang } from './kit/lang'
 import { HUB_PANE, paneOf } from './kit/stage'
 import { pinned } from './kit/pin'
-import { stableDrawings } from './kit/stable'
+import { catalogDrawings, closeQuietly, copy, hubDrawings, openHub, show } from './own-panes'
 import { modzTree } from './pane'
 import { wirePlainRows } from './plain-rows'
 import { noteAnswer, openPane, stepAside, toggleHub } from './swap'
 import type { Swap } from './swap'
 import { themeOf } from './theme'
+import { fillSideRows, refreshSide, wireUpkeep } from './upkeep'
 import type { Theme } from './theme'
 import { plainViewOf, viewOf } from './view'
 import type { Frame, Parts } from './view'
@@ -37,6 +38,7 @@ const TITLE = 'modz'
 
 const OPEN = { plugin: 'modz', key: 'open' } as const
 const STAGE = { plugin: 'modz', key: 'stage' } as const
+const OWN_PANES: readonly string[] = [PANE, MODS_PANE, ...SIDE_PANES]
 const cardsAtom = atom({ plugin: 'modz', key: 'cards' } as const, {} as Record<string, HubCard>)
 // The person's arrangement, mirrored from `$.store` (kept across sessions) so a change redraws the hub.
 const layoutAtom = atom({ plugin: 'modz', key: 'layout' } as const, EMPTY_LAYOUT)
@@ -67,31 +69,11 @@ const diskOf = ($: EngineInterface): Disk => ({
   log: text => $.ui.log(text, { to: 'debug' }),
 })
 
-// The hub's and the catalog's drawings, kept per what they show (stable.ts); forgotten when the pane opens again.
-const hubDrawings = stableDrawings<Drawing>()
-const catalogDrawings = stableDrawings<Drawing>()
-
-// A pane that will not close is logged, never thrown: the one being shown is already up.
-const closeQuietly = ($: EngineInterface, id: string) =>
-  $.ui.close({ id }).catch(cause => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: 'debug' }))
-
-// Puts one of the hub's own panes in the panel and closes the other; every mod's open pane closes too.
-// The footer toggle opens it without the keyboard (footer.tsx): the composer keeps it.
-async function show($: EngineInterface, pane: typeof PANE | typeof MODS_PANE, isFocused = true): Promise<void> {
-  const title = pane === PANE ? TITLE : modsTitle()
-  const drawings = pane === PANE ? hubDrawings : catalogDrawings
-  drawings.reset()
-  await $.ui.open(isFocused ? { id: pane, title, focus: true } : { id: pane, title })
-  await $.state.set(STAGE, { pane, at: Date.now() })
-  await closeQuietly($, pane === PANE ? MODS_PANE : PANE)
-}
-
-const openHub = ($: EngineInterface) => show($, PANE)
-
 // What swap.ts moves the panel through; built here, where `$` is.
 const swapOf = ($: EngineInterface): Swap => ({
   panes: () => $.ui.panes(),
-  show: (pane, isFocused) => show($, pane, isFocused),
+  // A side pane reads what it shows anew each time it opens.
+  show: (pane, isFocused) => show($, pane, isFocused).then(() => refreshSide($, pane)),
   hold: () => $.ui.open({ id: HOLD_PANE, title: TITLE }),
   close: id => closeQuietly($, id),
   stage: { read: async () => (await $.state.get(STAGE)).value, write: pane => $.state.set(STAGE, { pane, at: Date.now() }) },
@@ -157,6 +139,7 @@ function startHooks(on: On, options: Options): void {
     await update($, layoutAtom, () => saved)
     await $.state.set(ON, true)
     await $.command.register({ name: 'modz', description: hubWords().command })
+    fillSideRows($)
     if (options.openOnStart !== false) {
       hubDrawings.reset()
       await $.ui.open({ id: PANE, title: TITLE })
@@ -175,7 +158,7 @@ function startHooks(on: On, options: Options): void {
     const done = await next(e)
     const isDesktop = e.surface === 'desktop'
     const staged = paneOf((await $.state.get(STAGE)).value)
-    const isModStaged = staged !== null && staged !== PANE && staged !== MODS_PANE
+    const isModStaged = staged !== null && !OWN_PANES.includes(staged)
     if (isDesktop && options.openOnStart !== false && !isModStaged && (await $.ui.panes()).length === 0) await show($, PANE, false)
     // A desktop that comes back may still show a tree from before: drawn again, its rows carry presses this engine holds.
     if (isDesktop) $.ui.invalidate('ui.render')
@@ -220,7 +203,13 @@ function stageHooks(on: On): void {
 
   // `/modz help`: the one index of every installed mod's commands and options, as text; `/modz` opens the hub.
   on('command.run', { command: 'modz' }, async ($, e) => {
-    if (e.args.trim().toLowerCase() === 'help') return { text: helpText(await marketOf(diskOf($)), await $.command.list().catch(() => [])) }
+    const arg = e.args.trim().toLowerCase()
+    if (arg === 'help') return { text: helpText(await marketOf(diskOf($)), await $.command.list().catch(() => [])) }
+    if (arg === 'check') {
+      const market = await marketOf(diskOf($)).catch(() => ({ mods: [] as { name: string; isEnabled: boolean | null }[] }))
+
+      return { text: checkText(await checkFacts($, market.mods.filter(mod => mod.isEnabled === true).map(mod => mod.name))) }
+    }
     await openHub($)
 
     return { text: hubWords().opened }
@@ -262,17 +251,6 @@ function paneHooks(on: On): void {
   })
 }
 
-// An install line onto the clipboard of the surface that was pressed; a toast says whether it took.
-async function copy($: EngineInterface, text: string, press: unknown): Promise<void> {
-  const surface = (press as { surface?: 'desktop' | 'terminal' } | undefined)?.surface
-  const words = catalogWords()
-  try {
-    $.ui.toast((await $.ui.copy(surface === undefined ? { text } : { text, surface })).isCopied ? words.copied : words.notCopied)
-  } catch (cause) {
-    $.ui.log(`modz: the install line could not be copied: ${String(cause)}`, { to: 'debug' })
-  }
-}
-
 // The desktop only: the terminal keeps its footer as the engine draws it, and /modz.
 function footerHooks(on: On): void {
   on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
@@ -287,6 +265,7 @@ export const register: Register = (on, options) => {
   startHooks(on, options)
   stageHooks(on)
   wireCards(on)
+  wireUpkeep(on)
   paneHooks(on)
   footerHooks(on)
   wireLanguageKeeper(on, options)

@@ -8,6 +8,7 @@ import { cardOf } from './hub'
 import { isSame } from './kit/same'
 import { HUB_PANE } from './kit/stage'
 import { hasRunningClock } from './now'
+import { fillSideRows } from './upkeep'
 
 // State refs live in each file that reads them: the engine follows literals, not imports.
 const cardsAtom = atom({ plugin: 'modz', key: 'cards' } as const, {} as Record<string, HubCard>)
@@ -43,6 +44,8 @@ export function wireCards(on: On): void {
     // Widened from the declared reporters: the hub also hears a mod it does not list, and never itself.
     const from: string = e.plugin
     if (card === null || from === 'modz') return done
+    // A mod reporting means the session moves: a moment to read the hub's own two rows again (upkeep.tsx).
+    fillSideRows($)
     // An unchanged card is not kept again: the write would redraw the hub for nothing.
     if (isSame((await read($, cardsAtom))[from], card)) return done
     keepBeat($, await update($, cardsAtom, cards => ({ ...cards, [from]: card })))

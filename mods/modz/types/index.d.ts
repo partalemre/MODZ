@@ -45,11 +45,21 @@ export type ModzHome = { at: number; pane?: string }
 // The person's arrangement of the hub, kept across sessions: rows moved (`order`, by pane) and rows hidden.
 export type HubLayout = { hidden: string[]; order: string[] }
 
+// The session's connections to outside tools (MCP servers), each named once by its state. `failed` and `pending`
+// are known only after the Connections pane asked the engine (hooks/upkeep.tsx).
+export type Links = { connected: string[]; waiting: string[]; failed: Array<{ name: string; error: string }>; pending: string[] }
+
+// One plugin or skill nobody used in a month: how many skills it lists, what the listing costs each conversation,
+// when it was last used (null: never) and, for a plugin the settings switch, the line that turns it off.
+export type Weight = { name: string; kind: 'plugin' | 'skill'; skills: number; tokens: number; lastUsedAt: number | null; disable: string | null }
+
+export type Weights = { items: Weight[]; tokens: number }
+
 declare module 'claude-code' {
   interface PluginState {
     // `isOn` is true while the hub runs: a mod's pane then draws its "← MODZ" button (kit/home.tsx). `unanswered`
     // names the pane of a row whose mod did not put it up when asked.
-    modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean; unanswered: string | null }
+    modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean; unanswered: string | null; links: Links | null; weights: Weights | null }
     // Each listed mod's own hub line (hooks/hub.ts BASES), which the hub listens for and keeps.
     'savvy-progress': { hub: HubCard; home: ModzHome; shown: ModzStage }
     filetree: { hub: HubCard; home: ModzHome; shown: ModzStage }

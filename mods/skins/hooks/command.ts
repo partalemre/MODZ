@@ -11,6 +11,8 @@ export const DEFAULT_PREFS: Prefs = {
   // Off by default: another mod (hud-pro) shows usage. /skin band on brings it back.
   band: false,
   clipOutput: false,
+  // Off by default: it repaints the whole app, which a person asks for. /skin app on.
+  app: false,
   scene: 'off',
 }
 
@@ -21,6 +23,7 @@ export const TOGGLES = {
   shimmer: 'shimmer',
   band: 'band',
   clip: 'clipOutput',
+  app: 'app',
 } as const satisfies Record<string, keyof Prefs>
 
 export type ToggleWord = keyof typeof TOGGLES
@@ -51,6 +54,7 @@ export function parsePrefs(raw: unknown, names: readonly string[]): Prefs {
     shimmer: flagOr(saved.shimmer, DEFAULT_PREFS.shimmer),
     band: flagOr(saved.band, DEFAULT_PREFS.band),
     clipOutput: flagOr(saved.clipOutput, DEFAULT_PREFS.clipOutput),
+    app: flagOr(saved.app, DEFAULT_PREFS.app),
     scene: typeof saved.scene === 'string' && SCENE_NAMES.includes(saved.scene) ? saved.scene : DEFAULT_PREFS.scene,
   }
 }
@@ -72,6 +76,7 @@ export const listing = (current: Prefs, names: readonly string[]): string =>
       `shimmer ${onOff(current.shimmer)}`,
       `band ${onOff(current.band)}`,
       `clip ${onOff(current.clipOutput)}`,
+      `app ${onOff(current.app)}`,
       `scene ${current.scene}`,
     ].join(' · '),
   ].join('\n')

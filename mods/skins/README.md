@@ -39,7 +39,8 @@ There are eight skins, each with a light and a dark palette: `tidemark` (the def
 - `/skin scene <name>` puts a living scene above the prompt on the desktop app; `/skin scene off` removes it. The scenes: `honu-lagoon`, `koi-pond`, `jellyfish`, `paper-boats`, `fireflies`, `moonlit`, `cloud-drift` and `ember`. The settings pane's Scene button (`w`) cycles through them. Each is pure CSS motion in one small SVG, and stands still when the system asks for reduced motion.
 - `/skin gallery` shows every element the skin draws, numbered, to point at when you want one changed.
 - `/skin <name>`, `/skin list`, `/skin off` switch skins.
-- `/skin rail|tables|shimmer|band|clip on|off` switch a part on or off. `/skin icons unicode|ascii` picks the icon set.
+- `/skin rail|tables|shimmer|band|clip on|off` switch a part on or off.
+- `/skin app on` colours the whole desktop or mobile app (page, cards, words, code) from the skin, in light and dark; `off` gives the app's own colours back. Needs Claude Code 2.1.324 or later; the terminal is never repainted. `/skin icons unicode|ascii` picks the icon set.
 - `/skin pin` gives this folder a look of its own; `/skin unpin` returns it to the default; `/skin share` makes this folder's look the default for the rest. Made skins are shared by every folder.
 
 Your choices are remembered across sessions.

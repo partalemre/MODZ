@@ -26,6 +26,8 @@ export type Prefs = {
   shimmer: boolean
   band: boolean
   clipOutput: boolean
+  // The desktop and mobile apps' own colours follow the skin (hooks/app-look.ts).
+  app: boolean
   // The living scene above the prompt on the desktop (hooks/scenes.ts), or 'off'.
   scene: string
 }

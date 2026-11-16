@@ -1,6 +1,8 @@
 import { expect, test } from 'claude-code/testing'
 
+import { appColors, appPainter } from '../hooks/app-look'
 import { DEFAULT_PREFS, parsePrefs, runSkinCommand } from '../hooks/command'
+import { SKINS } from '../hooks/themes'
 import { buildCustom, resolveSkin, skinNames, withSlot } from '../hooks/custom'
 import { runDesign } from '../hooks/designer'
 import { clipLines, diffstat, formatDuration, formatMs, pick, shortenPath } from '../hooks/format'
@@ -197,6 +199,7 @@ test('/skin names a skin, switches parts, and refuses what it does not know', as
   expect(runSkinCommand('default', DEFAULT_PREFS, NAMES).prefs.skin).toBe('off')
   expect(runSkinCommand('rail off', DEFAULT_PREFS, NAMES).prefs.rail).toBe(false)
   expect(runSkinCommand('clip on', DEFAULT_PREFS, NAMES).prefs.clipOutput).toBe(true)
+  expect(runSkinCommand('app on', DEFAULT_PREFS, NAMES).prefs.app).toBe(true)
   expect(runSkinCommand('shimmer maybe', DEFAULT_PREFS, NAMES).prefs).toBe(DEFAULT_PREFS)
   expect(runSkinCommand('plaid', DEFAULT_PREFS, NAMES).channel).toBe('row')
   expect(runSkinCommand('list', { ...DEFAULT_PREFS, skin: 'nord' }, NAMES).message).toContain('● nord')
@@ -403,4 +406,25 @@ test('the context meter reads against the window compaction runs at', () => {
   expect(contextPercent(context)).toBe(80)
   expect(contextPercent({ ...context, breakdown: { rawMaxTokens: 200000 } })).toBe(40)
   expect(contextPercent({ window: 200000 } as any)).toBeNull()
+})
+
+test('every built-in skin makes app colours the desktop paints, and a skin too close to read makes none', async () => {
+  for (const skin of SKINS) {
+    expect(appColors(skin) === undefined ? skin.name : 'painted').toBe('painted')
+  }
+
+  const flat = { ...tokyoNight, palette: { ...tokyoNight.palette, fg: tokyoNight.palette.surface }, light: undefined }
+  expect(appColors(flat)).toBe(undefined)
+})
+
+test('the app painter sets a skin, and clears only a theme it painted', async () => {
+  const calls: string[] = []
+  const theme = { set: async () => void calls.push('set'), clear: async () => void calls.push('clear') }
+  const painter = appPainter()
+
+  expect(await painter.paint(theme, undefined)).toBe(true)
+  expect(calls).toEqual([])
+  expect(await painter.paint(theme, tokyoNight)).toBe(true)
+  expect(await painter.paint(theme, undefined)).toBe(true)
+  expect(calls).toEqual(['set', 'clear'])
 })

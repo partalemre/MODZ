@@ -33,6 +33,8 @@ The panel opens on the right when a session starts, and again any time with `/mo
 | Meter | Usage | `hud-pro` |
 | | Look | `skins` |
 | | Mods | `modz` (the catalog below) |
+| | Connections | `modz` (below) |
+| | Dead weight | `modz` (below) |
 
 A row shows for a mod the marketplace lists as on, or for a mod that has reported a line. Each mod reports one short line (60 characters at most) with a tone: idle, live, ok, warn or bad. Mods that draw no pane of their own (`blast-radius`, `secret-guard`, `session-budget`, `cache-tax`, `done-ping`, `reflect-mod`, `terminal-browser`) have no row.
 
@@ -42,11 +44,18 @@ While `hud-pro` runs, its Usage pane hosts `session-budget`, `cache-tax` and `ef
 
 **The Mods pane** (the last row, or its tab beside the panel) starts with what you can act on. **Not installed** gives each missing mod's exact install line (`/plugin install <name>@modz`) as text you can select, with a **Copy** button, the core set first: `savvy-progress`, `plan-steps`, `filetree`, `blast-radius`, `secret-guard`, `checkpoint`, `hud-pro`. **Commands and settings** lists each installed mod's slash commands and the options it has under `/plugin`. Then it lists every mod in the marketplace: its version, whether it is on, whether its `plugin.json` could be read (healthy or broken), its group (Look, Safety, Meter, Flow), where it draws (desktop, terminal), and the project it is adapted from. The head says how many are on and whether all are healthy. It reads the marketplace's `marketplace.json` and each mod's `plugin.json` from disk, and says "Catalog could not be read" if it can't find them.
 
-The desktop app draws the panel as pictures; the terminal draws the same as text.
+**Connections** lists the session's outside tools (MCP servers) by state: broken, connecting, waiting for a sign-in, working. Its row says how many are broken or waiting, and only a broken one warns. Which servers failed is asked from the engine when you open the pane or press **Look again** (one tool-search call that matches nothing); the waiting ones come from Claude Code's own `mcp-needs-auth-cache.json`, entries of the last day.
+
+**Dead weight** lists the plugins and skills you have not used in 30 days, the heaviest first, with what each one's listing costs every chat (the engine's own estimate, as `/context` counts it) and when it was last used (Claude Code's `skillUsage` counts in `.claude.json`). A plugin is weighed whole: one use of any of its skills keeps it off the list. A plugin your settings switch on gets its `/plugin disable <name>@<marketplace>` line with a **Copy** button; nothing is switched off for you. MCP servers are not weighed: Claude Code keeps no use count for them.
+
+Both rows are read when the session starts, when a mod reports and when the hub comes forward, a minute apart at most; a quiet session reads nothing. A session with no outside tool has no Connections row, and one whose use counts cannot be read has no Dead weight row.
+
+The desktop app draws the panel as pictures; the terminal draws the same as text. The two panes above are plain text on both, so a name or a line can be selected.
 
 ## Commands
 
 - `/modz` opens the panel and brings it forward.
+- `/modz check` prints what Claude Code answers in this chat (its version, where the chat draws, the cost reading, the small model), each with ✓ or ✗: the first thing to run when a panel shows 0 or a mod stays quiet.
 - `/modz help` prints one index: every installed mod's slash commands, the options it has under `/plugin`, and the install line of each mod that is not installed.
 - **MODZ** in the desktop prompt footer shows or hides the panel.
 

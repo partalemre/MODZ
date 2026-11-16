@@ -24,6 +24,8 @@ const PANES = {
     handoff: { title: 'Handoff', hint: 'A note for your next fresh chat' },
     skins: { title: 'Look', hint: 'Looks and colors' },
     'modz-mods': { title: 'Mods', hint: 'Every mod and whether it works' },
+    'modz-links': { title: 'Connections', hint: 'Outside tools: working, waiting or broken' },
+    'modz-weight': { title: 'Dead weight', hint: 'Installed, but you never use it' },
   },
   tr: {
     agents: { title: 'Ajanlar', hint: 'Ajanlar: durum, ilerleme, maliyet' },
@@ -38,6 +40,8 @@ const PANES = {
     handoff: { title: 'Devir', hint: 'Bir sonraki temiz sohbet için not' },
     skins: { title: 'Görünüm', hint: 'Görünüm ve renkler' },
     'modz-mods': { title: 'Modlar', hint: 'Tüm modlar ve çalışıp çalışmadıkları' },
+    'modz-links': { title: 'Bağlantılar', hint: 'Dış araçlar: çalışan, bekleyen, bozuk' },
+    'modz-weight': { title: 'Ölü ağırlık', hint: 'Kurulu ama hiç kullanmadıkların' },
   },
 } as const
 

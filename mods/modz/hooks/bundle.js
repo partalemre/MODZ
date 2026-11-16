@@ -122,7 +122,9 @@ const PANES = {
     effort: { title: "Thinking level", hint: "How hard Claude thinks each turn" },
     handoff: { title: "Handoff", hint: "A note for your next fresh chat" },
     skins: { title: "Look", hint: "Looks and colors" },
-    "modz-mods": { title: "Mods", hint: "Every mod and whether it works" }
+    "modz-mods": { title: "Mods", hint: "Every mod and whether it works" },
+    "modz-links": { title: "Connections", hint: "Outside tools: working, waiting or broken" },
+    "modz-weight": { title: "Dead weight", hint: "Installed, but you never use it" }
   },
   tr: {
     agents: { title: "Ajanlar", hint: "Ajanlar: durum, ilerleme, maliyet" },
@@ -136,7 +138,9 @@ const PANES = {
     effort: { title: "Düşünme düzeyi", hint: "Claude her turda ne kadar derin düşünüyor" },
     handoff: { title: "Devir", hint: "Bir sonraki temiz sohbet için not" },
     skins: { title: "Görünüm", hint: "Görünüm ve renkler" },
-    "modz-mods": { title: "Modlar", hint: "Tüm modlar ve çalışıp çalışmadıkları" }
+    "modz-mods": { title: "Modlar", hint: "Tüm modlar ve çalışıp çalışmadıkları" },
+    "modz-links": { title: "Bağlantılar", hint: "Dış araçlar: çalışan, bekleyen, bozuk" },
+    "modz-weight": { title: "Ölü ağırlık", hint: "Kurulu ama hiç kullanmadıkların" }
   }
 };
 function paneWords(pane) {
@@ -290,6 +294,9 @@ function placeLine(mod) {
 
 const SECTIONS = ["work", "safety", "meter"];
 const MODS_PANE = "modz-mods";
+const LINKS_PANE = "modz-links";
+const WEIGHT_PANE = "modz-weight";
+const SIDE_PANES = [LINKS_PANE, WEIGHT_PANE];
 const HOLD_PANE = "modz-hold";
 const BASES = [
   { pane: "agents", mod: "savvy-progress", icon: "sparkle", role: "run", section: "work" },
@@ -303,7 +310,9 @@ const BASES = [
   { pane: "effort", mod: "effort-router", icon: "bolt", role: "run", section: "meter" },
   { pane: "handoff", mod: "handoff", icon: "flag", role: "plan", section: "meter" },
   { pane: "skins", mod: "skins", icon: "eye", role: "edit", section: "meter" },
-  { pane: MODS_PANE, mod: "modz", icon: "cube", role: "edit", section: "meter" }
+  { pane: MODS_PANE, mod: "modz", icon: "cube", role: "edit", section: "meter" },
+  { pane: LINKS_PANE, mod: LINKS_PANE, icon: "plug", role: "read", section: "meter" },
+  { pane: WEIGHT_PANE, mod: WEIGHT_PANE, icon: "trash", role: "warn", section: "meter" }
 ];
 const entries = () => BASES.map(({ isBeta, ...base }) => ({ ...base, ...paneWords(base.pane), badge: isBeta ? badgeWord() : null, isGuest: false }));
 const KNOWN_MODS = new Set(BASES.map((base) => base.mod));
@@ -312,7 +321,6 @@ function guestEntry(mod, card) {
   const section = SECTIONS.includes(card.section) ? card.section : "work";
   return { pane: card.pane, mod, title: card.title ?? mod, hint: card.hint ?? "", icon, role: "edit", section, badge: card.badge ?? null, isGuest: true };
 }
-const modsTitle = () => paneWords(MODS_PANE).title;
 const TONES = ["idle", "live", "ok", "warn", "bad"];
 const DETAIL_MAX = 60;
 const TITLE_MAX = 32;
@@ -466,6 +474,495 @@ function nowOf(rows, now) {
 }
 const hasRunningClock = (cards) => Object.values(cards).some((card) => card.live?.lines.some((line) => line.since !== undefined) === true);
 
+const FIRST_PINNED = 1e9;
+const pins = new Map;
+function handleFor(id) {
+  let handle = pins.get(id);
+  if (handle === undefined) {
+    handle = FIRST_PINNED + pins.size;
+    pins.set(id, handle);
+  }
+  return handle;
+}
+const UNDRAWABLE = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\ud800-\udfff\u{10eeee}]/gu;
+const drawable = (text) => text.replace(UNDRAWABLE, "");
+function drawableProps(el) {
+  const props = el.props;
+  if (typeof props !== "object" || props === null)
+    return el;
+  const cleaned = Object.entries(props).filter(([name, value]) => name !== "key" && typeof value === "string" && drawable(value) !== value);
+  if (cleaned.length === 0)
+    return el;
+  return { ...el, props: { ...props, ...Object.fromEntries(cleaned.map(([name, value]) => [name, drawable(value)])) } };
+}
+function pinNode(node, ctx) {
+  if (typeof node === "string")
+    return drawable(node);
+  if (typeof node !== "object" || node === null)
+    return node;
+  const el = drawableProps(node);
+  const children = el.children?.map((child) => pinNode(child, ctx));
+  const withKids = children === undefined ? el : { ...el, children };
+  if (el.press?.plugin !== "" || typeof el.props?.key !== "string")
+    return withKids;
+  const base = `${ctx.site}\x00${el.type}\x00${el.props.key}`;
+  const nth = ctx.seen.get(base) ?? 0;
+  ctx.seen.set(base, nth + 1);
+  return { ...withKids, press: { plugin: "", handle: handleFor(`${base}\x00${nth}`) } };
+}
+function pinned(site, tree) {
+  if (tree === null || tree === undefined)
+    return tree;
+  const ctx = { site: `${site.surface}\x00${site.component ?? ""}\x00${site.requestId ?? ""}`, seen: new Map };
+  return pinNode(tree, ctx);
+}
+
+const short = (tokens, point, unit) => tokens < 1000 ? String(tokens) : `${(tokens / 1000).toFixed(1).replace(".", point)}${unit}`;
+const LINKS = {
+  en: {
+    lead: "Claude's doors to outside tools (MCP servers) in this chat.",
+    failed: "Broken",
+    failedNote: "Could not connect. Fix its address or remove it.",
+    pending: "Connecting",
+    waiting: "Waiting for sign-in",
+    waitingNote: "Unusable until you sign in: Claude's connector settings, or /mcp.",
+    connected: "Working",
+    none: "No connections in this chat.",
+    unread: "Not looked at yet.",
+    check: "Look again",
+    failedCount: (n) => `${n} broken`,
+    waitingCount: (n) => `${n} waiting for sign-in`,
+    connectedCount: (n) => `${n} working`
+  },
+  tr: {
+    lead: "Claude'un bu sohbette dış araçlara açılan kapıları (MCP sunucuları).",
+    failed: "Bozuk",
+    failedNote: "Bağlanamadı. Adresini düzelt ya da kaldır.",
+    pending: "Bağlanıyor",
+    waiting: "Giriş bekliyor",
+    waitingNote: "Giriş yapmadan kullanılamaz: Claude'un bağlantı ayarları ya da /mcp.",
+    connected: "Çalışıyor",
+    none: "Bu sohbette hiç bağlantı yok.",
+    unread: "Henüz bakılmadı.",
+    check: "Yeniden bak",
+    failedCount: (n) => `${n} bozuk`,
+    waitingCount: (n) => `${n} giriş bekliyor`,
+    connectedCount: (n) => `${n} çalışıyor`
+  }
+};
+const linkWords = () => pick(LINKS);
+const WEIGHT$1 = {
+  en: {
+    lead: (days) => `Plugins and skills you have not used in ${days} days. Claude reads each one's listing in every chat.`,
+    total: (tokens) => `Without them every chat starts about ${short(tokens, ".", "k")} tokens lighter.`,
+    kinds: { plugin: "plugin", skill: "skill" },
+    skills: (n) => `${n} ${n === 1 ? "skill" : "skills"}`,
+    tokens: (tokens) => `~${short(tokens, ".", "k")} tokens`,
+    never: "never used",
+    idle: (days) => `not used for ${days} days`,
+    how: "Copy a line and paste it into the message box to switch that plugin off. Your own skills are folders under ~/.claude/skills.",
+    copy: "Copy",
+    more: (n) => `+${n} more`,
+    none: "No dead weight: everything installed gets used.",
+    noneShort: "everything gets used",
+    unread: "Not measured yet.",
+    count: (n, tokens) => `${n} unused · ~${short(tokens, ".", "k")} tokens`
+  },
+  tr: {
+    lead: (days) => `${days} gündür kullanmadığın eklentiler ve beceriler. Claude her sohbette hepsinin tanıtımını okur.`,
+    total: (tokens) => `Bunlar olmasa her sohbet yaklaşık ${short(tokens, ",", " bin")} token hafif başlar.`,
+    kinds: { plugin: "eklenti", skill: "beceri" },
+    skills: (n) => `${n} beceri`,
+    tokens: (tokens) => `~${short(tokens, ",", " bin")} token`,
+    never: "hiç kullanılmadı",
+    idle: (days) => `${days} gündür kullanılmadı`,
+    how: "Bir satırı kopyalayıp mesaj kutusuna yapıştır; o eklenti kapanır. Kendi becerilerin ~/.claude/skills altındaki klasörlerdir.",
+    copy: "Kopyala",
+    more: (n) => `+${n} tane daha`,
+    none: "Ölü ağırlık yok: kurulu her şey kullanılıyor.",
+    noneShort: "her şey kullanılıyor",
+    unread: "Henüz ölçülmedi.",
+    count: (n, tokens) => `${n} kullanılmıyor · ~${short(tokens, ",", " bin")} token`
+  }
+};
+const weightWords = () => pick(WEIGHT$1);
+
+const WAIT_FRESH_MS = 24 * 60 * 60 * 1000;
+const ERROR_MAX = 80;
+const wireName = (name) => name.replace(/[^\w-]/g, "_");
+function linkName(name) {
+  const match = /^plugin([:_])(.+?)\1(.+)$/.exec(name);
+  if (match === null)
+    return name;
+  const [, , plugin, server] = match;
+  return server === plugin ? String(server) : `${server} (${plugin})`;
+}
+const byName = (a, b) => linkName(a).localeCompare(linkName(b));
+function waitingOf(cache, now) {
+  if (typeof cache !== "object" || cache === null)
+    return [];
+  return Object.entries(cache).filter(([, entry]) => now - Number(entry?.timestamp) <= WAIT_FRESH_MS).map(([name]) => name);
+}
+function searchOf(search) {
+  const result = search?.result;
+  const failed = (Array.isArray(result?.failed_mcp_servers) ? result.failed_mcp_servers : []).filter((one) => typeof one?.name === "string").map((one) => ({ name: one.name, error: typeof one.error === "string" ? one.error.slice(0, ERROR_MAX) : "" }));
+  const pending = (Array.isArray(result?.pending_mcp_servers) ? result.pending_mcp_servers : []).filter((name) => typeof name === "string");
+  return { failed, pending };
+}
+function linksOf(facts) {
+  const { failed, pending } = searchOf(facts.search);
+  const told = new Set([...failed.map((one) => one.name), ...pending].map(wireName));
+  const connected = [...new Set(facts.servers)].filter((name) => !told.has(wireName(name))).sort(byName);
+  for (const name of connected)
+    told.add(wireName(name));
+  const waiting = waitingOf(facts.authCache, facts.now).filter((name) => !told.has(wireName(name))).sort(byName);
+  return { connected, waiting, failed: failed.sort((a, b) => byName(a.name, b.name)), pending: pending.sort(byName) };
+}
+const hasLinks = (links) => links.connected.length + links.waiting.length + links.failed.length + links.pending.length > 0;
+function linksCard(links, at) {
+  const say = linkWords();
+  const parts = [links.failed.length > 0 ? say.failedCount(links.failed.length) : "", links.waiting.length > 0 ? say.waitingCount(links.waiting.length) : ""].filter((part) => part !== "");
+  const detail = parts.length > 0 ? parts.join(" · ") : say.connectedCount(links.connected.length);
+  return { pane: LINKS_PANE, detail, tone: links.failed.length > 0 ? "warn" : "idle", at };
+}
+
+function stableDrawings() {
+  const kept = new Map;
+  return {
+    reset: () => kept.clear(),
+    draw: (key, what, build) => {
+      const signature = typeof what === "string" ? what : JSON.stringify(what);
+      const before = kept.get(key);
+      if (before !== undefined && before.what === signature)
+        return before.drawing;
+      const drawing = build(before === undefined ? "enter" : "change");
+      kept.set(key, { what: signature, drawing });
+      return drawing;
+    }
+  };
+}
+
+const TITLE$1 = "modz";
+const STAGE$1 = { plugin: "modz", key: "stage" };
+const hubDrawings = stableDrawings();
+const catalogDrawings = stableDrawings();
+const closeQuietly = ($, id) => $.ui.close({ id }).catch((cause) => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: "debug" }));
+async function show($, pane, isFocused = true) {
+  const title = pane === HUB_PANE ? TITLE$1 : paneWords(pane).title;
+  if (pane === HUB_PANE)
+    hubDrawings.reset();
+  if (pane === MODS_PANE)
+    catalogDrawings.reset();
+  await $.ui.open(isFocused ? { id: pane, title, focus: true } : { id: pane, title });
+  await $.state.set(STAGE$1, { pane, at: Date.now() });
+  for (const other of [HUB_PANE, MODS_PANE])
+    if (other !== pane)
+      await closeQuietly($, other);
+  const up = new Set((await $.ui.panes().catch(() => [])).map((each) => each.id));
+  for (const side of SIDE_PANES)
+    if (side !== pane && up.has(side))
+      await closeQuietly($, side);
+}
+const openHub = ($) => show($, HUB_PANE);
+async function copy($, text, press) {
+  const surface = press?.surface;
+  const words = catalogWords();
+  try {
+    $.ui.toast((await $.ui.copy(surface === undefined ? { text } : { text, surface })).isCopied ? words.copied : words.notCopied);
+  } catch (cause) {
+    $.ui.log(`modz: the line could not be copied: ${String(cause)}`, { to: "debug" });
+  }
+}
+
+const HOME_LABEL = "← modz";
+function HomeButton(ui, onPress) {
+  const { Box, Button } = ui;
+  return h(Box, {
+    key: "modz-home-row",
+    flexDirection: "row",
+    marginLeft: -1
+  }, h(Button, {
+    key: "modz-home",
+    label: HOME_LABEL,
+    plain: true,
+    dimColor: true,
+    onPress
+  }));
+}
+function withHome(ui, tree, onHome) {
+  if (onHome === null)
+    return tree;
+  const { Box } = ui;
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, HomeButton(ui, onHome), tree);
+}
+
+const IDLE_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const usageKey = (skill) => skill.name.includes(":") || skill.pluginName === undefined ? skill.name : `${skill.pluginName}:${skill.name}`;
+function lastUsedOf(usage, skill) {
+  const use = usage[usageKey(skill)];
+  return Number(use?.usageCount) > 0 && typeof use?.lastUsedAt === "number" ? use.lastUsedAt : null;
+}
+function disableOf(plugin, enabled) {
+  const id = Object.keys(enabled).find((key) => key.startsWith(`${plugin}@`) && enabled[key] === true);
+  return id === undefined ? null : `/plugin disable ${id}`;
+}
+function weightsOf(facts) {
+  if (typeof facts.usage !== "object" || facts.usage === null || facts.skills.length === 0)
+    return null;
+  const usage = facts.usage;
+  const groups = new Map;
+  for (const skill of facts.skills) {
+    if (skill.source === "built-in")
+      continue;
+    const isPlugin = skill.pluginName !== undefined;
+    const name = skill.pluginName ?? skill.name;
+    const key = `${isPlugin ? "plugin" : "skill"}:${name}`;
+    const kept = groups.get(key) ?? { name, kind: isPlugin ? "plugin" : "skill", skills: 0, tokens: 0, lastUsedAt: null, disable: isPlugin ? disableOf(name, facts.enabled) : null };
+    const lastUsedAt = lastUsedOf(usage, skill);
+    groups.set(key, { ...kept, skills: kept.skills + 1, tokens: kept.tokens + skill.tokens, lastUsedAt: lastUsedAt === null ? kept.lastUsedAt : Math.max(lastUsedAt, kept.lastUsedAt ?? 0) });
+  }
+  const items = [...groups.values()].filter((one) => one.lastUsedAt === null || facts.now - one.lastUsedAt > IDLE_DAYS * DAY_MS).sort((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name));
+  return { items, tokens: items.reduce((sum, one) => sum + one.tokens, 0) };
+}
+const idleDays = (lastUsedAt, now) => Math.floor((now - lastUsedAt) / DAY_MS);
+function weightCard(weights, at) {
+  const say = weightWords();
+  const detail = weights.items.length === 0 ? say.noneShort : say.count(weights.items.length, weights.tokens);
+  return { pane: WEIGHT_PANE, detail, tone: "idle", at };
+}
+
+function group(ui, look, lines) {
+  const { Box, Text } = ui;
+  if (lines.length === 0)
+    return null;
+  return h(Box, {
+    key: look.key,
+    flexDirection: "column"
+  }, h(Text, {
+    bold: true,
+    color: look.color
+  }, `${look.title} · ${lines.length}`), look.note === undefined ? null : h(Text, {
+    dimColor: true
+  }, look.note), lines.map((line) => h(Text, {
+    key: `${look.key}-${line}`,
+    wrap: "truncate"
+  }, line)));
+}
+function linksBody(ui, links) {
+  const { Text } = ui;
+  const say = linkWords();
+  const failed = links.failed.map((one) => one.error === "" ? linkName(one.name) : `${linkName(one.name)}: ${one.error}`);
+  const groups = [
+    group(ui, { key: "failed", title: say.failed, color: "error", note: say.failedNote }, failed),
+    group(ui, { key: "pending", title: say.pending }, links.pending.map(linkName)),
+    group(ui, { key: "waiting", title: say.waiting, color: "warning", note: say.waitingNote }, links.waiting.map(linkName)),
+    group(ui, { key: "connected", title: say.connected, color: "success" }, links.connected.map(linkName))
+  ].filter((one) => one !== null);
+  return groups.length === 0 ? [h(Text, {
+    key: "none"
+  }, say.none)] : groups;
+}
+function linksTree(ui, view) {
+  const { Box, Button, Text } = ui;
+  const say = linkWords();
+  return withHome(ui, h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, h(Text, {
+    dimColor: true
+  }, say.lead), view.links === null ? [h(Text, {
+    key: "unread"
+  }, say.unread)] : linksBody(ui, view.links), h(Box, {
+    flexDirection: "row",
+    marginLeft: -1
+  }, h(Button, {
+    key: "links-check",
+    label: say.check,
+    plain: true,
+    onPress: view.onCheck
+  }))), view.onHome);
+}
+const MAX_ITEMS = 30;
+function weightRow(ui, view, item) {
+  const { Box, Button, Text } = ui;
+  const say = weightWords();
+  const key = `weight-${item.kind}-${item.name}`;
+  const kind = item.kind === "plugin" ? `${say.kinds.plugin} · ${say.skills(item.skills)}` : say.kinds.skill;
+  const idle = item.lastUsedAt === null ? say.never : say.idle(idleDays(item.lastUsedAt, view.now));
+  const { disable } = item;
+  return h(Box, {
+    key,
+    flexDirection: "column"
+  }, h(Box, {
+    flexDirection: "row",
+    columnGap: 1
+  }, h(Text, {
+    bold: true
+  }, item.name), h(Text, {
+    dimColor: true
+  }, kind), h(Box, {
+    flexGrow: 1
+  }), h(Text, null, say.tokens(item.tokens))), h(Text, {
+    dimColor: true
+  }, idle), disable === null ? null : h(Box, {
+    flexDirection: "row",
+    columnGap: 1,
+    alignItems: "center"
+  }, h(Button, {
+    key: `${key}-copy`,
+    label: say.copy,
+    variant: "secondary",
+    onPress: (press) => view.onCopy(disable, press)
+  }), h(Text, null, disable)));
+}
+function weightBody(ui, view) {
+  const { Text } = ui;
+  const say = weightWords();
+  const { weights } = view;
+  if (weights === null)
+    return [h(Text, {
+      key: "unread"
+    }, say.unread)];
+  if (weights.items.length === 0)
+    return [h(Text, {
+      key: "none"
+    }, say.none)];
+  const more = weights.items.length - MAX_ITEMS;
+  return [
+    h(Text, {
+      key: "total"
+    }, say.total(weights.tokens)),
+    ...weights.items.slice(0, MAX_ITEMS).map((item) => weightRow(ui, view, item)),
+    ...more > 0 ? [h(Text, {
+      key: "more",
+      dimColor: true
+    }, say.more(more))] : [],
+    h(Text, {
+      key: "how",
+      dimColor: true
+    }, say.how)
+  ];
+}
+function weightTree(ui, view) {
+  const { Box, Text } = ui;
+  return withHome(ui, h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, h(Text, {
+    dimColor: true
+  }, weightWords().lead(IDLE_DAYS)), weightBody(ui, view)), view.onHome);
+}
+
+const cardsAtom$2 = atom({ plugin: "modz", key: "cards" }, {});
+const linksAtom = atom({ plugin: "modz", key: "links" }, null);
+const weightsAtom = atom({ plugin: "modz", key: "weights" }, null);
+const FILL_GAP_MS = 60000;
+let filledAt = 0;
+const NO_MATCH = "zzqqxxjj";
+const log = ($, what) => (cause) => $.ui.log(`modz: ${what} failed: ${String(cause)}`, { to: "debug" });
+async function placesOf($) {
+  const named = await $.env.get("CLAUDE_CONFIG_DIR").catch(() => {
+    return;
+  });
+  if (named)
+    return { dir: named, json: `${named}/.claude.json` };
+  const home = await $.env.get("HOME").catch(() => {
+    return;
+  }) || await $.env.get("USERPROFILE").catch(() => {
+    return;
+  });
+  return home ? { dir: `${home}/.claude`, json: `${home}/.claude.json` } : null;
+}
+async function jsonAt($, path) {
+  if (path === undefined)
+    return;
+  try {
+    return JSON.parse(String(await $.fs.read(path)));
+  } catch {
+    return;
+  }
+}
+async function breakdownOf($) {
+  return (await $.session.usage({ breakdown: "summary" }).catch(() => {
+    return;
+  }))?.context.breakdown;
+}
+async function keepCard($, card) {
+  const kept = (await read($, cardsAtom$2))[card.pane];
+  if (kept?.detail === card.detail && kept.tone === card.tone)
+    return;
+  await update($, cardsAtom$2, (cards) => ({ ...cards, [card.pane]: card }));
+}
+async function refreshLinks($, isAsking) {
+  const places = await placesOf($);
+  const servers = ((await breakdownOf($))?.mcpTools ?? []).map((tool) => tool.serverName);
+  const search = isAsking ? await $.tool.call({ tool: "ToolSearch", query: NO_MATCH, max_results: 1 }).catch(() => {
+    return;
+  }) : undefined;
+  const now = await $.clock.now().catch(() => Date.now());
+  const links = linksOf({ servers, authCache: await jsonAt($, places === null ? undefined : `${places.dir}/mcp-needs-auth-cache.json`), search, now });
+  if (isSame(await read($, linksAtom), links) || !hasLinks(links) && await read($, linksAtom) === null)
+    return;
+  await update($, linksAtom, () => links);
+  await keepCard($, linksCard(links, now));
+}
+async function refreshWeights($) {
+  const config = await jsonAt($, (await placesOf($))?.json);
+  const enabled = (await $.settings.read().catch(() => ({}))).enabledPlugins;
+  const now = await $.clock.now().catch(() => Date.now());
+  const weights = weightsOf({
+    skills: (await breakdownOf($))?.skills?.skillFrontmatter ?? [],
+    usage: config?.skillUsage,
+    enabled: typeof enabled === "object" && enabled !== null ? enabled : {},
+    now
+  });
+  if (weights === null)
+    return false;
+  if (isSame(await read($, weightsAtom), weights))
+    return true;
+  await update($, weightsAtom, () => weights);
+  await keepCard($, weightCard(weights, now));
+  return true;
+}
+function refreshSide($, pane) {
+  if (pane === HUB_PANE)
+    fillSideRows($);
+  if (pane === LINKS_PANE)
+    refreshLinks($, true).catch(log($, "reading the connections"));
+  if (pane === WEIGHT_PANE)
+    refreshWeights($).catch(log($, "weighing the plugins"));
+}
+async function fill$1($) {
+  setLang(await $.env.get("MODZ_LANG").catch(() => {
+    return;
+  }));
+  await refreshLinks($, false);
+  if (!await refreshWeights($))
+    filledAt = 0;
+}
+function fillSideRows($) {
+  const now = Date.now();
+  if (now - filledAt < FILL_GAP_MS)
+    return;
+  filledAt = now;
+  fill$1($).catch(log($, "filling the side rows"));
+}
+function wireUpkeep(on) {
+  on("ui.render", { component: "Pane", requestId: LINKS_PANE }, async ($, e) => {
+    const onHome = () => void openHub($).catch(log($, "opening the hub"));
+    const onCheck = () => void refreshLinks($, true).catch(log($, "reading the connections"));
+    return pinned(e, linksTree($.ui.resolve(e), { links: await read($, linksAtom), onHome, onCheck }));
+  });
+  on("ui.render", { component: "Pane", requestId: WEIGHT_PANE }, async ($, e) => {
+    const onHome = () => void openHub($).catch(log($, "opening the hub"));
+    return pinned(e, weightTree($.ui.resolve(e), { weights: await read($, weightsAtom), now: await $.clock.now().catch(() => Date.now()), onHome, onCopy: (text, press) => copy($, text, press) }));
+  });
+}
+
 const cardsAtom$1 = atom({ plugin: "modz", key: "cards" }, {});
 const BEAT_MS = 1e4;
 let beat = null;
@@ -488,6 +985,7 @@ function wireCards(on) {
     const from = e.plugin;
     if (card === null || from === "modz")
       return done;
+    fillSideRows($);
     if (isSame((await read($, cardsAtom$1))[from], card))
       return done;
     keepBeat($, await update($, cardsAtom$1, (cards) => ({ ...cards, [from]: card })));
@@ -498,7 +996,7 @@ function wireCards(on) {
 const TOGGLE_KEY = "modz-toggle";
 const TOGGLE_LABEL = "modz";
 const JOINT = " & ";
-const HUB_PANES = new Set([HUB_PANE, MODS_PANE, HOLD_PANE]);
+const HUB_PANES = new Set([HUB_PANE, MODS_PANE, HOLD_PANE, ...SIDE_PANES]);
 function footerTree(ui, view) {
   const { Box, Text, Button } = ui;
   const labels = view.modes.length > 0 ? [h(Text, {
@@ -517,6 +1015,69 @@ function footerTree(ui, view) {
   }));
 }
 const isHubShown = (panes) => panes.some((pane) => pane.isShown && HUB_PANES.has(pane.id));
+
+const PROBE_MODEL = "haiku";
+const PROBE_TIMEOUT_MS = 20000;
+const PROBE_MAX_TOKENS = 8;
+const EN = {
+  title: "MODZ check: what Claude Code answers in this chat",
+  version: "Claude Code version",
+  surfaces: "Where this chat draws",
+  cost: "Cost reading",
+  model: "Small model (rule and safety checks)",
+  system: "System",
+  mods: "Mods on",
+  none: "none",
+  noSurface: "nowhere: a background or remote chat, panels and cards stay empty here",
+  noCost: "no reading yet: cost shows 0 until one arrives (send one message, then run this again)",
+  allOk: "Everything answered. If a panel is still empty, send this text to the mod author.",
+  someFailed: "The lines marked ✗ are why a panel shows 0 or stays quiet. Send this text to the mod author."
+};
+const WORDS$3 = {
+  en: EN,
+  tr: {
+    title: "MODZ sınaması: Claude Code bu sohbette neye cevap veriyor",
+    version: "Claude Code sürümü",
+    surfaces: "Bu sohbetin çizildiği yer",
+    cost: "Maliyet okuması",
+    model: "Küçük model (kural ve güvenlik kontrolleri)",
+    system: "Sistem",
+    mods: "Açık modlar",
+    none: "yok",
+    noSurface: "hiçbir yer: arka plan ya da uzaktan sohbet, paneller ve kartlar burada boş kalır",
+    noCost: "henüz okuma yok: gelene kadar maliyet 0 görünür (bir mesaj gönderip bunu yeniden çalıştır)",
+    allOk: "Hepsi cevap verdi. Bir panel hâlâ boşsa bu metni modun yazarına gönder.",
+    someFailed: "✗ işaretli satırlar bir panelin 0 göstermesinin ya da susmasının nedeni. Bu metni modun yazarına gönder."
+  }
+};
+const line = (label, probe) => `${probe.isOk ? "✓" : "✗"} ${label}: ${probe.said}`;
+function checkText(facts) {
+  const w = pick(WORDS$3);
+  const probes = [line(w.version, facts.version), line(w.surfaces, facts.surfaces), line(w.cost, facts.cost), line(w.model, facts.model)];
+  const isAllOk = [facts.version, facts.surfaces, facts.cost, facts.model].every((probe) => probe.isOk);
+  return [w.title, "", ...probes, `  ${w.system}: ${facts.system}`, `  ${w.mods}: ${facts.mods.join(", ") || w.none}`, "", isAllOk ? w.allOk : w.someFailed].join(`
+`);
+}
+const failed = (cause) => ({ isOk: false, said: String(cause) });
+async function modelProbe($) {
+  const reply = await $.model.complete({ model: PROBE_MODEL, prompt: "Reply with the single word: ok", maxTokens: PROBE_MAX_TOKENS, timeoutMs: PROBE_TIMEOUT_MS });
+  if (reply.isAnswered)
+    return { isOk: true, said: PROBE_MODEL };
+  return { isOk: false, said: reply.reason === "api-error" ? `${reply.reason} ${reply.status ?? ""} ${reply.error ?? ""}`.trim() : reply.reason };
+}
+async function checkFacts($, mods) {
+  const w = pick(WORDS$3);
+  const [version, surfaces, cost, model, os] = await Promise.all([
+    $.session.version().then((v) => ({ isOk: true, said: v.version }), failed),
+    $.session.surfaces().then((list) => list.length > 0 ? { isOk: true, said: list.join(", ") } : { isOk: false, said: w.noSurface }, failed),
+    $.session.usage().then((u) => u.cost === undefined ? { isOk: false, said: w.noCost } : { isOk: true, said: `$${u.cost.usd.toFixed(2)}` }, failed),
+    modelProbe($).catch(failed),
+    $.env.get("OS").catch(() => {
+      return;
+    })
+  ]);
+  return { version, surfaces, cost, model, system: os === "Windows_NT" ? "Windows" : "macOS / Linux", mods };
+}
 
 const CORE = ["modz", "savvy-progress", "plan-steps", "filetree", "blast-radius", "secret-guard", "checkpoint", "hud-pro"];
 const ownerOf = (command) => command.plugin?.split("@")[0];
@@ -2048,90 +2609,6 @@ function wireLanguageKeeper(on, options) {
   });
 }
 
-const FIRST_PINNED = 1e9;
-const pins = new Map;
-function handleFor(id) {
-  let handle = pins.get(id);
-  if (handle === undefined) {
-    handle = FIRST_PINNED + pins.size;
-    pins.set(id, handle);
-  }
-  return handle;
-}
-const UNDRAWABLE = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\ud800-\udfff\u{10eeee}]/gu;
-const drawable = (text) => text.replace(UNDRAWABLE, "");
-function drawableProps(el) {
-  const props = el.props;
-  if (typeof props !== "object" || props === null)
-    return el;
-  const cleaned = Object.entries(props).filter(([name, value]) => name !== "key" && typeof value === "string" && drawable(value) !== value);
-  if (cleaned.length === 0)
-    return el;
-  return { ...el, props: { ...props, ...Object.fromEntries(cleaned.map(([name, value]) => [name, drawable(value)])) } };
-}
-function pinNode(node, ctx) {
-  if (typeof node === "string")
-    return drawable(node);
-  if (typeof node !== "object" || node === null)
-    return node;
-  const el = drawableProps(node);
-  const children = el.children?.map((child) => pinNode(child, ctx));
-  const withKids = children === undefined ? el : { ...el, children };
-  if (el.press?.plugin !== "" || typeof el.props?.key !== "string")
-    return withKids;
-  const base = `${ctx.site}\x00${el.type}\x00${el.props.key}`;
-  const nth = ctx.seen.get(base) ?? 0;
-  ctx.seen.set(base, nth + 1);
-  return { ...withKids, press: { plugin: "", handle: handleFor(`${base}\x00${nth}`) } };
-}
-function pinned(site, tree) {
-  if (tree === null || tree === undefined)
-    return tree;
-  const ctx = { site: `${site.surface}\x00${site.component ?? ""}\x00${site.requestId ?? ""}`, seen: new Map };
-  return pinNode(tree, ctx);
-}
-
-function stableDrawings() {
-  const kept = new Map;
-  return {
-    reset: () => kept.clear(),
-    draw: (key, what, build) => {
-      const signature = typeof what === "string" ? what : JSON.stringify(what);
-      const before = kept.get(key);
-      if (before !== undefined && before.what === signature)
-        return before.drawing;
-      const drawing = build(before === undefined ? "enter" : "change");
-      kept.set(key, { what: signature, drawing });
-      return drawing;
-    }
-  };
-}
-
-const HOME_LABEL = "← modz";
-function HomeButton(ui, onPress) {
-  const { Box, Button } = ui;
-  return h(Box, {
-    key: "modz-home-row",
-    flexDirection: "row",
-    marginLeft: -1
-  }, h(Button, {
-    key: "modz-home",
-    label: HOME_LABEL,
-    plain: true,
-    dimColor: true,
-    onPress
-  }));
-}
-function withHome(ui, tree, onHome) {
-  if (onHome === null)
-    return tree;
-  const { Box } = ui;
-  return h(Box, {
-    flexDirection: "column",
-    rowGap: 1
-  }, HomeButton(ui, onHome), tree);
-}
-
 const PX_PER_COLUMN = 9;
 const WIDTH_MIN = 320;
 const WIDTH_MAX = 900;
@@ -3503,6 +3980,12 @@ let asked = null;
 function noteAnswer(pane) {
   answered = pane ?? answered;
 }
+const closeSides = async (io) => {
+  const up = new Set((await io.panes()).map((each) => each.id));
+  for (const side of SIDE_PANES)
+    if (up.has(side))
+      await io.close(side);
+};
 const clearUnanswered = async (io) => {
   if (await io.unanswered.read() !== null)
     await io.unanswered.write(null);
@@ -3512,6 +3995,7 @@ async function stepAside(io, pane) {
   await io.stage.write(pane);
   await io.close(HUB_PANE);
   await io.close(MODS_PANE);
+  await closeSides(io);
   await clearUnanswered(io);
 }
 async function watchAnswer(io, ask) {
@@ -3522,8 +4006,8 @@ async function watchAnswer(io, ask) {
     await io.show(HUB_PANE, false);
 }
 async function openPane(io, pane) {
-  if (pane === MODS_PANE)
-    return io.show(MODS_PANE);
+  if (pane === MODS_PANE || SIDE_PANES.includes(pane))
+    return io.show(pane);
   const ask = { pane };
   asked = ask;
   await clearUnanswered(io);
@@ -3550,6 +4034,7 @@ async function toggleHub(io) {
     return io.show(HUB_PANE, false);
   await io.close(HUB_PANE);
   await io.close(MODS_PANE);
+  await closeSides(io);
 }
 
 function metaOf(market) {
@@ -3572,6 +4057,7 @@ const PANE = HUB_PANE;
 const TITLE = "modz";
 const OPEN = { plugin: "modz", key: "open" };
 const STAGE = { plugin: "modz", key: "stage" };
+const OWN_PANES = [PANE, MODS_PANE, ...SIDE_PANES];
 const cardsAtom = atom({ plugin: "modz", key: "cards" }, {});
 const layoutAtom = atom({ plugin: "modz", key: "layout" }, EMPTY_LAYOUT);
 const editingAtom = atom({ plugin: "modz", key: "isEditing" }, false);
@@ -3594,21 +4080,9 @@ const diskOf = ($) => ({
   write: (path, text) => $.fs.write(path, text),
   log: (text) => $.ui.log(text, { to: "debug" })
 });
-const hubDrawings = stableDrawings();
-const catalogDrawings = stableDrawings();
-const closeQuietly = ($, id) => $.ui.close({ id }).catch((cause) => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: "debug" }));
-async function show($, pane, isFocused = true) {
-  const title = pane === PANE ? TITLE : modsTitle();
-  const drawings = pane === PANE ? hubDrawings : catalogDrawings;
-  drawings.reset();
-  await $.ui.open(isFocused ? { id: pane, title, focus: true } : { id: pane, title });
-  await $.state.set(STAGE, { pane, at: Date.now() });
-  await closeQuietly($, pane === PANE ? MODS_PANE : PANE);
-}
-const openHub = ($) => show($, PANE);
 const swapOf = ($) => ({
   panes: () => $.ui.panes(),
-  show: (pane, isFocused) => show($, pane, isFocused),
+  show: (pane, isFocused) => show($, pane, isFocused).then(() => refreshSide($, pane)),
   hold: () => $.ui.open({ id: HOLD_PANE, title: TITLE }),
   close: (id) => closeQuietly($, id),
   stage: { read: async () => (await $.state.get(STAGE)).value, write: (pane) => $.state.set(STAGE, { pane, at: Date.now() }) },
@@ -3656,6 +4130,7 @@ function startHooks(on, options) {
     await update($, layoutAtom, () => saved);
     await $.state.set(ON, true);
     await $.command.register({ name: "modz", description: hubWords().command });
+    fillSideRows($);
     if (options.openOnStart !== false) {
       hubDrawings.reset();
       await $.ui.open({ id: PANE, title: TITLE });
@@ -3669,7 +4144,7 @@ function startHooks(on, options) {
     const done = await next(e);
     const isDesktop = e.surface === "desktop";
     const staged = paneOf((await $.state.get(STAGE)).value);
-    const isModStaged = staged !== null && staged !== PANE && staged !== MODS_PANE;
+    const isModStaged = staged !== null && !OWN_PANES.includes(staged);
     if (isDesktop && options.openOnStart !== false && !isModStaged && (await $.ui.panes()).length === 0)
       await show($, PANE, false);
     if (isDesktop)
@@ -3702,8 +4177,13 @@ function stageHooks(on) {
     return next(e);
   });
   on("command.run", { command: "modz" }, async ($, e) => {
-    if (e.args.trim().toLowerCase() === "help")
+    const arg = e.args.trim().toLowerCase();
+    if (arg === "help")
       return { text: helpText(await marketOf(diskOf($)), await $.command.list().catch(() => [])) };
+    if (arg === "check") {
+      const market = await marketOf(diskOf($)).catch(() => ({ mods: [] }));
+      return { text: checkText(await checkFacts($, market.mods.filter((mod) => mod.isEnabled === true).map((mod) => mod.name))) };
+    }
     await openHub($);
     return { text: hubWords().opened };
   });
@@ -3733,15 +4213,6 @@ function paneHooks(on) {
     return pinned(e, modzTree(ui, { market, commands, surface: e.surface, columns, theme: await themeNow($), onHome, onCopy: (text, press) => copy($, text, press), stable: catalogDrawings }));
   });
 }
-async function copy($, text, press) {
-  const surface = press?.surface;
-  const words = catalogWords();
-  try {
-    $.ui.toast((await $.ui.copy(surface === undefined ? { text } : { text, surface })).isCopied ? words.copied : words.notCopied);
-  } catch (cause) {
-    $.ui.log(`modz: the install line could not be copied: ${String(cause)}`, { to: "debug" });
-  }
-}
 function footerHooks(on) {
   on("ui.render", { component: "SessionMode" }, async ($, e, next) => {
     if (e.surface !== "desktop")
@@ -3754,6 +4225,7 @@ const register = (on, options) => {
   startHooks(on, options);
   stageHooks(on);
   wireCards(on);
+  wireUpkeep(on);
   paneHooks(on);
   footerHooks(on);
   wireLanguageKeeper(on, options);

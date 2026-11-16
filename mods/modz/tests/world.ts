@@ -22,7 +22,7 @@ export function stubWorld(on: any, options: WorldOptions = {}) {
   // The pane a person's click holds: the engine shows it over any pane opened later, whatever that pane asked for.
   const hold: { id: string | null } = { id: null }
   const drop = (id: string) => up.includes(id) && up.splice(up.indexOf(id), 1)
-  mock.env(on, options.env ?? { MODZ_LANG: 'tr' })
+  const env: Record<string, string> = options.env ?? { MODZ_LANG: 'tr' }
   on('fs.stat', () => ({ value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
   on('fs.read', (_: unknown, e: { path: string }) => {
     const text = files[posix(e.path)]
@@ -31,7 +31,7 @@ export function stubWorld(on: any, options: WorldOptions = {}) {
     return { value: text }
   })
   const names = options.enabled ?? Object.keys(MARKET_FILES).map(path => /mods\/([^/]+)\//.exec(path)?.[1]).filter(Boolean)
-  // The hub reads the theme once per draw, so its draws are counted here.
+  // The hub reads MODZ_THEME once per draw, so its draws are counted here.
   const seen = { draws: 0 }
   on('settings.read', () => ({ value: { ...options.settings, enabledPlugins: Object.fromEntries(names.map(name => [`${name}@modz`, true])) } }))
   on('command.register', () => ({ value: undefined }))
@@ -53,11 +53,12 @@ export function stubWorld(on: any, options: WorldOptions = {}) {
   })
   on('ui.panes', () => ({ value: up.map((id, i) => ({ id, title: titles[id], isShown: hold.id === null ? i === up.length - 1 : id === hold.id, isFocused: id === hold.id, isPlaced: true })) }))
   on('session.start', () => ({ cwd: '/work' }))
-  on('config.list', () => {
-    seen.draws++
+  on('env.get', (_: unknown, e: { name: string }) => {
+    if (e.name === 'MODZ_THEME') seen.draws++
 
-    return { value: [] }
+    return { value: env[e.name] }
   })
+  on('config.list', () => ({ value: [{ key: 'theme', value: 'dark' }] }))
   if (!options.hasOwnClock) on('clock.now', () => ({ value: 1_000 }))
   on('command.run', () => ({ text: '' }))
 

@@ -49,10 +49,11 @@ const ON = { plugin: 'modz', key: 'isOn' } as const
 const LAYOUT_KEY = 'layout'
 const DEFAULT_COLUMNS = 80
 
+// The drawings follow the app they are drawn in (light or dark, as the Svg's own media query sees it). Claude
+// Code's `theme` setting is the terminal's: unset it reads `dark`, which pinned the pane dark in a light app.
+// Only `MODZ_THEME` pins a palette.
 async function themeNow($: EngineInterface): Promise<Theme> {
-  const rows = await $.config.list().catch(() => [])
-
-  return themeOf(rows.find(row => row.key === 'theme')?.value)
+  return themeOf(await $.env.get('MODZ_THEME').catch(() => undefined))
 }
 
 // What market.ts reads the catalog and the settings through; built here, where `$` is. Each env name is spelled

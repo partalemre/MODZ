@@ -4066,8 +4066,9 @@ const ON = { plugin: "modz", key: "isOn" };
 const LAYOUT_KEY = "layout";
 const DEFAULT_COLUMNS = 80;
 async function themeNow($) {
-  const rows = await $.config.list().catch(() => []);
-  return themeOf(rows.find((row) => row.key === "theme")?.value);
+  return themeOf(await $.env.get("MODZ_THEME").catch(() => {
+    return;
+  }));
 }
 const diskOf = ($) => ({
   root: $.plugin.root,

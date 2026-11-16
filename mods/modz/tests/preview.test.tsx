@@ -26,7 +26,7 @@ type World = { theme: string; isTroubled: boolean; isFirstRun: boolean }
 function stub(on: any, world: World) {
   const { theme, isTroubled } = world
   const files = isTroubled ? troubled() : MARKET_FILES
-  mock.env(on, { MODZ_LANG: 'tr' })
+  mock.env(on, { MODZ_LANG: 'tr', MODZ_THEME: theme })
   on('fs.stat', () => ({ value: { kind: 'directory', size: 0, mtimeMs: 0, isLink: false, realPath: '/m/mods/modz' } }))
   on('fs.read', (_: unknown, e: { path: string }) => {
     const text = files[posix(e.path)]
@@ -49,7 +49,6 @@ function stub(on: any, world: World) {
   on('command.register', () => ({ value: undefined }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('session.start', () => ({ cwd: '/work' }))
-  on('config.list', () => ({ value: [{ key: 'theme', value: theme }] }))
   on('command.run', () => ({ text: '' }))
 }
 

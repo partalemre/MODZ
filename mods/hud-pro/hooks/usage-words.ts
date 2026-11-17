@@ -15,7 +15,6 @@ type UsageWords = {
   sharesNote: string
   noTurns: string
   noWindow: string
-  shareNotice: (share: string, window: string, percent: string) => string
   listPrice: string
 }
 
@@ -30,7 +29,6 @@ const EN: UsageWords = {
   sharesNote: 'A share is how much of the allowance went while the turn ran; your other chats on the account count too.',
   noTurns: 'How much each turn used shows here once a turn ends.',
   noWindow: 'This account has no 5-hour or weekly allowance, so there is no pace to show. Cost shows under Limits.',
-  shareNotice: (share, window, percent) => `That turn used ${share} of the ${window} (now ${percent}).`,
   listPrice: 'estimate at list prices',
 }
 
@@ -45,7 +43,6 @@ const TR: UsageWords = {
   sharesNote: 'Pay, tur sürerken kullanım hakkından ne kadar gittiğidir; hesaptaki öbür sohbetlerin de sayılır.',
   noTurns: 'Bir tur bitince her turun ne kadar kullandığı burada görünür.',
   noWindow: 'Bu hesapta 5 saatlik ya da haftalık kullanım hakkı yok; gösterilecek hız yok. Maliyet Limitler altında.',
-  shareNotice: (share, window, percent) => `Bu tur ${window}tan ${share} kullandı (şimdi ${percent}).`,
   listPrice: 'liste fiyatıyla tahmin',
 }
 

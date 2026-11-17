@@ -1,6 +1,5 @@
 import { clockText, PACE_MIN_SAMPLES, PACE_MIN_SPAN_MS } from './forecast'
 import { longLabelOf, percentText } from './format'
-import { isNotable } from './pace'
 import type { Pace } from './pace'
 import { usageWords } from './usage-words'
 import { units } from './words'
@@ -50,11 +49,3 @@ export function paceSection(spec: { pace: Pace | null; shares: readonly TurnShar
 
   return { ...base, lines: [...rateLines(pace, spec.nowMs), ...shareLines(pace, spec.shares)], tone: pace.fullAt === null ? 'neutral' : 'warn', isEmpty }
 }
-
-// The line a notable turn earns, or null for an ordinary one.
-export function shareNotice(share: TurnShare): string | null {
-  if (!isNotable(share)) return null
-
-  return usageWords().shareNotice(percentText(share.share), longLabelOf(share.window), percentText(share.percent))
-}
-

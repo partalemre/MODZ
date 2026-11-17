@@ -433,10 +433,6 @@ function isLive(notice, nowMs) {
   const expiresAt = notice.expiresAt;
   return typeof expiresAt !== "number" || expiresAt <= 0 || expiresAt > nowMs;
 }
-function enqueue(queue, text) {
-  const id = Math.max(0, ...queue.map((notice) => notice.id)) + 1;
-  return [...queue, { id, text, expiresAt: 0 }];
-}
 function headToDraw(queue, nowMs) {
   const head = queue[0];
   if (head === undefined)
@@ -855,7 +851,6 @@ const DAY_HOURS = 24;
 const WEEK_HOURS = 7 * DAY_HOURS;
 const WEEK_MIN_EVEN_PERCENT = 5;
 const LOOKBACK_MS = { [FIVE_HOUR]: HOUR_MS, [SEVEN_DAY]: DAY_HOURS * HOUR_MS };
-const NOTABLE_SHARE = { [FIVE_HOUR]: 10, [SEVEN_DAY]: 3 };
 const SHARES_KEPT = 5;
 function paceWindow(usage) {
   const gauges = usage?.gauges ?? [];
@@ -865,7 +860,6 @@ function shareOf(before, after) {
   const isSameWindow = before !== null && before.id === after.id && before.resetsAt === after.resetsAt;
   return Math.max(0, isSameWindow ? after.percent - before.percent : after.percent);
 }
-const isNotable = (share) => share.share >= (NOTABLE_SHARE[share.window] ?? Number.POSITIVE_INFINITY);
 const addShare = (shares, share) => [...shares, share].slice(-SHARES_KEPT);
 function weekPaceOf(gauge, nowMs) {
   const even = paceOf$1(gauge, nowMs);
@@ -1103,7 +1097,6 @@ const EN = {
   sharesNote: "A share is how much of the allowance went while the turn ran; your other chats on the account count too.",
   noTurns: "How much each turn used shows here once a turn ends.",
   noWindow: "This account has no 5-hour or weekly allowance, so there is no pace to show. Cost shows under Limits.",
-  shareNotice: (share, window, percent) => `That turn used ${share} of the ${window} (now ${percent}).`,
   listPrice: "estimate at list prices"
 };
 const TR = {
@@ -1117,7 +1110,6 @@ const TR = {
   sharesNote: "Pay, tur sürerken kullanım hakkından ne kadar gittiğidir; hesaptaki öbür sohbetlerin de sayılır.",
   noTurns: "Bir tur bitince her turun ne kadar kullandığı burada görünür.",
   noWindow: "Bu hesapta 5 saatlik ya da haftalık kullanım hakkı yok; gösterilecek hız yok. Maliyet Limitler altında.",
-  shareNotice: (share, window, percent) => `Bu tur ${window}tan ${share} kullandı (şimdi ${percent}).`,
   listPrice: "liste fiyatıyla tahmin"
 };
 const usageWords = () => pick({ en: EN, tr: TR });
@@ -1159,11 +1151,6 @@ function paceSection(spec) {
     return { ...base, lines: [usageWords().noWindow], tone: "neutral", isEmpty: true };
   const isEmpty = pace.perHour === null && !spec.shares.some((share) => share.window === pace.gauge.id);
   return { ...base, lines: [...rateLines(pace, spec.nowMs), ...shareLines(pace, spec.shares)], tone: pace.fullAt === null ? "neutral" : "warn", isEmpty };
-}
-function shareNotice(share) {
-  if (!isNotable(share))
-    return null;
-  return usageWords().shareNotice(percentText(share.share), longLabelOf(share.window), percentText(share.percent));
 }
 
 const HISTORY_MAX = 96;
@@ -2171,7 +2158,7 @@ const liveAtom$1 = atom({ plugin: "hud-pro", key: "isLive" }, false);
 const pastAtom = atom({ plugin: "hud-pro", key: "past" }, null);
 const rangeAtom = atom({ plugin: "hud-pro", key: "pastRange" }, 7);
 const sharesAtom$1 = atom({ plugin: "hud-pro", key: "shares" }, []);
-const noticesAtom$2 = atom({ plugin: "hud-pro", key: "notices" }, []);
+const noticesAtom$1 = atom({ plugin: "hud-pro", key: "notices" }, []);
 async function forecastsOf$1($, usage) {
   return forecastsFrom({ history: await read($, historyAtom$1), turns: await read($, contextTurnsAtom$2), usage });
 }
@@ -2266,7 +2253,7 @@ async function isOutranked($) {
   return values.some((value) => isLive(value, nowMs));
 }
 async function noticeRow($, ui) {
-  const queue = await read($, noticesAtom$2);
+  const queue = await read($, noticesAtom$1);
   if (queue.length === 0 || await isOutranked($))
     return null;
   const head = headToDraw(queue, await $.clock.now());
@@ -2378,7 +2365,6 @@ const contextTurnsAtom$1 = atom({ plugin: "hud-pro", key: "contextTurns" }, []);
 const liveAtom = atom({ plugin: "hud-pro", key: "isLive" }, false);
 const usageAtom$1 = atom({ plugin: "hud-pro", key: "usage" }, null);
 const sharesAtom = atom({ plugin: "hud-pro", key: "shares" }, []);
-const noticesAtom$1 = atom({ plugin: "hud-pro", key: "notices" }, []);
 const running = { window: null };
 async function recordShare($, measured) {
   const after = paceWindow(toUsage(measured));
@@ -2386,11 +2372,6 @@ async function recordShare($, measured) {
     return;
   const share = { window: after.id, share: shareOf(running.window, after), percent: after.percent };
   await update($, sharesAtom, (shares) => addShare(shares, share));
-  const text = shareNotice(share);
-  if (text === null)
-    return;
-  await update($, noticesAtom$1, (queue) => enqueue(queue, text));
-  $.ui.invalidate("ui.render");
 }
 function onTurns(on) {
   on("turn.start", async ($, e, next) => {

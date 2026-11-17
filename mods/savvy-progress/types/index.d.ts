@@ -264,5 +264,12 @@ declare module 'claude-code' {
     // The Usage mod's forecast for the plan window it watches: when it runs out at its recent pace, if before the reset.
     'hud-pro': { pace: { window: string; fullAt: number | null } | null }
     'plan-steps': { tasks: { id: string; subject: string; status: string }[] }
+    // Who else works on this project (transceiver's hooks/team.ts); the session strip's teammate chip reads it.
+    transceiver: {
+      team: {
+        roomId: string; repo: string; mates: { name: string; at: number; branch?: string }[]; unread: number
+        last: { id: string; name: string; text: string; ts: number; isAgent: boolean } | null
+      } | null
+    }
   }
 }

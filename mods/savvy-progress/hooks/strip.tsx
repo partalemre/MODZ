@@ -8,6 +8,8 @@ import { CHIP_GAP, CHIP_H, chipCells, chipSvg, chipWidth } from './strip-chips'
 import type { Chip } from './strip-chips'
 import { layoutOf, SCENE_H, sceneSvg } from './strip-scene'
 import type { Step } from './strip-scene'
+import { teamArt, teamFrom } from './strip-team'
+import type { Drawing, Team } from './strip-team'
 import { NO_TALLY, spanText } from './strip-svg'
 import type { Tally } from './strip-svg'
 import { skyOf } from './sun'
@@ -31,6 +33,8 @@ export type StripIo = {
   isHubOn: () => Promise<boolean>
   // The Usage mod's own forecast for the window it watches (its recent pace), so both say the same moment.
   pace: () => Promise<unknown>
+  // Who else works on this project, as the transceiver mod tells it; undefined where that mod is not loaded.
+  team: () => Promise<unknown>
   tally: () => Promise<Partial<Tally>>
   agents: () => Promise<readonly AgentRun[]>
   mood: () => Promise<CrabMood>
@@ -55,9 +59,12 @@ const PLAN_MAX = 340
 // The hub's pane keys (each mod's hub.ts) and the command that opens the same pane where the hub is off.
 const PLAN_PANE = 'plan'
 const USAGE_PANE = 'usage'
-const COMMAND: Readonly<Record<string, { command: string; args?: string }>> = { [PLAN_PANE]: { command: 'steps' }, [USAGE_PANE]: { command: 'hud', args: 'full' } }
+const TEAM_PANE = 'transceiver'
+const COMMAND: Readonly<Record<string, { command: string; args?: string }>> = { [PLAN_PANE]: { command: 'steps' }, [USAGE_PANE]: { command: 'hud', args: 'full' }, [TEAM_PANE]: { command: 'transceiver' } }
+// The teammate chip leaves first when the row is tight: it never costs another chip its place.
+const TEAM_RANK = 6
 
-type Facts = { cost: number; tally: Tally; crew: AgentRun[]; mood: CrabMood; steps: Step[]; limits: Runway[]; now: number; isHubOn: boolean }
+type Facts = { cost: number; tally: Tally; crew: AgentRun[]; mood: CrabMood; steps: Step[]; limits: Runway[]; now: number; isHubOn: boolean; team: Team | null }
 
 // Another mod's list, read at the boundary: anything that is not a step is left out.
 const stepsFrom = (value: unknown): Step[] =>
@@ -90,11 +97,13 @@ async function factsOf(io: StripIo): Promise<Facts> {
     limits: withPace((usage?.rateLimits ?? []).flatMap(limit => runwayOf(limit, now) ?? []), await io.pace().catch(() => undefined)),
     now,
     isHubOn: await io.isHubOn().catch(() => false),
+    team: teamFrom(await io.team().catch(() => undefined)),
   }
 }
 
 // `rank` 0 never leaves the row; when it is tight the highest rank leaves first. `isNoteKept`: the note is the point.
-type Slot = { chip: Chip; rank: number; isNoteKept?: boolean; press: () => unknown }
+// `art`: a chip that draws itself (the teammate), whole or `isBare`, without its side value.
+type Slot = { chip: Chip; rank: number; isNoteKept?: boolean; press: () => unknown; art?: { full: Drawing; bare: Drawing }; isBare?: boolean }
 type Presses = { open: (pane: string) => () => unknown; onAgents: () => unknown; onHub: (() => unknown) | null }
 
 function planSlot(facts: Facts, presses: Presses): Slot[] {
@@ -134,6 +143,7 @@ function slotsOf(facts: Facts, presses: Presses): Slot[] {
     { chip: { id: 'tokens', label: t().stripTokens, value: fmtTokens(counted.tokens), widest: room.tokens }, rank: 3, press: usage },
     { chip: { id: 'time', label: t().stripTime, value: spanText(counted.busyMs), widest: room.time, ...(helpers > 0 ? { note: t().crew(helpers) } : {}) }, rank: 4, press: presses.onAgents },
     ...windows.map(run => limitSlot(run, facts, presses)),
+    ...(facts.team === null ? [] : [{ chip: { id: 'team', label: '', value: '' }, rank: TEAM_RANK, press: presses.open(TEAM_PANE), art: teamArt(facts.team, facts.now) }]),
     ...(presses.onHub === null ? [] : [{ chip: { id: 'modz', label: '', value: 'modz', isWordmark: true }, rank: 0, press: presses.onHub }]),
   ]
 }
@@ -144,19 +154,35 @@ const withoutNote = (slot: Slot): Slot => {
   return slot.isNoteKept === true ? slot : { ...slot, chip }
 }
 
-const fitW = (slot: Slot): number => (slot.chip.id === 'plan' ? PLAN_MIN : chipWidth(slot.chip))
+const drawingOf = (slot: Slot, maxW: number): Drawing => {
+  if (slot.art === undefined) return chipSvg(slot.chip, maxW)
+  return slot.isBare === true ? slot.art.bare : slot.art.full
+}
+const fitW = (slot: Slot): number => {
+  if (slot.art !== undefined) return drawingOf(slot, 0).width
+  return slot.chip.id === 'plan' ? PLAN_MIN : chipWidth(slot.chip)
+}
 const rowW = (row: readonly Slot[]): number => row.reduce((sum, slot) => sum + fitW(slot), 0) + CHIP_GAP * Math.max(0, row.length - 1)
 
-/** The chips that fit `width`: side notes give way first, then whole chips by rank; the plan takes the room left. */
+// The teammate takes only room the others leave: its side value goes first, then the chip, before any note or chip.
+function spared(slots: readonly Slot[], width: number): Slot[] {
+  if (rowW(slots) <= width) return [...slots]
+  const bare = slots.map(slot => (slot.art === undefined ? slot : { ...slot, isBare: true }))
+
+  return rowW(bare) <= width ? bare : slots.filter(slot => slot.art === undefined)
+}
+
+/** The chips that fit `width`: the teammate first, then side notes, then whole chips by rank; the plan takes the room left. */
 export function fitRow(slots: readonly Slot[], width: number): { slot: Slot; maxW: number }[] {
-  let row = rowW(slots) > width ? slots.map(withoutNote) : [...slots]
+  const spare = spared(slots, width)
+  let row = rowW(spare) > width ? spare.map(withoutNote) : spare
   while (rowW(row) > width && row.some(slot => slot.rank > 0)) {
     const top = Math.max(...row.map(slot => slot.rank))
     row = row.filter(slot => slot.rank !== top)
   }
-  const spare = Math.max(0, width - rowW(row))
+  const left = Math.max(0, width - rowW(row))
 
-  return row.map(slot => ({ slot, maxW: slot.chip.id === 'plan' ? Math.min(PLAN_MAX, PLAN_MIN + spare) : Number.POSITIVE_INFINITY }))
+  return row.map(slot => ({ slot, maxW: slot.chip.id === 'plan' ? Math.min(PLAN_MAX, PLAN_MIN + left) : Number.POSITIVE_INFINITY }))
 }
 
 // Which helper agents were seen at work while each step was under way, by the step's words.
@@ -225,7 +251,7 @@ const BLANK = '\u3164'
 // only surface, so it has nothing to be out of line with.
 function chipPress(ui: Ui, slot: Slot, maxW: number) {
   const { Box, Button, Svg } = ui
-  const drawing = chipSvg(slot.chip, maxW)
+  const drawing = drawingOf(slot, maxW)
   const { id } = slot.chip
 
   return (
@@ -254,10 +280,12 @@ export async function stripOf(io: StripIo, ui: Ui, site: StripSite) {
   const sky = { ...skyOf(facts.now, await io.place().catch(() => undefined)), weather: await io.weather().catch(() => undefined) }
   // The strip is the session's own: its helpers stand on their rows of the conversation (row-crab.ts).
   const scene = sceneSvg({ width, crew: facts.crew.filter(a => a.isMain === true), mood: facts.mood, steps: facts.steps, sky, ...(from === undefined ? {} : { from }) })
-  // The last chip (the way to the hub) sits at the row's right end, so the row ends where the scene does.
+  // The people (the teammate) and the way to the hub sit at the row's right end, so the row ends where the scene does.
   const fitted = fitRow(slotsOf(facts, pressesOf(io, facts)), width)
+  const team = fitted.findIndex(({ slot }) => slot.art !== undefined)
+  const springAt = team > 0 ? team : fitted.length - 1
   const chips = fitted.flatMap(({ slot, maxW }, i) => [
-    ...(i > 0 && i === fitted.length - 1 ? [<Box key="savvy-chip-spring" flexGrow={1} />] : []),
+    ...(i > 0 && i === springAt ? [<Box key="savvy-chip-spring" flexGrow={1} />] : []),
     chipPress(ui, slot, maxW),
   ])
 

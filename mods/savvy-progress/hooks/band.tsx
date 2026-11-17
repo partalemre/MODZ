@@ -311,6 +311,7 @@ const stripIo = ($: EngineInterface): StripIo => ({
   plan: async () => (await $.state.get({ plugin: 'plan-steps', key: 'tasks' })).value,
   isHubOn: async () => (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true,
   pace: async () => (await $.state.get({ plugin: 'hud-pro', key: 'pace' })).value,
+  team: async () => (await $.state.get({ plugin: 'transceiver', key: 'team' })).value,
   tally: () => read($, tally),
   agents: () => read($, agents),
   mood: async () => (await read($, crab)).mood,

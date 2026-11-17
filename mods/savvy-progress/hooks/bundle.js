@@ -114,6 +114,17 @@ const en = {
   stripDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
   stripResting: { sleeping: "asleep", working: "working", happy: "pleased", worried: "uneasy" },
   stripStep: (n, subject) => `Step ${n}: ${subject}`,
+  stripTeam: {
+    fresh: (n) => `${n} new`,
+    away: (name) => `${name} is not working right now`,
+    working: "working now",
+    isWorking: (name) => `${name} is working now`,
+    worked: (name, ago) => `${name} worked ${ago}`,
+    on: (branch) => `on the line of work ${branch}`,
+    more: (n) => `and ${n} more on this project`,
+    wrote: (name) => `${name} wrote`,
+    aiWrote: (name) => `${name}'s AI wrote`
+  },
   hubCrew: (n) => `${n} running`,
   pct: (n) => `${n}%`,
   minutes: (n) => `${n} min`,
@@ -264,6 +275,17 @@ const ru = {
   stripDays: ["вс", "пн", "вт", "ср", "чт", "пт", "сб"],
   stripResting: { sleeping: "спит", working: "работает", happy: "доволен", worried: "встревожен" },
   stripStep: (n, subject) => `Шаг ${n}: ${subject}`,
+  stripTeam: {
+    fresh: (n) => `новых: ${n}`,
+    away: (name) => `${name} сейчас не работает`,
+    working: "работает сейчас",
+    isWorking: (name) => `${name} работает сейчас`,
+    worked: (name, ago) => `${name} работал(а) ${ago}`,
+    on: (branch) => `ветка работы ${branch}`,
+    more: (n) => `и ещё ${n} в этом проекте`,
+    wrote: (name) => `${name} написал(а)`,
+    aiWrote: (name) => `ИИ пользователя ${name} написал`
+  },
   hubCrew: (n) => `агентов: ${n}`,
   minutes: (n) => `${n} мин`,
   seconds: (n) => `${n} с`,
@@ -423,6 +445,17 @@ const tr = {
   stripDays: ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"],
   stripResting: { sleeping: "uyuyor", working: "çalışıyor", happy: "keyifli", worried: "tedirgin" },
   stripStep: (n, subject) => `${n}. adım: ${subject}`,
+  stripTeam: {
+    fresh: (n) => `${n} yeni`,
+    away: (name) => `${name} şu an çalışmıyor`,
+    working: "şimdi çalışıyor",
+    isWorking: (name) => `${name} şimdi çalışıyor`,
+    worked: (name, ago) => `${name} ${ago} çalıştı`,
+    on: (branch) => `çalışma dalı ${branch}`,
+    more: (n) => `bu projede ${n} kişi daha`,
+    wrote: (name) => `${name} yazdı`,
+    aiWrote: (name) => `${name} adlı kişinin yapay zekâsı yazdı`
+  },
   hubCrew: (n) => `${n} ajan`,
   pct: (n) => `%${n}`,
   minutes: (n) => `${n} dk`,
@@ -919,7 +952,7 @@ const SHELL = {
 };
 
 const STEPS_SHOWN = 2;
-const NAME_MAX$1 = 40;
+const NAME_MAX$2 = 40;
 const WRAPPERS = new Set(["sudo", "time", "command", "exec", "nohup", "env", "then", "do", "else", "if", "while", "until", "!"]);
 const SILENT = new Set(["cd", "export", "set", "unset", "source", ".", "for", "done", "fi", "true", "false", ":", "[", "[[", "test", "local", "shift", "wait"]);
 const FILTERS = new Set(["grep", "rg", "sed", "awk", "head", "tail", "sort", "uniq", "wc", "cut", "tr", "tee", "xargs", "jq", "column", "less", "cat"]);
@@ -928,7 +961,7 @@ const PASS_ON = new Set(["run", "run-script", "exec", "x", "dlx", "-m", "plugin"
 const INLINE = new Set(["-c", "-e", "-"]);
 const PROPER = /^(GitHub|Git\b|Docker|Claude|Flutter|JSON|Python|iOS|Mac)/;
 const base = (path) => path.split("/").filter(Boolean).at(-1) ?? path;
-const clip$1 = (text) => text.length > NAME_MAX$1 ? `${text.slice(0, NAME_MAX$1 - 1)}…` : text;
+const clip$1 = (text) => text.length > NAME_MAX$2 ? `${text.slice(0, NAME_MAX$2 - 1)}…` : text;
 const isFlag = (word) => word.startsWith("-");
 const withoutHeredocs = (command) => command.replace(/\\\n/g, " ").replace(/<<-?\s*(['"]?)(\w+)\1[\s\S]*?\n\s*\2(?=\s|$)/g, "<<");
 function isOpenAt(scan, line, i) {
@@ -1207,7 +1240,7 @@ function reasonOf(answer) {
   return text.length > REASON_MAX ? `${text.slice(0, REASON_MAX - 1)}…` : text;
 }
 
-const NAME_MAX = 48;
+const NAME_MAX$1 = 48;
 const EDIT$1 = [["Changing the file {x}", "{x} dosyasını değiştiriyor"], "file_path", "file"];
 const TASKS = [["Updating its to-do list", "Yapılacaklar listesini güncelliyor"]];
 const HELPER = [["Handing a job to a helper agent[: {x}]", "Bir yardımcı ajana iş veriyor[: {x}]"], "description"];
@@ -1275,7 +1308,7 @@ const OTHER = {
   command: ["Running a terminal command", "Bir terminal komutu çalıştırıyor"]
 };
 const fieldsOf = (input) => typeof input === "object" && input !== null ? input : {};
-const clip = (text) => text.length > NAME_MAX ? `${text.slice(0, NAME_MAX - 1)}…` : text;
+const clip = (text) => text.length > NAME_MAX$1 ? `${text.slice(0, NAME_MAX$1 - 1)}…` : text;
 const firstLine = (text) => text.split(`
 `)[0]?.trim() ?? "";
 function namedOf(value, as) {
@@ -1748,7 +1781,11 @@ const COSTUMES = {
     f([27, 6, 1, 9], "#C9CCD2", "it");
     f([26, 15, 3, 1], "#7A4A26", "it");
   },
-  other: (f, _t, look) => crabBody(f, {}, look)
+  other: (f, _t, look) => crabBody(f, {}, look),
+  mate: (f, _t, look) => {
+    crabBody(f, {}, look);
+    stamp$1(f, { x: 7, y: 3, rows: [".......ww.......", "......wwww......", "....bbbbbbbb....", "..bbbbbbbbbbbb..", ".bbbbbbbbbbbbbb.", ".bbbbbbbbbbbbbb.", "rrrrrrrrrrrrrrrr"], map: { w: "#F4F3EE", b: "#3E8E7E", r: "#2E6B5F" } });
+  }
 };
 const FACES$1 = {
   sleeping: [[9, 13, 2, 1], [19, 13, 2, 1]],
@@ -1766,7 +1803,7 @@ const moodBody = (f, look, mood) => {
   f([3, 9, 3, 2], SWEAT);
 };
 const CRAB_SCALE = 1.1;
-const crab$3 = (x, y, opts) => {
+const crab$4 = (x, y, opts) => {
   const groups = new Map([["bd", []]]);
   const f = ([cx, cy, w, h], c, cls = "bd") => {
     if (!groups.has(cls))
@@ -1837,12 +1874,12 @@ const snoozeSvg = (x, y, scale) => {
 };
 const homeCrab = (x, y, opts) => {
   const { mood, isMoving } = opts.home;
-  const body = crab$3(x, y, { costume: "other", look: HOME_LOOK, mood, isWalking: isMoving && mood === "working", scale: opts.scale });
+  const body = crab$4(x, y, { costume: "other", look: HOME_LOOK, mood, isWalking: isMoving && mood === "working", scale: opts.scale });
   return mood === "sleeping" ? body + snoozeSvg(x, y, opts.scale) : body;
 };
 const LEVEL_PILL = { h: 16, padX: 7, size: 10 };
-const BOLD$6 = 1.06;
-const levelWidth = (text) => Math.ceil(textWidth(text, LEVEL_PILL.size) * BOLD$6 + LEVEL_PILL.padX * 2);
+const BOLD$8 = 1.06;
+const levelWidth = (text) => Math.ceil(textWidth(text, LEVEL_PILL.size) * BOLD$8 + LEVEL_PILL.padX * 2);
 const levelPill = (text, x, y) => {
   const w = levelWidth(text);
   const r = (LEVEL_PILL.h - 1) / 2;
@@ -1850,7 +1887,7 @@ const levelPill = (text, x, y) => {
 };
 const FACES = { sleeping: "(-_-) zz", working: "(•_•)", happy: "(^_^)", worried: "(°_°;)" };
 
-const GAP$3 = 3;
+const GAP$4 = 3;
 const MIN_SEG = 6;
 const classOf = (view, i) => {
   const ok = view.done - view.failed;
@@ -1877,11 +1914,11 @@ const meterSvg = (view, track) => {
   const units = view.units;
   if (units < 1)
     return rect(track, { x: track.x, w: track.w, cls: "k" });
-  const seg = (track.w - GAP$3 * (units - 1)) / units;
+  const seg = (track.w - GAP$4 * (units - 1)) / units;
   if (seg < MIN_SEG)
     return solid(view, track);
   return Array.from({ length: units }, (_, i) => {
-    const x = track.x + i * (seg + GAP$3);
+    const x = track.x + i * (seg + GAP$4);
     const cls = classOf(view, i);
     return cls === "f-edit" ? running(track, x, seg) : rect(track, { x, w: seg, cls });
   }).join("");
@@ -2072,17 +2109,17 @@ const sealJob = (prev, list) => {
 };
 
 const BAND_H = 26;
-const BASELINE$1 = 17.5;
+const BASELINE$2 = 17.5;
 const TITLE_X = 11;
 const TITLE_SIZE = 13;
 const TITLE_MIN = 64;
-const BOLD$5 = 1.06;
-const GAP$2 = 8;
+const BOLD$7 = 1.06;
+const GAP$3 = 8;
 const PILL$1 = { y: 3, h: 20, padX: 9, size: 11 };
 const METER$2 = { h: 6, min: 36, max: 360 };
 const PERCENT_SIZE = 12.5;
 const MONO_EM$1 = 0.6;
-const CRAB$1 = { w: 24, y: 2, scale: 0.8 };
+const CRAB$2 = { w: 24, y: 2, scale: 0.8 };
 const UNKNOWN$1 = "—";
 const pillRole = (view) => {
   if (!view.isFinished)
@@ -2091,34 +2128,34 @@ const pillRole = (view) => {
 };
 const PILL_INK$1 = { run: "f-edit", ok: "s", warn: "f-warn", danger: "f-danger" };
 const pillSvg = ({ label, role, x, w }) => `<rect class="k" x="${x}" y="${PILL$1.y}" width="${w}" height="${PILL$1.h}" rx="${PILL$1.h / 2}"/>
-<text class="${PILL_INK$1[role]}" x="${x + w / 2}" y="${BASELINE$1 - 0.5}" text-anchor="middle" font-family="${FONT}" font-size="${PILL$1.size}" font-weight="600">${xml(label)}</text>`;
+<text class="${PILL_INK$1[role]}" x="${x + w / 2}" y="${BASELINE$2 - 0.5}" text-anchor="middle" font-family="${FONT}" font-size="${PILL$1.size}" font-weight="600">${xml(label)}</text>`;
 const planOf$1 = (view, maxW) => {
-  const pillW = Math.ceil(textWidth(view.label, PILL$1.size) * BOLD$5 + PILL$1.padX * 2);
+  const pillW = Math.ceil(textWidth(view.label, PILL$1.size) * BOLD$7 + PILL$1.padX * 2);
   const pctW = percentText(view) === UNKNOWN$1 ? 0 : Math.ceil(percentText(view).length * PERCENT_SIZE * MONO_EM$1);
-  const avail = maxW - TITLE_X - pillW - pctW - CRAB$1.w - GAP$2 * 4;
-  const natural = Math.ceil(textWidth(view.title, TITLE_SIZE) * BOLD$5);
+  const avail = maxW - TITLE_X - pillW - pctW - CRAB$2.w - GAP$3 * 4;
+  const natural = Math.ceil(textWidth(view.title, TITLE_SIZE) * BOLD$7);
   if (avail - natural >= METER$2.min)
     return { title: view.title, titleW: natural, meterW: Math.min(METER$2.max, avail - natural), pillW, pctW };
   const titleW = Math.max(TITLE_MIN, avail - METER$2.min);
   const meterW = avail - titleW;
   const fits = meterW >= METER$2.min;
-  const room = fits ? titleW : Math.max(TITLE_MIN, avail + GAP$2);
-  const title = fitText(view.title, TITLE_SIZE * BOLD$5, room);
-  return { title, titleW: Math.min(room, Math.ceil(textWidth(title, TITLE_SIZE) * BOLD$5)), meterW: fits ? meterW : 0, pillW, pctW };
+  const room = fits ? titleW : Math.max(TITLE_MIN, avail + GAP$3);
+  const title = fitText(view.title, TITLE_SIZE * BOLD$7, room);
+  return { title, titleW: Math.min(room, Math.ceil(textWidth(title, TITLE_SIZE) * BOLD$7)), meterW: fits ? meterW : 0, pillW, pctW };
 };
-const bandCrab = (x, mood) => crab$3(x, CRAB$1.y, { costume: "other", look: HOME_LOOK, mood, scale: CRAB$1.scale });
+const bandCrab = (x, mood) => crab$4(x, CRAB$2.y, { costume: "other", look: HOME_LOOK, mood, scale: CRAB$2.scale });
 const bandSvg = (view, maxW, mood) => {
   const plan = planOf$1(view, maxW);
-  const pillX = TITLE_X + plan.titleW + GAP$2;
-  const meterX = pillX + plan.pillW + GAP$2;
-  const pctX = meterX + (plan.meterW ? plan.meterW + GAP$2 : 0);
-  const crabX = pctX + (plan.pctW ? plan.pctW + GAP$2 : 0);
-  const width = Math.ceil(mood ? crabX + CRAB$1.w : crabX - GAP$2);
+  const pillX = TITLE_X + plan.titleW + GAP$3;
+  const meterX = pillX + plan.pillW + GAP$3;
+  const pctX = meterX + (plan.meterW ? plan.meterW + GAP$3 : 0);
+  const crabX = pctX + (plan.pctW ? plan.pctW + GAP$3 : 0);
+  const width = Math.ceil(mood ? crabX + CRAB$2.w : crabX - GAP$3);
   const body = [
-    `<text class="t" x="${TITLE_X}" y="${BASELINE$1}" font-family="${FONT}" font-size="${TITLE_SIZE}" font-weight="600">${xml(plan.title)}</text>`,
+    `<text class="t" x="${TITLE_X}" y="${BASELINE$2}" font-family="${FONT}" font-size="${TITLE_SIZE}" font-weight="600">${xml(plan.title)}</text>`,
     pillSvg({ label: view.label, role: pillRole(view), x: pillX, w: plan.pillW }),
     plan.meterW ? meterSvg(view, { x: meterX, y: (BAND_H - METER$2.h) / 2, w: plan.meterW, h: METER$2.h }) : "",
-    plan.pctW ? `<text class="t" x="${pctX}" y="${BASELINE$1}" font-family="${MONO}" font-size="${PERCENT_SIZE}" font-weight="650">${xml(percentText(view))}</text>` : "",
+    plan.pctW ? `<text class="t" x="${pctX}" y="${BASELINE$2}" font-family="${MONO}" font-size="${PERCENT_SIZE}" font-weight="650">${xml(percentText(view))}</text>` : "",
     mood ? bandCrab(crabX, mood) : ""
   ];
   return { source: paneSvg(width, BAND_H, body.join(`
@@ -2399,7 +2436,7 @@ const CLASS = /\sclass="([^"]*)"/;
 const STYLE = /\sstyle="([^"]*)"/;
 const MIN_RATIO_STEP = 0.02;
 const RATIO_DIGITS = 3;
-const widthOf$1 = (tag) => Number(WIDTH.exec(tag)?.[1] ?? 0);
+const widthOf$2 = (tag) => Number(WIDTH.exec(tag)?.[1] ?? 0);
 function withClass(tag, name, extra = "") {
   const tagged = CLASS.test(tag) ? tag.replace(CLASS, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
   return tagged.replace(/\s*\/?>$/, `${extra}$&`);
@@ -2411,8 +2448,8 @@ function slideFills(before, now) {
   let index = 0;
   return now.replace(FILL$1, (tag) => {
     const was = old[index++];
-    const from = was === undefined ? 0 : widthOf$1(was);
-    const to = widthOf$1(tag);
+    const from = was === undefined ? 0 : widthOf$2(was);
+    const to = widthOf$2(tag);
     if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP)
       return tag;
     const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS)}`;
@@ -2619,39 +2656,39 @@ const CHIP_H = 28;
 const CHIP_GAP$1 = 0;
 const BUTTON_PAD = 28;
 const CELL_PX$1 = 11.9;
-const PAD$2 = 12;
-const GAP$1 = 6;
-const BASELINE = 18.5;
+const PAD$3 = 12;
+const GAP$2 = 6;
+const BASELINE$1 = 18.5;
 const LABEL_SIZE = 11.5;
 const VALUE_SIZE = 13;
-const BOLD$4 = 1.14;
+const BOLD$6 = 1.14;
 const VALUE_SLACK = 3;
 const METER$1 = { w: 34, h: 4 };
 const WARN_AT = 70;
 const DANGER_AT = 90;
 const FULL$1 = 100;
-const NOTE_MIN = 28;
+const LABEL_SLACK = 1.08;
 const LETTERS = {
   m: [".....", ".....", "XX.X.", "X.X.X", "X.X.X", "X.X.X", "X.X.X"],
   o: [".....", ".....", ".XXX.", "X...X", "X...X", "X...X", ".XXX."],
   d: ["....X", "....X", ".XXXX", "X...X", "X...X", "X...X", ".XXXX"],
   z: [".....", ".....", "XXXXX", "...X.", "..X..", ".X...", "XXXXX"]
 };
-const PIXEL = { pitch: 2.3, cell: 1.9, cols: 5, rows: 7, gap: 1 };
+const PIXEL$1 = { pitch: 2.3, cell: 1.9, cols: 5, rows: 7, gap: 1 };
 const label = (cls, s) => ({
-  w: Math.ceil(textWidth(s, LABEL_SIZE)),
-  draw: (x) => `<text class="${cls}" x="${x}" y="${BASELINE}" font-family="${FONT}" font-size="${LABEL_SIZE}">${xml(s)}</text>`
+  w: Math.ceil(textWidth(s, LABEL_SIZE) * LABEL_SLACK),
+  draw: (x) => `<text class="${cls}" x="${x}" y="${BASELINE$1}" font-family="${FONT}" font-size="${LABEL_SIZE}">${xml(s)}</text>`
 });
 const value = (cls, s, widest = s) => ({
-  w: Math.ceil(Math.max(textWidth(s, VALUE_SIZE), textWidth(widest, VALUE_SIZE)) * BOLD$4) + VALUE_SLACK,
-  draw: (x) => `<text class="${cls}" x="${x}" y="${BASELINE}" font-family="${FONT}" font-size="${VALUE_SIZE}" font-weight="600" style="font-variant-numeric:tabular-nums">${xml(s)}</text>`
+  w: Math.ceil(Math.max(textWidth(s, VALUE_SIZE), textWidth(widest, VALUE_SIZE)) * BOLD$6) + VALUE_SLACK,
+  draw: (x) => `<text class="${cls}" x="${x}" y="${BASELINE$1}" font-family="${FONT}" font-size="${VALUE_SIZE}" font-weight="600" style="font-variant-numeric:tabular-nums">${xml(s)}</text>`
 });
 const wordmark = (word) => {
-  const advance = (PIXEL.cols + PIXEL.gap) * PIXEL.pitch;
-  const top = (CHIP_H - PIXEL.rows * PIXEL.pitch) / 2 - 1;
+  const advance = (PIXEL$1.cols + PIXEL$1.gap) * PIXEL$1.pitch;
+  const top = (CHIP_H - PIXEL$1.rows * PIXEL$1.pitch) / 2 - 1;
   return {
-    w: Math.ceil([...word].length * advance - PIXEL.gap * PIXEL.pitch),
-    draw: (x) => [...word].flatMap((ch, i) => (LETTERS[ch] ?? []).flatMap((row, r) => [...row].flatMap((cell, c) => cell === "X" ? [`<rect class="f-edit" x="${(x + i * advance + c * PIXEL.pitch).toFixed(1)}" y="${(top + r * PIXEL.pitch).toFixed(1)}" width="${PIXEL.cell}" height="${PIXEL.cell}" rx=".4"/>`] : []))).join("")
+    w: Math.ceil([...word].length * advance - PIXEL$1.gap * PIXEL$1.pitch),
+    draw: (x) => [...word].flatMap((ch, i) => (LETTERS[ch] ?? []).flatMap((row, r) => [...row].flatMap((cell, c) => cell === "X" ? [`<rect class="f-edit" x="${(x + i * advance + c * PIXEL$1.pitch).toFixed(1)}" y="${(top + r * PIXEL$1.pitch).toFixed(1)}" width="${PIXEL$1.cell}" height="${PIXEL$1.cell}" rx=".4"/>`] : []))).join("")
   };
 };
 const meterTone = (percent) => {
@@ -2679,22 +2716,76 @@ const partsOf = (chip, note) => {
     ...note === "" ? [] : [label(chip.tone === undefined ? "s" : ink, note)]
   ];
 };
-const widthOf = (parts) => Math.ceil(PAD$2 * 2 + parts.reduce((sum, part) => sum + part.w, 0) + GAP$1 * (parts.length - 1));
+const widthOf$1 = (parts) => Math.ceil(PAD$3 * 2 + parts.reduce((sum, part) => sum + part.w, 0) + GAP$2 * (parts.length - 1));
 const chipCells = (width) => Math.max(1, Math.floor((width - BUTTON_PAD) / CELL_PX$1));
-const chipWidth$1 = (chip) => widthOf(partsOf(chip, chip.note ?? ""));
+const chipWidth$1 = (chip) => widthOf$1(partsOf(chip, chip.note ?? ""));
+function wordsThatFit(chip, maxW) {
+  const words = (chip.note ?? "").split(" ");
+  for (let n = words.length;n > 0; n--) {
+    const note = n === words.length ? words.join(" ") : `${words.slice(0, n).join(" ")}…`;
+    if (widthOf$1(partsOf(chip, note)) <= maxW)
+      return note;
+  }
+  return "";
+}
 function chipSvg(chip, maxW = Number.POSITIVE_INFINITY) {
-  const room = maxW - widthOf(partsOf(chip, "")) - GAP$1;
-  const fitted = chip.note === undefined || room < NOTE_MIN ? "" : fitText(chip.note, LABEL_SIZE, room);
+  const whole = chip.note ?? "";
+  const fitted = widthOf$1(partsOf(chip, whole)) <= maxW ? whole : chip.id === "plan" ? wordsThatFit(chip, maxW) : "";
   const parts = partsOf(chip, fitted);
-  const width = widthOf(parts);
-  let x = PAD$2;
+  const width = widthOf$1(parts);
+  let x = PAD$3;
   const drawn = parts.map((part) => {
     const at = x;
-    x += part.w + GAP$1;
+    x += part.w + GAP$2;
     return part.draw(at);
   });
   const alt = [chip.label, chip.value, chip.note ?? ""].filter(Boolean).join(" ");
   return { source: paneSvg(width, CHIP_H, drawn.join("")), width, alt };
+}
+
+const PLAN_MIN = 150;
+const PLAN_MAX = 340;
+const withoutNote = (slot) => {
+  const { note: _dropped, ...chip } = slot.chip;
+  return slot.isNoteKept === true ? slot : { ...slot, chip };
+};
+const drawingOf = (slot, maxW) => {
+  if (slot.art === undefined)
+    return chipSvg(slot.chip, maxW);
+  return slot.art[slot.tier ?? "full"];
+};
+const fitW = (slot) => {
+  if (slot.art !== undefined)
+    return drawingOf(slot, 0).width;
+  return slot.chip.id === "plan" ? PLAN_MIN : chipWidth$1(slot.chip);
+};
+const rowW = (row) => row.reduce((sum, slot) => sum + fitW(slot), 0) + CHIP_GAP$1 * Math.max(0, row.length - 1);
+function trimmed(slots, width) {
+  let row = rowW(slots) > width ? slots.map(withoutNote) : [...slots];
+  while (rowW(row) > width && row.some((slot) => slot.rank > 0)) {
+    const top = Math.max(...row.map((slot) => slot.rank));
+    row = row.filter((slot) => slot.rank !== top);
+  }
+  return row;
+}
+const quiet = (row) => row.map(withoutNote);
+function withTeam(slots, width) {
+  const team = slots.find((slot) => slot.art !== undefined);
+  const others = slots.filter((slot) => slot !== team);
+  if (team === undefined)
+    return trimmed(others, width);
+  const yielding = quiet(others.filter((slot) => slot.rank < team.rank));
+  const tries = [[others, "full"], [others, "bare"], [quiet(others), "bare"], [quiet(others), "face"], [yielding, "face"]];
+  const hit = tries.find(([row, tier]) => rowW([...row, { ...team, tier }]) <= width);
+  if (hit === undefined)
+    return trimmed(others, width);
+  const [row, tier] = hit;
+  return slots.flatMap((slot) => slot === team ? [{ ...team, tier }] : row.filter((kept) => kept.chip.id === slot.chip.id));
+}
+function fitRow(slots, width) {
+  const row = withTeam(slots, width);
+  const left = Math.max(0, width - rowW(row));
+  return row.map((slot) => ({ slot, maxW: slot.chip.id === "plan" ? Math.min(PLAN_MAX, PLAN_MIN + left) : Number.POSITIVE_INFINITY }));
 }
 
 const HISTORY_MAX = 150;
@@ -2896,6 +2987,223 @@ function landOf(width, sky) {
   return { open: `${landCss(phase)}${defs}<g clip-path="url(#win)">${air}${ground}`, back: decor.back, front: decor.front + (phase === "night" && !isDullOf(sky.weather) ? fireflies(width) : "") + (sky.weather === "fog" ? fog(width) : "") + falling(sky.weather, width), close: "</g>" };
 }
 
+const SECOND$3 = 1000;
+const MINUTE$2 = 60 * SECOND$3;
+const HOUR$1 = 60 * MINUTE$2;
+const QUIET_MS = 2 * MINUTE$2;
+const LONG_TOOL_MS = 15 * MINUTE$2;
+const FAILURE_FRESH_MS = 10 * MINUTE$2;
+const roughSpan = (ms) => {
+  const s = t();
+  if (ms < MINUTE$2)
+    return s.seconds(Math.floor(ms / SECOND$3));
+  if (ms < HOUR$1)
+    return s.minutes(Math.floor(ms / MINUTE$2));
+  return s.hours(Math.floor(ms / HOUR$1));
+};
+function stuckOf(a, at) {
+  if (a.status !== "running" || a.isMain === true)
+    return null;
+  const open = (a.history ?? []).find((e) => e.endAt === undefined);
+  if (open)
+    return at - open.at >= LONG_TOOL_MS ? { reason: t().longTool(open.tool, roughSpan(at - open.at)), since: open.at } : null;
+  if (a.stepAt !== undefined)
+    return at - a.stepAt >= LONG_TOOL_MS ? { reason: t().quiet(roughSpan(at - a.stepAt)), since: a.stepAt } : null;
+  const heard = Math.max(a.heardAt ?? 0, a.startedAt);
+  return at - heard >= QUIET_MS ? { reason: t().quiet(roughSpan(at - heard)), since: heard } : null;
+}
+const attention = (a, reason, role) => ({
+  agentId: a.id,
+  name: lookOf(a).name,
+  title: a.description || a.type,
+  reason,
+  role
+});
+const isFreshFailure = (a, at) => a.status === "failed" && a.endReason !== "aborted" && a.endedAt !== undefined && at - a.endedAt < FAILURE_FRESH_MS;
+function attentionOf(list, at) {
+  const stuck = list.map((a) => ({ a, why: stuckOf(a, at) })).filter((x) => x.why !== null).sort((x, y) => x.why.since - y.why.since)[0];
+  if (stuck)
+    return attention(stuck.a, stuck.why.reason, "warn");
+  const failed = list.filter((a) => isFreshFailure(a, at)).sort((x, y) => (y.endedAt ?? 0) - (x.endedAt ?? 0))[0];
+  return failed ? attention(failed, t().failedNow, "danger") : null;
+}
+
+const WORKING_MS = 10 * 60000;
+const TEAM_W = { full: 208, bare: 112, face: 40 };
+const PAD$2 = 12;
+const GAP$1 = 6;
+const BASELINE = 18.5;
+const NAME_SIZE$1 = 13;
+const SIDE_SIZE = 11.5;
+const NAME_MAX = 64;
+const BOLD$5 = 1.14;
+const FACE = { r: 7.5, size: 9.5 };
+const DOT = { r: 2.75, off: 5.5 };
+const CRAB$1 = ["X.....X", "XX...XX", ".XXXXX.", "XXXXXXX", ".X.X.X."];
+const PIXEL = { pitch: 1.9, cell: 1.6 };
+const isText = (v) => typeof v === "string" && v.trim() !== "";
+const mateFrom = (one) => {
+  const m = one;
+  if (!isText(m?.name) || typeof m.at !== "number")
+    return [];
+  return [{ name: m.name, at: m.at, ...isText(m.branch) ? { branch: m.branch } : {} }];
+};
+const lastFrom = (value) => {
+  const l = value;
+  if (!isText(l?.name) || !isText(l.text))
+    return null;
+  return { name: l.name, text: oneLine(l.text), isAgent: l.isAgent === true };
+};
+const oneLine = (s) => s.replace(/\s+/g, " ").trim();
+const mineFrom = (recent) => {
+  const newest = Array.isArray(recent) ? recent.at(-1) : undefined;
+  if (newest?.isMine !== true || !isText(newest.text) || typeof newest.ts !== "number")
+    return null;
+  return { text: oneLine(newest.text), ts: newest.ts };
+};
+function teamFrom(value) {
+  const v = value;
+  const [first, ...rest] = Array.isArray(v?.mates) ? v.mates.flatMap(mateFrom) : [];
+  if (first === undefined || !isText(v?.roomId))
+    return null;
+  return { roomId: v.roomId, mates: [first, ...rest], unread: typeof v?.unread === "number" ? v.unread : 0, last: lastFrom(v?.last), mine: mineFrom(v?.recent) };
+}
+const put = (ink, svg, w) => {
+  ink.out.push(svg);
+  ink.x += w + GAP$1;
+};
+const text$1 = (o, x) => `<text class="${o.cls}" x="${x.toFixed(1)}" y="${BASELINE}" font-family="${FONT}" font-size="${o.size}"${o.isBold === true ? ' font-weight="600"' : ""}>${xml(o.s)}</text>`;
+function face(ink, o) {
+  const cx = ink.x + FACE.r;
+  const initial = upper([...o.name][0] ?? "");
+  const disc = `<circle class="${o.isNew === true ? "b-edit" : "k"}" cx="${cx}" cy="${CHIP_H / 2}" r="${FACE.r}"/>`;
+  const letter = `<text class="${o.isNew === true ? "f-edit" : "s"}" x="${cx}" y="${CHIP_H / 2 + FACE.size * 0.36}" text-anchor="middle" font-family="${FONT}" font-size="${FACE.size}" font-weight="700">${xml(initial)}</text>`;
+  const dot = o.isWorking === true ? `<circle class="f-edit" cx="${cx + DOT.off}" cy="${CHIP_H / 2 + DOT.off}" r="${DOT.r}"/>` : "";
+  put(ink, disc + letter + dot, FACE.r * 2);
+}
+function name(ink, o) {
+  const s = fitText(o.s, NAME_SIZE$1, NAME_MAX / BOLD$5);
+  put(ink, text$1({ cls: o.cls, s, size: NAME_SIZE$1, isBold: true }, ink.x), Math.ceil(textWidth(s, NAME_SIZE$1) * BOLD$5));
+}
+function crab$3(ink) {
+  const top = (CHIP_H - CRAB$1.length * PIXEL.pitch) / 2;
+  const cells = CRAB$1.flatMap((row, r) => [...row].flatMap((c, i) => c === "X" ? [`<rect class="f-edit" x="${(ink.x + i * PIXEL.pitch).toFixed(1)}" y="${(top + r * PIXEL.pitch).toFixed(1)}" width="${PIXEL.cell}" height="${PIXEL.cell}"/>`] : []));
+  put(ink, cells.join(""), Math.max(...CRAB$1.map((row) => row.length)) * PIXEL.pitch);
+}
+const SIDE_MIN = 24;
+function side(ink, o) {
+  const room = o.width - PAD$2 - ink.x;
+  if (room < SIDE_MIN)
+    return;
+  put(ink, text$1({ cls: o.cls, s: fitText(o.s, SIDE_SIZE, room), size: SIDE_SIZE }, ink.x), room);
+}
+const isWorking = (at, now) => now - at < WORKING_MS;
+function talkOf(team, now) {
+  const [mate] = team.mates;
+  const mine = team.mine !== null && isWorking(team.mine.ts, now) ? team.mine.text : null;
+  const said = mine === null && team.unread > 0 ? team.last : null;
+  return { name: mate.name, isWorking: isWorking(mate.at, now), said, mine };
+}
+function presence(team, o) {
+  const [mate, ...others] = team.mates;
+  const ink = { x: PAD$2, out: [] };
+  const working = isWorking(mate.at, o.now);
+  const ago = t().ago(roughSpan(Math.max(0, o.now - mate.at)));
+  face(ink, { name: mate.name, isWorking: working });
+  if (o.tier !== "face")
+    name(ink, { s: mate.name, cls: "t" });
+  const more = `+${others.length}`;
+  if (o.tier !== "face" && others.length > 0)
+    put(ink, text$1({ cls: "s", s: more, size: SIDE_SIZE, isBold: true }, ink.x), Math.ceil(textWidth(more, SIDE_SIZE) * BOLD$5) + GAP$1);
+  if (o.tier === "full")
+    side(ink, { s: working ? mate.branch ?? t().stripTeam.working : ago, cls: "m", width: TEAM_W.full });
+  const said = working ? t().stripTeam.isWorking(mate.name) : t().stripTeam.worked(mate.name, ago);
+  const alt = [said, working && mate.branch !== undefined ? t().stripTeam.on(mate.branch) : "", others.length > 0 ? t().stripTeam.more(others.length) : ""];
+  return { body: ink.out.join(""), alt: alt.filter(Boolean).join(", ") };
+}
+function message(last, o) {
+  const { tier } = o;
+  const ink = { x: PAD$2, out: [] };
+  face(ink, { name: last.name, isNew: tier !== "full" });
+  if (tier !== "face")
+    name(ink, { s: last.name, cls: tier === "full" ? "t" : "f-edit" });
+  if (tier !== "face" && last.isAgent)
+    crab$3(ink);
+  if (tier === "full")
+    side(ink, { s: t().stripTeam.fresh(o.unread), cls: "f-edit", width: TEAM_W.full });
+  const who = last.isAgent ? t().stripTeam.aiWrote(last.name) : t().stripTeam.wrote(last.name);
+  return { body: ink.out.join(""), alt: `${who}: ${last.text}` };
+}
+function drawn(team, o) {
+  const said = team.unread > 0 && team.last !== null ? message(team.last, { tier: o.tier, unread: team.unread }) : presence(team, o);
+  const width = TEAM_W[o.tier];
+  return { source: paneSvg(width, CHIP_H, said.body), width, alt: said.alt };
+}
+const teamArt = (team, now) => ({
+  full: drawn(team, { now, tier: "full" }),
+  bare: drawn(team, { now, tier: "bare" }),
+  face: drawn(team, { now, tier: "face" })
+});
+
+const MATE_LOOK = { shell: "#A8A29A", eyes: "dot", name: "" };
+const MATE_W = 30;
+const FEET = 26;
+const SPEECH = { h: 16, size: 10, pad: 6, gap: 4, max: 240, min: 72, tail: 12, lift: 3 };
+const BOLD$4 = 1.14;
+const EDGE$1 = 4;
+function mateX(g) {
+  const gaps = g.at.slice(1).map((x, i) => (x + (g.at[i] ?? x)) / 2);
+  const spots = g.at.length < 2 ? [g.x0, g.x1] : gaps;
+  return spots.reduce((best, x) => Math.abs(x - g.stand) >= Math.abs(best - g.stand) ? x : best);
+}
+const mark = (x) => CRAB$1.flatMap((row, r) => [...row].flatMap((c, i) => c === "X" ? [`<rect class="f-edit" x="${(x + i * PIXEL.pitch).toFixed(1)}" y="${(4 + r * PIXEL.pitch).toFixed(1)}" width="${PIXEL.cell}" height="${PIXEL.cell}"/>`] : [])).join("");
+const MARK_W = Math.max(...CRAB$1.map((row) => row.length)) * PIXEL.pitch;
+const widthOf = (said, maxW) => {
+  const lead = said.name === "" ? 0 : textWidth(said.name, SPEECH.size) * BOLD$4 + SPEECH.gap;
+  const want = SPEECH.pad * 2 + lead + (said.isAgent ? MARK_W + SPEECH.gap : 0) + textWidth(said.text, SPEECH.size);
+  const w = Math.ceil(Math.min(SPEECH.max, maxW, want));
+  return w < SPEECH.min ? 0 : w;
+};
+function words(said, w) {
+  const y = SPEECH.h / 2 + SPEECH.size * 0.36;
+  const name = said.name === "" ? "" : fitText(said.name, SPEECH.size, w / 3 / BOLD$4);
+  const nameW = name === "" ? 0 : textWidth(name, SPEECH.size) * BOLD$4 + SPEECH.gap;
+  const markAt = SPEECH.pad + nameW;
+  const textAt = markAt + (said.isAgent ? MARK_W + SPEECH.gap : 0);
+  const text = fitText(said.text, SPEECH.size, w - textAt - SPEECH.pad);
+  const who = name === "" ? "" : `<text class="t" x="${SPEECH.pad}" y="${y.toFixed(1)}" font-family="${FONT}" font-size="${SPEECH.size}" font-weight="600">${xml(name)}</text>`;
+  return `${who}${said.isAgent ? mark(markAt) : ""}<text class="s" x="${textAt.toFixed(1)}" y="${y.toFixed(1)}" font-family="${FONT}" font-size="${SPEECH.size}">${xml(text)}</text>`;
+}
+const bubbleAt = (said, o) => {
+  const { h } = SPEECH;
+  const tip = `M${o.tail - 3} ${h - 0.5}L${o.tail} ${h + SPEECH.lift + 1}L${o.tail + 3} ${h - 0.5}`;
+  return `<g transform="translate(${o.x.toFixed(1)},${o.y.toFixed(1)})"><path class="card ln" d="${tip}" stroke-width="1"/><rect class="card ln" x=".5" y=".5" width="${o.w - 1}" height="${h - 1}" rx="6" stroke-width="1"/><rect class="card" x="${o.tail - 2.4}" y="${h - 1.5}" width="4.8" height="1.6"/>${words(said, o.w)}</g>`;
+};
+function ownBubble(text, o) {
+  const said = { name: "", text, isAgent: false };
+  const w = widthOf(said, o.maxW);
+  return w === 0 ? "" : bubbleAt(said, { x: o.from, y: o.top - SPEECH.h - SPEECH.lift, w, tail: SPEECH.tail });
+}
+const ownRoom = (o) => (o.mate === undefined ? o.width - EDGE$1 : o.mate - MATE_W) - o.from;
+function mateBubble(said, m) {
+  const isLeftward = m.x > m.stand;
+  const room = isLeftward ? m.x - m.stand - MATE_W * 2 : m.stand - m.x - MATE_W * 2;
+  const w = widthOf(said, room);
+  if (w === 0)
+    return "";
+  const tail = isLeftward ? w - SPEECH.tail : SPEECH.tail;
+  const x = Math.min(m.width - EDGE$1 - w, Math.max(EDGE$1, m.x - tail));
+  return bubbleAt(said, { x, y: groundY(m.x) + 1 - FEET - SPEECH.h - SPEECH.lift - 1, w, tail: m.x - x });
+}
+function mateSvg(m) {
+  const { talk } = m;
+  const body = crab$4(0, -FEET, { costume: "mate", look: MATE_LOOK, isDim: !talk.isWorking, scale: 1 });
+  const state = talk.isWorking ? t().stripTeam.isWorking(talk.name) : t().stripTeam.away(talk.name);
+  const figure = `<g transform="translate(${(m.x - MATE_W / 2).toFixed(1)},${(groundY(m.x) + 1).toFixed(1)})"><title>${xml(state)}</title><g class="${talk.isWorking ? "br" : ""}">${body}</g></g>`;
+  const said = talk.said === null ? "" : `${talk.said.isAgent ? t().stripTeam.aiWrote(talk.said.name) : t().stripTeam.wrote(talk.said.name)}: ${talk.said.text}`;
+  return { svg: figure + (talk.said === null ? "" : mateBubble(talk.said, m)), alt: [state, said].filter(Boolean).join(" · ") };
+}
+
 const STROLL_S = 24;
 const WALKS = [
   [12, 32],
@@ -3040,11 +3348,11 @@ function leadOf(spec, isWalkingIn) {
   const main = spec.crew.find((a) => a.isMain === true);
   if (main === undefined) {
     const isAwake = spec.mood === "happy" || spec.mood === "worried";
-    const body = crab$3(0, -GRID$1.feet * LEAD_SCALE, { costume: "other", look: HOME_LOOK, mood: spec.mood, isWalking: isWalkingIn, scale: LEAD_SCALE });
+    const body = crab$4(0, -GRID$1.feet * LEAD_SCALE, { costume: "other", look: HOME_LOOK, mood: spec.mood, isWalking: isWalkingIn, scale: LEAD_SCALE });
     return { body, extra: RESTING[spec.mood], title: `${t().mainName} · ${t().stripResting[spec.mood]}`, breath: spec.mood === "sleeping" ? "sl" : "br", canAmble: isAwake && spec.steps.length === 0 };
   }
   const kind = kindOf(main.lastTool ?? "");
-  const body = crab$3(0, -GRID$1.feet * LEAD_SCALE, { costume: costumeOf(main), look: lookOf(main), isWalking: IS_BUSY[kind] || isWalkingIn, scale: LEAD_SCALE });
+  const body = crab$4(0, -GRID$1.feet * LEAD_SCALE, { costume: costumeOf(main), look: lookOf(main), isWalking: IS_BUSY[kind] || isWalkingIn, scale: LEAD_SCALE });
   return { body, extra: bubble(THOUGHT[kind]), title: `${t().mainName} · ${main.lastPlain || t().stripDoing[kind]}`, breath: IS_BUSY[kind] ? "" : "br", canAmble: false };
 }
 const TIP = { h: 18, size: 10.5, pad: 7, max: 40, gap: 6 };
@@ -3054,13 +3362,25 @@ const tip = (text, at) => {
   return `<g class="tip" transform="translate(${at.isLeft ? at.x - w : at.x},${at.y})"><rect class="card ln" x=".5" y=".5" width="${w - 1}" height="${TIP.h - 1}" rx="5" stroke-width="1"/><text class="t" x="${TIP.pad}" y="12.5" font-family="${FONT}" font-size="${TIP.size}">${xml(said)}</text></g>`;
 };
 const standing = (x, w, body) => `<g transform="translate(${(x - w / 2).toFixed(1)},${(groundY(x) + 1).toFixed(1)})">${body}</g>`;
-function leadSvg(spec, lay) {
+const OWN_FROM = 22;
+const strollOf = (spec, lay, mate) => {
+  const isTalking = spec.talk !== undefined && (spec.talk.said !== null || spec.talk.mine !== null);
+  if (isTalking)
+    return 0;
+  const reach = mate === undefined ? lay.x1 - lay.x0 : mate - MATE_W - LEAD_W - lay.stand;
+  return Math.min(AMBLE_MAX, reach);
+};
+function leadSvg(spec, lay, mate) {
   const isWalkingIn = spec.from !== undefined && Math.round(spec.from) !== lay.stand;
   const lead = leadOf(spec, isWalkingIn);
   const isLeft = lay.stand > spec.width * 0.6;
   const said = tip(lead.title, { x: isLeft ? BUBBLE.x - TIP.gap : LEAD_W + TIP.gap, y: -GRID$1.feet * LEAD_SCALE + 4, isLeft });
-  const who = `<g class="who"><g class="lift"><g class="${lead.breath}">${lead.body}</g>${lead.extra}</g>${said}</g>`;
-  const stroll = lead.canAmble ? strollCss(lay.stand, Math.min(AMBLE_MAX, lay.x1 - lay.x0)) : "";
+  const mine = spec.talk?.mine ?? null;
+  const room = ownRoom({ from: lay.stand - LEAD_W / 2 + OWN_FROM, mate, width: spec.width });
+  const own = mine === null ? "" : ownBubble(mine, { from: OWN_FROM, top: -GRID$1.feet * LEAD_SCALE, maxW: room });
+  const who = `<g class="who"><g class="lift"><g class="${lead.breath}">${lead.body}</g>${lead.extra}${own}</g>${said}</g>`;
+  const distance = strollOf(spec, lay, mate);
+  const stroll = lead.canAmble && distance > 0 ? strollCss(lay.stand, distance) : "";
   const amble = stroll === "" ? who : `${stroll}<g class="amble">${who}</g>`;
   const walk = isWalkingIn && spec.from !== undefined ? `${walkInCss(spec.from, lay.stand)}<g class="walkin">${amble}</g>` : amble;
   return standing(lay.stand, LEAD_W, walk);
@@ -3072,21 +3392,23 @@ function sceneSvg(spec) {
   const plan = spec.steps.length === 0 ? "" : `${t().stripPlan} ${done}/${spec.steps.length}`;
   const names = spec.crew.map((a) => lookOf(a).name).join(", ");
   const alt = [plan, names === "" ? `${t().mainName} · ${t().stripResting[spec.mood]}` : names].filter(Boolean).join(" · ");
-  const body = land.open + land.back + trackSvg(spec, lay) + leadSvg(spec, lay) + land.front + land.close;
-  return { source: paneSvg(spec.width, SCENE_H, SCHEME + SCENE_CSS + body), alt };
+  const x = spec.talk === undefined ? undefined : mateX(lay);
+  const mate = spec.talk === undefined || x === undefined ? undefined : mateSvg({ talk: spec.talk, x, stand: lay.stand, width: spec.width });
+  const body = land.open + land.back + trackSvg(spec, lay) + (mate?.svg ?? "") + leadSvg(spec, lay, x) + land.front + land.close;
+  return { source: paneSvg(spec.width, SCENE_H, SCHEME + SCENE_CSS + body), alt: [alt, mate?.alt ?? ""].filter(Boolean).join(" · ") };
 }
 
 const NO_TALLY = { tokens: 0, busyMs: 0, turns: 0, lastCost: 0, costBefore: 0 };
-const SECOND$3 = 1000;
-const MINUTE$2 = 60;
-const HOUR$1 = 60 * MINUTE$2;
+const SECOND$2 = 1000;
+const MINUTE$1 = 60;
+const HOUR = 60 * MINUTE$1;
 const spanText = (ms) => {
-  const s = Math.round(ms / SECOND$3);
+  const s = Math.round(ms / SECOND$2);
   const words = t();
-  if (s >= HOUR$1)
-    return `${words.hours(Math.floor(s / HOUR$1))} ${words.minutes(Math.floor(s % HOUR$1 / MINUTE$2))}`;
-  if (s >= MINUTE$2)
-    return `${words.minutes(Math.floor(s / MINUTE$2))} ${words.seconds(s % MINUTE$2)}`;
+  if (s >= HOUR)
+    return `${words.hours(Math.floor(s / HOUR))} ${words.minutes(Math.floor(s % HOUR / MINUTE$1))}`;
+  if (s >= MINUTE$1)
+    return `${words.minutes(Math.floor(s / MINUTE$1))} ${words.seconds(s % MINUTE$1)}`;
   return words.seconds(s);
 };
 
@@ -3156,11 +3478,12 @@ function placeOfZone(zoneTab, zone) {
 const PX_PER_COL$2 = 8.8;
 const DEFAULT_COLS$2 = 100;
 const FULL = 100;
-const PLAN_MIN = 150;
-const PLAN_MAX = 340;
 const PLAN_PANE = "plan";
 const USAGE_PANE = "usage";
-const COMMAND = { [PLAN_PANE]: { command: "steps" }, [USAGE_PANE]: { command: "hud", args: "full" } };
+const TEAM_PANE = "transceiver";
+const HUB_CHIP = "modz";
+const COMMAND = { [PLAN_PANE]: { command: "steps" }, [USAGE_PANE]: { command: "hud", args: "full" }, [TEAM_PANE]: { command: "transceiver" } };
+const TEAM_RANK = 5;
 const stepsFrom = (value) => Array.isArray(value) ? value.flatMap((one) => {
   const step = one;
   return typeof step?.subject === "string" && typeof step.status === "string" ? [{ subject: step.subject, status: step.status }] : [];
@@ -3188,7 +3511,10 @@ async function factsOf(io) {
       return;
     })),
     now,
-    isHubOn: await io.isHubOn().catch(() => false)
+    isHubOn: await io.isHubOn().catch(() => false),
+    team: teamFrom(await io.team().catch(() => {
+      return;
+    }))
   };
 }
 function planSlot(facts, presses) {
@@ -3224,23 +3550,9 @@ function slotsOf(facts, presses) {
     { chip: { id: "tokens", label: t().stripTokens, value: fmtTokens(counted.tokens), widest: room.tokens }, rank: 3, press: usage },
     { chip: { id: "time", label: t().stripTime, value: spanText(counted.busyMs), widest: room.time, ...helpers > 0 ? { note: t().crew(helpers) } : {} }, rank: 4, press: presses.onAgents },
     ...windows.map((run) => limitSlot(run, facts, presses)),
-    ...presses.onHub === null ? [] : [{ chip: { id: "modz", label: "", value: "modz", isWordmark: true }, rank: 0, press: presses.onHub }]
+    ...facts.team === null ? [] : [{ chip: { id: "team", label: "", value: "" }, rank: TEAM_RANK, press: presses.open(TEAM_PANE), art: teamArt(facts.team, facts.now) }],
+    ...presses.onHub === null ? [] : [{ chip: { id: HUB_CHIP, label: "", value: "modz", isWordmark: true }, rank: 0, press: presses.onHub }]
   ];
-}
-const withoutNote = (slot) => {
-  const { note: _dropped, ...chip } = slot.chip;
-  return slot.isNoteKept === true ? slot : { ...slot, chip };
-};
-const fitW = (slot) => slot.chip.id === "plan" ? PLAN_MIN : chipWidth$1(slot.chip);
-const rowW = (row) => row.reduce((sum, slot) => sum + fitW(slot), 0) + CHIP_GAP$1 * Math.max(0, row.length - 1);
-function fitRow(slots, width) {
-  let row = rowW(slots) > width ? slots.map(withoutNote) : [...slots];
-  while (rowW(row) > width && row.some((slot) => slot.rank > 0)) {
-    const top = Math.max(...row.map((slot) => slot.rank));
-    row = row.filter((slot) => slot.rank !== top);
-  }
-  const spare = Math.max(0, width - rowW(row));
-  return row.map((slot) => ({ slot, maxW: slot.chip.id === "plan" ? Math.min(PLAN_MAX, PLAN_MIN + spare) : Number.POSITIVE_INFINITY }));
 }
 const worked = new Map;
 function withCrew(steps, crew) {
@@ -3290,7 +3602,7 @@ function stripText(facts) {
 const BLANK$1 = "ㅤ";
 function chipPress(ui, slot, maxW) {
   const { Box, Button, Svg } = ui;
-  const drawing = chipSvg(slot.chip, maxW);
+  const drawing = drawingOf(slot, maxW);
   const { id } = slot.chip;
   return h(Box, {
     key: `savvy-chip-${id}`,
@@ -3318,10 +3630,25 @@ function chipPress(ui, slot, maxW) {
     onPress: slot.press
   })));
 }
+function springAt(row, hasHub) {
+  const team = row.findIndex(({ slot }) => slot.art !== undefined);
+  if (team > 0)
+    return team;
+  return hasHub ? row.length : row.length - 1;
+}
+async function sayShown(io, roomId) {
+  const said = await io.teamShown.read().catch(() => {
+    return;
+  });
+  if ((said?.roomId ?? null) === roomId && said !== undefined)
+    return;
+  io.teamShown.write(roomId === null ? null : { roomId });
+}
 async function stripOf(io, ui, site) {
   const seen = await factsOf(io);
   const facts = { ...seen, steps: withCrew(seen.steps, seen.crew) };
   if (!site.isDesktop) {
+    await sayShown(io, null);
     const { Text } = ui;
     return h(Text, {
       key: "savvy-strip",
@@ -3336,15 +3663,17 @@ async function stripOf(io, ui, site) {
   })), weather: await io.weather().catch(() => {
     return;
   }) };
-  const scene = sceneSvg({ width, crew: facts.crew.filter((a) => a.isMain === true), mood: facts.mood, steps: facts.steps, sky, ...from === undefined ? {} : { from } });
+  const talk = facts.team === null ? {} : { talk: talkOf(facts.team, facts.now) };
+  const scene = sceneSvg({ width, crew: facts.crew.filter((a) => a.isMain === true), mood: facts.mood, steps: facts.steps, sky, ...from === undefined ? {} : { from }, ...talk });
   const fitted = fitRow(slotsOf(facts, pressesOf(io, facts)), width);
-  const chips = fitted.flatMap(({ slot, maxW }, i) => [
-    ...i > 0 && i === fitted.length - 1 ? [h(Box, {
-      key: "savvy-chip-spring",
-      flexGrow: 1
-    })] : [],
-    chipPress(ui, slot, maxW)
-  ]);
+  const hub = fitted.find(({ slot }) => slot.chip.id === HUB_CHIP);
+  const row = fitted.filter((one) => one !== hub);
+  await sayShown(io, facts.team !== null && row.some(({ slot }) => slot.art !== undefined) ? facts.team.roomId : null);
+  const at = springAt(row, hub !== undefined);
+  const chips = row.flatMap(({ slot, maxW }, i) => [...i > 0 && i === at ? [h(Box, {
+    key: "savvy-chip-spring",
+    flexGrow: 1
+  })] : [], chipPress(ui, slot, maxW)]);
   return h(Box, {
     key: "savvy-strip",
     flexDirection: "column"
@@ -3358,7 +3687,17 @@ async function stripOf(io, ui, site) {
   }), h(Box, {
     key: "savvy-chips",
     flexDirection: "row"
-  }, chips));
+  }, h(Box, {
+    key: "savvy-chips-fit",
+    flexDirection: "row",
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    overflow: "hidden"
+  }, chips, at === row.length ? h(Box, {
+    key: "savvy-chip-spring",
+    flexGrow: 1
+  }) : null), hub === undefined ? null : chipPress(ui, hub.slot, hub.maxW)));
 }
 
 const WEATHER_EVERY_MS = 30 * 60000;
@@ -3395,6 +3734,7 @@ const now$3 = atom({ plugin: "savvy-progress", key: "now" }, 0);
 const crab$2 = atom({ plugin: "savvy-progress", key: "crab" }, restingCrab(0));
 const tally$1 = atom({ plugin: "savvy-progress", key: "tally" }, NO_TALLY);
 const HOME$1 = { plugin: "savvy-progress", key: "home" };
+const TEAM_SHOWN = { plugin: "savvy-progress", key: "teamShown" };
 const PX_PER_COL$1 = 8;
 const BUTTONS_PX = 128;
 const DEFAULT_COLS$1 = 100;
@@ -3653,10 +3993,18 @@ const stripIo = ($) => ({
   plan: async () => (await $.state.get({ plugin: "plan-steps", key: "tasks" })).value,
   isHubOn: async () => (await $.state.get({ plugin: "modz", key: "isOn" })).value === true,
   pace: async () => (await $.state.get({ plugin: "hud-pro", key: "pace" })).value,
+  team: async () => (await $.state.get({ plugin: "transceiver", key: "team" })).value,
   tally: () => read($, tally$1),
   agents: () => read($, agents$5),
   mood: async () => (await read($, crab$2)).mood,
   home: (value) => $.state.set(HOME$1, value),
+  teamShown: {
+    read: async () => (await $.state.get(TEAM_SHOWN)).value,
+    write: (value) => {
+      const failed = (cause) => $.ui.log(`savvy-progress: the teammate chip could not say its room: ${String(cause)}`, { to: "debug" });
+      $.clock.after(0, () => void $.state.set(TEAM_SHOWN, value).catch(failed));
+    }
+  },
   run: (command) => $.command.run(command),
   log: (text) => $.ui.log(`savvy-progress: ${text}`, { to: "debug" }),
   onAgents: () => void togglePane($)
@@ -3707,16 +4055,16 @@ const pillPart = (pill, x, y) => {
   return { body: body.join(""), width };
 };
 const chevronSvg = (x, y) => `<g class="chev"><path d="M${x} ${y - CHEVRON}l${CHEVRON} ${CHEVRON}-${CHEVRON} ${CHEVRON}" fill="none" stroke-width="${STROKE$1}" stroke-linecap="round" stroke-linejoin="round" class="i-m"/></g>`;
-const cardHeadSvg = (W, head) => {
+const cardHeadSvg = (W, head, inset = 0) => {
   const right = W - CHEVRON_ROOM;
   const probe = pillPart(head.pill, 0, 0);
   const pill = pillPart(head.pill, right - probe.width, (HEAD.h - PILL.h) / 2);
   const nameW = textWidth(head.name, HEAD.size) * BOLD$3;
-  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap);
+  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap - inset);
   const titleSpan = title === "…" ? "" : `<tspan class="s" dx="${HEAD.nameGap}">${xml(title)}</tspan>`;
   const y = HEAD.h / 2 + HEAD.size * 0.35;
   const body = [
-    `<text x="0" y="${y}" font-family="${FONT}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
+    `<text x="${inset}" y="${y}" font-family="${FONT}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
     pill.body,
     chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, HEAD.h / 2)
   ];
@@ -4242,47 +4590,6 @@ function PressRow(ui, o) {
   }, stillSvg(ui, o.drawing), PressCover(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
 }
 
-const SECOND$2 = 1000;
-const MINUTE$1 = 60 * SECOND$2;
-const HOUR = 60 * MINUTE$1;
-const QUIET_MS = 2 * MINUTE$1;
-const LONG_TOOL_MS = 15 * MINUTE$1;
-const FAILURE_FRESH_MS = 10 * MINUTE$1;
-const roughSpan = (ms) => {
-  const s = t();
-  if (ms < MINUTE$1)
-    return s.seconds(Math.floor(ms / SECOND$2));
-  if (ms < HOUR)
-    return s.minutes(Math.floor(ms / MINUTE$1));
-  return s.hours(Math.floor(ms / HOUR));
-};
-function stuckOf(a, at) {
-  if (a.status !== "running" || a.isMain === true)
-    return null;
-  const open = (a.history ?? []).find((e) => e.endAt === undefined);
-  if (open)
-    return at - open.at >= LONG_TOOL_MS ? { reason: t().longTool(open.tool, roughSpan(at - open.at)), since: open.at } : null;
-  if (a.stepAt !== undefined)
-    return at - a.stepAt >= LONG_TOOL_MS ? { reason: t().quiet(roughSpan(at - a.stepAt)), since: a.stepAt } : null;
-  const heard = Math.max(a.heardAt ?? 0, a.startedAt);
-  return at - heard >= QUIET_MS ? { reason: t().quiet(roughSpan(at - heard)), since: heard } : null;
-}
-const attention = (a, reason, role) => ({
-  agentId: a.id,
-  name: lookOf(a).name,
-  title: a.description || a.type,
-  reason,
-  role
-});
-const isFreshFailure = (a, at) => a.status === "failed" && a.endReason !== "aborted" && a.endedAt !== undefined && at - a.endedAt < FAILURE_FRESH_MS;
-function attentionOf(list, at) {
-  const stuck = list.map((a) => ({ a, why: stuckOf(a, at) })).filter((x) => x.why !== null).sort((x, y) => x.why.since - y.why.since)[0];
-  if (stuck)
-    return attention(stuck.a, stuck.why.reason, "warn");
-  const failed = list.filter((a) => isFreshFailure(a, at)).sort((x, y) => (y.endedAt ?? 0) - (x.endedAt ?? 0))[0];
-  return failed ? attention(failed, t().failedNow, "danger") : null;
-}
-
 const COMPACT_H = 32;
 const CRAB_PITCH = 36;
 const MORE_ROOM = 40;
@@ -4319,9 +4626,9 @@ const clockOf = (a, at) => {
   const time = fmtTime(elapsed(a, at));
   return a.status === "running" ? time : `${t().total} ${time}`;
 };
-const crabSvg = (opts) => paneSvg(CRAB.w, CRAB.h, crab$3(1, 0, opts));
+const crabSvg = (opts) => paneSvg(CRAB.w, CRAB.h, crab$4(1, 0, opts));
 const CARD_CRAB = { w: 30, h: 28, scale: 0.92 };
-const cardCrabSvg = (opts) => paneSvg(CARD_CRAB.w, CARD_CRAB.h, crab$3(1, 0, { ...opts, scale: CARD_CRAB.scale }));
+const cardCrabSvg = (opts) => paneSvg(CARD_CRAB.w, CARD_CRAB.h, crab$4(1, 0, { ...opts, scale: CARD_CRAB.scale }));
 const HERO_CRAB = { w: 76, h: 88, scale: 2.3, crabH: 66, pillGap: 4 };
 const GRID_MID = 15;
 const heroCrabSvg = (home) => {
@@ -4344,7 +4651,7 @@ const compactSvg = (W, icons) => {
   const fit = Math.max(1, Math.floor((W - MORE_ROOM) / CRAB_PITCH));
   const shown = icons.slice(0, fit);
   const more = icons.length - shown.length;
-  const body = shown.map((ic, i) => crab$3(i * CRAB_PITCH, 0, { costume: ic.costume, look: ic.look, isDim: ic.isDim, isWalking: ic.isRunning }) + (ic.isRunning ? `<circle class="f-edit live" cx="${i * CRAB_PITCH + LIVE_DOT.x}" cy="${LIVE_DOT.y}" r="${LIVE_DOT.r}"/>` : "")).join("");
+  const body = shown.map((ic, i) => crab$4(i * CRAB_PITCH, 0, { costume: ic.costume, look: ic.look, isDim: ic.isDim, isWalking: ic.isRunning }) + (ic.isRunning ? `<circle class="f-edit live" cx="${i * CRAB_PITCH + LIVE_DOT.x}" cy="${LIVE_DOT.y}" r="${LIVE_DOT.r}"/>` : "")).join("");
   const plus = more ? `<text class="s" x="${shown.length * CRAB_PITCH + 4}" y="21" font-family="${FONT}" font-size="12">+${more}</text>` : "";
   return paneSvg(W, COMPACT_H, body + plus);
 };
@@ -4587,7 +4894,8 @@ function toolbarTree(ui, d, on) {
     alignItems: "center"
   }, h(Button, {
     key: "new-task",
-    variant: isDrafting ? undefined : "secondary",
+    plain: true,
+    dimColor: isDrafting,
     label: `＋ ${s.newTask}`,
     onPress: on.onNewTask
   }), h(Button, {
@@ -4657,6 +4965,7 @@ function sectionHead(ui, layout, head) {
     key: `h-${toggle.key}`,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     columnGap: 1
   }, svg, h(Button, {
     key: toggle.key,
@@ -4885,8 +5194,7 @@ function HomeButton(ui, onPress) {
   const { Box, Button } = ui;
   return h(Box, {
     key: "modz-home-row",
-    flexDirection: "row",
-    marginLeft: -1
+    flexDirection: "row"
   }, h(Button, {
     key: "modz-home",
     label: HOME_LABEL,
@@ -5668,14 +5976,13 @@ function deskHead(ui, a, ctx) {
   const stuck = stuckOf(a, ctx.at);
   const isOpen = ctx.selected === a.id;
   const head = headOf(a, stuck);
-  const headW = ctx.inner - CARD_CRAB.w - GAP_PX;
+  const headW = ctx.inner - CARD_CRAB.w;
   const crab = cardCrabSvg({ costume: costumeOf(a), look, isWalking: a.status === "running" && !stuck });
   const alt = `${head.title}: ${head.name} · ${whoLine(a)} · ${head.pill.text} (${isOpen ? t().hide : t().details})`;
   return h(Box, {
     flexDirection: "row",
-    alignItems: "center",
-    columnGap: 1
-  }, picture(ui, { key: "crab", at: `crab-${a.id}`, pic: { source: crab, alt: `${look.name}, ${tierWordOf(a)}`, width: CARD_CRAB.w, height: CARD_CRAB.h } }), picture(ui, { key: "head", at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head), alt, width: headW, height: HEAD_H } }));
+    alignItems: "center"
+  }, picture(ui, { key: "crab", at: `crab-${a.id}`, pic: { source: crab, alt: `${look.name}, ${tierWordOf(a)}`, width: CARD_CRAB.w, height: CARD_CRAB.h } }), picture(ui, { key: "head", at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head, GAP_PX), alt, width: headW, height: HEAD_H } }));
 }
 function deskFoot(ui, a, ctx) {
   const { Box, Text } = ui;
@@ -6241,7 +6548,7 @@ function whyOf(run, event) {
 }
 function crabAt(run, stand) {
   const isWalking = stand.kind === "edit" || stand.kind === "run" || stand.kind === "test" || stand.kind === "save";
-  const body = crab$3(0, -GRID.feet, { costume: costumeOf(run), look: lookOf(run), isWalking });
+  const body = crab$4(0, -GRID.feet, { costume: costumeOf(run), look: lookOf(run), isWalking });
   const thought = stand.thought === "" ? "" : `<g transform="translate(0,${THOUGHT_DROP})">${bubble(stand.thought)}</g>`;
   const who = `<g class="lift"><g class="wig"><g class="${isWalking ? "" : "br"}">${body}</g></g>${thought}</g>`;
   const moving = stand.kind === undefined ? who : `<g class="mv-${stand.kind}">${who}</g>`;

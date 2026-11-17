@@ -9,13 +9,14 @@ type Table = Record<string, any>
 
 export const HOME_LABEL = '← modz'
 
-// A button's padding is a cell a side: one cell back, its arrow starts where the text under it does.
+// The button's box, not its text, sits on the column's edge: under the pointer the app lights that box, and a box
+// pulled a cell out of the column lit outside every other edge of the pane (owner's screenshot, 2026-11-17).
 
 export function HomeButton(ui: Table, onPress: () => void) {
   const { Box, Button } = ui
 
   return (
-    <Box key="modz-home-row" flexDirection="row" marginLeft={-1}>
+    <Box key="modz-home-row" flexDirection="row">
       <Button key="modz-home" label={HOME_LABEL} plain dimColor onPress={onPress} />
     </Box>
   )

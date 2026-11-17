@@ -169,6 +169,18 @@ export type Strings = {
   stripDays: string[]
   stripResting: Record<'sleeping' | 'working' | 'happy' | 'worried', string>
   stripStep: (n: number, subject: string) => string
+  /** The teammate chip: someone else on the same project, what they last did, and what they or their AI wrote. */
+  stripTeam: {
+    fresh: (n: number) => string
+    away: (name: string) => string
+    working: string
+    isWorking: (name: string) => string
+    worked: (name: string, ago: string) => string
+    on: (branch: string) => string
+    more: (n: number) => string
+    wrote: (name: string) => string
+    aiWrote: (name: string) => string
+  }
   /** The hub card's running count: "2 ajan", "2 running". */
   hubCrew: (n: number) => string
   liveCount: (n: number) => string

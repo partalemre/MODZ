@@ -220,8 +220,12 @@ function stageHooks(on: On): void {
 }
 
 // The desktop keeps the hub's tab across an engine restart, and the new engine has no such pane: the tab would stay
-// blank. So the hub opens again, once per engine and after the draw, when the panel is empty.
+// blank. So the hub opens again, once per module and after the draw, when the panel is empty. `hubKept` is module
+// memory, so a reload (a rebuilt bundle) forgets it, and `$.ui.panes()` lists only the hub's own panes: the stage,
+// kept by the engine, says a mod's pane holds the panel, and then the hub stays away.
 async function reopenKept($: EngineInterface): Promise<void> {
+  const staged = paneOf((await $.state.get(STAGE)).value)
+  if (staged !== null && !OWN_PANES.includes(staged)) return
   if ((await $.ui.panes()).length === 0) await show($, PANE, false)
 }
 

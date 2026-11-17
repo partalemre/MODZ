@@ -24,6 +24,15 @@ v3 (2026-10-29) v2'nin şablon görünümünü söktü: renkli ikon kutuları, b
    adını çizimin `alt` metni verir. Terminal kendi düğmelerini korur.
 6. **Düğme hiyerarşisi.** Panelde en fazla bir `primary`. Gerçek alternatifler `secondary`. Düşük ağırlıklı işler
    (Düzenle, Yenile, Daha fazla, Şimdi değil) `plain dimColor`. Satır içi her eylem için düğme yığılmaz.
+6b. **Düğmenin kutusu çizimle örtüşür.** Masaüstü düğmenin hover'ı uygulamanın kendi yuvarlak kutusudur, ~28 px
+   yüksek ve etiket kadar geniş; biz yalnızca nereye oturduğunu seçeriz. Kurallar: (1) metin düğmesi `plain`'dir, gri
+   hap (`secondary`) panelde kullanılmaz; seçili olan tam güçte + ✓, ötekiler `dimColor`; (2) düğmenin *kutusu* sütun
+   kenarına oturur, metni değil: negatif kenar boşluğu (`marginLeft={-1}`) yok; sağdaki düğmeler (Daralt, Gizle,
+   Göster) aynı sağ kenarda, `justifyContent="space-between"` ile; (3) bir satırı açan basış tek kontrol boyundadır
+   (28 px) ve çizimi tam satır genişliğindedir: yan yana çizimler arasında hücre sayılan `columnGap` yok, boşluk
+   çizimin içinde (`inset`), yoksa satır panelden taşar ve sağdaki `›` kesilir; (4) geri dönüş her panelde aynı
+   `HomeButton` ("← modz", küçük harf); (5) kapatma `role="dismiss"` ile uygulamanın kendi kapatma düğmesi;
+   (6) ızgara yerine tek sütun: seçenek listeleri alt alta, kısayol çipleri aynı hizada.
 7. **Tek seviye yüzey.** İç içe kart yok. Liste satırları kutuya değil boşluğa yaslanır; kart yalnızca bir şeyi öne
    çıkarmak için (hub başı, karar kartı): card zemin + 1px line, rx 10.
 8. **Tipografi.** Başlık 16/600 · satır başlığı 13/560 text.hi · gövde 12 text.mid · meta 12 text.lo. Mono yalnızca
@@ -173,7 +182,7 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
   (`kit/stage.ts`). Paneli açılan mod, açıldıktan sonra (`isPlaced`) kendi `{ plugin: '<mod>', key: 'shown' }`
   değerine `{ pane, at }` yazar. Hub bunu duyunca kendi panellerini kapatır ve `{ plugin: 'modz', key: 'stage' }`
   değerine o paneli yazar; açık paneli olan diğer her mod `state.set { plugin: 'modz', key: 'stage' }` kancasında
-  `isOffStage(e.value, kendiAnahtarı)` ise kendi panelini kapatır. Hub geri gelince (satırı, "← MODZ", `/modz`)
+  `isOffStage(e.value, kendiAnahtarı)` ise kendi panelini kapatır. Hub geri gelince (satırı, "← modz", `/modz`)
   sahneyi `modz` yazar. Cevap vermeyen bir mod hub'ı yerinde bırakır: boş panel olmaz. Her açılış `focus: true`
   (alt bilgi düğmesi hariç, aşağıda).
 - **Satıra basış:** motor, kişinin klavyeyi verdiği panelin üstüne yeni paneli göstermez, `focus: true` istense bile;
@@ -215,7 +224,7 @@ Modlar birbirini doğrudan çağırmaz; `$.state` yazımları ve `state.set` kan
   önce: modz, savvy-progress, plan-steps, filetree, blast-radius, secret-guard, checkpoint, hud-pro (`guide.ts`).
 
 - **Eve dönüş:** hub çalıştıkça `{ plugin: 'modz', key: 'isOn' }` `true`'dur. Hub'ın açtığı her panel bunu çizerken
-  okur ve açıksa ağacın başına `HomeButton` (`kit/home.tsx`, "← MODZ") koyar. Basınca mod kendi
+  okur ve açıksa ağacın başına `HomeButton` (`kit/home.tsx`, "← modz") koyar. Basınca mod kendi
   `{ plugin: '<mod>', key: 'home' }` değerine `{ at }` yazar; hub `state.set { key: 'home' }` ile duyar ve kendini
   `focus: true` ile açar, kapanmışsa yeniden, ve sahneyi `modz` yazar: mod paneli kapanır, hub aynı yerde belirir.
 - **Alt bilgi düğmesi (masaüstü):** prompt altındaki soluk mod etiketleri (`SessionMode`) `modz` tarafından çizilir:

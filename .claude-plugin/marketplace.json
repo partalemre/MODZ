@@ -12,7 +12,10 @@
     {
       "name": "modz",
       "source": "./mods/modz",
-      "description": "The MODZ panel. Opens beside the chat with a live line from every installed mod, one click to each mod's own pane."
+      "description": "The MODZ panel. Opens beside the chat with a live line from every installed mod, one click to each mod's own pane.",
+      "dependencies": [
+        "transceiver"
+      ]
     },
     {
       "name": "savvy-progress",
@@ -40,7 +43,7 @@
         "source": "url",
         "url": "https://github.com/partalemre/transceiver.git"
       },
-      "description": "Beta. Chat and zero-token agent questions between your own computers; team rooms across accounts are experimental."
+      "description": "Beta. Team chat and zero-token agent questions on a private GitHub repo you share, with nothing to set up, and between your own computers."
     },
     {
       "name": "blast-radius",

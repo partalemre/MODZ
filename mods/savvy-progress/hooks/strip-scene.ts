@@ -7,7 +7,9 @@ import { t } from './i18n'
 import { lookOf } from './identity'
 import { HOME_LOOK } from './mood-svg'
 import { groundLine, groundY, landOf, SCENE_H } from './strip-land'
+import { MATE_W, mateSvg, mateX, ownBubble, ownRoom } from './strip-mate'
 import { SCENE_CSS, strollCss, walkInCss } from './strip-motion'
+import type { Talk } from './strip-team'
 import type { Sky } from './sun'
 import { FONT, paneSvg } from './theme'
 import { costumeOf } from './tiers'
@@ -36,8 +38,8 @@ const SCHEME = '<style>:root{color-scheme:light dark}</style>'
 /** `crew`: the helper agents seen at work on the step. */
 export type Step = { subject: string; status: string; crew?: readonly { name: string; shell: string }[] }
 
-/** `from` is where the crab stood before the plan moved on: it walks in from there. */
-export type SceneSpec = { width: number; crew: readonly AgentRun[]; mood: CrabMood; steps: readonly Step[]; sky: Sky; from?: number }
+/** `from` is where the crab stood before the plan moved on: it walks in from there. `talk`: a teammate on the project. */
+export type SceneSpec = { width: number; crew: readonly AgentRun[]; mood: CrabMood; steps: readonly Step[]; sky: Sky; from?: number; talk?: Talk }
 
 type Layout = { x0: number; x1: number; at: number[]; stand: number; standIndex: number }
 
@@ -152,14 +154,30 @@ const tip = (text: string, at: { x: number; y: number; isLeft: boolean }): strin
 // Feet on the ground at `x`, the drawing `w` wide.
 const standing = (x: number, w: number, body: string): string => `<g transform="translate(${(x - w / 2).toFixed(1)},${(groundY(x) + 1).toFixed(1)})">${body}</g>`
 
+// The owner's own line starts this far into his crab, right of its thought bubble.
+const OWN_FROM = 22
+
+// With a teammate there, the crab strolls only up to them, and stands still while a line is said between them.
+const strollOf = (spec: SceneSpec, lay: Layout, mate: number | undefined): number => {
+  const isTalking = spec.talk !== undefined && (spec.talk.said !== null || spec.talk.mine !== null)
+  if (isTalking) return 0
+  const reach = mate === undefined ? lay.x1 - lay.x0 : mate - MATE_W - LEAD_W - lay.stand
+
+  return Math.min(AMBLE_MAX, reach)
+}
+
 // Each motion gets its own group: a CSS transform would replace a group's own `transform` attribute.
-function leadSvg(spec: SceneSpec, lay: Layout): string {
+function leadSvg(spec: SceneSpec, lay: Layout, mate: number | undefined): string {
   const isWalkingIn = spec.from !== undefined && Math.round(spec.from) !== lay.stand
   const lead = leadOf(spec, isWalkingIn)
   const isLeft = lay.stand > spec.width * 0.6
   const said = tip(lead.title, { x: isLeft ? BUBBLE.x - TIP.gap : LEAD_W + TIP.gap, y: -GRID.feet * LEAD_SCALE + 4, isLeft })
-  const who = `<g class="who"><g class="lift"><g class="${lead.breath}">${lead.body}</g>${lead.extra}</g>${said}</g>`
-  const stroll = lead.canAmble ? strollCss(lay.stand, Math.min(AMBLE_MAX, lay.x1 - lay.x0)) : ''
+  const mine = spec.talk?.mine ?? null
+  const room = ownRoom({ from: lay.stand - LEAD_W / 2 + OWN_FROM, mate, width: spec.width })
+  const own = mine === null ? '' : ownBubble(mine, { from: OWN_FROM, top: -GRID.feet * LEAD_SCALE, maxW: room })
+  const who = `<g class="who"><g class="lift"><g class="${lead.breath}">${lead.body}</g>${lead.extra}${own}</g>${said}</g>`
+  const distance = strollOf(spec, lay, mate)
+  const stroll = lead.canAmble && distance > 0 ? strollCss(lay.stand, distance) : ''
   const amble = stroll === '' ? who : `${stroll}<g class="amble">${who}</g>`
   const walk = isWalkingIn && spec.from !== undefined ? `${walkInCss(spec.from, lay.stand)}<g class="walkin">${amble}</g>` : amble
 
@@ -174,7 +192,9 @@ export function sceneSvg(spec: SceneSpec): { source: string; alt: string } {
   const plan = spec.steps.length === 0 ? '' : `${t().stripPlan} ${done}/${spec.steps.length}`
   const names = spec.crew.map(a => lookOf(a).name).join(', ')
   const alt = [plan, names === '' ? `${t().mainName} · ${t().stripResting[spec.mood]}` : names].filter(Boolean).join(' · ')
-  const body = land.open + land.back + trackSvg(spec, lay) + leadSvg(spec, lay) + land.front + land.close
+  const x = spec.talk === undefined ? undefined : mateX(lay)
+  const mate = spec.talk === undefined || x === undefined ? undefined : mateSvg({ talk: spec.talk, x, stand: lay.stand, width: spec.width })
+  const body = land.open + land.back + trackSvg(spec, lay) + (mate?.svg ?? '') + leadSvg(spec, lay, x) + land.front + land.close
 
-  return { source: paneSvg(spec.width, SCENE_H, SCHEME + SCENE_CSS + body), alt }
+  return { source: paneSvg(spec.width, SCENE_H, SCHEME + SCENE_CSS + body), alt: [alt, mate?.alt ?? ''].filter(Boolean).join(' · ') }
 }

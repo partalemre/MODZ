@@ -257,6 +257,9 @@ declare module 'claude-code' {
       crab: HomeCrab
       // The session strip's own count (hooks/strip-svg.ts): tokens, agent time, turns, the last turn's cost.
       tally: { tokens: number; busyMs: number; turns: number; lastCost: number; costBefore: number }
+      // The project room whose teammate chip the strip draws now, or null; transceiver reads it so its own notice
+      // above the prompt does not say the same line twice.
+      teamShown: { roomId: string } | null
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
     modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
@@ -264,5 +267,12 @@ declare module 'claude-code' {
     // The Usage mod's forecast for the plan window it watches: when it runs out at its recent pace, if before the reset.
     'hud-pro': { pace: { window: string; fullAt: number | null } | null }
     'plan-steps': { tasks: { id: string; subject: string; status: string }[] }
+    // Who else works on this project (transceiver's hooks/team.ts); the session strip's teammate chip reads it.
+    transceiver: {
+      team: {
+        roomId: string; repo: string; mates: { name: string; at: number; branch?: string }[]; unread: number
+        last: { id: string; name: string; text: string; ts: number; isAgent: boolean } | null
+      } | null
+    }
   }
 }

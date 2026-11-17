@@ -241,7 +241,7 @@ const CATALOG = {
     from: (upstream) => `from ${upstream}`,
     unreadable: "its settings file (plugin.json) could not be read",
     invalid: "its line in the mod list is broken",
-    remote: "kept elsewhere: no details on this computer",
+    remote: "kept in its own project",
     entry: (n) => `entry ${n}`,
     emptyTitle: "The mod list could not be read",
     emptyLine: "The list file (marketplace.json) is missing or lists no mods.",
@@ -271,7 +271,7 @@ const CATALOG = {
     from: (upstream) => `asıl: ${upstream}`,
     unreadable: "ayar dosyası (plugin.json) okunamadı",
     invalid: "mod listesindeki satırı bozuk",
-    remote: "başka yerde tutuluyor: bu bilgisayarda ayrıntısı yok",
+    remote: "kendi projesinde tutuluyor",
     entry: (n) => `kayıt ${n}`,
     emptyTitle: "Mod listesi okunamadı",
     emptyLine: "Liste dosyası (marketplace.json) bulunamadı ya da içinde mod yok.",
@@ -609,7 +609,7 @@ function searchOf(search) {
   const pending = (Array.isArray(result?.pending_mcp_servers) ? result.pending_mcp_servers : []).filter((name) => typeof name === "string");
   return { failed, pending };
 }
-function linksOf(facts) {
+function linksOf$1(facts) {
   const { failed, pending } = searchOf(facts.search);
   const told = new Set([...failed.map((one) => one.name), ...pending].map(wireName));
   const connected = [...new Set(facts.servers)].filter((name) => !told.has(wireName(name))).sort(byName);
@@ -681,8 +681,7 @@ function HomeButton(ui, onPress) {
   const { Box, Button } = ui;
   return h(Box, {
     key: "modz-home-row",
-    flexDirection: "row",
-    marginLeft: -1
+    flexDirection: "row"
   }, h(Button, {
     key: "modz-home",
     label: HOME_LABEL,
@@ -779,8 +778,7 @@ function linksTree(ui, view) {
   }, say.lead), view.links === null ? [h(Text, {
     key: "unread"
   }, say.unread)] : linksBody(ui, view.links), h(Box, {
-    flexDirection: "row",
-    marginLeft: -1
+    flexDirection: "row"
   }, h(Button, {
     key: "links-check",
     label: say.check,
@@ -906,7 +904,7 @@ async function refreshLinks($, isAsking) {
     return;
   }) : undefined;
   const now = await $.clock.now().catch(() => Date.now());
-  const links = linksOf({ servers, authCache: await jsonAt($, places === null ? undefined : `${places.dir}/mcp-needs-auth-cache.json`), search, now });
+  const links = linksOf$1({ servers, authCache: await jsonAt($, places === null ? undefined : `${places.dir}/mcp-needs-auth-cache.json`), search, now });
   if (isSame(await read($, linksAtom), links) || !hasLinks(links) && await read($, linksAtom) === null)
     return;
   await update($, linksAtom, () => links);
@@ -2349,13 +2347,13 @@ function githubName(url) {
 }
 
 const SKILLS_DIR = ".claude/skills";
-function linkCheck(spec) {
+function linkedDir(spec) {
   const dirs = spec.roots.filter((root) => Boolean(root)).map((root) => `${root}/${SKILLS_DIR}`);
   return async (name) => {
     for (const dir of dirs)
       if (await spec.exists(`${dir}/${name}`).catch(() => false))
-        return true;
-    return false;
+        return `${dir}/${name}`;
+    return;
   };
 }
 function marketRoot(realPluginRoot) {
@@ -2397,11 +2395,11 @@ function infoOf(facts) {
   return {
     name,
     version: text(manifest?.version) ?? text(entry.version) ?? null,
-    description: problem ?? summary ?? text(manifest?.description) ?? text(entry.description) ?? (manifest ? "" : catalogWords().unreadable),
+    description: problem ?? summary ?? text(manifest?.description) ?? text(entry.description) ?? facts.note ?? (manifest ? "" : catalogWords().unreadable),
     group: meta?.group ?? "other",
     surfaces: meta?.surfaces ?? BOTH,
     upstream: upstreamOf(name, manifest),
-    isHealthy: manifest !== undefined && problem === undefined,
+    isHealthy: (manifest !== undefined || facts.note !== undefined) && problem === undefined,
     isEnabled: facts.isEnabled,
     options: isRecord(manifest?.userConfig) ? Object.keys(manifest.userConfig) : []
   };
@@ -2414,10 +2412,18 @@ async function enabledOf(spec) {
   const isLinked = SAFE_NAME.test(spec.name) && await spec.hasLink(spec.name).catch(() => false);
   return isLinked ? true : null;
 }
-function remoteProblem(source) {
-  const repo = isRecord(source) ? text(source.repo) ?? text(source.url) : undefined;
+function remoteNote(source) {
+  const repo = isRecord(source) ? text(source.repo) ?? githubName(source.url) ?? undefined : undefined;
   const remote = catalogWords().remote;
   return repo === undefined ? remote : `${remote} (${repo})`;
+}
+async function remoteInfo(spec) {
+  const { name, entry, isEnabled, options } = spec;
+  const dir = SAFE_NAME.test(name) ? await options.linkedDir?.(name).catch(() => {
+    return;
+  }) : undefined;
+  const manifest = dir === undefined ? undefined : await readJson(options.read, `${dir}/.claude-plugin/plugin.json`);
+  return infoOf({ name, entry, manifest, isEnabled, note: remoteNote(entry.source) });
 }
 async function entryInfo(spec) {
   const { index, options, enabled } = spec;
@@ -2428,8 +2434,10 @@ async function entryInfo(spec) {
   if (name === undefined)
     return infoOf({ name: catalogWords().entry(index + 1), entry, manifest: undefined, isEnabled: null, problem: invalid });
   const isEnabled = await enabledOf({ name, flag: enabled[name], hasLink });
+  if (entry.source === undefined || entry.source === null)
+    return infoOf({ name, entry, manifest: undefined, isEnabled, problem: invalid });
   if (typeof entry.source !== "string")
-    return infoOf({ name, entry, manifest: undefined, isEnabled, problem: entry.source === undefined ? invalid : remoteProblem(entry.source) });
+    return remoteInfo({ name, entry, isEnabled, options });
   const dir = `${options.root}/${entry.source.replace(/^\.\//, "")}`;
   return infoOf({ name, entry, manifest: await readJson(options.read, `${dir}/.claude-plugin/plugin.json`), isEnabled });
 }
@@ -2481,7 +2489,11 @@ async function skillLinks(disk) {
   const cwd = await disk.cwd().catch(() => {
     return;
   });
-  return linkCheck({ roots: [home, cwd], exists: (path) => disk.exists(path) });
+  return linkedDir({ roots: [home, cwd], exists: (path) => disk.exists(path) });
+}
+async function linksOf(disk) {
+  const dirOf = await skillLinks(disk);
+  return { hasLink: async (name) => await dirOf(name) !== undefined, linkedDir: dirOf };
 }
 async function textOf$2(disk, path) {
   return await disk.exists(path) ? String(await disk.read(path)) : undefined;
@@ -2495,7 +2507,7 @@ async function marketOf(disk) {
     const root = install === undefined ? marketRoot(real) : installedMarketRoot(install, await textOf$2(disk, `${install.pluginsDir}/known_marketplaces.json`).catch(() => {
       return;
     }));
-    return await loadCatalog({ read: (path) => disk.read(path), root, enabledPlugins: await enabledPlugins(disk), hasLink: await skillLinks(disk) });
+    return await loadCatalog({ read: (path) => disk.read(path), root, enabledPlugins: await enabledPlugins(disk), ...await linksOf(disk) });
   } catch (cause) {
     disk.log(`modz: the catalog could not be read: ${String(cause)}`);
     return { name: "", mods: [] };
@@ -4193,6 +4205,9 @@ function stageHooks(on) {
   });
 }
 async function reopenKept($) {
+  const staged = paneOf((await $.state.get(STAGE)).value);
+  if (staged !== null && !OWN_PANES.includes(staged))
+    return;
   if ((await $.ui.panes()).length === 0)
     await show($, PANE, false);
 }

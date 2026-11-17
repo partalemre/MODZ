@@ -60,6 +60,8 @@ export type SetupOptions = {
   sid?: string
   /** `tool.check` answers `ask` for these tools: a permission dialog would open. */
   ask?: string[]
+  /** What `session.usage` answers: cost and the usage allowances, in place of the 5-hour window at 20%. */
+  usage?: { cost: { usd: number }; rateLimits: { kind: string; percentUsed: number; resetsAt?: string }[] }
 }
 
 // Folders are found by the end of their path, so a relative `.claude/agents` matches wherever the test runs.
@@ -125,7 +127,7 @@ export async function setup($: any, on: any, opts: SetupOptions = {}) {
   })
   on('turn.complete', (_: any, e: any) => ({ text: e.answer }))
   on('prompt.submit', (_: any, e: any) => ({ text: e.text }))
-  on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: [{ kind: 'five_hour', percentUsed: 20, resetsAt: 'r1' }], cost: { usd: 0 } } }))
+  on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: [{ kind: 'five_hour', percentUsed: 20, resetsAt: 'r1' }], cost: { usd: 0 }, ...opts.usage } }))
   on('session.measure', (_: any, e: any) => ({ changed: e.changed }))
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/w' })
   return { clock, world }

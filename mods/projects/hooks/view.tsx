@@ -33,11 +33,11 @@ export const busyText = (busy: Busy): string => {
   return busy.label === 'estimate' ? say.estimating(busy.done, busy.total) : say.scanning
 }
 
-// A plain button one cell back: its padding would indent its label from the text around it.
+// A plain button in its own row, its box on the column edge (the box is what lights under the pointer).
 export const flush = (ui: Ui, key: string, button: unknown) => {
   const { Box } = ui
 
-  return <Box key={key} flexDirection="row" marginLeft={-1}>{button as never}</Box>
+  return <Box key={key} flexDirection="row">{button as never}</Box>
 }
 
 // A group's label: 12/600 text.lo on the desktop (DESIGN.md §0.2), which a Text cannot be; bold on a terminal.

@@ -177,14 +177,15 @@ function deskHead(ui: Ui, a: AgentRun, ctx: RowContext) {
   const stuck = stuckOf(a, ctx.at)
   const isOpen = ctx.selected === a.id
   const head = headOf(a, stuck)
-  const headW = ctx.inner - CARD_CRAB.w - GAP_PX
+  // No layout gap: a gap is counted in cells, so crab + gap + head ran past the pane and cut the chevron.
+  const headW = ctx.inner - CARD_CRAB.w
   // A stuck crab stands still: the calm row says it before the pill does.
   const crab = cardCrabSvg({ costume: costumeOf(a), look, isWalking: a.status === 'running' && !stuck })
   const alt = `${head.title}: ${head.name} · ${whoLine(a)} · ${head.pill.text} (${isOpen ? t().hide : t().details})`
   return (
-    <Box flexDirection="row" alignItems="center" columnGap={1}>
+    <Box flexDirection="row" alignItems="center">
       {picture(ui, { key: 'crab', at: `crab-${a.id}`, pic: { source: crab, alt: `${look.name}, ${tierWordOf(a)}`, width: CARD_CRAB.w, height: CARD_CRAB.h } })}
-      {picture(ui, { key: 'head', at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head), alt, width: headW, height: HEAD_H } })}
+      {picture(ui, { key: 'head', at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head, GAP_PX), alt, width: headW, height: HEAD_H } })}
     </Box>
   )
 }

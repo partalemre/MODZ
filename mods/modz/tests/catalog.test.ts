@@ -27,12 +27,25 @@ test('a bad marketplace entry becomes an unhealthy row and the others still load
   const { mods } = await loadCatalog({ ...market(plugins, { good: { version: '1.0.0', description: 'ok' } }) })
 
   expect(mods).toHaveLength(6)
-  expect(mods.filter(mod => !mod.isHealthy)).toHaveLength(5)
+  expect(mods.filter(mod => !mod.isHealthy)).toHaveLength(4)
+  expect(byName(mods, 'remote')?.isHealthy).toBe(true)
   expect(byName(mods, 'good')?.isHealthy).toBe(true)
   expect(mods[0]?.description).toBe('mod listesindeki satırı bozuk')
   expect(byName(mods, 'noSource')?.description).toBe('mod listesindeki satırı bozuk')
   expect(byName(mods, 'remote')?.description).toContain('o/r')
   expect(new Set(mods.map(mod => mod.name)).size).toBe(6)
+})
+
+test('a mod kept in its own repo is an ordinary row, read where its skills link leads', async () => {
+  setLang('en')
+  const plugins = [{ name: 'far', source: { source: 'url', url: 'https://github.com/o/far.git' } }, { name: 'away', source: { source: 'url', url: 'https://example.org/away.git' } }]
+  const base = market(plugins)
+  const read = async (path: string) => (path === '/h/.claude/skills/far/.claude-plugin/plugin.json' ? JSON.stringify({ version: '2.0.0', description: 'its own words' }) : base.read(path))
+  const linkedDir = async (name: string) => (name === 'far' ? '/h/.claude/skills/far' : undefined)
+  const { mods } = await loadCatalog({ read, root: ROOT, linkedDir })
+
+  expect(byName(mods, 'far')).toMatchObject({ isHealthy: true, version: '2.0.0', description: 'its own words' })
+  expect(byName(mods, 'away')).toMatchObject({ isHealthy: true, description: 'kept in its own project' })
 })
 
 test('a missing or non-array plugins list gives an empty catalog, not a throw', async () => {

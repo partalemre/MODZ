@@ -57,7 +57,7 @@ Start a new session and press **modz** under the prompt (or type `/modz`). The m
 - **Requirements.** Claude Code 2.1.295 or later, tested on 2.1.296 (terminal) and 2.1.317 (desktop app). `terminal-browser` draws in the terminal only and needs the external `terminal-browser` CLI (without it, the mod asks you to install it first). Outside the desktop app, `done-ping` falls back to a macOS banner.
 - **Updates.** Automatic and free. The first session after you install turns on Claude Code's own auto-update for the `modz` marketplace, so every mod you installed, `transceiver` from its own repo included, updates itself in the background a few minutes into a session and loads fresh at the next start. No model call, no command to run. If you already chose under `/plugin` > Marketplaces, that choice stays; to turn it off, choose **Disable auto-update** there.
 - **Language.** The interface is in English. Set `MODZ_LANG=tr` for Turkish.
-- **Transceiver** (an extra, kept in its own repo) needs a claude.ai login. If Claude Code runs inside another app (an IDE, `claude -p`, an SDK host), also set `CLAUDE_CODE_ARTIFACT=1`.
+- **Transceiver** comes with `modz`: installing the hub installs it too (it is kept in its own repo). On a private GitHub repo you share, its team room opens by itself. Its DMs and the bridge between your own computers need a claude.ai login. If Claude Code runs inside another app (an IDE, `claude -p`, an SDK host), also set `CLAUDE_CODE_ARTIFACT=1`.
 
 Both variables go in the `env` block of `~/.claude/settings.json`:
 

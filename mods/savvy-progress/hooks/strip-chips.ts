@@ -1,4 +1,4 @@
-import { fitText, textWidth, xml } from './format'
+import { textWidth, xml } from './format'
 import { FONT, paneSvg } from './theme'
 
 // The strip's chips: one fact each (cost, tokens, the week's allowance, the plan's step), a quiet label and its
@@ -25,8 +25,8 @@ const METER = { w: 34, h: 4 }
 const WARN_AT = 70
 const DANGER_AT = 90
 const FULL = 100
-// A note cut to less than this is dropped: two letters and an ellipsis say nothing.
-const NOTE_MIN = 28
+// The measure runs a little short of what the app draws; a note sized by it bare could lose its last letter.
+const LABEL_SLACK = 1.08
 // The modz wordmark, in the hub's own pixel letters (kit/pixels.ts): 5 cells wide, 7 tall.
 const LETTERS: Readonly<Record<string, readonly string[]>> = {
   m: ['.....', '.....', 'XX.X.', 'X.X.X', 'X.X.X', 'X.X.X', 'X.X.X'],
@@ -45,7 +45,7 @@ export type Chip = { id: string; label: string; value: string; widest?: string; 
 type Part = { w: number; draw: (x: number) => string }
 
 const label = (cls: string, s: string): Part => ({
-  w: Math.ceil(textWidth(s, LABEL_SIZE)),
+  w: Math.ceil(textWidth(s, LABEL_SIZE) * LABEL_SLACK),
   draw: x => `<text class="${cls}" x="${x}" y="${BASELINE}" font-family="${FONT}" font-size="${LABEL_SIZE}">${xml(s)}</text>`,
 })
 
@@ -110,10 +110,21 @@ export const chipCells = (width: number): number => Math.max(1, Math.floor((widt
 /** The chip's width with its whole note. */
 export const chipWidth = (chip: Chip): number => widthOf(partsOf(chip, chip.note ?? ''))
 
-/** The chip drawn at most `maxW` wide: the note is cut to fit, and left out when too little of it would show. */
+// The longest run of whole words of `note` that fits `maxW`, with "…" when words were left out; '' when none fit.
+function wordsThatFit(chip: Chip, maxW: number): string {
+  const words = (chip.note ?? '').split(' ')
+  for (let n = words.length; n > 0; n--) {
+    const note = n === words.length ? words.join(' ') : `${words.slice(0, n).join(' ')}…`
+    if (widthOf(partsOf(chip, note)) <= maxW) return note
+  }
+
+  return ''
+}
+
+/** The chip drawn at most `maxW` wide: a note is never cut mid-word; only the plan's step gives up its last words. */
 export function chipSvg(chip: Chip, maxW = Number.POSITIVE_INFINITY): { source: string; width: number; alt: string } {
-  const room = maxW - widthOf(partsOf(chip, '')) - GAP
-  const fitted = chip.note === undefined || room < NOTE_MIN ? '' : fitText(chip.note, LABEL_SIZE, room)
+  const whole = chip.note ?? ''
+  const fitted = widthOf(partsOf(chip, whole)) <= maxW ? whole : chip.id === 'plan' ? wordsThatFit(chip, maxW) : ''
   const parts = partsOf(chip, fitted)
   const width = widthOf(parts)
   let x = PAD

@@ -16,6 +16,10 @@ const STAGE = { plugin: 'modz', key: 'stage' } as const
 export const hubDrawings = stableDrawings<Drawing>()
 export const catalogDrawings = stableDrawings<Drawing>()
 
+// Whether this engine has put a pane of the hub's in the panel. A draw asked for the hub before that is a tab the
+// desktop kept from before the engine restarted (register.tsx: paneHooks).
+export const hubKept = { isHeld: false }
+
 // A pane that will not close is logged, never thrown: the one being shown is already up.
 export const closeQuietly = ($: EngineInterface, id: string) =>
   $.ui.close({ id }).catch(cause => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: 'debug' }))
@@ -24,6 +28,7 @@ export const closeQuietly = ($: EngineInterface, id: string) =>
 // The footer toggle opens it without the keyboard (footer.tsx): the composer keeps it.
 export async function show($: EngineInterface, pane: string, isFocused = true): Promise<void> {
   const title = pane === HUB_PANE ? TITLE : paneWords(pane).title
+  hubKept.isHeld = true
   if (pane === HUB_PANE) hubDrawings.reset()
   if (pane === MODS_PANE) catalogDrawings.reset()
   await $.ui.open(isFocused ? { id: pane, title, focus: true } : { id: pane, title })

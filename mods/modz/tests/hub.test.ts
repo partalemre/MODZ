@@ -96,14 +96,14 @@ const testsReporter = {
   },
 }
 
-test('the hub opens by itself at session start', async ($, on) => {
+test('with openOnStart on the hub opens by itself at session start', { options: { openOnStart: true } }, async ($: any, on: any) => {
   const w = stubWorld(on)
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
 
   expect(w.opened).toEqual(['modz'])
 })
 
-test('with openOnStart off nothing opens until /modz', { options: { openOnStart: false } }, async ($: any, on: any) => {
+test('by default nothing opens until /modz', async ($: any, on: any) => {
   const w = stubWorld(on)
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   expect(w.opened).toEqual([])
@@ -113,7 +113,7 @@ test('with openOnStart off nothing opens until /modz', { options: { openOnStart:
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
-  test(`pressing a row swaps the panel to that mod and the catalog swaps with the hub (${surface})`, { plugins: [agentsMod] }, async ($: any, on: any) => {
+  test(`pressing a row swaps the panel to that mod and the catalog swaps with the hub (${surface})`, { options: { openOnStart: true }, plugins: [agentsMod] }, async ($: any, on: any) => {
     const w = stubWorld(on)
     const asked: unknown[] = []
     on('state.set', { plugin: 'modz', key: 'open' }, (_: unknown, e: any, next: any) => {
@@ -148,7 +148,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(await catalog.find({ key: 'mod-savvy-progress' })).toBeDefined()
   })
 
-  test(`a mod that does not answer leaves the hub in the panel (${surface})`, async ($: any, on: any) => {
+  test(`a mod that does not answer leaves the hub in the panel (${surface})`, { options: { openOnStart: true } }, async ($: any, on: any) => {
     const w = stubWorld(on)
     await $.session.start({ surface, isInteractive: true, cwd: '/work' })
     const ui = await $.ui.mount({ ...PANE, surface })
@@ -254,7 +254,7 @@ test('a value too long for its row is shortened at a word, never mid-word', () =
   expect(shortValue('çokçokçokuzunbirkelime', 40).endsWith('…')).toBe(true)
 })
 
-test('a desktop that comes back with no hub gets it again; one that still has it gets no second', async ($: any, on: any) => {
+test('a desktop that comes back with no hub gets it again; one that still has it gets no second', { options: { openOnStart: true } }, async ($: any, on: any) => {
   const world = stubWorld(on)
   on('session.attach', (_: unknown, e: any) => ({ clientId: e.clientId }))
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })

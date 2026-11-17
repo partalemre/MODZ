@@ -21,7 +21,7 @@ import type { HubLayout } from './layout'
 import { setLang } from './kit/lang'
 import { HUB_PANE, paneOf } from './kit/stage'
 import { pinned } from './kit/pin'
-import { catalogDrawings, closeQuietly, copy, hubDrawings, openHub, show } from './own-panes'
+import { catalogDrawings, closeQuietly, copy, hubDrawings, hubKept, openHub, show } from './own-panes'
 import { modzTree } from './pane'
 import { wirePlainRows } from './plain-rows'
 import { noteAnswer, openPane, stepAside, toggleHub } from './swap'
@@ -130,7 +130,7 @@ async function partsOf($: EngineInterface): Promise<Parts> {
 type On = Parameters<Register>[0]
 type Options = Parameters<Register>[1]
 
-// The hub's life: up when the session starts, and back when a desktop returns.
+// The hub's life: closed until asked for (up at the start with `openOnStart`), and back when a desktop returns.
 function startHooks(on: On, options: Options): void {
   on('session.start', async ($, e, next) => {
     // The interface language (kit/lang.ts). Spelled out: the engine admits an env read by a literal name only.
@@ -141,8 +141,9 @@ function startHooks(on: On, options: Options): void {
     await $.state.set(ON, true)
     await $.command.register({ name: 'modz', description: hubWords().command })
     fillSideRows($)
-    if (options.openOnStart !== false) {
+    if (options.openOnStart === true) {
       hubDrawings.reset()
+      hubKept.isHeld = true
       await $.ui.open({ id: PANE, title: TITLE })
     }
     if (options.keepUpdated !== false) {
@@ -153,14 +154,15 @@ function startHooks(on: On, options: Options): void {
   })
 
   // A desktop that comes back (the app restarted, a session resumed) gets no session.start, and its panes are gone:
-  // the hub comes back too, without the keyboard, unless one of its own panes is already up. A client that only left
+  // with `openOnStart` the hub comes back too, without the keyboard, unless one of its own panes is already up (a hub
+  // the person opened comes back through its kept tab, paneHooks). A client that only left
   // and came back (the same session, the panes kept) finds a mod's pane still holding the panel: that stays.
   on('session.attach', async ($, e, next) => {
     const done = await next(e)
     const isDesktop = e.surface === 'desktop'
     const staged = paneOf((await $.state.get(STAGE)).value)
     const isModStaged = staged !== null && !OWN_PANES.includes(staged)
-    if (isDesktop && options.openOnStart !== false && !isModStaged && (await $.ui.panes()).length === 0) await show($, PANE, false)
+    if (isDesktop && options.openOnStart === true && !isModStaged && (await $.ui.panes()).length === 0) await show($, PANE, false)
     // A desktop that comes back may still show a tree from before: drawn again, its rows carry presses this engine holds.
     if (isDesktop) $.ui.invalidate('ui.render')
 
@@ -217,8 +219,18 @@ function stageHooks(on: On): void {
   })
 }
 
+// The desktop keeps the hub's tab across an engine restart, and the new engine has no such pane: the tab would stay
+// blank. So the hub opens again, once per engine and after the draw, when the panel is empty.
+async function reopenKept($: EngineInterface): Promise<void> {
+  if ((await $.ui.panes()).length === 0) await show($, PANE, false)
+}
+
 function paneHooks(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    if (!hubKept.isHeld) {
+      hubKept.isHeld = true
+      $.clock.after(0, () => void reopenKept($).catch(cause => $.ui.log(`modz: the kept hub tab could not be opened: ${String(cause)}`, { to: 'debug' })))
+    }
     const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS
 
     return pinned(e, hubTree($.ui.resolve(e), viewOf(await partsOf($), await frameOf($, { surface: e.surface, columns }))))

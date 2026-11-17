@@ -7,6 +7,9 @@ import { ALWAYS, BAND, MS_PER_HOUR, PANE, USAGE, compactions, opens, start, stub
 
 const SURFACES = ['terminal', 'desktop'] as const
 
+// Where the others' drawing sits in a drawn tree: inline on engines up to 2.1.296, an `engine` ref from 2.1.325.
+const theirsAt = (drawn: string): number => (drawn.includes('"type":"engine"') ? drawn.indexOf('"type":"engine"') : drawn.indexOf('theirs'))
+
 type Drawn = { props: { source: string; alt: string; width: number; isInteractive?: boolean } } | undefined
 
 test('tone stays neutral on pace, Amber 10 points ahead, Flare from 95; context warns from 70', () => {
@@ -34,8 +37,8 @@ test('terminal: one text line under what others drew, 5s with reset, 7g, bağlam
   for (const text of ['theirs', '5s', '%32', '↻ 2sa 0dk', 'hafta', '%91', '↻ 3g 22sa', 'hafıza', '%41', '≈$1,23']) {
     expect(await ui.find({ type: 'Text', text })).toBeDefined()
   }
-  const order = (await ui.findAll({ type: 'Text' })).map((found: any) => found.text)
-  expect(order.indexOf('theirs')).toBeLessThan(order.indexOf('5s'))
+  const drawn = JSON.stringify(await ui.drawn())
+  expect(theirsAt(drawn)).toBeLessThan(drawn.indexOf('"5s"'))
   expect(await ui.find({ type: 'Text', text: /┊/ })).toBeDefined()
   expect(await ui.find({ type: 'Svg' })).toBeUndefined()
   expect((await ui.find({ type: 'Text', text: '%32' }))?.props?.dimColor).toBe(true)
@@ -56,7 +59,7 @@ test('desktop: one transparent Svg line of pills with meters and pace ticks, und
   expect(svg?.props.source).toContain('prefers-color-scheme: light')
   expect(svg?.props.source).toContain('f-warn tab')
   const drawn = JSON.stringify(await ui.drawn())
-  expect(drawn.indexOf('theirs')).toBeLessThan(drawn.indexOf('"Svg"'))
+  expect(theirsAt(drawn)).toBeLessThan(drawn.indexOf('"Svg"'))
   expect(await ui.find({ key: 'compact' })).toBeUndefined()
 })
 

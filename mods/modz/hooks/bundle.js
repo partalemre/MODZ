@@ -646,9 +646,11 @@ const TITLE$1 = "modz";
 const STAGE$1 = { plugin: "modz", key: "stage" };
 const hubDrawings = stableDrawings();
 const catalogDrawings = stableDrawings();
+const hubKept = { isHeld: false };
 const closeQuietly = ($, id) => $.ui.close({ id }).catch((cause) => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: "debug" }));
 async function show($, pane, isFocused = true) {
   const title = pane === HUB_PANE ? TITLE$1 : paneWords(pane).title;
+  hubKept.isHeld = true;
   if (pane === HUB_PANE)
     hubDrawings.reset();
   if (pane === MODS_PANE)
@@ -4132,8 +4134,9 @@ function startHooks(on, options) {
     await $.state.set(ON, true);
     await $.command.register({ name: "modz", description: hubWords().command });
     fillSideRows($);
-    if (options.openOnStart !== false) {
+    if (options.openOnStart === true) {
       hubDrawings.reset();
+      hubKept.isHeld = true;
       await $.ui.open({ id: PANE, title: TITLE });
     }
     if (options.keepUpdated !== false) {
@@ -4146,7 +4149,7 @@ function startHooks(on, options) {
     const isDesktop = e.surface === "desktop";
     const staged = paneOf((await $.state.get(STAGE)).value);
     const isModStaged = staged !== null && !OWN_PANES.includes(staged);
-    if (isDesktop && options.openOnStart !== false && !isModStaged && (await $.ui.panes()).length === 0)
+    if (isDesktop && options.openOnStart === true && !isModStaged && (await $.ui.panes()).length === 0)
       await show($, PANE, false);
     if (isDesktop)
       $.ui.invalidate("ui.render");
@@ -4189,8 +4192,16 @@ function stageHooks(on) {
     return { text: hubWords().opened };
   });
 }
+async function reopenKept($) {
+  if ((await $.ui.panes()).length === 0)
+    await show($, PANE, false);
+}
 function paneHooks(on) {
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
+    if (!hubKept.isHeld) {
+      hubKept.isHeld = true;
+      $.clock.after(0, () => void reopenKept($).catch((cause) => $.ui.log(`modz: the kept hub tab could not be opened: ${String(cause)}`, { to: "debug" })));
+    }
     const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS;
     return pinned(e, hubTree($.ui.resolve(e), viewOf(await partsOf($), await frameOf($, { surface: e.surface, columns }))));
   }).catch(async ($, e, next) => {

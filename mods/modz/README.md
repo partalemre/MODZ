@@ -15,7 +15,7 @@ Install this first, then the mods you want. Start a new session, or run `/reload
 
 ## What you see
 
-The panel opens on the right when a session starts, and again any time with `/modz`. In the desktop app the prompt footer also carries a dim **MODZ** button beside the mode labels: like the app's own session-rail toggle, one press brings the panel back (over any mod's pane) and the next puts it away. It never takes the keyboard from the prompt.
+The panel stays closed until you ask for it: `/modz`, or a press on **modz** under the prompt, opens it on the right. In the desktop app the prompt footer also carries a dim **MODZ** button beside the mode labels: like the app's own session-rail toggle, one press brings the panel back (over any mod's pane) and the next puts it away. It never takes the keyboard from the prompt.
 
 - **A head card** that leads with what needs you most: a failure, then a warning, then live work. Idle, it says "All quiet". When something leads, a primary button opens that mod's pane (for example "Open Tests").
 - **Now**, above the sections, so a working day needs no pane swap: any mod that fails or warns first, then each running agent (its task, how long it has run, its cost once it has one; three by name, the rest as "+2 more"), the plan's current step under its "3 of 9 steps", and the usage line. Nothing running, nothing drawn. A press on any of these lines opens that mod's pane for the detail. A row in Now is that mod's row, moved: it is not drawn again in its section, and a section left with no rows has no heading.
@@ -63,7 +63,7 @@ The desktop app draws the panel as pictures; the terminal draws the same as text
 
 | Option | Default | Meaning |
 |---|---|---|
-| `openOnStart` | `true` | Open the MODZ panel on the right at every session start. |
+| `openOnStart` | `false` | Open the MODZ panel on the right at every session start. |
 | `keepReplyLanguage` | `true` | Keep Claude's replies in your language (below). |
 
 The panel's theme follows Claude Code's `theme` setting.

@@ -51,7 +51,7 @@ done
 
 Or ask your coding agent: *Install modz for me. Follow https://partalemre.github.io/MODZ/llms.txt and ask me which mods I want.*
 
-Start a new session. The modz panel opens on the right with a line from every mod you installed.
+Start a new session and press **modz** under the prompt (or type `/modz`). The modz panel opens on the right with a line from every mod you installed.
 
 - **Where it draws.** The Claude desktop app's Code tab draws everything. The terminal draws the same panels as text.
 - **Requirements.** Claude Code 2.1.295 or later, tested on 2.1.296 (terminal) and 2.1.317 (desktop app). `terminal-browser` draws in the terminal only and needs the external `terminal-browser` CLI (without it, the mod asks you to install it first). Outside the desktop app, `done-ping` falls back to a macOS banner.
@@ -69,7 +69,7 @@ Both variables go in the `env` block of `~/.claude/settings.json`:
 
 <img src="docs/img/panel.jpg" alt="The modz panel beside a Claude Code session, showing Agents, Files, Plan, Tests, Checkpoints and Usage">
 
-The panel opens beside the chat when a session starts. If a mod does not open its pane, its row says so instead of doing nothing. Each mod reports one honest line: what it measured, never a guess. One click opens that mod's own pane next to the panel.
+The panel opens beside the chat when you press **modz** under the prompt or type `/modz`; it stays closed until then. If a mod does not open its pane, its row says so instead of doing nothing. Each mod reports one honest line: what it measured, never a guess. One click opens that mod's own pane next to the panel.
 
 - **Now.** The top of the panel shows what is happening without opening anything: a failing or warning mod first, each running agent with its task, time and cost, the plan's current step, and your usage. Press a line for the detail.
 - **Commands and settings.** `/modz help` prints every installed mod's slash commands and the options it has under `/plugin`. The Mods pane shows the same, and for each mod you have not installed, the line that installs it with a Copy button.

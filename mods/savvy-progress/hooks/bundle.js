@@ -279,8 +279,8 @@ const ru = {
     worked: (name, ago) => `${name} работал(а) ${ago}`,
     on: (branch) => `ветка работы ${branch}`,
     more: (n) => `и ещё ${n} в этом проекте`,
-    wrote: (name) => `${name} пишет`,
-    aiWrote: (name) => `ИИ пользователя ${name} пишет`
+    wrote: (name) => `${name} написал(а)`,
+    aiWrote: (name) => `ИИ пользователя ${name} написал`
   },
   hubCrew: (n) => `агентов: ${n}`,
   minutes: (n) => `${n} мин`,
@@ -2724,6 +2724,51 @@ function chipSvg(chip, maxW = Number.POSITIVE_INFINITY) {
   return { source: paneSvg(width, CHIP_H, drawn.join("")), width, alt };
 }
 
+const PLAN_MIN = 150;
+const PLAN_MAX = 340;
+const withoutNote = (slot) => {
+  const { note: _dropped, ...chip } = slot.chip;
+  return slot.isNoteKept === true ? slot : { ...slot, chip };
+};
+const drawingOf = (slot, maxW) => {
+  if (slot.art === undefined)
+    return chipSvg(slot.chip, maxW);
+  return slot.art[slot.tier ?? "full"];
+};
+const fitW = (slot) => {
+  if (slot.art !== undefined)
+    return drawingOf(slot, 0).width;
+  return slot.chip.id === "plan" ? PLAN_MIN : chipWidth$1(slot.chip);
+};
+const rowW = (row) => row.reduce((sum, slot) => sum + fitW(slot), 0) + CHIP_GAP$1 * Math.max(0, row.length - 1);
+function trimmed(slots, width) {
+  let row = rowW(slots) > width ? slots.map(withoutNote) : [...slots];
+  while (rowW(row) > width && row.some((slot) => slot.rank > 0)) {
+    const top = Math.max(...row.map((slot) => slot.rank));
+    row = row.filter((slot) => slot.rank !== top);
+  }
+  return row;
+}
+const quiet = (row) => row.map(withoutNote);
+function withTeam(slots, width) {
+  const team = slots.find((slot) => slot.art !== undefined);
+  const others = slots.filter((slot) => slot !== team);
+  if (team === undefined)
+    return trimmed(others, width);
+  const yielding = quiet(others.filter((slot) => slot.rank < team.rank));
+  const tries = [[others, "full"], [others, "bare"], [quiet(others), "bare"], [quiet(others), "face"], [yielding, "face"]];
+  const hit = tries.find(([row, tier]) => rowW([...row, { ...team, tier }]) <= width);
+  if (hit === undefined)
+    return trimmed(others, width);
+  const [row, tier] = hit;
+  return slots.flatMap((slot) => slot === team ? [{ ...team, tier }] : row.filter((kept) => kept.chip.id === slot.chip.id));
+}
+function fitRow(slots, width) {
+  const row = withTeam(slots, width);
+  const left = Math.max(0, width - rowW(row));
+  return row.map((slot) => ({ slot, maxW: slot.chip.id === "plan" ? Math.min(PLAN_MAX, PLAN_MIN + left) : Number.POSITIVE_INFINITY }));
+}
+
 const HISTORY_MAX = 150;
 const READ = ["Read", "Grep", "Glob", "LS", "WebFetch", "WebSearch", "NotebookRead"];
 const EDIT = ["Edit", "Write", "MultiEdit", "NotebookEdit"];
@@ -3145,7 +3190,7 @@ function attentionOf(list, at) {
 }
 
 const WORKING_MS = 10 * 60000;
-const TEAM_W = { full: 208, bare: 112 };
+const TEAM_W = { full: 208, bare: 112, face: 40 };
 const PAD$1 = 12;
 const GAP$1 = 6;
 const BASELINE = 18.5;
@@ -3183,11 +3228,10 @@ const put = (ink, svg, w) => {
 };
 const text$1 = (o, x) => `<text class="${o.cls}" x="${x.toFixed(1)}" y="${BASELINE}" font-family="${FONT}" font-size="${o.size}"${o.isBold === true ? ' font-weight="600"' : ""}>${xml(o.s)}</text>`;
 function face(ink, o) {
-  const { name } = o;
   const cx = ink.x + FACE.r;
-  const initial = upper([...name][0] ?? "");
-  const disc = `<circle class="k" cx="${cx}" cy="${CHIP_H / 2}" r="${FACE.r}"/>`;
-  const letter = `<text class="s" x="${cx}" y="${CHIP_H / 2 + FACE.size * 0.36}" text-anchor="middle" font-family="${FONT}" font-size="${FACE.size}" font-weight="700">${xml(initial)}</text>`;
+  const initial = upper([...o.name][0] ?? "");
+  const disc = `<circle class="${o.isNew === true ? "b-edit" : "k"}" cx="${cx}" cy="${CHIP_H / 2}" r="${FACE.r}"/>`;
+  const letter = `<text class="${o.isNew === true ? "f-edit" : "s"}" x="${cx}" y="${CHIP_H / 2 + FACE.size * 0.36}" text-anchor="middle" font-family="${FONT}" font-size="${FACE.size}" font-weight="700">${xml(initial)}</text>`;
   const dot = o.isWorking === true ? `<circle class="f-edit" cx="${cx + DOT.off}" cy="${CHIP_H / 2 + DOT.off}" r="${DOT.r}"/>` : "";
   put(ink, disc + letter + dot, FACE.r * 2);
 }
@@ -3214,33 +3258,38 @@ function presence(team, o) {
   const working = isWorking(mate, o.now);
   const ago = t().ago(roughSpan(Math.max(0, o.now - mate.at)));
   face(ink, { name: mate.name, isWorking: working });
-  name(ink, { s: mate.name, cls: "t" });
+  if (o.tier !== "face")
+    name(ink, { s: mate.name, cls: "t" });
   const more = `+${others.length}`;
-  if (others.length > 0)
+  if (o.tier !== "face" && others.length > 0)
     put(ink, text$1({ cls: "s", s: more, size: SIDE_SIZE, isBold: true }, ink.x), Math.ceil(textWidth(more, SIDE_SIZE) * BOLD$4) + GAP$1);
-  if (o.width > TEAM_W.bare)
-    side(ink, { s: working ? mate.branch ?? t().stripTeam.working : ago, cls: "m", width: o.width });
+  if (o.tier === "full")
+    side(ink, { s: working ? mate.branch ?? t().stripTeam.working : ago, cls: "m", width: TEAM_W.full });
   const said = working ? t().stripTeam.isWorking(mate.name) : t().stripTeam.worked(mate.name, ago);
   const alt = [said, working && mate.branch !== undefined ? t().stripTeam.on(mate.branch) : "", others.length > 0 ? t().stripTeam.more(others.length) : ""];
   return { body: ink.out.join(""), alt: alt.filter(Boolean).join(", ") };
 }
-function message(last, width) {
+function message(last, tier) {
   const ink = { x: PAD$1, out: [] };
-  face(ink, { name: last.name });
-  name(ink, { s: last.name, cls: width > TEAM_W.bare ? "t" : "f-edit" });
-  if (last.isAgent)
+  face(ink, { name: last.name, isNew: tier !== "full" });
+  if (tier !== "face")
+    name(ink, { s: last.name, cls: tier === "full" ? "t" : "f-edit" });
+  if (tier !== "face" && last.isAgent)
     crab$3(ink);
-  side(ink, { s: last.text, cls: "f-edit", width });
+  if (tier === "full")
+    side(ink, { s: last.text, cls: "f-edit", width: TEAM_W.full });
   const who = last.isAgent ? t().stripTeam.aiWrote(last.name) : t().stripTeam.wrote(last.name);
   return { body: ink.out.join(""), alt: `${who}: ${last.text}` };
 }
 function drawn(team, o) {
-  const said = team.unread > 0 && team.last !== null ? message(team.last, o.width) : presence(team, o);
-  return { source: paneSvg(o.width, CHIP_H, said.body), width: o.width, alt: said.alt };
+  const said = team.unread > 0 && team.last !== null ? message(team.last, o.tier) : presence(team, o);
+  const width = TEAM_W[o.tier];
+  return { source: paneSvg(width, CHIP_H, said.body), width, alt: said.alt };
 }
 const teamArt = (team, now) => ({
-  full: drawn(team, { now, width: TEAM_W.full }),
-  bare: drawn(team, { now, width: TEAM_W.bare })
+  full: drawn(team, { now, tier: "full" }),
+  bare: drawn(team, { now, tier: "bare" }),
+  face: drawn(team, { now, tier: "face" })
 });
 
 const NO_TALLY = { tokens: 0, busyMs: 0, turns: 0, lastCost: 0, costBefore: 0 };
@@ -3323,13 +3372,12 @@ function placeOfZone(zoneTab, zone) {
 const PX_PER_COL$2 = 8.8;
 const DEFAULT_COLS$2 = 100;
 const FULL = 100;
-const PLAN_MIN = 150;
-const PLAN_MAX = 340;
 const PLAN_PANE = "plan";
 const USAGE_PANE = "usage";
 const TEAM_PANE = "transceiver";
+const HUB_CHIP = "modz";
 const COMMAND = { [PLAN_PANE]: { command: "steps" }, [USAGE_PANE]: { command: "hud", args: "full" }, [TEAM_PANE]: { command: "transceiver" } };
-const TEAM_RANK = 6;
+const TEAM_RANK = 5;
 const stepsFrom = (value) => Array.isArray(value) ? value.flatMap((one) => {
   const step = one;
   return typeof step?.subject === "string" && typeof step.status === "string" ? [{ subject: step.subject, status: step.status }] : [];
@@ -3397,39 +3445,8 @@ function slotsOf(facts, presses) {
     { chip: { id: "time", label: t().stripTime, value: spanText(counted.busyMs), widest: room.time, ...helpers > 0 ? { note: t().crew(helpers) } : {} }, rank: 4, press: presses.onAgents },
     ...windows.map((run) => limitSlot(run, facts, presses)),
     ...facts.team === null ? [] : [{ chip: { id: "team", label: "", value: "" }, rank: TEAM_RANK, press: presses.open(TEAM_PANE), art: teamArt(facts.team, facts.now) }],
-    ...presses.onHub === null ? [] : [{ chip: { id: "modz", label: "", value: "modz", isWordmark: true }, rank: 0, press: presses.onHub }]
+    ...presses.onHub === null ? [] : [{ chip: { id: HUB_CHIP, label: "", value: "modz", isWordmark: true }, rank: 0, press: presses.onHub }]
   ];
-}
-const withoutNote = (slot) => {
-  const { note: _dropped, ...chip } = slot.chip;
-  return slot.isNoteKept === true ? slot : { ...slot, chip };
-};
-const drawingOf = (slot, maxW) => {
-  if (slot.art === undefined)
-    return chipSvg(slot.chip, maxW);
-  return slot.isBare === true ? slot.art.bare : slot.art.full;
-};
-const fitW = (slot) => {
-  if (slot.art !== undefined)
-    return drawingOf(slot, 0).width;
-  return slot.chip.id === "plan" ? PLAN_MIN : chipWidth$1(slot.chip);
-};
-const rowW = (row) => row.reduce((sum, slot) => sum + fitW(slot), 0) + CHIP_GAP$1 * Math.max(0, row.length - 1);
-function spared(slots, width) {
-  if (rowW(slots) <= width)
-    return [...slots];
-  const bare = slots.map((slot) => slot.art === undefined ? slot : { ...slot, isBare: true });
-  return rowW(bare) <= width ? bare : slots.filter((slot) => slot.art === undefined);
-}
-function fitRow(slots, width) {
-  const spare = spared(slots, width);
-  let row = rowW(spare) > width ? spare.map(withoutNote) : spare;
-  while (rowW(row) > width && row.some((slot) => slot.rank > 0)) {
-    const top = Math.max(...row.map((slot) => slot.rank));
-    row = row.filter((slot) => slot.rank !== top);
-  }
-  const left = Math.max(0, width - rowW(row));
-  return row.map((slot) => ({ slot, maxW: slot.chip.id === "plan" ? Math.min(PLAN_MAX, PLAN_MIN + left) : Number.POSITIVE_INFINITY }));
 }
 const worked = new Map;
 function withCrew(steps, crew) {
@@ -3507,6 +3524,12 @@ function chipPress(ui, slot, maxW) {
     onPress: slot.press
   })));
 }
+function springAt(row, hasHub) {
+  const team = row.findIndex(({ slot }) => slot.art !== undefined);
+  if (team > 0)
+    return team;
+  return hasHub ? row.length : row.length - 1;
+}
 async function stripOf(io, ui, site) {
   const seen = await factsOf(io);
   const facts = { ...seen, steps: withCrew(seen.steps, seen.crew) };
@@ -3527,15 +3550,13 @@ async function stripOf(io, ui, site) {
   }) };
   const scene = sceneSvg({ width, crew: facts.crew.filter((a) => a.isMain === true), mood: facts.mood, steps: facts.steps, sky, ...from === undefined ? {} : { from } });
   const fitted = fitRow(slotsOf(facts, pressesOf(io, facts)), width);
-  const team = fitted.findIndex(({ slot }) => slot.art !== undefined);
-  const springAt = team > 0 ? team : fitted.length - 1;
-  const chips = fitted.flatMap(({ slot, maxW }, i) => [
-    ...i > 0 && i === springAt ? [h(Box, {
-      key: "savvy-chip-spring",
-      flexGrow: 1
-    })] : [],
-    chipPress(ui, slot, maxW)
-  ]);
+  const hub = fitted.find(({ slot }) => slot.chip.id === HUB_CHIP);
+  const row = fitted.filter((one) => one !== hub);
+  const at = springAt(row, hub !== undefined);
+  const chips = row.flatMap(({ slot, maxW }, i) => [...i > 0 && i === at ? [h(Box, {
+    key: "savvy-chip-spring",
+    flexGrow: 1
+  })] : [], chipPress(ui, slot, maxW)]);
   return h(Box, {
     key: "savvy-strip",
     flexDirection: "column"
@@ -3549,7 +3570,17 @@ async function stripOf(io, ui, site) {
   }), h(Box, {
     key: "savvy-chips",
     flexDirection: "row"
-  }, chips));
+  }, h(Box, {
+    key: "savvy-chips-fit",
+    flexDirection: "row",
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    overflow: "hidden"
+  }, chips, at === row.length ? h(Box, {
+    key: "savvy-chip-spring",
+    flexGrow: 1
+  }) : null), hub === undefined ? null : chipPress(ui, hub.slot, hub.maxW)));
 }
 
 const WEATHER_EVERY_MS = 30 * 60000;

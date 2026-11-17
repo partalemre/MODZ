@@ -14,11 +14,13 @@ import { FONT, paneSvg } from './theme'
 export type Mate = { name: string; at: number; branch?: string }
 export type Team = { mates: [Mate, ...Mate[]]; unread: number; last: { name: string; text: string; isAgent: boolean } | null }
 export type Drawing = { source: string; width: number; alt: string }
+export type Tier = 'full' | 'bare' | 'face'
+export type TeamArt = Record<Tier, Drawing>
 
 // Someone counts as working now while their last work is this recent.
 const WORKING_MS = 10 * 60_000
-// The chip's two widths: whole, and without its side value when the row is tight.
-export const TEAM_W = { full: 208, bare: 112 }
+// The chip's widths: whole, without its side value, and its face alone when the row is tighter still.
+export const TEAM_W: Readonly<Record<Tier, number>> = { full: 208, bare: 112, face: 40 }
 const PAD = 12
 const GAP = 6
 const BASELINE = 18.5
@@ -69,12 +71,12 @@ const put = (ink: Ink, svg: string, w: number): void => {
 const text = (o: { cls: string; s: string; size: number; isBold?: boolean }, x: number): string =>
   `<text class="${o.cls}" x="${x.toFixed(1)}" y="${BASELINE}" font-family="${FONT}" font-size="${o.size}"${o.isBold === true ? ' font-weight="600"' : ''}>${xml(o.s)}</text>`
 
-function face(ink: Ink, o: { name: string; isWorking?: boolean }): void {
-  const { name } = o
+// `isNew`: unread words the chip has no room to show; the face takes the accent's tint instead.
+function face(ink: Ink, o: { name: string; isWorking?: boolean; isNew?: boolean }): void {
   const cx = ink.x + FACE.r
-  const initial = upper([...name][0] ?? '')
-  const disc = `<circle class="k" cx="${cx}" cy="${CHIP_H / 2}" r="${FACE.r}"/>`
-  const letter = `<text class="s" x="${cx}" y="${CHIP_H / 2 + FACE.size * 0.36}" text-anchor="middle" font-family="${FONT}" font-size="${FACE.size}" font-weight="700">${xml(initial)}</text>`
+  const initial = upper([...o.name][0] ?? '')
+  const disc = `<circle class="${o.isNew === true ? 'b-edit' : 'k'}" cx="${cx}" cy="${CHIP_H / 2}" r="${FACE.r}"/>`
+  const letter = `<text class="${o.isNew === true ? 'f-edit' : 's'}" x="${cx}" y="${CHIP_H / 2 + FACE.size * 0.36}" text-anchor="middle" font-family="${FONT}" font-size="${FACE.size}" font-weight="700">${xml(initial)}</text>`
   const dot = o.isWorking === true ? `<circle class="f-edit" cx="${cx + DOT.off}" cy="${CHIP_H / 2 + DOT.off}" r="${DOT.r}"/>` : ''
   put(ink, disc + letter + dot, FACE.r * 2)
 }
@@ -102,43 +104,47 @@ function side(ink: Ink, o: { s: string; cls: string; width: number }): void {
 
 const isWorking = (mate: Mate, now: number): boolean => now - mate.at < WORKING_MS
 
-function presence(team: Team, o: { now: number; width: number }): { body: string; alt: string } {
+type Said = { body: string; alt: string }
+
+function presence(team: Team, o: { now: number; tier: Tier }): Said {
   const [mate, ...others] = team.mates
   const ink: Ink = { x: PAD, out: [] }
   const working = isWorking(mate, o.now)
   const ago = t().ago(roughSpan(Math.max(0, o.now - mate.at)))
   face(ink, { name: mate.name, isWorking: working })
-  name(ink, { s: mate.name, cls: 't' })
+  if (o.tier !== 'face') name(ink, { s: mate.name, cls: 't' })
   const more = `+${others.length}`
   // The count belongs with the name, so it takes the name's weight and keeps apart from the dim side value.
-  if (others.length > 0) put(ink, text({ cls: 's', s: more, size: SIDE_SIZE, isBold: true }, ink.x), Math.ceil(textWidth(more, SIDE_SIZE) * BOLD) + GAP)
-  if (o.width > TEAM_W.bare) side(ink, { s: working ? (mate.branch ?? t().stripTeam.working) : ago, cls: 'm', width: o.width })
+  if (o.tier !== 'face' && others.length > 0) put(ink, text({ cls: 's', s: more, size: SIDE_SIZE, isBold: true }, ink.x), Math.ceil(textWidth(more, SIDE_SIZE) * BOLD) + GAP)
+  if (o.tier === 'full') side(ink, { s: working ? (mate.branch ?? t().stripTeam.working) : ago, cls: 'm', width: TEAM_W.full })
   const said = working ? t().stripTeam.isWorking(mate.name) : t().stripTeam.worked(mate.name, ago)
   const alt = [said, working && mate.branch !== undefined ? t().stripTeam.on(mate.branch) : '', others.length > 0 ? t().stripTeam.more(others.length) : '']
 
   return { body: ink.out.join(''), alt: alt.filter(Boolean).join(', ') }
 }
 
-function message(last: NonNullable<Team['last']>, width: number): { body: string; alt: string } {
+// Narrowed, the words go first, then the name: what is left wears the accent, so it still says there is something to read.
+function message(last: NonNullable<Team['last']>, tier: Tier): Said {
   const ink: Ink = { x: PAD, out: [] }
-  face(ink, { name: last.name })
-  // Narrowed to the name alone, the name takes the accent, so the chip still says there is something to read.
-  name(ink, { s: last.name, cls: width > TEAM_W.bare ? 't' : 'f-edit' })
-  if (last.isAgent) crab(ink)
-  side(ink, { s: last.text, cls: 'f-edit', width })
+  face(ink, { name: last.name, isNew: tier !== 'full' })
+  if (tier !== 'face') name(ink, { s: last.name, cls: tier === 'full' ? 't' : 'f-edit' })
+  if (tier !== 'face' && last.isAgent) crab(ink)
+  if (tier === 'full') side(ink, { s: last.text, cls: 'f-edit', width: TEAM_W.full })
   const who = last.isAgent ? t().stripTeam.aiWrote(last.name) : t().stripTeam.wrote(last.name)
 
   return { body: ink.out.join(''), alt: `${who}: ${last.text}` }
 }
 
-function drawn(team: Team, o: { now: number; width: number }): Drawing {
-  const said = team.unread > 0 && team.last !== null ? message(team.last, o.width) : presence(team, o)
+function drawn(team: Team, o: { now: number; tier: Tier }): Drawing {
+  const said = team.unread > 0 && team.last !== null ? message(team.last, o.tier) : presence(team, o)
+  const width = TEAM_W[o.tier]
 
-  return { source: paneSvg(o.width, CHIP_H, said.body), width: o.width, alt: said.alt }
+  return { source: paneSvg(width, CHIP_H, said.body), width, alt: said.alt }
 }
 
-/** The chip whole and without its side value; both are fixed widths, whatever it says. */
-export const teamArt = (team: Team, now: number): { full: Drawing; bare: Drawing } => ({
-  full: drawn(team, { now, width: TEAM_W.full }),
-  bare: drawn(team, { now, width: TEAM_W.bare }),
+/** The chip at each of its widths; each is fixed, whatever the chip says. */
+export const teamArt = (team: Team, now: number): TeamArt => ({
+  full: drawn(team, { now, tier: 'full' }),
+  bare: drawn(team, { now, tier: 'bare' }),
+  face: drawn(team, { now, tier: 'face' }),
 })

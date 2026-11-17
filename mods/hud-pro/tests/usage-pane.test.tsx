@@ -169,14 +169,14 @@ test('a notable turn says one quiet line above the other rows; an ordinary one s
   expect(order.indexOf('That turn used 14% of the 5-hour allowance (now 44%).')).toBeLessThan(order.indexOf('theirs'))
 })
 
-test('a pace that fills the window before it resets says so once', async ($, on) => {
+test('a pace that fills the window before it resets adds no line under the band; the gauge already says when', async ($, on) => {
   const clock = stubSession(on, five(40), ENGLISH)
   await start($, 'terminal')
   await measureFive($, clock, [40, 45, 50, 55, 60])
   const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
   const lines = (await band.findAll({ type: 'Text', text: /^At this pace the 5-hour allowance runs out/ })) as unknown[]
 
-  expect(lines.length).toBe(1)
+  expect(lines.length).toBe(0)
 })
 
 test('a louder notice holds the line; the HUD notice waits and shows once it clears, then goes', { plugins: [BUDGET] } as any, async ($: any, on: any) => {

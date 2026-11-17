@@ -1104,7 +1104,6 @@ const EN = {
   noTurns: "How much each turn used shows here once a turn ends.",
   noWindow: "This account has no 5-hour or weekly allowance, so there is no pace to show. Cost shows under Limits.",
   shareNotice: (share, window, percent) => `That turn used ${share} of the ${window} (now ${percent}).`,
-  fillNotice: ({ window, time, reset }) => `At this pace the ${window} runs out ${time}, before it refills at ${reset}.`,
   listPrice: "estimate at list prices"
 };
 const TR = {
@@ -1119,7 +1118,6 @@ const TR = {
   noTurns: "Bir tur bitince her turun ne kadar kullandığı burada görünür.",
   noWindow: "Bu hesapta 5 saatlik ya da haftalık kullanım hakkı yok; gösterilecek hız yok. Maliyet Limitler altında.",
   shareNotice: (share, window, percent) => `Bu tur ${window}tan ${share} kullandı (şimdi ${percent}).`,
-  fillNotice: ({ window, time, reset }) => `Bu hızla ${window} ${time} biter, yenilenmeden (${reset}) önce.`,
   listPrice: "liste fiyatıyla tahmin"
 };
 const usageWords = () => pick({ en: EN, tr: TR });
@@ -1166,13 +1164,6 @@ function shareNotice(share) {
   if (!isNotable(share))
     return null;
   return usageWords().shareNotice(percentText(share.share), longLabelOf(share.window), percentText(share.percent));
-}
-function fillNotice(pace, nowMs) {
-  if (pace === null || pace.fullAt === null || pace.gauge.resetsAt === null)
-    return null;
-  const reset = clockText(Date.parse(pace.gauge.resetsAt), nowMs);
-  const text = usageWords().fillNotice({ window: longLabelOf(pace.gauge.id), time: clockText(pace.fullAt, nowMs), reset });
-  return { key: `${pace.gauge.id}:${pace.gauge.resetsAt}`, text };
 }
 
 const HISTORY_MAX = 96;
@@ -2444,7 +2435,6 @@ const hubAtom = atom({ plugin: "hud-pro", key: "hub" }, EMPTY_HUB);
 const noticesAtom = atom({ plugin: "hud-pro", key: "notices" }, []);
 const paceAtom = atom({ plugin: "hud-pro", key: "pace" }, null);
 const noticed = new Set;
-const filled = new Set;
 let shownGauges = null;
 async function record($, fresh) {
   const nowMs = await $.clock.now();
@@ -2477,12 +2467,6 @@ async function noticeFill($, fresh) {
   const before = await read($, paceAtom);
   if (before?.window !== told?.window || before?.fullAt !== told?.fullAt)
     await update($, paceAtom, () => told);
-  const fill = fillNotice(pace, nowMs);
-  if (fill === null || filled.has(fill.key))
-    return;
-  filled.add(fill.key);
-  await update($, noticesAtom, (queue) => enqueue(queue, fill.text));
-  $.ui.invalidate("ui.render");
 }
 async function forecastsOf($, usage) {
   return forecastsFrom({ history: await read($, historyAtom), turns: await read($, contextTurnsAtom), usage });
@@ -2503,7 +2487,6 @@ async function redrawIfMoved($) {
 async function setup($) {
   await $.state.set({ plugin: "hud-pro", key: "host" }, true);
   resetSlot();
-  filled.clear();
   const current = toUsage(await $.session.usage());
   await update($, usageAtom, () => current);
   shownGauges = gaugeViews(current, await $.clock.now(), await forecastsOf($, current));

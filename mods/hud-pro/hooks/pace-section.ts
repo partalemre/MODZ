@@ -58,11 +58,3 @@ export function shareNotice(share: TurnShare): string | null {
   return usageWords().shareNotice(percentText(share.share), longLabelOf(share.window), percentText(share.percent))
 }
 
-// The line a pace that fills the window before its reset earns, once per window (its `key`); null otherwise.
-export function fillNotice(pace: Pace | null, nowMs: number): { key: string; text: string } | null {
-  if (pace === null || pace.fullAt === null || pace.gauge.resetsAt === null) return null
-  const reset = clockText(Date.parse(pace.gauge.resetsAt), nowMs)
-  const text = usageWords().fillNotice({ window: longLabelOf(pace.gauge.id), time: clockText(pace.fullAt, nowMs), reset })
-
-  return { key: `${pace.gauge.id}:${pace.gauge.resetsAt}`, text }
-}

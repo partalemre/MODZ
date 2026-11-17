@@ -11,10 +11,9 @@ import { setLang } from './lang'
 import { gaugeViews } from './model'
 import type { Forecasts } from './model'
 import { paceOf } from './pace'
-import { fillNotice } from './pace-section'
 import { onPast } from './past-hook'
 import { isSame } from './same'
-import { enqueue, expired, resetSlot } from './slot'
+import { expired, resetSlot } from './slot'
 import { onTurns } from './turns-hook'
 import { newNotices, toUsage } from './usage'
 import { words } from './words'
@@ -35,7 +34,6 @@ const paceAtom = atom({ plugin: 'hud-pro', key: 'pace' } as const, null)
 
 const noticed = new Set<string>()
 // The windows (by reset) whose fill-before-reset line was already said.
-const filled = new Set<string>()
 // What the minute clock last moved on screen: the gauges' countdowns, pace marks and estimates.
 let shownGauges: unknown = null
 
@@ -65,7 +63,7 @@ async function noticeHigh($: EngineInterface, fresh: HudUsage): Promise<void> {
   for (const text of newNotices(fresh, { nowMs: await $.clock.now(), noticed })) $.ui.toast(text)
 }
 
-// A pace that fills the window before it resets earns one line per window, once the history holds the reading.
+// Keeps the window's estimated full time for the other mods; the line itself is no longer shown here.
 async function noticeFill($: EngineInterface, fresh: HudUsage): Promise<void> {
   const nowMs = await $.clock.now()
   const pace = paceOf({ usage: fresh, history: await read($, historyAtom), nowMs })
@@ -73,11 +71,6 @@ async function noticeFill($: EngineInterface, fresh: HudUsage): Promise<void> {
   const told = pace === null ? null : { window: pace.gauge.id, fullAt: pace.fullAt === null ? null : Math.round(pace.fullAt / MINUTE_MS) * MINUTE_MS }
   const before = await read($, paceAtom)
   if (before?.window !== told?.window || before?.fullAt !== told?.fullAt) await update($, paceAtom, () => told)
-  const fill = fillNotice(pace, nowMs)
-  if (fill === null || filled.has(fill.key)) return
-  filled.add(fill.key)
-  await update($, noticesAtom, queue => enqueue(queue, fill.text))
-  $.ui.invalidate('ui.render')
 }
 
 async function forecastsOf($: EngineInterface, usage: HudUsage | null): Promise<Forecasts> {
@@ -103,7 +96,6 @@ async function setup($: EngineInterface): Promise<void> {
   // Said first, so the other meter mods know before they report that their sections show here.
   await $.state.set({ plugin: 'hud-pro', key: 'host' }, true)
   resetSlot()
-  filled.clear()
   const current = toUsage(await $.session.usage())
   await update($, usageAtom, () => current)
   shownGauges = gaugeViews(current, await $.clock.now(), await forecastsOf($, current))

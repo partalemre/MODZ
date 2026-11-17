@@ -92,7 +92,7 @@ export function toolbarTree(ui: Ui, d: PaneData, on: PaneHandlers) {
   const isDrafting = d.panel.draft?.isOpen === true
   return (
     <Box key="toolbar" flexDirection="row" justifyContent="space-between" alignItems="center">
-      <Button key="new-task" variant={isDrafting ? undefined : 'secondary'} label={`＋ ${s.newTask}`} onPress={on.onNewTask} />
+      <Button key="new-task" plain dimColor={isDrafting} label={`＋ ${s.newTask}`} onPress={on.onNewTask} />
       <Button key="compact" label={d.panel.isCompact ? s.expand : s.collapse} plain dimColor onPress={on.onCompact} />
     </Box>
   )
@@ -136,7 +136,7 @@ export function sectionHead(ui: Ui, layout: Layout, head: SectionHead & { id: st
   const svg = picture(ui, { key: 'eyebrow', at: `eyebrow-${head.id}`, pic: { source: sectionSvg(width, head), alt: head.label, width, height: SECTION_SVG_H } })
   if (!toggle) return <Box key={`h-${head.label}`} flexDirection="row">{svg}</Box>
   return (
-    <Box key={`h-${toggle.key}`} flexDirection="row" alignItems="center" columnGap={1}>
+    <Box key={`h-${toggle.key}`} flexDirection="row" alignItems="center" justifyContent="space-between" columnGap={1}>
       {svg}
       <Button key={toggle.key} plain dimColor label={toggle.isOpen ? s.hide : s.show} onPress={toggle.onPress} />
     </Box>

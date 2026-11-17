@@ -2667,7 +2667,7 @@ const METER$1 = { w: 34, h: 4 };
 const WARN_AT = 70;
 const DANGER_AT = 90;
 const FULL$1 = 100;
-const NOTE_MIN = 28;
+const LABEL_SLACK = 1.08;
 const LETTERS = {
   m: [".....", ".....", "XX.X.", "X.X.X", "X.X.X", "X.X.X", "X.X.X"],
   o: [".....", ".....", ".XXX.", "X...X", "X...X", "X...X", ".XXX."],
@@ -2676,7 +2676,7 @@ const LETTERS = {
 };
 const PIXEL$1 = { pitch: 2.3, cell: 1.9, cols: 5, rows: 7, gap: 1 };
 const label = (cls, s) => ({
-  w: Math.ceil(textWidth(s, LABEL_SIZE)),
+  w: Math.ceil(textWidth(s, LABEL_SIZE) * LABEL_SLACK),
   draw: (x) => `<text class="${cls}" x="${x}" y="${BASELINE$1}" font-family="${FONT}" font-size="${LABEL_SIZE}">${xml(s)}</text>`
 });
 const value = (cls, s, widest = s) => ({
@@ -2719,9 +2719,18 @@ const partsOf = (chip, note) => {
 const widthOf$1 = (parts) => Math.ceil(PAD$3 * 2 + parts.reduce((sum, part) => sum + part.w, 0) + GAP$2 * (parts.length - 1));
 const chipCells = (width) => Math.max(1, Math.floor((width - BUTTON_PAD) / CELL_PX$1));
 const chipWidth$1 = (chip) => widthOf$1(partsOf(chip, chip.note ?? ""));
+function wordsThatFit(chip, maxW) {
+  const words = (chip.note ?? "").split(" ");
+  for (let n = words.length;n > 0; n--) {
+    const note = n === words.length ? words.join(" ") : `${words.slice(0, n).join(" ")}…`;
+    if (widthOf$1(partsOf(chip, note)) <= maxW)
+      return note;
+  }
+  return "";
+}
 function chipSvg(chip, maxW = Number.POSITIVE_INFINITY) {
-  const room = maxW - widthOf$1(partsOf(chip, "")) - GAP$2;
-  const fitted = chip.note === undefined || room < NOTE_MIN ? "" : fitText(chip.note, LABEL_SIZE, room);
+  const whole = chip.note ?? "";
+  const fitted = widthOf$1(partsOf(chip, whole)) <= maxW ? whole : chip.id === "plan" ? wordsThatFit(chip, maxW) : "";
   const parts = partsOf(chip, fitted);
   const width = widthOf$1(parts);
   let x = PAD$3;
@@ -4046,16 +4055,16 @@ const pillPart = (pill, x, y) => {
   return { body: body.join(""), width };
 };
 const chevronSvg = (x, y) => `<g class="chev"><path d="M${x} ${y - CHEVRON}l${CHEVRON} ${CHEVRON}-${CHEVRON} ${CHEVRON}" fill="none" stroke-width="${STROKE$1}" stroke-linecap="round" stroke-linejoin="round" class="i-m"/></g>`;
-const cardHeadSvg = (W, head) => {
+const cardHeadSvg = (W, head, inset = 0) => {
   const right = W - CHEVRON_ROOM;
   const probe = pillPart(head.pill, 0, 0);
   const pill = pillPart(head.pill, right - probe.width, (HEAD.h - PILL.h) / 2);
   const nameW = textWidth(head.name, HEAD.size) * BOLD$3;
-  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap);
+  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap - inset);
   const titleSpan = title === "…" ? "" : `<tspan class="s" dx="${HEAD.nameGap}">${xml(title)}</tspan>`;
   const y = HEAD.h / 2 + HEAD.size * 0.35;
   const body = [
-    `<text x="0" y="${y}" font-family="${FONT}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
+    `<text x="${inset}" y="${y}" font-family="${FONT}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
     pill.body,
     chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, HEAD.h / 2)
   ];
@@ -4885,7 +4894,8 @@ function toolbarTree(ui, d, on) {
     alignItems: "center"
   }, h(Button, {
     key: "new-task",
-    variant: isDrafting ? undefined : "secondary",
+    plain: true,
+    dimColor: isDrafting,
     label: `＋ ${s.newTask}`,
     onPress: on.onNewTask
   }), h(Button, {
@@ -4955,6 +4965,7 @@ function sectionHead(ui, layout, head) {
     key: `h-${toggle.key}`,
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     columnGap: 1
   }, svg, h(Button, {
     key: toggle.key,
@@ -5183,8 +5194,7 @@ function HomeButton(ui, onPress) {
   const { Box, Button } = ui;
   return h(Box, {
     key: "modz-home-row",
-    flexDirection: "row",
-    marginLeft: -1
+    flexDirection: "row"
   }, h(Button, {
     key: "modz-home",
     label: HOME_LABEL,
@@ -5966,14 +5976,13 @@ function deskHead(ui, a, ctx) {
   const stuck = stuckOf(a, ctx.at);
   const isOpen = ctx.selected === a.id;
   const head = headOf(a, stuck);
-  const headW = ctx.inner - CARD_CRAB.w - GAP_PX;
+  const headW = ctx.inner - CARD_CRAB.w;
   const crab = cardCrabSvg({ costume: costumeOf(a), look, isWalking: a.status === "running" && !stuck });
   const alt = `${head.title}: ${head.name} · ${whoLine(a)} · ${head.pill.text} (${isOpen ? t().hide : t().details})`;
   return h(Box, {
     flexDirection: "row",
-    alignItems: "center",
-    columnGap: 1
-  }, picture(ui, { key: "crab", at: `crab-${a.id}`, pic: { source: crab, alt: `${look.name}, ${tierWordOf(a)}`, width: CARD_CRAB.w, height: CARD_CRAB.h } }), picture(ui, { key: "head", at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head), alt, width: headW, height: HEAD_H } }));
+    alignItems: "center"
+  }, picture(ui, { key: "crab", at: `crab-${a.id}`, pic: { source: crab, alt: `${look.name}, ${tierWordOf(a)}`, width: CARD_CRAB.w, height: CARD_CRAB.h } }), picture(ui, { key: "head", at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head, GAP_PX), alt, width: headW, height: HEAD_H } }));
 }
 function deskFoot(ui, a, ctx) {
   const { Box, Text } = ui;

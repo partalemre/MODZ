@@ -3850,7 +3850,6 @@ function galleryPane(look, { columns, back }) {
   }, h(Box, {
     key: "back",
     flexDirection: "row",
-    marginLeft: -1,
     marginBottom: 1
   }, h(Button, {
     key: "gallery-back",
@@ -4010,8 +4009,7 @@ function HomeButton(ui, onPress) {
   const { Box, Button } = ui;
   return h(Box, {
     key: "modz-home-row",
-    flexDirection: "row",
-    marginLeft: -1
+    flexDirection: "row"
   }, h(Button, {
     key: "modz-home",
     label: HOME_LABEL,
@@ -4079,7 +4077,7 @@ function skinButton(parts, name, i) {
     key: `dot-${k}`,
     color: hex
   }, "●"));
-  const look = isOn ? { variant: "secondary" } : { plain: true, dimColor: true };
+  const look = { plain: true, dimColor: !isOn };
   const hotkey = i < HOTKEYS ? { hotkey: String(i + 1) } : {};
   return h(Box, {
     key: `skin-swatch-${name}`,
@@ -4097,20 +4095,26 @@ function skinButton(parts, name, i) {
   }));
 }
 function skinButtons(parts) {
-  const { Box, Button } = parts.ui;
+  const { Box, Button, Text } = parts.ui;
   const isOff = parts.look.prefs.skin === OFF;
   return h(Box, {
+    flexDirection: "column",
+    alignItems: "flex-start"
+  }, parts.model.names.map((name, i) => skinButton(parts, name, i)), h(Box, {
+    key: "skin-swatch-off",
     flexDirection: "row",
-    flexWrap: "wrap",
-    columnGap: 2,
-    rowGap: 1
-  }, parts.model.names.map((name, i) => skinButton(parts, name, i)), h(Button, {
+    columnGap: 1,
+    alignItems: "center"
+  }, h(Text, {
+    dimColor: true
+  }, "○○○"), h(Button, {
     key: "skin-off",
     label: isOff ? `${say().off} ✓` : say().off,
     hotkey: "0",
-    ...isOff ? { variant: "secondary" } : { plain: true, dimColor: true },
+    plain: true,
+    dimColor: !isOff,
     onPress: () => parts.actions.pick(OFF)
-  }));
+  })));
 }
 function optionButtons({ look, ui, actions }) {
   const { Box, Button } = ui;
@@ -4125,9 +4129,8 @@ function optionButtons({ look, ui, actions }) {
     onPress: () => actions.toggle(word)
   });
   return h(Box, {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    columnGap: 2
+    flexDirection: "column",
+    alignItems: "flex-start"
   }, toggle("rail", "r", prefs.rail), toggle("tables", "t", prefs.tables), toggle("shimmer", "s", prefs.shimmer), toggle("band", "b", prefs.band), toggle("clip", "c", prefs.clipOutput), toggle("app", "a", prefs.app), h(Button, {
     key: "icons",
     label: say().icons(prefs.icons),

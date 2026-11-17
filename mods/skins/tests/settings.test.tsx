@@ -61,16 +61,18 @@ for (const surface of SURFACES) {
     const ui = await $.ui.mount(pane(surface))
 
     const current = (await ui.find({ key: 'skin-tidemark' })) as Node | undefined
-    expect(current?.props?.variant).toBe('secondary')
+    expect(current?.props?.plain).toBe(true)
+    expect(current?.props?.dimColor).toBe(false)
     expect(String(current?.props?.label)).toContain('✓')
     const dracula = (await ui.find({ key: 'skin-dracula' })) as Node | undefined
-    expect(dracula?.props?.plain).toBe(true)
+    expect(dracula?.props?.dimColor).toBe(true)
     const swatch = (await ui.find({ key: 'skin-swatch-dracula' })) as Node | undefined
     expect(colors(swatch).slice(0, 3)).toEqual(['#bd93f9', '#50fa7b', '#ff5555'])
 
     await ui.press({ key: 'skin-dracula' })
-    expect(((await ui.find({ key: 'skin-dracula' })) as Node | undefined)?.props?.variant).toBe('secondary')
-    expect(((await ui.find({ key: 'skin-tidemark' })) as Node | undefined)?.props?.plain).toBe(true)
+    expect(String(((await ui.find({ key: 'skin-dracula' })) as Node | undefined)?.props?.label)).toContain('✓')
+    expect(((await ui.find({ key: 'skin-dracula' })) as Node | undefined)?.props?.dimColor).toBe(false)
+    expect(((await ui.find({ key: 'skin-tidemark' })) as Node | undefined)?.props?.dimColor).toBe(true)
   })
 
   test(`${surface}: Kapalı turns the skin off; the toggles say on or off; the gallery opens`, async ($, on) => {

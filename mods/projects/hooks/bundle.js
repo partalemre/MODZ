@@ -888,8 +888,7 @@ function HomeButton(ui, onPress) {
   const { Box, Button } = ui;
   return h(Box, {
     key: "modz-home-row",
-    flexDirection: "row",
-    marginLeft: -1
+    flexDirection: "row"
   }, h(Button, {
     key: "modz-home",
     label: HOME_LABEL,
@@ -2056,8 +2055,7 @@ const flush = (ui, key, button) => {
   const { Box } = ui;
   return h(Box, {
     key,
-    flexDirection: "row",
-    marginLeft: -1
+    flexDirection: "row"
   }, button);
 };
 const groupLabel = (ui, view, text) => {
@@ -2387,8 +2385,7 @@ function listHead(ui, view) {
     key: "head"
   }, headLine(ui, view, text), h(Box, {
     flexDirection: "row",
-    flexWrap: "wrap",
-    marginLeft: -1
+    flexWrap: "wrap"
   }, view.missing > 0 && view.busy === null ? h(Button, {
     key: "estimate",
     label: say.estimateAll(view.missing),

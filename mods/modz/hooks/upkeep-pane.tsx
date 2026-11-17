@@ -48,7 +48,7 @@ export function linksTree(ui: Ui, view: LinksView) {
     <Box flexDirection="column" rowGap={1}>
       <Text dimColor>{say.lead}</Text>
       {(view.links === null ? [<Text key="unread">{say.unread}</Text>] : linksBody(ui, view.links))}
-      <Box flexDirection="row" marginLeft={-1}>
+      <Box flexDirection="row">
         <Button key="links-check" label={say.check} plain onPress={view.onCheck} />
       </Box>
     </Box>

@@ -103,14 +103,15 @@ function section(look: Look, head: { title: string; hint?: string }, body: Rende
 // `home` is given only while the MODZ hub runs: the pane then opens with the way back to it.
 type Parts = { look: Look; ui: PaneUi; model: SettingsModel; actions: SettingsActions; home?: () => void }
 
-// The skin in use is the one bordered button with a check; the rest are quiet until pointed at. Its colour
+// The skin in use is the one at full strength with a check; the rest are quiet until pointed at. Every row is
+// the same plain button, so the hotkey chips line up and no grey pill sits in the list (owner, 2026-11-17). Its colour
 // dots sit beside the button, not in it: the desktop engine takes a Button's label as its one string and
 // refuses a Text inside, which left the whole pane undrawn there.
 function skinButton(parts: Parts, name: string, i: number) {
   const { Box, Button, Text } = parts.ui
   const isOn = name === parts.look.prefs.skin
   const dots = (parts.model.swatches[name] ?? []).map((hex, k) => <Text key={`dot-${k}`} color={hex}>●</Text>)
-  const look = isOn ? { variant: 'secondary' as const } : { plain: true as const, dimColor: true }
+  const look = { plain: true as const, dimColor: !isOn }
   const hotkey = i < HOTKEYS ? { hotkey: String(i + 1) } : {}
 
   return (
@@ -122,13 +123,17 @@ function skinButton(parts: Parts, name: string, i: number) {
 }
 
 function skinButtons(parts: Parts) {
-  const { Box, Button } = parts.ui
+  const { Box, Button, Text } = parts.ui
   const isOff = parts.look.prefs.skin === OFF
 
   return (
-    <Box flexDirection="row" flexWrap="wrap" columnGap={2} rowGap={1}>
+    <Box flexDirection="column" alignItems="flex-start">
       {parts.model.names.map((name, i) => skinButton(parts, name, i))}
-      <Button key="skin-off" label={isOff ? `${say().off} ✓` : say().off} hotkey="0" {...(isOff ? { variant: 'secondary' as const } : { plain: true as const, dimColor: true })} onPress={() => parts.actions.pick(OFF)} />
+      {/* Hollow dots hold the swatches' place, so its hotkey chip stands under the others'. */}
+      <Box key="skin-swatch-off" flexDirection="row" columnGap={1} alignItems="center">
+        <Text dimColor>○○○</Text>
+        <Button key="skin-off" label={isOff ? `${say().off} ✓` : say().off} hotkey="0" plain dimColor={!isOff} onPress={() => parts.actions.pick(OFF)} />
+      </Box>
     </Box>
   )
 }
@@ -144,7 +149,7 @@ function optionButtons({ look, ui, actions }: Parts) {
   )
 
   return (
-    <Box flexDirection="row" flexWrap="wrap" columnGap={2}>
+    <Box flexDirection="column" alignItems="flex-start">
       {toggle('rail', 'r', prefs.rail)}
       {toggle('tables', 't', prefs.tables)}
       {toggle('shimmer', 's', prefs.shimmer)}

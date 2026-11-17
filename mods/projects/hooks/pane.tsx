@@ -36,7 +36,7 @@ function listHead(ui: Ui, view: PaneView) {
   return (
     <Box flexDirection="column" gap={1} key="head">
       {headLine(ui, view, text)}
-      <Box flexDirection="row" flexWrap="wrap" marginLeft={-1}>
+      <Box flexDirection="row" flexWrap="wrap">
         {view.missing > 0 && view.busy === null ? <Button key="estimate" label={say.estimateAll(view.missing)} plain onPress={view.acts.estimate} /> : null}
         <Button key="board" label={say.openBoard} plain onPress={view.acts.openBoard} />
       </Box>

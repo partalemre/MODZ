@@ -109,7 +109,7 @@ export function galleryPane(look: Look, { columns, back }: { columns: number; ba
 
   return (
     <Box flexDirection="column">
-      <Box key="back" flexDirection="row" marginLeft={-1} marginBottom={1}>
+      <Box key="back" flexDirection="row" marginBottom={1}>
         <Button key="gallery-back" label={galleryWords().back} plain dimColor onPress={back} />
       </Box>
       {[...rowSections(look), ...cards, ...bandSections(look)].map(([title, ...items], i) => (

@@ -55,17 +55,20 @@ export type CardHead = {
   pill: Pill
 }
 
-/** "Nori  the task  ● running ›": one line, one control tall, so the row's button lights it whole. */
-export const cardHeadSvg = (W: number, head: CardHead): string => {
+/**
+ * "Nori  the task  ● running ›": one line, one control tall, so the row's button lights it whole. `inset` is the
+ * room left of the name, drawn inside the picture so the row's width is exactly the pictures' widths.
+ */
+export const cardHeadSvg = (W: number, head: CardHead, inset = 0): string => {
   const right = W - CHEVRON_ROOM
   const probe = pillPart(head.pill, 0, 0)
   const pill = pillPart(head.pill, right - probe.width, (HEAD.h - PILL.h) / 2)
   const nameW = textWidth(head.name, HEAD.size) * BOLD
-  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap)
+  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap - inset)
   const titleSpan = title === '…' ? '' : `<tspan class="s" dx="${HEAD.nameGap}">${xml(title)}</tspan>`
   const y = HEAD.h / 2 + HEAD.size * 0.35
   const body = [
-    `<text x="0" y="${y}" font-family="${FONT}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
+    `<text x="${inset}" y="${y}" font-family="${FONT}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
     pill.body,
     chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, HEAD.h / 2),
   ]

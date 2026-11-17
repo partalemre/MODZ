@@ -18,6 +18,7 @@ Usage: python3 -I tools/desk/check.py [repo]   (exit 1 on any failure)
 import json
 import os
 import re
+import shutil
 import sys
 import tempfile
 import time
@@ -273,13 +274,64 @@ def is_linked_here(repo):
     return os.path.realpath(link) == os.path.realpath(os.path.join(repo, 'mods', 'modz'))
 
 
+RELOAD_ROW = 'open-checkpoints'
+RELOADED = 'modz@skills-dir reloaded in'
+
+
+def reloads(log):
+    try:
+        with open(log, errors='replace') as lines:
+            return sum(RELOADED in line for line in lines)
+    except OSError:
+        return 0
+
+
+def swap_then_reload(engine, desk, home, log):
+    """Row press swaps the panel; then the hub's bundle is rebuilt (its copy here) and its pane asked to draw once."""
+    engine.say('/modz')
+    if not wait(lambda: ids(engine) == [HUB], OPEN_WAIT_S * 2):
+        return 'reload: the hub could not be brought up'
+    stale = desk.render(HUB)
+    desk.hold(HUB)
+    if not desk.press(RELOAD_ROW, tree=stale).get('handled') or not wait(lambda: ids(engine) == ['checkpoints'], OPEN_WAIT_S):
+        return f'reload: {RELOAD_ROW} left {ids(engine)}, want the checkpoints pane alone'
+    before = reloads(log)
+    with open(os.path.join(home, 'skills', HUB, 'hooks', 'bundle.js'), 'a') as bundle:
+        bundle.write(f'\n// rebuilt {time.time()}\n')
+    if not wait(lambda: reloads(log) > before, OPEN_WAIT_S * 2):
+        return 'reload: the rebuilt hub did not reload'
+    time.sleep(SETTLE_S)
+    desk.render(HUB)
+    time.sleep(SETTLE_S)
+    return None if ids(engine) == ['checkpoints'] else f'reload: a draw of the reloaded hub left {ids(engine)}, want the checkpoints pane alone'
+
+
+def check_hub_reload(repo):
+    """A hub rebuilt while a mod's pane holds the panel stays away: its kept-tab reopen must not fire (DESIGN.md §9)."""
+    with tempfile.TemporaryDirectory(prefix='modz-reload-', ignore_cleanup_errors=True) as root:
+        home, project = world(repo, root)
+        hub = os.path.join(home, 'skills', HUB)
+        os.unlink(hub)
+        shutil.copytree(os.path.join(repo, 'mods', HUB), hub, ignore=shutil.ignore_patterns('node_modules', 'tests', '.git'))
+        log = os.path.join(root, 'debug.log')
+        engine = Engine(project, extra=['--debug-file', log], home=home)
+        try:
+            return swap_then_reload(engine, Desk(engine), home, log)
+        finally:
+            engine.close()
+
+
 def main(repo):
     if is_linked_here(repo):
-        return check(lambda: Engine(repo), own_mods(repo))
-    print('  the home links another checkout: this one\'s mods run in a throwaway home')
-    with tempfile.TemporaryDirectory(prefix='modz-desk-', ignore_cleanup_errors=True) as root:
-        home, project = world(repo, root)
-        return check(lambda: Engine(project, home=home), own_mods(repo), SKIP_ROWS)
+        failed = check(lambda: Engine(repo), own_mods(repo))
+    else:
+        print('  the home links another checkout: this one\'s mods run in a throwaway home')
+        with tempfile.TemporaryDirectory(prefix='modz-desk-', ignore_cleanup_errors=True) as root:
+            home, project = world(repo, root)
+            failed = check(lambda: Engine(project, home=home), own_mods(repo), SKIP_ROWS)
+    problem = check_hub_reload(repo)
+    print(f'  hub reload {"":<12} {"✘ " + problem if problem else "✔"}')
+    return 1 if failed or problem else 0
 
 
 def check(make, owners, skipped=None):

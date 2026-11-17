@@ -1,7 +1,7 @@
 // The catalog as the hub reads it from disk, and Claude Code's own auto-update switched on for it. No `$` here:
 // the engine follows `$` only into the file that got it, so register.tsx hands in the few reads these need (`Disk`).
 import { autoUpdateSettings, installOf } from './auto-update'
-import { installedMarketRoot, linkCheck, loadCatalog, marketRoot } from './catalog'
+import { installedMarketRoot, linkedDir, loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
 
 export type Disk = {
@@ -39,11 +39,17 @@ async function homeOf(disk: Disk): Promise<string | undefined> {
 
 // Mods are enabled by a skills-folder symlink (~/.claude/skills, or the project's
 // .claude/skills in a cloud session), which settings never mention.
-async function skillLinks(disk: Disk): Promise<(name: string) => Promise<boolean>> {
+async function skillLinks(disk: Disk): Promise<(name: string) => Promise<string | undefined>> {
   const home = await homeOf(disk)
   const cwd = await disk.cwd().catch(() => undefined)
 
-  return linkCheck({ roots: [home, cwd], exists: path => disk.exists(path) })
+  return linkedDir({ roots: [home, cwd], exists: path => disk.exists(path) })
+}
+
+async function linksOf(disk: Disk): Promise<{ hasLink: (name: string) => Promise<boolean>; linkedDir: (name: string) => Promise<string | undefined> }> {
+  const dirOf = await skillLinks(disk)
+
+  return { hasLink: async name => (await dirOf(name)) !== undefined, linkedDir: dirOf }
 }
 
 async function textOf(disk: Disk, path: string): Promise<string | undefined> {
@@ -60,7 +66,7 @@ export async function marketOf(disk: Disk): Promise<Market> {
       ? marketRoot(real)
       : installedMarketRoot(install, await textOf(disk, `${install.pluginsDir}/known_marketplaces.json`).catch(() => undefined))
 
-    return await loadCatalog({ read: path => disk.read(path), root, enabledPlugins: await enabledPlugins(disk), hasLink: await skillLinks(disk) })
+    return await loadCatalog({ read: path => disk.read(path), root, enabledPlugins: await enabledPlugins(disk), ...(await linksOf(disk)) })
   } catch (cause) {
     disk.log(`modz: the catalog could not be read: ${String(cause)}`)
 

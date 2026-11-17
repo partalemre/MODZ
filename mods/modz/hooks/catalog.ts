@@ -5,6 +5,7 @@ import { catalogWords } from './words'
 
 type ReadFile = (path: string) => Promise<unknown>
 type HasLink = (name: string) => Promise<boolean>
+type LinkedDir = (name: string) => Promise<string | undefined>
 
 export type ModInfo = {
   name: string
@@ -34,6 +35,8 @@ export type CatalogOptions = {
   enabledPlugins?: Record<string, unknown>
   // Whether a skills-folder link to the mod exists: how this repo's mods are enabled.
   hasLink?: HasLink
+  // The folder a skills link to the mod leads to: where a mod kept in its own repo can still be read.
+  linkedDir?: LinkedDir
 }
 
 export type Market = { name: string; mods: ModInfo[] }
@@ -42,14 +45,22 @@ const SKILLS_DIR = '.claude/skills'
 
 // A mod is linked from the user's skills folder (every session on this machine) or from the
 // project's (a cloud session gets only what the repo carries). Blank roots are skipped.
-export function linkCheck(spec: { roots: (string | undefined)[]; exists: (path: string) => Promise<boolean> }): HasLink {
+type LinkSpec = { roots: (string | undefined)[]; exists: (path: string) => Promise<boolean> }
+
+export function linkedDir(spec: LinkSpec): LinkedDir {
   const dirs = spec.roots.filter((root): root is string => Boolean(root)).map(root => `${root}/${SKILLS_DIR}`)
 
   return async name => {
-    for (const dir of dirs) if (await spec.exists(`${dir}/${name}`).catch(() => false)) return true
+    for (const dir of dirs) if (await spec.exists(`${dir}/${name}`).catch(() => false)) return `${dir}/${name}`
 
-    return false
+    return undefined
   }
+}
+
+export function linkCheck(spec: LinkSpec): HasLink {
+  const dirOf = linkedDir(spec)
+
+  return async name => (await dirOf(name)) !== undefined
 }
 
 // The mod lives in MODZ/mods/modz; given its real path (not the ~/.claude/skills
@@ -98,7 +109,8 @@ function upstreamOf(name: string, manifest: Manifest | undefined): string | null
   return githubName(manifest?.repository) ?? githubName(manifest?.homepage) ?? META[name]?.upstream ?? githubName(manifest?.author?.url)
 }
 
-type Facts = { name: string; entry: Entry; manifest: Manifest | undefined; isEnabled: boolean | null; problem?: string }
+// `note` stands in for a description when a mod is fine but its manifest is out of reach (kept in its own repo).
+type Facts = { name: string; entry: Entry; manifest: Manifest | undefined; isEnabled: boolean | null; problem?: string; note?: string }
 
 function infoOf(facts: Facts): ModInfo {
   const { name, entry, manifest, problem } = facts
@@ -108,12 +120,12 @@ function infoOf(facts: Facts): ModInfo {
   return {
     name,
     version: text(manifest?.version) ?? text(entry.version) ?? null,
-    description: problem ?? summary ?? text(manifest?.description) ?? text(entry.description) ?? (manifest ? '' : catalogWords().unreadable),
+    description: problem ?? summary ?? text(manifest?.description) ?? text(entry.description) ?? facts.note ?? (manifest ? '' : catalogWords().unreadable),
     group: meta?.group ?? 'other',
     surfaces: meta?.surfaces ?? BOTH,
     upstream: upstreamOf(name, manifest),
     // A manifest without a version is still a readable one.
-    isHealthy: manifest !== undefined && problem === undefined,
+    isHealthy: (manifest !== undefined || facts.note !== undefined) && problem === undefined,
     isEnabled: facts.isEnabled,
     options: isRecord(manifest?.userConfig) ? Object.keys(manifest.userConfig) : [],
   }
@@ -128,12 +140,21 @@ async function enabledOf(spec: { name: string; flag: unknown; hasLink: HasLink }
   return isLinked ? true : null
 }
 
-// An object source ({ source: "github", repo }) points away from this checkout; only a string is a local path.
-function remoteProblem(source: unknown): string {
-  const repo = isRecord(source) ? text(source.repo) ?? text(source.url) : undefined
+// An object source ({ source: "github", repo } or a git url) is a mod kept in its own repo, not a broken one.
+function remoteNote(source: unknown): string {
+  const repo = isRecord(source) ? text(source.repo) ?? githubName(source.url) ?? undefined : undefined
   const remote = catalogWords().remote
 
   return repo === undefined ? remote : `${remote} (${repo})`
+}
+
+// Its manifest is read where the skills link leads, when the mod is linked on this computer.
+async function remoteInfo(spec: { name: string; entry: Entry; isEnabled: boolean | null; options: CatalogOptions }): Promise<ModInfo> {
+  const { name, entry, isEnabled, options } = spec
+  const dir = SAFE_NAME.test(name) ? await options.linkedDir?.(name).catch(() => undefined) : undefined
+  const manifest = dir === undefined ? undefined : await readJson(options.read, `${dir}/.claude-plugin/plugin.json`)
+
+  return infoOf({ name, entry, manifest, isEnabled, note: remoteNote(entry.source) })
 }
 
 async function entryInfo(spec: { entry: unknown; index: number; options: CatalogOptions; enabled: Record<string, unknown> }): Promise<ModInfo> {
@@ -145,7 +166,8 @@ async function entryInfo(spec: { entry: unknown; index: number; options: Catalog
   if (name === undefined) return infoOf({ name: catalogWords().entry(index + 1), entry, manifest: undefined, isEnabled: null, problem: invalid })
 
   const isEnabled = await enabledOf({ name, flag: enabled[name], hasLink })
-  if (typeof entry.source !== 'string') return infoOf({ name, entry, manifest: undefined, isEnabled, problem: entry.source === undefined ? invalid : remoteProblem(entry.source) })
+  if (entry.source === undefined || entry.source === null) return infoOf({ name, entry, manifest: undefined, isEnabled, problem: invalid })
+  if (typeof entry.source !== 'string') return remoteInfo({ name, entry, isEnabled, options })
   const dir = `${options.root}/${entry.source.replace(/^\.\//, '')}`
 
   return infoOf({ name, entry, manifest: await readJson(options.read, `${dir}/.claude-plugin/plugin.json`), isEnabled })

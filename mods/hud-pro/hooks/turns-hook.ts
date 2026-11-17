@@ -3,14 +3,12 @@ import type { EngineInterface, Register, SessionUsage } from 'claude-code'
 
 import { addTurn } from './forecast'
 import { addShare, paceWindow, shareOf } from './pace'
-import { shareNotice } from './pace-section'
-import { enqueue } from './slot'
 import { addUsage, toUsage } from './usage'
 import type { HudGauge, HudTurn } from '../types'
 
 // The current turn's requests and tokens, the last finished turn's, whether a turn is running, the context's
 // fill at each main-loop turn's end, and each such turn's share of the limit window; the pane, the forecast and
-// the pace read them. A notable share waits for the line above the prompt (slot.ts).
+// the pace read them.
 
 export const EMPTY_TURN: HudTurn = { requests: 0, input: 0, output: 0, cacheRead: 0 }
 
@@ -21,23 +19,18 @@ const contextTurnsAtom = atom({ plugin: 'hud-pro', key: 'contextTurns' } as cons
 const liveAtom = atom({ plugin: 'hud-pro', key: 'isLive' } as const, false)
 const usageAtom = atom({ plugin: 'hud-pro', key: 'usage' } as const, null)
 const sharesAtom = atom({ plugin: 'hud-pro', key: 'shares' } as const, [])
-const noticesAtom = atom({ plugin: 'hud-pro', key: 'notices' } as const, [])
 
 // The window as the running turn started, for its share once it ends.
 const running: { window: HudGauge | null } = { window: null }
 
 type On = Parameters<Register>[0]
 
-// The window's rise over the turn just ended; a notable one waits for the line.
+// The window's rise over the turn just ended, for the pane's list.
 async function recordShare($: EngineInterface, measured: SessionUsage): Promise<void> {
   const after = paceWindow(toUsage(measured))
   if (after === null) return
   const share = { window: after.id, share: shareOf(running.window, after), percent: after.percent }
   await update($, sharesAtom, shares => addShare(shares, share))
-  const text = shareNotice(share)
-  if (text === null) return
-  await update($, noticesAtom, queue => enqueue(queue, text))
-  $.ui.invalidate('ui.render')
 }
 
 export function onTurns(on: On) {

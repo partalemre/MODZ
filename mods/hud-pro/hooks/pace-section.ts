@@ -1,6 +1,5 @@
 import { clockText, PACE_MIN_SAMPLES, PACE_MIN_SPAN_MS } from './forecast'
 import { longLabelOf, percentText } from './format'
-import { isNotable } from './pace'
 import type { Pace } from './pace'
 import { usageWords } from './usage-words'
 import { units } from './words'
@@ -49,20 +48,4 @@ export function paceSection(spec: { pace: Pace | null; shares: readonly TurnShar
   const isEmpty = pace.perHour === null && !spec.shares.some(share => share.window === pace.gauge.id)
 
   return { ...base, lines: [...rateLines(pace, spec.nowMs), ...shareLines(pace, spec.shares)], tone: pace.fullAt === null ? 'neutral' : 'warn', isEmpty }
-}
-
-// The line a notable turn earns, or null for an ordinary one.
-export function shareNotice(share: TurnShare): string | null {
-  if (!isNotable(share)) return null
-
-  return usageWords().shareNotice(percentText(share.share), longLabelOf(share.window), percentText(share.percent))
-}
-
-// The line a pace that fills the window before its reset earns, once per window (its `key`); null otherwise.
-export function fillNotice(pace: Pace | null, nowMs: number): { key: string; text: string } | null {
-  if (pace === null || pace.fullAt === null || pace.gauge.resetsAt === null) return null
-  const reset = clockText(Date.parse(pace.gauge.resetsAt), nowMs)
-  const text = usageWords().fillNotice({ window: longLabelOf(pace.gauge.id), time: clockText(pace.fullAt, nowMs), reset })
-
-  return { key: `${pace.gauge.id}:${pace.gauge.resetsAt}`, text }
 }

@@ -13,9 +13,6 @@ const WEEK_HOURS = 7 * DAY_HOURS
 // week days too early. A week is paced at its whole-window average instead, once this much of it has passed.
 const WEEK_MIN_EVEN_PERCENT = 5
 const LOOKBACK_MS: Readonly<Record<string, number>> = { [FIVE_HOUR]: HOUR_MS, [SEVEN_DAY]: DAY_HOURS * HOUR_MS }
-// A share worth a line above the prompt: ten such turns empty a 5-hour window; three points of a week are about
-// five hours of its even pace (100 % over 168 h is 0.6 points an hour).
-export const NOTABLE_SHARE: Readonly<Record<string, number>> = { [FIVE_HOUR]: 10, [SEVEN_DAY]: 3 }
 export const SHARES_KEPT = 5
 
 export type Pace = { gauge: HudGauge; readings: number; perHour: number | null; fullAt: number | null }
@@ -32,8 +29,6 @@ export function shareOf(before: HudGauge | null, after: HudGauge): number {
 
   return Math.max(0, isSameWindow ? after.percent - before.percent : after.percent)
 }
-
-export const isNotable = (share: TurnShare): boolean => share.share >= (NOTABLE_SHARE[share.window] ?? Number.POSITIVE_INFINITY)
 
 export const addShare = (shares: readonly TurnShare[], share: TurnShare): TurnShare[] => [...shares, share].slice(-SHARES_KEPT)
 

@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { isNotable, paceOf, paceWindow, shareOf } from '../hooks/pace'
+import { paceOf, paceWindow, shareOf } from '../hooks/pace'
 import { isSection } from '../hooks/sections'
 import { BAND, ENGLISH, MS_PER_HOUR, PANE, USAGE, opens, start, stubSession } from './stubs'
 
@@ -79,13 +79,6 @@ test('the pace reads the 5-hour window, else the weekly one; a share is the rise
   expect(shareOf(null, gauge('five_hour', 7))).toBe(7)
 })
 
-test('a notable turn is 10 points of the 5-hour window or 3 of the weekly one', () => {
-  expect(isNotable({ window: 'five_hour', share: 10, percent: 50 })).toBe(true)
-  expect(isNotable({ window: 'five_hour', share: 9, percent: 50 })).toBe(false)
-  expect(isNotable({ window: 'seven_day', share: 3, percent: 50 })).toBe(true)
-  expect(isNotable({ window: 'spend_limit', share: 99, percent: 99 })).toBe(false)
-})
-
 test('a weekly window is paced at its whole-window average, idle hours included', () => {
   // Reset in 130 h: the week opened 38 h ago, so 28 % is 0.74 points an hour, not the burst of the readings.
   const week = { gauges: [gauge('seven_day', 28, new Date(130 * MS_PER_HOUR).toISOString())], costUsd: null, context: null }
@@ -153,49 +146,23 @@ for (const surface of SURFACES) {
   })
 }
 
-test('a notable turn says one quiet line above the other rows; an ordinary one says none', async ($, on) => {
+test('a turn, however big, adds no line under the band', async ($, on) => {
   const clock = stubSession(on, five(44), ENGLISH)
   await start($, 'terminal')
-  await measureFive($, clock, [42])
-  await turn($, 't0')
-  const quiet = await $.ui.mount({ ...BAND, surface: 'terminal', requestId: 'quiet' })
-  expect(await quiet.find({ type: 'Text', text: /^That turn used/ })).toBeUndefined()
-
   await measureFive($, clock, [30])
   await turn($, 't1')
   const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
-  const order = (await band.findAll({ type: 'Text' })).map((found: any) => found.text)
-  expect(order).toContain('That turn used 14% of the 5-hour allowance (now 44%).')
-  expect(order.indexOf('That turn used 14% of the 5-hour allowance (now 44%).')).toBeLessThan(order.indexOf('theirs'))
+  expect(await band.find({ type: 'Text', text: /^That turn used/ })).toBeUndefined()
 })
 
-test('a pace that fills the window before it resets says so once', async ($, on) => {
+test('a pace that fills the window before it resets adds no line under the band; the gauge already says when', async ($, on) => {
   const clock = stubSession(on, five(40), ENGLISH)
   await start($, 'terminal')
   await measureFive($, clock, [40, 45, 50, 55, 60])
   const band = await $.ui.mount({ ...BAND, surface: 'terminal' })
   const lines = (await band.findAll({ type: 'Text', text: /^At this pace the 5-hour allowance runs out/ })) as unknown[]
 
-  expect(lines.length).toBe(1)
-})
-
-test('a louder notice holds the line; the HUD notice waits and shows once it clears, then goes', { plugins: [BUDGET] } as any, async ($: any, on: any) => {
-  const clock = stubSession(on, five(44), ENGLISH)
-  await start($, 'terminal')
-  await run($, 'sb-notice')
-  await measureFive($, clock, [30])
-  await turn($, 't1')
-  const held = await $.ui.mount({ ...BAND, surface: 'terminal', requestId: 'held' })
-  expect(await held.find({ type: 'Text', text: /^That turn used/ })).toBeUndefined()
-
-  await clock.advance(3 * MINUTE_MS)
-  await run($, 'sb-notice', 'off')
-  const shown = await $.ui.mount({ ...BAND, surface: 'terminal', requestId: 'shown' })
-  expect(await shown.find({ type: 'Text', text: /^That turn used/ })).toBeDefined()
-
-  await clock.advance(2 * MINUTE_MS)
-  const gone = await $.ui.mount({ ...BAND, surface: 'terminal', requestId: 'gone' })
-  expect(await gone.find({ type: 'Text', text: /^That turn used/ })).toBeUndefined()
+  expect(lines.length).toBe(0)
 })
 
 test('a meter mod asks for the pane: it opens at that mod\'s section, which comes first', { plugins: [BUDGET] } as any, async ($: any, on: any) => {

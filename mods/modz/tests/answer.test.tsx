@@ -71,7 +71,7 @@ async function hubWith($: any, on: any, surface: 'desktop' | 'terminal' = 'deskt
 const drawnText = async (ui: any): Promise<string> => JSON.stringify(await ui.drawn())
 
 for (const surface of ['desktop', 'terminal'] as const) {
-  test(`${surface}: a row whose mod does not answer leaves the hub up and says the pane did not open`, { plugins: [mute] }, async ($: any, on: any) => {
+  test(`${surface}: a row whose mod does not answer leaves the hub up and says the pane did not open`, { options: { openOnStart: true }, plugins: [mute] }, async ($: any, on: any) => {
     const { world, clock, ui } = await hubWith($, on, surface)
     await ui.press({ key: 'open-mute' })
     expect(await drawnText(ui)).not.toContain('did not answer')

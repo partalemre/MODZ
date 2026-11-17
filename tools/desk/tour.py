@@ -242,8 +242,8 @@ def main(repo, only):
         engine = Engine(project, extra=['--debug-file', log], home=home)
         desk = Desk(engine)
         tour = Tour(engine, desk, log)
-        if not wait(lambda: HUB in tour.ids(), OPEN_WAIT_S * 2):
-            print('✘ the MODZ hub did not open at session start')
+        if not tour.hub():
+            print('✘ the MODZ hub did not open on /modz')
             return 1
         # A mod that writes its hub row from the first message's hook has written it once one has gone by.
         engine.say('/modz')

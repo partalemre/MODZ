@@ -42,7 +42,7 @@ test('with no labels the footer holds the control alone', async ($: any, on: any
   expect(walk(tree).filter(node => node.type === 'Text')).toHaveLength(0)
 })
 
-test('a press takes the hub away when it is shown, and the next brings it back without the keyboard', async ($: any, on: any) => {
+test('a press takes the hub away when it is shown, and the next brings it back without the keyboard', { options: { openOnStart: true } }, async ($: any, on: any) => {
   const { w, ui } = await desktop($, on)
   expect(w.up).toEqual(['modz'])
 

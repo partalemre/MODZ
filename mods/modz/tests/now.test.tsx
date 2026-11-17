@@ -206,7 +206,7 @@ test('terminal: the same lines are read as text under "Şu an"', { plugins: repo
   expect(await ui.findAll({ type: 'Text', text: /41\/42 geçti/ })).toHaveLength(1)
 })
 
-test('a running time moves on the hub\'s own beat without one state write; with none running nothing is drawn again', { plugins: reporters }, async ($: any, on: any) => {
+test('a running time moves on the hub\'s own beat without one state write; with none running nothing is drawn again', { options: { openOnStart: true }, plugins: reporters }, async ($: any, on: any) => {
   const { seen } = stubWorld(on, { hasOwnClock: true })
   const clock = mock.clock(on, { now: START })
   let writes = 0

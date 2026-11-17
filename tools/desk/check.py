@@ -1,6 +1,6 @@
 """End-to-end check of the MODZ mods on the desktop engine, the way the Code tab drives them.
 
-A session starts in the repo with every linked mod, a desktop attaches, and the MODZ hub opens by itself. Each hub
+A session starts in the repo with every linked mod, a desktop attaches, and the MODZ hub stays closed until the strip's modz chip is pressed. Each hub
 row is pressed on a tree drawn before a redraw (what a desktop click is) and must swap the one panel to that mod:
 its pane open, the hub closed, nothing else left as a tab, also when the hub holds the keyboard (a desktop click into its
 body) and when the row is pressed a second time. A client that leaves and comes back finds the same pane. That pane must draw a tree of its own, keep each button's
@@ -231,9 +231,40 @@ def check_footer(desk, engine):
         desk.render('session-mode', 'SessionMode', FOOTER_PROPS)
         if not desk.press('modz-toggle', tree=stale).get('handled'):
             return f'footer: the toggle press ({label}) was dropped'
+        if not want:
+            # A late draw of the hub this engine closed is not a kept tab: it must stay away.
+            desk.render(HUB)
+            time.sleep(SETTLE_S)
+            desk.render('session-mode', 'SessionMode', FOOTER_PROPS)
         if not wait(lambda: ids(engine) == want, OPEN_WAIT_S):
             return f'footer: the toggle ({label}) left {ids(engine)}, want {want}'
     return None
+
+
+CHIP = 'savvy-chip-press-modz'
+
+
+def check_start(desk, engine, is_new_home=False):
+    """The hub stays closed at session start, and one press on the strip's modz chip opens it."""
+    time.sleep(SETTLE_S)
+    if ids(engine):
+        return f'start: the panel opened by itself with {ids(engine)}'
+    band = desk.render('above-prompt', 'AbovePrompt')
+    if CHIP not in [key for key, _ in walk(band, 'Button')]:
+        return None if is_new_home and bring_hub(desk, engine) else 'start: the strip drew no modz chip'
+    if not desk.press(CHIP, tree=band).get('handled'):
+        return 'start: the modz chip press was dropped'
+    return None if wait(lambda: ids(engine) == [HUB], OPEN_WAIT_S) else f'start: the modz chip left {ids(engine)}, want the hub'
+
+
+def check_kept_tab(engine):
+    """A tab the desktop kept from before an engine restart: asked to draw, the hub this engine never opened opens."""
+    desk = Desk(engine)
+    time.sleep(SETTLE_S)
+    if ids(engine):
+        return f'kept tab: the panel opened by itself with {ids(engine)}'
+    desk.render(HUB)
+    return None if wait(lambda: ids(engine) == [HUB], OPEN_WAIT_S) else f'kept tab: a draw of the hub left {ids(engine)}, want the hub'
 
 
 def is_linked_here(repo):
@@ -244,18 +275,20 @@ def is_linked_here(repo):
 
 def main(repo):
     if is_linked_here(repo):
-        return check(Engine(repo), own_mods(repo))
+        return check(lambda: Engine(repo), own_mods(repo))
     print('  the home links another checkout: this one\'s mods run in a throwaway home')
     with tempfile.TemporaryDirectory(prefix='modz-desk-', ignore_cleanup_errors=True) as root:
         home, project = world(repo, root)
-        return check(Engine(project, home=home), own_mods(repo), SKIP_ROWS)
+        return check(lambda: Engine(project, home=home), own_mods(repo), SKIP_ROWS)
 
 
-def check(engine, owners, skipped=None):
+def check(make, owners, skipped=None):
+    engine = make()
     desk = Desk(engine)
     failures = []
-    if not wait(lambda: HUB in ids(engine), OPEN_WAIT_S * 2):
-        failures.append('the MODZ hub did not open at session start')
+    problem = check_start(desk, engine, is_new_home=skipped is not None)
+    print(f'  start {"":<17} {"✘ " + problem if problem else "✔"}')
+    failures += [problem] if problem else []
     rows = [key for key, _ in walk(desk.render(HUB), 'Button') if key.startswith('open-') and key != 'open-focus' and key not in (skipped or ())]
     failures += [problem for problem in (check_motion(desk, HUB), check_site(desk, HUB)) if problem]
     for row in rows:
@@ -272,6 +305,11 @@ def check(engine, owners, skipped=None):
     failures += [problem] if problem else []
     problem = check_footer(desk, engine)
     print(f'  footer {"":<16} {"✘ " + problem if problem else "✔"}')
+    failures += [problem] if problem else []
+    engine.close()
+    engine = make()
+    problem = check_kept_tab(engine)
+    print(f'  kept tab {"":<14} {"✘ " + problem if problem else "✔"}')
     failures += [problem] if problem else []
     engine.close()
     for failure in failures:

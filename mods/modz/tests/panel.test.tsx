@@ -71,7 +71,7 @@ describe('a row pressed on the hub', () => {
     expect(world.opened).not.toContain('modz-hold')
   })
 
-  test('brings the hub back alone when the mod never answers a held press', { plugins: [mute] }, async ($: any, on: any) => {
+  test('brings the hub back alone when the mod never answers a held press', { options: { openOnStart: true }, plugins: [mute] }, async ($: any, on: any) => {
     const { world, ui, row } = await hubWith($, on, 'mute')
     world.hold.id = 'modz'
 
@@ -105,7 +105,7 @@ describe('a desktop that comes back', () => {
     expect(world.up).toEqual(['guest'])
   })
 
-  test('gets the hub back when no mod holds the panel', async ($: any, on: any) => {
+  test('gets the hub back when no mod holds the panel', { options: { openOnStart: true } }, async ($: any, on: any) => {
     const world = stubWorld(on)
     on('session.attach', (_: unknown, e: any) => ({ clientId: e.clientId }))
     await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
@@ -114,5 +114,53 @@ describe('a desktop that comes back', () => {
     await attach($)
 
     expect(world.up).toEqual(['modz'])
+  })
+})
+
+const HUB_DRAW = { plugin: 'modz', component: 'Pane', requestId: 'modz', surface: 'desktop', props: {}, viewport: { columns: 100, rows: 40 } } as const
+declare const setTimeout: (work: () => void, ms: number) => unknown
+const settled = () => new Promise<void>(resolve => setTimeout(resolve, 20))
+const comeBack = ($: any) => $.session.attach({ surface: 'desktop', clientId: 'desktop:default' })
+// `$.clock.after`: its work runs once the dispatch resolves.
+const withTimers = (on: any) => on('clock.after', () => ({ value: undefined }))
+
+describe('a hub that starts closed', () => {
+  test('stays closed when a desktop comes back with an empty panel', async ($: any, on: any) => {
+    const world = stubWorld(on)
+    on('session.attach', (_: unknown, e: any) => ({ clientId: e.clientId }))
+    await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
+
+    await comeBack($)
+
+    expect(world.opened).toEqual([])
+  })
+
+  test('opens again, once and without the keyboard, for a tab the desktop kept from before a restart', async ($: any, on: any) => {
+    const world = stubWorld(on)
+    withTimers(on)
+    await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
+
+    await $.ui.render(HUB_DRAW)
+    await settled()
+    expect(world.up).toEqual(['modz'])
+    expect(world.focused).toEqual([])
+
+    world.up.splice(0, world.up.length)
+    await $.ui.render(HUB_DRAW)
+    await settled()
+    expect(world.up).toEqual([])
+  })
+
+  test('a late draw of a hub this engine closed does not bring it back', async ($: any, on: any) => {
+    const world = stubWorld(on)
+    withTimers(on)
+    await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
+    await $.command.run({ command: 'modz', args: '' })
+    world.up.splice(0, world.up.length)
+
+    await $.ui.render(HUB_DRAW)
+    await settled()
+
+    expect(world.up).toEqual([])
   })
 })

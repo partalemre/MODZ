@@ -124,6 +124,8 @@ export const tr: Strings = {
   stripResting: { sleeping: 'uyuyor', working: 'çalışıyor', happy: 'keyifli', worried: 'tedirgin' },
   stripStep: (n, subject) => `${n}. adım: ${subject}`,
   stripTeam: {
+    fresh: n => `${n} yeni`,
+    away: name => `${name} şu an çalışmıyor`,
     working: 'şimdi çalışıyor',
     isWorking: name => `${name} şimdi çalışıyor`,
     worked: (name, ago) => `${name} ${ago} çalıştı`,

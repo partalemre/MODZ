@@ -119,6 +119,11 @@ const COSTUMES: Record<string, (f: Fill, t: string, look: Look) => void> = {
     f([27, 6, 1, 9], '#C9CCD2', 'it'); f([26, 15, 3, 1], '#7A4A26', 'it')
   },
   other: (f, _t, look) => crabBody(f, {}, look),
+  // A teammate, a person and no agent: a knit cap with a bobble, a hat no agent's tier wears.
+  mate: (f, _t, look) => {
+    crabBody(f, {}, look)
+    stamp(f, { x: 7, y: 3, rows: ['.......ww.......', '......wwww......', '....bbbbbbbb....', '..bbbbbbbbbbbb..', '.bbbbbbbbbbbbbb.', '.bbbbbbbbbbbbbb.', 'rrrrrrrrrrrrrrrr'], map: { w: '#F4F3EE', b: '#3E8E7E', r: '#2E6B5F' } })
+  },
 }
 
 // The home crab's faces: shut while it sleeps, arched with a claw up when happy, lowered with a

@@ -10,7 +10,7 @@ import { drawingOf, fitRow } from './strip-fit'
 import type { Slot } from './strip-fit'
 import { layoutOf, SCENE_H, sceneSvg } from './strip-scene'
 import type { Step } from './strip-scene'
-import { teamArt, teamFrom } from './strip-team'
+import { talkOf, teamArt, teamFrom } from './strip-team'
 import type { Team } from './strip-team'
 
 export { fitRow } from './strip-fit'
@@ -261,7 +261,8 @@ export async function stripOf(io: StripIo, ui: Ui, site: StripSite) {
   const from = facts.steps.length === 0 ? undefined : walkFrom(layoutOf({ width, steps: facts.steps }).stand, facts.now)
   const sky = { ...skyOf(facts.now, await io.place().catch(() => undefined)), weather: await io.weather().catch(() => undefined) }
   // The strip is the session's own: its helpers stand on their rows of the conversation (row-crab.ts).
-  const scene = sceneSvg({ width, crew: facts.crew.filter(a => a.isMain === true), mood: facts.mood, steps: facts.steps, sky, ...(from === undefined ? {} : { from }) })
+  const talk = facts.team === null ? {} : { talk: talkOf(facts.team, facts.now) }
+  const scene = sceneSvg({ width, crew: facts.crew.filter(a => a.isMain === true), mood: facts.mood, steps: facts.steps, sky, ...(from === undefined ? {} : { from }), ...talk })
   const fitted = fitRow(slotsOf(facts, pressesOf(io, facts)), width)
   const hub = fitted.find(({ slot }) => slot.chip.id === HUB_CHIP)
   const row = fitted.filter(one => one !== hub)

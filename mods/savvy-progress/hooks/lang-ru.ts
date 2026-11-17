@@ -108,6 +108,8 @@ export const ru: Strings = {
   stripResting: { sleeping: 'спит', working: 'работает', happy: 'доволен', worried: 'встревожен' },
   stripStep: (n, subject) => `Шаг ${n}: ${subject}`,
   stripTeam: {
+    fresh: n => `новых: ${n}`,
+    away: name => `${name} сейчас не работает`,
     working: 'работает сейчас',
     isWorking: name => `${name} работает сейчас`,
     worked: (name, ago) => `${name} работал(а) ${ago}`,

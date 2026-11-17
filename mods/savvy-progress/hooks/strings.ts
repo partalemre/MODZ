@@ -171,6 +171,8 @@ export type Strings = {
   stripStep: (n: number, subject: string) => string
   /** The teammate chip: someone else on the same project, what they last did, and what they or their AI wrote. */
   stripTeam: {
+    fresh: (n: number) => string
+    away: (name: string) => string
     working: string
     isWorking: (name: string) => string
     worked: (name: string, ago: string) => string

@@ -107,6 +107,8 @@ export const en: Strings = {
   stripResting: { sleeping: 'asleep', working: 'working', happy: 'pleased', worried: 'uneasy' },
   stripStep: (n, subject) => `Step ${n}: ${subject}`,
   stripTeam: {
+    fresh: n => `${n} new`,
+    away: name => `${name} is not working right now`,
     working: 'working now',
     isWorking: name => `${name} is working now`,
     worked: (name, ago) => `${name} worked ${ago}`,

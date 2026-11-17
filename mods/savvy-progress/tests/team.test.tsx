@@ -23,6 +23,7 @@ const TRANSCEIVER = {
       await $.state.set({ plugin: 'transceiver', key: 'team' }, JSON.parse(e.args))
       return {}
     })
+    on('command.run', { command: 'team-shown' }, async ($: any) => ({ text: JSON.stringify((await $.state.get({ plugin: 'savvy-progress', key: 'teamShown' })).value ?? null) }))
   },
 }
 const HUB = {
@@ -188,3 +189,31 @@ for (const cols of [93, 60]) {
     expect(await ui.find({ key: 'savvy-chip-press-plan' })).toBeDefined()
   })
 }
+
+// transceiver hides its own notice for the room whose chip the strip draws, so a line is never said twice.
+const shown = async ($: any) => JSON.parse(((await $.command.run({ command: 'team-shown', args: '' } as never)) as { text: string }).text)
+
+test('team: the strip says which room its chip shows, and null when it draws none', PLUGINS, async ($, on) => {
+  const { clock } = await setup($, on, EN)
+  await setTeam($, team({ unread: 1 }))
+  const ui = await $.ui.mount(DESK)
+  expect(await ui.find({ key: 'savvy-chip-press-team' })).toBeDefined()
+  await clock.advance(1)
+  expect(await shown($)).toEqual({ roomId: 'r1' })
+  await setTeam($, null)
+  await clock.advance(1)
+  expect(await shown($)).toBeNull()
+})
+
+test('team: a chip dropped for room says null too', PLUGINS, async ($, on) => {
+  const { clock } = await setup($, on, EN)
+  await setTeam($, team({ unread: 1 }))
+  const wide = await $.ui.mount(DESK)
+  await clock.advance(1)
+  expect(await shown($)).toEqual({ roomId: 'r1' })
+  await wide.unmount()
+  const ui = await $.ui.mount({ ...DESK, props: { ...DESK.props, bodyColumns: 40 } })
+  expect(await ui.find({ key: 'savvy-chip-press-team' })).toBeUndefined()
+  await clock.advance(1)
+  expect(await shown($)).toBeNull()
+})

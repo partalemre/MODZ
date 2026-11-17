@@ -257,6 +257,9 @@ declare module 'claude-code' {
       crab: HomeCrab
       // The session strip's own count (hooks/strip-svg.ts): tokens, agent time, turns, the last turn's cost.
       tally: { tokens: number; busyMs: number; turns: number; lastCost: number; costBefore: number }
+      // The project room whose teammate chip the strip draws now, or null; transceiver reads it so its own notice
+      // above the prompt does not say the same line twice.
+      teamShown: { roomId: string } | null
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
     modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }

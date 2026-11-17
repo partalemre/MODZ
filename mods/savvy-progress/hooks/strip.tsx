@@ -42,6 +42,9 @@ export type StripIo = {
   tally: () => Promise<Partial<Tally>>
   agents: () => Promise<readonly AgentRun[]>
   mood: () => Promise<CrabMood>
+  // Writes this mod's `teamShown`: the room whose teammate chip is drawn, or null.
+  // Drawing is pure (the engine refuses a write made while ui.render runs), so `write` is done just after the draw.
+  teamShown: { read: () => Promise<unknown>; write: (value: { roomId: string } | null) => void }
   // Writes this mod's `home`: the hub comes forward, or opens the pane the value names.
   home: (value: { at: number; pane?: string }) => Promise<unknown>
   run: (command: { command: string; args?: string }) => Promise<unknown>
@@ -237,10 +240,18 @@ function springAt(row: readonly { slot: Slot }[], hasHub: boolean): number {
 
 export type StripSite = { isDesktop: boolean; cols: number }
 
+// Said only when it changes, so the write wakes nothing on the strip's every draw.
+async function sayShown(io: StripIo, roomId: string | null): Promise<void> {
+  const said = (await io.teamShown.read().catch(() => undefined)) as { roomId?: unknown } | null | undefined
+  if ((said?.roomId ?? null) === roomId && said !== undefined) return
+  io.teamShown.write(roomId === null ? null : { roomId })
+}
+
 export async function stripOf(io: StripIo, ui: Ui, site: StripSite) {
   const seen = await factsOf(io)
   const facts = { ...seen, steps: withCrew(seen.steps, seen.crew) }
   if (!site.isDesktop) {
+    await sayShown(io, null)
     const { Text } = ui
 
     return <Text key="savvy-strip" dimColor>{stripText(facts)}</Text>
@@ -254,6 +265,7 @@ export async function stripOf(io: StripIo, ui: Ui, site: StripSite) {
   const fitted = fitRow(slotsOf(facts, pressesOf(io, facts)), width)
   const hub = fitted.find(({ slot }) => slot.chip.id === HUB_CHIP)
   const row = fitted.filter(one => one !== hub)
+  await sayShown(io, facts.team !== null && row.some(({ slot }) => slot.art !== undefined) ? facts.team.roomId : null)
   const at = springAt(row, hub !== undefined)
   const chips = row.flatMap(({ slot, maxW }, i) => [...(i > 0 && i === at ? [<Box key="savvy-chip-spring" flexGrow={1} />] : []), chipPress(ui, slot, maxW)])
 

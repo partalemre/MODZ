@@ -34,6 +34,7 @@ const crab = atom({ plugin: 'savvy-progress', key: 'crab' } as const, restingCra
 // shortcut: kept in session state, so an engine restart starts tokens and time over; cost is the engine's own total.
 const tally = atom({ plugin: 'savvy-progress', key: 'tally' } as const, NO_TALLY)
 const HOME = { plugin: 'savvy-progress', key: 'home' } as const
+const TEAM_SHOWN = { plugin: 'savvy-progress', key: 'teamShown' } as const
 
 type On = Parameters<Register>[0]
 type Ui = Record<string, any>
@@ -316,6 +317,13 @@ const stripIo = ($: EngineInterface): StripIo => ({
   agents: () => read($, agents),
   mood: async () => (await read($, crab)).mood,
   home: value => $.state.set(HOME, value),
+  teamShown: {
+    read: async () => (await $.state.get(TEAM_SHOWN)).value,
+    write: value => {
+      const failed = (cause: unknown) => $.ui.log(`savvy-progress: the teammate chip could not say its room: ${String(cause)}`, { to: 'debug' })
+      $.clock.after(0, () => void $.state.set(TEAM_SHOWN, value).catch(failed))
+    },
+  },
   run: command => $.command.run(command),
   log: text => $.ui.log(`savvy-progress: ${text}`, { to: 'debug' }),
   onAgents: () => void togglePane($),

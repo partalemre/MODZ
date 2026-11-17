@@ -3218,9 +3218,9 @@ const lastFrom = (value) => {
 function teamFrom(value) {
   const v = value;
   const [first, ...rest] = Array.isArray(v?.mates) ? v.mates.flatMap(mateFrom) : [];
-  if (first === undefined)
+  if (first === undefined || !isText(v?.roomId))
     return null;
-  return { mates: [first, ...rest], unread: typeof v?.unread === "number" ? v.unread : 0, last: lastFrom(v?.last) };
+  return { roomId: v.roomId, mates: [first, ...rest], unread: typeof v?.unread === "number" ? v.unread : 0, last: lastFrom(v?.last) };
 }
 const put = (ink, svg, w) => {
   ink.out.push(svg);
@@ -3530,10 +3530,19 @@ function springAt(row, hasHub) {
     return team;
   return hasHub ? row.length : row.length - 1;
 }
+async function sayShown(io, roomId) {
+  const said = await io.teamShown.read().catch(() => {
+    return;
+  });
+  if ((said?.roomId ?? null) === roomId && said !== undefined)
+    return;
+  io.teamShown.write(roomId === null ? null : { roomId });
+}
 async function stripOf(io, ui, site) {
   const seen = await factsOf(io);
   const facts = { ...seen, steps: withCrew(seen.steps, seen.crew) };
   if (!site.isDesktop) {
+    await sayShown(io, null);
     const { Text } = ui;
     return h(Text, {
       key: "savvy-strip",
@@ -3552,6 +3561,7 @@ async function stripOf(io, ui, site) {
   const fitted = fitRow(slotsOf(facts, pressesOf(io, facts)), width);
   const hub = fitted.find(({ slot }) => slot.chip.id === HUB_CHIP);
   const row = fitted.filter((one) => one !== hub);
+  await sayShown(io, facts.team !== null && row.some(({ slot }) => slot.art !== undefined) ? facts.team.roomId : null);
   const at = springAt(row, hub !== undefined);
   const chips = row.flatMap(({ slot, maxW }, i) => [...i > 0 && i === at ? [h(Box, {
     key: "savvy-chip-spring",
@@ -3617,6 +3627,7 @@ const now$3 = atom({ plugin: "savvy-progress", key: "now" }, 0);
 const crab$2 = atom({ plugin: "savvy-progress", key: "crab" }, restingCrab(0));
 const tally$1 = atom({ plugin: "savvy-progress", key: "tally" }, NO_TALLY);
 const HOME$1 = { plugin: "savvy-progress", key: "home" };
+const TEAM_SHOWN = { plugin: "savvy-progress", key: "teamShown" };
 const PX_PER_COL$1 = 8;
 const BUTTONS_PX = 128;
 const DEFAULT_COLS$1 = 100;
@@ -3880,6 +3891,13 @@ const stripIo = ($) => ({
   agents: () => read($, agents$5),
   mood: async () => (await read($, crab$2)).mood,
   home: (value) => $.state.set(HOME$1, value),
+  teamShown: {
+    read: async () => (await $.state.get(TEAM_SHOWN)).value,
+    write: (value) => {
+      const failed = (cause) => $.ui.log(`savvy-progress: the teammate chip could not say its room: ${String(cause)}`, { to: "debug" });
+      $.clock.after(0, () => void $.state.set(TEAM_SHOWN, value).catch(failed));
+    }
+  },
   run: (command) => $.command.run(command),
   log: (text) => $.ui.log(`savvy-progress: ${text}`, { to: "debug" }),
   onAgents: () => void togglePane($)

@@ -12,7 +12,7 @@ import { FONT, paneSvg } from './theme'
 // and always one of two fixed widths, so nothing it says moves the row.
 
 export type Mate = { name: string; at: number; branch?: string }
-export type Team = { mates: [Mate, ...Mate[]]; unread: number; last: { name: string; text: string; isAgent: boolean } | null }
+export type Team = { roomId: string; mates: [Mate, ...Mate[]]; unread: number; last: { name: string; text: string; isAgent: boolean } | null }
 export type Drawing = { source: string; width: number; alt: string }
 export type Tier = 'full' | 'bare' | 'face'
 export type TeamArt = Record<Tier, Drawing>
@@ -54,11 +54,11 @@ const lastFrom = (value: unknown): Team['last'] => {
 
 /** Another mod's value, read at the boundary: null unless someone else is there. */
 export function teamFrom(value: unknown): Team | null {
-  const v = value as { mates?: unknown; unread?: unknown; last?: unknown } | null | undefined
+  const v = value as { roomId?: unknown; mates?: unknown; unread?: unknown; last?: unknown } | null | undefined
   const [first, ...rest] = Array.isArray(v?.mates) ? v.mates.flatMap(mateFrom) : []
-  if (first === undefined) return null
+  if (first === undefined || !isText(v?.roomId)) return null
 
-  return { mates: [first, ...rest], unread: typeof v?.unread === 'number' ? v.unread : 0, last: lastFrom(v?.last) }
+  return { roomId: v.roomId, mates: [first, ...rest], unread: typeof v?.unread === 'number' ? v.unread : 0, last: lastFrom(v?.last) }
 }
 
 type Ink = { x: number; out: string[] }

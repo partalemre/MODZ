@@ -90,7 +90,7 @@ Each subagent gets a crab, a name and a card with its task, step, progress, cost
 
 <img src="docs/img/team.jpg" alt="Two Transceiver windows: teammates chatting, and one agent's diff question answered by the other machine at zero tokens">
 
-Transceiver first links your own computers: sessions on, say, a Mac and a Windows PC under the same claude.ai account can chat, and one agent can ask the other for `status`, `diff`, `tests`, `log` or a file. The answer is computed on the other machine and costs zero tokens. Team rooms across different accounts use the same mechanism and are experimental. Only collaborators on the repo can ask, and secrets never leave your machine. Rooms are private claude.ai artifacts; there is no extra server. Transceiver is in beta, and it is an extra, not part of the core set. [How it works](https://github.com/partalemre/transceiver)
+Transceiver first links your own computers: sessions on, say, a Mac and a Windows PC under the same claude.ai account can chat, and one agent can ask the other for `status`, `diff`, `tests`, `log` or a file. The answer is computed on the other machine and costs zero tokens. Team rooms across different accounts use the same mechanism and are experimental. Only collaborators on the repo can ask, every message is end-to-end encrypted to the room's members, and secrets never leave your machine. Rooms are private claude.ai artifacts; there is no extra server. Transceiver is in beta, and it is an extra, not part of the core set. [How it works](https://github.com/partalemre/transceiver)
 
 ## The mods
 

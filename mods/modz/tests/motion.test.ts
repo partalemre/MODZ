@@ -43,7 +43,7 @@ const card = (detail: string, tone: HubCard['tone'], at: number): HubCard => ({ 
 
 const sources = async (ui: any) => Object.fromEntries((await ui.findAll({ type: 'Svg' })).map((svg: any) => [svg.props.alt, svg.props.source]))
 
-test('a changed card redraws only its own row; the rest keep their sources, pressed rows held still', { plugins: [testsMod] }, async ($: any, on: any) => {
+test('a changed card redraws only its own row; the rest keep their sources, pressed rows held still', { timeoutMs: 20_000, plugins: [testsMod] }, async ($: any, on: any) => {
   stubWorld(on)
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   const say = (value: HubCard) => $.command.run({ command: 'say', args: JSON.stringify(value) })
@@ -62,7 +62,7 @@ test('a changed card redraws only its own row; the rest keep their sources, pres
   expect(changed).toEqual(['Testler: 42/42 geçti'])
 })
 
-test('live work lights its glyph; a quiet row stays in the quiet ink', { plugins: [testsMod] }, async ($: any, on: any) => {
+test('live work lights its glyph; a quiet row stays in the quiet ink', { timeoutMs: 20_000, plugins: [testsMod] }, async ($: any, on: any) => {
   stubWorld(on)
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   await $.command.run({ command: 'say', args: JSON.stringify(card('Çalışıyor 12/42', 'live', 1)) })

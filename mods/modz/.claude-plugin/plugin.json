@@ -15,8 +15,8 @@
     "keepUpdated": {
       "type": "boolean",
       "title": "Keep mods up to date",
-      "description": "Turn on Claude Code's own auto-update for the MODZ marketplace once, so every mod you installed (transceiver included) updates itself. A choice you already made under /plugin is kept.",
-      "default": true
+      "description": "Off by default: new commits reach your machine only when you update. On, it turns on Claude Code's own auto-update for the MODZ marketplace once, so every installed mod updates itself without your review. A choice you already made under /plugin is kept.",
+      "default": false
     },
     "keepReplyLanguage": {
       "type": "boolean",

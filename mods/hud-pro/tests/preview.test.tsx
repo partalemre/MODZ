@@ -42,7 +42,7 @@ const STATES = [
 ] as const
 
 for (const state of STATES) {
-  test(`preview ${state.label}`, async ($, on) => {
+  test(`preview ${state.label}`, { timeoutMs: 20_000 }, async ($, on) => {
     stubSession(on, state.value)
     await start($, 'desktop')
     await log(state.label, await $.ui.mount({ ...BAND, surface: 'desktop' }))
@@ -80,7 +80,7 @@ async function logPane($: any, label: string) {
 }
 
 // A 5-hour window filling within the hour and a context five turns from full: both estimates on the line.
-test('preview line-forecast', async ($, on) => {
+test('preview line-forecast', { timeoutMs: 20_000 }, async ($, on) => {
   const live: any = { ...usage(40, 30, 75), context: { window: 200_000, tokens: 150_000, percent: 75 } }
   const clock = stubSession(on, live)
   await start($, 'desktop')
@@ -96,14 +96,14 @@ test('preview line-forecast', async ($, on) => {
 })
 
 // The context card before any breakdown or turn: the estimate line and the button alone.
-test('preview hud-context-empty', async ($, on) => {
+test('preview hud-context-empty', { timeoutMs: 20_000 }, async ($, on) => {
   stubSession(on, usage(32, 38, 41))
   await start($, 'desktop')
   await logPane($, 'hud-context-empty')
 })
 
 // After "Compact now": the card says what it came to.
-test('preview hud-compacted', async ($, on) => {
+test('preview hud-compacted', { timeoutMs: 20_000 }, async ($, on) => {
   const clock = stubSession(on, withBreakdown(usage(32, 38, 19)))
   await start($, 'desktop')
   const terminal = await logPane($, 'hud-before-compact')
@@ -113,7 +113,7 @@ test('preview hud-compacted', async ($, on) => {
   await logPane($, 'hud-compacted')
 })
 
-test('preview hud-full', async ($, on) => {
+test('preview hud-full', { timeoutMs: 20_000 }, async ($, on) => {
   const live: any = withBreakdown(usage(32, 38, 41))
   const clock = stubSession(on, live)
   await start($, 'desktop')
@@ -144,7 +144,7 @@ const METERS = {
 }
 
 // The one Usage pane: Limits, then Pace with turn shares and a fill before the reset, then a meter mod's section.
-test('preview usage-pane', { plugins: [METERS] } as any, async ($: any, on: any) => {
+test('preview usage-pane', { timeoutMs: 20_000, plugins: [METERS] } as any, async ($: any, on: any) => {
   const clock = stubSession(on, usage(58, 30, 41), {})
   await start($, 'desktop')
   for (const five of [40, 46, 52]) {

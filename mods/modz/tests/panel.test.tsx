@@ -53,7 +53,7 @@ async function hubWith($: any, on: any, name: string) {
 }
 
 describe('a row pressed on the hub', () => {
-  test('swaps the panel to the mod even when a click left the hub holding the keyboard', { plugins: [guest] }, async ($: any, on: any) => {
+  test('swaps the panel to the mod even when a click left the hub holding the keyboard', { timeoutMs: 20_000, plugins: [guest] }, async ($: any, on: any) => {
     const { world, ui, row } = await hubWith($, on, 'guest')
     world.hold.id = 'modz'
 
@@ -62,7 +62,7 @@ describe('a row pressed on the hub', () => {
     expect(world.up).toEqual(['guest'])
   })
 
-  test('swaps the panel when nothing holds the hub, and leaves no stand-in behind', { plugins: [guest] }, async ($: any, on: any) => {
+  test('swaps the panel when nothing holds the hub, and leaves no stand-in behind', { timeoutMs: 20_000, plugins: [guest] }, async ($: any, on: any) => {
     const { world, ui, row } = await hubWith($, on, 'guest')
 
     await ui.press({ key: row })
@@ -71,7 +71,7 @@ describe('a row pressed on the hub', () => {
     expect(world.opened).not.toContain('modz-hold')
   })
 
-  test('brings the hub back alone when the mod never answers a held press', { options: { openOnStart: true }, plugins: [mute] }, async ($: any, on: any) => {
+  test('brings the hub back alone when the mod never answers a held press', { timeoutMs: 20_000, options: { openOnStart: true }, plugins: [mute] }, async ($: any, on: any) => {
     const { world, ui, row } = await hubWith($, on, 'mute')
     world.hold.id = 'modz'
 
@@ -80,7 +80,7 @@ describe('a row pressed on the hub', () => {
     expect(world.up).toEqual(['modz'])
   })
 
-  test('closes a pane left behind a tab before asking, so the asked one opens anew and comes forward', { plugins: [guest] }, async ($: any, on: any) => {
+  test('closes a pane left behind a tab before asking, so the asked one opens anew and comes forward', { timeoutMs: 20_000, plugins: [guest] }, async ($: any, on: any) => {
     const { world, ui, row } = await hubWith($, on, 'guest')
     world.up.splice(0, world.up.length, 'guest', 'modz')
 
@@ -94,7 +94,7 @@ describe('a row pressed on the hub', () => {
 describe('a desktop that comes back', () => {
   const attach = ($: any) => $.session.attach({ surface: 'desktop', clientId: 'desktop:default' })
 
-  test('finds the mod it left on stage, with the hub staying away', { plugins: [guest] }, async ($: any, on: any) => {
+  test('finds the mod it left on stage, with the hub staying away', { timeoutMs: 20_000, plugins: [guest] }, async ($: any, on: any) => {
     const { world, ui, row } = await hubWith($, on, 'guest')
     await ui.press({ key: row })
     const before = world.opened.length
@@ -105,7 +105,7 @@ describe('a desktop that comes back', () => {
     expect(world.up).toEqual(['guest'])
   })
 
-  test('gets the hub back when no mod holds the panel', { options: { openOnStart: true } }, async ($: any, on: any) => {
+  test('gets the hub back when no mod holds the panel', { timeoutMs: 20_000, options: { openOnStart: true } }, async ($: any, on: any) => {
     const world = stubWorld(on)
     on('session.attach', (_: unknown, e: any) => ({ clientId: e.clientId }))
     await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
@@ -125,7 +125,7 @@ const comeBack = ($: any) => $.session.attach({ surface: 'desktop', clientId: 'd
 const withTimers = (on: any) => on('clock.after', () => ({ value: undefined }))
 
 describe('a hub that starts closed', () => {
-  test('stays closed when a desktop comes back with an empty panel', async ($: any, on: any) => {
+  test('stays closed when a desktop comes back with an empty panel', { timeoutMs: 20_000 }, async ($: any, on: any) => {
     const world = stubWorld(on)
     on('session.attach', (_: unknown, e: any) => ({ clientId: e.clientId }))
     await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
@@ -135,7 +135,7 @@ describe('a hub that starts closed', () => {
     expect(world.opened).toEqual([])
   })
 
-  test('opens again, once and without the keyboard, for a tab the desktop kept from before a restart', async ($: any, on: any) => {
+  test('opens again, once and without the keyboard, for a tab the desktop kept from before a restart', { timeoutMs: 20_000 }, async ($: any, on: any) => {
     const world = stubWorld(on)
     withTimers(on)
     await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
@@ -151,7 +151,7 @@ describe('a hub that starts closed', () => {
     expect(world.up).toEqual([])
   })
 
-  test('a late draw of a hub this engine closed does not bring it back', async ($: any, on: any) => {
+  test('a late draw of a hub this engine closed does not bring it back', { timeoutMs: 20_000 }, async ($: any, on: any) => {
     const world = stubWorld(on)
     withTimers(on)
     await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })

@@ -286,7 +286,7 @@ const placeOf = async ($: EngineInterface): Promise<Place | undefined> =>
 // network, and the strip is drawn again when the answer differs.
 let weatherSeen: { at: number; kind: Weather | undefined } = { at: 0, kind: undefined }
 async function askWeather($: EngineInterface): Promise<void> {
-  if ((await $.env.get('MODZ_WEATHER')) === 'off') return
+  if ((await $.env.get('MODZ_WEATHER')) !== 'on') return
   const place = await (placeFound ??= placeOf($))
   if (place === undefined) return
   const kind = weatherOfText((await $.http.fetch(weatherUrl(place))).text)

@@ -157,6 +157,8 @@ const HUB = {
     openPane: (title) => `Open ${title}`,
     modsOn: (n) => `${count(n, "mod", "mods")} on`,
     unreadable: "the mod list could not be read",
+    updateReady: "update ready",
+    updateToast: "A new MODZ is out. To get it: claude plugin marketplace update modz, then claude plugin update modz@modz (and each mod you use).",
     command: "Opens the modz hub: agents, files, plan, tests and every mod",
     opened: "Opened the modz panel.",
     customize: "Customize",
@@ -193,6 +195,8 @@ const HUB = {
     openPane: (title) => `${title} panelini aç`,
     modsOn: (n) => `${n} mod açık`,
     unreadable: "mod listesi okunamadı",
+    updateReady: "güncelleme var",
+    updateToast: "MODZ'un yeni sürümü çıktı. Almak için: claude plugin marketplace update modz, sonra claude plugin update modz@modz (ve kullandığın her mod).",
     command: "modz ana panelini açar: ajanlar, dosyalar, plan, testler ve tüm modlar",
     opened: "modz paneli açıldı.",
     customize: "Düzenle",
@@ -2267,37 +2271,37 @@ function hubTree(ui, view) {
 }
 
 const LOCAL_SOURCES = new Set(["directory", "file"]);
-function isRecord$1(value) {
+function isRecord$2(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function parsed(text) {
+function parsed$1(text) {
   if (text === undefined || text.trim() === "")
     return {};
   try {
     const value = JSON.parse(text);
-    return isRecord$1(value) ? value : undefined;
+    return isRecord$2(value) ? value : undefined;
   } catch {
     return;
   }
 }
 function isRemote(source) {
-  return isRecord$1(source) && typeof source.source === "string" && !LOCAL_SOURCES.has(source.source);
+  return isRecord$2(source) && typeof source.source === "string" && !LOCAL_SOURCES.has(source.source);
 }
 function entryOf(plan, declared) {
-  if (isRecord$1(declared)) {
+  if (isRecord$2(declared)) {
     if ("autoUpdate" in declared || !isRemote(declared.source))
       return;
     return { ...declared, autoUpdate: true };
   }
-  const known = parsed(plan.knownText)?.[plan.market];
-  const source = isRecord$1(known) ? known.source : undefined;
+  const known = parsed$1(plan.knownText)?.[plan.market];
+  const source = isRecord$2(known) ? known.source : undefined;
   return isRemote(source) ? { source, autoUpdate: true } : undefined;
 }
 function autoUpdateSettings(plan) {
-  const settings = parsed(plan.settingsText);
+  const settings = parsed$1(plan.settingsText);
   if (settings === undefined || plan.market === "")
     return;
-  const markets = isRecord$1(settings.extraKnownMarketplaces) ? settings.extraKnownMarketplaces : {};
+  const markets = isRecord$2(settings.extraKnownMarketplaces) ? settings.extraKnownMarketplaces : {};
   const entry = entryOf(plan, markets[plan.market]);
   if (entry === undefined)
     return;
@@ -2311,6 +2315,40 @@ function installOf(root) {
     return;
   return { pluginsDir: match[1], market: match[2] };
 }
+
+const isRecord$1 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+function parsed(text) {
+  if (text === undefined)
+    return;
+  try {
+    const value = JSON.parse(text);
+    return isRecord$1(value) ? value : undefined;
+  } catch {
+    return;
+  }
+}
+function remoteOf(knownText, market) {
+  const entry = parsed(knownText)?.[market];
+  const source = isRecord$1(entry) ? entry.source : undefined;
+  if (!isRecord$1(source))
+    return;
+  if (source.source === "github" && typeof source.repo === "string")
+    return `https://github.com/${source.repo}.git`;
+  if ((source.source === "git" || source.source === "url") && typeof source.url === "string")
+    return source.url;
+  return;
+}
+function installedCommit(installedText, key) {
+  const plugins = parsed(installedText)?.plugins;
+  const entries = isRecord$1(plugins) ? plugins[key] : undefined;
+  const first = Array.isArray(entries) ? entries[0] : undefined;
+  const sha = isRecord$1(first) ? first.gitCommitSha : undefined;
+  return typeof sha === "string" ? sha : undefined;
+}
+function headOf(lsRemote) {
+  return /^([0-9a-f]{40})\s+HEAD$/m.exec(lsRemote)?.[1];
+}
+const isNewer = (installed, head) => installed !== undefined && head !== undefined && installed !== head;
 
 const GROUPS = ["look", "safety", "meter", "flow", "other"];
 const BOTH = ["desktop", "terminal"];
@@ -2542,6 +2580,16 @@ async function keepUpdated(disk) {
     return;
   await disk.write(settingsPath, next);
   disk.log(`modz: auto-update turned on for the ${install.market} marketplace`);
+}
+async function updateReady(disk, run) {
+  const install = installOf(disk.root);
+  if (install === undefined)
+    return false;
+  const url = remoteOf(await textOf$2(disk, `${install.pluginsDir}/known_marketplaces.json`), install.market);
+  const installed = installedCommit(await textOf$2(disk, `${install.pluginsDir}/installed_plugins.json`), `modz@${install.market}`);
+  if (url === undefined || installed === undefined)
+    return false;
+  return isNewer(installed, headOf((await run(["git", "ls-remote", url, "HEAD"])).stdout));
 }
 
 const ENGLISH = {
@@ -4051,16 +4099,17 @@ async function toggleHub(io) {
   await closeSides(io);
 }
 
-function metaOf(market) {
+function metaOf(market, hasUpdate) {
   if (market.mods.length === 0)
     return hubWords().unreadable;
-  return hubWords().modsOn(market.mods.filter((mod) => mod.isEnabled === true).length);
+  const on = hubWords().modsOn(market.mods.filter((mod) => mod.isEnabled === true).length);
+  return hasUpdate ? `${on} · ${hubWords().updateReady}` : on;
 }
 function viewOf(parts, frame) {
   const presence = withHosted(presenceOf(parts.market), parts.isUsageHosting);
   const rows = withUnanswered(rowsOf(parts.cards, presence, parts.layout), parts.unanswered, hubWords().noAnswer);
   const hidden = hiddenRowsOf(parts.cards, presence, parts.layout);
-  return { rows, hidden, focus: focusOf(rows), now: nowOf(rows, parts.now), meta: metaOf(parts.market), isEditing: parts.isEditing, ...frame };
+  return { rows, hidden, focus: focusOf(rows), now: nowOf(rows, parts.now), meta: metaOf(parts.market, parts.hasUpdate === true), isEditing: parts.isEditing, ...frame };
 }
 function plainViewOf(parts, frame) {
   const rows = rowsOf(parts.cards, withHosted(presenceOf(parts.market), parts.isUsageHosting));
@@ -4075,6 +4124,7 @@ const OWN_PANES = [PANE, MODS_PANE, ...SIDE_PANES];
 const cardsAtom = atom({ plugin: "modz", key: "cards" }, {});
 const layoutAtom = atom({ plugin: "modz", key: "layout" }, EMPTY_LAYOUT);
 const editingAtom = atom({ plugin: "modz", key: "isEditing" }, false);
+const updateAtom = atom({ plugin: "modz", key: "hasUpdate" }, false);
 const unansweredAtom = atom({ plugin: "modz", key: "unanswered" }, null);
 const ON = { plugin: "modz", key: "isOn" };
 const LAYOUT_KEY = "layout";
@@ -4131,7 +4181,15 @@ const frameOf = async ($, site) => ({ ...site, theme: await themeNow($), actions
 async function partsOf($) {
   const [cards, layout, isEditing] = [await read($, cardsAtom), await read($, layoutAtom), await read($, editingAtom)];
   const host = await $.state.get({ plugin: "hud-pro", key: "host" }).catch(() => ({ value: false }));
-  return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()), isUsageHosting: host.value === true };
+  return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()), isUsageHosting: host.value === true, hasUpdate: await read($, updateAtom) };
+}
+const UPDATE_CHECK_MS = 1e4;
+async function noticeUpdate($) {
+  const isReady = await updateReady(diskOf($), (argv) => $.process.run(argv, { timeoutMs: UPDATE_CHECK_MS }));
+  if (!isReady || await read($, updateAtom))
+    return;
+  await update($, updateAtom, () => true);
+  $.ui.toast(hubWords().updateToast, { timeoutMs: 12000 });
 }
 function startHooks(on, options) {
   on("session.start", async ($, e, next) => {
@@ -4151,9 +4209,10 @@ function startHooks(on, options) {
       hubKept.isHeld = true;
       await $.ui.open({ id: PANE, title: TITLE });
     }
-    if (options.keepUpdated !== false) {
+    if (options.keepUpdated === true) {
       keepUpdated(diskOf($)).catch((cause) => $.ui.log(`modz: auto-update could not be turned on: ${String(cause)}`, { to: "debug" }));
     }
+    noticeUpdate($).catch((cause) => $.ui.log(`modz: the update check failed: ${String(cause)}`, { to: "debug" }));
     return started;
   });
   on("session.attach", async ($, e, next) => {

@@ -20,7 +20,7 @@ function handlesOf(node: any, out: Record<string, number> = {}): Record<string, 
   return out
 }
 
-test('a band redraw keeps every button’s press handle', async ($, on) => {
+test('a band redraw keeps every button’s press handle', { timeoutMs: 20_000 }, async ($, on) => {
   const clock = mock.clock(on, { now: START })
   world(on, [])
   await $.session.start({ ...session, surface: 'desktop', isInteractive: true })

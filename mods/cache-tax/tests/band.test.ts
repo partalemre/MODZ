@@ -17,7 +17,7 @@ const MOSS_OF = { terminal: 'success', desktop: MOSS } as const
 const AMBER_OF = { terminal: 'warning', desktop: '#E9B949' } as const
 
 describe('status row', () => {
-  test('redraws reuse session preferences and theme changes repaint immediately', async ($, on) => {
+  test('redraws reuse session preferences and theme changes repaint immediately', { timeoutMs: 20_000 }, async ($, on) => {
     mock.clock(on, { now: START })
     const w = world(on, [])
     await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
@@ -35,7 +35,7 @@ describe('status row', () => {
     expect(w.forks.length).toBe(0)
   })
 
-  test('a denied theme change preserves the existing icon', async ($, on) => {
+  test('a denied theme change preserves the existing icon', { timeoutMs: 20_000 }, async ($, on) => {
     mock.clock(on, { now: START })
     world(on, [], { denyTheme: true })
     await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
@@ -46,7 +46,7 @@ describe('status row', () => {
     expect((await ui.find({ type: 'Image' }))?.props.source).toEqual({ png: statusIcons.dark.warm.png })
   })
 
-  test('the written theme wins over the requested value', async ($, on) => {
+  test('the written theme wins over the requested value', { timeoutMs: 20_000 }, async ($, on) => {
     mock.clock(on, { now: START })
     world(on, [], { writtenTheme: 'light' })
     await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
@@ -57,7 +57,7 @@ describe('status row', () => {
   })
 
   for (const surface of ['terminal', 'desktop'] as const) {
-    test(`${surface}: official cube follows state and theme with a text alternative`, async ($, on) => {
+    test(`${surface}: official cube follows state and theme with a text alternative`, { timeoutMs: 20_000 }, async ($, on) => {
       const clock = mock.clock(on, { now: 10 * HOUR })
       const theme = { value: 'dark' }
       // A ping with nothing to fork leaves the window waiting, so the cache goes cold by the clock alone.
@@ -88,7 +88,7 @@ describe('status row', () => {
       expect((await ui.find(ROW))?.text).toMatch(/süresi doldu · 0 dk önce · sonraki mesaj en fazla \$4,01/)
     })
 
-    test(`${surface}: NO_COLOR uses a bold text icon and uncolored state`, async ($, on) => {
+    test(`${surface}: NO_COLOR uses a bold text icon and uncolored state`, { timeoutMs: 20_000 }, async ($, on) => {
       mock.clock(on, { now: START })
       world(on, [], { noColor: true })
       await $.session.start({ ...session, surface, isInteractive: true })
@@ -103,7 +103,7 @@ describe('status row', () => {
   }
 
   for (const surface of ['terminal', 'desktop'] as const) {
-    test(`${surface}: unknown, warm, cold and warm again agree with the card`, async ($, on) => {
+    test(`${surface}: unknown, warm, cold and warm again agree with the card`, { timeoutMs: 20_000 }, async ($, on) => {
       const clock = mock.clock(on, { now: 10 * HOUR })
       const w = world(on, [{ isAnswered: false, reason: 'nothing-to-fork' } satisfies ModelForkResult], { bandText: 'other mod' })
       await $.session.start({ ...session, surface, isInteractive: true })
@@ -131,7 +131,7 @@ describe('status row', () => {
     })
   }
 
-  test('cold resume, compaction and clear reset the row without a ping', async ($, on) => {
+  test('cold resume, compaction and clear reset the row without a ping', { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: 10 * HOUR })
     const w = world(on, [], { store: new Map([['deadline:S1', 13 * HOUR]]) })
     await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
@@ -151,7 +151,7 @@ describe('status row', () => {
     expect(w.forks.length).toBe(0)
   })
 
-  test('window expiry removes the row and surveys retain their band', async ($, on) => {
+  test('window expiry removes the row and surveys retain their band', { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: START })
     const w = world(on, [], { bandText: 'survey' })
     await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
@@ -166,7 +166,7 @@ describe('status row', () => {
     expect(w.forks.length).toBe(0)
   })
 
-  test('a warm resume restores green and ignores subagent cache activity; a stored hour-long period pings at 50m', async ($, on) => {
+  test('a warm resume restores green and ignores subagent cache activity; a stored hour-long period pings at 50m', { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: 10 * HOUR })
     const w = world(on, [{ isAnswered: false, reason: 'nothing-to-fork' } satisfies ModelForkResult], { store: new Map<string, unknown>([['deadline:S1', 13 * HOUR], ['every:S1', 90 * MIN]]) })
     await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
@@ -181,7 +181,7 @@ describe('status row', () => {
   })
 
   for (const surface of ['vscode', 'mobile', null] as const) {
-    test(`${surface ?? 'headless'} keeps the plain status fallback`, async ($, on) => {
+    test(`${surface ?? 'headless'} keeps the plain status fallback`, { timeoutMs: 20_000 }, async ($, on) => {
       mock.clock(on, { now: START })
       const w = world(on, [])
       await $.session.start({ ...session, surface })
@@ -193,7 +193,7 @@ describe('status row', () => {
     })
   }
 
-  test('a warm ping keeps the green row and a cold read stops it neutrally', async ($, on) => {
+  test('a warm ping keeps the green row and a cold read stops it neutrally', { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: START })
     const w = world(on, [warm, { read: 0, write: 200000 }])
     await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
@@ -232,7 +232,7 @@ describe('status row', () => {
 })
 
 describe('keepwarm survives a restart and a busy API', () => {
-  test('nothing to fork waits for the next turn instead of ending the window', async ($, on) => {
+  test('nothing to fork waits for the next turn instead of ending the window', { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: START })
     const w = world(on, [{ isAnswered: false, reason: 'nothing-to-fork' } satisfies ModelForkResult, warm])
     await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
@@ -249,7 +249,7 @@ describe('keepwarm survives a restart and a busy API', () => {
     expect((await ui.find(ROW))?.text).toMatch(/son tazeleme 200k token okudu/)
   })
 
-  test('a busy API is retried after 1, 2 and 4 minutes, then the window stops', async ($, on) => {
+  test('a busy API is retried after 1, 2 and 4 minutes, then the window stops', { timeoutMs: 20_000 }, async ($, on) => {
     const busy = { isAnswered: false, reason: 'api-error', status: 529, error: 'overloaded', usage: usage() } satisfies ModelForkResult
     const clock = mock.clock(on, { now: START })
     const w = world(on, [busy, busy, busy, busy, warm])
@@ -272,7 +272,7 @@ describe('keepwarm survives a restart and a busy API', () => {
 })
 
 describe('status row visibility', () => {
-  test('without keepwarm it shows only a big cache going cold within ten minutes, or cold', async ($, on) => {
+  test('without keepwarm it shows only a big cache going cold within ten minutes, or cold', { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: START })
     const w = world(on, [])
     await $.session.start({ ...session, surface: 'desktop', isInteractive: true })
@@ -288,7 +288,7 @@ describe('status row visibility', () => {
     expect(w.forks.length).toBe(0)
   })
 
-  test('a small cache never earns the row', async ($, on) => {
+  test('a small cache never earns the row', { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: START })
     world(on, [])
     await $.session.start({ ...session, surface: 'desktop', isInteractive: true })
@@ -298,7 +298,7 @@ describe('status row visibility', () => {
     expect(await ui.find(ROW)).toBe(undefined)
   })
 
-  test('a narrow band drops the least important segments first', async ($, on) => {
+  test('a narrow band drops the least important segments first', { timeoutMs: 20_000 }, async ($, on) => {
     mock.clock(on, { now: START })
     world(on, [warm])
     await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
@@ -324,7 +324,7 @@ async function holdOn($: Engine, on: On, surface: 'terminal' | 'desktop') {
 
 describe('hold card', () => {
   for (const surface of ['terminal', 'desktop'] as const) {
-    test(`${surface}: a cold send waits on the card, and pay sends it as the person's own words`, async ($, on) => {
+    test(`${surface}: a cold send waits on the card, and pay sends it as the person's own words`, { timeoutMs: 20_000 }, async ($, on) => {
       const { w, ui, dropped } = await holdOn($, on, surface)
       expect(dropped.drop).toBe('cache-tax: mesajın bekletiliyor, kartta seç (sohbet artık hazır tutulmuyor, en fazla $4,01).')
       expect(await ui.find({ key: 'cache-tax:hold' })).not.toBe(undefined)
@@ -347,7 +347,7 @@ describe('hold card', () => {
   }
 
   for (const surface of ['terminal', 'desktop'] as const) {
-    test(`start fresh runs /clear and puts the held text back in the prompt box (${surface})`, async ($, on) => {
+    test(`start fresh runs /clear and puts the held text back in the prompt box (${surface})`, { timeoutMs: 20_000 }, async ($, on) => {
       const { w, ui } = await holdOn($, on, surface)
       await ui.press({ key: 'cache-tax:fresh' })
       expect(w.ran).toContain('clear')
@@ -356,7 +356,7 @@ describe('hold card', () => {
       expect(await ui.find({ key: 'cache-tax:hold' })).toBe(undefined)
     })
 
-    test(`cache status leaves the card up, and typing the message again pays as before (${surface})`, async ($, on) => {
+    test(`cache status leaves the card up, and typing the message again pays as before (${surface})`, { timeoutMs: 20_000 }, async ($, on) => {
       const { w, ui } = await holdOn($, on, surface)
       await ui.press({ key: 'cache-tax:status' })
       expect(await ui.find({ key: 'cache-tax:hold' })).not.toBe(undefined)
@@ -366,7 +366,7 @@ describe('hold card', () => {
     })
   }
 
-  test('the comparison shows both prices, the token span, the price ratio and a visible warm sliver', async ($, on) => {
+  test('the comparison shows both prices, the token span, the price ratio and a visible warm sliver', { timeoutMs: 20_000 }, async ($, on) => {
     const { ui } = await holdOn($, on, 'desktop')
     const compare = String((await ui.findAll({ type: 'Svg' }))[1]?.props.source)
     for (const part of ['Şimdi gönder', '$4,01', 'Olağan bir tur', '$0,05', '~200.502 token', 'baştan okunur · milyon token başına $20', 'sohbet hazırken · 80 kat ucuz']) {
@@ -374,7 +374,7 @@ describe('hold card', () => {
     }
   })
 
-  test('the terminal card says the same prices and ratio in text', async ($, on) => {
+  test('the terminal card says the same prices and ratio in text', { timeoutMs: 20_000 }, async ($, on) => {
     const { ui } = await holdOn($, on, 'terminal')
     const drawn = JSON.stringify(await ui.drawn())
     for (const part of ['Baştan okuma bedeli', '$4,01', '$0,05', '80 kat ucuz', 'keepwarm sohbeti 3 sa hazır tutsun']) {

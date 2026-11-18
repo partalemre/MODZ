@@ -1,7 +1,7 @@
 import type { Place } from './sun'
 
 // The weather over the strip's scene, asked of Open-Meteo (free, no key, no account). Only the place rounded to
-// a tenth of a degree (about a town's width) leaves the machine; MODZ_WEATHER=off keeps even that at home.
+// a tenth of a degree (about a town's width) leaves the machine, and only with MODZ_WEATHER=on: off by default.
 
 /** What the sky is doing, as the scene draws it. */
 export type Weather = 'clear' | 'cloudy' | 'overcast' | 'fog' | 'rain' | 'snow' | 'storm'

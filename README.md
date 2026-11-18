@@ -55,7 +55,7 @@ Start a new session and press **modz** under the prompt (or type `/modz`). The m
 
 - **Where it draws.** The Claude desktop app's Code tab draws everything. The terminal draws the same panels as text.
 - **Requirements.** Claude Code 2.1.295 or later, tested on 2.1.296 (terminal) and 2.1.317 (desktop app). `terminal-browser` draws in the terminal only and needs the external `terminal-browser` CLI (without it, the mod asks you to install it first). Outside the desktop app, `done-ping` falls back to a macOS banner.
-- **Updates.** Automatic and free. The first session after you install turns on Claude Code's own auto-update for the `modz` marketplace, so every mod you installed, `transceiver` from its own repo included, updates itself in the background a few minutes into a session and loads fresh at the next start. No model call, no command to run. If you already chose under `/plugin` > Marketplaces, that choice stays; to turn it off, choose **Disable auto-update** there.
+- **Updates.** By hand, so no new commit runs on your machine before you choose it. When a new one is out, the modz panel says "update ready" and a toast shows the commands: `claude plugin marketplace update modz`, then `claude plugin update <mod>@modz`. To have every mod update itself instead, turn on `keepUpdated` (`claude plugin configure modz`) or choose **Enable auto-update** under `/plugin` > Marketplaces. An install from before this change may already have auto-update on; choose **Disable auto-update** there to stop it. See [SECURITY.md](SECURITY.md).
 - **Language.** The interface is in English. Set `MODZ_LANG=tr` for Turkish.
 - **Transceiver** comes with `modz`: installing the hub installs it too (it is kept in its own repo). On a private GitHub repo you share, its team room opens by itself. Its DMs and the bridge between your own computers need a claude.ai login. If Claude Code runs inside another app (an IDE, `claude -p`, an SDK host), also set `CLAUDE_CODE_ARTIFACT=1`.
 
@@ -171,8 +171,8 @@ Read from the code, not from a promise. "Store" is the mod's own file in `~/.cla
 
 | Mod | Reads | Writes | Runs | Network | Model |
 |---|---|---|---|---|---|
-| `modz` | marketplace, settings | store; once, `autoUpdate` for its marketplace in user settings | | | |
-| `savvy-progress` | transcript | store | | | agents you start |
+| `modz` | marketplace, settings | store; with `keepUpdated` on (off by default), once, `autoUpdate` for its marketplace in user settings | `git ls-remote` | GitHub: the MODZ repo's latest commit, once a session | |
+| `savvy-progress` | transcript | store | | Open-Meteo, only with `MODZ_WEATHER=on` | agents you start |
 | `savvy-flow` | | | | | its worker agents |
 | `filetree` | project files (once opened) | | `git`, `open` | | |
 | `plan-steps` | task list, plan file | store | | | |
@@ -235,7 +235,7 @@ To remove a mod: `claude plugin uninstall <name>@modz`. To remove everything: al
 - **Unit checks.** `bin/modz check [name]` validates each mod and runs its tests, on both the terminal engine and the desktop app's engine.
 - **End to end.** `bin/modz desk` starts a real session, speaks the desktop app's own protocol to it, and clicks through every panel. Run both before opening a pull request.
 - **Seeing it.** An agent cannot see the desktop app, so `bin/modz shot [--pane] [--title t]` saves the Claude window as a PNG, even when another window covers it. Mods load when a session starts: to look at fresh code, open a new session in its own window and shoot it with `--title`.
-- **Releases.** No mod sets `version`: Claude Code then versions each one by its commit, so every push to `main` reaches every user. Keep it that way; a pinned `version` stops updates until someone bumps it.
+- **Releases.** No mod sets `version`: Claude Code then versions each one by its commit, so every push to `main` reaches every user who updates (or opted into auto-update). Keep it that way; a pinned `version` stops updates until someone bumps it.
 - **Types.** Claude Code writes its API types into `.claude-plugin/types/` beside a mod it hot-reloads. Each mod's `tsconfig.json` extends them, so `tsc -p mods/<name>` type-checks that mod.
 - **Kit gallery.** `tools/kit-gallery` draws every kit component; its tests check contrast in both themes.
 - **Design rules.** [DESIGN.md](DESIGN.md) (in Turkish) covers colour, type, components and the rules every mod follows.

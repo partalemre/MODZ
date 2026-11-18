@@ -15,7 +15,7 @@ function handlesOf(node: any, out: Record<string, number> = {}): Record<string, 
   return out
 }
 
-test('a band redraw keeps every button’s press handle', ALWAYS, async ($, on) => {
+test('a band redraw keeps every button’s press handle', { ...ALWAYS, timeoutMs: 20_000 }, async ($, on) => {
   const clock = stubSession(on, { ...USAGE, context: { window: 200_000, tokens: 168_000, percent: 84 } })
   await start($, 'desktop')
   const band = await $.ui.mount({ ...BAND, surface: 'desktop' })

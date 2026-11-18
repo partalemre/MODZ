@@ -74,7 +74,7 @@ The mod itself makes no model calls; the other chats and the home crab cost no t
 
 The interface is English. Set `MODZ_LANG=tr` in the `env` block of `~/.claude/settings.json` for Turkish. Unlike the other mods, this one also follows Claude Code's `language` setting and your system locale when `MODZ_LANG` is not set, and it has Russian too.
 
-The strip's sky follows the real sun and weather where you are. The place is your time zone's main city, read from the system's own zone table; set `MODZ_PLACE="41.01,28.97"` (latitude, longitude) for the exact spot. Sunrise and sunset are worked out on your machine. The weather comes from [Open-Meteo](https://open-meteo.com) every half hour: the only thing sent is the place rounded to a tenth of a degree. `MODZ_WEATHER=off` turns that request off and keeps the fair-weather sky.
+The strip's sky follows the real sun and weather where you are. The place is your time zone's main city, read from the system's own zone table; set `MODZ_PLACE="41.01,28.97"` (latitude, longitude) for the exact spot. Sunrise and sunset are worked out on your machine. The sky is fair weather unless you set `MODZ_WEATHER=on`: then the weather comes from [Open-Meteo](https://open-meteo.com) every half hour, and the only thing sent is the place rounded to a tenth of a degree. Off by default, nothing leaves your machine.
 
 ## Credits
 

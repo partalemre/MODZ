@@ -1,0 +1,24 @@
+# Sessions run each mod's hooks/bundle.js, not the .ts beside it. This rebuilds every bundle from source and fails
+# when a committed bundle differs, so the code people read on GitHub is the code that runs (SECURITY.md).
+name: bundle-match
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  match:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bin/modz build
+      - run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --porcelain
+            echo "::error::A committed bundle.js does not match its source. Run bin/modz build and commit the result."
+            exit 1
+          fi

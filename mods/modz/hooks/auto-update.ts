@@ -1,7 +1,8 @@
 // Keeps every installed mod current at no cost: Claude Code's own background auto-update refreshes a
 // marketplace and every plugin installed from it, transceiver's own repo included, but it is off for a
-// third-party marketplace until someone turns it on. The hub turns it on once, in the user settings
-// entry the engine reads first, and never touches a choice the person already made there.
+// third-party marketplace until someone turns it on. With keepUpdated on (off by default, so no commit runs
+// unreviewed), the hub turns it on once, in the user settings entry the engine reads first, and never touches
+// a choice the person already made there.
 
 type Json = Record<string, unknown>
 

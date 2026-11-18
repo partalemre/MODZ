@@ -3967,7 +3967,7 @@ let placeFound;
 const placeOf = async ($) => placeFromText(await $.env.get("MODZ_PLACE")) ?? placeOfZone(await $.fs.read(ZONE_TAB), Intl.DateTimeFormat().resolvedOptions().timeZone);
 let weatherSeen = { at: 0, kind: undefined };
 async function askWeather($) {
-  if (await $.env.get("MODZ_WEATHER") === "off")
+  if (await $.env.get("MODZ_WEATHER") !== "on")
     return;
   const place = await (placeFound ??= placeOf($));
   if (place === undefined)

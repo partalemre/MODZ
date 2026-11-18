@@ -146,7 +146,7 @@ function startHooks(on: On, options: Options): void {
       hubKept.isHeld = true
       await $.ui.open({ id: PANE, title: TITLE })
     }
-    if (options.keepUpdated !== false) {
+    if (options.keepUpdated === true) {
       void keepUpdated(diskOf($)).catch(cause => $.ui.log(`modz: auto-update could not be turned on: ${String(cause)}`, { to: 'debug' }))
     }
 

@@ -12,10 +12,7 @@
     {
       "name": "modz",
       "source": "./mods/modz",
-      "description": "The MODZ panel. Opens beside the chat with a live line from every installed mod, one click to each mod's own pane.",
-      "dependencies": [
-        "transceiver"
-      ]
+      "description": "The MODZ panel. Opens beside the chat with a live line from every installed mod, one click to each mod's own pane."
     },
     {
       "name": "savvy-progress",

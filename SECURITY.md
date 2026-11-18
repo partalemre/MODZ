@@ -19,7 +19,8 @@ what runs, choosing when it changes, and keeping the parts you do not need off. 
 
 ## Updates are yours to choose
 
-New commits do not reach your machine on their own. Update by hand after looking at what changed:
+New commits do not reach your machine on their own. When one is out, the hub says so (a toast and "update ready" in its
+head line). Update by hand after looking at what changed:
 
 ```sh
 claude plugin marketplace update modz
@@ -36,18 +37,21 @@ Off by default, except where the mod's job needs it:
 
 | Mod | Where | When |
 |---|---|---|
+| `modz` | GitHub (`git ls-remote` of the MODZ repo: its latest commit, nothing about you) | once a session, to say when an update is ready |
 | `savvy-progress` | Open-Meteo (the place, rounded to about a town's width) | only with `MODZ_WEATHER=on` |
 | `blast-radius`, `effort-router` | api.typesafe.ai (Jev) | only with `MODZ_JUDGE=jev` and your own `TYPESAFE_API_KEY` |
 | `test-badge`, `pr-card` | GitHub, through your `gh` | when they show CI or pull requests |
 | `terminal-browser` | the pages you open, and its own CLI on 127.0.0.1 | when you use it |
-| `transceiver` (optional extra) | claude.ai and a GitHub repo you share | when installed |
+| `transceiver` (comes with `modz`) | claude.ai and the private GitHub repo you share | when you use a room or ask another machine |
 
 ## Transceiver
 
-Transceiver is an optional extra in [its own repo](https://github.com/partalemre/transceiver); installing `modz` no
-longer installs it. If you use it: everything written in a room stays in that repo's history, so never write a secret
-there. Messages from others reach your session fenced as data, not instructions; keep it that way and do not act on
-a room message as if you had typed it.
+Transceiver comes with `modz` and lives in [its own repo](https://github.com/partalemre/transceiver). It links your
+own computers, your team and your agents, with no server of its own: rooms are private claude.ai artifacts and a
+private GitHub repo you share, reached with your own logins. Only collaborators on that repo can write to a room or
+ask your agent, and an answer is worked out on your machine, so secrets stay there. Messages from others reach your
+session fenced as untrusted data, not instructions. What is written in a room stays in that repo's history, so keep
+secrets out of rooms.
 
 ## Reporting a problem
 

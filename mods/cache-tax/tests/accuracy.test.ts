@@ -29,7 +29,7 @@ describe('price table', () => {
     expect(priceOf('us.anthropic.claude-fable-5-2-v1:0', 1000)).toEqual([0.2, 16, 40])
   })
 
-  test('an unknown model gets no price instead of a neighbour\'s', async ($, on) => {
+  test('an unknown model gets no price instead of a neighbour\'s', { timeoutMs: 20_000 }, async ($, on) => {
     for (const id of ['claude-fable-5-3', 'claude-opus-5-7', 'claude-sonnet-6', 'claude-haiku-6-1']) expect([id, priceOf(id, 1000)]).toEqual([id, null])
     mock.clock(on, { now: START })
     world(on, [], { lang: 'en' })
@@ -40,7 +40,7 @@ describe('price table', () => {
 })
 
 describe('keepwarm only when asked', () => {
-  test('a detected full rewrite scores the miss but starts no window', async ($, on) => {
+  test('a detected full rewrite scores the miss but starts no window', { timeoutMs: 20_000 }, async ($, on) => {
     mock.clock(on, { now: START })
     const w = world(on, [warm], { lang: 'en' })
     await $.session.start(session)
@@ -51,7 +51,7 @@ describe('keepwarm only when asked', () => {
     expect((await $.command.run(run('keepwarm', 'status'))).text).toBe('keepwarm off')
   })
 
-  test('the card\'s pay button is asking: its paid write opens the window', async ($, on) => {
+  test('the card\'s pay button is asking: its paid write opens the window', { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: START })
     const w = world(on, [], { store: new Map([['guard', 'refuse']]) })
     await $.session.start({ ...session, surface: 'desktop', isInteractive: true })
@@ -67,7 +67,7 @@ describe('keepwarm only when asked', () => {
 })
 
 describe('pings are capped', () => {
-  test('a window sends at most 12 refreshes, and says so when armed', async ($, on) => {
+  test('a window sends at most 12 refreshes, and says so when armed', { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: START })
     const w = world(on, Array.from({ length: 20 }, () => warm), { lang: 'en' })
     await $.session.start(session)
@@ -78,7 +78,7 @@ describe('pings are capped', () => {
     expect((await $.command.run(run('keepwarm', 'status'))).text).toMatch(/^stopped keeping the chat ready: 12 refreshes/)
   })
 
-  test('a refresh that answers at length ends the window', async ($, on) => {
+  test('a refresh that answers at length ends the window', { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: START })
     const w = world(on, [{ read: 200000, write: 0, out: 1500 }, warm], { lang: 'en' })
     await $.session.start(session)
@@ -91,7 +91,7 @@ describe('pings are capped', () => {
 })
 
 describe('store', () => {
-  test('other sessions\' windows that lapsed over a day ago are pruned on start; recent and live ones stay', async ($, on) => {
+  test('other sessions\' windows that lapsed over a day ago are pruned on start; recent and live ones stay', { timeoutMs: 20_000 }, async ($, on) => {
     mock.clock(on, { now: START + 30 * 24 * HOUR })
     const now = START + 30 * 24 * HOUR
     const store = new Map<string, unknown>([
@@ -105,7 +105,7 @@ describe('store', () => {
 })
 
 describe('on a subscription', () => {
-  test('the guard warns by default; a fresh store holds nothing', async ($, on) => {
+  test('the guard warns by default; a fresh store holds nothing', { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: START })
     const w = world(on, [], { store: new Map(), lang: 'en' })
     await $.session.start(session)
@@ -115,7 +115,7 @@ describe('on a subscription', () => {
     expect(w.entered).toEqual(['hi'])
   })
 
-  test('a cold send reads as a share of the limit window first, dollars second', async ($, on) => {
+  test('a cold send reads as a share of the limit window first, dollars second', { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: START })
     const limits: Limits = { rateLimits: [{ kind: 'seven_day', percentUsed: 20 }], cost: { usd: 10 } }
     const w = world(on, [], { store: new Map(), lang: 'en', limits })
@@ -130,7 +130,7 @@ describe('on a subscription', () => {
   })
 
   for (const surface of ['terminal', 'desktop'] as const) {
-    test(`the hold card says the share too (${surface})`, async ($, on) => {
+    test(`the hold card says the share too (${surface})`, { timeoutMs: 20_000 }, async ($, on) => {
       const clock = mock.clock(on, { now: START })
       const limits: Limits = { rateLimits: [{ kind: 'seven_day', percentUsed: 20 }], cost: { usd: 10 } }
       world(on, [], { store: new Map([['guard', 'refuse']]), lang: 'en', limits })

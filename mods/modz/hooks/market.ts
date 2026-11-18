@@ -1,6 +1,7 @@
 // The catalog as the hub reads it from disk, and Claude Code's own auto-update switched on for it. No `$` here:
 // the engine follows `$` only into the file that got it, so register.tsx hands in the few reads these need (`Disk`).
 import { autoUpdateSettings, installOf } from './auto-update'
+import { headOf, installedCommit, isNewer, remoteOf } from './updates'
 import { installedMarketRoot, linkedDir, loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
 
@@ -108,4 +109,15 @@ export async function keepUpdated(disk: Disk): Promise<void> {
   if (next === undefined) return
   await disk.write(settingsPath, next)
   disk.log(`modz: auto-update turned on for the ${install.market} marketplace`)
+}
+
+// Whether GitHub has a newer MODZ than the installed copy (updates.ts); false for a copy that loads in place.
+export async function updateReady(disk: Disk, run: (argv: string[]) => Promise<{ stdout: string }>): Promise<boolean> {
+  const install = installOf(disk.root)
+  if (install === undefined) return false
+  const url = remoteOf(await textOf(disk, `${install.pluginsDir}/known_marketplaces.json`), install.market)
+  const installed = installedCommit(await textOf(disk, `${install.pluginsDir}/installed_plugins.json`), `modz@${install.market}`)
+  if (url === undefined || installed === undefined) return false
+
+  return isNewer(installed, headOf((await run(['git', 'ls-remote', url, 'HEAD'])).stdout))
 }

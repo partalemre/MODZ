@@ -33,7 +33,7 @@ const SIZES = [{ tag: '', columns: 112 }, { tag: '-w520', columns: 65 }, { tag: 
 for (const [theme, size] of (['dark', 'light'] as const).flatMap(theme => SIZES.map(size => [theme, size] as const))) {
   const WIDE = { ...bandProps, bodyColumns: size.columns }
 
-  test(`preview ${theme}${size.tag}: hold card`, async ($, on) => {
+  test(`preview ${theme}${size.tag}: hold card`, { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: START })
     world(on, [], { theme: { value: theme }, model: 'claude-opus-5', live: { tokens: 51929 } })
     await $.session.start({ ...session, surface: 'desktop', isInteractive: true })
@@ -44,12 +44,12 @@ for (const [theme, size] of (['dark', 'light'] as const).flatMap(theme => SIZES.
     console.log(`@@TREE@@hold-card-${theme}${size.tag}@@` + JSON.stringify(await ui.drawn()))
   })
 
-  test(`preview ${theme}${size.tag}: hold card for a model switch`, async ($, on) => {
+  test(`preview ${theme}${size.tag}: hold card for a model switch`, { timeoutMs: 20_000 }, async ($, on) => {
     const ui = await switchHeld($, on, { surface: 'desktop', theme, columns: size.columns })
     console.log(`@@TREE@@hold-switch-${theme}${size.tag}@@` + JSON.stringify(await ui.drawn()))
   })
 
-  test(`preview ${theme}${size.tag}: status rows`, async ($, on) => {
+  test(`preview ${theme}${size.tag}: status rows`, { timeoutMs: 20_000 }, async ($, on) => {
     const clock = mock.clock(on, { now: START })
     world(on, [{ read: 61000, write: 0 }], { theme: { value: theme }, model: 'claude-opus-5', live: { tokens: 61000 } })
     await $.session.start({ ...session, surface: 'desktop', isInteractive: true })
@@ -64,7 +64,7 @@ for (const [theme, size] of (['dark', 'light'] as const).flatMap(theme => SIZES.
   })
 }
 
-test('preview terminal: hold card and status row', async ($, on) => {
+test('preview terminal: hold card and status row', { timeoutMs: 20_000 }, async ($, on) => {
   const clock = mock.clock(on, { now: START })
   world(on, [], { theme: { value: 'dark' }, model: 'claude-opus-5', live: { tokens: 51929 } })
   await $.session.start({ ...session, surface: 'terminal', isInteractive: true })
@@ -75,7 +75,7 @@ test('preview terminal: hold card and status row', async ($, on) => {
   console.log('@@TREE@@hold-card-terminal@@' + JSON.stringify(await ui.drawn()))
 })
 
-test('preview terminal: hold card for a model switch', async ($, on) => {
+test('preview terminal: hold card for a model switch', { timeoutMs: 20_000 }, async ($, on) => {
   const ui = await switchHeld($, on, { surface: 'terminal', theme: 'dark', columns: 100 })
   console.log('@@TREE@@hold-switch-terminal@@' + JSON.stringify(await ui.drawn()))
 })

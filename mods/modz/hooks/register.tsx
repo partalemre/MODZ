@@ -13,7 +13,7 @@ import { helpText } from './guide'
 import { HOLD_PANE, MODS_PANE, SIDE_PANES } from './hub'
 import { hubTree } from './hub-pane'
 import type { HubActions } from './hub-pane'
-import { keepMarket, keepUpdated, marketOf, marketSoon } from './market'
+import { keepMarket, keepUpdated, marketOf, marketSoon, updateReady } from './market'
 import type { Disk } from './market'
 import { wireLanguageKeeper } from './language-keeper'
 import { EMPTY_LAYOUT, layoutOf, moveUp, setHidden } from './layout'
@@ -44,6 +44,7 @@ const cardsAtom = atom({ plugin: 'modz', key: 'cards' } as const, {} as Record<s
 const layoutAtom = atom({ plugin: 'modz', key: 'layout' } as const, EMPTY_LAYOUT)
 const editingAtom = atom({ plugin: 'modz', key: 'isEditing' } as const, false)
 // The pane of a row whose mod did not put it up when asked (openPane's watchdog); the row says so until pressed again.
+const updateAtom = atom({ plugin: 'modz', key: 'hasUpdate' } as const, false)
 const unansweredAtom = atom({ plugin: 'modz', key: 'unanswered' } as const, null as string | null)
 const ON = { plugin: 'modz', key: 'isOn' } as const
 const LAYOUT_KEY = 'layout'
@@ -124,7 +125,16 @@ async function partsOf($: EngineInterface): Promise<Parts> {
   // hud-pro says when its Usage pane hosts the other meter mods; nobody saying so means nobody hosts.
   const host = await $.state.get({ plugin: 'hud-pro', key: 'host' }).catch(() => ({ value: false }))
 
-  return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()), isUsageHosting: host.value === true }
+  return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()), isUsageHosting: host.value === true, hasUpdate: await read($, updateAtom) }
+}
+
+// Updates stay the person's choice: a newer MODZ on GitHub is said once, in a toast and in the hub's head line.
+const UPDATE_CHECK_MS = 10_000
+async function noticeUpdate($: EngineInterface): Promise<void> {
+  const isReady = await updateReady(diskOf($), argv => $.process.run(argv, { timeoutMs: UPDATE_CHECK_MS }))
+  if (!isReady || (await read($, updateAtom))) return
+  await update($, updateAtom, () => true)
+  $.ui.toast(hubWords().updateToast, { timeoutMs: 12_000 })
 }
 
 type On = Parameters<Register>[0]
@@ -149,6 +159,7 @@ function startHooks(on: On, options: Options): void {
     if (options.keepUpdated === true) {
       void keepUpdated(diskOf($)).catch(cause => $.ui.log(`modz: auto-update could not be turned on: ${String(cause)}`, { to: 'debug' }))
     }
+    void noticeUpdate($).catch(cause => $.ui.log(`modz: the update check failed: ${String(cause)}`, { to: 'debug' }))
 
     return started
   })

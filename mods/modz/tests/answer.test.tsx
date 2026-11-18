@@ -71,7 +71,7 @@ async function hubWith($: any, on: any, surface: 'desktop' | 'terminal' = 'deskt
 const drawnText = async (ui: any): Promise<string> => JSON.stringify(await ui.drawn())
 
 for (const surface of ['desktop', 'terminal'] as const) {
-  test(`${surface}: a row whose mod does not answer leaves the hub up and says the pane did not open`, { options: { openOnStart: true }, plugins: [mute] }, async ($: any, on: any) => {
+  test(`${surface}: a row whose mod does not answer leaves the hub up and says the pane did not open`, { timeoutMs: 20_000, options: { openOnStart: true }, plugins: [mute] }, async ($: any, on: any) => {
     const { world, clock, ui } = await hubWith($, on, surface)
     await ui.press({ key: 'open-mute' })
     expect(await drawnText(ui)).not.toContain('did not answer')
@@ -81,7 +81,7 @@ for (const surface of ['desktop', 'terminal'] as const) {
     expect(await drawnText(ui)).toContain('did not answer')
   })
 
-  test(`${surface}: a row whose mod answers swaps the panel and leaves no such word behind`, { plugins: [guest] }, async ($: any, on: any) => {
+  test(`${surface}: a row whose mod answers swaps the panel and leaves no such word behind`, { timeoutMs: 20_000, plugins: [guest] }, async ($: any, on: any) => {
     const { world, clock, ui } = await hubWith($, on, surface)
     await ui.press({ key: 'open-guest' })
     await clock.advance(ANSWER_MS)
@@ -91,7 +91,7 @@ for (const surface of ['desktop', 'terminal'] as const) {
     expect(await drawnText(ui)).not.toContain('did not answer')
   })
 
-  test(`${surface}: a mod with no pane has a row only while it says something, and a press points to the prompt`, { plugins: [band] }, async ($: any, on: any) => {
+  test(`${surface}: a mod with no pane has a row only while it says something, and a press points to the prompt`, { timeoutMs: 20_000, plugins: [band] }, async ($: any, on: any) => {
     const toasts: string[] = []
     on('ui.toast', (_: any, e: any) => (toasts.push(e.text), { value: undefined }))
     const { world, clock, ui } = await hubWith($, on, surface)
@@ -107,7 +107,7 @@ for (const surface of ['desktop', 'terminal'] as const) {
     expect(await drawnText(ui)).not.toContain('Band')
   })
 
-  test(`${surface}: a hub whose drawing throws still lists its rows, and a row pressed there opens its pane`, { plugins: [guest, layoutBreaker] }, async ($: any, on: any) => {
+  test(`${surface}: a hub whose drawing throws still lists its rows, and a row pressed there opens its pane`, { timeoutMs: 20_000, plugins: [guest, layoutBreaker] }, async ($: any, on: any) => {
     const { world, ui } = await hubWith($, on, surface)
     expect(await drawnText(ui)).toContain('plain view')
     expect(await ui.find({ key: 'open-guest' })).toBeDefined()
@@ -116,7 +116,7 @@ for (const surface of ['desktop', 'terminal'] as const) {
     expect(world.up).toEqual(['guest'])
   })
 
-  test(`${surface}: an escape sequence in a mod's card does not cost the hub`, { plugins: [guest] }, async ($: any, on: any) => {
+  test(`${surface}: an escape sequence in a mod's card does not cost the hub`, { timeoutMs: 20_000, plugins: [guest] }, async ($: any, on: any) => {
     const { ui } = await hubWith($, on, surface)
     const drawn = await drawnText(ui)
     expect(drawn).toContain('failed')

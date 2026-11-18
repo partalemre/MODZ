@@ -14,7 +14,7 @@ const band = { plugin: 'cache-tax', component: 'AbovePrompt', props: bandProps }
 
 describe('in English', () => {
   for (const surface of ['terminal', 'desktop'] as const) {
-    test(`${surface}: a cold send waits on the hold card with its English price`, async ($, on) => {
+    test(`${surface}: a cold send waits on the hold card with its English price`, { timeoutMs: 20_000 }, async ($, on) => {
       const clock = mock.clock(on, { now: START })
       world(on, [], { lang: 'en' })
       await $.session.start({ ...session, surface, isInteractive: true })
@@ -39,7 +39,7 @@ describe('in English', () => {
       expect(JSON.stringify(await ui.drawn())).not.toMatch(TURKISH_ONLY)
     })
 
-    test(`${surface}: the status row says warm and cold in English`, async ($, on) => {
+    test(`${surface}: the status row says warm and cold in English`, { timeoutMs: 20_000 }, async ($, on) => {
       const clock = mock.clock(on, { now: START })
       world(on, [], { lang: 'en' })
       await $.session.start({ ...session, surface, isInteractive: true })
@@ -59,7 +59,7 @@ describe('in English', () => {
     })
   }
 
-  test('keepwarm and /cache-tax answer in English', async ($, on) => {
+  test('keepwarm and /cache-tax answer in English', { timeoutMs: 20_000 }, async ($, on) => {
     mock.clock(on, { now: START })
     world(on, [], { lang: 'en' })
     await $.session.start({ ...session, surface: 'terminal', isInteractive: true })

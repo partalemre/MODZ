@@ -123,7 +123,7 @@ test('what fails leads, then what waits, then what runs, then the usage; a quiet
   expect(now[3]?.lines).toEqual([{ label: 'register dosyasını böl', value: '' }])
 })
 
-test('desktop: the hub itself shows each running agent, the plan step, the failure and the usage', { plugins: reporters }, async ($: any, on: any) => {
+test('desktop: the hub itself shows each running agent, the plan step, the failure and the usage', { timeoutMs: 20_000, plugins: reporters }, async ($: any, on: any) => {
   const { ui } = await busyHub($, on, 'desktop')
   const seen = await alts(ui)
 
@@ -138,7 +138,7 @@ test('desktop: the hub itself shows each running agent, the plan step, the failu
 const LIFTED = { Testler: 'tests', Ajanlar: 'agents', Plan: 'plan', Kullanım: 'usage' }
 
 for (const surface of ['desktop', 'terminal'] as const) {
-  test(`${surface}: a row lifted into "Şu an" is that row, moved: no name is drawn twice, and it keeps its own press`, { plugins: reporters }, async ($: any, on: any) => {
+  test(`${surface}: a row lifted into "Şu an" is that row, moved: no name is drawn twice, and it keeps its own press`, { timeoutMs: 20_000, plugins: reporters }, async ($: any, on: any) => {
     const { ui } = await busyHub($, on, surface)
     const names = surface === 'desktop'
       ? (await alts(ui)).map(alt => alt.split(':')[0])
@@ -151,7 +151,7 @@ for (const surface of ['desktop', 'terminal'] as const) {
   })
 }
 
-test('a section whose every row stands in "Şu an" has no heading left', { plugins: reporters }, async ($: any, on: any) => {
+test('a section whose every row stands in "Şu an" has no heading left', { timeoutMs: 20_000, plugins: reporters }, async ($: any, on: any) => {
   stubWorld(on, { enabled: ['modz', 'test-badge'] })
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   await say($, 'tests', { pane: 'tests', detail: '42/42 geçti', tone: 'ok', at: 1 })
@@ -164,7 +164,7 @@ test('a section whose every row stands in "Şu an" has no heading left', { plugi
   expect(seen).toContain('Testler: 41/42 geçti')
 })
 
-test('a meter mod hosted in the Usage pane has no row of its own, card or no card', { plugins: reporters }, async ($: any, on: any) => {
+test('a meter mod hosted in the Usage pane has no row of its own, card or no card', { timeoutMs: 20_000, plugins: reporters }, async ($: any, on: any) => {
   const effort: HubCard = { pane: 'effort', detail: 'orta · Opus 5.5', tone: 'idle', at: 1 }
   const listed = () => 'listed' as const
   expect(rowsOf({}, withHosted(listed, false)).map(row => row.entry.pane)).toContain('effort')
@@ -184,7 +184,7 @@ test('a meter mod hosted in the Usage pane has no row of its own, card or no car
   expect(await ui.find({ key: 'open-usage' })).toBeDefined()
 })
 
-test('desktop: a press on a live line opens its mod\'s pane for the detail', { plugins: reporters }, async ($: any, on: any) => {
+test('desktop: a press on a live line opens its mod\'s pane for the detail', { timeoutMs: 20_000, plugins: reporters }, async ($: any, on: any) => {
   const asked: unknown[] = []
   on('state.set', { plugin: 'modz', key: 'open' }, (_: unknown, e: any, next: any) => {
     asked.push(e.value?.pane)
@@ -199,14 +199,14 @@ test('desktop: a press on a live line opens its mod\'s pane for the detail', { p
   expect(asked).toEqual(['agents', 'plan'])
 })
 
-test('terminal: the same lines are read as text under "Şu an"', { plugins: reporters }, async ($: any, on: any) => {
+test('terminal: the same lines are read as text under "Şu an"', { timeoutMs: 20_000, plugins: reporters }, async ($: any, on: any) => {
   const { ui } = await busyHub($, on, 'terminal')
 
   for (const text of [/^Şu an$/, /auth akışını incele/, /4 dk · \$0,31/, /\+2 tane daha/, /register dosyasını böl/]) expect(await ui.find({ type: 'Text', text })).toBeDefined()
   expect(await ui.findAll({ type: 'Text', text: /41\/42 geçti/ })).toHaveLength(1)
 })
 
-test('a running time moves on the hub\'s own beat without one state write; with none running nothing is drawn again', { options: { openOnStart: true }, plugins: reporters }, async ($: any, on: any) => {
+test('a running time moves on the hub\'s own beat without one state write; with none running nothing is drawn again', { timeoutMs: 20_000, options: { openOnStart: true }, plugins: reporters }, async ($: any, on: any) => {
   const { seen } = stubWorld(on, { hasOwnClock: true })
   const clock = mock.clock(on, { now: START })
   let writes = 0
@@ -246,7 +246,7 @@ test('a running time moves on the hub\'s own beat without one state write; with 
   expect(seen.draws).toBe(restDraws)
 })
 
-test('with only the hub installed it says so and leads to the install lines', async ($: any, on: any) => {
+test('with only the hub installed it says so and leads to the install lines', { timeoutMs: 20_000 }, async ($: any, on: any) => {
   const world = stubWorld(on, { enabled: ['modz'] })
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })

@@ -55,9 +55,9 @@ Start a new session and press **modz** under the prompt (or type `/modz`). The m
 
 - **Where it draws.** The Claude desktop app's Code tab draws everything. The terminal draws the same panels as text.
 - **Requirements.** Claude Code 2.1.295 or later, tested on 2.1.296 (terminal) and 2.1.317 (desktop app). `terminal-browser` draws in the terminal only and needs the external `terminal-browser` CLI (without it, the mod asks you to install it first). Outside the desktop app, `done-ping` falls back to a macOS banner.
-- **Updates.** By hand, so no new commit runs on your machine before you choose it: `claude plugin marketplace update modz`, then `claude plugin update <mod>@modz`. To have every mod update itself instead, turn on `keepUpdated` (`claude plugin configure modz`) or choose **Enable auto-update** under `/plugin` > Marketplaces. An install from before this change may already have auto-update on; choose **Disable auto-update** there to stop it. See [SECURITY.md](SECURITY.md).
+- **Updates.** By hand, so no new commit runs on your machine before you choose it. When a new one is out, the modz panel says "update ready" and a toast shows the commands: `claude plugin marketplace update modz`, then `claude plugin update <mod>@modz`. To have every mod update itself instead, turn on `keepUpdated` (`claude plugin configure modz`) or choose **Enable auto-update** under `/plugin` > Marketplaces. An install from before this change may already have auto-update on; choose **Disable auto-update** there to stop it. See [SECURITY.md](SECURITY.md).
 - **Language.** The interface is in English. Set `MODZ_LANG=tr` for Turkish.
-- **Transceiver** is an optional extra kept in its own repo: install it with `claude plugin install transceiver@modz`. On a private GitHub repo you share, its team room opens by itself. Its DMs and the bridge between your own computers need a claude.ai login. If Claude Code runs inside another app (an IDE, `claude -p`, an SDK host), also set `CLAUDE_CODE_ARTIFACT=1`.
+- **Transceiver** comes with `modz`: installing the hub installs it too (it is kept in its own repo). On a private GitHub repo you share, its team room opens by itself. Its DMs and the bridge between your own computers need a claude.ai login. If Claude Code runs inside another app (an IDE, `claude -p`, an SDK host), also set `CLAUDE_CODE_ARTIFACT=1`.
 
 Both variables go in the `env` block of `~/.claude/settings.json`:
 
@@ -171,7 +171,7 @@ Read from the code, not from a promise. "Store" is the mod's own file in `~/.cla
 
 | Mod | Reads | Writes | Runs | Network | Model |
 |---|---|---|---|---|---|
-| `modz` | marketplace, settings | store; with `keepUpdated` on (off by default), once, `autoUpdate` for its marketplace in user settings | | | |
+| `modz` | marketplace, settings | store; with `keepUpdated` on (off by default), once, `autoUpdate` for its marketplace in user settings | `git ls-remote` | GitHub: the MODZ repo's latest commit, once a session | |
 | `savvy-progress` | transcript | store | | Open-Meteo, only with `MODZ_WEATHER=on` | agents you start |
 | `savvy-flow` | | | | | its worker agents |
 | `filetree` | project files (once opened) | | `git`, `open` | | |

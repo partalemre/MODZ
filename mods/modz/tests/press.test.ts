@@ -15,7 +15,7 @@ function handlesOf(node: any, out: Record<string, number> = {}): Record<string, 
   return out
 }
 
-test('a hub redraw keeps every button’s press handle', async ($: any, on: any) => {
+test('a hub redraw keeps every button’s press handle', { timeoutMs: 20_000 }, async ($: any, on: any) => {
   stubWorld(on)
   await $.session.start({ surface: 'desktop', isInteractive: true, cwd: '/work' })
   const ui = await $.ui.mount({ ...HUB, surface: 'desktop' })

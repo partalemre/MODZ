@@ -1,7 +1,7 @@
 // House rules for the gray zone: a Bash command blast-radius's own rules don't hold and that is
 // not plainly read-only is weighed against `.claude/house-rules.md`, when the person wrote one.
-// One judge call per command at most (kit/judge.ts, haiku on the person's own account; Jev when
-// they opted in), its verdict kept for the session. allow runs it, ask holds it on the Amber
+// One judge call per command at most (kit/judge.ts, haiku on the person's own account), its
+// verdict kept for the session. allow runs it, ask holds it on the Amber
 // card, block refuses it. No verdict (no model, a timeout, a stray reply) runs it: a judge that
 // failed never stops the person's work.
 
@@ -12,7 +12,7 @@ import { SLEEP_TIMEOUT_MS, hold, take, takeAnswered } from './hold'
 import type { Decision, Held, HoldIo } from './hold'
 import { judge } from './kit/judge'
 import type { JudgeIo } from './kit/judge'
-import { RULES_FILE, instructionsFor, isReadOnly, labelsFor, parseRules, redact, verdictOf } from './rules'
+import { RULES_FILE, instructionsFor, isReadOnly, labelsFor, parseRules, verdictOf } from './rules'
 import type { Verdict } from './rules'
 import { words } from './words'
 
@@ -46,8 +46,7 @@ async function judged($: EngineInterface, input: { command: string; rules: strin
   cache.rules = key
   const known = cache.verdicts.get(input.command)
   if (known !== undefined) return known
-  const env = { backend: await $.env.get('MODZ_JUDGE'), typesafeKey: await $.env.get('TYPESAFE_API_KEY') }
-  const io: JudgeIo = { complete: request => $.model.complete(request), fetch: (url, init) => $.http.fetch(url, init), sleep: ms => $.clock.sleep(ms), redact, env }
+  const io: JudgeIo = { complete: request => $.model.complete(request) }
   const answer = await judge(io, { text: input.command, labels: labelsFor(input.rules), instructions: instructionsFor(input.rules) })
   const verdict = answer === undefined ? null : verdictOf(answer.label, input.rules)
   if (verdict !== null) cache.verdicts.set(input.command, verdict)

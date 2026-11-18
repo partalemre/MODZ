@@ -3,21 +3,32 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { HubCard, Links, Weights } from '../types'
-import { LINKS_PANE, WEIGHT_PANE } from './hub'
+import type { HubCard, Links, Updates, Weights } from '../types'
+import { LINKS_PANE, UPDATES_PANE, WEIGHT_PANE } from './hub'
 import { setLang } from './kit/lang'
 import { pinned } from './kit/pin'
 import { HUB_PANE } from './kit/stage'
 import { isSame } from './kit/same'
 import { hasLinks, linksCard, linksOf } from './links'
+import { diskOf } from './disk'
+import { setAutoUpdate, updatesOf } from './market'
 import { copy, openHub } from './own-panes'
-import { linksTree, weightTree } from './upkeep-pane'
+import { updatesCard } from './updates'
+import { linksTree, updatesTree, weightTree } from './upkeep-pane'
+import { hubWords } from './words'
 import { weightCard, weightsOf } from './weight'
 
 // State refs live in each file that reads them: the engine follows literals, not imports.
 const cardsAtom = atom({ plugin: 'modz', key: 'cards' } as const, {} as Record<string, HubCard>)
 const linksAtom = atom({ plugin: 'modz', key: 'links' } as const, null as Links | null)
 const weightsAtom = atom({ plugin: 'modz', key: 'weights' } as const, null as Weights | null)
+const updatesAtom = atom({ plugin: 'modz', key: 'updates' } as const, null as Updates | null)
+
+// GitHub is asked once a session and on the person's press, never on each fill.
+const UPDATE_CHECK_MS = 10_000
+const TOAST_MS = 12_000
+let isHeadAsked = false
+let isAutoFailed = false
 
 const FILL_GAP_MS = 60_000
 let filledAt = 0
@@ -92,11 +103,31 @@ async function refreshWeights($: EngineInterface): Promise<boolean> {
   return true
 }
 
+async function refreshUpdates($: EngineInterface, isAsking: boolean): Promise<void> {
+  const kept = await read($, updatesAtom)
+  const isAskingNow = isAsking || !isHeadAsked
+  isHeadAsked = true
+  const run = isAskingNow ? (argv: string[]) => $.process.run(argv, { timeoutMs: UPDATE_CHECK_MS }) : undefined
+  const updates = await updatesOf(diskOf($), { run, hadNew: kept?.hasNew === true })
+  // A copy loaded in place (a checkout) is always current: no row, nothing written.
+  if (!updates.isInstalled || isSame(kept, updates)) return
+  await update($, updatesAtom, () => updates)
+  await keepCard($, updatesCard(updates, await $.clock.now().catch(() => Date.now())))
+  if (updates.hasNew && kept?.hasNew !== true) $.ui.toast(hubWords().updateToast, { timeoutMs: TOAST_MS })
+}
+
+async function setAuto($: EngineInterface, isOn: boolean): Promise<void> {
+  isAutoFailed = !(await setAutoUpdate(diskOf($), isOn))
+  await refreshUpdates($, false)
+  await $.ui.invalidate('ui.render')
+}
+
 // One of the hub's own panes was put in the panel: what it shows is read anew.
 export function refreshSide($: EngineInterface, pane: string): void {
   if (pane === HUB_PANE) fillSideRows($)
   if (pane === LINKS_PANE) void refreshLinks($, true).catch(log($, 'reading the connections'))
   if (pane === WEIGHT_PANE) void refreshWeights($).catch(log($, 'weighing the plugins'))
+  if (pane === UPDATES_PANE) void refreshUpdates($, false).catch(log($, 'reading the updates'))
 }
 
 // Both rows read anew, a minute apart at most: as the session starts, when a mod reports and when the hub comes
@@ -105,6 +136,7 @@ export function refreshSide($: EngineInterface, pane: string): void {
 async function fill($: EngineInterface): Promise<void> {
   setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
   await refreshLinks($, false)
+  await refreshUpdates($, false).catch(log($, 'reading the updates'))
   // A session still listing its skills is weighed at the next call, not a minute on.
   if (!(await refreshWeights($))) filledAt = 0
 }
@@ -127,5 +159,14 @@ export function wireUpkeep(on: On): void {
   on('ui.render', { component: 'Pane', requestId: WEIGHT_PANE }, async ($, e) => {
     const onHome = () => void openHub($).catch(log($, 'opening the hub'))
     return pinned(e, weightTree($.ui.resolve(e), { weights: await read($, weightsAtom), now: await $.clock.now().catch(() => Date.now()), onHome, onCopy: (text, press) => copy($, text, press) }))
+  })
+
+  on('ui.render', { component: 'Pane', requestId: UPDATES_PANE }, async ($, e) => {
+    const onHome = () => void openHub($).catch(log($, 'opening the hub'))
+    const onCheck = () => void refreshUpdates($, true).catch(log($, 'reading the updates'))
+    const onAuto = (isOn: boolean) => void setAuto($, isOn).catch(log($, 'setting auto-update'))
+    const view = { updates: await read($, updatesAtom), isFailed: isAutoFailed, onHome, onCheck, onAuto, onCopy: (text: string, press: unknown) => copy($, text, press) }
+
+    return pinned(e, updatesTree($.ui.resolve(e), view))
   })
 }

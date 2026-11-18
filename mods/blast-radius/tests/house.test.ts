@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { isReadOnly, labelsFor, parseRules, redact, verdictOf } from '../hooks/rules'
+import { isReadOnly, labelsFor, parseRules, verdictOf } from '../hooks/rules'
 import { BUILD_SCAN, EN, SURFACES, mountBand, pass, start, stub, world } from './world'
 
 // House rules: the gray zone put to the judge, with the person's own rules as its instructions.
@@ -9,8 +9,6 @@ const RULES_PATH = '/work/demo-app/.claude/house-rules.md'
 const RULES = '# House rules\n\n<!-- plain words -->\n- never touch the production database\n* no network calls to *.internal\n'
 const WITH_RULES = { ...EN, files: { [RULES_PATH]: RULES } }
 const PSQL = 'psql "$PROD_URL" -c "update users set plan = 1"'
-// Built at run time so no scanner mistakes the fixture for a real key.
-const SECRET = ['sk', 'live', '0123456789abcdef0123'].join('_')
 
 function byKey(node: any, key: string): any {
   if (node === null || typeof node !== 'object') return undefined
@@ -23,7 +21,7 @@ function byKey(node: any, key: string): any {
   return undefined
 }
 
-test('rules, the read-only allowlist, the labels, the verdicts and the masking', () => {
+test('rules, the read-only allowlist, the labels and the verdicts', () => {
   const rules = parseRules(RULES)
   expect(rules).toEqual(['never touch the production database', 'no network calls to *.internal'])
   expect(labelsFor(rules)).toEqual(['allow', 'ask 1', 'block 1', 'ask 2', 'block 2'])
@@ -33,8 +31,6 @@ test('rules, the read-only allowlist, the labels, the verdicts and the masking',
   expect(verdictOf('maybe', rules)).toBeNull()
   for (const command of ['ls -la', 'git status && git diff HEAD | head -5', 'rg TODO src']) expect(isReadOnly(command)).toBe(true)
   for (const command of ['echo x > out', 'git diff --output=x', 'ls; npm publish', 'cat $(which x)', 'lsof -i', 'curl api.internal']) expect(isReadOnly(command)).toBe(false)
-  expect(redact(`API_KEY=${SECRET} curl -H "Authorization: Bearer abc.def" https://me:pw@host --token ${SECRET} OUT=dist`))
-    .toBe('API_KEY=**** curl -H "Authorization: Bearer ****" https://me:****@host --token **** OUT=dist')
 })
 
 test('with no rules file nothing is judged', async ($, on) => {
@@ -141,18 +137,4 @@ test('an unnamed rule says house rules; with nobody to ask, ask refuses', async 
 
   expect(result.deny).toMatch(/a house rule \(house rules\) asks the user first, and nobody is here/)
   expect(w.opened).toHaveLength(0)
-})
-
-test('Jev, when opted in, gets the masked command and the model is not asked', async ($, on) => {
-  const w = world({ ...WITH_RULES, env: { MODZ_JUDGE: 'jev', TYPESAFE_API_KEY: 'ts-test-key' }, jevChoice: 'block 1' })
-  stub(on, w)
-  await start($, w)
-  const result: any = await ($ as any).tool.call({ tool: 'Bash', command: `DB_PASSWORD=${SECRET} psql -c "update users set plan = 1"` })
-
-  expect(result.deny).toMatch(/never touch the production database/)
-  expect(w.asked).toHaveLength(0)
-  expect(w.fetched).toHaveLength(1)
-  expect(w.fetched[0].url).toBe('https://api.typesafe.ai/v1/systemone')
-  expect(w.fetched[0].init.body).toContain('DB_PASSWORD=****')
-  expect(w.fetched[0].init.body).not.toContain(SECRET)
 })

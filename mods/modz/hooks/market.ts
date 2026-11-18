@@ -1,9 +1,10 @@
 // The catalog as the hub reads it from disk, and Claude Code's own auto-update switched on for it. No `$` here:
 // the engine follows `$` only into the file that got it, so register.tsx hands in the few reads these need (`Disk`).
-import { autoUpdateSettings, installOf } from './auto-update'
-import { headOf, installedCommit, isNewer, remoteOf } from './updates'
+import { autoUpdateSettings, installOf, isAutoOn, settingsWithAuto } from './auto-update'
+import { headOf, installedCommit, installedFrom, isNewer, remoteOf } from './updates'
 import { installedMarketRoot, linkedDir, loadCatalog, marketRoot } from './catalog'
 import type { Market } from './catalog'
+import type { Updates } from '../types'
 
 export type Disk = {
   // The folder this copy of the mod was loaded from.
@@ -111,13 +112,43 @@ export async function keepUpdated(disk: Disk): Promise<void> {
   disk.log(`modz: auto-update turned on for the ${install.market} marketplace`)
 }
 
-// Whether GitHub has a newer MODZ than the installed copy (updates.ts); false for a copy that loads in place.
-export async function updateReady(disk: Disk, run: (argv: string[]) => Promise<{ stdout: string }>): Promise<boolean> {
-  const install = installOf(disk.root)
-  if (install === undefined) return false
-  const url = remoteOf(await textOf(disk, `${install.pluginsDir}/known_marketplaces.json`), install.market)
-  const installed = installedCommit(await textOf(disk, `${install.pluginsDir}/installed_plugins.json`), `modz@${install.market}`)
-  if (url === undefined || installed === undefined) return false
+type Run = (argv: string[]) => Promise<{ stdout: string }>
 
-  return isNewer(installed, headOf((await run(['git', 'ls-remote', url, 'HEAD'])).stdout))
+async function settingsPathOf(disk: Disk): Promise<string | undefined> {
+  const home = await homeOf(disk)
+  const configDir = (await disk.env.configDir()) ?? (home === undefined ? undefined : `${home}/.claude`)
+
+  return configDir === undefined ? undefined : `${configDir}/settings.json`
+}
+
+// What the Updates row says (updates.ts). `run` asks GitHub for the latest commit; without it, `hadNew` stands.
+export async function updatesOf(disk: Disk, ask: { run?: Run; hadNew: boolean }): Promise<Updates> {
+  const install = installOf(disk.root)
+  if (install === undefined) return { isInstalled: false, isAuto: false, hasNew: false, mods: [], market: '' }
+  const settingsPath = await settingsPathOf(disk)
+  const knownText = await textOf(disk, `${install.pluginsDir}/known_marketplaces.json`)
+  const isAuto = isAutoOn({ market: install.market, settingsText: settingsPath === undefined ? undefined : await textOf(disk, settingsPath), knownText })
+  const url = remoteOf(knownText, install.market)
+  const installedText = await textOf(disk, `${install.pluginsDir}/installed_plugins.json`)
+  const installed = installedCommit(installedText, `modz@${install.market}`)
+  const known = { isInstalled: true, isAuto, mods: installedFrom(installedText, install.market), market: install.market }
+  if (ask.run === undefined || url === undefined || installed === undefined) return { ...known, hasNew: ask.hadNew }
+
+  return { ...known, hasNew: isNewer(installed, headOf((await ask.run(['git', 'ls-remote', url, 'HEAD'])).stdout)) }
+}
+
+// The person's press on the Updates pane: Claude Code's own auto-update for this marketplace, on or off.
+export async function setAutoUpdate(disk: Disk, isOn: boolean): Promise<boolean> {
+  const install = installOf(disk.root)
+  const settingsPath = await settingsPathOf(disk)
+  if (install === undefined || settingsPath === undefined) return false
+  const next = settingsWithAuto({
+    market: install.market,
+    settingsText: await textOf(disk, settingsPath),
+    knownText: await textOf(disk, `${install.pluginsDir}/known_marketplaces.json`),
+  }, isOn)
+  if (next === undefined) return false
+  await disk.write(settingsPath, next)
+
+  return true
 }

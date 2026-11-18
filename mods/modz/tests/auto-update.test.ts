@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { autoUpdateSettings, installOf } from '../hooks/auto-update'
+import { autoUpdateSettings, installOf, isAutoOn, settingsWithAuto } from '../hooks/auto-update'
 
 const GITHUB = { source: 'github', repo: 'partalemre/MODZ' }
 const settings = (value: object) => JSON.stringify(value, null, 2)
@@ -45,4 +45,15 @@ test('a local folder marketplace, an unknown one or unreadable settings are left
   expect(autoUpdateSettings({ market: 'modz', settingsText: '{}', knownText: '{}' })).toBeUndefined()
   expect(autoUpdateSettings({ market: 'modz', settingsText: '{ "a": 1, // note', knownText: known({ modz: { source: GITHUB } }) })).toBeUndefined()
   expect(autoUpdateSettings({ market: '', settingsText: '{}', knownText: known({ '': { source: GITHUB } }) })).toBeUndefined()
+})
+
+test('a press sets auto-update on or off, over any earlier choice, and keeps every other setting', () => {
+  const before = { theme: 'dark', extraKnownMarketplaces: { modz: { source: GITHUB, autoUpdate: true } } }
+  const off = written(settingsWithAuto({ market: 'modz', settingsText: settings(before), knownText: undefined }, false))
+
+  expect(off).toEqual({ theme: 'dark', extraKnownMarketplaces: { modz: { source: GITHUB, autoUpdate: false } } })
+  expect(isAutoOn({ market: 'modz', settingsText: JSON.stringify(off), knownText: undefined })).toBe(false)
+  const on = settingsWithAuto({ market: 'modz', settingsText: undefined, knownText: known({ modz: { source: GITHUB } }) }, true)
+  expect(isAutoOn({ market: 'modz', settingsText: on, knownText: undefined })).toBe(true)
+  expect(settingsWithAuto({ market: 'modz', settingsText: undefined, knownText: known({ modz: { source: { source: 'directory', path: '/m' } } }) }, true)).toBeUndefined()
 })

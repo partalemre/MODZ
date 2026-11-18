@@ -1,10 +1,11 @@
-// The hub's two side panes as plain lines on both surfaces, so a name or a line can be selected and copied:
+// The hub's side panes as plain lines on both surfaces, so a name or a line can be selected and copied:
 // Connections (links.ts) and Dead weight (weight.ts), each under the way back to the hub.
-import type { Links, Weight, Weights } from '../types'
+import type { Links, Updates, Weight, Weights } from '../types'
 import { withHome } from './kit/home'
 import { linkName } from './links'
 import { idleDays, IDLE_DAYS } from './weight'
-import { linkWords, weightWords } from './upkeep-words'
+import { updateCommands } from './updates'
+import { linkWords, updateWords, weightWords } from './upkeep-words'
 
 // The resolved element table of the surface that draws the pane.
 type Ui = Record<string, any>
@@ -110,6 +111,58 @@ export function weightTree(ui: Ui, view: WeightView) {
     <Box flexDirection="column" rowGap={1}>
       <Text dimColor>{weightWords().lead(IDLE_DAYS)}</Text>
       {weightBody(ui, view)}
+    </Box>
+  ), view.onHome)
+}
+
+// `updates` is null until the first look; `isFailed`, the last press could not change the setting.
+export type UpdatesView = {
+  updates: Updates | null
+  isFailed: boolean
+  onHome: () => void
+  onCheck: () => void
+  onAuto: (isOn: boolean) => void
+  onCopy: (text: string, press: unknown) => unknown
+}
+
+function updatesBody(ui: Ui, view: UpdatesView, updates: Updates) {
+  const { Box, Button, Text } = ui
+  const say = updateWords()
+  if (!updates.isInstalled) return [<Text key="local">{say.local}</Text>]
+  const commands = updateCommands(updates.market, updates.mods)
+
+  return [
+    updates.hasNew ? <Text key="state" bold color="warning">{say.fresh}</Text> : <Text key="state" color="success">{say.current}</Text>,
+    <Box key="auto" flexDirection="column" rowGap={1}>
+      <Text>{updates.isAuto ? say.autoOn : say.autoOff}</Text>
+      <Box flexDirection="row">
+        <Button key="updates-auto" label={updates.isAuto ? say.turnOff : say.turnOn} variant={updates.isAuto ? 'secondary' : 'primary'} onPress={() => view.onAuto(!updates.isAuto)} />
+      </Box>
+      {view.isFailed ? <Text color="error">{say.failed}</Text> : null}
+    </Box>,
+    updates.hasNew ? (
+      <Box key="hand" flexDirection="column">
+        <Text dimColor>{say.byHand}</Text>
+        <Box flexDirection="row" columnGap={1} alignItems="center">
+          <Button key="updates-copy" label={say.copy} variant="secondary" onPress={(press: unknown) => view.onCopy(commands, press)} />
+          <Text wrap="truncate">{commands}</Text>
+        </Box>
+      </Box>
+    ) : null,
+  ].filter(one => one !== null)
+}
+
+export function updatesTree(ui: Ui, view: UpdatesView) {
+  const { Box, Button, Text } = ui
+  const say = updateWords()
+
+  return withHome(ui, (
+    <Box flexDirection="column" rowGap={1}>
+      <Text dimColor>{say.lead}</Text>
+      {view.updates === null ? [<Text key="unread">{linkWords().unread}</Text>] : updatesBody(ui, view, view.updates)}
+      <Box flexDirection="row">
+        <Button key="updates-check" label={say.check} plain onPress={view.onCheck} />
+      </Box>
     </Box>
   ), view.onHome)
 }

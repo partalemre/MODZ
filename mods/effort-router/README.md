@@ -40,7 +40,6 @@ Pick a mode in the pane. Your pick is kept across sessions and overrides the plu
 | plugin option `mode` | The starting mode when you have not picked one in the pane |
 | `MODZ_LANG=tr` | Turkish interface |
 | `MODZ_THEME=light` / `dark` | Pins the pane's theme |
-| `MODZ_JUDGE=jev` and `TYPESAFE_API_KEY` | Opt-in: route mode classifies with TypeSafe Jev instead of haiku. The masked prompt then goes to `api.typesafe.ai`. If Jev cannot be used, haiku answers. |
 
 Set them in the `env` block of `~/.claude/settings.json`.
 
@@ -50,7 +49,7 @@ At `prompt.submit` (route mode only) the shared MODZ judge (`kit/judge.ts`) pick
 
 ## Access
 
-Reads: your prompts (the classifier sees only a masked first 2,000 characters). Writes: its own `$.state` and one `$.store` value (`mode`). Network: none, unless you opt in to Jev. Tokens: none in `show`; at most one haiku call per prompt in `auto`.
+Reads: your prompts (the classifier sees only a masked first 2,000 characters). Writes: its own `$.state` and one `$.store` value (`mode`). Network: none. Tokens: none in `show`; at most one haiku call per prompt in `auto`.
 
 ## Inspiration
 

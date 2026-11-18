@@ -55,7 +55,7 @@ Start a new session and press **modz** under the prompt (or type `/modz`). The m
 
 - **Where it draws.** The Claude desktop app's Code tab draws everything. The terminal draws the same panels as text.
 - **Requirements.** Claude Code 2.1.295 or later, tested on 2.1.296 (terminal) and 2.1.317 (desktop app). `terminal-browser` draws in the terminal only and needs the external `terminal-browser` CLI (without it, the mod asks you to install it first). Outside the desktop app, `done-ping` falls back to a macOS banner.
-- **Updates.** By hand, so no new commit runs on your machine before you choose it. When a new one is out, the modz panel says "update ready" and a toast shows the commands: `claude plugin marketplace update modz`, then `claude plugin update <mod>@modz`. To have every mod update itself instead, turn on `keepUpdated` (`claude plugin configure modz`) or choose **Enable auto-update** under `/plugin` > Marketplaces. An install from before this change may already have auto-update on; choose **Disable auto-update** there to stop it. See [SECURITY.md](SECURITY.md).
+- **Updates.** Open **Updates** in the modz panel. It says when a new version is out (a toast tells you too), turns automatic updates on or off with one press, and copies the commands to update by hand. Off by default, so nothing new runs on your computer before you choose it. See [SECURITY.md](SECURITY.md).
 - **Language.** The interface is in English. Set `MODZ_LANG=tr` for Turkish.
 - **Transceiver** comes with `modz`: installing the hub installs it too (it is kept in its own repo). On a private GitHub repo you share, its team room opens by itself. Its DMs and the bridge between your own computers need a claude.ai login. If Claude Code runs inside another app (an IDE, `claude -p`, an SDK host), also set `CLAUDE_CODE_ARTIFACT=1`.
 
@@ -179,7 +179,7 @@ Read from the code, not from a promise. "Store" is the mod's own file in `~/.cla
 | `projects` | transcripts, plan files, README | `<config>/modz-projects/`, store | `awk`, `tail`, `git`, `open` | | optional, per project on press |
 | `transceiver` | repo, git | its room | `git` | claude.ai | free-form `ask` |
 | `handoff` | transcript, plan | `.claude/handoff/*.md` in the main repository, store | `git status`, `git rev-parse`, `rm` (own notes) | | optional |
-| `blast-radius` | `.claude/house-rules.md` | store | `git`, a read-only look at what a held command would touch | Jev, opt-in | with house rules |
+| `blast-radius` | `.claude/house-rules.md` | store | `git`, a read-only look at what a held command would touch | | with house rules |
 | `secret-guard` | written files, Bash write commands | `.env`, `.gitignore` (on your press) | `git` | | |
 | `checkpoint` | | store, git refs, shadow repo under `~/.cache` | `git` | | |
 | `test-badge` | project files | store | your test and lint commands, `git`, `gh` | GitHub, through `gh` | |
@@ -188,13 +188,11 @@ Read from the code, not from a promise. "Store" is the mod's own file in `~/.cla
 | `session-budget` | | store | | | |
 | `cache-tax` | | store | | | when keepwarm runs |
 | `hud-pro` | context breakdown | store | | | |
-| `effort-router` | prompts | store | | Jev, opt-in | `auto` only |
+| `effort-router` | prompts | store | | | `auto` only |
 | `done-ping` | | store | `osascript`, `terminal-notifier`, `afplay` | | |
 | `reflect-mod` | transcripts, CLAUDE.md | CLAUDE.md (on your press), store | `tail` | | yes |
 | `skins` | settings | store | | | |
 | `terminal-browser` | web pages | | the `terminal-browser` CLI | yes | |
-
-Jev is TypeSafe's classifier: set `MODZ_JUDGE=jev` and `TYPESAFE_API_KEY` to use it instead of your own model account. What it is sent is masked first.
 
 ## Make it yours
 

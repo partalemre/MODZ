@@ -34,7 +34,8 @@ export const MODS_PANE = 'modz-mods'
 // a card the hub writes itself, kept under the pane's own id (upkeep.tsx).
 export const LINKS_PANE = 'modz-links'
 export const WEIGHT_PANE = 'modz-weight'
-export const SIDE_PANES: readonly string[] = [LINKS_PANE, WEIGHT_PANE]
+export const UPDATES_PANE = 'modz-updates'
+export const SIDE_PANES: readonly string[] = [LINKS_PANE, WEIGHT_PANE, UPDATES_PANE]
 
 // A blank pane of the hub's that stands in while a person's click on the hub holds the panel (register.tsx: openPane).
 export const HOLD_PANE = 'modz-hold'
@@ -56,6 +57,7 @@ const BASES: EntryBase[] = [
   { pane: MODS_PANE, mod: 'modz', icon: 'cube', role: 'edit', section: 'meter' },
   { pane: LINKS_PANE, mod: LINKS_PANE, icon: 'plug', role: 'read', section: 'meter' },
   { pane: WEIGHT_PANE, mod: WEIGHT_PANE, icon: 'trash', role: 'warn', section: 'meter' },
+  { pane: UPDATES_PANE, mod: UPDATES_PANE, icon: 'layers', role: 'ok', section: 'meter' },
 ]
 
 // The hub's own rows with their title and hint in the interface language, read when drawn.

@@ -76,3 +76,42 @@ const WEIGHT = {
 }
 
 export const weightWords = () => pick(WEIGHT)
+
+const UPDATES = {
+  en: {
+    lead: 'New MODZ versions come from GitHub. Nothing new runs on your computer until you take it.',
+    local: 'This copy loads from a folder on your computer, so it is always the latest.',
+    current: 'You have the latest version.',
+    fresh: 'A new version is out.',
+    autoOn: 'Automatic updates are on: new versions download in the background and start with your next session.',
+    autoOff: 'Automatic updates are off: you take each new version yourself.',
+    turnOn: 'Turn on automatic updates',
+    turnOff: 'Turn off automatic updates',
+    byHand: 'To update now, paste these into a terminal, then start a new session:',
+    copy: 'Copy',
+    check: 'Look again',
+    failed: 'Could not change the setting.',
+    cardNew: 'new version out',
+    cardAuto: 'automatic · up to date',
+    cardCurrent: 'up to date',
+  },
+  tr: {
+    lead: "Yeni MODZ sürümleri GitHub'dan gelir. Sen almadan bilgisayarında yeni hiçbir şey çalışmaz.",
+    local: 'Bu kopya bilgisayarındaki bir klasörden yükleniyor; hep en son sürüm.',
+    current: 'En son sürüm sende.',
+    fresh: 'Yeni bir sürüm çıktı.',
+    autoOn: 'Otomatik güncelleme açık: yeni sürümler arka planda iner, bir sonraki oturumda devreye girer.',
+    autoOff: 'Otomatik güncelleme kapalı: her yeni sürümü sen alırsın.',
+    turnOn: 'Otomatik güncellemeyi aç',
+    turnOff: 'Otomatik güncellemeyi kapat',
+    byHand: 'Şimdi güncellemek için bunları bir terminale yapıştır, sonra yeni bir oturum başlat:',
+    copy: 'Kopyala',
+    check: 'Yeniden bak',
+    failed: 'Ayar değiştirilemedi.',
+    cardNew: 'yeni sürüm var',
+    cardAuto: 'otomatik · güncel',
+    cardCurrent: 'güncel',
+  },
+}
+
+export const updateWords = () => pick(UPDATES)

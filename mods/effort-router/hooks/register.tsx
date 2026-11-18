@@ -7,7 +7,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { EffortMode, HubCard, RouteClass, TurnRow } from '../types'
 import { classify } from './classify'
 import { withHome } from './kit/home'
-import type { JudgeEnv, JudgeIo } from './kit/judge'
+import type { JudgeIo } from './kit/judge'
 import { setLang } from './kit/lang'
 import { pinned } from './kit/pin'
 import { isSame } from './kit/same'
@@ -35,10 +35,9 @@ const HUB_ON = { plugin: 'modz', key: 'isOn' } as const
 const SECTION = { plugin: 'effort-router', key: 'section' } as const
 const NOTICE = { plugin: 'effort-router', key: 'notice' } as const
 
-// The module's own: the judge's settings, the theme override, the routing judged for the person's prompt whose turn
+// The module's own: the theme override, the routing judged for the person's prompt whose turn
 // starts next (consumed by that turn alone), whether a task is under way, and the last lowered turn the band names.
 const session = {
-  env: {} as JudgeEnv,
   themeOverride: undefined as string | undefined,
   route: null as RouteClass | null,
   isInTask: false,
@@ -49,21 +48,10 @@ const session = {
 
 const log = ($: EngineInterface, line: string) => $.ui.log(`effort-router: ${line}`, { to: 'debug' })
 
-// Read once at session.start. Spelled out: the engine admits an env read by a literal name only.
-async function judgeEnvOf($: EngineInterface): Promise<JudgeEnv> {
-  const backend = await $.env.get('MODZ_JUDGE').catch(() => undefined)
-  const typesafeKey = await $.env.get('TYPESAFE_API_KEY').catch(() => undefined)
-
-  return { backend, typesafeKey }
-}
-
 // The engine calls the judge runs on; `classify` adds the mask.
 function judgeIoOf($: EngineInterface): JudgeIo {
   return {
     complete: request => $.model.complete(request),
-    fetch: (url, init) => $.http.fetch(url, init),
-    sleep: ms => $.clock.sleep(ms),
-    env: session.env,
   }
 }
 
@@ -144,7 +132,6 @@ function sessionHooks(on: On, options: Options): void {
   on('session.start', async ($, e, next) => {
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     const done = await next(e)
-    session.env = await judgeEnvOf($)
     session.themeOverride = await $.env.get('MODZ_THEME').catch(() => undefined)
     const stored = await $.store.get(MODE_STORE_KEY).catch(() => undefined)
     await update($, modeAtom, () => resolveMode(stored, options.mode))

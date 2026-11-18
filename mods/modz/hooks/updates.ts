@@ -1,6 +1,9 @@
 // Whether a newer MODZ is on GitHub than the one installed, so the hub can say so while updates stay the person's
 // choice: the installed commit (installed_plugins.json) against the marketplace repo's head (`git ls-remote`, one
 // read of a public repo that sends nothing about the person). Pure: market.ts does the reads.
+import type { HubCard, Updates } from '../types'
+import { UPDATES_PANE } from './hub'
+import { updateWords } from './upkeep-words'
 
 type Json = Record<string, unknown>
 
@@ -45,3 +48,23 @@ export function headOf(lsRemote: string): string | undefined {
 
 export const isNewer = (installed: string | undefined, head: string | undefined): boolean =>
   installed !== undefined && head !== undefined && installed !== head
+
+// The plugins installed from `market`, by name.
+export function installedFrom(installedText: string | undefined, market: string): string[] {
+  const plugins = parsed(installedText)?.plugins
+  const suffix = `@${market}`
+
+  return isRecord(plugins) ? Object.keys(plugins).filter(key => key.endsWith(suffix)).map(key => key.slice(0, -suffix.length)).sort() : []
+}
+
+// What updating by hand takes: refresh the marketplace, then each plugin installed from it.
+export const updateCommands = (market: string, mods: string[]): string =>
+  [`claude plugin marketplace update ${market}`, ...mods.map(mod => `claude plugin update ${mod}@${market}`)].join(' && ')
+
+// The row's one line; only a new version asks for attention.
+export function updatesCard(updates: Updates, at: number): HubCard {
+  const say = updateWords()
+  if (updates.hasNew) return { pane: UPDATES_PANE, detail: say.cardNew, tone: 'warn', at }
+
+  return { pane: UPDATES_PANE, detail: updates.isAuto ? say.cardAuto : say.cardCurrent, tone: 'idle', at }
+}

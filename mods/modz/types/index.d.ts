@@ -53,14 +53,17 @@ export type Links = { connected: string[]; waiting: string[]; failed: Array<{ na
 // when it was last used (null: never) and, for a plugin the settings switch, the line that turns it off.
 export type Weight = { name: string; kind: 'plugin' | 'skill'; skills: number; tokens: number; lastUsedAt: number | null; disable: string | null }
 
+// The Updates row: `isInstalled` false is a copy loaded in place (a checkout), always current; `isAuto`, Claude Code
+// updates the marketplace by itself; `hasNew`, GitHub has a newer commit than the installed one; `mods`, the
+// plugins installed from it.
+export type Updates = { isInstalled: boolean; isAuto: boolean; hasNew: boolean; mods: string[]; market: string }
 export type Weights = { items: Weight[]; tokens: number }
 
 declare module 'claude-code' {
   interface PluginState {
     // `isOn` is true while the hub runs: a mod's pane then draws its "← MODZ" button (kit/home.tsx). `unanswered`
     // names the pane of a row whose mod did not put it up when asked.
-    // `hasUpdate`: GitHub has a newer MODZ than the installed copy (hooks/updates.ts).
-    modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean; unanswered: string | null; links: Links | null; weights: Weights | null; hasUpdate: boolean }
+    modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean; unanswered: string | null; links: Links | null; weights: Weights | null; updates: Updates | null }
     // Each listed mod's own hub line (hooks/hub.ts BASES), which the hub listens for and keeps.
     'savvy-progress': { hub: HubCard; home: ModzHome; shown: ModzStage }
     filetree: { hub: HubCard; home: ModzHome; shown: ModzStage }

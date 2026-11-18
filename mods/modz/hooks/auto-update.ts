@@ -61,6 +61,39 @@ export function autoUpdateSettings(plan: UpdatePlan): string | undefined {
   return `${JSON.stringify({ ...settings, extraKnownMarketplaces: { ...markets, [plan.market]: entry } }, null, 2)}\n`
 }
 
+// The marketplace's source as settings or known_marketplaces.json name it, when it is a remote one.
+function sourceOf(plan: UpdatePlan, declared: unknown): unknown {
+  if (isRecord(declared) && isRemote(declared.source)) return declared.source
+  const known = parsed(plan.knownText)?.[plan.market]
+  const source = isRecord(known) ? known.source : undefined
+
+  return isRemote(source) ? source : undefined
+}
+
+// Whether the engine updates this marketplace by itself: the settings entry wins over known_marketplaces.json.
+export function isAutoOn(plan: UpdatePlan): boolean {
+  const markets = parsed(plan.settingsText)?.extraKnownMarketplaces
+  const declared = isRecord(markets) ? markets[plan.market] : undefined
+  if (isRecord(declared) && typeof declared.autoUpdate === 'boolean') return declared.autoUpdate
+  const known = parsed(plan.knownText)?.[plan.market]
+
+  return isRecord(known) && known.autoUpdate === true
+}
+
+// The settings text with auto-update set to `isOn` by the person's own press; undefined when there is nothing to
+// set it on (unreadable settings, a local marketplace).
+export function settingsWithAuto(plan: UpdatePlan, isOn: boolean): string | undefined {
+  const settings = parsed(plan.settingsText)
+  if (settings === undefined || plan.market === '') return undefined
+  const markets = isRecord(settings.extraKnownMarketplaces) ? settings.extraKnownMarketplaces : {}
+  const declared = markets[plan.market]
+  const source = sourceOf(plan, declared)
+  if (source === undefined) return undefined
+  const entry = { ...(isRecord(declared) ? declared : {}), source, autoUpdate: isOn }
+
+  return `${JSON.stringify({ ...settings, extraKnownMarketplaces: { ...markets, [plan.market]: entry } }, null, 2)}\n`
+}
+
 // An installed copy lives at <plugins>/cache/<marketplace>/<plugin>/<version>.
 const CACHED = /^(.*)\/cache\/([^/]+)\/[^/]+\/[^/]+\/?$/
 

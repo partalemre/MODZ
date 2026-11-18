@@ -5,7 +5,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import type { HubCard } from '../types'
+import type { HubCard, Updates } from '../types'
 import { wireCards } from './cards'
 import { footerTree } from './footer'
 import { checkFacts, checkText } from './check'
@@ -13,8 +13,7 @@ import { helpText } from './guide'
 import { HOLD_PANE, MODS_PANE, SIDE_PANES } from './hub'
 import { hubTree } from './hub-pane'
 import type { HubActions } from './hub-pane'
-import { keepMarket, keepUpdated, marketOf, marketSoon, updateReady } from './market'
-import type { Disk } from './market'
+import { keepMarket, keepUpdated, marketOf, marketSoon } from './market'
 import { wireLanguageKeeper } from './language-keeper'
 import { EMPTY_LAYOUT, layoutOf, moveUp, setHidden } from './layout'
 import type { HubLayout } from './layout'
@@ -27,6 +26,7 @@ import { wirePlainRows } from './plain-rows'
 import { noteAnswer, openPane, stepAside, toggleHub } from './swap'
 import type { Swap } from './swap'
 import { themeOf } from './theme'
+import { diskOf } from './disk'
 import { fillSideRows, refreshSide, wireUpkeep } from './upkeep'
 import type { Theme } from './theme'
 import { plainViewOf, viewOf } from './view'
@@ -44,7 +44,7 @@ const cardsAtom = atom({ plugin: 'modz', key: 'cards' } as const, {} as Record<s
 const layoutAtom = atom({ plugin: 'modz', key: 'layout' } as const, EMPTY_LAYOUT)
 const editingAtom = atom({ plugin: 'modz', key: 'isEditing' } as const, false)
 // The pane of a row whose mod did not put it up when asked (openPane's watchdog); the row says so until pressed again.
-const updateAtom = atom({ plugin: 'modz', key: 'hasUpdate' } as const, false)
+const updatesAtom = atom({ plugin: 'modz', key: 'updates' } as const, null as Updates | null)
 const unansweredAtom = atom({ plugin: 'modz', key: 'unanswered' } as const, null as string | null)
 const ON = { plugin: 'modz', key: 'isOn' } as const
 const LAYOUT_KEY = 'layout'
@@ -57,19 +57,6 @@ async function themeNow($: EngineInterface): Promise<Theme> {
   return themeOf(await $.env.get('MODZ_THEME').catch(() => undefined))
 }
 
-// What market.ts reads the catalog and the settings through; built here, where `$` is. Each env name is spelled
-// out, as the engine admits an env read by a literal name only.
-const diskOf = ($: EngineInterface): Disk => ({
-  root: $.plugin.root,
-  env: { home: () => $.env.get('HOME'), userProfile: () => $.env.get('USERPROFILE'), configDir: () => $.env.get('CLAUDE_CONFIG_DIR') },
-  cwd: () => $.session.cwd(),
-  settings: () => $.settings.read(),
-  realPath: async path => (await $.fs.stat(path, { resolve: true })).realPath,
-  read: path => $.fs.read(path),
-  exists: path => $.fs.exists(path),
-  write: (path, text) => $.fs.write(path, text),
-  log: text => $.ui.log(text, { to: 'debug' }),
-})
 
 // What swap.ts moves the panel through; built here, where `$` is.
 const swapOf = ($: EngineInterface): Swap => ({
@@ -125,16 +112,7 @@ async function partsOf($: EngineInterface): Promise<Parts> {
   // hud-pro says when its Usage pane hosts the other meter mods; nobody saying so means nobody hosts.
   const host = await $.state.get({ plugin: 'hud-pro', key: 'host' }).catch(() => ({ value: false }))
 
-  return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()), isUsageHosting: host.value === true, hasUpdate: await read($, updateAtom) }
-}
-
-// Updates stay the person's choice: a newer MODZ on GitHub is said once, in a toast and in the hub's head line.
-const UPDATE_CHECK_MS = 10_000
-async function noticeUpdate($: EngineInterface): Promise<void> {
-  const isReady = await updateReady(diskOf($), argv => $.process.run(argv, { timeoutMs: UPDATE_CHECK_MS }))
-  if (!isReady || (await read($, updateAtom))) return
-  await update($, updateAtom, () => true)
-  $.ui.toast(hubWords().updateToast, { timeoutMs: 12_000 })
+  return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()), isUsageHosting: host.value === true, hasUpdate: (await read($, updatesAtom))?.hasNew === true }
 }
 
 type On = Parameters<Register>[0]
@@ -159,7 +137,6 @@ function startHooks(on: On, options: Options): void {
     if (options.keepUpdated === true) {
       void keepUpdated(diskOf($)).catch(cause => $.ui.log(`modz: auto-update could not be turned on: ${String(cause)}`, { to: 'debug' }))
     }
-    void noticeUpdate($).catch(cause => $.ui.log(`modz: the update check failed: ${String(cause)}`, { to: 'debug' }))
 
     return started
   })

@@ -1178,7 +1178,7 @@ const KEYWORDS = new Set(["then", "do", "else", "!", "if", "elif", "while", "unt
 const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh"]);
 const XARGS_VALUED = new Set(["-I", "-L", "-n", "-P", "-s", "-d", "-E", "-a", "--arg-file", "--delimiter", "--max-args", "--max-procs", "--max-lines", "--eof"]);
 const READ_ONLY$1 = new Set(["ls", "cat", "echo", "printf", "grep", "rg", "find", "less", "head", "tail", "cd", "git"]);
-const ASSIGNMENT$1 = /^[A-Za-z_][A-Za-z0-9_]*=/;
+const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
 const REDIRECT_ALONE = /^(?:\d*|&)(?:>>?|<)(?:&?\d*|\|)?$/;
 const REDIRECT_GLUED = /^(?:\d*|&)(?:>>?|<)/;
 const MAX_DEPTH = 4;
@@ -1186,7 +1186,7 @@ function readAssignments(segment, vars) {
   const words = tokenize(segment.trim());
   if (words[0] === "export")
     words.shift();
-  if (words.length === 0 || !words.every((word) => ASSIGNMENT$1.test(word)))
+  if (words.length === 0 || !words.every((word) => ASSIGNMENT.test(word)))
     return;
   for (const word of words) {
     const at = word.indexOf("=");
@@ -1249,7 +1249,7 @@ function stripPrefixes(input) {
     const first = words[0] ?? "";
     const name = commandName(first);
     const wrapper = Object.hasOwn(WRAPPERS, name) ? WRAPPERS[name] : undefined;
-    changed = ASSIGNMENT$1.test(first) || KEYWORDS.has(first) || wrapper !== undefined;
+    changed = ASSIGNMENT.test(first) || KEYWORDS.has(first) || wrapper !== undefined;
     if (!changed)
       break;
     words.shift();
@@ -1738,25 +1738,14 @@ function editHooks(on) {
 
 const JUDGE_MODEL = "haiku";
 const JUDGE_MODEL_TIMEOUT_MS = 8000;
-const JUDGE_HTTP_TIMEOUT_MS = 5000;
-const JEV_URL = "https://api.typesafe.ai/v1/systemone";
-const JEV_MODEL = "jev-latest";
-const JEV_BACKEND = "jev";
 const MAX_REPLY_TOKENS = 32;
 const MIN_LABELS = 2;
-const JEV_QUESTION = "label";
 const DEFAULT_INSTRUCTIONS = "Which label fits the text best?";
 async function judge(io, question) {
   if (!isAskable(question))
     return;
-  const isJevAsked = io.env.backend === JEV_BACKEND;
-  const link = isJevAsked ? jevLink(io) : undefined;
-  if (link !== undefined) {
-    const label = await askJev(link, question);
-    return label === undefined ? undefined : { label, source: "jev", isFallback: false };
-  }
   const label = await askModel(io.complete, question);
-  return label === undefined ? undefined : { label, source: "model", isFallback: isJevAsked };
+  return label === undefined ? undefined : { label };
 }
 function matchLabel(reply, labels) {
   const said = reply.trim().replace(/[.!"'`]+$/u, "").replace(/^["'`]+/u, "");
@@ -1772,14 +1761,6 @@ function isAskable(question) {
   if (new Set(labels).size !== labels.length)
     return false;
   return labels.every((label) => label.trim() !== "");
-}
-function jevLink(io) {
-  const { fetch, sleep, redact } = io;
-  const key = io.env.typesafeKey;
-  if (key === undefined || key === "" || fetch === undefined || sleep === undefined || redact === undefined) {
-    return;
-  }
-  return { key, fetch, sleep, redact };
 }
 async function askModel(complete, question) {
   const { labels } = question;
@@ -1801,41 +1782,6 @@ ${question.text}
       timeoutMs: JUDGE_MODEL_TIMEOUT_MS
     });
     return reply.isAnswered ? matchLabel(reply.text, labels) : undefined;
-  } catch {
-    return;
-  }
-}
-async function askJev(link, question) {
-  const criteria = Object.fromEntries(question.labels.map((label) => [label, null]));
-  const body = JSON.stringify({
-    state: link.redact(question.text),
-    model: JEV_MODEL,
-    questions: {
-      [JEV_QUESTION]: { type: "choice", instructions: link.redact(question.instructions ?? DEFAULT_INSTRUCTIONS), criteria }
-    }
-  });
-  const init = {
-    method: "POST",
-    headers: { authorization: `Bearer ${link.key}`, "content-type": "application/json" },
-    body
-  };
-  try {
-    const timedOut = link.sleep(JUDGE_HTTP_TIMEOUT_MS).then(() => {
-      return;
-    });
-    const response = await Promise.race([link.fetch(JEV_URL, init), timedOut]);
-    if (response === undefined || !response.ok)
-      return;
-    return readJevChoice(response.text, question.labels);
-  } catch {
-    return;
-  }
-}
-function readJevChoice(text, labels) {
-  try {
-    const parsed = JSON.parse(text);
-    const choice = parsed.answers?.[JEV_QUESTION]?.choice;
-    return typeof choice === "string" && labels.includes(choice) ? choice : undefined;
   } catch {
     return;
   }
@@ -1919,16 +1865,6 @@ function verdictOf(label, rules) {
   const rule = number === undefined ? undefined : rules[Number(number) - 1];
   return { kind, rule: rule ?? null };
 }
-const SECRET_NAME = /key|token|secret|pass(?:word)?|pwd|auth|credential/i;
-const ASSIGNMENT = /\b([A-Za-z_][A-Za-z0-9_]*)=("[^"]*"|'[^']*'|\S+)/g;
-const SECRET_FLAG = /(--?(?:password|passwd|token|secret|api-key|apikey|key)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi;
-const URL_CREDENTIAL = /:\/\/([^/\s:@]+):([^/\s@]+)@/g;
-const BEARER = /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/g;
-const LONG_TOKEN = /[A-Za-z0-9_+/=-]{24,}/g;
-const MASK = "****";
-function redact(text) {
-  return text.replace(ASSIGNMENT, (whole, name) => SECRET_NAME.test(name) ? `${name}=${MASK}` : whole).replace(SECRET_FLAG, `$1${MASK}`).replace(URL_CREDENTIAL, `://$1:${MASK}@`).replace(BEARER, `$1 ${MASK}`).replace(LONG_TOKEN, (token) => /\d/.test(token) && /[A-Za-z]/.test(token) ? MASK : token);
-}
 
 const WHY$1 = {
   timeout: "no answer within 10 minutes",
@@ -1953,8 +1889,7 @@ async function judged($, input) {
   const known = cache.verdicts.get(input.command);
   if (known !== undefined)
     return known;
-  const env = { backend: await $.env.get("MODZ_JUDGE"), typesafeKey: await $.env.get("TYPESAFE_API_KEY") };
-  const io = { complete: (request) => $.model.complete(request), fetch: (url, init) => $.http.fetch(url, init), sleep: (ms) => $.clock.sleep(ms), redact, env };
+  const io = { complete: (request) => $.model.complete(request) };
   const answer = await judge(io, { text: input.command, labels: labelsFor(input.rules), instructions: instructionsFor(input.rules) });
   const verdict = answer === undefined ? null : verdictOf(answer.label, input.rules);
   if (verdict !== null)

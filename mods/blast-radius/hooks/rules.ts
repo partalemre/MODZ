@@ -1,7 +1,7 @@
 // House rules: plain sentences the person keeps in `.claude/house-rules.md` ("never touch the
 // production database"). A command that is neither risky nor plainly read-only is put to the
 // shared judge with the rules as its instructions. Pure: parsing, the read-only allowlist, the
-// question, the verdict, and the masking applied before any text could leave the machine.
+// question and the verdict.
 
 export const RULES_FILE = '.claude/house-rules.md'
 // Rules past this much text are not sent: the judge's prompt stays small and its cost bounded.
@@ -79,23 +79,4 @@ export function verdictOf(label: string, rules: readonly string[]): Verdict | nu
   const rule = number === undefined ? undefined : rules[Number(number) - 1]
 
   return { kind, rule: rule ?? null }
-}
-
-// Masking for what leaves the machine (the Jev backend): secret-looking assignments and flags,
-// credentials in URLs, bearer tokens, and long mixed strings that read like keys.
-const SECRET_NAME = /key|token|secret|pass(?:word)?|pwd|auth|credential/i
-const ASSIGNMENT = /\b([A-Za-z_][A-Za-z0-9_]*)=("[^"]*"|'[^']*'|\S+)/g
-const SECRET_FLAG = /(--?(?:password|passwd|token|secret|api-key|apikey|key)(?:=|\s+))("[^"]*"|'[^']*'|\S+)/gi
-const URL_CREDENTIAL = /:\/\/([^/\s:@]+):([^/\s@]+)@/g
-const BEARER = /\b(Bearer|Basic)\s+[A-Za-z0-9._~+/=-]+/g
-const LONG_TOKEN = /[A-Za-z0-9_+/=-]{24,}/g
-const MASK = '****'
-
-export function redact(text: string): string {
-  return text
-    .replace(ASSIGNMENT, (whole, name: string) => (SECRET_NAME.test(name) ? `${name}=${MASK}` : whole))
-    .replace(SECRET_FLAG, `$1${MASK}`)
-    .replace(URL_CREDENTIAL, `://$1:${MASK}@`)
-    .replace(BEARER, `$1 ${MASK}`)
-    .replace(LONG_TOKEN, token => (/\d/.test(token) && /[A-Za-z]/.test(token) ? MASK : token))
 }

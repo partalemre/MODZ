@@ -26,6 +26,7 @@ const PANES = {
     'modz-mods': { title: 'Mods', hint: 'Every mod and whether it works' },
     'modz-links': { title: 'Connections', hint: 'Outside tools: working, waiting or broken' },
     'modz-weight': { title: 'Dead weight', hint: 'Installed, but you never use it' },
+    'modz-updates': { title: 'Updates', hint: 'New MODZ versions, by hand or automatic' },
   },
   tr: {
     agents: { title: 'Ajanlar', hint: 'Ajanlar: durum, ilerleme, maliyet' },
@@ -42,6 +43,7 @@ const PANES = {
     'modz-mods': { title: 'Modlar', hint: 'Tüm modlar ve çalışıp çalışmadıkları' },
     'modz-links': { title: 'Bağlantılar', hint: 'Dış araçlar: çalışan, bekleyen, bozuk' },
     'modz-weight': { title: 'Ölü ağırlık', hint: 'Kurulu ama hiç kullanmadıkların' },
+    'modz-updates': { title: 'Güncellemeler', hint: 'Yeni MODZ sürümleri: elle ya da otomatik' },
   },
 } as const
 
@@ -63,7 +65,7 @@ const HUB = {
     modsOn: (n: number) => `${count(n, 'mod', 'mods')} on`,
     unreadable: 'the mod list could not be read',
     updateReady: 'update ready',
-    updateToast: 'A new MODZ is out. To get it: claude plugin marketplace update modz, then claude plugin update modz@modz (and each mod you use).',
+    updateToast: 'A new MODZ is out. Open Updates in the modz panel to get it.',
     command: 'Opens the modz hub: agents, files, plan, tests and every mod',
     opened: 'Opened the modz panel.',
     customize: 'Customize',
@@ -101,7 +103,7 @@ const HUB = {
     modsOn: (n: number) => `${n} mod açık`,
     unreadable: 'mod listesi okunamadı',
     updateReady: 'güncelleme var',
-    updateToast: "MODZ'un yeni sürümü çıktı. Almak için: claude plugin marketplace update modz, sonra claude plugin update modz@modz (ve kullandığın her mod).",
+    updateToast: "MODZ'un yeni sürümü çıktı. Almak için modz panelinde Güncellemeler'i aç.",
     command: 'modz ana panelini açar: ajanlar, dosyalar, plan, testler ve tüm modlar',
     opened: 'modz paneli açıldı.',
     customize: 'Düzenle',

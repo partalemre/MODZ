@@ -12,7 +12,7 @@ Every step is safe to repeat.
 4. Optional, in the `env` object of `~/.claude/settings.json` (merge with existing keys, never overwrite the file):
    - `"MODZ_LANG": "tr"`: Turkish interface (the default is English).
    - `"CLAUDE_CODE_ARTIFACT": "1"`: needed for transceiver when Claude Code is driven by an SDK host (an IDE, `claude -p`, T3 Code). The desktop app and the plain terminal do not need it.
-5. Updates are by hand by default (`claude plugin marketplace update modz`, then `claude plugin update <mod>@modz`), so no commit runs unreviewed. Auto-update only if the person asks: `keepUpdated` in `claude plugin configure modz`. Do not edit `extraKnownMarketplaces` yourself.
+5. Updates are by hand by default, so no commit runs unreviewed. The modz panel's Updates row says when a new version is out and turns automatic updates on with one press. Do not edit `extraKnownMarketplaces` yourself.
 6. Verify: `claude plugin list` lists each `<name>@modz` as enabled.
 7. Tell the person to start a new session (or run `/reload-plugins`). A press on **modz** under the prompt, or `/modz`, opens the modz panel on the right.
 
@@ -62,5 +62,4 @@ Core set (recommended install): modz, savvy-progress, plan-steps, filetree, blas
 - Draws in the Claude desktop app's Code tab (rich) and in the terminal (text). Tested on Claude Code 2.1.296 (terminal) and 2.1.317 (desktop app).
 - Four mods add a short section to the system prompt: plan-steps, secret-guard, handoff (after Continue from handoff) and reflect-mod.
 - Most mods use no model tokens. Token use: reflect-mod (one small check per correction, one per /mine), cache-tax keepwarm (only when started), handoff (one optional summary per note), effort-router (auto mode only), blast-radius (only with .claude/house-rules.md), replay-theater (rarely), transceiver free-form `ask` (small model on the other side, at most 10 a day per room).
-- Optional Jev judge: MODZ_JUDGE=jev and TYPESAFE_API_KEY send the masked text that blast-radius and effort-router judge to TypeSafe instead of the person's own model account.
 - License: MIT; adapted mods keep their original license in their folder.

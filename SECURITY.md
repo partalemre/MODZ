@@ -19,17 +19,14 @@ what runs, choosing when it changes, and keeping the parts you do not need off. 
 
 ## Updates are yours to choose
 
-New commits do not reach your machine on their own. When one is out, the hub says so (a toast and "update ready" in its
-head line). Update by hand after looking at what changed:
+New commits do not reach your machine on their own. Open **Updates** in the modz panel: it says when a new
+version is out (a toast tells you too), turns Claude Code's automatic updates for MODZ on or off with one press, and
+copies the commands to update by hand:
 
 ```sh
 claude plugin marketplace update modz
 claude plugin update <mod>@modz
 ```
-
-Auto-update is opt-in: turn on `keepUpdated` (`claude plugin configure modz`) or choose **Enable auto-update** under
-`/plugin` > Marketplaces. An install from before this default changed may already have it on; choose **Disable
-auto-update** there to stop it.
 
 ## Network
 
@@ -39,7 +36,6 @@ Off by default, except where the mod's job needs it:
 |---|---|---|
 | `modz` | GitHub (`git ls-remote` of the MODZ repo: its latest commit, nothing about you) | once a session, to say when an update is ready |
 | `savvy-progress` | Open-Meteo (the place, rounded to about a town's width) | only with `MODZ_WEATHER=on` |
-| `blast-radius`, `effort-router` | api.typesafe.ai (Jev) | only with `MODZ_JUDGE=jev` and your own `TYPESAFE_API_KEY` |
 | `test-badge`, `pr-card` | GitHub, through your `gh` | when they show CI or pull requests |
 | `terminal-browser` | the pages you open, and its own CLI on 127.0.0.1 | when you use it |
 | `transceiver` (comes with `modz`) | claude.ai and the private GitHub repo you share | when you use a room or ask another machine |

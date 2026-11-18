@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { headOf, installedCommit, isNewer, remoteOf } from '../hooks/updates'
+import { headOf, installedCommit, installedFrom, isNewer, remoteOf, updateCommands, updatesCard } from '../hooks/updates'
 
 const OLD = 'a'.repeat(40)
 const NEW = 'b'.repeat(40)
@@ -33,4 +33,20 @@ test('an update is ready only when both commits are known and differ', () => {
   expect(isNewer(OLD, head)).toBe(true)
   expect(isNewer(NEW, head)).toBe(false)
   expect(isNewer(OLD, headOf('fatal: unable to access'))).toBe(false)
+})
+
+test('the plugins installed from the marketplace make the update commands', () => {
+  const installed = JSON.stringify({ plugins: { 'modz@modz': [{}], 'hud-pro@modz': [{}], 'other@elsewhere': [{}] } })
+  const mods = installedFrom(installed, 'modz')
+
+  expect(mods).toEqual(['hud-pro', 'modz'])
+  expect(updateCommands('modz', mods)).toBe('claude plugin marketplace update modz && claude plugin update hud-pro@modz && claude plugin update modz@modz')
+})
+
+test('the row says a new version first, then whether updates are automatic', () => {
+  const base = { isInstalled: true, isAuto: false, hasNew: false, mods: [], market: 'modz' }
+
+  expect(updatesCard({ ...base, hasNew: true }, 0).tone).toBe('warn')
+  expect(updatesCard({ ...base, isAuto: true }, 0).tone).toBe('idle')
+  expect(updatesCard({ ...base, isAuto: true }, 0).detail).not.toBe(updatesCard(base, 0).detail)
 })

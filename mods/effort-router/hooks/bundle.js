@@ -3,25 +3,14 @@ import { atom, update, read } from 'claude-code';
 
 const JUDGE_MODEL = "haiku";
 const JUDGE_MODEL_TIMEOUT_MS = 8000;
-const JUDGE_HTTP_TIMEOUT_MS = 5000;
-const JEV_URL = "https://api.typesafe.ai/v1/systemone";
-const JEV_MODEL = "jev-latest";
-const JEV_BACKEND = "jev";
 const MAX_REPLY_TOKENS = 32;
 const MIN_LABELS = 2;
-const JEV_QUESTION = "label";
 const DEFAULT_INSTRUCTIONS = "Which label fits the text best?";
 async function judge(io, question) {
   if (!isAskable(question))
     return;
-  const isJevAsked = io.env.backend === JEV_BACKEND;
-  const link = isJevAsked ? jevLink(io) : undefined;
-  if (link !== undefined) {
-    const label = await askJev(link, question);
-    return label === undefined ? undefined : { label, source: "jev", isFallback: false };
-  }
   const label = await askModel(io.complete, question);
-  return label === undefined ? undefined : { label, source: "model", isFallback: isJevAsked };
+  return label === undefined ? undefined : { label };
 }
 function matchLabel(reply, labels) {
   const said = reply.trim().replace(/[.!"'`]+$/u, "").replace(/^["'`]+/u, "");
@@ -37,14 +26,6 @@ function isAskable(question) {
   if (new Set(labels).size !== labels.length)
     return false;
   return labels.every((label) => label.trim() !== "");
-}
-function jevLink(io) {
-  const { fetch, sleep, redact } = io;
-  const key = io.env.typesafeKey;
-  if (key === undefined || key === "" || fetch === undefined || sleep === undefined || redact === undefined) {
-    return;
-  }
-  return { key, fetch, sleep, redact };
 }
 async function askModel(complete, question) {
   const { labels } = question;
@@ -66,41 +47,6 @@ ${question.text}
       timeoutMs: JUDGE_MODEL_TIMEOUT_MS
     });
     return reply.isAnswered ? matchLabel(reply.text, labels) : undefined;
-  } catch {
-    return;
-  }
-}
-async function askJev(link, question) {
-  const criteria = Object.fromEntries(question.labels.map((label) => [label, null]));
-  const body = JSON.stringify({
-    state: link.redact(question.text),
-    model: JEV_MODEL,
-    questions: {
-      [JEV_QUESTION]: { type: "choice", instructions: link.redact(question.instructions ?? DEFAULT_INSTRUCTIONS), criteria }
-    }
-  });
-  const init = {
-    method: "POST",
-    headers: { authorization: `Bearer ${link.key}`, "content-type": "application/json" },
-    body
-  };
-  try {
-    const timedOut = link.sleep(JUDGE_HTTP_TIMEOUT_MS).then(() => {
-      return;
-    });
-    const response = await Promise.race([link.fetch(JEV_URL, init), timedOut]);
-    if (response === undefined || !response.ok)
-      return;
-    return readJevChoice(response.text, question.labels);
-  } catch {
-    return;
-  }
-}
-function readJevChoice(text, labels) {
-  try {
-    const parsed = JSON.parse(text);
-    const choice = parsed.answers?.[JEV_QUESTION]?.choice;
-    return typeof choice === "string" && labels.includes(choice) ? choice : undefined;
   } catch {
     return;
   }
@@ -329,7 +275,7 @@ function fitGroups(o) {
 
 async function classify(io, text) {
   const masked = redact([...text].slice(0, JUDGE_TEXT_MAX).join(""));
-  const answer = await judge({ ...io, redact }, { text: masked, labels: CLASSES, instructions: JUDGE_INSTRUCTIONS });
+  const answer = await judge(io, { text: masked, labels: CLASSES, instructions: JUDGE_INSTRUCTIONS });
   return classOf(answer?.label);
 }
 
@@ -1371,7 +1317,6 @@ const HUB_ON = { plugin: "modz", key: "isOn" };
 const SECTION = { plugin: "effort-router", key: "section" };
 const NOTICE = { plugin: "effort-router", key: "notice" };
 const session = {
-  env: {},
   themeOverride: undefined,
   route: null,
   isInTask: false,
@@ -1379,21 +1324,9 @@ const session = {
   lowered: null
 };
 const log = ($, line) => $.ui.log(`effort-router: ${line}`, { to: "debug" });
-async function judgeEnvOf($) {
-  const backend = await $.env.get("MODZ_JUDGE").catch(() => {
-    return;
-  });
-  const typesafeKey = await $.env.get("TYPESAFE_API_KEY").catch(() => {
-    return;
-  });
-  return { backend, typesafeKey };
-}
 function judgeIoOf($) {
   return {
-    complete: (request) => $.model.complete(request),
-    fetch: (url, init) => $.http.fetch(url, init),
-    sleep: (ms) => $.clock.sleep(ms),
-    env: session.env
+    complete: (request) => $.model.complete(request)
   };
 }
 const isHosted = async ($) => (await $.state.get({ plugin: "hud-pro", key: "host" })).value === true;
@@ -1466,7 +1399,6 @@ function sessionHooks(on, options) {
       return;
     }));
     const done = await next(e);
-    session.env = await judgeEnvOf($);
     session.themeOverride = await $.env.get("MODZ_THEME").catch(() => {
       return;
     });

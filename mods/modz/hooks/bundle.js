@@ -124,7 +124,8 @@ const PANES = {
     skins: { title: "Look", hint: "Looks and colors" },
     "modz-mods": { title: "Mods", hint: "Every mod and whether it works" },
     "modz-links": { title: "Connections", hint: "Outside tools: working, waiting or broken" },
-    "modz-weight": { title: "Dead weight", hint: "Installed, but you never use it" }
+    "modz-weight": { title: "Dead weight", hint: "Installed, but you never use it" },
+    "modz-updates": { title: "Updates", hint: "New MODZ versions, by hand or automatic" }
   },
   tr: {
     agents: { title: "Ajanlar", hint: "Ajanlar: durum, ilerleme, maliyet" },
@@ -140,7 +141,8 @@ const PANES = {
     skins: { title: "Görünüm", hint: "Görünüm ve renkler" },
     "modz-mods": { title: "Modlar", hint: "Tüm modlar ve çalışıp çalışmadıkları" },
     "modz-links": { title: "Bağlantılar", hint: "Dış araçlar: çalışan, bekleyen, bozuk" },
-    "modz-weight": { title: "Ölü ağırlık", hint: "Kurulu ama hiç kullanmadıkların" }
+    "modz-weight": { title: "Ölü ağırlık", hint: "Kurulu ama hiç kullanmadıkların" },
+    "modz-updates": { title: "Güncellemeler", hint: "Yeni MODZ sürümleri: elle ya da otomatik" }
   }
 };
 function paneWords(pane) {
@@ -158,7 +160,7 @@ const HUB = {
     modsOn: (n) => `${count(n, "mod", "mods")} on`,
     unreadable: "the mod list could not be read",
     updateReady: "update ready",
-    updateToast: "A new MODZ is out. To get it: claude plugin marketplace update modz, then claude plugin update modz@modz (and each mod you use).",
+    updateToast: "A new MODZ is out. Open Updates in the modz panel to get it.",
     command: "Opens the modz hub: agents, files, plan, tests and every mod",
     opened: "Opened the modz panel.",
     customize: "Customize",
@@ -196,7 +198,7 @@ const HUB = {
     modsOn: (n) => `${n} mod açık`,
     unreadable: "mod listesi okunamadı",
     updateReady: "güncelleme var",
-    updateToast: "MODZ'un yeni sürümü çıktı. Almak için: claude plugin marketplace update modz, sonra claude plugin update modz@modz (ve kullandığın her mod).",
+    updateToast: "MODZ'un yeni sürümü çıktı. Almak için modz panelinde Güncellemeler'i aç.",
     command: "modz ana panelini açar: ajanlar, dosyalar, plan, testler ve tüm modlar",
     opened: "modz paneli açıldı.",
     customize: "Düzenle",
@@ -300,7 +302,8 @@ const SECTIONS = ["work", "safety", "meter"];
 const MODS_PANE = "modz-mods";
 const LINKS_PANE = "modz-links";
 const WEIGHT_PANE = "modz-weight";
-const SIDE_PANES = [LINKS_PANE, WEIGHT_PANE];
+const UPDATES_PANE = "modz-updates";
+const SIDE_PANES = [LINKS_PANE, WEIGHT_PANE, UPDATES_PANE];
 const HOLD_PANE = "modz-hold";
 const BASES = [
   { pane: "agents", mod: "savvy-progress", icon: "sparkle", role: "run", section: "work" },
@@ -316,7 +319,8 @@ const BASES = [
   { pane: "skins", mod: "skins", icon: "eye", role: "edit", section: "meter" },
   { pane: MODS_PANE, mod: "modz", icon: "cube", role: "edit", section: "meter" },
   { pane: LINKS_PANE, mod: LINKS_PANE, icon: "plug", role: "read", section: "meter" },
-  { pane: WEIGHT_PANE, mod: WEIGHT_PANE, icon: "trash", role: "warn", section: "meter" }
+  { pane: WEIGHT_PANE, mod: WEIGHT_PANE, icon: "trash", role: "warn", section: "meter" },
+  { pane: UPDATES_PANE, mod: UPDATES_PANE, icon: "layers", role: "ok", section: "meter" }
 ];
 const entries = () => BASES.map(({ isBeta, ...base }) => ({ ...base, ...paneWords(base.pane), badge: isBeta ? badgeWord() : null, isGuest: false }));
 const KNOWN_MODS = new Set(BASES.map((base) => base.mod));
@@ -590,6 +594,43 @@ const WEIGHT$1 = {
   }
 };
 const weightWords = () => pick(WEIGHT$1);
+const UPDATES = {
+  en: {
+    lead: "New MODZ versions come from GitHub. Nothing new runs on your computer until you take it.",
+    local: "This copy loads from a folder on your computer, so it is always the latest.",
+    current: "You have the latest version.",
+    fresh: "A new version is out.",
+    autoOn: "Automatic updates are on: new versions download in the background and start with your next session.",
+    autoOff: "Automatic updates are off: you take each new version yourself.",
+    turnOn: "Turn on automatic updates",
+    turnOff: "Turn off automatic updates",
+    byHand: "To update now, paste these into a terminal, then start a new session:",
+    copy: "Copy",
+    check: "Look again",
+    failed: "Could not change the setting.",
+    cardNew: "new version out",
+    cardAuto: "automatic · up to date",
+    cardCurrent: "up to date"
+  },
+  tr: {
+    lead: "Yeni MODZ sürümleri GitHub'dan gelir. Sen almadan bilgisayarında yeni hiçbir şey çalışmaz.",
+    local: "Bu kopya bilgisayarındaki bir klasörden yükleniyor; hep en son sürüm.",
+    current: "En son sürüm sende.",
+    fresh: "Yeni bir sürüm çıktı.",
+    autoOn: "Otomatik güncelleme açık: yeni sürümler arka planda iner, bir sonraki oturumda devreye girer.",
+    autoOff: "Otomatik güncelleme kapalı: her yeni sürümü sen alırsın.",
+    turnOn: "Otomatik güncellemeyi aç",
+    turnOff: "Otomatik güncellemeyi kapat",
+    byHand: "Şimdi güncellemek için bunları bir terminale yapıştır, sonra yeni bir oturum başlat:",
+    copy: "Kopyala",
+    check: "Yeniden bak",
+    failed: "Ayar değiştirilemedi.",
+    cardNew: "yeni sürüm var",
+    cardAuto: "otomatik · güncel",
+    cardCurrent: "güncel"
+  }
+};
+const updateWords = () => pick(UPDATES);
 
 const WAIT_FRESH_MS = 24 * 60 * 60 * 1000;
 const ERROR_MAX = 80;
@@ -628,6 +669,405 @@ function linksCard(links, at) {
   const parts = [links.failed.length > 0 ? say.failedCount(links.failed.length) : "", links.waiting.length > 0 ? say.waitingCount(links.waiting.length) : ""].filter((part) => part !== "");
   const detail = parts.length > 0 ? parts.join(" · ") : say.connectedCount(links.connected.length);
   return { pane: LINKS_PANE, detail, tone: links.failed.length > 0 ? "warn" : "idle", at };
+}
+
+const diskOf = ($) => ({
+  root: $.plugin.root,
+  env: { home: () => $.env.get("HOME"), userProfile: () => $.env.get("USERPROFILE"), configDir: () => $.env.get("CLAUDE_CONFIG_DIR") },
+  cwd: () => $.session.cwd(),
+  settings: () => $.settings.read(),
+  realPath: async (path) => (await $.fs.stat(path, { resolve: true })).realPath,
+  read: (path) => $.fs.read(path),
+  exists: (path) => $.fs.exists(path),
+  write: (path, text) => $.fs.write(path, text),
+  log: (text) => $.ui.log(text, { to: "debug" })
+});
+
+const LOCAL_SOURCES = new Set(["directory", "file"]);
+function isRecord$2(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function parsed$1(text) {
+  if (text === undefined || text.trim() === "")
+    return {};
+  try {
+    const value = JSON.parse(text);
+    return isRecord$2(value) ? value : undefined;
+  } catch {
+    return;
+  }
+}
+function isRemote(source) {
+  return isRecord$2(source) && typeof source.source === "string" && !LOCAL_SOURCES.has(source.source);
+}
+function entryOf(plan, declared) {
+  if (isRecord$2(declared)) {
+    if ("autoUpdate" in declared || !isRemote(declared.source))
+      return;
+    return { ...declared, autoUpdate: true };
+  }
+  const known = parsed$1(plan.knownText)?.[plan.market];
+  const source = isRecord$2(known) ? known.source : undefined;
+  return isRemote(source) ? { source, autoUpdate: true } : undefined;
+}
+function autoUpdateSettings(plan) {
+  const settings = parsed$1(plan.settingsText);
+  if (settings === undefined || plan.market === "")
+    return;
+  const markets = isRecord$2(settings.extraKnownMarketplaces) ? settings.extraKnownMarketplaces : {};
+  const entry = entryOf(plan, markets[plan.market]);
+  if (entry === undefined)
+    return;
+  return `${JSON.stringify({ ...settings, extraKnownMarketplaces: { ...markets, [plan.market]: entry } }, null, 2)}
+`;
+}
+function sourceOf(plan, declared) {
+  if (isRecord$2(declared) && isRemote(declared.source))
+    return declared.source;
+  const known = parsed$1(plan.knownText)?.[plan.market];
+  const source = isRecord$2(known) ? known.source : undefined;
+  return isRemote(source) ? source : undefined;
+}
+function isAutoOn(plan) {
+  const markets = parsed$1(plan.settingsText)?.extraKnownMarketplaces;
+  const declared = isRecord$2(markets) ? markets[plan.market] : undefined;
+  if (isRecord$2(declared) && typeof declared.autoUpdate === "boolean")
+    return declared.autoUpdate;
+  const known = parsed$1(plan.knownText)?.[plan.market];
+  return isRecord$2(known) && known.autoUpdate === true;
+}
+function settingsWithAuto(plan, isOn) {
+  const settings = parsed$1(plan.settingsText);
+  if (settings === undefined || plan.market === "")
+    return;
+  const markets = isRecord$2(settings.extraKnownMarketplaces) ? settings.extraKnownMarketplaces : {};
+  const declared = markets[plan.market];
+  const source = sourceOf(plan, declared);
+  if (source === undefined)
+    return;
+  const entry = { ...isRecord$2(declared) ? declared : {}, source, autoUpdate: isOn };
+  return `${JSON.stringify({ ...settings, extraKnownMarketplaces: { ...markets, [plan.market]: entry } }, null, 2)}
+`;
+}
+const CACHED = /^(.*)\/cache\/([^/]+)\/[^/]+\/[^/]+\/?$/;
+function installOf(root) {
+  const match = CACHED.exec(root.replaceAll("\\", "/"));
+  if (match?.[1] === undefined || match[2] === undefined)
+    return;
+  return { pluginsDir: match[1], market: match[2] };
+}
+
+const isRecord$1 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+function parsed(text) {
+  if (text === undefined)
+    return;
+  try {
+    const value = JSON.parse(text);
+    return isRecord$1(value) ? value : undefined;
+  } catch {
+    return;
+  }
+}
+function remoteOf(knownText, market) {
+  const entry = parsed(knownText)?.[market];
+  const source = isRecord$1(entry) ? entry.source : undefined;
+  if (!isRecord$1(source))
+    return;
+  if (source.source === "github" && typeof source.repo === "string")
+    return `https://github.com/${source.repo}.git`;
+  if ((source.source === "git" || source.source === "url") && typeof source.url === "string")
+    return source.url;
+  return;
+}
+function installedCommit(installedText, key) {
+  const plugins = parsed(installedText)?.plugins;
+  const entries = isRecord$1(plugins) ? plugins[key] : undefined;
+  const first = Array.isArray(entries) ? entries[0] : undefined;
+  const sha = isRecord$1(first) ? first.gitCommitSha : undefined;
+  return typeof sha === "string" ? sha : undefined;
+}
+function headOf(lsRemote) {
+  return /^([0-9a-f]{40})\s+HEAD$/m.exec(lsRemote)?.[1];
+}
+const isNewer = (installed, head) => installed !== undefined && head !== undefined && installed !== head;
+function installedFrom(installedText, market) {
+  const plugins = parsed(installedText)?.plugins;
+  const suffix = `@${market}`;
+  return isRecord$1(plugins) ? Object.keys(plugins).filter((key) => key.endsWith(suffix)).map((key) => key.slice(0, -suffix.length)).sort() : [];
+}
+const updateCommands = (market, mods) => [`claude plugin marketplace update ${market}`, ...mods.map((mod) => `claude plugin update ${mod}@${market}`)].join(" && ");
+function updatesCard(updates, at) {
+  const say = updateWords();
+  if (updates.hasNew)
+    return { pane: UPDATES_PANE, detail: say.cardNew, tone: "warn", at };
+  return { pane: UPDATES_PANE, detail: updates.isAuto ? say.cardAuto : say.cardCurrent, tone: "idle", at };
+}
+
+const GROUPS = ["look", "safety", "meter", "flow", "other"];
+const BOTH = ["desktop", "terminal"];
+const META = {
+  skins: { group: "look", summary: { en: "Themes the transcript; /skin switches it", tr: "Transkripti temalarla çizer; /skin ile değişir" } },
+  filetree: { group: "look", summary: { en: "Files Claude touches and their git status", tr: "Claude'un dokunduğu dosyalar ve git durumu" } },
+  "replay-theater": { group: "look", upstream: "anthropics/claude-code-playground", summary: { en: "Replays the last turn's edits step by step", tr: "Son turun düzenlemelerini adım adım oynatır" } },
+  wrapped: { group: "look", summary: { en: "Your year with Claude Code: a card and a video", tr: "Claude Code ile yılın: kart ve video" } },
+  "terminal-browser": { group: "look", surfaces: ["terminal"], summary: { en: "A browser that runs in the terminal", tr: "Terminalde çalışan tarayıcı" } },
+  modz: { group: "look", summary: { en: "This pane: the hub and a catalog of every mod", tr: "Bu panel: ana sayfa ve tüm modların kataloğu" } },
+  "blast-radius": { group: "safety", upstream: "anthropics/claude-code-playground", summary: { en: "Holds risky commands, shows what they'd delete", tr: "Riskli komutları tutar, neyi sileceğini gösterir" } },
+  "secret-guard": { group: "safety", summary: { en: "Catches keys before they reach disk or git", tr: "Anahtarları diske ya da git'e düşmeden yakalar" } },
+  checkpoint: { group: "safety", summary: { en: "A quiet git snapshot before every turn", tr: "Her turdan önce sessiz git anlık görüntüsü" } },
+  "session-budget": { group: "safety", summary: { en: "Session budget: warns at 80%, asks at 100%", tr: "Oturum bütçesi: %80'de uyarır, %100'de sorar" } },
+  "cache-tax": { group: "safety", upstream: "karanb192/cache-tax", summary: { en: "Keeps the cache warm on breaks, shows the cost", tr: "Molada önbelleği sıcak tutar, bedeli gösterir" } },
+  "hud-pro": { group: "meter", summary: { en: "One line: 5h, 7d, context and cost", tr: "Tek satır: 5 saat, 7 gün, bağlam ve maliyet" } },
+  "effort-router": { group: "meter", summary: { en: "Each turn's effort; can lower it for light asks", tr: "Her turun eforu; hafif işte düşürebilir" } },
+  handoff: { group: "flow", summary: { en: "A handoff note before the context fills", tr: "Bağlam dolmadan bir devir notu" } },
+  "test-badge": { group: "meter", summary: { en: "Runs tests and lint when source changes", tr: "Kaynak değişince test ve lint çalıştırır" } },
+  "pr-card": { group: "meter", summary: { en: "A PR card with CI, review and merge state", tr: "CI, inceleme ve birleştirme durumlu PR kartı" } },
+  "savvy-progress": { group: "meter", summary: { en: "Task band and Agents pane: progress, cost", tr: "Görev bandı ve Ajanlar paneli: ilerleme, maliyet" } },
+  "savvy-flow": { group: "flow", summary: { en: "A planning model and five tiers of worker agents", tr: "Planlayan model ve beş katmanlı işçi ajan akışı" } },
+  projects: { group: "flow", summary: { en: "Every project: percent, plans, tokens, agents", tr: "Tüm projeler: yüzde, plan, token, ajan" } },
+  "plan-steps": { group: "flow", summary: { en: "The plan's steps and where the work is", tr: "Planın adımları ve işin nerede olduğu" } },
+  "reflect-mod": { group: "flow", summary: { en: "Turns your corrections into CLAUDE.md rules", tr: "Düzeltmelerini CLAUDE.md kuralına çevirir" } },
+  "done-ping": { group: "flow", summary: { en: "A ping when a long turn ends or Claude waits", tr: "Uzun tur bitince ya da Claude beklerken bildirim" } }
+};
+const GITHUB = /github\.com\/([\w.-]+)(?:\/([\w.-]+))?/;
+function githubName(url) {
+  const match = typeof url === "string" ? GITHUB.exec(url) : null;
+  if (match === null)
+    return null;
+  return match[2] === undefined ? match[1] ?? null : `${match[1]}/${match[2].replace(/\.git$/, "")}`;
+}
+
+const SKILLS_DIR = ".claude/skills";
+function linkedDir(spec) {
+  const dirs = spec.roots.filter((root) => Boolean(root)).map((root) => `${root}/${SKILLS_DIR}`);
+  return async (name) => {
+    for (const dir of dirs)
+      if (await spec.exists(`${dir}/${name}`).catch(() => false))
+        return `${dir}/${name}`;
+    return;
+  };
+}
+function marketRoot(realPluginRoot) {
+  return realPluginRoot.replaceAll("\\", "/").replace(/\/mods\/[^/]+\/?$/, "");
+}
+function installedMarketRoot(install, knownText) {
+  let known;
+  try {
+    known = JSON.parse(knownText ?? "");
+  } catch {
+    known = undefined;
+  }
+  const entry = isRecord(known) ? known[install.market] : undefined;
+  const location = isRecord(entry) ? text(entry.installLocation) : undefined;
+  return (location ?? `${install.pluginsDir}/marketplaces/${install.market}`).replaceAll("\\", "/").replace(/\/+$/, "");
+}
+const SAFE_NAME = /^[\w.-]+$/;
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function text(value) {
+  return typeof value === "string" && value !== "" ? value : undefined;
+}
+async function readJson(read, path) {
+  try {
+    const value = JSON.parse(String(await read(path)));
+    return isRecord(value) ? value : undefined;
+  } catch {
+    return;
+  }
+}
+function upstreamOf(name, manifest) {
+  return githubName(manifest?.repository) ?? githubName(manifest?.homepage) ?? META[name]?.upstream ?? githubName(manifest?.author?.url);
+}
+function infoOf(facts) {
+  const { name, entry, manifest, problem } = facts;
+  const meta = META[name];
+  const summary = meta?.summary === undefined ? undefined : pick(meta.summary);
+  return {
+    name,
+    version: text(manifest?.version) ?? text(entry.version) ?? null,
+    description: problem ?? summary ?? text(manifest?.description) ?? text(entry.description) ?? facts.note ?? (manifest ? "" : catalogWords().unreadable),
+    group: meta?.group ?? "other",
+    surfaces: meta?.surfaces ?? BOTH,
+    upstream: upstreamOf(name, manifest),
+    isHealthy: (manifest !== undefined || facts.note !== undefined) && problem === undefined,
+    isEnabled: facts.isEnabled,
+    options: isRecord(manifest?.userConfig) ? Object.keys(manifest.userConfig) : []
+  };
+}
+async function enabledOf(spec) {
+  if (spec.flag === false)
+    return false;
+  if (spec.flag === true)
+    return true;
+  const isLinked = SAFE_NAME.test(spec.name) && await spec.hasLink(spec.name).catch(() => false);
+  return isLinked ? true : null;
+}
+function remoteNote(source) {
+  const repo = isRecord(source) ? text(source.repo) ?? githubName(source.url) ?? undefined : undefined;
+  const remote = catalogWords().remote;
+  return repo === undefined ? remote : `${remote} (${repo})`;
+}
+async function remoteInfo(spec) {
+  const { name, entry, isEnabled, options } = spec;
+  const dir = SAFE_NAME.test(name) ? await options.linkedDir?.(name).catch(() => {
+    return;
+  }) : undefined;
+  const manifest = dir === undefined ? undefined : await readJson(options.read, `${dir}/.claude-plugin/plugin.json`);
+  return infoOf({ name, entry, manifest, isEnabled, note: remoteNote(entry.source) });
+}
+async function entryInfo(spec) {
+  const { index, options, enabled } = spec;
+  const hasLink = options.hasLink ?? (async () => false);
+  const entry = isRecord(spec.entry) ? spec.entry : {};
+  const name = text(entry.name);
+  const invalid = catalogWords().invalid;
+  if (name === undefined)
+    return infoOf({ name: catalogWords().entry(index + 1), entry, manifest: undefined, isEnabled: null, problem: invalid });
+  const isEnabled = await enabledOf({ name, flag: enabled[name], hasLink });
+  if (entry.source === undefined || entry.source === null)
+    return infoOf({ name, entry, manifest: undefined, isEnabled, problem: invalid });
+  if (typeof entry.source !== "string")
+    return remoteInfo({ name, entry, isEnabled, options });
+  const dir = `${options.root}/${entry.source.replace(/^\.\//, "")}`;
+  return infoOf({ name, entry, manifest: await readJson(options.read, `${dir}/.claude-plugin/plugin.json`), isEnabled });
+}
+async function loadCatalog(options) {
+  const market = await readJson(options.read, `${options.root}/.claude-plugin/marketplace.json`);
+  const name = text(market?.name) ?? "modz";
+  const plugins = market?.plugins;
+  const entries = Array.isArray(plugins) ? plugins : [];
+  const enabled = Object.fromEntries(Object.entries(options.enabledPlugins ?? {}).filter(([key]) => key.endsWith(`@${name}`)).map(([key, value]) => [key.slice(0, -name.length - 1), value]));
+  const mods = await Promise.all(entries.map((entry, index) => entryInfo({ entry, index, options, enabled })));
+  return { name, mods };
+}
+function headline(mods) {
+  const words = catalogWords();
+  const known = mods.filter((mod) => mod.isEnabled !== null);
+  const total = words.mods(mods.length);
+  if (known.length === 0)
+    return total;
+  const on = known.filter((mod) => mod.isEnabled === true).length;
+  const state = on === known.length ? words.allOn : words.on(on);
+  const unknown = mods.length - known.length;
+  return unknown === 0 ? `${total} · ${state}` : `${total} · ${state} · ${words.unknown(unknown)}`;
+}
+function healthOf(mods) {
+  const words = catalogWords();
+  const bad = mods.filter((mod) => !mod.isHealthy).length;
+  return bad === 0 ? { text: words.allHealthy, isBad: false } : { text: words.broken(bad), isBad: true };
+}
+
+async function enabledPlugins(disk) {
+  try {
+    const value = (await disk.settings()).enabledPlugins;
+    return typeof value === "object" && value !== null ? value : {};
+  } catch {
+    disk.log("modz: settings could not be read; enabled state unknown");
+    return {};
+  }
+}
+async function homeOf(disk) {
+  const home = await disk.env.home().catch(() => {
+    return;
+  }) || await disk.env.userProfile().catch(() => {
+    return;
+  });
+  return home ? home.replaceAll("\\", "/").replace(/\/+$/, "") : undefined;
+}
+async function skillLinks(disk) {
+  const home = await homeOf(disk);
+  const cwd = await disk.cwd().catch(() => {
+    return;
+  });
+  return linkedDir({ roots: [home, cwd], exists: (path) => disk.exists(path) });
+}
+async function linksOf(disk) {
+  const dirOf = await skillLinks(disk);
+  return { hasLink: async (name) => await dirOf(name) !== undefined, linkedDir: dirOf };
+}
+async function textOf$2(disk, path) {
+  return await disk.exists(path) ? String(await disk.read(path)) : undefined;
+}
+async function marketOf(disk) {
+  try {
+    const real = await disk.realPath(disk.root).catch(() => {
+      return;
+    }) ?? disk.root;
+    const install = installOf(real);
+    const root = install === undefined ? marketRoot(real) : installedMarketRoot(install, await textOf$2(disk, `${install.pluginsDir}/known_marketplaces.json`).catch(() => {
+      return;
+    }));
+    return await loadCatalog({ read: (path) => disk.read(path), root, enabledPlugins: await enabledPlugins(disk), ...await linksOf(disk) });
+  } catch (cause) {
+    disk.log(`modz: the catalog could not be read: ${String(cause)}`);
+    return { name: "", mods: [] };
+  }
+}
+const MARKET_TTL_MS = 15000;
+let marketKept = null;
+function marketSoon(disk) {
+  const now = Date.now();
+  if (marketKept === null || now - marketKept.at > MARKET_TTL_MS)
+    marketKept = { at: now, market: marketOf(disk) };
+  return marketKept.market;
+}
+function keepMarket(market) {
+  marketKept = { at: Date.now(), market: Promise.resolve(market) };
+}
+async function keepUpdated(disk) {
+  const install = installOf(disk.root);
+  if (install === undefined)
+    return;
+  const home = await homeOf(disk);
+  const configDir = await disk.env.configDir() ?? (home === undefined ? undefined : `${home}/.claude`);
+  if (configDir === undefined)
+    return;
+  const settingsPath = `${configDir}/settings.json`;
+  const next = autoUpdateSettings({
+    market: install.market,
+    settingsText: await textOf$2(disk, settingsPath),
+    knownText: await textOf$2(disk, `${install.pluginsDir}/known_marketplaces.json`)
+  });
+  if (next === undefined)
+    return;
+  await disk.write(settingsPath, next);
+  disk.log(`modz: auto-update turned on for the ${install.market} marketplace`);
+}
+async function settingsPathOf(disk) {
+  const home = await homeOf(disk);
+  const configDir = await disk.env.configDir() ?? (home === undefined ? undefined : `${home}/.claude`);
+  return configDir === undefined ? undefined : `${configDir}/settings.json`;
+}
+async function updatesOf(disk, ask) {
+  const install = installOf(disk.root);
+  if (install === undefined)
+    return { isInstalled: false, isAuto: false, hasNew: false, mods: [], market: "" };
+  const settingsPath = await settingsPathOf(disk);
+  const knownText = await textOf$2(disk, `${install.pluginsDir}/known_marketplaces.json`);
+  const isAuto = isAutoOn({ market: install.market, settingsText: settingsPath === undefined ? undefined : await textOf$2(disk, settingsPath), knownText });
+  const url = remoteOf(knownText, install.market);
+  const installedText = await textOf$2(disk, `${install.pluginsDir}/installed_plugins.json`);
+  const installed = installedCommit(installedText, `modz@${install.market}`);
+  const known = { isInstalled: true, isAuto, mods: installedFrom(installedText, install.market), market: install.market };
+  if (ask.run === undefined || url === undefined || installed === undefined)
+    return { ...known, hasNew: ask.hadNew };
+  return { ...known, hasNew: isNewer(installed, headOf((await ask.run(["git", "ls-remote", url, "HEAD"])).stdout)) };
+}
+async function setAutoUpdate(disk, isOn) {
+  const install = installOf(disk.root);
+  const settingsPath = await settingsPathOf(disk);
+  if (install === undefined || settingsPath === undefined)
+    return false;
+  const next = settingsWithAuto({
+    market: install.market,
+    settingsText: await textOf$2(disk, settingsPath),
+    knownText: await textOf$2(disk, `${install.pluginsDir}/known_marketplaces.json`)
+  }, isOn);
+  if (next === undefined)
+    return false;
+  await disk.write(settingsPath, next);
+  return true;
 }
 
 function stableDrawings() {
@@ -860,10 +1300,84 @@ function weightTree(ui, view) {
     dimColor: true
   }, weightWords().lead(IDLE_DAYS)), weightBody(ui, view)), view.onHome);
 }
+function updatesBody(ui, view, updates) {
+  const { Box, Button, Text } = ui;
+  const say = updateWords();
+  if (!updates.isInstalled)
+    return [h(Text, {
+      key: "local"
+    }, say.local)];
+  const commands = updateCommands(updates.market, updates.mods);
+  return [
+    updates.hasNew ? h(Text, {
+      key: "state",
+      bold: true,
+      color: "warning"
+    }, say.fresh) : h(Text, {
+      key: "state",
+      color: "success"
+    }, say.current),
+    h(Box, {
+      key: "auto",
+      flexDirection: "column",
+      rowGap: 1
+    }, h(Text, null, updates.isAuto ? say.autoOn : say.autoOff), h(Box, {
+      flexDirection: "row"
+    }, h(Button, {
+      key: "updates-auto",
+      label: updates.isAuto ? say.turnOff : say.turnOn,
+      variant: updates.isAuto ? "secondary" : "primary",
+      onPress: () => view.onAuto(!updates.isAuto)
+    })), view.isFailed ? h(Text, {
+      color: "error"
+    }, say.failed) : null),
+    updates.hasNew ? h(Box, {
+      key: "hand",
+      flexDirection: "column"
+    }, h(Text, {
+      dimColor: true
+    }, say.byHand), h(Box, {
+      flexDirection: "row",
+      columnGap: 1,
+      alignItems: "center"
+    }, h(Button, {
+      key: "updates-copy",
+      label: say.copy,
+      variant: "secondary",
+      onPress: (press) => view.onCopy(commands, press)
+    }), h(Text, {
+      wrap: "truncate"
+    }, commands))) : null
+  ].filter((one) => one !== null);
+}
+function updatesTree(ui, view) {
+  const { Box, Button, Text } = ui;
+  const say = updateWords();
+  return withHome(ui, h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, h(Text, {
+    dimColor: true
+  }, say.lead), view.updates === null ? [h(Text, {
+    key: "unread"
+  }, linkWords().unread)] : updatesBody(ui, view, view.updates), h(Box, {
+    flexDirection: "row"
+  }, h(Button, {
+    key: "updates-check",
+    label: say.check,
+    plain: true,
+    onPress: view.onCheck
+  }))), view.onHome);
+}
 
 const cardsAtom$2 = atom({ plugin: "modz", key: "cards" }, {});
 const linksAtom = atom({ plugin: "modz", key: "links" }, null);
 const weightsAtom = atom({ plugin: "modz", key: "weights" }, null);
+const updatesAtom$1 = atom({ plugin: "modz", key: "updates" }, null);
+const UPDATE_CHECK_MS = 1e4;
+const TOAST_MS = 12000;
+let isHeadAsked = false;
+let isAutoFailed = false;
 const FILL_GAP_MS = 60000;
 let filledAt = 0;
 const NO_MATCH = "zzqqxxjj";
@@ -932,6 +1446,24 @@ async function refreshWeights($) {
   await keepCard($, weightCard(weights, now));
   return true;
 }
+async function refreshUpdates($, isAsking) {
+  const kept = await read($, updatesAtom$1);
+  const isAskingNow = isAsking || !isHeadAsked;
+  isHeadAsked = true;
+  const run = isAskingNow ? (argv) => $.process.run(argv, { timeoutMs: UPDATE_CHECK_MS }) : undefined;
+  const updates = await updatesOf(diskOf($), { run, hadNew: kept?.hasNew === true });
+  if (!updates.isInstalled || isSame(kept, updates))
+    return;
+  await update($, updatesAtom$1, () => updates);
+  await keepCard($, updatesCard(updates, await $.clock.now().catch(() => Date.now())));
+  if (updates.hasNew && kept?.hasNew !== true)
+    $.ui.toast(hubWords().updateToast, { timeoutMs: TOAST_MS });
+}
+async function setAuto($, isOn) {
+  isAutoFailed = !await setAutoUpdate(diskOf($), isOn);
+  await refreshUpdates($, false);
+  await $.ui.invalidate("ui.render");
+}
 function refreshSide($, pane) {
   if (pane === HUB_PANE)
     fillSideRows($);
@@ -939,12 +1471,15 @@ function refreshSide($, pane) {
     refreshLinks($, true).catch(log($, "reading the connections"));
   if (pane === WEIGHT_PANE)
     refreshWeights($).catch(log($, "weighing the plugins"));
+  if (pane === UPDATES_PANE)
+    refreshUpdates($, false).catch(log($, "reading the updates"));
 }
 async function fill$1($) {
   setLang(await $.env.get("MODZ_LANG").catch(() => {
     return;
   }));
   await refreshLinks($, false);
+  await refreshUpdates($, false).catch(log($, "reading the updates"));
   if (!await refreshWeights($))
     filledAt = 0;
 }
@@ -964,6 +1499,13 @@ function wireUpkeep(on) {
   on("ui.render", { component: "Pane", requestId: WEIGHT_PANE }, async ($, e) => {
     const onHome = () => void openHub($).catch(log($, "opening the hub"));
     return pinned(e, weightTree($.ui.resolve(e), { weights: await read($, weightsAtom), now: await $.clock.now().catch(() => Date.now()), onHome, onCopy: (text, press) => copy($, text, press) }));
+  });
+  on("ui.render", { component: "Pane", requestId: UPDATES_PANE }, async ($, e) => {
+    const onHome = () => void openHub($).catch(log($, "opening the hub"));
+    const onCheck = () => void refreshUpdates($, true).catch(log($, "reading the updates"));
+    const onAuto = (isOn) => void setAuto($, isOn).catch(log($, "setting auto-update"));
+    const view = { updates: await read($, updatesAtom$1), isFailed: isAutoFailed, onHome, onCheck, onAuto, onCopy: (text, press) => copy($, text, press) };
+    return pinned(e, updatesTree($.ui.resolve(e), view));
   });
 }
 
@@ -2268,328 +2810,6 @@ function terminalTree$1(ui, view) {
 }
 function hubTree(ui, view) {
   return view.surface === "desktop" && "Svg" in ui ? desktopTree$1(ui, view) : terminalTree$1(ui, view);
-}
-
-const LOCAL_SOURCES = new Set(["directory", "file"]);
-function isRecord$2(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function parsed$1(text) {
-  if (text === undefined || text.trim() === "")
-    return {};
-  try {
-    const value = JSON.parse(text);
-    return isRecord$2(value) ? value : undefined;
-  } catch {
-    return;
-  }
-}
-function isRemote(source) {
-  return isRecord$2(source) && typeof source.source === "string" && !LOCAL_SOURCES.has(source.source);
-}
-function entryOf(plan, declared) {
-  if (isRecord$2(declared)) {
-    if ("autoUpdate" in declared || !isRemote(declared.source))
-      return;
-    return { ...declared, autoUpdate: true };
-  }
-  const known = parsed$1(plan.knownText)?.[plan.market];
-  const source = isRecord$2(known) ? known.source : undefined;
-  return isRemote(source) ? { source, autoUpdate: true } : undefined;
-}
-function autoUpdateSettings(plan) {
-  const settings = parsed$1(plan.settingsText);
-  if (settings === undefined || plan.market === "")
-    return;
-  const markets = isRecord$2(settings.extraKnownMarketplaces) ? settings.extraKnownMarketplaces : {};
-  const entry = entryOf(plan, markets[plan.market]);
-  if (entry === undefined)
-    return;
-  return `${JSON.stringify({ ...settings, extraKnownMarketplaces: { ...markets, [plan.market]: entry } }, null, 2)}
-`;
-}
-const CACHED = /^(.*)\/cache\/([^/]+)\/[^/]+\/[^/]+\/?$/;
-function installOf(root) {
-  const match = CACHED.exec(root.replaceAll("\\", "/"));
-  if (match?.[1] === undefined || match[2] === undefined)
-    return;
-  return { pluginsDir: match[1], market: match[2] };
-}
-
-const isRecord$1 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
-function parsed(text) {
-  if (text === undefined)
-    return;
-  try {
-    const value = JSON.parse(text);
-    return isRecord$1(value) ? value : undefined;
-  } catch {
-    return;
-  }
-}
-function remoteOf(knownText, market) {
-  const entry = parsed(knownText)?.[market];
-  const source = isRecord$1(entry) ? entry.source : undefined;
-  if (!isRecord$1(source))
-    return;
-  if (source.source === "github" && typeof source.repo === "string")
-    return `https://github.com/${source.repo}.git`;
-  if ((source.source === "git" || source.source === "url") && typeof source.url === "string")
-    return source.url;
-  return;
-}
-function installedCommit(installedText, key) {
-  const plugins = parsed(installedText)?.plugins;
-  const entries = isRecord$1(plugins) ? plugins[key] : undefined;
-  const first = Array.isArray(entries) ? entries[0] : undefined;
-  const sha = isRecord$1(first) ? first.gitCommitSha : undefined;
-  return typeof sha === "string" ? sha : undefined;
-}
-function headOf(lsRemote) {
-  return /^([0-9a-f]{40})\s+HEAD$/m.exec(lsRemote)?.[1];
-}
-const isNewer = (installed, head) => installed !== undefined && head !== undefined && installed !== head;
-
-const GROUPS = ["look", "safety", "meter", "flow", "other"];
-const BOTH = ["desktop", "terminal"];
-const META = {
-  skins: { group: "look", summary: { en: "Themes the transcript; /skin switches it", tr: "Transkripti temalarla çizer; /skin ile değişir" } },
-  filetree: { group: "look", summary: { en: "Files Claude touches and their git status", tr: "Claude'un dokunduğu dosyalar ve git durumu" } },
-  "replay-theater": { group: "look", upstream: "anthropics/claude-code-playground", summary: { en: "Replays the last turn's edits step by step", tr: "Son turun düzenlemelerini adım adım oynatır" } },
-  wrapped: { group: "look", summary: { en: "Your year with Claude Code: a card and a video", tr: "Claude Code ile yılın: kart ve video" } },
-  "terminal-browser": { group: "look", surfaces: ["terminal"], summary: { en: "A browser that runs in the terminal", tr: "Terminalde çalışan tarayıcı" } },
-  modz: { group: "look", summary: { en: "This pane: the hub and a catalog of every mod", tr: "Bu panel: ana sayfa ve tüm modların kataloğu" } },
-  "blast-radius": { group: "safety", upstream: "anthropics/claude-code-playground", summary: { en: "Holds risky commands, shows what they'd delete", tr: "Riskli komutları tutar, neyi sileceğini gösterir" } },
-  "secret-guard": { group: "safety", summary: { en: "Catches keys before they reach disk or git", tr: "Anahtarları diske ya da git'e düşmeden yakalar" } },
-  checkpoint: { group: "safety", summary: { en: "A quiet git snapshot before every turn", tr: "Her turdan önce sessiz git anlık görüntüsü" } },
-  "session-budget": { group: "safety", summary: { en: "Session budget: warns at 80%, asks at 100%", tr: "Oturum bütçesi: %80'de uyarır, %100'de sorar" } },
-  "cache-tax": { group: "safety", upstream: "karanb192/cache-tax", summary: { en: "Keeps the cache warm on breaks, shows the cost", tr: "Molada önbelleği sıcak tutar, bedeli gösterir" } },
-  "hud-pro": { group: "meter", summary: { en: "One line: 5h, 7d, context and cost", tr: "Tek satır: 5 saat, 7 gün, bağlam ve maliyet" } },
-  "effort-router": { group: "meter", summary: { en: "Each turn's effort; can lower it for light asks", tr: "Her turun eforu; hafif işte düşürebilir" } },
-  handoff: { group: "flow", summary: { en: "A handoff note before the context fills", tr: "Bağlam dolmadan bir devir notu" } },
-  "test-badge": { group: "meter", summary: { en: "Runs tests and lint when source changes", tr: "Kaynak değişince test ve lint çalıştırır" } },
-  "pr-card": { group: "meter", summary: { en: "A PR card with CI, review and merge state", tr: "CI, inceleme ve birleştirme durumlu PR kartı" } },
-  "savvy-progress": { group: "meter", summary: { en: "Task band and Agents pane: progress, cost", tr: "Görev bandı ve Ajanlar paneli: ilerleme, maliyet" } },
-  "savvy-flow": { group: "flow", summary: { en: "A planning model and five tiers of worker agents", tr: "Planlayan model ve beş katmanlı işçi ajan akışı" } },
-  projects: { group: "flow", summary: { en: "Every project: percent, plans, tokens, agents", tr: "Tüm projeler: yüzde, plan, token, ajan" } },
-  "plan-steps": { group: "flow", summary: { en: "The plan's steps and where the work is", tr: "Planın adımları ve işin nerede olduğu" } },
-  "reflect-mod": { group: "flow", summary: { en: "Turns your corrections into CLAUDE.md rules", tr: "Düzeltmelerini CLAUDE.md kuralına çevirir" } },
-  "done-ping": { group: "flow", summary: { en: "A ping when a long turn ends or Claude waits", tr: "Uzun tur bitince ya da Claude beklerken bildirim" } }
-};
-const GITHUB = /github\.com\/([\w.-]+)(?:\/([\w.-]+))?/;
-function githubName(url) {
-  const match = typeof url === "string" ? GITHUB.exec(url) : null;
-  if (match === null)
-    return null;
-  return match[2] === undefined ? match[1] ?? null : `${match[1]}/${match[2].replace(/\.git$/, "")}`;
-}
-
-const SKILLS_DIR = ".claude/skills";
-function linkedDir(spec) {
-  const dirs = spec.roots.filter((root) => Boolean(root)).map((root) => `${root}/${SKILLS_DIR}`);
-  return async (name) => {
-    for (const dir of dirs)
-      if (await spec.exists(`${dir}/${name}`).catch(() => false))
-        return `${dir}/${name}`;
-    return;
-  };
-}
-function marketRoot(realPluginRoot) {
-  return realPluginRoot.replaceAll("\\", "/").replace(/\/mods\/[^/]+\/?$/, "");
-}
-function installedMarketRoot(install, knownText) {
-  let known;
-  try {
-    known = JSON.parse(knownText ?? "");
-  } catch {
-    known = undefined;
-  }
-  const entry = isRecord(known) ? known[install.market] : undefined;
-  const location = isRecord(entry) ? text(entry.installLocation) : undefined;
-  return (location ?? `${install.pluginsDir}/marketplaces/${install.market}`).replaceAll("\\", "/").replace(/\/+$/, "");
-}
-const SAFE_NAME = /^[\w.-]+$/;
-function isRecord(value) {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-function text(value) {
-  return typeof value === "string" && value !== "" ? value : undefined;
-}
-async function readJson(read, path) {
-  try {
-    const value = JSON.parse(String(await read(path)));
-    return isRecord(value) ? value : undefined;
-  } catch {
-    return;
-  }
-}
-function upstreamOf(name, manifest) {
-  return githubName(manifest?.repository) ?? githubName(manifest?.homepage) ?? META[name]?.upstream ?? githubName(manifest?.author?.url);
-}
-function infoOf(facts) {
-  const { name, entry, manifest, problem } = facts;
-  const meta = META[name];
-  const summary = meta?.summary === undefined ? undefined : pick(meta.summary);
-  return {
-    name,
-    version: text(manifest?.version) ?? text(entry.version) ?? null,
-    description: problem ?? summary ?? text(manifest?.description) ?? text(entry.description) ?? facts.note ?? (manifest ? "" : catalogWords().unreadable),
-    group: meta?.group ?? "other",
-    surfaces: meta?.surfaces ?? BOTH,
-    upstream: upstreamOf(name, manifest),
-    isHealthy: (manifest !== undefined || facts.note !== undefined) && problem === undefined,
-    isEnabled: facts.isEnabled,
-    options: isRecord(manifest?.userConfig) ? Object.keys(manifest.userConfig) : []
-  };
-}
-async function enabledOf(spec) {
-  if (spec.flag === false)
-    return false;
-  if (spec.flag === true)
-    return true;
-  const isLinked = SAFE_NAME.test(spec.name) && await spec.hasLink(spec.name).catch(() => false);
-  return isLinked ? true : null;
-}
-function remoteNote(source) {
-  const repo = isRecord(source) ? text(source.repo) ?? githubName(source.url) ?? undefined : undefined;
-  const remote = catalogWords().remote;
-  return repo === undefined ? remote : `${remote} (${repo})`;
-}
-async function remoteInfo(spec) {
-  const { name, entry, isEnabled, options } = spec;
-  const dir = SAFE_NAME.test(name) ? await options.linkedDir?.(name).catch(() => {
-    return;
-  }) : undefined;
-  const manifest = dir === undefined ? undefined : await readJson(options.read, `${dir}/.claude-plugin/plugin.json`);
-  return infoOf({ name, entry, manifest, isEnabled, note: remoteNote(entry.source) });
-}
-async function entryInfo(spec) {
-  const { index, options, enabled } = spec;
-  const hasLink = options.hasLink ?? (async () => false);
-  const entry = isRecord(spec.entry) ? spec.entry : {};
-  const name = text(entry.name);
-  const invalid = catalogWords().invalid;
-  if (name === undefined)
-    return infoOf({ name: catalogWords().entry(index + 1), entry, manifest: undefined, isEnabled: null, problem: invalid });
-  const isEnabled = await enabledOf({ name, flag: enabled[name], hasLink });
-  if (entry.source === undefined || entry.source === null)
-    return infoOf({ name, entry, manifest: undefined, isEnabled, problem: invalid });
-  if (typeof entry.source !== "string")
-    return remoteInfo({ name, entry, isEnabled, options });
-  const dir = `${options.root}/${entry.source.replace(/^\.\//, "")}`;
-  return infoOf({ name, entry, manifest: await readJson(options.read, `${dir}/.claude-plugin/plugin.json`), isEnabled });
-}
-async function loadCatalog(options) {
-  const market = await readJson(options.read, `${options.root}/.claude-plugin/marketplace.json`);
-  const name = text(market?.name) ?? "modz";
-  const plugins = market?.plugins;
-  const entries = Array.isArray(plugins) ? plugins : [];
-  const enabled = Object.fromEntries(Object.entries(options.enabledPlugins ?? {}).filter(([key]) => key.endsWith(`@${name}`)).map(([key, value]) => [key.slice(0, -name.length - 1), value]));
-  const mods = await Promise.all(entries.map((entry, index) => entryInfo({ entry, index, options, enabled })));
-  return { name, mods };
-}
-function headline(mods) {
-  const words = catalogWords();
-  const known = mods.filter((mod) => mod.isEnabled !== null);
-  const total = words.mods(mods.length);
-  if (known.length === 0)
-    return total;
-  const on = known.filter((mod) => mod.isEnabled === true).length;
-  const state = on === known.length ? words.allOn : words.on(on);
-  const unknown = mods.length - known.length;
-  return unknown === 0 ? `${total} · ${state}` : `${total} · ${state} · ${words.unknown(unknown)}`;
-}
-function healthOf(mods) {
-  const words = catalogWords();
-  const bad = mods.filter((mod) => !mod.isHealthy).length;
-  return bad === 0 ? { text: words.allHealthy, isBad: false } : { text: words.broken(bad), isBad: true };
-}
-
-async function enabledPlugins(disk) {
-  try {
-    const value = (await disk.settings()).enabledPlugins;
-    return typeof value === "object" && value !== null ? value : {};
-  } catch {
-    disk.log("modz: settings could not be read; enabled state unknown");
-    return {};
-  }
-}
-async function homeOf(disk) {
-  const home = await disk.env.home().catch(() => {
-    return;
-  }) || await disk.env.userProfile().catch(() => {
-    return;
-  });
-  return home ? home.replaceAll("\\", "/").replace(/\/+$/, "") : undefined;
-}
-async function skillLinks(disk) {
-  const home = await homeOf(disk);
-  const cwd = await disk.cwd().catch(() => {
-    return;
-  });
-  return linkedDir({ roots: [home, cwd], exists: (path) => disk.exists(path) });
-}
-async function linksOf(disk) {
-  const dirOf = await skillLinks(disk);
-  return { hasLink: async (name) => await dirOf(name) !== undefined, linkedDir: dirOf };
-}
-async function textOf$2(disk, path) {
-  return await disk.exists(path) ? String(await disk.read(path)) : undefined;
-}
-async function marketOf(disk) {
-  try {
-    const real = await disk.realPath(disk.root).catch(() => {
-      return;
-    }) ?? disk.root;
-    const install = installOf(real);
-    const root = install === undefined ? marketRoot(real) : installedMarketRoot(install, await textOf$2(disk, `${install.pluginsDir}/known_marketplaces.json`).catch(() => {
-      return;
-    }));
-    return await loadCatalog({ read: (path) => disk.read(path), root, enabledPlugins: await enabledPlugins(disk), ...await linksOf(disk) });
-  } catch (cause) {
-    disk.log(`modz: the catalog could not be read: ${String(cause)}`);
-    return { name: "", mods: [] };
-  }
-}
-const MARKET_TTL_MS = 15000;
-let marketKept = null;
-function marketSoon(disk) {
-  const now = Date.now();
-  if (marketKept === null || now - marketKept.at > MARKET_TTL_MS)
-    marketKept = { at: now, market: marketOf(disk) };
-  return marketKept.market;
-}
-function keepMarket(market) {
-  marketKept = { at: Date.now(), market: Promise.resolve(market) };
-}
-async function keepUpdated(disk) {
-  const install = installOf(disk.root);
-  if (install === undefined)
-    return;
-  const home = await homeOf(disk);
-  const configDir = await disk.env.configDir() ?? (home === undefined ? undefined : `${home}/.claude`);
-  if (configDir === undefined)
-    return;
-  const settingsPath = `${configDir}/settings.json`;
-  const next = autoUpdateSettings({
-    market: install.market,
-    settingsText: await textOf$2(disk, settingsPath),
-    knownText: await textOf$2(disk, `${install.pluginsDir}/known_marketplaces.json`)
-  });
-  if (next === undefined)
-    return;
-  await disk.write(settingsPath, next);
-  disk.log(`modz: auto-update turned on for the ${install.market} marketplace`);
-}
-async function updateReady(disk, run) {
-  const install = installOf(disk.root);
-  if (install === undefined)
-    return false;
-  const url = remoteOf(await textOf$2(disk, `${install.pluginsDir}/known_marketplaces.json`), install.market);
-  const installed = installedCommit(await textOf$2(disk, `${install.pluginsDir}/installed_plugins.json`), `modz@${install.market}`);
-  if (url === undefined || installed === undefined)
-    return false;
-  return isNewer(installed, headOf((await run(["git", "ls-remote", url, "HEAD"])).stdout));
 }
 
 const ENGLISH = {
@@ -4124,7 +4344,7 @@ const OWN_PANES = [PANE, MODS_PANE, ...SIDE_PANES];
 const cardsAtom = atom({ plugin: "modz", key: "cards" }, {});
 const layoutAtom = atom({ plugin: "modz", key: "layout" }, EMPTY_LAYOUT);
 const editingAtom = atom({ plugin: "modz", key: "isEditing" }, false);
-const updateAtom = atom({ plugin: "modz", key: "hasUpdate" }, false);
+const updatesAtom = atom({ plugin: "modz", key: "updates" }, null);
 const unansweredAtom = atom({ plugin: "modz", key: "unanswered" }, null);
 const ON = { plugin: "modz", key: "isOn" };
 const LAYOUT_KEY = "layout";
@@ -4134,17 +4354,6 @@ async function themeNow($) {
     return;
   }));
 }
-const diskOf = ($) => ({
-  root: $.plugin.root,
-  env: { home: () => $.env.get("HOME"), userProfile: () => $.env.get("USERPROFILE"), configDir: () => $.env.get("CLAUDE_CONFIG_DIR") },
-  cwd: () => $.session.cwd(),
-  settings: () => $.settings.read(),
-  realPath: async (path) => (await $.fs.stat(path, { resolve: true })).realPath,
-  read: (path) => $.fs.read(path),
-  exists: (path) => $.fs.exists(path),
-  write: (path, text) => $.fs.write(path, text),
-  log: (text) => $.ui.log(text, { to: "debug" })
-});
 const swapOf = ($) => ({
   panes: () => $.ui.panes(),
   show: (pane, isFocused) => show($, pane, isFocused).then(() => refreshSide($, pane)),
@@ -4181,15 +4390,7 @@ const frameOf = async ($, site) => ({ ...site, theme: await themeNow($), actions
 async function partsOf($) {
   const [cards, layout, isEditing] = [await read($, cardsAtom), await read($, layoutAtom), await read($, editingAtom)];
   const host = await $.state.get({ plugin: "hud-pro", key: "host" }).catch(() => ({ value: false }));
-  return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()), isUsageHosting: host.value === true, hasUpdate: await read($, updateAtom) };
-}
-const UPDATE_CHECK_MS = 1e4;
-async function noticeUpdate($) {
-  const isReady = await updateReady(diskOf($), (argv) => $.process.run(argv, { timeoutMs: UPDATE_CHECK_MS }));
-  if (!isReady || await read($, updateAtom))
-    return;
-  await update($, updateAtom, () => true);
-  $.ui.toast(hubWords().updateToast, { timeoutMs: 12000 });
+  return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()), isUsageHosting: host.value === true, hasUpdate: (await read($, updatesAtom))?.hasNew === true };
 }
 function startHooks(on, options) {
   on("session.start", async ($, e, next) => {
@@ -4212,7 +4413,6 @@ function startHooks(on, options) {
     if (options.keepUpdated === true) {
       keepUpdated(diskOf($)).catch((cause) => $.ui.log(`modz: auto-update could not be turned on: ${String(cause)}`, { to: "debug" }));
     }
-    noticeUpdate($).catch((cause) => $.ui.log(`modz: the update check failed: ${String(cause)}`, { to: "debug" }));
     return started;
   });
   on("session.attach", async ($, e, next) => {

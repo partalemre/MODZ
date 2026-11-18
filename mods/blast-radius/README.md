@@ -67,8 +67,6 @@ The verdict for each exact command is kept for the session, and dropped when the
 
 **Token cost:** at most one `haiku` call (effort low, a reply of at most 32 tokens) per Bash command that is neither held by the table nor a plain read, on your own account, and only while `.claude/house-rules.md` exists; a repeated command costs nothing. Without the file this costs nothing.
 
-**TypeSafe Jev (opt-in):** set `MODZ_JUDGE=jev` and `TYPESAFE_API_KEY` in the `env` block of `~/.claude/settings.json` and the judge asks TypeSafe Jev instead of the model. The command and your rules are then sent to `api.typesafe.ai`, after `KEY=value` assignments with secret-looking names, `--token`/`--password` values, URL passwords, bearer tokens and long key-like strings are masked. Without both variables nothing is sent there.
-
 ## Another chat's edit
 
 When two chats work in the same files, the second one can write over what the first just changed. Each edit that lands (Write, Edit, NotebookEdit, and MultiEdit where the build has it) is noted by the file's real path, so a symlink and its target count as one file. If Claude is about to edit a file that another chat on this machine edited in the last 30 minutes, the edit is held on an amber card:
@@ -95,7 +93,7 @@ The notes live in the plugin's own store under `~/.claude`, one entry per chat, 
 - Needs `bash`, `git`, `find` and `du` on your `PATH`.
 - This is a safety net, not a permission system. Use [permission rules](https://code.claude.com/docs/en/settings) for a hard block.
 
-Without `.claude/house-rules.md` it uses no model tokens. It has no settings beyond the two Jev variables above.
+Without `.claude/house-rules.md` it uses no model tokens. It has no settings.
 
 ## Language
 

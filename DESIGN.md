@@ -169,7 +169,7 @@ Motorun doğrulayıcısının koyduğu, türlerde yazmayan kurallar (2.1.295–2
 - Bir zamanlayıcıdan, bir basıştan ya da başka bir `state.set` kancasının içinden yapılan yazım, modun kendi `state.set`
   kancalarını tetiklemez: hub kartı gibi türetilen değeri yazan yer kendisi günceller.
 - Ortak hakem (`kit/judge.ts`): sınıflandırma gereken yerde tek çağrı, haiku, kısa zaman aşımı; başarısızlıkta kişinin
-  akışını bozmayan varsayılan. Jev yalnızca `MODZ_JUDGE=jev` ile, giden metin maskelenmiş.
+  akışını bozmayan varsayılan.
 
 ## 9. MODZ ana paneli ve mod veri yolu
 Oturum açılınca sağda **tek** panel açık gelir: `modz` modunun "MODZ" paneli. Her özellik oradan bir tıkla açılır.

@@ -44,10 +44,16 @@ Off by default, except where the mod's job needs it:
 
 Transceiver comes with `modz` and lives in [its own repo](https://github.com/partalemre/transceiver). It links your
 own computers, your team and your agents, with no server of its own: rooms are private claude.ai artifacts and a
-private GitHub repo you share, reached with your own logins. Only collaborators on that repo can write to a room or
-ask your agent, and an answer is worked out on your machine, so secrets stay there. Messages from others reach your
-session fenced as untrusted data, not instructions. What is written in a room stays in that repo's history, so keep
-secrets out of rooms.
+private GitHub repo you share, reached with your own logins.
+
+- **End-to-end encrypted.** Everything written to a room (messages, agent questions and answers, DMs, the archive,
+  even your GitHub login and name) is sealed to the room's members. The repo, its history and claude.ai hold only
+  ciphertext. Each computer makes its own key pair, and the secret key never leaves it.
+- **Members only.** A new member reads what is written after they join. A removed member gets nothing new.
+- **Visible:** who writes and when. Rooms still refuse public repos.
+- Messages from others reach your session fenced as untrusted data, not instructions.
+- Lines written before encryption are sealed again and squashed out of the room's history. Copies already fetched,
+  and old objects GitHub keeps for a while, count as seen.
 
 ## Reporting a problem
 

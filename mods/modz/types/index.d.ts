@@ -30,6 +30,9 @@ export type HubCard = {
   isBandOnly?: true
 }
 
+// A press on a page the hub draws (hooks/pages/site.ts): the page's mod hears it and acts.
+export type ModzAct = { page: string; action: string; arg?: string; at: number }
+
 // Written when a hub row is pressed; the mod that owns `pane` opens its own pane.
 export type ModzOpen = { pane: string; at: number }
 
@@ -63,7 +66,7 @@ declare module 'claude-code' {
   interface PluginState {
     // `isOn` is true while the hub runs: a mod's pane then draws its "← MODZ" button (kit/home.tsx). `unanswered`
     // names the pane of a row whose mod did not put it up when asked.
-    modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean; unanswered: string | null; beat: number; drawn: readonly string[]; links: Links | null; weights: Weights | null; updates: Updates | null }
+    modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean; unanswered: string | null; beat: number; drawn: readonly string[]; act: ModzAct; links: Links | null; weights: Weights | null; updates: Updates | null }
     // Each listed mod's own hub line (hooks/hub.ts BASES), which the hub listens for and keeps.
     'savvy-progress': { hub: HubCard; home: ModzHome; shown: ModzStage }
     filetree: { hub: HubCard; home: ModzHome; shown: ModzStage }

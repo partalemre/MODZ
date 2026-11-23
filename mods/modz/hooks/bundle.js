@@ -4139,27 +4139,40 @@ function planPane(ui, view, layout) {
   }, header(ui, headline(plan), [plan.source, noteOf(view)].filter(Boolean).join(" · ")), bar(ui, { percent: progressOf(plan).percent, columns: layout.columns, eta: eta === null || noteOf(view) !== "" ? "" : words().left(formatDuration(eta)) }), h(Text, null, " "), stepList(ui, { ...view, plan }, layout.rows));
 }
 
-const HUB_DRAWN = ["plan"];
 const PLAN_TASKS = { plugin: "plan-steps", key: "tasks" };
 const PLAN_DOC = { plugin: "plan-steps", key: "doc" };
 const PLAN_TRACKS = { plugin: "plan-steps", key: "tracks" };
-const BEAT = { plugin: "modz", key: "beat" };
-const HOME_ROWS = 1;
-const DEFAULT_ROWS = 24;
 async function planPage($, ui, site) {
   const tasks = (await $.state.get(PLAN_TASKS)).value ?? [];
   const doc = (await $.state.get(PLAN_DOC)).value ?? null;
   const tracks = (await $.state.get(PLAN_TRACKS)).value ?? {};
   const view = { plan: resolvePlan(tasks, doc), tracks, now: await $.clock.now(), theme: "auto", touchedAt: 0 };
-  return planPane(ui, view, { ...site, rows: Math.max(site.rows - HOME_ROWS, 1) });
+  return planPane(ui, view, site);
 }
+
+const HUB_DRAWN = ["plan"];
+async function pageOf($, o) {
+  switch (o.page) {
+    case "plan":
+      return planPage($, o.ui, o.site);
+    default:
+      return null;
+  }
+}
+const BEAT = { plugin: "modz", key: "beat" };
+const ACT = { plugin: "modz", key: "act" };
+const HOME_ROWS = 1;
+const DEFAULT_ROWS = 24;
 async function pageTree($, e, o) {
   await $.state.get(BEAT);
-  const site = { columns: o.columns, rows: e.props.scroll?.bodyRows || e.viewport?.rows || DEFAULT_ROWS, surface: o.surface };
+  const rows = e.props.scroll?.bodyRows || e.viewport?.rows || DEFAULT_ROWS;
+  const site = { columns: o.columns, rows: Math.max(rows - HOME_ROWS, 1), surface: o.surface };
+  const act = (action, arg) => void $.state.set(ACT, { page: o.page, action, ...arg === undefined ? {} : { arg }, at: Date.now() }).catch((cause) => $.ui.log(`modz: the ${o.page} page's ${action} could not be handed on: ${String(cause)}`, { to: "debug" }));
+  const page = await pageOf($, { page: o.page, ui: o.ui, site, act });
   const { Box } = o.ui;
   return h(Box, {
     flexDirection: "column"
-  }, HomeButton(o.ui, o.onHome), await planPage($, o.ui, site));
+  }, HomeButton(o.ui, o.onHome), page);
 }
 
 const textOf$1 = (entry, lang) => entry[lang === "tr" ? 1 : 0];

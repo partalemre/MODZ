@@ -20,10 +20,13 @@ export const MAX_PINGS = 12
 // A one-word reply plus the thinking a model cannot turn off stays well under this; over it, a ping costs double.
 export const MAX_PING_OUTPUT = 1000
 
-// Claude 5 and later, $ per million tokens, [cache read, 1h cache write (2× input), output]: the published list
-// prices (claude-api skill model table, cached 2026-11-03). Keyed by family and version, matched exactly, so a
-// release not listed here has no price rather than a neighbour's.
-const PRICES_5: Record<string, Price> = {
+// $ per million tokens, [cache read, 1h cache write (2× input), output]: the published list prices (claude-api
+// skill model table, cached 2026-11-03). Keyed by family and version, matched exactly, so a release not listed
+// here has no price rather than a neighbour's.
+const OPUS_4_5: Price = [0.5, 10, 25]
+const OPUS_4: Price = [1.5, 30, 75]
+const SONNET_4: Price = [0.3, 6, 15]
+const PRICES: Record<string, Price> = {
   'fable-5-2': [0.2, 16, 40],
   'mythos-5-2': [0.2, 16, 40],
   'fable-5-1': [0.25, 20, 50],
@@ -35,20 +38,23 @@ const PRICES_5: Record<string, Price> = {
   'sonnet-5-5': [0.1, 4, 10],
   'sonnet-5': [0.2, 4, 10],
   'haiku-5-5': [0.01, 0.2, 0.5],
+  'opus-4-8': OPUS_4_5,
+  'opus-4-7': OPUS_4_5,
+  'opus-4-6': OPUS_4_5,
+  'opus-4-5': OPUS_4_5,
+  'opus-4-1': OPUS_4,
+  'opus-4-0': OPUS_4,
+  'opus-4': OPUS_4,
+  'sonnet-4-6': SONNET_4,
+  'sonnet-4-5': SONNET_4,
+  'sonnet-4-0': SONNET_4,
+  'sonnet-4': SONNET_4,
+  'haiku-4-5': [0.1, 2, 5],
+  'haiku-3-5': [0.08, 1.6, 4],
 }
-// "opus-5-5" in claude-opus-5-5, claude-opus-5-5[1m] or us.anthropic.claude-opus-5-5-v1:0; a date suffix is not a minor.
-const GEN_5 = /(fable|mythos|opus|sonnet|haiku)-((?:[5-9]|\d{2,})(?:-\d{1,2})?)(?!\d)/
-
-// Earlier models, more specific families first: a model id takes the first row it matches.
-const PRICES: Array<[string | RegExp, number, number, number]> = [
-  // Opus 4 and 4.1 in every spelling (claude-opus-4-1-20250805, claude-opus-4@20250514), never Opus 4.5 and later.
-  [/opus-4(?:-[01])?(?:$|[^-\d]|-20\d{6})/, 1.5, 30, 75],
-  ['opus-4', 0.5, 10, 25],
-  ['sonnet', 0.3, 6, 15],
-  ['3-5-haiku', 0.08, 1.6, 4],
-  ['haiku-3-5', 0.08, 1.6, 4],
-  ['haiku', 0.1, 2, 5],
-]
+// "opus-5-5" in claude-opus-5-5, claude-opus-5-5[1m] or us.anthropic.claude-opus-5-5-v1:0, "opus-4" in
+// claude-opus-4-20250514 or claude-opus-4@20250514: a date suffix is not a minor.
+const FAMILY_VERSION = /(fable|mythos|opus|sonnet|haiku)-(\d{1,2}(?:-\d{1,2})?)(?!\d)/
 
 const LONG_PROMPT_TOKENS = 100000
 // A request whose prompt, cache reads and writes included, is over 100k tokens pays these instead.
@@ -120,17 +126,11 @@ export function freshState(): State {
 
 export function priceOf(model: string | null, promptTokens: number): Price | null {
   const m = (model ?? '').toLowerCase().replace(/[\s.]+/g, '-')
-  const isLong = promptTokens > LONG_PROMPT_TOKENS
-  const gen5 = GEN_5.exec(m)
-  if (gen5) {
-    const key = `${gen5[1]}-${gen5[2]}`
-    const long = isLong ? LONG_PRICES.find(([family]) => family === key) : undefined
-    return long ? [long[1], long[2], long[3]] : PRICES_5[key] ?? null
-  }
-  for (const [family, read, write, output] of PRICES) {
-    if (typeof family === 'string' ? m.includes(family) : family.test(m)) return [read, write, output]
-  }
-  return null
+  const found = FAMILY_VERSION.exec(m)
+  // The older spelling claude-3-5-haiku puts the version before the family.
+  const key = found ? `${found[1]}-${found[2]}` : m.includes('3-5-haiku') ? 'haiku-3-5' : ''
+  const long = promptTokens > LONG_PROMPT_TOKENS ? LONG_PRICES.find(([family]) => family === key) : undefined
+  return long ? [long[1], long[2], long[3]] : PRICES[key] ?? null
 }
 
 export function coldUsd(s: State, model = s.lastModel): number | null {

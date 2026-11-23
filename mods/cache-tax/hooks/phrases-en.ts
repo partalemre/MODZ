@@ -86,6 +86,7 @@ export const EN = {
   guardFloor: (usd: string): string => `hold once at ${usd} or more, warn below (/cache-tax guard refuse holds any)`,
   underFloor: (floor: string): string => ` It costs less than your ${floor} floor, so it was not held.`,
   session: (count: number, usd: string): string => `${plural(count, 'full re-read', 'full re-reads')} paid, ${usd}`,
+  unpricedPaid: (usd: string | null, count: number): string => `${usd ? `${usd} and ` : ''}${count} with no price`,
 }
 
 export type Phrases = typeof EN

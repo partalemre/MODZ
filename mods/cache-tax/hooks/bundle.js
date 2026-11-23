@@ -12,7 +12,10 @@ const BIG_TOKENS = 50000;
 const PING_PROMPT = "Reply with the single word: warm. No reasoning, no tools, nothing else.";
 const MAX_PINGS = 12;
 const MAX_PING_OUTPUT = 1000;
-const PRICES_5 = {
+const OPUS_4_5 = [0.5, 10, 25];
+const OPUS_4 = [1.5, 30, 75];
+const SONNET_4 = [0.3, 6, 15];
+const PRICES = {
   "fable-5-2": [0.2, 16, 40],
   "mythos-5-2": [0.2, 16, 40],
   "fable-5-1": [0.25, 20, 50],
@@ -23,17 +26,22 @@ const PRICES_5 = {
   "opus-5": [0.5, 10, 25],
   "sonnet-5-5": [0.1, 4, 10],
   "sonnet-5": [0.2, 4, 10],
-  "haiku-5-5": [0.01, 0.2, 0.5]
+  "haiku-5-5": [0.01, 0.2, 0.5],
+  "opus-4-8": OPUS_4_5,
+  "opus-4-7": OPUS_4_5,
+  "opus-4-6": OPUS_4_5,
+  "opus-4-5": OPUS_4_5,
+  "opus-4-1": OPUS_4,
+  "opus-4-0": OPUS_4,
+  "opus-4": OPUS_4,
+  "sonnet-4-6": SONNET_4,
+  "sonnet-4-5": SONNET_4,
+  "sonnet-4-0": SONNET_4,
+  "sonnet-4": SONNET_4,
+  "haiku-4-5": [0.1, 2, 5],
+  "haiku-3-5": [0.08, 1.6, 4]
 };
-const GEN_5 = /(fable|mythos|opus|sonnet|haiku)-((?:[5-9]|\d{2,})(?:-\d{1,2})?)(?!\d)/;
-const PRICES = [
-  [/opus-4(?:-[01])?(?:$|[^-\d]|-20\d{6})/, 1.5, 30, 75],
-  ["opus-4", 0.5, 10, 25],
-  ["sonnet", 0.3, 6, 15],
-  ["3-5-haiku", 0.08, 1.6, 4],
-  ["haiku-3-5", 0.08, 1.6, 4],
-  ["haiku", 0.1, 2, 5]
-];
+const FAMILY_VERSION = /(fable|mythos|opus|sonnet|haiku)-(\d{1,2}(?:-\d{1,2})?)(?!\d)/;
 const LONG_PROMPT_TOKENS = 1e5;
 const LONG_PRICES = [
   ["haiku-5-5", 0.05, 1, 2.5]
@@ -74,18 +82,10 @@ function freshState() {
 }
 function priceOf(model, promptTokens) {
   const m = (model ?? "").toLowerCase().replace(/[\s.]+/g, "-");
-  const isLong = promptTokens > LONG_PROMPT_TOKENS;
-  const gen5 = GEN_5.exec(m);
-  if (gen5) {
-    const key = `${gen5[1]}-${gen5[2]}`;
-    const long = isLong ? LONG_PRICES.find(([family]) => family === key) : undefined;
-    return long ? [long[1], long[2], long[3]] : PRICES_5[key] ?? null;
-  }
-  for (const [family, read, write, output] of PRICES) {
-    if (typeof family === "string" ? m.includes(family) : family.test(m))
-      return [read, write, output];
-  }
-  return null;
+  const found = FAMILY_VERSION.exec(m);
+  const key = found ? `${found[1]}-${found[2]}` : m.includes("3-5-haiku") ? "haiku-3-5" : "";
+  const long = promptTokens > LONG_PROMPT_TOKENS ? LONG_PRICES.find(([family]) => family === key) : undefined;
+  return long ? [long[1], long[2], long[3]] : PRICES[key] ?? null;
 }
 function coldUsd(s, model = s.lastModel) {
   const price = priceOf(model, s.ctx);
@@ -748,7 +748,8 @@ const EN = {
   guardWarn: "warn only (/cache-tax guard refuse holds once)",
   guardFloor: (usd) => `hold once at ${usd} or more, warn below (/cache-tax guard refuse holds any)`,
   underFloor: (floor) => ` It costs less than your ${floor} floor, so it was not held.`,
-  session: (count, usd) => `${plural(count, "full re-read", "full re-reads")} paid, ${usd}`
+  session: (count, usd) => `${plural(count, "full re-read", "full re-reads")} paid, ${usd}`,
+  unpricedPaid: (usd, count) => `${usd ? `${usd} and ` : ""}${count} with no price`
 };
 
 const TR = {
@@ -813,7 +814,8 @@ const TR = {
   guardWarn: "yalnızca uyar (/cache-tax guard refuse ile bir kez beklet)",
   guardFloor: (usd) => `${usd} ve üstünde bir kez beklet, altında uyar (/cache-tax guard refuse her birini bekletir)`,
   underFloor: (floor) => ` ${floor} sınırının altında olduğu için bekletilmedi.`,
-  session: (count, usd) => `sohbet ${count} kez baştan okundu, ${usd}`
+  session: (count, usd) => `sohbet ${count} kez baştan okundu, ${usd}`,
+  unpricedPaid: (usd, count) => `${usd ? `${usd} ve ` : ""}${count} kez fiyatsız`
 };
 
 const say = () => pick({ en: EN, tr: TR });
@@ -932,8 +934,10 @@ function cardText(s, now) {
     lines.push(row(labels.even, say().even(pings, { every: fmtDuration(s.every), span: fmtDuration(pings * s.every) })));
   }
   lines.push(row(labels.guard, guardRow(s)));
-  const paid = s.misses.reduce((a, m) => a + (m.usd ?? 0), 0);
-  lines.push(row(labels.session, say().session(s.misses.length, fmtUsd(paid))));
+  const priced = s.misses.filter((m) => m.usd != null);
+  const paid = fmtUsd(priced.reduce((a, m) => a + (m.usd ?? 0), 0));
+  const unpriced = s.misses.length - priced.length;
+  lines.push(row(labels.session, say().session(s.misses.length, unpriced ? say().unpricedPaid(priced.length ? paid : null, unpriced) : paid)));
   return lines.join(`
 `);
 }

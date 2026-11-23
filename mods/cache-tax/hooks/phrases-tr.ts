@@ -80,4 +80,5 @@ export const TR: Phrases = {
   guardFloor: (usd: string): string => `${usd} ve üstünde bir kez beklet, altında uyar (/cache-tax guard refuse her birini bekletir)`,
   underFloor: (floor: string): string => ` ${floor} sınırının altında olduğu için bekletilmedi.`,
   session: (count: number, usd: string): string => `sohbet ${count} kez baştan okundu, ${usd}`,
+  unpricedPaid: (usd: string | null, count: number): string => `${usd ? `${usd} ve ` : ''}${count} kez fiyatsız`,
 }

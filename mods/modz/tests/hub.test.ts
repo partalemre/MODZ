@@ -110,7 +110,7 @@ test('by default nothing opens until /modz', async ($: any, on: any) => {
   expect(w.opened).toEqual([])
   await $.command.run({ command: 'modz', args: '' })
 
-  expect(w.opened).toEqual(['modz', 'close:modz-mods'])
+  expect(w.opened).toEqual(['modz'])
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
@@ -143,10 +143,10 @@ for (const surface of ['terminal', 'desktop'] as const) {
     expect(staged).toEqual(['modz', 'tests', 'modz'])
     w.opened.length = 0
     await ui.press({ key: 'open-modz-mods' })
-    expect(w.opened).toEqual(['modz-mods', 'close:modz'])
+    // The catalog is a page of the hub's one pane: the pane comes forward, nothing else opens.
+    expect(w.opened).toEqual(['modz'])
     expect(staged).toEqual(['modz', 'tests', 'modz', 'modz-mods'])
-    const catalog = await $.ui.mount({ ...PANE, requestId: 'modz-mods', surface })
-    expect(await catalog.find({ key: 'mod-savvy-progress' })).toBeDefined()
+    expect(await ui.find({ key: 'mod-savvy-progress' })).toBeDefined()
   })
 
   test(`a mod that does not answer leaves the hub in the panel (${surface})`, { options: { openOnStart: true } }, async ($: any, on: any) => {

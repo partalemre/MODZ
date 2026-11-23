@@ -1093,21 +1093,19 @@ const catalogDrawings = stableDrawings$4();
 const hubKept = { isHeld: false };
 const closeQuietly = ($, id) => $.ui.close({ id }).catch((cause) => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: "debug" }));
 async function show($, pane, isFocused = true) {
-  const title = pane === HUB_PANE ? TITLE$3 : paneWords(pane).title;
   hubKept.isHeld = true;
   if (pane === HUB_PANE)
     hubDrawings.reset();
   if (pane === MODS_PANE)
     catalogDrawings.reset();
-  await $.ui.open(isFocused ? { id: pane, title, focus: true } : { id: pane, title });
-  await $.state.set(STAGE$2, { pane, at: Date.now() });
-  for (const other of [HUB_PANE, MODS_PANE])
-    if (other !== pane)
-      await closeQuietly($, other);
+  const staged = paneOf((await $.state.get(STAGE$2)).value);
+  if (staged !== pane && !(pane === HUB_PANE && staged === null))
+    await $.state.set(STAGE$2, { pane, at: Date.now() });
+  await $.ui.open(isFocused ? { id: HUB_PANE, title: TITLE$3, focus: true } : { id: HUB_PANE, title: TITLE$3 });
   const up = new Set((await $.ui.panes().catch(() => [])).map((each) => each.id));
-  for (const side of SIDE_PANES)
-    if (side !== pane && up.has(side))
-      await closeQuietly($, side);
+  for (const own of [MODS_PANE, ...SIDE_PANES])
+    if (up.has(own))
+      await closeQuietly($, own);
 }
 const openHub = ($) => show($, HUB_PANE);
 async function copy($, text, press) {
@@ -1490,23 +1488,35 @@ function fillSideRows($) {
   filledAt = now;
   fill$1($).catch(log($, "filling the side rows"));
 }
+async function linksPage($, e) {
+  const onHome = () => void openHub($).catch(log($, "opening the hub"));
+  const onCheck = () => void refreshLinks($, true).catch(log($, "reading the connections"));
+  return pinned(e, linksTree($.ui.resolve(e), { links: await read($, linksAtom), onHome, onCheck }));
+}
+async function weightPage($, e) {
+  const onHome = () => void openHub($).catch(log($, "opening the hub"));
+  return pinned(e, weightTree($.ui.resolve(e), { weights: await read($, weightsAtom), now: await $.clock.now().catch(() => Date.now()), onHome, onCopy: (text, press) => copy($, text, press) }));
+}
+async function updatesPage($, e) {
+  const onHome = () => void openHub($).catch(log($, "opening the hub"));
+  const onCheck = () => void refreshUpdates($, true).catch(log($, "reading the updates"));
+  const onAuto = (isOn) => void setAuto($, isOn).catch(log($, "setting auto-update"));
+  const view = { updates: await read($, updatesAtom$1), isFailed: isAutoFailed, onHome, onCheck, onAuto, onCopy: (text, press) => copy($, text, press) };
+  return pinned(e, updatesTree($.ui.resolve(e), view));
+}
+async function sidePage($, e, page) {
+  if (page === LINKS_PANE)
+    return linksPage($, e);
+  if (page === WEIGHT_PANE)
+    return weightPage($, e);
+  if (page === UPDATES_PANE)
+    return updatesPage($, e);
+  return null;
+}
 function wireUpkeep(on) {
-  on("ui.render", { component: "Pane", requestId: LINKS_PANE }, async ($, e) => {
-    const onHome = () => void openHub($).catch(log($, "opening the hub"));
-    const onCheck = () => void refreshLinks($, true).catch(log($, "reading the connections"));
-    return pinned(e, linksTree($.ui.resolve(e), { links: await read($, linksAtom), onHome, onCheck }));
-  });
-  on("ui.render", { component: "Pane", requestId: WEIGHT_PANE }, async ($, e) => {
-    const onHome = () => void openHub($).catch(log($, "opening the hub"));
-    return pinned(e, weightTree($.ui.resolve(e), { weights: await read($, weightsAtom), now: await $.clock.now().catch(() => Date.now()), onHome, onCopy: (text, press) => copy($, text, press) }));
-  });
-  on("ui.render", { component: "Pane", requestId: UPDATES_PANE }, async ($, e) => {
-    const onHome = () => void openHub($).catch(log($, "opening the hub"));
-    const onCheck = () => void refreshUpdates($, true).catch(log($, "reading the updates"));
-    const onAuto = (isOn) => void setAuto($, isOn).catch(log($, "setting auto-update"));
-    const view = { updates: await read($, updatesAtom$1), isFailed: isAutoFailed, onHome, onCheck, onAuto, onCopy: (text, press) => copy($, text, press) };
-    return pinned(e, updatesTree($.ui.resolve(e), view));
-  });
+  on("ui.render", { component: "Pane", requestId: LINKS_PANE }, ($, e) => linksPage($, e));
+  on("ui.render", { component: "Pane", requestId: WEIGHT_PANE }, ($, e) => weightPage($, e));
+  on("ui.render", { component: "Pane", requestId: UPDATES_PANE }, ($, e) => updatesPage($, e));
 }
 
 const cardsAtom$1 = atom({ plugin: "modz", key: "cards" }, {});
@@ -11524,6 +11534,10 @@ async function reopenKept($) {
 function paneHooks(on) {
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
     const staged = paneOf((await $.state.get(STAGE)).value);
+    if (staged === MODS_PANE)
+      return catalogPage($, e);
+    if (staged !== null && SIDE_PANES.includes(staged))
+      return sidePage($, e, staged);
     if (staged !== null && HUB_DRAWN.includes(staged)) {
       const onHome = () => void openHub($).catch((cause) => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: "debug" }));
       return pinned(e, await pageTree($, e, { page: staged, ui: $.ui.resolve(e), columns: e.props.bodyColumns || DEFAULT_COLUMNS, surface: e.surface, onHome }));
@@ -11545,15 +11559,16 @@ function paneHooks(on) {
     const { Box } = $.ui.resolve(e);
     return h(Box, null);
   });
-  on("ui.render", { component: "Pane", requestId: MODS_PANE }, async ($, e) => {
-    const ui = $.ui.resolve(e);
-    const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS;
-    const onHome = () => void openHub($).catch((cause) => $.ui.log(`modz: the hub could not be opened: ${String(cause)}`, { to: "debug" }));
-    const market = await marketOf(diskOf($));
-    keepMarket(market);
-    const commands = await $.command.list().catch(() => []);
-    return pinned(e, modzTree(ui, { market, commands, surface: e.surface, columns, theme: await themeNow($), onHome, onCopy: (text, press) => copy($, text, press), stable: catalogDrawings }));
-  });
+  on("ui.render", { component: "Pane", requestId: MODS_PANE }, ($, e) => catalogPage($, e));
+}
+async function catalogPage($, e) {
+  const ui = $.ui.resolve(e);
+  const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS;
+  const onHome = () => void openHub($).catch((cause) => $.ui.log(`modz: the hub could not be opened: ${String(cause)}`, { to: "debug" }));
+  const market = await marketOf(diskOf($));
+  keepMarket(market);
+  const commands = await $.command.list().catch(() => []);
+  return pinned(e, modzTree(ui, { market, commands, surface: e.surface, columns, theme: await themeNow($), onHome, onCopy: (text, press) => copy($, text, press), stable: catalogDrawings }));
 }
 function footerHooks(on) {
   on("ui.render", { component: "SessionMode" }, async ($, e, next) => {

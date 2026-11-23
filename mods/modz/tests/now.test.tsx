@@ -272,5 +272,5 @@ test('with only the hub installed it says so and leads to the install lines', { 
   expect(press.props.label).toMatch(/^\u3164+$/)
   expect(await alts(ui)).toContain('Mod ekle')
   await ui.press({ key: 'add-mods' })
-  expect(world.up).toEqual(['modz-mods'])
+  expect(world.up).toEqual(['modz'])
 })

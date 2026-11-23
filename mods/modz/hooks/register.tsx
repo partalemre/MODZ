@@ -29,7 +29,7 @@ import { noteAnswer, openPane, stepAside, toggleHub } from './swap'
 import type { Swap } from './swap'
 import { themeOf } from './theme'
 import { diskOf } from './disk'
-import { fillSideRows, refreshSide, wireUpkeep } from './upkeep'
+import { fillSideRows, refreshSide, sidePage, wireUpkeep } from './upkeep'
 import type { Theme } from './theme'
 import { plainViewOf, viewOf } from './view'
 import type { Frame, Parts } from './view'
@@ -239,6 +239,8 @@ async function reopenKept($: EngineInterface): Promise<void> {
 function paneHooks(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const staged = paneOf((await $.state.get(STAGE)).value)
+    if (staged === MODS_PANE) return catalogPage($, e)
+    if (staged !== null && SIDE_PANES.includes(staged)) return sidePage($, e, staged)
     if (staged !== null && HUB_DRAWN.includes(staged)) {
       const onHome = () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: 'debug' }))
 
@@ -267,18 +269,19 @@ function paneHooks(on: On): void {
     return <Box />
   })
 
-  on('ui.render', { component: 'Pane', requestId: MODS_PANE }, async ($, e) => {
-    const ui = $.ui.resolve(e)
-    const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS
+  // The catalog is drawn in the hub's pane now (show); a tab an older engine left still draws.
+  on('ui.render', { component: 'Pane', requestId: MODS_PANE }, ($, e) => catalogPage($, e))
+}
 
-    const onHome = () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not be opened: ${String(cause)}`, { to: 'debug' }))
+async function catalogPage($: EngineInterface, e: any) {
+  const ui = $.ui.resolve(e)
+  const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS
+  const onHome = () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not be opened: ${String(cause)}`, { to: 'debug' }))
+  const market = await marketOf(diskOf($))
+  keepMarket(market)
+  const commands = await $.command.list().catch(() => [])
 
-    const market = await marketOf(diskOf($))
-    keepMarket(market)
-    const commands = await $.command.list().catch(() => [])
-
-    return pinned(e, modzTree(ui, { market, commands, surface: e.surface, columns, theme: await themeNow($), onHome, onCopy: (text, press) => copy($, text, press), stable: catalogDrawings }))
-  })
+  return pinned(e, modzTree(ui, { market, commands, surface: e.surface, columns, theme: await themeNow($), onHome, onCopy: (text, press) => copy($, text, press), stable: catalogDrawings }))
 }
 
 // The desktop only: the terminal keeps its footer as the engine draws it, and /modz.

@@ -62,7 +62,6 @@ test('a press over another mod’s pane brings the hub back on stage', async ($:
   await ui.press({ key: 'modz-toggle' })
 
   expect(w.up.at(-1)).toBe('modz')
-  expect(w.opened.at(-1)).toBe('close:modz-mods')
 })
 
 test('the terminal footer is left to the engine', async ($: any, on: any) => {

@@ -311,7 +311,9 @@ async function alive(io, pids) {
   if (pids.length === 0)
     return new Set;
   try {
-    const { stdout } = await io.run(["ps", "-o", "pid=", "-p", pids.join(",")], { timeoutMs: PS_TIMEOUT_MS });
+    const { exitCode, stdout, stderr } = await io.run(["ps", "-o", "pid=", "-p", pids.join(",")], { timeoutMs: PS_TIMEOUT_MS });
+    if (exitCode !== 0 && (exitCode !== 1 || stderr.trim() !== ""))
+      return new Set(pids);
     return new Set(stdout.split(/\s+/).filter(Boolean).map(Number));
   } catch {
     return new Set(pids);

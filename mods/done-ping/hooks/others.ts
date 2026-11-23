@@ -15,7 +15,7 @@ export type OthersIo = {
   configDir: () => Promise<string>
   list: (path: string) => Promise<readonly { name: string; kind: string }[]>
   read: (path: string) => Promise<string>
-  run: (argv: string[], init: { timeoutMs: number }) => Promise<{ stdout: string }>
+  run: (argv: string[], init: { timeoutMs: number }) => Promise<{ exitCode: number; stdout: string; stderr: string }>
   sessionId: () => Promise<string>
 }
 
@@ -51,8 +51,10 @@ async function statuses(io: OthersIo, dir: string): Promise<Status[]> {
 async function alive(io: OthersIo, pids: readonly number[]): Promise<Set<number>> {
   if (pids.length === 0) return new Set()
   try {
-    // ps exits 1 when none of them runs: nothing is listed then.
-    const { stdout } = await io.run(['ps', '-o', 'pid=', '-p', pids.join(',')], { timeoutMs: PS_TIMEOUT_MS })
+    const { exitCode, stdout, stderr } = await io.run(['ps', '-o', 'pid=', '-p', pids.join(',')], { timeoutMs: PS_TIMEOUT_MS })
+    // ps exits 1 with nothing on stderr when none of them runs. Any other failure is a ps that cannot answer
+    // (Git for Windows, BusyBox: no -o): every file is taken at its word.
+    if (exitCode !== 0 && (exitCode !== 1 || stderr.trim() !== '')) return new Set(pids)
 
     return new Set(stdout.split(/\s+/).filter(Boolean).map(Number))
   } catch {

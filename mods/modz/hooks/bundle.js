@@ -99,14 +99,14 @@ function setHidden(layout, opts) {
 }
 const isHidden = (layout, pane) => layout.hidden.includes(pane);
 
-let current$2 = "en";
-const langOf$2 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
-function setLang$2(value) {
-  current$2 = langOf$2(value);
-  return current$2;
+let current$3 = "en";
+const langOf$3 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
+function setLang$3(value) {
+  current$3 = langOf$3(value);
+  return current$3;
 }
-const lang$1 = () => current$2;
-const pick$1 = (table) => table[current$2];
+const lang$1 = () => current$3;
+const pick$2 = (table) => table[current$3];
 
 const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const PANES = {
@@ -146,7 +146,7 @@ const PANES = {
   }
 };
 function paneWords(pane) {
-  const table = pick$1(PANES);
+  const table = pick$2(PANES);
   return table[pane] ?? { title: pane, hint: "" };
 }
 const HUB = {
@@ -227,8 +227,8 @@ const HUB = {
     helpInstall: "Kurulu değil:"
   }
 };
-const hubWords = () => pick$1(HUB);
-const badgeWord = () => pick$1({ en: "Beta", tr: "Beta" });
+const hubWords = () => pick$2(HUB);
+const badgeWord = () => pick$2({ en: "Beta", tr: "Beta" });
 const CATALOG = {
   en: {
     groups: { look: "Look", safety: "Safety", meter: "Meter", flow: "Flow", other: "Other" },
@@ -291,7 +291,7 @@ const CATALOG = {
     noCommand: "komut yok"
   }
 };
-const catalogWords = () => pick$1(CATALOG);
+const catalogWords = () => pick$2(CATALOG);
 function placeLine(mod) {
   const words = catalogWords();
   const source = mod.upstream === null ? "modz" : words.from(mod.upstream);
@@ -443,13 +443,13 @@ const paneOf = (value) => {
 };
 
 const USAGE_PANE = "usage";
-const SECOND$5 = 1000;
+const SECOND$6 = 1000;
 const MINUTE_S$1 = 60;
 const HOUR_M = 60;
 const STEP_S = 10;
 function elapsedText(ms) {
   const ago = hubWords().ago;
-  const seconds = Math.max(0, Math.floor(ms / SECOND$5));
+  const seconds = Math.max(0, Math.floor(ms / SECOND$6));
   if (seconds < STEP_S)
     return ago.now;
   if (seconds < MINUTE_S$1)
@@ -558,7 +558,7 @@ const LINKS = {
     connectedCount: (n) => `${n} çalışıyor`
   }
 };
-const linkWords = () => pick$1(LINKS);
+const linkWords = () => pick$2(LINKS);
 const WEIGHT$1 = {
   en: {
     lead: (days) => `Plugins and skills you have not used in ${days} days. Claude reads each one's listing in every chat.`,
@@ -593,7 +593,7 @@ const WEIGHT$1 = {
     count: (n, tokens) => `${n} kullanılmıyor · ~${short(tokens, ",", " bin")} token`
   }
 };
-const weightWords = () => pick$1(WEIGHT$1);
+const weightWords = () => pick$2(WEIGHT$1);
 const UPDATES = {
   en: {
     lead: "New MODZ versions come from GitHub. Nothing new runs on your computer until you take it.",
@@ -630,7 +630,7 @@ const UPDATES = {
     cardCurrent: "güncel"
   }
 };
-const updateWords = () => pick$1(UPDATES);
+const updateWords = () => pick$2(UPDATES);
 
 const WAIT_FRESH_MS = 24 * 60 * 60 * 1000;
 const ERROR_MAX = 80;
@@ -805,7 +805,7 @@ function updatesCard(updates, at) {
 
 const GROUPS = ["look", "safety", "meter", "flow", "other"];
 const BOTH = ["desktop", "terminal"];
-const META = {
+const META$1 = {
   skins: { group: "look", summary: { en: "Themes the transcript; /skin switches it", tr: "Transkripti temalarla çizer; /skin ile değişir" } },
   filetree: { group: "look", summary: { en: "Files Claude touches and their git status", tr: "Claude'un dokunduğu dosyalar ve git durumu" } },
   "replay-theater": { group: "look", upstream: "anthropics/claude-code-playground", summary: { en: "Replays the last turn's edits step by step", tr: "Son turun düzenlemelerini adım adım oynatır" } },
@@ -858,14 +858,14 @@ function installedMarketRoot(install, knownText) {
     known = undefined;
   }
   const entry = isRecord(known) ? known[install.market] : undefined;
-  const location = isRecord(entry) ? text(entry.installLocation) : undefined;
+  const location = isRecord(entry) ? text$1(entry.installLocation) : undefined;
   return (location ?? `${install.pluginsDir}/marketplaces/${install.market}`).replaceAll("\\", "/").replace(/\/+$/, "");
 }
 const SAFE_NAME = /^[\w.-]+$/;
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function text(value) {
+function text$1(value) {
   return typeof value === "string" && value !== "" ? value : undefined;
 }
 async function readJson(read, path) {
@@ -877,16 +877,16 @@ async function readJson(read, path) {
   }
 }
 function upstreamOf(name, manifest) {
-  return githubName(manifest?.repository) ?? githubName(manifest?.homepage) ?? META[name]?.upstream ?? githubName(manifest?.author?.url);
+  return githubName(manifest?.repository) ?? githubName(manifest?.homepage) ?? META$1[name]?.upstream ?? githubName(manifest?.author?.url);
 }
 function infoOf(facts) {
   const { name, entry, manifest, problem } = facts;
-  const meta = META[name];
-  const summary = meta?.summary === undefined ? undefined : pick$1(meta.summary);
+  const meta = META$1[name];
+  const summary = meta?.summary === undefined ? undefined : pick$2(meta.summary);
   return {
     name,
-    version: text(manifest?.version) ?? text(entry.version) ?? null,
-    description: problem ?? summary ?? text(manifest?.description) ?? text(entry.description) ?? facts.note ?? (manifest ? "" : catalogWords().unreadable),
+    version: text$1(manifest?.version) ?? text$1(entry.version) ?? null,
+    description: problem ?? summary ?? text$1(manifest?.description) ?? text$1(entry.description) ?? facts.note ?? (manifest ? "" : catalogWords().unreadable),
     group: meta?.group ?? "other",
     surfaces: meta?.surfaces ?? BOTH,
     upstream: upstreamOf(name, manifest),
@@ -904,7 +904,7 @@ async function enabledOf(spec) {
   return isLinked ? true : null;
 }
 function remoteNote(source) {
-  const repo = isRecord(source) ? text(source.repo) ?? githubName(source.url) ?? undefined : undefined;
+  const repo = isRecord(source) ? text$1(source.repo) ?? githubName(source.url) ?? undefined : undefined;
   const remote = catalogWords().remote;
   return repo === undefined ? remote : `${remote} (${repo})`;
 }
@@ -920,7 +920,7 @@ async function entryInfo(spec) {
   const { index, options, enabled } = spec;
   const hasLink = options.hasLink ?? (async () => false);
   const entry = isRecord(spec.entry) ? spec.entry : {};
-  const name = text(entry.name);
+  const name = text$1(entry.name);
   const invalid = catalogWords().invalid;
   if (name === undefined)
     return infoOf({ name: catalogWords().entry(index + 1), entry, manifest: undefined, isEnabled: null, problem: invalid });
@@ -934,7 +934,7 @@ async function entryInfo(spec) {
 }
 async function loadCatalog(options) {
   const market = await readJson(options.read, `${options.root}/.claude-plugin/marketplace.json`);
-  const name = text(market?.name) ?? "modz";
+  const name = text$1(market?.name) ?? "modz";
   const plugins = market?.plugins;
   const entries = Array.isArray(plugins) ? plugins : [];
   const enabled = Object.fromEntries(Object.entries(options.enabledPlugins ?? {}).filter(([key]) => key.endsWith(`@${name}`)).map(([key, value]) => [key.slice(0, -name.length - 1), value]));
@@ -1070,7 +1070,7 @@ async function setAutoUpdate(disk, isOn) {
   return true;
 }
 
-function stableDrawings$2() {
+function stableDrawings$3() {
   const kept = new Map;
   return {
     reset: () => kept.clear(),
@@ -1086,14 +1086,14 @@ function stableDrawings$2() {
   };
 }
 
-const TITLE$1 = "modz";
+const TITLE$2 = "modz";
 const STAGE$1 = { plugin: "modz", key: "stage" };
-const hubDrawings = stableDrawings$2();
-const catalogDrawings = stableDrawings$2();
+const hubDrawings = stableDrawings$3();
+const catalogDrawings = stableDrawings$3();
 const hubKept = { isHeld: false };
 const closeQuietly = ($, id) => $.ui.close({ id }).catch((cause) => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: "debug" }));
 async function show($, pane, isFocused = true) {
-  const title = pane === HUB_PANE ? TITLE$1 : paneWords(pane).title;
+  const title = pane === HUB_PANE ? TITLE$2 : paneWords(pane).title;
   hubKept.isHeld = true;
   if (pane === HUB_PANE)
     hubDrawings.reset();
@@ -1475,7 +1475,7 @@ function refreshSide($, pane) {
     refreshUpdates($, false).catch(log($, "reading the updates"));
 }
 async function fill$1($) {
-  setLang$2(await $.env.get("MODZ_LANG").catch(() => {
+  setLang$3(await $.env.get("MODZ_LANG").catch(() => {
     return;
   }));
   await refreshLinks($, false);
@@ -1566,7 +1566,7 @@ const isHubShown = (panes) => panes.some((pane) => pane.isShown && HUB_PANES.has
 const PROBE_MODEL = "haiku";
 const PROBE_TIMEOUT_MS = 20000;
 const PROBE_MAX_TOKENS = 8;
-const EN$1 = {
+const EN$2 = {
   title: "MODZ check: what Claude Code answers in this chat",
   version: "Claude Code version",
   surfaces: "Where this chat draws",
@@ -1581,7 +1581,7 @@ const EN$1 = {
   someFailed: "The lines marked ✗ are why a panel shows 0 or stays quiet. Send this text to the mod author."
 };
 const WORDS$4 = {
-  en: EN$1,
+  en: EN$2,
   tr: {
     title: "MODZ sınaması: Claude Code bu sohbette neye cevap veriyor",
     version: "Claude Code sürümü",
@@ -1597,10 +1597,10 @@ const WORDS$4 = {
     someFailed: "✗ işaretli satırlar bir panelin 0 göstermesinin ya da susmasının nedeni. Bu metni modun yazarına gönder."
   }
 };
-const line = (label, probe) => `${probe.isOk ? "✓" : "✗"} ${label}: ${probe.said}`;
+const line$1 = (label, probe) => `${probe.isOk ? "✓" : "✗"} ${label}: ${probe.said}`;
 function checkText(facts) {
-  const w = pick$1(WORDS$4);
-  const probes = [line(w.version, facts.version), line(w.surfaces, facts.surfaces), line(w.cost, facts.cost), line(w.model, facts.model)];
+  const w = pick$2(WORDS$4);
+  const probes = [line$1(w.version, facts.version), line$1(w.surfaces, facts.surfaces), line$1(w.cost, facts.cost), line$1(w.model, facts.model)];
   const isAllOk = [facts.version, facts.surfaces, facts.cost, facts.model].every((probe) => probe.isOk);
   return [w.title, "", ...probes, `  ${w.system}: ${facts.system}`, `  ${w.mods}: ${facts.mods.join(", ") || w.none}`, "", isAllOk ? w.allOk : w.someFailed].join(`
 `);
@@ -1613,7 +1613,7 @@ async function modelProbe($) {
   return { isOk: false, said: reply.reason === "api-error" ? `${reply.reason} ${reply.status ?? ""} ${reply.error ?? ""}`.trim() : reply.reason };
 }
 async function checkFacts($, mods) {
-  const w = pick$1(WORDS$4);
+  const w = pick$2(WORDS$4);
   const [version, surfaces, cost, model, os] = await Promise.all([
     $.session.version().then((v) => ({ isOk: true, said: v.version }), failed),
     $.session.surfaces().then((list) => list.length > 0 ? { isOk: true, said: list.join(", ") } : { isOk: false, said: w.noSurface }, failed),
@@ -1926,7 +1926,7 @@ const PER_MILLE = 1000;
 const WEIGHT_LOW = 400;
 const WEIGHT_SPAN = 300;
 const UNKNOWN_EM = 0.6;
-const WIDE_EM$1 = 1;
+const WIDE_EM$2 = 1;
 const FIRST_WIDE = 11904;
 const TRACKING = [
   [10.5, 0.0146],
@@ -1947,10 +1947,10 @@ function trackingAt(size) {
   const [x1, y1] = TRACKING[upper] ?? last;
   return y0 + (y1 - y0) * (size - x0) / (x1 - x0);
 }
-function charEm$1(char, boldness) {
+function charEm$2(char, boldness) {
   const i = INDEX.get(char);
   if (i === undefined)
-    return (char.codePointAt(0) ?? 0) >= FIRST_WIDE ? WIDE_EM$1 : UNKNOWN_EM;
+    return (char.codePointAt(0) ?? 0) >= FIRST_WIDE ? WIDE_EM$2 : UNKNOWN_EM;
   const regular = REGULAR[i] ?? UNKNOWN_EM * PER_MILLE;
   const bold = BOLD$5[i] ?? regular;
   return (regular + (bold - regular) * boldness) / PER_MILLE;
@@ -1958,40 +1958,40 @@ function charEm$1(char, boldness) {
 function textWidth$1(text, size, weight = WEIGHT_LOW) {
   const boldness = Math.max(0, Math.min(1, (weight - WEIGHT_LOW) / WEIGHT_SPAN));
   const chars = [...text];
-  const advance = chars.reduce((sum, char) => sum + charEm$1(char, boldness), 0);
+  const advance = chars.reduce((sum, char) => sum + charEm$2(char, boldness), 0);
   return Math.max(0, (advance + chars.length * trackingAt(size)) * size);
 }
 
-const STAGGER_MS$2 = 45;
-const EASE$2 = "cubic-bezier(.2,.8,.2,1)";
-const RULES$2 = {
-  "m-in": `.m-in{animation:m-in .42s ${EASE$2} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
-  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$2} both}@keyframes m-fade{from{opacity:0}}`,
-  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$2} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
-  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$2} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
+const STAGGER_MS$3 = 45;
+const EASE$3 = "cubic-bezier(.2,.8,.2,1)";
+const RULES$3 = {
+  "m-in": `.m-in{animation:m-in .42s ${EASE$3} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
+  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$3} both}@keyframes m-fade{from{opacity:0}}`,
+  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$3} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
+  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$3} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
   "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
-  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$2} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
-  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$2} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
+  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$3} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
+  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$3} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
   "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
   "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
-  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$2}}svg:hover .m-wash{opacity:.12}`,
-  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$2}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
+  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$3}}svg:hover .m-wash{opacity:.12}`,
+  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$3}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
 };
-const REDUCED$4 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
-function motionCss$2(body) {
-  const used = Object.keys(RULES$2).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
-  return used.length === 0 ? "" : `${used.map((name) => RULES$2[name]).join("")}${REDUCED$4}`;
+const REDUCED$5 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+function motionCss$3(body) {
+  const used = Object.keys(RULES$3).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
+  return used.length === 0 ? "" : `${used.map((name) => RULES$3[name]).join("")}${REDUCED$5}`;
 }
-const MOTION_CSS$1 = Object.values(RULES$2).join("");
-const isEntering$2 = (cue) => cue.phase === "enter";
-function entering$2(body, cue, kind = "in") {
-  if (!isEntering$2(cue))
+const MOTION_CSS$1 = Object.values(RULES$3).join("");
+const isEntering$3 = (cue) => cue.phase === "enter";
+function entering$3(body, cue, kind = "in") {
+  if (!isEntering$3(cue))
     return body;
-  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$2}ms">${body}</g>`;
+  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$3}ms">${body}</g>`;
 }
-const delayOf = (cue, step) => `animation-delay:${cue.order * STAGGER_MS$2 + step}ms`;
+const delayOf = (cue, step) => `animation-delay:${cue.order * STAGGER_MS$3 + step}ms`;
 
-const DARK$2 = {
+const DARK$3 = {
   sheet: "#191917",
   card: "#1F1F1C",
   inset: "#171715",
@@ -2011,7 +2011,7 @@ const DARK$2 = {
     plan: { fg: "#E07BC0", tint: "#351F2E", line: "#6B3A5C" }
   }
 };
-const LIGHT$2 = {
+const LIGHT$3 = {
   sheet: "#F4F2EC",
   card: "#FFFFFF",
   inset: "#F6F4EF",
@@ -2033,8 +2033,8 @@ const LIGHT$2 = {
 };
 const ROLE_NAMES$1 = ["read", "edit", "run", "ok", "warn", "danger", "plan"];
 const FONT$3 = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`;
-const MONO$2 = `ui-monospace, 'SF Mono', Menlo, monospace`;
-function varsOf(palette) {
+const MONO$3 = `ui-monospace, 'SF Mono', Menlo, monospace`;
+function varsOf$1(palette) {
   const base = ["sheet", "card", "inset", "line", "strong", "track", "hi", "mid", "lo"];
   const neutral = base.map((key) => `--${key}:${palette[key]}`);
   const roles = ROLE_NAMES$1.flatMap((name) => {
@@ -2048,7 +2048,7 @@ function roleClasses() {
 }
 const TYPE_CSS = [
   `text{font-family:${FONT$3}}`,
-  `.num{font-family:${MONO$2};font-variant-numeric:tabular-nums}`,
+  `.num{font-family:${MONO$3};font-variant-numeric:tabular-nums}`,
   ".hi{fill:var(--hi)}.mid{fill:var(--mid)}.lo{fill:var(--lo)}",
   ".eb{font-size:10.5px;font-weight:700;letter-spacing:.1em}",
   ".hl{font-size:17px;font-weight:620}.ti{font-size:13px;font-weight:600}",
@@ -2057,15 +2057,15 @@ const TYPE_CSS = [
   ".f-line{fill:var(--line)}.f-strong{fill:var(--strong)}.f-mid{fill:var(--mid)}"
 ].join("");
 const MOTION_CSS = ".breathe{animation:breathe 1.8s ease-in-out infinite}@keyframes breathe{50%{opacity:.45}}";
-const REDUCED$3 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+const REDUCED$4 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
 function styleOf() {
-  const dark = varsOf(DARK$2);
-  return `<style>svg{${varsOf(LIGHT$2)}}svg.t-dark{${dark}}@media (prefers-color-scheme: dark){svg.t-auto{${dark}}}${TYPE_CSS}${roleClasses()}${MOTION_CSS}${REDUCED$3}</style>`;
+  const dark = varsOf$1(DARK$3);
+  return `<style>svg{${varsOf$1(LIGHT$3)}}svg.t-dark{${dark}}@media (prefers-color-scheme: dark){svg.t-auto{${dark}}}${TYPE_CSS}${roleClasses()}${MOTION_CSS}${REDUCED$4}</style>`;
 }
-const SCHEME$3 = { light: "light", dark: "dark", auto: "light dark" };
-function svgDoc$1(doc) {
+const SCHEME$4 = { light: "light", dark: "dark", auto: "light dark" };
+function svgDoc$2(doc) {
   const width = Math.round(doc.width);
-  const scheme = `:root{color-scheme:${SCHEME$3[doc.theme]}}`;
+  const scheme = `:root{color-scheme:${SCHEME$4[doc.theme]}}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" class="t-${doc.theme}" width="${width}" height="${doc.height}" viewBox="0 0 ${width} ${doc.height}">${styleOf()}<style>${scheme}${doc.css ?? ""}</style>${doc.body}</svg>`;
 }
 function themeOf(value) {
@@ -2075,58 +2075,58 @@ function themeOf(value) {
   return name.includes("dark") ? "dark" : "auto";
 }
 
-const settled = (spec) => spec.cue === undefined ? svgDoc$1(spec) : svgDoc$1({ width: spec.width, height: spec.height, theme: spec.theme, body: entering$2(spec.body, spec.cue), css: MOTION_CSS$1 });
+const settled = (spec) => spec.cue === undefined ? svgDoc$2(spec) : svgDoc$2({ width: spec.width, height: spec.height, theme: spec.theme, body: entering$3(spec.body, spec.cue), css: MOTION_CSS$1 });
 const HEAD$1 = 44;
 const GROUP = 28;
 const ROW$3 = 62;
-const TEXT_X = 16;
+const TEXT_X$1 = 16;
 const GAP$3 = 6;
-function esc(text) {
+function esc$1(text) {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-const MONO_EM$3 = 0.6;
+const MONO_EM$4 = 0.6;
 const WEIGHT_BODY = 500;
-function measure$1(text, size, weight = WEIGHT_BODY) {
+function measure$2(text, size, weight = WEIGHT_BODY) {
   return textWidth$1(text, size, weight);
 }
-const monoMeasure = (text, size) => [...text].length * size * MONO_EM$3;
-function fit$1(text, width, font) {
+const monoMeasure = (text, size) => [...text].length * size * MONO_EM$4;
+function fit$2(text, width, font) {
   const { size, weight = WEIGHT_BODY } = font;
-  if (measure$1(text, size, weight) <= width)
+  if (measure$2(text, size, weight) <= width)
     return text;
   const chars = [...text];
-  while (chars.length > 1 && measure$1(`${chars.join("").trimEnd()}…`, size, weight) > width)
+  while (chars.length > 1 && measure$2(`${chars.join("").trimEnd()}…`, size, weight) > width)
     chars.pop();
   return `${chars.join("").trimEnd()}…`;
 }
-function headSvg(spec) {
-  const meta = spec.meta === "" ? "" : `<text x="${spec.width - TEXT_X}" y="28" text-anchor="end" style="font-size:11.5px" class="num ${spec.metaRole === null ? "lo" : `fg-${spec.metaRole}`}">${esc(spec.meta)}</text>`;
-  const title = fit$1(spec.title, spec.width - TEXT_X * 2 - measure$1(spec.meta, 12) - GAP$3 * 2, { size: 16, weight: 600 });
-  const body = `<text x="${TEXT_X}" y="28" style="font-size:16px;font-weight:600" class="hi">${esc(title)}</text>${meta}`;
+function headSvg$1(spec) {
+  const meta = spec.meta === "" ? "" : `<text x="${spec.width - TEXT_X$1}" y="28" text-anchor="end" style="font-size:11.5px" class="num ${spec.metaRole === null ? "lo" : `fg-${spec.metaRole}`}">${esc$1(spec.meta)}</text>`;
+  const title = fit$2(spec.title, spec.width - TEXT_X$1 * 2 - measure$2(spec.meta, 12) - GAP$3 * 2, { size: 16, weight: 600 });
+  const body = `<text x="${TEXT_X$1}" y="28" style="font-size:16px;font-weight:600" class="hi">${esc$1(title)}</text>${meta}`;
   return { source: settled({ width: spec.width, height: HEAD$1, theme: spec.theme, body, cue: spec.cue }), alt: `${catalogWords().allMods}: ${spec.title}${spec.meta === "" ? "" : ` · ${spec.meta}`}`, height: HEAD$1 };
 }
 function labelSvg(spec) {
   const { label } = spec;
   const count = catalogWords().mods(spec.count);
-  const body = `<text x="${TEXT_X}" y="${GROUP - 8}" style="font-size:11px;font-weight:600" class="lo">${esc(label)}</text><text x="${spec.width - TEXT_X}" y="${GROUP - 8}" text-anchor="end" style="font-size:11px" class="num lo">${esc(count)}</text>`;
+  const body = `<text x="${TEXT_X$1}" y="${GROUP - 8}" style="font-size:11px;font-weight:600" class="lo">${esc$1(label)}</text><text x="${spec.width - TEXT_X$1}" y="${GROUP - 8}" text-anchor="end" style="font-size:11px" class="num lo">${esc$1(count)}</text>`;
   return { source: settled({ width: spec.width, height: GROUP, theme: spec.theme, body, cue: spec.cue }), alt: `${label}: ${count}`, height: GROUP };
 }
 const groupSvg = (spec) => labelSvg({ ...spec, label: catalogWords().groups[spec.group] });
 const GUIDE = { one: 28, two: 44 };
 function guideSvg(spec) {
   const { guide, width } = spec;
-  const right = width - TEXT_X;
+  const right = width - TEXT_X$1;
   const words = catalogWords();
   const options = guide.options.length === 0 ? "" : words.options(guide.options.join(", "));
   const height = options === "" ? GUIDE.one : GUIDE.two;
-  const name = fit$1(guide.mod, (right - TEXT_X) / 2, { size: 13, weight: 560 });
-  const room = Math.floor((right - TEXT_X - measure$1(name, 13, 560) - GAP$3 * 2) / (11.5 * MONO_EM$3));
+  const name = fit$2(guide.mod, (right - TEXT_X$1) / 2, { size: 13, weight: 560 });
+  const room = Math.floor((right - TEXT_X$1 - measure$2(name, 13, 560) - GAP$3 * 2) / (11.5 * MONO_EM$4));
   const all = commandsLine(guide);
   const commands = [...all].length <= room ? all : `${[...all].slice(0, Math.max(1, room - 1)).join("")}…`;
   const body = [
-    `<text x="${TEXT_X}" y="19" style="font-size:13px;font-weight:560" class="hi">${esc(name)}</text>`,
-    all === "" ? "" : `<text x="${right}" y="19" text-anchor="end" style="font-size:11.5px" class="num mid">${esc(commands)}</text>`,
-    options === "" ? "" : `<text x="${TEXT_X}" y="36" style="font-size:11px" class="lo">${esc(fit$1(options, right - TEXT_X, { size: 11 }))}</text>`
+    `<text x="${TEXT_X$1}" y="19" style="font-size:13px;font-weight:560" class="hi">${esc$1(name)}</text>`,
+    all === "" ? "" : `<text x="${right}" y="19" text-anchor="end" style="font-size:11.5px" class="num mid">${esc$1(commands)}</text>`,
+    options === "" ? "" : `<text x="${TEXT_X$1}" y="36" style="font-size:11px" class="lo">${esc$1(fit$2(options, right - TEXT_X$1, { size: 11 }))}</text>`
   ].join("");
   const alt = [guide.mod, all === "" ? words.noCommand : all, options].filter(Boolean).join(" · ");
   return { source: settled({ width, height, theme: spec.theme, body, cue: spec.cue }), alt, height };
@@ -2147,20 +2147,20 @@ function stateLabel(mod) {
     return words.stateUnknown;
   return mod.isEnabled ? words.onWord : words.offWord;
 }
-function rowSvg$2(spec) {
+function rowSvg$3(spec) {
   const { mod, width } = spec;
-  const right = width - TEXT_X;
+  const right = width - TEXT_X$1;
   const versionText = mod.version === null ? "" : `v${mod.version}`;
   const state = stateWord(mod);
   const edge = [state?.text, versionText].filter(Boolean).join(" · ");
-  const name = fit$1(mod.name, right - TEXT_X - monoMeasure(edge, 11.5) - GAP$3 * 2, { size: 13, weight: 560 });
+  const name = fit$2(mod.name, right - TEXT_X$1 - monoMeasure(edge, 11.5) - GAP$3 * 2, { size: 13, weight: 560 });
   const isQuiet = mod.isEnabled === false;
-  const lineRoom = right - TEXT_X;
+  const lineRoom = right - TEXT_X$1;
   const body = [
-    `<text x="${TEXT_X}" y="21" style="font-size:13px;font-weight:560" class="${isQuiet ? "lo" : "hi"}">${esc(name)}</text>`,
-    edge === "" ? "" : `<text x="${right}" y="21" text-anchor="end" style="font-size:11.5px" class="num ${state?.ink ?? "lo"}">${esc(edge)}</text>`,
-    `<text x="${TEXT_X}" y="39" style="font-size:12px" class="${mod.isHealthy ? isQuiet ? "lo" : "mid" : "fg-danger"}">${esc(fit$1(mod.description, lineRoom, { size: 12 }))}</text>`,
-    `<text x="${TEXT_X}" y="55" style="font-size:11px" class="lo">${esc(fit$1(placeLine(mod), lineRoom, { size: 11 }))}</text>`
+    `<text x="${TEXT_X$1}" y="21" style="font-size:13px;font-weight:560" class="${isQuiet ? "lo" : "hi"}">${esc$1(name)}</text>`,
+    edge === "" ? "" : `<text x="${right}" y="21" text-anchor="end" style="font-size:11.5px" class="num ${state?.ink ?? "lo"}">${esc$1(edge)}</text>`,
+    `<text x="${TEXT_X$1}" y="39" style="font-size:12px" class="${mod.isHealthy ? isQuiet ? "lo" : "mid" : "fg-danger"}">${esc$1(fit$2(mod.description, lineRoom, { size: 12 }))}</text>`,
+    `<text x="${TEXT_X$1}" y="55" style="font-size:11px" class="lo">${esc$1(fit$2(placeLine(mod), lineRoom, { size: 11 }))}</text>`
   ].join("");
   const alt = `${[mod.name, versionText].filter(Boolean).join(" ")} · ${placeLine(mod)} · ${stateLabel(mod)} · ${mod.description}`;
   return { source: settled({ width, height: ROW$3, theme: spec.theme, body, cue: spec.cue }), alt, height: ROW$3 };
@@ -2262,7 +2262,7 @@ const BADGE_GAP = 6;
 const HUB_CSS = [
   "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}"
 ].join("");
-const doc = (spec) => svgDoc$1({ ...spec, css: motionCss$2(spec.body) || HUB_CSS });
+const doc = (spec) => svgDoc$2({ ...spec, css: motionCss$3(spec.body) || HUB_CSS });
 const LIVE_DOT$1 = { r: 3, gap: 9 };
 function valueOf(card) {
   if (card === null || card.detail === "")
@@ -2276,45 +2276,45 @@ function glyphInk(card) {
   return role === null ? "f-mid" : `fg-${role}`;
 }
 function hubHeadSvg(spec) {
-  const isDropping = isEntering$2(spec.cue);
+  const isDropping = isEntering$3(spec.cue);
   const cellAttrs = isDropping ? (at) => ` class="m-px" style="${delayOf(spec.cue, at.index * LETTER_MS + at.row * ROW_MS + at.col * COLUMN_MS)}"` : undefined;
   const z = sizesOf(spec.width);
   const mark = pixelWord("modz", { x: z.inset, y: (z.head - 7 * z.mark.pitch) / 2, ...z.mark, className: "fg-edit", cellAttrs });
-  const meta = `<text x="${spec.width - z.inset}" y="${z.head / 2 + 4}" text-anchor="end" style="font-size:${z.meta}px" class="num lo">${esc(spec.meta)}</text>`;
-  const body = mark.svg + entering$2(meta, { ...spec.cue, order: spec.cue.order + 4 }, "fade");
-  const css = HUB_CSS + motionCss$2(body);
-  return { source: svgDoc$1({ width: spec.width, height: z.head, theme: spec.theme, body, css }), alt: `modz · ${spec.meta}`, height: z.head };
+  const meta = `<text x="${spec.width - z.inset}" y="${z.head / 2 + 4}" text-anchor="end" style="font-size:${z.meta}px" class="num lo">${esc$1(spec.meta)}</text>`;
+  const body = mark.svg + entering$3(meta, { ...spec.cue, order: spec.cue.order + 4 }, "fade");
+  const css = HUB_CSS + motionCss$3(body);
+  return { source: svgDoc$2({ width: spec.width, height: z.head, theme: spec.theme, body, css }), alt: `modz · ${spec.meta}`, height: z.head };
 }
 function sectionSvg$1(spec) {
   const z = sizesOf(spec.width);
-  const body = `<text x="${z.inset}" y="${z.section - 8}" style="font-size:${z.label}px;font-weight:600" class="lo">${esc(spec.label)}</text>`;
-  return { source: doc({ width: spec.width, height: z.section, theme: spec.theme, body: entering$2(body, spec.cue, "fade") }), alt: spec.label, height: z.section };
+  const body = `<text x="${z.inset}" y="${z.section - 8}" style="font-size:${z.label}px;font-weight:600" class="lo">${esc$1(spec.label)}</text>`;
+  return { source: doc({ width: spec.width, height: z.section, theme: spec.theme, body: entering$3(body, spec.cue, "fade") }), alt: spec.label, height: z.section };
 }
 function rowIcon(row, z) {
   const glyph = pixelGlyph(row.entry.icon, { x: z.inset, y: (z.row - z.icon) / 2, box: z.icon, ...z.glyph, className: glyphInk(row.card) });
   return isLive(row.card) ? `<g class="m-breathe">${glyph}</g>` : glyph;
 }
 const isLive = (card) => card !== null && card.detail !== "" && card.tone === "live";
-function titleOf(row, z) {
+function titleOf$1(row, z) {
   const title = row.entry.title;
-  const titleEnd = z.textX + measure$1(title, z.title.size, z.title.weight);
-  const text = `<text x="${z.textX}" y="${z.baseline}" style="font-size:${z.title.size}px;font-weight:500" class="hi">${esc(title)}</text>`;
+  const titleEnd = z.textX + measure$2(title, z.title.size, z.title.weight);
+  const text = `<text x="${z.textX}" y="${z.baseline}" style="font-size:${z.title.size}px;font-weight:500" class="hi">${esc$1(title)}</text>`;
   const badge = row.entry.badge;
   if (badge === null)
     return { svg: text, end: titleEnd };
   const word = badge.toLocaleLowerCase();
-  const tag = `<text x="${titleEnd + BADGE_GAP}" y="${z.baseline}" style="font-size:${z.label}px;font-weight:500" class="lo">${esc(word)}</text>`;
-  return { svg: text + tag, end: titleEnd + BADGE_GAP + measure$1(word, z.label, 500) };
+  const tag = `<text x="${titleEnd + BADGE_GAP}" y="${z.baseline}" style="font-size:${z.label}px;font-weight:500" class="lo">${esc$1(word)}</text>`;
+  return { svg: text + tag, end: titleEnd + BADGE_GAP + measure$2(word, z.label, 500) };
 }
 const NARROW_VALUE = { size: 12, weight: 400 };
 function shortValue(text, width, font = NARROW_VALUE) {
-  const fits = (candidate) => measure$1(candidate, font.size, font.weight) <= width;
+  const fits = (candidate) => measure$2(candidate, font.size, font.weight) <= width;
   if (fits(text))
     return text;
   const first = text.split(" · ")[0] ?? text;
   const words = first.split(" ");
   if (words.length === 1)
-    return fit$1(first, width, font);
+    return fit$2(first, width, font);
   for (let n = words.length;n >= 2; n--) {
     const kept = words.slice(0, n).join(" ");
     if (fits(kept))
@@ -2328,10 +2328,10 @@ function valueSvg(value, room) {
   const text = shortValue(value.text, room.to - room.from, room.z.value);
   if (text === "")
     return "";
-  const words = `<text x="${room.to}" y="${room.z.baseline}" text-anchor="end" style="font-size:${room.z.value.size}px;font-variant-numeric:tabular-nums" class="${value.ink}">${esc(text)}</text>`;
+  const words = `<text x="${room.to}" y="${room.z.baseline}" text-anchor="end" style="font-size:${room.z.value.size}px;font-variant-numeric:tabular-nums" class="${value.ink}">${esc$1(text)}</text>`;
   if (!value.isLive)
     return words;
-  const x = room.to - measure$1(text, room.z.value.size, room.z.value.weight) - LIVE_DOT$1.gap;
+  const x = room.to - measure$2(text, room.z.value.size, room.z.value.weight) - LIVE_DOT$1.gap;
   const y = room.z.row / 2;
   const dot = (cls) => `<circle cx="${x}" cy="${y}" r="${LIVE_DOT$1.r}" class="fg-edit${cls}"/>`;
   return dot(" m-ring") + dot("") + words;
@@ -2339,7 +2339,7 @@ function valueSvg(value, room) {
 function hubRowSvg(spec) {
   const { width, row } = spec;
   const z = sizesOf(width);
-  const title = titleOf(row, z);
+  const title = titleOf$1(row, z);
   const value = spec.buttonRoom > 0 ? null : valueOf(row.card);
   const body = [
     rowIcon(row, z),
@@ -2347,20 +2347,20 @@ function hubRowSvg(spec) {
     valueSvg(value, { from: title.end + VALUE_GAP + (value?.isLive ? LIVE_DOT$1.gap + LIVE_DOT$1.r * 2 : 0), to: width - z.inset, z })
   ].join("");
   const alt = `${row.entry.title}${row.entry.badge === null ? "" : ` (${row.entry.badge})`}${value === null ? "" : `: ${value.text}`}`;
-  return { source: doc({ width, height: z.row, theme: spec.theme, body: entering$2(body, spec.cue) }), alt, height: z.row };
+  return { source: doc({ width, height: z.row, theme: spec.theme, body: entering$3(body, spec.cue) }), alt, height: z.row };
 }
 function hubLineSvg(spec) {
   const z = sizesOf(spec.width);
   const right = spec.width - z.inset;
   const { value } = spec.line;
-  const room = right - z.textX - (value === "" ? 0 : measure$1(value, z.label, 400) + VALUE_GAP);
-  const label = fit$1(spec.line.label, room, { size: z.value.size, weight: 400 });
+  const room = right - z.textX - (value === "" ? 0 : measure$2(value, z.label, 400) + VALUE_GAP);
+  const label = fit$2(spec.line.label, room, { size: z.value.size, weight: 400 });
   const y = z.line / 2 + z.value.size * 0.35;
   const body = [
-    `<text x="${z.textX}" y="${y}" style="font-size:${z.value.size}px" class="mid">${esc(label)}</text>`,
-    value === "" ? "" : `<text x="${right}" y="${y}" text-anchor="end" style="font-size:${z.label}px;font-variant-numeric:tabular-nums" class="lo">${esc(value)}</text>`
+    `<text x="${z.textX}" y="${y}" style="font-size:${z.value.size}px" class="mid">${esc$1(label)}</text>`,
+    value === "" ? "" : `<text x="${right}" y="${y}" text-anchor="end" style="font-size:${z.label}px;font-variant-numeric:tabular-nums" class="lo">${esc$1(value)}</text>`
   ].join("");
-  return { source: doc({ width: spec.width, height: z.line, theme: spec.theme, body: entering$2(body, spec.cue) }), alt: [spec.line.label, value].filter(Boolean).join(": "), height: z.line };
+  return { source: doc({ width: spec.width, height: z.line, theme: spec.theme, body: entering$3(body, spec.cue) }), alt: [spec.line.label, value].filter(Boolean).join(": "), height: z.line };
 }
 
 const DESKTOP_FOOT$1 = { paddingX: 2, marginTop: 1 };
@@ -2404,15 +2404,15 @@ function firstRunRow(ui, view, pen) {
   }, words.firstRun)), pen.press({ box: "row-add-mods", key: "add-mods", drawing: built, pane: MODS_PANE }));
 }
 
-const BLANK$1 = "ㅤ";
-const CELL_PX$1 = 11.9;
-const BUTTON_PX$2 = 28;
-const RUN_SPAN$1 = 2;
-const LINE_SPAN$1 = "400%";
-function PressCover$1(ui, o) {
+const BLANK$2 = "ㅤ";
+const CELL_PX$2 = 11.9;
+const BUTTON_PX$3 = 28;
+const RUN_SPAN$2 = 2;
+const LINE_SPAN$2 = "400%";
+function PressCover$2(ui, o) {
   const { Box, Button } = ui;
-  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX$2 * 2)));
-  const label = BLANK$1.repeat(Math.ceil(o.width * RUN_SPAN$1 / CELL_PX$1));
+  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX$3 * 2)));
+  const label = BLANK$2.repeat(Math.ceil(o.width * RUN_SPAN$2 / CELL_PX$2));
   const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey };
   return h(Box, {
     position: "absolute",
@@ -2426,7 +2426,7 @@ function PressCover$1(ui, o) {
   }, Array.from({ length: lines }, (_, i) => h(Box, {
     key: `${o.key}~line${i}`,
     flexDirection: "row",
-    width: LINE_SPAN$1,
+    width: LINE_SPAN$2,
     marginLeft: -1,
     flexShrink: 0
   }, h(Button, {
@@ -2437,32 +2437,32 @@ function PressCover$1(ui, o) {
     onPress: o.onPress
   }))));
 }
-const STILL$1 = "<style>*{animation:none!important;transition:none!important}</style>";
-const stillSource$1 = (source) => source.replace(/<\/svg>\s*$/, `${STILL$1}</svg>`);
-function stillSvg$1(ui, drawing) {
+const STILL$2 = "<style>*{animation:none!important;transition:none!important}</style>";
+const stillSource$2 = (source) => source.replace(/<\/svg>\s*$/, `${STILL$2}</svg>`);
+function stillSvg$2(ui, drawing) {
   if (drawing.type !== "Svg")
     return drawing;
   const { Svg } = ui;
   const { key, source, alt, width, height } = drawing.props;
   return h(Svg, {
     key,
-    source: stillSource$1(source),
+    source: stillSource$2(source),
     alt,
     width,
     height
   });
 }
-const FALLBACK_PX$1 = 52;
-const FALLBACK_WIDTH_PX$1 = 360;
-function PressRow$1(ui, o) {
+const FALLBACK_PX$2 = 52;
+const FALLBACK_WIDTH_PX$2 = 360;
+function PressRow$2(ui, o) {
   const { Box } = ui;
   const props = o.drawing.type === "Svg" ? o.drawing.props : {};
-  const width = props.width ?? FALLBACK_WIDTH_PX$1;
-  const height = props.height ?? FALLBACK_PX$1;
+  const width = props.width ?? FALLBACK_WIDTH_PX$2;
+  const height = props.height ?? FALLBACK_PX$2;
   return h(Box, {
     key: o.box,
     alignSelf: "flex-start"
-  }, stillSvg$1(ui, o.drawing), PressCover$1(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
+  }, stillSvg$2(ui, o.drawing), PressCover$2(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
 }
 
 const linesOf = (item) => item.more > 0 ? [...item.lines, { label: hubWords().more(item.more), value: "" }] : item.lines;
@@ -2546,12 +2546,12 @@ function nowTerminal(ui, now, button) {
   }, hubWords().now), now.map((item) => terminalGroup(ui, item, button)));
 }
 
-const PX_PER_COLUMN$2 = 9;
+const PX_PER_COLUMN$3 = 9;
 const WIDTH_MIN$1 = 240;
 const WIDTH_MAX$1 = 640;
 const EDIT_BUTTON_ROOM = 136;
 const INSET = 1;
-const hubWidth = (columns) => Math.max(WIDTH_MIN$1, Math.min(WIDTH_MAX$1, columns * PX_PER_COLUMN$2 - PX_PER_COLUMN$2));
+const hubWidth = (columns) => Math.max(WIDTH_MIN$1, Math.min(WIDTH_MAX$1, columns * PX_PER_COLUMN$3 - PX_PER_COLUMN$3));
 const inSection = (rows, section) => rows.filter((row) => row.entry.section === section);
 function rowControls(ui, view, opts) {
   const { Box, Button } = ui;
@@ -2663,7 +2663,7 @@ function pressRow(ui, view, opts) {
     width,
     height: drawing.height
   });
-  return PressRow$1(ui, { box: opts.box, key: opts.key, drawing: svg, onPress: () => view.actions.onOpen(pane) });
+  return PressRow$2(ui, { box: opts.box, key: opts.key, drawing: svg, onPress: () => view.actions.onOpen(pane) });
 }
 function desktopGroup(ui, view, opts) {
   const { Box } = ui;
@@ -2827,7 +2827,7 @@ const NAMED = [
 const MIN_WORDS = 30;
 const SAMPLE_CHARS = 4000;
 const PROSE_SHARE = 0.2;
-function targetOf(opts) {
+function targetOf$1(opts) {
   if (typeof opts.setting === "string" && opts.setting.trim() !== "") {
     const name = opts.setting.trim();
     const named = NAMED.find((entry) => entry.pattern.test(name));
@@ -2873,7 +2873,7 @@ function wireLanguageKeeper(on, options) {
     if (asksWhy)
       unasked.add(agentId ?? MAIN);
     if (agentId === undefined)
-      armed = targetOf({ setting: await languageSetting($), uiLang: lang$1() });
+      armed = targetOf$1({ setting: await languageSetting($), uiLang: lang$1() });
     return next(e);
   });
   on("tool.call", async (_$, e, next) => {
@@ -2892,7 +2892,7 @@ function wireLanguageKeeper(on, options) {
   });
 }
 
-const PX_PER_COLUMN$1 = 9;
+const PX_PER_COLUMN$2 = 9;
 const WIDTH_MIN = 320;
 const WIDTH_MAX = 900;
 function groupsOf(mods) {
@@ -3036,7 +3036,7 @@ function terminalTree(ui, view) {
 }
 function desktopTree(ui, view) {
   const { Box, Svg } = ui;
-  const width = Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, view.columns * PX_PER_COLUMN$1 - PX_PER_COLUMN$1));
+  const width = Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, view.columns * PX_PER_COLUMN$2 - PX_PER_COLUMN$2));
   const health = healthOf(view.market.mods);
   let order = 0;
   const draw = (key, what, build) => {
@@ -3058,7 +3058,7 @@ function desktopTree(ui, view) {
   return h(Box, {
     flexDirection: "column",
     rowGap: 1
-  }, draw("head", [title, health], (cue) => headSvg({ width, theme: view.theme, title, meta: health.text, metaRole: health.isBad ? "danger" : null, cue })), installSection(ui, view, label("install", words.install, installsOf(view.market).length)), guides.length === 0 ? null : h(Box, {
+  }, draw("head", [title, health], (cue) => headSvg$1({ width, theme: view.theme, title, meta: health.text, metaRole: health.isBad ? "danger" : null, cue })), installSection(ui, view, label("install", words.install, installsOf(view.market).length)), guides.length === 0 ? null : h(Box, {
     key: "guide",
     flexDirection: "column"
   }, label("guide", words.guide, guides.length), guides.map((guide) => h(Box, {
@@ -3068,7 +3068,7 @@ function desktopTree(ui, view) {
     flexDirection: "column"
   }, draw(`eyebrow-${group}`, [group, list.length], (cue) => groupSvg({ width, theme: view.theme, group, count: list.length, cue })), list.map((mod) => h(Box, {
     key: `mod-${mod.name}`
-  }, draw(`row-${mod.name}`, mod, (cue) => rowSvg$2({ width, theme: view.theme, mod, cue })))))));
+  }, draw(`row-${mod.name}`, mod, (cue) => rowSvg$3({ width, theme: view.theme, mod, cue })))))));
 }
 const modzTree = (ui, view) => withHome(ui, catalogTree(ui, view), view.onHome);
 function catalogTree(ui, view) {
@@ -3087,15 +3087,15 @@ function catalogTree(ui, view) {
   return view.surface === "desktop" ? desktopTree(ui, view) : terminalTree(ui, view);
 }
 
-let current$1 = "en";
-const langOf$1 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
-function setLang$1(value) {
-  current$1 = langOf$1(value);
-  return current$1;
+let current$2 = "en";
+const langOf$2 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
+function setLang$2(value) {
+  current$2 = langOf$2(value);
+  return current$2;
 }
-const upper$1 = (text) => text.toLocaleUpperCase(current$1);
+const upper$2 = (text) => text.toLocaleUpperCase(current$2);
 
-const plural$1 = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const plural$2 = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const en = {
   pane: "Agents",
   command: "Open or close the Agents panel: running, done and planned helper agents; progress, cost, timeline, quiet-agent warning; message, stop and new task",
@@ -3151,7 +3151,7 @@ const en = {
   lastStep: "Last step",
   doing: { read: "Reading", edit: "Editing", run: "Running a command", agent: "Working with an agent", other: "Using a tool" },
   files: "Files touched",
-  moreFiles: (n) => `+${plural$1(n, "more file", "more files")}`,
+  moreFiles: (n) => `+${plural$2(n, "more file", "more files")}`,
   showAll: "Show all",
   showLess: "Show less",
   ago: (span) => `${span} ago`,
@@ -3171,20 +3171,20 @@ const en = {
   builtins: { "general-purpose": "Research, search and multi-step work", Explore: "Scans the code fast, changes nothing", Plan: "Plans how the work will be done" },
   sources: { "built-in": "built-in", plugin: "plugin", project: "project", user: "user" },
   shareOf: (share) => `≈${share}% of the 5-hour usage allowance`,
-  earlier: (n) => `${plural$1(n, "earlier step", "earlier steps")} hidden`,
+  earlier: (n) => `${plural$2(n, "earlier step", "earlier steps")} hidden`,
   logOpen: (n) => `Show every step (${n})`,
   logClose: "Close the log",
   log: "Step-by-step log",
   because: "Why",
   after: (list) => `after ${list}`,
-  tools: (n) => plural$1(n, "step", "steps"),
+  tools: (n) => plural$2(n, "step", "steps"),
   errors: (n) => `${n} failed`,
-  crew: (n) => plural$1(n, "agent", "agents"),
+  crew: (n) => plural$2(n, "agent", "agents"),
   stripCost: "cost",
   stripTokens: "tokens",
   stripTime: "agent time",
   stripLast: (cost) => `last turn ${cost}`,
-  stripTurns: (n) => plural$1(n, "turn", "turns"),
+  stripTurns: (n) => plural$2(n, "turn", "turns"),
   stripPerTurn: (span) => `${span} per turn`,
   stripDoing: { read: "reading", edit: "writing", run: "command", agent: "leading agents", other: "thinking" },
   rowDoing: { read: "reading", search: "searching", edit: "writing", run: "running a command", test: "checking", save: "saving a version", web: "on the internet", message: "sending word", agent: "leading agents", wait: "waiting", other: "thinking" },
@@ -3590,11 +3590,11 @@ const tr = {
 const STRINGS = { tr, en, ru };
 let lang = "en";
 const t = () => STRINGS[lang];
-const setLang = (next) => {
+const setLang$1 = (next) => {
   lang = next;
-  setLang$1(next);
+  setLang$2(next);
 };
-const langOf = (value) => {
+const langOf$1 = (value) => {
   if (typeof value !== "string" || !value.trim())
     return null;
   if (/^(tr|turk|türk)/i.test(value.trim()))
@@ -3607,7 +3607,7 @@ const langOf = (value) => {
 const KILO = 1000;
 const MEGA = 1e6;
 const COST_WIDE = 10;
-const SECOND$4 = 1000;
+const SECOND$5 = 1000;
 const MINUTE_S = 60;
 const HOUR_S = 3600;
 const EM_NARROW = 0.3;
@@ -3616,8 +3616,8 @@ const EM_BODY = 0.56;
 const EM_FULL = 1;
 const WIDE$1 = /[\u1100-\u115F\u2E80-\u303E\u3041-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uA960-\uA97F\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF01-\uFF60\uFFE0-\uFFE6\u{1F300}-\u{1FAFF}\u{20000}-\u{3FFFD}]/u;
 const xml = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c);
-const clip$2 = (s, max) => s.length > max ? s.slice(0, Math.max(1, max - 1)) + "…" : s;
-const charEm = (ch) => {
+const clip$3 = (s, max) => s.length > max ? s.slice(0, Math.max(1, max - 1)) + "…" : s;
+const charEm$1 = (ch) => {
   if (WIDE$1.test(ch))
     return EM_FULL;
   if (/[\s.,:;'|!il1ıİ()[\]]/.test(ch))
@@ -3626,7 +3626,7 @@ const charEm = (ch) => {
     return EM_WIDE;
   return EM_BODY;
 };
-const textWidth = (s, size) => [...s].reduce((w, ch) => w + charEm(ch) * size, 0);
+const textWidth = (s, size) => [...s].reduce((w, ch) => w + charEm$1(ch) * size, 0);
 const fitText = (s, size, maxW) => {
   if (textWidth(s, size) <= maxW)
     return s;
@@ -3638,7 +3638,7 @@ const fitText = (s, size, maxW) => {
   }
   return out + "…";
 };
-const fitStart = (s, size, maxW) => {
+const fitStart$1 = (s, size, maxW) => {
   if (textWidth(s, size) <= maxW)
     return s;
   const chars = [...s];
@@ -3646,10 +3646,10 @@ const fitStart = (s, size, maxW) => {
     chars.shift();
   return chars.length ? "…" + chars.join("") : "";
 };
-const MONO_EM$2 = 0.62;
-const monoWidth = (s, size) => [...s].length * MONO_EM$2 * size;
+const MONO_EM$3 = 0.62;
+const monoWidth = (s, size) => [...s].length * MONO_EM$3 * size;
 const fitMono = (s, opts) => {
-  const room = Math.floor(opts.maxW / (MONO_EM$2 * opts.size));
+  const room = Math.floor(opts.maxW / (MONO_EM$3 * opts.size));
   const chars = [...s];
   if (chars.length <= room)
     return s;
@@ -3667,7 +3667,7 @@ const fmtTokens = (n) => {
 };
 const fmtCost = (usd) => `$${usd < COST_WIDE ? fixed(usd, 2) : fixed(usd, 1)}`;
 const fmtTime = (ms) => {
-  const s = Math.max(0, Math.round(ms / SECOND$4));
+  const s = Math.max(0, Math.round(ms / SECOND$5));
   const h = Math.floor(s / HOUR_S);
   const m = Math.floor(s % HOUR_S / MINUTE_S);
   const ss = String(s % MINUTE_S).padStart(2, "0");
@@ -3790,19 +3790,19 @@ const plannedOf = (f, list) => {
   return (f.tasks ?? []).map((task, i) => ({ ...task, n: i + 1 })).filter((task) => !started.has(norm(task.title)));
 };
 
-const SECOND$3 = 1000;
-const MINUTE$2 = 60 * SECOND$3;
-const HOUR$1 = 60 * MINUTE$2;
-const QUIET_MS = 2 * MINUTE$2;
-const LONG_TOOL_MS = 15 * MINUTE$2;
-const FAILURE_FRESH_MS = 10 * MINUTE$2;
+const SECOND$4 = 1000;
+const MINUTE$3 = 60 * SECOND$4;
+const HOUR$2 = 60 * MINUTE$3;
+const QUIET_MS = 2 * MINUTE$3;
+const LONG_TOOL_MS = 15 * MINUTE$3;
+const FAILURE_FRESH_MS = 10 * MINUTE$3;
 const roughSpan = (ms) => {
   const s = t();
-  if (ms < MINUTE$2)
-    return s.seconds(Math.floor(ms / SECOND$3));
-  if (ms < HOUR$1)
-    return s.minutes(Math.floor(ms / MINUTE$2));
-  return s.hours(Math.floor(ms / HOUR$1));
+  if (ms < MINUTE$3)
+    return s.seconds(Math.floor(ms / SECOND$4));
+  if (ms < HOUR$2)
+    return s.minutes(Math.floor(ms / MINUTE$3));
+  return s.hours(Math.floor(ms / HOUR$2));
 };
 function stuckOf(a, at) {
   if (a.status !== "running" || a.isMain === true)
@@ -4022,7 +4022,7 @@ const toneOf = (d) => {
     return "idle";
   return d.view && d.view.failed > 0 ? "warn" : "ok";
 };
-const countsOf$1 = (d) => {
+const countsOf$2 = (d) => {
   const s = t();
   const ended = d.list.length - d.running.length;
   return [d.running.length && s.liveCount(d.running.length), ended && s.endedCount(ended), d.planned.length && s.plannedCount(d.planned.length)].filter(Boolean).join(" · ");
@@ -4033,7 +4033,7 @@ function headerOf(d) {
   const view = d.view;
   return {
     eyebrow: s.pane,
-    counts: countsOf$1(d),
+    counts: countsOf$2(d),
     headline: view?.title || s.crew(d.list.length),
     percent: view ? percentText(view) : "—",
     tone: toneOf(d),
@@ -4243,8 +4243,8 @@ const crab = (x, y, opts) => {
 };
 
 const FONT$2 = "-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,system-ui,sans-serif";
-const MONO$1 = "ui-monospace,'SF Mono',Menlo,monospace";
-const NEUTRALS = {
+const MONO$2 = "ui-monospace,'SF Mono',Menlo,monospace";
+const NEUTRALS$1 = {
   t: ["#1C1B19", "#F0EEE8"],
   s: ["#4F4B44", "#C2BEB4"],
   m: ["#706B63", "#8E8A80"],
@@ -4258,7 +4258,7 @@ const STROKES = {
   "i-s": ["#4F4B44", "#C2BEB4"],
   rk: ["#ECE8DF", "#34332F"]
 };
-const ROLES$2 = {
+const ROLES$3 = {
   read: { fg: ["#2464A0", "#7FB6E8"], tint: ["#E7F0F9", "#1E2B37"], line: ["#B9D3EC", "#2F4A63"] },
   edit: { fg: ["#A94A26", "#E58A5F"], tint: ["#FBEDE6", "#38251D"], line: ["#EFC6B4", "#6A3E2D"] },
   plan: { fg: ["#A8337F", "#E07BC0"], tint: ["#FBE9F4", "#351F2E"], line: ["#EDBFDC", "#6B3A5C"] },
@@ -4268,9 +4268,9 @@ const ROLES$2 = {
   danger: { fg: ["#C0263A", "#F2727F"], tint: ["#FCE8EA", "#3B2023"], line: ["#F1B9C0", "#74343C"] }
 };
 const rulesOf = (side) => {
-  const fills = Object.entries(NEUTRALS).map(([cls, pair]) => `.${cls}{fill:${pair[side]}}`);
+  const fills = Object.entries(NEUTRALS$1).map(([cls, pair]) => `.${cls}{fill:${pair[side]}}`);
   const strokes = Object.entries(STROKES).map(([cls, pair]) => `.${cls}{stroke:${pair[side]}}`);
-  const roles = Object.entries(ROLES$2).map(([role, c]) => `.f-${role}{fill:${c.fg[side]}}.b-${role}{fill:${c.tint[side]}}.l-${role}{stroke:${c.line[side]}}.i-${role}{stroke:${c.fg[side]}}`);
+  const roles = Object.entries(ROLES$3).map(([role, c]) => `.f-${role}{fill:${c.fg[side]}}.b-${role}{fill:${c.tint[side]}}.l-${role}{stroke:${c.line[side]}}.i-${role}{stroke:${c.fg[side]}}`);
   return [...fills, ...strokes, ...roles].join("");
 };
 const TIDEMARK_CSS = `<style>
@@ -4283,10 +4283,10 @@ ${rulesOf(0)}
 const paneSvg = (W, H, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${TIDEMARK_CSS}${CRAB_CSS}${body}</svg>`;
 
 const CARD = { padX: 14, rx: 10, labelY: 24, firstRowY: 48, rowH: 22, bottom: 14 };
-const LABEL$4 = { size: 12, weight: 600 };
+const LABEL$5 = { size: 12, weight: 600 };
 const ROW$2 = { size: 13, waitSize: 12, gap: 10 };
 const BOLD$4 = 1.06;
-const rowSvg$1 = (row, y, W) => {
+const rowSvg$2 = (row, y, W) => {
   const right = W - CARD.padX;
   const waitW = Math.ceil(textWidth(row.wait, ROW$2.waitSize) * BOLD$4);
   const room = right - waitW - ROW$2.gap - CARD.padX;
@@ -4302,12 +4302,12 @@ const rowSvg$1 = (row, y, W) => {
 const chatsCardSvg = (W, card) => {
   const lines = card.rows.length + (card.more ? 1 : 0);
   const height = CARD.firstRowY + (lines - 1) * CARD.rowH + CARD.bottom;
-  const rows = card.rows.map((row, i) => rowSvg$1(row, CARD.firstRowY + i * CARD.rowH, W));
+  const rows = card.rows.map((row, i) => rowSvg$2(row, CARD.firstRowY + i * CARD.rowH, W));
   const moreY = CARD.firstRowY + card.rows.length * CARD.rowH;
   const more = card.more ? `<text class="m" x="${CARD.padX}" y="${moreY}" font-family="${FONT$2}" font-size="${ROW$2.waitSize}">${xml(card.more)}</text>` : "";
   const body = [
     `<rect class="card ln" x="0.5" y="0.5" width="${W - 1}" height="${height - 1}" rx="${CARD.rx}" stroke-width="1"/>`,
-    `<text class="m" x="${CARD.padX}" y="${CARD.labelY}" font-family="${FONT$2}" font-size="${LABEL$4.size}" font-weight="${LABEL$4.weight}">${xml(fitText(card.title, LABEL$4.size * BOLD$4, W - CARD.padX * 2))}</text>`,
+    `<text class="m" x="${CARD.padX}" y="${CARD.labelY}" font-family="${FONT$2}" font-size="${LABEL$5.size}" font-weight="${LABEL$5.weight}">${xml(fitText(card.title, LABEL$5.size * BOLD$4, W - CARD.padX * 2))}</text>`,
     ...rows,
     more
   ];
@@ -4334,76 +4334,76 @@ const chatLinesSvg = (W, lines) => {
   return { source: paneSvg(W, height, lines.map((line, i) => lineSvg(line, i * LIST.rowH, W)).join("")), height, alt };
 };
 
-const FILL$2 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
-const DONE$1 = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
-const HAS_DONE$1 = /\bdata-m-done\b/;
-const WIDTH$1 = /\swidth="([\d.]+)"/;
-const CLASS$1 = /\sclass="([^"]*)"/;
-const STYLE$1 = /\sstyle="([^"]*)"/;
-const MIN_RATIO_STEP$1 = 0.02;
-const RATIO_DIGITS$1 = 3;
-const widthOf$1 = (tag) => Number(WIDTH$1.exec(tag)?.[1] ?? 0);
-function withClass$1(tag, name, extra = "") {
-  const tagged = CLASS$1.test(tag) ? tag.replace(CLASS$1, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
+const FILL$3 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
+const DONE$2 = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
+const HAS_DONE$2 = /\bdata-m-done\b/;
+const WIDTH$3 = /\swidth="([\d.]+)"/;
+const CLASS$2 = /\sclass="([^"]*)"/;
+const STYLE$2 = /\sstyle="([^"]*)"/;
+const MIN_RATIO_STEP$2 = 0.02;
+const RATIO_DIGITS$2 = 3;
+const widthOf$2 = (tag) => Number(WIDTH$3.exec(tag)?.[1] ?? 0);
+function withClass$2(tag, name, extra = "") {
+  const tagged = CLASS$2.test(tag) ? tag.replace(CLASS$2, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
   return tagged.replace(/\s*\/?>$/, `${extra}$&`);
 }
-function slideFills$1(before, now) {
-  const old = before.match(FILL$2) ?? [];
-  if (old.length !== (now.match(FILL$2) ?? []).length)
+function slideFills$2(before, now) {
+  const old = before.match(FILL$3) ?? [];
+  if (old.length !== (now.match(FILL$3) ?? []).length)
     return now;
   let index = 0;
-  return now.replace(FILL$2, (tag) => {
+  return now.replace(FILL$3, (tag) => {
     const was = old[index++];
-    const from = was === undefined ? 0 : widthOf$1(was);
-    const to = widthOf$1(tag);
-    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP$1)
+    const from = was === undefined ? 0 : widthOf$2(was);
+    const to = widthOf$2(tag);
+    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP$2)
       return tag;
-    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS$1)}`;
-    const styled = STYLE$1.test(tag) ? tag.replace(STYLE$1, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
-    return withClass$1(styled, "m-from");
+    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS$2)}`;
+    const styled = STYLE$2.test(tag) ? tag.replace(STYLE$2, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
+    return withClass$2(styled, "m-from");
   });
 }
-function drawDone$1(before, now) {
-  if (HAS_DONE$1.test(before))
+function drawDone$2(before, now) {
+  if (HAS_DONE$2.test(before))
     return now;
-  return now.replace(DONE$1, (tag) => withClass$1(tag, "m-draw", ' pathLength="1"'));
+  return now.replace(DONE$2, (tag) => withClass$2(tag, "m-draw", ' pathLength="1"'));
 }
-function markChanges$1(before, now) {
-  return drawDone$1(before, slideFills$1(before, now));
+function markChanges$2(before, now) {
+  return drawDone$2(before, slideFills$2(before, now));
 }
 
-const STAGGER_MS$1 = 45;
-const EASE$1 = "cubic-bezier(.2,.8,.2,1)";
-const SHEEN$1 = "#A39E93";
-const RULES$1 = {
-  "m-in": `.m-in{animation:m-in .42s ${EASE$1} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
-  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$1} both}@keyframes m-fade{from{opacity:0}}`,
-  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$1} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
-  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$1} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
+const STAGGER_MS$2 = 45;
+const EASE$2 = "cubic-bezier(.2,.8,.2,1)";
+const SHEEN$2 = "#A39E93";
+const RULES$2 = {
+  "m-in": `.m-in{animation:m-in .42s ${EASE$2} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
+  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$2} both}@keyframes m-fade{from{opacity:0}}`,
+  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$2} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
+  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$2} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
   "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
-  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$1} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
-  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$1} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
+  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$2} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
+  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$2} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
   "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
   "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
-  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$1}}svg:hover .m-wash{opacity:.12}`,
-  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$1}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
+  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$2}}svg:hover .m-wash{opacity:.12}`,
+  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$2}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
 };
-const REDUCED$2 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
-function motionCss$1(body) {
-  const used = Object.keys(RULES$1).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
-  return used.length === 0 ? "" : `${used.map((name) => RULES$1[name]).join("")}${REDUCED$2}`;
+const REDUCED$3 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+function motionCss$2(body) {
+  const used = Object.keys(RULES$2).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
+  return used.length === 0 ? "" : `${used.map((name) => RULES$2[name]).join("")}${REDUCED$3}`;
 }
-Object.values(RULES$1).join("");
-const isEntering$1 = (cue) => cue.phase === "enter";
-function entering$1(body, cue, kind = "in") {
-  if (!isEntering$1(cue))
+Object.values(RULES$2).join("");
+const isEntering$2 = (cue) => cue.phase === "enter";
+function entering$2(body, cue, kind = "in") {
+  if (!isEntering$2(cue))
     return body;
-  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$1}ms">${body}</g>`;
+  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$2}ms">${body}</g>`;
 }
-const FLASH$1 = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN$1}" fill-opacity=".22" class="m-flash"/>`;
-const WASH$1 = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
+const FLASH$2 = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN$2}" fill-opacity=".22" class="m-flash"/>`;
+const WASH$2 = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
 
-function stableDrawings$1() {
+function stableDrawings$2() {
   const kept = new Map;
   return {
     reset: () => kept.clear(),
@@ -4419,32 +4419,32 @@ function stableDrawings$1() {
   };
 }
 
-const TAG_WIDTH$1 = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
-const SVG$1 = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
-const SCHEME$2 = "<style>:root{color-scheme:light dark}</style>";
-const SAYS_SCHEME$1 = /(^|[^-\w])color-scheme\s*:/;
-const PASS_MS$1 = 120;
-const MAX_ORDER$1 = 12;
-const LIVE_MS$1 = 30000;
-function animate$1(source, spec) {
-  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges$1(spec.before, source) : source;
-  const parts = SVG$1.exec(moved);
+const TAG_WIDTH$2 = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
+const SVG$2 = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
+const SCHEME$3 = "<style>:root{color-scheme:light dark}</style>";
+const SAYS_SCHEME$2 = /(^|[^-\w])color-scheme\s*:/;
+const PASS_MS$2 = 120;
+const MAX_ORDER$2 = 12;
+const LIVE_MS$2 = 30000;
+function animate$2(source, spec) {
+  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges$2(spec.before, source) : source;
+  const parts = SVG$2.exec(moved);
   if (parts === null)
     return source;
   const [, open, inner = "", close] = parts;
-  const scheme = SAYS_SCHEME$1.test(inner) ? "" : SCHEME$2;
-  const lit = `${spec.isRow === true ? WASH$1 : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH$1 : ""}${inner}`;
-  const body = entering$1(lit, spec.cue);
-  const css = motionCss$1(body);
+  const scheme = SAYS_SCHEME$2.test(inner) ? "" : SCHEME$3;
+  const lit = `${spec.isRow === true ? WASH$2 : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH$2 : ""}${inner}`;
+  const body = entering$2(lit, spec.cue);
+  const css = motionCss$2(body);
   return `${open}${scheme}${css === "" ? "" : `<style>${css}</style>`}${body}${close}`;
 }
-function paneMotion$1() {
-  const drawings = stableDrawings$1();
+function paneMotion$2() {
+  const drawings = stableDrawings$2();
   const shown = new Map;
   const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 };
   const begin = () => {
     const now = Date.now();
-    if (now - pass.at > PASS_MS$1)
+    if (now - pass.at > PASS_MS$2)
       pass.entered = 0;
     pass.at = now;
   };
@@ -4456,36 +4456,36 @@ function paneMotion$1() {
     pic: (key, pic, opts = {}) => {
       begin();
       const what = `${opts.isRow === true ? "row:" : ""}${pic.source}`;
-      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH$1.exec(pic.source)?.[1]), source: pic.source };
+      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH$2.exec(pic.source)?.[1]), source: pic.source };
       const source = drawings.draw(key, what, (built) => {
-        const order = built === "enter" ? Math.min(MAX_ORDER$1, pass.entered++) : 0;
+        const order = built === "enter" ? Math.min(MAX_ORDER$2, pass.entered++) : 0;
         const before = shown.get(key);
         const isQuiet = before !== undefined && (before.shows === now.shows || before.width !== now.width);
         const phase = built === "change" && isQuiet ? "still" : built;
         const lastChange = before?.changedAt ?? Number.NEGATIVE_INFINITY;
-        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS$1;
+        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS$2;
         shown.set(key, { ...now, changedAt: phase === "change" ? pass.at : lastChange });
-        return animate$1(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
+        return animate$2(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
       });
       return { ...pic, source, isInteractive: true };
     }
   };
 }
 
-const motion$1 = paneMotion$1();
-function picture(ui, placed) {
+const motion$2 = paneMotion$2();
+function picture$1(ui, placed) {
   const { Svg } = ui;
   return h(Svg, {
     key: placed.key,
-    ...motion$1.pic(placed.at, placed.pic, placed.opts)
+    ...motion$2.pic(placed.at, placed.pic, placed.opts)
   });
 }
 
 const PILL = { h: 20, padX: 9, size: 11, dot: 3, dotGap: 6 };
 const BOLD$3 = 1.06;
-const LABEL$3 = { size: 12, weight: 600 };
+const LABEL$4 = { size: 12, weight: 600 };
 const HEAD = { h: 28, size: 13.5, gap: 10, nameGap: 7 };
-const CHEVRON_ROOM = 22;
+const CHEVRON_ROOM$1 = 22;
 const CHEVRON = 4.5;
 const STROKE$1 = 1.5;
 const SECTION_H = 18;
@@ -4509,7 +4509,7 @@ const pillPart = (pill, x, y) => {
 };
 const chevronSvg = (x, y) => `<g class="chev"><path d="M${x} ${y - CHEVRON}l${CHEVRON} ${CHEVRON}-${CHEVRON} ${CHEVRON}" fill="none" stroke-width="${STROKE$1}" stroke-linecap="round" stroke-linejoin="round" class="i-m"/></g>`;
 const cardHeadSvg = (W, head, inset = 0) => {
-  const right = W - CHEVRON_ROOM;
+  const right = W - CHEVRON_ROOM$1;
   const probe = pillPart(head.pill, 0, 0);
   const pill = pillPart(head.pill, right - probe.width, (HEAD.h - PILL.h) / 2);
   const nameW = textWidth(head.name, HEAD.size) * BOLD$3;
@@ -4519,12 +4519,12 @@ const cardHeadSvg = (W, head, inset = 0) => {
   const body = [
     `<text x="${inset}" y="${y}" font-family="${FONT$2}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
     pill.body,
-    chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, HEAD.h / 2)
+    chevronSvg(W - CHEVRON_ROOM$1 / 2 - CHEVRON / 2, HEAD.h / 2)
   ];
   return paneSvg(W, HEAD.h, body.join(""));
 };
 const sectionSvg = (W, section) => {
-  const label = `<text class="m" x="0" y="${SECTION_H / 2 + LABEL$3.size * 0.36}" font-family="${FONT$2}" font-size="${LABEL$3.size}" font-weight="${LABEL$3.weight}">${xml(fitText(section.label, LABEL$3.size * BOLD$3, W))}</text>`;
+  const label = `<text class="m" x="0" y="${SECTION_H / 2 + LABEL$4.size * 0.36}" font-family="${FONT$2}" font-size="${LABEL$4.size}" font-weight="${LABEL$4.weight}">${xml(fitText(section.label, LABEL$4.size * BOLD$3, W))}</text>`;
   return paneSvg(W, SECTION_H, label);
 };
 const SECTION_SVG_H = SECTION_H;
@@ -4535,11 +4535,11 @@ const noticeSvg = (W, notice) => {
   const lead = `${notice.name} `;
   const reason = notice.reason;
   const used = textWidth(lead, NOTICE.size) * BOLD$3 + textWidth(reason, NOTICE.size) * BOLD$3;
-  const title = fitText(` · ${notice.title}`, NOTICE.size, Math.max(0, W - x - CHEVRON_ROOM - used));
+  const title = fitText(` · ${notice.title}`, NOTICE.size, Math.max(0, W - x - CHEVRON_ROOM$1 - used));
   const body = [
     `<circle class="f-${notice.role}" cx="${NOTICE.padX + NOTICE.dot}" cy="${mid}" r="${NOTICE.dot}"/>`,
     `<text x="${x}" y="${mid + NOTICE.size * 0.35}" font-family="${FONT$2}" font-size="${NOTICE.size}" font-weight="560"><tspan class="t">${xml(lead)}</tspan><tspan class="f-${notice.role}">${xml(reason)}</tspan><tspan class="s" font-weight="400">${xml(title === "…" ? "" : title)}</tspan></text>`,
-    chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, mid)
+    chevronSvg(W - CHEVRON_ROOM$1 / 2 - CHEVRON / 2, mid)
   ];
   return paneSvg(W, NOTICE.h, body.join(""));
 };
@@ -4556,29 +4556,29 @@ const classOf = (view, i) => {
   return i < view.done + view.active ? "f-edit" : "k";
 };
 const RUN_SHARE = 0.34;
-const rect = (track, { x, w, cls }) => `<rect class="${cls}" x="${x.toFixed(1)}" y="${track.y}" width="${Math.max(0, w).toFixed(1)}" height="${track.h}" rx="${track.h / 2}"/>`;
+const rect$1 = (track, { x, w, cls }) => `<rect class="${cls}" x="${x.toFixed(1)}" y="${track.y}" width="${Math.max(0, w).toFixed(1)}" height="${track.h}" rx="${track.h / 2}"/>`;
 const solid = (view, track) => {
   const unit = track.w / Math.max(1, view.units);
   const ok = view.done - view.failed;
-  const parts = [rect(track, { x: track.x, w: track.w, cls: "k" })];
+  const parts = [rect$1(track, { x: track.x, w: track.w, cls: "k" })];
   const spans = [[0, ok, "m"], [ok, view.done, "f-danger"], [view.done, view.done + view.active, "f-edit"]];
   for (const [from, to, cls] of spans)
     if (to > from)
-      parts.push(rect(track, { x: track.x + from * unit, w: (to - from) * unit, cls }));
+      parts.push(rect$1(track, { x: track.x + from * unit, w: (to - from) * unit, cls }));
   return parts.join("");
 };
-const running = (track, x, w) => rect(track, { x, w, cls: "k" }) + rect(track, { x, w: w * RUN_SHARE, cls: "f-edit live" });
+const running = (track, x, w) => rect$1(track, { x, w, cls: "k" }) + rect$1(track, { x, w: w * RUN_SHARE, cls: "f-edit live" });
 const meterSvg = (view, track) => {
   const units = view.units;
   if (units < 1)
-    return rect(track, { x: track.x, w: track.w, cls: "k" });
+    return rect$1(track, { x: track.x, w: track.w, cls: "k" });
   const seg = (track.w - GAP$2 * (units - 1)) / units;
   if (seg < MIN_SEG)
     return solid(view, track);
   return Array.from({ length: units }, (_, i) => {
     const x = track.x + i * (seg + GAP$2);
     const cls = classOf(view, i);
-    return cls === "f-edit" ? running(track, x, seg) : rect(track, { x, w: seg, cls });
+    return cls === "f-edit" ? running(track, x, seg) : rect$1(track, { x, w: seg, cls });
   }).join("");
 };
 
@@ -4607,10 +4607,10 @@ const FACES = { sleeping: "(-_-) zz", working: "(•_•)", happy: "(^_^)", worr
 
 const PAD$1 = 16;
 const RADIUS = 10;
-const LABEL$2 = { size: 12, weight: 600, y: 27 };
+const LABEL$3 = { size: 12, weight: 600, y: 27 };
 const HEADLINE = { size: 17, y: 56 };
 const PERCENT$2 = { size: 26, y: 58 };
-const MONO_EM$1 = 0.6;
+const MONO_EM$2 = 0.6;
 const METER = { y: 70, h: 6 };
 const DIVIDER_Y = 92;
 const STATS = { top: 104, label: 11, value: 31, valueSize: 15, labelSize: 12, rule: 34, pitch: 46 };
@@ -4649,7 +4649,7 @@ const homeParts = (data, eyebrowEnd) => {
   if (!data.home)
     return { body: "", room: 0 };
   const crab = homeCrab(PAD$1, HOME.y, { home: data.home, scale: HOME.scale });
-  const pill = levelPill(data.home.level, eyebrowEnd + PILL_GAP, LABEL$2.y - LEVEL_PILL.h + PILL_DROP);
+  const pill = levelPill(data.home.level, eyebrowEnd + PILL_GAP, LABEL$3.y - LEVEL_PILL.h + PILL_DROP);
   return { body: crab + pill, room: PILL_GAP + levelWidth(data.home.level) };
 };
 const headerSvg = (W, data) => {
@@ -4657,22 +4657,22 @@ const headerSvg = (W, data) => {
   const left = PAD$1 + (data.home ? HOME.room : 0);
   const isLive = data.tone === "run";
   const eyebrowX = left + (isLive ? DOT_R$2 * 2 + 7 : 0);
-  const eyebrowEnd = eyebrowX + textWidth(data.eyebrow, LABEL$2.size) * BOLD$1;
+  const eyebrowEnd = eyebrowX + textWidth(data.eyebrow, LABEL$3.size) * BOLD$1;
   const home = homeParts(data, eyebrowEnd);
   const isKnown = data.percent !== UNKNOWN;
-  const percentW = isKnown ? Math.ceil(data.percent.length * PERCENT$2.size * MONO_EM$1) : 0;
-  const isCountShown = textWidth(data.counts, LABEL$2.size) <= W - PAD$1 - eyebrowEnd - home.room - GAP$1;
+  const percentW = isKnown ? Math.ceil(data.percent.length * PERCENT$2.size * MONO_EM$2) : 0;
+  const isCountShown = textWidth(data.counts, LABEL$3.size) <= W - PAD$1 - eyebrowEnd - home.room - GAP$1;
   const headline = fitText(data.headline, HEADLINE.size * 1.06, W - PAD$1 - left - percentW - (isKnown ? GAP$1 : 0));
   const stats = statsSvg(data.stats, inner);
-  const dot = isLive ? `<circle class="f-edit live" cx="${left + DOT_R$2}" cy="${LABEL$2.y - 4}" r="${DOT_R$2}"/>` : "";
+  const dot = isLive ? `<circle class="f-edit live" cx="${left + DOT_R$2}" cy="${LABEL$3.y - 4}" r="${DOT_R$2}"/>` : "";
   const body = [
     `<rect class="card ln" x="0.5" y="0.5" width="${W - 1}" height="${stats.height - 1}" rx="${RADIUS}" stroke-width="1"/>`,
     home.body,
     dot,
-    `<text class="m" x="${eyebrowX}" y="${LABEL$2.y}" font-family="${FONT$2}" font-size="${LABEL$2.size}" font-weight="${LABEL$2.weight}">${xml(data.eyebrow)}</text>`,
-    isCountShown ? `<text class="m" x="${W - PAD$1}" y="${LABEL$2.y}" text-anchor="end" font-family="${FONT$2}" font-size="${LABEL$2.size}" font-variant-numeric="tabular-nums">${xml(data.counts)}</text>` : "",
+    `<text class="m" x="${eyebrowX}" y="${LABEL$3.y}" font-family="${FONT$2}" font-size="${LABEL$3.size}" font-weight="${LABEL$3.weight}">${xml(data.eyebrow)}</text>`,
+    isCountShown ? `<text class="m" x="${W - PAD$1}" y="${LABEL$3.y}" text-anchor="end" font-family="${FONT$2}" font-size="${LABEL$3.size}" font-variant-numeric="tabular-nums">${xml(data.counts)}</text>` : "",
     `<text class="t" x="${left}" y="${HEADLINE.y}" font-family="${FONT$2}" font-size="${HEADLINE.size}" font-weight="620">${xml(headline)}</text>`,
-    isKnown ? `<text class="${PERCENT_CLASS[data.tone]}" x="${W - PAD$1}" y="${PERCENT$2.y}" text-anchor="end" font-family="${MONO$1}" font-size="${PERCENT$2.size}" font-weight="650">${xml(data.percent)}</text>` : "",
+    isKnown ? `<text class="${PERCENT_CLASS[data.tone]}" x="${W - PAD$1}" y="${PERCENT$2.y}" text-anchor="end" font-family="${MONO$2}" font-size="${PERCENT$2.size}" font-weight="650">${xml(data.percent)}</text>` : "",
     meterSvg(data.meter ?? { units: 0, done: 0, failed: 0, active: 0 }, { x: PAD$1, y: METER.y, w: inner, h: METER.h }),
     `<line class="ln" x1="${PAD$1}" x2="${W - PAD$1}" y1="${DIVIDER_Y}" y2="${DIVIDER_Y}" stroke-width="1"/>`,
     stats.body
@@ -4681,15 +4681,15 @@ const headerSvg = (W, data) => {
 `)), height: stats.height };
 };
 
-const BLANK = "ㅤ";
-const CELL_PX = 11.9;
-const BUTTON_PX$1 = 28;
-const RUN_SPAN = 2;
-const LINE_SPAN = "400%";
-function PressCover(ui, o) {
+const BLANK$1 = "ㅤ";
+const CELL_PX$1 = 11.9;
+const BUTTON_PX$2 = 28;
+const RUN_SPAN$1 = 2;
+const LINE_SPAN$1 = "400%";
+function PressCover$1(ui, o) {
   const { Box, Button } = ui;
-  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX$1 * 2)));
-  const label = BLANK.repeat(Math.ceil(o.width * RUN_SPAN / CELL_PX));
+  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX$2 * 2)));
+  const label = BLANK$1.repeat(Math.ceil(o.width * RUN_SPAN$1 / CELL_PX$1));
   const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey };
   return h(Box, {
     position: "absolute",
@@ -4703,7 +4703,7 @@ function PressCover(ui, o) {
   }, Array.from({ length: lines }, (_, i) => h(Box, {
     key: `${o.key}~line${i}`,
     flexDirection: "row",
-    width: LINE_SPAN,
+    width: LINE_SPAN$1,
     marginLeft: -1,
     flexShrink: 0
   }, h(Button, {
@@ -4714,32 +4714,32 @@ function PressCover(ui, o) {
     onPress: o.onPress
   }))));
 }
-const STILL = "<style>*{animation:none!important;transition:none!important}</style>";
-const stillSource = (source) => source.replace(/<\/svg>\s*$/, `${STILL}</svg>`);
-function stillSvg(ui, drawing) {
+const STILL$1 = "<style>*{animation:none!important;transition:none!important}</style>";
+const stillSource$1 = (source) => source.replace(/<\/svg>\s*$/, `${STILL$1}</svg>`);
+function stillSvg$1(ui, drawing) {
   if (drawing.type !== "Svg")
     return drawing;
   const { Svg } = ui;
   const { key, source, alt, width, height } = drawing.props;
   return h(Svg, {
     key,
-    source: stillSource(source),
+    source: stillSource$1(source),
     alt,
     width,
     height
   });
 }
-const FALLBACK_PX = 52;
-const FALLBACK_WIDTH_PX = 360;
-function PressRow(ui, o) {
+const FALLBACK_PX$1 = 52;
+const FALLBACK_WIDTH_PX$1 = 360;
+function PressRow$1(ui, o) {
   const { Box } = ui;
   const props = o.drawing.type === "Svg" ? o.drawing.props : {};
-  const width = props.width ?? FALLBACK_WIDTH_PX;
-  const height = props.height ?? FALLBACK_PX;
+  const width = props.width ?? FALLBACK_WIDTH_PX$1;
+  const height = props.height ?? FALLBACK_PX$1;
   return h(Box, {
     key: o.box,
     alignSelf: "flex-start"
-  }, stillSvg(ui, o.drawing), PressCover(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
+  }, stillSvg$1(ui, o.drawing), PressCover$1(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
 }
 
 const COMPACT_H = 32;
@@ -4891,9 +4891,9 @@ const CAP_R = 3.5;
 const NAME_SIZE$1 = 12;
 const MICRO = 10.5;
 const TICKS_MAX = 4;
-const SECOND$2 = 1000;
-const MINUTE$1 = 60 * SECOND$2;
-const STEPS_MS = [10 * SECOND$2, 30 * SECOND$2, MINUTE$1, 2 * MINUTE$1, 5 * MINUTE$1, 10 * MINUTE$1, 15 * MINUTE$1, 30 * MINUTE$1, 60 * MINUTE$1];
+const SECOND$3 = 1000;
+const MINUTE$2 = 60 * SECOND$3;
+const STEPS_MS = [10 * SECOND$3, 30 * SECOND$3, MINUTE$2, 2 * MINUTE$2, 5 * MINUTE$2, 10 * MINUTE$2, 15 * MINUTE$2, 30 * MINUTE$2, 60 * MINUTE$2];
 const CAP = { running: "f-edit", done: "m", failed: "f-danger" };
 const ENDED_OPACITY = 0.6;
 const xOf = (scale, ms) => scale.x0 + (ms - scale.t0) / scale.span * (scale.x1 - scale.x0);
@@ -4915,14 +4915,14 @@ function laneSvg(lane, y, scale) {
   return `<g>${label}<g opacity="${isLive ? 1 : ENDED_OPACITY}">${track}${segs}</g>${cap}${notch}</g>`;
 }
 function axisSvg(scale, top, nowX) {
-  const step = STEPS_MS.find((ms) => scale.span / ms <= TICKS_MAX) ?? STEPS_MS.at(-1) ?? MINUTE$1;
+  const step = STEPS_MS.find((ms) => scale.span / ms <= TICKS_MAX) ?? STEPS_MS.at(-1) ?? MINUTE$2;
   const ticks = [];
   for (let ms = 0;ms <= scale.span; ms += step) {
     const x = xOf(scale, scale.t0 + ms);
     if (nowX !== null && Math.abs(x - nowX) < NOW_ROOM && ms > 0)
       continue;
     const anchor = ms === 0 ? "start" : "middle";
-    ticks.push(`<rect class="k" x="${n1(x)}" y="${top}" width="1" height="4"/><text class="m" x="${n1(x)}" y="${top + 16}" text-anchor="${anchor}" font-family="${MONO$1}" font-size="${MICRO}">${fmtTime(ms)}</text>`);
+    ticks.push(`<rect class="k" x="${n1(x)}" y="${top}" width="1" height="4"/><text class="m" x="${n1(x)}" y="${top + 16}" text-anchor="${anchor}" font-family="${MONO$2}" font-size="${MICRO}">${fmtTime(ms)}</text>`);
   }
   return `<rect class="k" x="${scale.x0}" y="${top}" width="${n1(scale.x1 - scale.x0)}" height="1"/>${ticks.join("")}`;
 }
@@ -4946,7 +4946,7 @@ function timelineSvg(W, tl) {
   return { source: paneSvg(W, height, body), height, alt: altOf$1(tl) };
 }
 
-const BUTTON_PX = 76;
+const BUTTON_PX$1 = 76;
 const TERM_NAME = 6;
 const TERM_CLOCK = 2;
 const TIMELINE_MIN_AGENTS = 2;
@@ -4956,7 +4956,7 @@ function deskHead$1(ui, d, layout) {
   const { stats, ...shows } = data;
   const head = headerSvg(layout.W, data);
   const alt = [data.headline, data.percent, data.counts, totalsLineOf(data), homeAlt(d.home)].filter(Boolean).join(", ");
-  return picture(ui, { key: "head", at: "head", pic: { source: head.source, alt, width: layout.W, height: head.height }, opts: { shows: { ...shows, labels: stats.map((stat) => stat.label) } } });
+  return picture$1(ui, { key: "head", at: "head", pic: { source: head.source, alt, width: layout.W, height: head.height }, opts: { shows: { ...shows, labels: stats.map((stat) => stat.label) } } });
 }
 function headTree(ui, d, layout) {
   const { Box, Text } = ui;
@@ -5029,8 +5029,8 @@ function attentionTree(ui, view) {
     }));
   }
   const pic = { source: noticeSvg(layout.W, att), alt: `${att.name} ${att.reason}: ${att.title} (${t().look})`, width: layout.W, height: NOTICE_H };
-  const drawing = picture(ui, { key: "notice", at: "attention", pic, opts: { isRow: true } });
-  return PressRow(ui, { box: "attention", key: "look", drawing, onPress });
+  const drawing = picture$1(ui, { key: "notice", at: "attention", pic, opts: { isRow: true } });
+  return PressRow$1(ui, { box: "attention", key: "look", drawing, onPress });
 }
 function sectionHead(ui, layout, head) {
   const { Box, Button, Text } = ui;
@@ -5052,8 +5052,8 @@ function sectionHead(ui, layout, head) {
       onPress: toggle.onPress
     }));
   }
-  const width = toggle ? layout.W - BUTTON_PX : layout.W;
-  const svg = picture(ui, { key: "eyebrow", at: `eyebrow-${head.id}`, pic: { source: sectionSvg(width, head), alt: head.label, width, height: SECTION_SVG_H } });
+  const width = toggle ? layout.W - BUTTON_PX$1 : layout.W;
+  const svg = picture$1(ui, { key: "eyebrow", at: `eyebrow-${head.id}`, pic: { source: sectionSvg(width, head), alt: head.label, width, height: SECTION_SVG_H } });
   if (!toggle)
     return h(Box, {
       key: `h-${head.label}`,
@@ -5104,7 +5104,7 @@ function termTimeline(ui, tl, layout) {
 function deskTimeline(ui, tl, layout) {
   const drawing = timelineSvg(layout.W, tl);
   const shows = { lanes: tl.lanes.map((lane) => [lane.id, lane.status, lane.isStuck]), isLive: tl.isLive };
-  return picture(ui, { key: "timeline", at: "timeline", pic: { ...drawing, width: layout.W }, opts: { shows } });
+  return picture$1(ui, { key: "timeline", at: "timeline", pic: { ...drawing, width: layout.W }, opts: { shows } });
 }
 function timelineTree(ui, view) {
   const { Box } = ui;
@@ -5132,7 +5132,7 @@ const iconsOf = (d) => [
 function compactTree(ui, d, layout) {
   const { Text } = ui;
   if (layout.isDesktop) {
-    return picture(ui, { key: "compact-icons", at: "compact", pic: { source: compactSvg(layout.W, iconsOf(d)), alt: `${d.list.length} ${t().agentsCount}, ${summaryOf(d.sum)}`, width: layout.W, height: COMPACT_H } });
+    return picture$1(ui, { key: "compact-icons", at: "compact", pic: { source: compactSvg(layout.W, iconsOf(d)), alt: `${d.list.length} ${t().agentsCount}, ${summaryOf(d.sum)}`, width: layout.W, height: COMPACT_H } });
   }
   const glyphs = [...d.running, ...d.finished].map((a) => h(Text, {
     key: a.id,
@@ -5149,7 +5149,7 @@ function emptyTree(ui, view) {
   const { layout, on } = view;
   const home = view.d.home;
   const s = t();
-  const crab = layout.isDesktop && picture(ui, { key: "crab", at: "hero-crab", pic: { source: heroCrabSvg(home), alt: homeAlt(home), width: HERO_CRAB.w, height: HERO_CRAB.h } });
+  const crab = layout.isDesktop && picture$1(ui, { key: "crab", at: "hero-crab", pic: { source: heroCrabSvg(home), alt: homeAlt(home), width: HERO_CRAB.w, height: HERO_CRAB.h } });
   return h(Box, {
     key: "empty",
     flexDirection: "row",
@@ -5199,7 +5199,7 @@ function waitingTree(ui, chats, layout) {
   const more = rest > 0 ? s.more(rest) : "";
   if (layout.isDesktop) {
     const card = chatsCardSvg(layout.W, { title: s.waitingTitle, rows, more });
-    return picture(ui, { key: "chats-waiting", at: "chats-waiting", pic: { ...card, width: layout.W } });
+    return picture$1(ui, { key: "chats-waiting", at: "chats-waiting", pic: { ...card, width: layout.W } });
   }
   return h(Box, {
     key: "chats-waiting",
@@ -5222,7 +5222,7 @@ function waitingTree(ui, chats, layout) {
 }
 const linesPicture = (ui, at, lines, W) => {
   const drawn = chatLinesSvg(W, lines);
-  return picture(ui, { key: at, at, pic: { source: drawn.source, alt: drawn.alt, width: W, height: drawn.height } });
+  return picture$1(ui, { key: at, at, pic: { source: drawn.source, alt: drawn.alt, width: W, height: drawn.height } });
 };
 const chatLine = (chat) => ({
   kind: "chat",
@@ -5295,7 +5295,7 @@ function draftHead(ui, layout) {
       bold: true,
       dimColor: true
     }, label);
-  return picture(ui, { key: "draft-head", at: "draft-head", pic: { source: sectionSvg(layout.inner, { label }), alt: label, width: layout.inner, height: SECTION_SVG_H } });
+  return picture$1(ui, { key: "draft-head", at: "draft-head", pic: { source: sectionSvg(layout.inner, { label }), alt: label, width: layout.inner, height: SECTION_SVG_H } });
 }
 function draftTree(ui, view, on) {
   const { Box, Button, Input, Select, Text } = ui;
@@ -5362,7 +5362,7 @@ function briefTree(ui, a, ctx) {
   const s = t();
   const isLong = a.brief.length > BRIEF_SHOWN;
   const isWhole = !isLong || ctx.briefOpen === a.id;
-  const text = isWhole ? a.brief : clip$2(a.brief, BRIEF_SHOWN);
+  const text = isWhole ? a.brief : clip$3(a.brief, BRIEF_SHOWN);
   return h(Box, {
     key: `brief-box-${a.id}`,
     flexDirection: "column"
@@ -5378,7 +5378,7 @@ function briefTree(ui, a, ctx) {
   })));
 }
 const turnsOf = (a) => a.thread ?? (a.answer && a.status === "done" ? [{ from: "agent", text: a.answer, at: a.endedAt ?? a.startedAt }] : []);
-const turnTree = (ui, a, turn, i) => turn.from === "you" ? saidTree(ui, { key: `turn-${i}`, who: t().you, text: turn.text }) : saidTree(ui, { key: `turn-${i}`, who: lookOf$1(a).name, text: clip$2(turn.text, ANSWER_SHOWN) });
+const turnTree = (ui, a, turn, i) => turn.from === "you" ? saidTree(ui, { key: `turn-${i}`, who: t().you, text: turn.text }) : saidTree(ui, { key: `turn-${i}`, who: lookOf$1(a).name, text: clip$3(turn.text, ANSWER_SHOWN) });
 const isAwaited = (a, turns) => a.status === "running" || a.status === "done" && turns.at(-1)?.from === "you";
 function tailTree(ui, a, turns) {
   const { Text } = ui;
@@ -5435,12 +5435,12 @@ const lookOfNow = (now) => {
     return { ink: "f-edit", icon: now.kind };
   return { ink: "f-edit", icon: "thinking" };
 };
-const capital$1 = (s) => upper$1(s.charAt(0)) + s.slice(1);
+const capital$1 = (s) => upper$2(s.charAt(0)) + s.slice(1);
 const callLine = (now, x, room) => {
   const tool = now.tool ? `${fitText(now.tool, NOW.line2 * BOLD, room)} ` : "";
   const used = textWidth(tool, NOW.line2) * BOLD;
   const shown = fitMono(now.target, { size: NOW.mono, maxW: Math.max(0, room - used), isFromStart: now.isPath });
-  return `<text x="${x}" y="${NOW.lineY}" font-family="${FONT$2}" font-size="${NOW.line2}" font-weight="620"><tspan class="t">${xml(tool)}</tspan><tspan class="s" font-family="${MONO$1}" font-size="${NOW.mono}" font-weight="450">${xml(shown)}</tspan></text>`;
+  return `<text x="${x}" y="${NOW.lineY}" font-family="${FONT$2}" font-size="${NOW.line2}" font-weight="620"><tspan class="t">${xml(tool)}</tspan><tspan class="s" font-family="${MONO$2}" font-size="${NOW.mono}" font-weight="450">${xml(shown)}</tspan></text>`;
 };
 const nowSvg = (W, now) => {
   const look = lookOfNow(now);
@@ -5459,16 +5459,16 @@ const BADGE_MAX = 4;
 const badgeOf = (path, y) => {
   const ext = extOf(path).slice(0, BADGE_MAX);
   const mid = y + ROW$1.h / 2;
-  return `<rect class="k" x="0" y="${mid - ROW$1.badgeH / 2}" width="${ROW$1.badgeW}" height="${ROW$1.badgeH}" rx="${ROW$1.badgeRx}"/>` + `<text class="m" x="${ROW$1.badgeW / 2}" y="${mid + ROW$1.badge * MID_BASELINE}" text-anchor="middle" font-family="${MONO$1}" font-size="${ROW$1.badge}" font-weight="600">${xml(ext || "·")}</text>`;
+  return `<rect class="k" x="0" y="${mid - ROW$1.badgeH / 2}" width="${ROW$1.badgeW}" height="${ROW$1.badgeH}" rx="${ROW$1.badgeRx}"/>` + `<text class="m" x="${ROW$1.badgeW / 2}" y="${mid + ROW$1.badge * MID_BASELINE}" text-anchor="middle" font-family="${MONO$2}" font-size="${ROW$1.badge}" font-weight="600">${xml(ext || "·")}</text>`;
 };
-const countsOf = (f) => [{ n: f.edits, icon: "edit", ink: "s" }, { n: f.reads, icon: "read", ink: "m" }].filter((c) => c.n > 0);
+const countsOf$1 = (f) => [{ n: f.edits, icon: "edit", ink: "s" }, { n: f.reads, icon: "read", ink: "m" }].filter((c) => c.n > 0);
 const countW = (c) => ICON_SIZE * ROW$1.icon + ROW$1.iconGap + monoWidth(String(c.n), ROW$1.count);
 const countsSvg = (counts, opts) => {
   let x = opts.right;
   const mid = opts.y + ROW$1.h / 2;
   const parts = [...counts].reverse().map((c) => {
     x -= countW(c);
-    const part = iconAt(c.icon, { x, y: mid - ICON_SIZE * ROW$1.icon / 2, cls: `i-${c.ink}`, scale: ROW$1.icon }) + `<text class="${c.ink}" x="${x + ICON_SIZE * ROW$1.icon + ROW$1.iconGap}" y="${mid + ROW$1.count * MID_BASELINE}" font-family="${MONO$1}" font-size="${ROW$1.count}" font-weight="600">${c.n}</text>`;
+    const part = iconAt(c.icon, { x, y: mid - ICON_SIZE * ROW$1.icon / 2, cls: `i-${c.ink}`, scale: ROW$1.icon }) + `<text class="${c.ink}" x="${x + ICON_SIZE * ROW$1.icon + ROW$1.iconGap}" y="${mid + ROW$1.count * MID_BASELINE}" font-family="${MONO$2}" font-size="${ROW$1.count}" font-weight="600">${c.n}</text>`;
     x -= ROW$1.countGap;
     return part;
   });
@@ -5478,14 +5478,14 @@ const pathSvg = (path, opts) => {
   const short = shortPath(path);
   const cut = short.lastIndexOf("/") + 1;
   const name = fitText(short.slice(cut), ROW$1.path * BOLD, opts.room);
-  const dir = fitStart(short.slice(0, cut), ROW$1.path, opts.room - textWidth(name, ROW$1.path) * BOLD);
+  const dir = fitStart$1(short.slice(0, cut), ROW$1.path, opts.room - textWidth(name, ROW$1.path) * BOLD);
   const y = opts.y + ROW$1.h / 2 + ROW$1.path * MID_BASELINE;
   return `<text x="${ROW$1.badgeW + ROW$1.gap}" y="${y}" font-family="${FONT$2}" font-size="${ROW$1.path}"><tspan class="m">${xml(dir)}</tspan><tspan class="t" font-weight="560">${xml(name)}</tspan></text>`;
 };
 const filesSvg = (W, files) => {
   const rows = files.map((f, i) => {
     const y = i * ROW$1.h;
-    const counts = countsSvg(countsOf(f), { right: W, y });
+    const counts = countsSvg(countsOf$1(f), { right: W, y });
     const room = W - ROW$1.badgeW - ROW$1.gap - counts.width - ROW$1.gap;
     return badgeOf(f.path, y) + pathSvg(f.path, { y, room }) + counts.body;
   });
@@ -5585,7 +5585,7 @@ const PCT_GAP = 8;
 const PCT_W = 46;
 const PCT_SIZE = 12.5;
 const STRIPE = 8;
-const CHIP_GAP = 6;
+const CHIP_GAP$1 = 6;
 const CHIP_PAD = 9;
 const CHIP_TEXT = 11.5;
 const RING_R$1 = 5.5;
@@ -5593,8 +5593,8 @@ const RING_W = 2.2;
 const RING_SLOT = 17;
 const MIX_GAP = 2;
 const stripesOf = (filled, y, uid) => `<defs><pattern id="st${uid}" width="${STRIPE}" height="${STRIPE}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${STRIPE / 2}" height="${STRIPE}" fill="#fff" opacity=".28"/></pattern></defs><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" fill="url(#st${uid})"/>`;
-const FILL$1 = { running: "f-edit", done: "m", failed: "f-danger" };
-const LABEL$1 = { running: "s", done: "m", failed: "f-danger" };
+const FILL$2 = { running: "f-edit", done: "m", failed: "f-danger" };
+const LABEL$2 = { running: "s", done: "m", failed: "f-danger" };
 const progressBarSvg = (W, a, opts) => {
   const y = (BAR_H$1 - TRACK_H) / 2;
   const barW = Math.max(TRACK_H, W - PCT_W - PCT_GAP);
@@ -5602,10 +5602,10 @@ const progressBarSvg = (W, a, opts) => {
   const uid = a.id.replace(/\W/g, "");
   const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`;
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`;
-  const bar = `<rect data-m-fill="" class="${FILL$1[a.status] ?? "f-edit"}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
+  const bar = `<rect data-m-fill="" class="${FILL$2[a.status] ?? "f-edit"}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
   const isRunning = a.status === "running";
   const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : "";
-  const label = `<text class="${LABEL$1[a.status] ?? "s"}" x="${barW + PCT_GAP}" y="${BAR_H$1 / 2 + PCT_SIZE * 0.34}" font-family="${MONO$1}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`;
+  const label = `<text class="${LABEL$2[a.status] ?? "s"}" x="${barW + PCT_GAP}" y="${BAR_H$1 / 2 + PCT_SIZE * 0.34}" font-family="${MONO$2}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`;
   return paneSvg(W, BAR_H$1, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`);
 };
 const ringOf = (x, ring) => {
@@ -5624,14 +5624,14 @@ const chipsSvg = (W, chips) => {
     const w = Math.min(W, chipWidth(chip));
     if (x > 0 && x + w > W) {
       x = 0;
-      y += CHIPS_H + CHIP_GAP;
+      y += CHIPS_H + CHIP_GAP$1;
     }
     const tx = x + CHIP_PAD + (chip.ring ? RING_SLOT : 0);
     parts.push(`<rect class="chip" x="${x}" y="${y}" width="${w}" height="${CHIPS_H}" rx="${CHIPS_H / 2}"/>`);
     if (chip.ring)
       parts.push(`<g transform="translate(0,${y})">${ringOf(x, chip.ring)}</g>`);
     parts.push(`<text class="s" x="${tx}" y="${y + CHIPS_H / 2 + 4}" font-family="${FONT$2}" font-size="${CHIP_TEXT}" font-weight="500" font-variant-numeric="tabular-nums">${xml(chip.text)}</text>`);
-    x += w + CHIP_GAP;
+    x += w + CHIP_GAP$1;
   }
   const height = y + CHIPS_H;
   return { source: paneSvg(W, height, parts.join("")), height };
@@ -5651,9 +5651,9 @@ const mixSvg = (W, parts) => {
   return paneSvg(W, MIX_H, segs.join(""));
 };
 
-const SECOND$1 = 1000;
+const SECOND$2 = 1000;
 const PATH = /^[~.]?\//;
-const agoOf = (ms) => ms < SECOND$1 ? t().now : t().ago(roughSpan(ms));
+const agoOf = (ms) => ms < SECOND$2 ? t().now : t().ago(roughSpan(ms));
 const stateOf$1 = (a, last) => {
   if (a.status !== "running")
     return a.status;
@@ -5694,7 +5694,7 @@ const RECENT_SHOWN = 8;
 const FILES_SHOWN$3 = 6;
 const KIND_ORDER = ["read", "edit", "run", "agent", "other"];
 const NOW_KEY = { call: "claude", thinking: "claude", starting: "claude", done: "subtle", failed: "error" };
-const capital = (s) => upper$1(s.charAt(0)) + s.slice(1);
+const capital = (s) => upper$2(s.charAt(0)) + s.slice(1);
 function nowText(ui, now) {
   const { Box, Text } = ui;
   const key = NOW_KEY[now.state];
@@ -5725,7 +5725,7 @@ function nowText(ui, now) {
 }
 function deskNow(ui, a, now, ctx) {
   const alt = [now.verb, now.span, now.tool, now.target].filter(Boolean).join(" · ");
-  return picture(ui, { key: "now", at: `now-${a.id}`, pic: { source: nowSvg(ctx.inner, now), alt, width: ctx.inner, height: NOW_H } });
+  return picture$1(ui, { key: "now", at: `now-${a.id}`, pic: { source: nowSvg(ctx.inner, now), alt, width: ctx.inner, height: NOW_H } });
 }
 function nowTree(ui, a, ctx) {
   const { Box, Text } = ui;
@@ -5761,7 +5761,7 @@ function eventTree(ui, e, ctx) {
   const said = e.why ?? e.plain;
   const fine = e.why && e.plain ? ` · ${e.plain}` : `${said ? ` · ${e.tool}` : ""}${e.target ? ` ${e.target}` : ""}`;
   const pulse = { source: pulseSvg(), alt: t().isRunning, width: PULSE, height: PULSE };
-  const end = e.endAt === undefined && ctx.isLive && ctx.isDesktop ? picture(ui, { key: "live", at: `live-${ctx.id}-${ctx.index}`, pic: pulse }) : h(Text, {
+  const end = e.endAt === undefined && ctx.isLive && ctx.isDesktop ? picture$1(ui, { key: "live", at: `live-${ctx.id}-${ctx.index}`, pic: pulse }) : h(Text, {
     color: outcome.key
   }, outcome.glyph);
   return h(Box, {
@@ -5806,7 +5806,7 @@ function mixTree(ui, parts, ctx) {
   return h(Box, {
     flexDirection: "column",
     rowGap: ctx.isDesktop ? 1 : 0
-  }, ctx.isDesktop && picture(ui, { key: "mix", at: `mix-${ctx.id}`, pic: { source: mixSvg(ctx.inner, parts), alt: words, width: ctx.inner, height: MIX_H } }), h(Text, {
+  }, ctx.isDesktop && picture$1(ui, { key: "mix", at: `mix-${ctx.id}`, pic: { source: mixSvg(ctx.inner, parts), alt: words, width: ctx.inner, height: MIX_H } }), h(Text, {
     wrap: "truncate-end"
   }, legend));
 }
@@ -5862,7 +5862,7 @@ function filesTree(ui, a, ctx) {
     rowGap: ctx.isDesktop ? 1 : 0
   }, h(Text, {
     bold: true
-  }, `${s.files} · ${all.length}`), drawn ? picture(ui, { key: "files", at: `files-${a.id}`, pic: { source: drawn.source, alt, width: ctx.inner, height: drawn.height } }) : shown.map((f) => fileText(ui, f)), ui.Markdown && links ? h(ui.Markdown, {
+  }, `${s.files} · ${all.length}`), drawn ? picture$1(ui, { key: "files", at: `files-${a.id}`, pic: { source: drawn.source, alt, width: ctx.inner, height: drawn.height } }) : shown.map((f) => fileText(ui, f)), ui.Markdown && links ? h(ui.Markdown, {
     key: `file-links-${a.id}`,
     dimColor: true,
     text: links
@@ -5903,7 +5903,7 @@ function metricsTree(ui, a, ctx) {
     }, line);
   const width = ctx.inner;
   const chips = chipsSvg(width, a.status === "running" ? usageChipsOf(a, ctx.limit) : chipsOf(a, facts));
-  return picture(ui, { key: "chips", at: `chips-${a.id}`, pic: { source: chips.source, alt: line, width, height: chips.height } });
+  return picture$1(ui, { key: "chips", at: `chips-${a.id}`, pic: { source: chips.source, alt: line, width, height: chips.height } });
 }
 function actionsTree(ui, a, ctx) {
   const { Box, Button, Input } = ui;
@@ -6028,7 +6028,7 @@ const nowLine = (a, isOpen) => {
   const answer = a.status === "done" && !isOpen ? a.answer?.split(`
 `).find((line) => line.trim()) : undefined;
   if (answer)
-    return clip$2(answer.trim(), ANSWER_LINE);
+    return clip$3(answer.trim(), ANSWER_LINE);
   if (a.status === "failed" && a.lastTool)
     return `› ${a.lastPlain ?? `${a.lastTool}${a.lastTarget ? " " + a.lastTarget : ""}`}`;
   return activityOf(a);
@@ -6124,7 +6124,7 @@ function deskHead(ui, a, ctx) {
   return h(Box, {
     flexDirection: "row",
     alignItems: "center"
-  }, picture(ui, { key: "crab", at: `crab-${a.id}`, pic: { source: crab, alt: `${look.name}, ${tierWordOf(a)}`, width: CARD_CRAB.w, height: CARD_CRAB.h } }), picture(ui, { key: "head", at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head, GAP_PX), alt, width: headW, height: HEAD_H$1 } }));
+  }, picture$1(ui, { key: "crab", at: `crab-${a.id}`, pic: { source: crab, alt: `${look.name}, ${tierWordOf(a)}`, width: CARD_CRAB.w, height: CARD_CRAB.h } }), picture$1(ui, { key: "head", at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head, GAP_PX), alt, width: headW, height: HEAD_H$1 } }));
 }
 function deskFoot(ui, a, ctx) {
   const { Box, Text } = ui;
@@ -6145,7 +6145,7 @@ function deskBar(ui, a, ctx) {
   const progress = agentProgress(a);
   const label = barLabel(a, progress);
   const pic = { source: progressBarSvg(ctx.inner, a, { progress, label }), alt: label || t().starting, width: ctx.inner, height: BAR_H$1 };
-  return picture(ui, { key: "bar", at: `bar-${a.id}`, pic, opts: { shows: { status: a.status, isEstimate: progress.isEstimate } } });
+  return picture$1(ui, { key: "bar", at: `bar-${a.id}`, pic, opts: { shows: { status: a.status, isEstimate: progress.isEstimate } } });
 }
 function deskCard(ui, a, ctx) {
   const { Box } = ui;
@@ -6160,7 +6160,7 @@ function deskCard(ui, a, ctx) {
   }, h(Box, {
     key: "head-row",
     alignSelf: "flex-start"
-  }, deskHead(ui, a, ctx), PressCover(ui, { key: `open-${a.id}`, width: ctx.inner, height: HEAD_H$1, onPress: () => ctx.onToggle(a.id) })), deskBar(ui, a, ctx), deskFoot(ui, a, ctx)), isOpen && detailTree(ui, a, ctx));
+  }, deskHead(ui, a, ctx), PressCover$1(ui, { key: `open-${a.id}`, width: ctx.inner, height: HEAD_H$1, onPress: () => ctx.onToggle(a.id) })), deskBar(ui, a, ctx), deskFoot(ui, a, ctx)), isOpen && detailTree(ui, a, ctx));
 }
 const agentRow = (ui, a, ctx) => ctx.isDesktop ? deskCard(ui, a, ctx) : termCard(ui, a, ctx);
 function plannedRow(ui, p, ctx) {
@@ -6172,7 +6172,7 @@ function plannedRow(ui, p, ctx) {
     flexDirection: "row",
     columnGap: 1,
     alignItems: "center"
-  }, ctx.isDesktop ? picture(ui, { key: "crab", at: `plan-crab-${p.n}`, pic: crab }) : h(Text, {
+  }, ctx.isDesktop ? picture$1(ui, { key: "crab", at: `plan-crab-${p.n}`, pic: crab }) : h(Text, {
     dimColor: true
   }, "○"), h(Box, {
     flexDirection: "column",
@@ -6211,7 +6211,7 @@ function listTree(ui, view) {
     dimColor: true
   }, s.moreAgents(more)));
 }
-function paneTree(ui, view) {
+function paneTree$1(ui, view) {
   const { Box } = ui;
   const { d, layout, on } = view;
   const isDrafting = d.panel.draft?.isOpen === true;
@@ -6235,7 +6235,7 @@ function agentsTree(ui, view) {
   return h(Box, {
     flexDirection: "column",
     rowGap: 1
-  }, waitingTree(ui, d.chats, layout), paneTree(ui, view), crewTree(ui, listed.chats, layout), quiet, listed.more > 0 && h(Text, {
+  }, waitingTree(ui, d.chats, layout), paneTree$1(ui, view), crewTree(ui, listed.chats, layout), quiet, listed.more > 0 && h(Text, {
     key: "chats-more",
     dimColor: true
   }, t().chats.more(listed.more)));
@@ -6257,7 +6257,7 @@ const TYPES$1 = { plugin: "savvy-progress", key: "types" };
 const CRAB = { plugin: "savvy-progress", key: "crab" };
 const CHATS = { plugin: "savvy-progress", key: "chats" };
 async function speakHubLang($) {
-  setLang(langOf(await $.env.get("MODZ_LANG").catch(() => {
+  setLang$1(langOf$1(await $.env.get("MODZ_LANG").catch(() => {
     return;
   })) ?? "en");
 }
@@ -6277,6 +6277,936 @@ async function agentsPage($, ui, site, act) {
   };
   const isDesktop = site.surface === "desktop" && "Svg" in ui;
   return agentsTree(ui, { d: paneDataOf(kept), layout: layoutOf(isDesktop, site.columns), on: pageHandlers(act) });
+}
+
+let current$1 = "en";
+const langOf = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
+function setLang(value) {
+  current$1 = langOf(value);
+  return current$1;
+}
+const pick$1 = (table) => table[current$1];
+const upper$1 = (text) => text.toLocaleUpperCase(current$1);
+
+const FILL$1 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
+const DONE$1 = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
+const HAS_DONE$1 = /\bdata-m-done\b/;
+const WIDTH$2 = /\swidth="([\d.]+)"/;
+const CLASS$1 = /\sclass="([^"]*)"/;
+const STYLE$1 = /\sstyle="([^"]*)"/;
+const MIN_RATIO_STEP$1 = 0.02;
+const RATIO_DIGITS$1 = 3;
+const widthOf$1 = (tag) => Number(WIDTH$2.exec(tag)?.[1] ?? 0);
+function withClass$1(tag, name, extra = "") {
+  const tagged = CLASS$1.test(tag) ? tag.replace(CLASS$1, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
+  return tagged.replace(/\s*\/?>$/, `${extra}$&`);
+}
+function slideFills$1(before, now) {
+  const old = before.match(FILL$1) ?? [];
+  if (old.length !== (now.match(FILL$1) ?? []).length)
+    return now;
+  let index = 0;
+  return now.replace(FILL$1, (tag) => {
+    const was = old[index++];
+    const from = was === undefined ? 0 : widthOf$1(was);
+    const to = widthOf$1(tag);
+    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP$1)
+      return tag;
+    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS$1)}`;
+    const styled = STYLE$1.test(tag) ? tag.replace(STYLE$1, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
+    return withClass$1(styled, "m-from");
+  });
+}
+function drawDone$1(before, now) {
+  if (HAS_DONE$1.test(before))
+    return now;
+  return now.replace(DONE$1, (tag) => withClass$1(tag, "m-draw", ' pathLength="1"'));
+}
+function markChanges$1(before, now) {
+  return drawDone$1(before, slideFills$1(before, now));
+}
+
+const STAGGER_MS$1 = 45;
+const EASE$1 = "cubic-bezier(.2,.8,.2,1)";
+const SHEEN$1 = "#A39E93";
+const RULES$1 = {
+  "m-in": `.m-in{animation:m-in .42s ${EASE$1} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
+  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$1} both}@keyframes m-fade{from{opacity:0}}`,
+  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$1} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
+  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$1} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
+  "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
+  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$1} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
+  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$1} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
+  "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
+  "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
+  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$1}}svg:hover .m-wash{opacity:.12}`,
+  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$1}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
+};
+const REDUCED$2 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+function motionCss$1(body) {
+  const used = Object.keys(RULES$1).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
+  return used.length === 0 ? "" : `${used.map((name) => RULES$1[name]).join("")}${REDUCED$2}`;
+}
+Object.values(RULES$1).join("");
+const isEntering$1 = (cue) => cue.phase === "enter";
+function entering$1(body, cue, kind = "in") {
+  if (!isEntering$1(cue))
+    return body;
+  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$1}ms">${body}</g>`;
+}
+const FLASH$1 = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN$1}" fill-opacity=".22" class="m-flash"/>`;
+const WASH$1 = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
+
+function stableDrawings$1() {
+  const kept = new Map;
+  return {
+    reset: () => kept.clear(),
+    draw: (key, what, build) => {
+      const signature = typeof what === "string" ? what : JSON.stringify(what);
+      const before = kept.get(key);
+      if (before !== undefined && before.what === signature)
+        return before.drawing;
+      const drawing = build(before === undefined ? "enter" : "change");
+      kept.set(key, { what: signature, drawing });
+      return drawing;
+    }
+  };
+}
+
+const TAG_WIDTH$1 = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
+const SVG$1 = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
+const SCHEME$2 = "<style>:root{color-scheme:light dark}</style>";
+const SAYS_SCHEME$1 = /(^|[^-\w])color-scheme\s*:/;
+const PASS_MS$1 = 120;
+const MAX_ORDER$1 = 12;
+const LIVE_MS$1 = 30000;
+function animate$1(source, spec) {
+  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges$1(spec.before, source) : source;
+  const parts = SVG$1.exec(moved);
+  if (parts === null)
+    return source;
+  const [, open, inner = "", close] = parts;
+  const scheme = SAYS_SCHEME$1.test(inner) ? "" : SCHEME$2;
+  const lit = `${spec.isRow === true ? WASH$1 : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH$1 : ""}${inner}`;
+  const body = entering$1(lit, spec.cue);
+  const css = motionCss$1(body);
+  return `${open}${scheme}${css === "" ? "" : `<style>${css}</style>`}${body}${close}`;
+}
+function paneMotion$1() {
+  const drawings = stableDrawings$1();
+  const shown = new Map;
+  const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 };
+  const begin = () => {
+    const now = Date.now();
+    if (now - pass.at > PASS_MS$1)
+      pass.entered = 0;
+    pass.at = now;
+  };
+  return {
+    reset: () => {
+      drawings.reset();
+      shown.clear();
+    },
+    pic: (key, pic, opts = {}) => {
+      begin();
+      const what = `${opts.isRow === true ? "row:" : ""}${pic.source}`;
+      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH$1.exec(pic.source)?.[1]), source: pic.source };
+      const source = drawings.draw(key, what, (built) => {
+        const order = built === "enter" ? Math.min(MAX_ORDER$1, pass.entered++) : 0;
+        const before = shown.get(key);
+        const isQuiet = before !== undefined && (before.shows === now.shows || before.width !== now.width);
+        const phase = built === "change" && isQuiet ? "still" : built;
+        const lastChange = before?.changedAt ?? Number.NEGATIVE_INFINITY;
+        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS$1;
+        shown.set(key, { ...now, changedAt: phase === "change" ? pass.at : lastChange });
+        return animate$1(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
+      });
+      return { ...pic, source, isInteractive: true };
+    }
+  };
+}
+
+const BLANK = "ㅤ";
+const CELL_PX = 11.9;
+const BUTTON_PX = 28;
+const RUN_SPAN = 2;
+const LINE_SPAN = "400%";
+function PressCover(ui, o) {
+  const { Box, Button } = ui;
+  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX * 2)));
+  const label = BLANK.repeat(Math.ceil(o.width * RUN_SPAN / CELL_PX));
+  const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey };
+  return h(Box, {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "column",
+    justifyContent: "center",
+    overflow: "hidden"
+  }, Array.from({ length: lines }, (_, i) => h(Box, {
+    key: `${o.key}~line${i}`,
+    flexDirection: "row",
+    width: LINE_SPAN,
+    marginLeft: -1,
+    flexShrink: 0
+  }, h(Button, {
+    key: i === 0 ? o.key : `${o.key}~${i}`,
+    label,
+    plain: true,
+    ...i === 0 ? hotkey : {},
+    onPress: o.onPress
+  }))));
+}
+const STILL = "<style>*{animation:none!important;transition:none!important}</style>";
+const stillSource = (source) => source.replace(/<\/svg>\s*$/, `${STILL}</svg>`);
+function stillSvg(ui, drawing) {
+  if (drawing.type !== "Svg")
+    return drawing;
+  const { Svg } = ui;
+  const { key, source, alt, width, height } = drawing.props;
+  return h(Svg, {
+    key,
+    source: stillSource(source),
+    alt,
+    width,
+    height
+  });
+}
+const FALLBACK_PX = 52;
+const FALLBACK_WIDTH_PX = 360;
+function PressRow(ui, o) {
+  const { Box } = ui;
+  const props = o.drawing.type === "Svg" ? o.drawing.props : {};
+  const width = props.width ?? FALLBACK_WIDTH_PX;
+  const height = props.height ?? FALLBACK_PX;
+  return h(Box, {
+    key: o.box,
+    alignSelf: "flex-start"
+  }, stillSvg(ui, o.drawing), PressCover(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
+}
+
+const AUTO = { mode: "auto", isLight: false };
+const NEUTRALS = ["card", "inset", "line", "strong", "track", "hi", "mid", "lo"];
+const ROLES$2 = ["tide", "kiln", "iris", "moss", "amber", "flare", "orchid"];
+const DARK$2 = {
+  card: "#1F1F1C",
+  inset: "#171715",
+  line: "#2E2E2A",
+  strong: "#45443F",
+  track: "#34332F",
+  hi: "#F0EEE8",
+  mid: "#C2BEB4",
+  lo: "#8E8A80",
+  tide: { fg: "#7FB6E8", tint: "#1E2B37", line: "#2F4A63" },
+  kiln: { fg: "#E58A5F", tint: "#38251D", line: "#6A3E2D" },
+  iris: { fg: "#B19CF3", tint: "#29243D", line: "#4A3F75" },
+  moss: { fg: "#6FC593", tint: "#1B2F25", line: "#2F5A42" },
+  amber: { fg: "#E9B949", tint: "#332D19", line: "#66552A" },
+  flare: { fg: "#F2727F", tint: "#3B2023", line: "#74343C" },
+  orchid: { fg: "#E07BC0", tint: "#351F2E", line: "#6B3A5C" }
+};
+const LIGHT$2 = {
+  card: "#FFFFFF",
+  inset: "#F6F4EF",
+  line: "#E4E0D6",
+  strong: "#CFC9BC",
+  track: "#ECE8DF",
+  hi: "#1C1B19",
+  mid: "#4F4B44",
+  lo: "#77726A",
+  tide: { fg: "#2464A0", tint: "#E7F0F9", line: "#B9D3EC" },
+  kiln: { fg: "#A94A26", tint: "#FBEDE6", line: "#EFC6B4" },
+  iris: { fg: "#6243C4", tint: "#F0ECFC", line: "#CFC3F3" },
+  moss: { fg: "#1F6E43", tint: "#E4F4EA", line: "#B5DEC4" },
+  amber: { fg: "#8A6000", tint: "#FBF2D9", line: "#EBD48F" },
+  flare: { fg: "#C0263A", tint: "#FCE8EA", line: "#F1B9C0" },
+  orchid: { fg: "#A8337F", tint: "#FBE9F4", line: "#EDBFDC" }
+};
+const THEME_KEY = {
+  tide: "suggestion",
+  kiln: "claude",
+  iris: "permission",
+  moss: "success",
+  amber: "warning",
+  flare: "error",
+  orchid: "merged"
+};
+const varsOf = (palette) => [
+  ...NEUTRALS.map((name) => `--${name}:${palette[name]}`),
+  ...ROLES$2.flatMap((role) => [`--${role}:${palette[role].fg}`, `--${role}-t:${palette[role].tint}`, `--${role}-l:${palette[role].line}`])
+].join(";");
+function themeCss() {
+  return `svg,.t-dark{${varsOf(DARK$2)}}.t-light{${varsOf(LIGHT$2)}}@media (prefers-color-scheme: light){.t-auto{${varsOf(LIGHT$2)}}}`;
+}
+function boxColor(theme, role, part = "fg") {
+  if (theme.mode === "auto")
+    return THEME_KEY[role];
+  return (theme.isLight ? LIGHT$2 : DARK$2)[role][part];
+}
+
+const SANS = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`;
+const MONO$1 = `ui-monospace, 'SF Mono', Menlo, monospace`;
+const PX_PER_COLUMN$1 = 9;
+const MONO_EM$1 = 0.6;
+const BOLD_FROM = 600;
+const BOLD_WIDEN$1 = 1.06;
+const ENTITIES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+const MOTION$1 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+const esc = (text) => text.replace(/[&<>"]/g, (ch) => ENTITIES[ch] ?? ch);
+const px = (value) => String(Math.round(value * 10) / 10);
+const NARROW_CHAR = /[\s.,:;'|!il1()[\]ıjtf`]/;
+const WIDE_CHAR = /[A-ZÇĞİÖŞÜmwMW@%]/;
+const NARROW_EM$1 = 0.3;
+const WIDE_EM$1 = 0.72;
+const PLAIN_EM = 0.56;
+function charEm(ch) {
+  if (NARROW_CHAR.test(ch))
+    return NARROW_EM$1;
+  return WIDE_CHAR.test(ch) ? WIDE_EM$1 : PLAIN_EM;
+}
+function measure$1(text, font) {
+  const chars = [...text];
+  const em = font.isMono === true ? chars.length * MONO_EM$1 : chars.reduce((sum, ch) => sum + charEm(ch), 0);
+  const widen = (font.weight ?? 0) >= BOLD_FROM ? BOLD_WIDEN$1 : 1;
+  return em * font.size * widen;
+}
+function cut(text, box) {
+  const { width, font, isFromStart } = box;
+  if (measure$1(text, font) <= width)
+    return text;
+  const chars = [...text];
+  while (chars.length > 1 && measure$1(`${chars.join("")}…`, font) > width) {
+    if (isFromStart)
+      chars.shift();
+    else
+      chars.pop();
+  }
+  return isFromStart ? `…${chars.join("")}` : `${chars.join("")}…`;
+}
+const fit$1 = (text, width, font) => cut(text, { width, font, isFromStart: false });
+const fitStart = (text, width, font) => cut(text, { width, font, isFromStart: true });
+function wrap$1(text, width, spec) {
+  const lines = [];
+  let current = "";
+  for (const word of text.split(/\s+/).filter((part) => part !== "")) {
+    const next = current === "" ? word : `${current} ${word}`;
+    if (current === "" || measure$1(next, spec.font) <= width)
+      current = next;
+    else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current !== "")
+    lines.push(current);
+  if (lines.length <= spec.maxLines)
+    return lines.map((line) => fit$1(line, width, spec.font));
+  const kept = lines.slice(0, spec.maxLines);
+  const last = kept.length - 1;
+  return kept.map((line, index) => index === last ? fit$1(`${line} ${lines.slice(spec.maxLines).join(" ")}`, width, spec.font) : line);
+}
+function svgWidth(columns, range) {
+  const room = (columns - (range.reserve ?? 0)) * PX_PER_COLUMN$1;
+  return Math.round(Math.max(range.min, Math.min(range.max, room)));
+}
+function svgDoc$1(spec) {
+  const { width, height } = spec;
+  const style = `${themeCss()}text{font-family:${SANS};font-variant-numeric:tabular-nums}.mono{font-family:${MONO$1}}${MOTION$1}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="t-${spec.mode}" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><style>${style}</style>${spec.body}</svg>`;
+}
+function text(spec) {
+  const attrs = [`x="${px(spec.x)}"`, `y="${px(spec.y)}"`, `font-size="${spec.size}"`];
+  if (spec.weight !== undefined)
+    attrs.push(`font-weight="${spec.weight}"`);
+  if (spec.anchor !== undefined && spec.anchor !== "start")
+    attrs.push(`text-anchor="${spec.anchor}"`);
+  if (spec.isMono === true)
+    attrs.push('class="mono"');
+  return `<text ${attrs.join(" ")} style="fill:var(--${spec.ink})">${esc(spec.text)}</text>`;
+}
+function runs(spec) {
+  const spans = spec.parts.map((part) => {
+    const weight = part.weight === undefined ? "" : ` font-weight="${part.weight}"`;
+    const mono = part.isMono === true ? ' class="mono"' : "";
+    return `<tspan${weight}${mono} style="fill:var(--${part.ink})">${esc(part.text)}</tspan>`;
+  });
+  return `<text x="${px(spec.x)}" y="${px(spec.y)}" font-size="${spec.size}">${spans.join("")}</text>`;
+}
+function rect(spec) {
+  const fill = spec.fill === undefined ? "fill:none" : `fill:var(--${spec.fill})`;
+  const stroke = spec.stroke === undefined ? "" : `;stroke:var(--${spec.stroke})`;
+  const cls = spec.className === undefined ? "" : ` class="${spec.className}"`;
+  return `<rect${cls} x="${px(spec.x)}" y="${px(spec.y)}" width="${px(spec.w)}" height="${px(spec.h)}" rx="${spec.rx ?? 0}" style="${fill}${stroke}"/>`;
+}
+function line(spec) {
+  const dash = spec.dash === undefined ? "" : ` stroke-dasharray="${spec.dash}"`;
+  return `<line x1="${px(spec.x1)}" y1="${px(spec.y1)}" x2="${px(spec.x2)}" y2="${px(spec.y2)}" stroke-width="1"${dash} style="stroke:var(--${spec.ink})"/>`;
+}
+function fileBadge$1(spec) {
+  const name = spec.path.split("/").pop() ?? spec.path;
+  const dot = name.lastIndexOf(".");
+  const ext = dot > 0 ? name.slice(dot + 1) : "";
+  const label = upper$1(ext === "" ? "·" : ext.slice(0, 3));
+  return rect({ x: spec.x, y: spec.y, w: 26, h: 16, rx: 4, fill: "track" }) + text({ size: 9.5, weight: 600, isMono: true, x: spec.x + 13, y: spec.y + 11.5, text: label, ink: "lo", anchor: "middle" });
+}
+function monogram(spec) {
+  return rect({ x: spec.x, y: spec.y, w: 16, h: 16, rx: 4, fill: "track" }) + text({ size: 10, weight: 600, isMono: true, x: spec.x + 8, y: spec.y + 11.5, text: spec.glyph, ink: "lo", anchor: "middle" });
+}
+function bar$1(spec) {
+  const radius = spec.height / 2;
+  const track = rect({ x: spec.x, y: spec.y, w: spec.width, h: spec.height, rx: radius, fill: "track" });
+  let left = spec.x;
+  const fills = spec.parts.filter((part) => part.value > 0).map((part) => {
+    const width = Math.max(spec.height, spec.width * part.value / Math.max(1, spec.total) - 2);
+    const drawn = rect({ x: left, y: spec.y, w: width, h: spec.height, rx: radius, fill: part.ink });
+    left += width + 2;
+    return drawn;
+  });
+  return track + fills.join("");
+}
+
+const SECOND$1 = 1000;
+const MINUTE$1 = 60 * SECOND$1;
+const HOUR$1 = 60 * MINUTE$1;
+const DAY = 24 * HOUR$1;
+const plural$1 = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+function agoEn(ms) {
+  if (ms < MINUTE$1)
+    return "just now";
+  if (ms < HOUR$1)
+    return `${Math.round(ms / MINUTE$1)}m ago`;
+  if (ms < DAY)
+    return `${Math.round(ms / HOUR$1)}h ago`;
+  return `${Math.round(ms / DAY)}d ago`;
+}
+function agoTr(ms) {
+  if (ms < MINUTE$1)
+    return `${Math.max(0, Math.round(ms / SECOND$1))} sn önce`;
+  if (ms < HOUR$1)
+    return `${Math.round(ms / MINUTE$1)} dk önce`;
+  if (ms < DAY)
+    return `${Math.round(ms / HOUR$1)} sa önce`;
+  return `${Math.round(ms / DAY)} g önce`;
+}
+const EN$1 = {
+  title: "Restore points",
+  ago: agoEn,
+  hubDetail: (count) => `${count} saved`,
+  headerMeta: (count, ago) => `${count} saved · newest ${ago}`,
+  newest: (ago) => `newest ${ago}`,
+  emptyLead: "No restore points yet",
+  emptyRest: "one is saved quietly before the first file change",
+  turnsSaved: (turns) => `${plural$1(turns, "turn", "turns")} saved`,
+  turn: (number) => `Turn ${number}`,
+  saved: "Restore point",
+  beforeUndo: "Before undo",
+  safetyPrefix: "before undo: ",
+  undo: "Undo",
+  undoMeta: "the current state is saved first",
+  question: (target) => `Go back to before ${target}?`,
+  changed: (count) => `${plural$1(count, "file", "files")} will change`,
+  confirm: (count) => ({ label: `Restore ${plural$1(count, "file", "files")}`, hotkey: "r" }),
+  cancel: { label: "Cancel", hotkey: "c" },
+  redo: "Redo",
+  files: (count) => `+${plural$1(count, "file", "files")}`,
+  undone: "undone",
+  willDelete: "will be deleted",
+  moreFiles: (count) => `+ ${plural$1(count, "more file", "more files")}`,
+  more: (count) => `+ ${count} more`,
+  toRestore: (count) => `${count} to restore`,
+  toDelete: (count) => `${count} to delete`,
+  lines: "lines",
+  summary: (restore, remove) => [`${plural$1(restore, "file", "files")} will be restored`, remove > 0 ? `${plural$1(remove, "new file", "new files")} will be deleted` : ""].filter(Boolean).join(", ") + ". The current state is saved first.",
+  checking: "Checking…",
+  undoing: "Undoing…",
+  noRepo: "This folder has no version history (git).",
+  alreadyThere: "The files already match this restore point.",
+  failed: "Couldn't undo; the reason is in Claude Code's log (debug log).",
+  commitsKept: (count) => `${plural$1(count, "saved version", "saved versions")} (commits) made since this point stay in the history; the undo shows up as new changes on top.`,
+  indexBack: "Files marked for the next saved version (staged) go back as they were too.",
+  ignoredKept: "Files git is told to skip (such as the secrets file .env) are not covered and stay as they are.",
+  restored: (count, target) => `Restored ${plural$1(count, "file", "files")} to before ${target}.`,
+  toggled: (isOn) => `restore points ${isOn ? "on" : "off"}`,
+  toggleLine: "Quietly saves a restore point before each turn's first file change: on/off",
+  paneLine: "Lists the restore points; undoes a turn",
+  promptFallback: "turn"
+};
+const TR$1 = {
+  title: "Geri dönüş noktaları",
+  ago: agoTr,
+  hubDetail: (count) => `${count} nokta`,
+  headerMeta: (count, ago) => `${count} nokta · en yenisi ${ago}`,
+  newest: (ago) => `en yenisi ${ago}`,
+  emptyLead: "Henüz geri dönüş noktası yok",
+  emptyRest: "ilk dosya değişikliğinden önce sessizce alınır",
+  turnsSaved: (turns) => `${turns} tur kayıtlı`,
+  turn: (number) => `Tur ${number}`,
+  saved: "Geri dönüş noktası",
+  beforeUndo: "Geri almadan önce",
+  safetyPrefix: "geri almadan önce: ",
+  undo: "Geri al",
+  undoMeta: "şimdiki hal önce kaydedilir",
+  question: (target) => `${target} öncesine dönülsün mü?`,
+  changed: (count) => `${count} dosya değişecek`,
+  confirm: (count) => ({ label: `${count} dosyayı geri al`, hotkey: "g" }),
+  cancel: { label: "Vazgeç", hotkey: "v" },
+  redo: "Yinele",
+  files: (count) => `+${count} dosya`,
+  undone: "geri alındı",
+  willDelete: "silinecek",
+  moreFiles: (count) => `+${count} dosya daha`,
+  more: (count) => `+${count} daha`,
+  toRestore: (count) => `${count} geri yüklenecek`,
+  toDelete: (count) => `${count} silinecek`,
+  lines: "satır",
+  summary: (restore, remove) => [`${restore} dosya geri yüklenecek`, remove > 0 ? `${remove} yeni dosya silinecek` : ""].filter(Boolean).join(", ") + ". Önce şimdiki hal kaydedilir.",
+  checking: "Denetleniyor…",
+  undoing: "Geri alınıyor…",
+  noRepo: "Bu klasörün sürüm geçmişi (git) yok.",
+  alreadyThere: "Dosyalar zaten bu noktadaki gibi.",
+  failed: "Geri alınamadı; nedeni Claude Code günlüğünde (debug log).",
+  commitsKept: (count) => `Bu noktadan sonraki ${count} kayıt (commit) geçmişte kalır; geri alma bunların üstüne yeni değişiklik olarak görünür.`,
+  indexBack: "Sonraki kayda hazırlanan (staged) dosyalar da eski haline döner.",
+  ignoredKept: "Git'in atladığı dosyalar (gizli ayar dosyası .env gibi) kapsanmaz, olduğu gibi kalır.",
+  restored: (count, target) => `${count} dosya ${target} öncesine döndü.`,
+  toggled: (isOn) => `geri dönüş noktaları ${isOn ? "açık" : "kapalı"}`,
+  toggleLine: "Her turun ilk dosya değişikliğinden önce sessizce geri dönüş noktası alır: aç/kapa",
+  paneLine: "Geri dönüş noktalarını listeler; bir turu geri alır",
+  promptFallback: "tur"
+};
+const SAFETY_PREFIXES = [EN$1.safetyPrefix, TR$1.safetyPrefix];
+const words$1 = () => pick$1({ en: EN$1, tr: TR$1 });
+
+const HEAD_LEAD_Y = 18;
+const HEAD_PAD_BOTTOM = 6;
+const SUB_LINE_H = 18;
+const LEAD = { size: 16, weight: 600 };
+const SUB = { size: 12 };
+const ROW_MIN_H = 48;
+const ROW_PAD_BOTTOM = 10;
+const DOT_X$2 = 8;
+const DOT_Y = 15;
+const TEXT_X = 26;
+const TITLE_Y = 19;
+const LABEL_Y = 38;
+const LABEL_LINE_H = 17;
+const LABEL_LINES = 2;
+const CHIP = 16;
+const CHIP_GAP = 4;
+const RIGHT_GAP = 12;
+const FILES_GAP = 10;
+const TITLE$1 = { size: 13, weight: 560 };
+const WHEN = { size: 13 };
+const LABEL$1 = { size: 12 };
+const META = { size: 11, isMono: true };
+const STRIKE_FIT = 0.95;
+const CHEVRON_ROOM = 28;
+const CHEVRON_INSET = 18;
+const drawing = (frame, spec) => ({ source: svgDoc$1({ width: frame.width, height: spec.height, mode: frame.mode, body: spec.body }), width: frame.width, height: spec.height, alt: spec.alt });
+function headLines(room, spec) {
+  const joiner = spec.joiner ?? " ";
+  const isRestInline = spec.rest === "" || measure$1(`${spec.lead}${joiner}${spec.rest}`, LEAD) <= room;
+  const rest = isRestInline ? [] : wrap$1(spec.rest, room, { font: SUB, maxLines: LABEL_LINES }).map((part) => ({ text: part, ink: "mid" }));
+  const meta = spec.meta === "" ? [] : [{ text: fit$1(spec.meta, room, SUB), ink: "lo" }];
+  return { inline: isRestInline && spec.rest !== "" ? `${joiner}${spec.rest}` : "", sub: [...rest, ...meta] };
+}
+function headSvg(frame, spec) {
+  const room = frame.width;
+  const lines = headLines(room, spec);
+  const lead = fit$1(spec.lead, room, LEAD);
+  const subs = lines.sub.map((part, index) => text({ ...SUB, x: 0, y: HEAD_LEAD_Y + SUB_LINE_H * (index + 1), text: part.text, ink: part.ink }));
+  const body = runs({ x: 0, y: HEAD_LEAD_Y, size: LEAD.size, parts: [{ text: lead, ink: "hi", weight: LEAD.weight }, { text: lines.inline, ink: "mid", weight: 500 }] }) + subs.join("");
+  const height = HEAD_LEAD_Y + SUB_LINE_H * lines.sub.length + HEAD_PAD_BOTTOM;
+  const meta = spec.meta === "" ? "" : ` · ${spec.meta}`;
+  const rest = spec.rest === "" ? "" : `${spec.joiner ?? " "}${spec.rest}`;
+  return drawing(frame, { height, body, alt: `${spec.label}: ${spec.lead}${rest}${meta}` });
+}
+function dotOf(spec) {
+  const { meta } = spec;
+  if (meta.isSafety === true)
+    return rect({ x: DOT_X$2 - 3.5, y: DOT_Y - 3.5, w: 7, h: 7, rx: 1.5, fill: "card", stroke: "lo" });
+  if (meta.isUndone === true)
+    return `<circle cx="${DOT_X$2}" cy="${DOT_Y}" r="4" stroke-dasharray="2 1.6" style="fill:var(--card);stroke:var(--lo)"/>`;
+  if (spec.isNewest)
+    return `<circle cx="${DOT_X$2}" cy="${DOT_Y}" r="4" style="fill:var(--kiln)"/>`;
+  return `<circle cx="${DOT_X$2}" cy="${DOT_Y}" r="4" style="fill:var(--strong)"/>`;
+}
+function railOf(spec, height) {
+  const top = spec.isFirst ? DOT_Y : 0;
+  const bottom = spec.isLast ? DOT_Y : height;
+  return top === bottom ? "" : line({ x1: DOT_X$2, y1: top, x2: DOT_X$2, y2: bottom, ink: "line" });
+}
+const filesText$1 = (meta) => meta.files === undefined || meta.files === 0 ? "" : words$1().files(meta.files);
+function factsOf(meta, at) {
+  const tools = meta.tools ?? [];
+  const chipsW = tools.length === 0 ? 0 : tools.length * (CHIP + CHIP_GAP) - CHIP_GAP;
+  const files = filesText$1(meta);
+  const filesW = files === "" ? 0 : measure$1(files, META);
+  const gap = chipsW > 0 && filesW > 0 ? FILES_GAP : 0;
+  const chipsX = at.isCountFirst ? at.x + filesW + gap : at.x;
+  const filesX = at.isCountFirst ? at.x : at.x + chipsW + gap;
+  const chips = tools.map((glyph, index) => monogram({ x: chipsX + index * (CHIP + CHIP_GAP), y: at.y, glyph }));
+  const label = files === "" ? "" : text({ ...META, x: filesX, y: at.y + 12, text: files, ink: meta.isUndone === true ? "lo" : "mid" });
+  return { svg: chips.join("") + label, width: chipsW + gap + filesW };
+}
+const factsWidth = (meta) => factsOf(meta, { x: 0, y: 0, isCountFirst: false }).width;
+const headWidth = (spec) => measure$1(spec.title, TITLE$1) + measure$1(`  ${spec.when}`, WHEN);
+function rowFits(frame, spec) {
+  const facts = factsWidth(spec.meta);
+  return facts === 0 || TEXT_X + headWidth(spec) + RIGHT_GAP + facts + CHEVRON_ROOM <= frame.width;
+}
+function struck(spec) {
+  const width = measure$1(spec.text, spec.font) * STRIKE_FIT;
+  const y = spec.y - spec.font.size * 0.32;
+  return line({ x1: spec.x - 1, y1: y, x2: spec.x + width + 1, y2: y, ink: "lo" });
+}
+const titleInkOf = (meta) => meta.isUndone === true ? "lo" : "hi";
+const chevron = (x, y) => `<path d="M${x} ${y - 4.5}l4.5 4.5-4.5 4.5" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--lo)"/>`;
+function rowSvg$1(frame, spec) {
+  const { meta } = spec;
+  const isUndone = meta.isUndone === true;
+  const titleInk = titleInkOf(meta);
+  const head = runs({ x: TEXT_X, y: TITLE_Y, size: TITLE$1.size, parts: [{ text: spec.title, ink: titleInk, weight: TITLE$1.weight }, { text: `  ${spec.when}`, ink: "lo", weight: 400 }] });
+  const labels = wrap$1(spec.label, frame.width - TEXT_X - CHEVRON_ROOM, { font: LABEL$1, maxLines: LABEL_LINES });
+  const labelY = (index) => LABEL_Y + index * LABEL_LINE_H;
+  const body = labels.map((part, index) => text({ ...LABEL$1, x: TEXT_X, y: labelY(index), text: part, ink: isUndone ? "lo" : "mid" })).join("");
+  const lastY = labelY(Math.max(0, labels.length - 1));
+  const hasFacts = factsWidth(meta) > 0;
+  const factsTop = spec.isStacked ? lastY + ROW_PAD_BOTTOM - 2 : TITLE_Y - 15;
+  const facts = factsOf(meta, { x: spec.isStacked ? TEXT_X : frame.width - CHEVRON_ROOM - factsWidth(meta), y: factsTop, isCountFirst: !spec.isStacked });
+  const bottom = spec.isStacked && hasFacts ? factsTop + CHIP : lastY;
+  const height = Math.max(ROW_MIN_H, Math.ceil(bottom + ROW_PAD_BOTTOM));
+  const strikes = isUndone ? [struck({ x: TEXT_X, y: TITLE_Y, text: spec.title, font: TITLE$1 }), ...labels.map((part, index) => struck({ x: TEXT_X, y: labelY(index), text: part, font: LABEL$1 }))].join("") : "";
+  const all = railOf(spec, height) + dotOf(spec) + head + facts.svg + body + strikes + chevron(frame.width - CHEVRON_INSET, height / 2);
+  const files = filesText$1(meta);
+  return drawing(frame, { height, body: all, alt: `${words$1().undo}: ${spec.title}, ${spec.when}${isUndone ? `, ${words$1().undone}` : ""}${files === "" ? "" : `, ${files}`}: ${spec.label}` });
+}
+const STAT_LINE_Y = 17;
+const STAT_NOTE_Y = 37;
+const STAT_BAR_W = 60;
+const STAT_GAP = 12;
+const FILE_X = 34;
+const FILE_ROW_H = 24;
+const FILE_ROW_TALL = 38;
+const FILE_NAME = { size: 12.5 };
+const FILE_DIR = { size: 11 };
+const TAG = { size: 11 };
+const countsOf = (file) => `+${file.added} −${file.removed}`;
+const rightOfFile = (file) => measure$1(countsOf(file), META) + (file.isRemoved ? measure$1(words$1().willDelete, TAG) + STAT_GAP : 0);
+const fileFits = (frame, file) => FILE_X + measure$1(file.path, FILE_NAME) + STAT_GAP + rightOfFile(file) <= frame.width;
+function fileRow$1(frame, file, at) {
+  const countsW = measure$1(countsOf(file), META);
+  const room = frame.width - FILE_X - STAT_GAP - rightOfFile(file);
+  const cut = file.path.lastIndexOf("/");
+  const name = at.isTall && cut >= 0 ? file.path.slice(cut + 1) : file.path;
+  const folder = at.isTall && cut >= 0 ? file.path.slice(0, cut + 1) : "";
+  const tag = file.isRemoved ? text({ ...TAG, x: frame.width - countsW - STAT_GAP, y: at.y + 15, text: words$1().willDelete, ink: "flare", anchor: "end" }) : "";
+  const under = folder === "" ? "" : text({ ...FILE_DIR, x: FILE_X, y: at.y + 30, text: fitStart(folder, frame.width - FILE_X, FILE_DIR), ink: "lo" });
+  return fileBadge$1({ x: 0, y: at.y + 3, path: file.path }) + text({ ...FILE_NAME, x: FILE_X, y: at.y + 15, text: fitStart(name, room, FILE_NAME), ink: "hi" }) + under + tag + runs({ x: frame.width - countsW, y: at.y + 15, size: META.size, parts: [{ text: `+${file.added}`, ink: countInk(file.added, "moss"), isMono: true }, { text: ` −${file.removed}`, ink: countInk(file.removed, "flare"), isMono: true }] });
+}
+const countInk = (count, ink) => count === 0 ? "lo" : ink;
+const MORE_H$1 = 22;
+function moreOf(pending, y) {
+  const more = pending.restore + pending.remove - pending.files.length;
+  if (more <= 0)
+    return { svg: "", height: 0, text: "" };
+  const said = words$1().moreFiles(more);
+  return { svg: text({ size: 11.5, x: FILE_X, y: y + 15, text: said, ink: "lo" }), height: MORE_H$1, text: said };
+}
+function diffstatSvg(frame, pending) {
+  const total = pending.added + pending.removed;
+  const sumFont = { size: 13, isMono: true };
+  const summary = runs({ x: 0, y: STAT_LINE_Y, size: sumFont.size, parts: [{ text: `+${pending.added}`, ink: "moss", weight: 650, isMono: true }, { text: ` −${pending.removed}`, ink: "flare", weight: 650, isMono: true }] });
+  const sumW = measure$1(`+${pending.added} −${pending.removed}`, sumFont) + STAT_GAP;
+  const blocks = bar$1({ x: sumW, y: STAT_LINE_Y - 8, width: STAT_BAR_W, height: 6, total: Math.max(1, total), parts: [{ value: pending.added, ink: "moss" }, { value: pending.removed, ink: "flare" }] });
+  const parts = [words$1().toRestore(pending.restore), pending.remove > 0 ? words$1().toDelete(pending.remove) : ""].filter((part) => part !== "").join(" · ");
+  const noteX = sumW + STAT_BAR_W + STAT_GAP;
+  const isNoteBeside = noteX + measure$1(parts, { size: 11.5 }) <= frame.width;
+  const note = text({ size: 11.5, x: isNoteBeside ? noteX : 0, y: isNoteBeside ? STAT_LINE_Y : STAT_NOTE_Y, text: parts, ink: "lo" });
+  const statH = (isNoteBeside ? STAT_LINE_Y : STAT_NOTE_Y) + 13;
+  const isTall = pending.files.some((file) => !fileFits(frame, file));
+  const rowH = isTall ? FILE_ROW_TALL : FILE_ROW_H;
+  const files = pending.files.map((file, index) => fileRow$1(frame, file, { y: statH + index * rowH, isTall }));
+  const more = moreOf(pending, statH + pending.files.length * rowH);
+  const height = statH + pending.files.length * rowH + more.height;
+  const listed = [...pending.files.map((file) => file.path), ...more.text === "" ? [] : [more.text]].join(", ");
+  return drawing(frame, { height, body: summary + blocks + note + files.join("") + more.svg, alt: `+${pending.added} −${pending.removed} ${words$1().lines}, ${parts}: ${listed}` });
+}
+
+const summaryText = (pending) => words$1().summary(pending.restore, pending.remove);
+function confirmText(ui, pending, opts) {
+  const { Box, Text, Button } = ui;
+  const more = pending.restore + pending.remove - pending.files.length;
+  const said = words$1();
+  const confirm = confirmOf(pending);
+  return h(Box, {
+    flexDirection: "column",
+    borderStyle: "single",
+    borderColor: "warning",
+    paddingX: 1
+  }, h(Text, {
+    color: "warning",
+    bold: true,
+    wrap: "truncate"
+  }, `${questionOf(pending)} ${changedText(pending)}`), h(Box, {
+    flexDirection: "row",
+    columnGap: 1
+  }, h(Text, {
+    color: "success"
+  }, `+${pending.added}`), h(Text, {
+    color: "error"
+  }, `−${pending.removed}`), h(Text, null, summaryText(pending))), pending.files.map((file, index) => h(Text, {
+    key: `cp-path-${index}`,
+    dimColor: true,
+    wrap: "truncate-start"
+  }, `› ${file.path}${file.isRemoved ? ` (${said.willDelete})` : ""}`)), more > 0 && h(Text, {
+    dimColor: true
+  }, said.more(more)), notesOf(pending).map((note, index) => h(Text, {
+    key: `cp-note-${index}`,
+    dimColor: true,
+    wrap: "wrap"
+  }, note)), h(Box, {
+    flexDirection: "row",
+    columnGap: 1,
+    marginTop: 1
+  }, h(Button, {
+    key: "cp-confirm",
+    variant: "secondary",
+    hotkey: confirm.hotkey,
+    label: confirm.label,
+    onPress: opts.actions.onConfirm
+  }), h(Button, {
+    key: "cp-cancel",
+    variant: "secondary",
+    hotkey: said.cancel.hotkey,
+    label: said.cancel.label,
+    autoFocus: true,
+    onPress: opts.actions.onCancel
+  })));
+}
+function glyphOf(meta) {
+  if (meta.isSafety === true)
+    return "◆";
+  return meta.isUndone === true ? "○" : "●";
+}
+function rowText(ui, view, spec) {
+  const { Box, Text, Button } = ui;
+  const entry = view.entries[spec.index];
+  if (entry === undefined)
+    return null;
+  const meta = spec.opts.meta[entry.ref] ?? {};
+  const named = titleOf(entry, spec.opts.meta);
+  const isUndone = meta.isUndone === true;
+  const glyph = glyphOf(meta);
+  const facts = [ago(spec.opts.now - entry.at), meta.files ? words$1().files(meta.files) : "", (meta.tools ?? []).join(" ")].filter((part) => part !== "");
+  return h(Box, {
+    key: `cp-row-${spec.index}`,
+    flexDirection: "row",
+    columnGap: 1
+  }, h(Text, {
+    ...spec.index === 0 && !isUndone ? { color: "claude" } : { dimColor: true }
+  }, glyph), h(Box, {
+    flexDirection: "column",
+    flexGrow: 1
+  }, h(Box, {
+    flexDirection: "row",
+    columnGap: 1
+  }, h(Text, {
+    bold: !isUndone,
+    dimColor: isUndone,
+    strikethrough: isUndone
+  }, named.title), h(Text, {
+    dimColor: true
+  }, facts.join(" · "))), h(Text, {
+    wrap: "truncate",
+    dimColor: isUndone,
+    strikethrough: isUndone
+  }, named.label)), h(Button, {
+    key: `cp-undo-${spec.index}`,
+    variant: "secondary",
+    dimColor: view.isBusy,
+    label: words$1().undo,
+    onPress: () => spec.opts.actions.onUndo(entry)
+  }));
+}
+function textPane(ui, view, opts) {
+  const { Box, Text } = ui;
+  return h(Box, {
+    flexDirection: "column"
+  }, h(Box, {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    columnGap: 1
+  }, h(Text, {
+    bold: true,
+    dimColor: true
+  }, words$1().title), h(Text, {
+    dimColor: true
+  }, headerMeta(view, opts.now))), h(Text, null, " "), statusRow(ui, view, opts.actions), view.pending !== null && confirmText(ui, view.pending, opts), view.pending === null && view.entries.length === 0 && h(Text, {
+    dimColor: true
+  }, emptyText()), view.pending === null && view.entries.map((_, index) => rowText(ui, view, { index, opts })));
+}
+
+const LABEL_MAX = 60;
+const WIDTH$1 = { min: 240, max: 860 };
+const CARD_RESERVE = 6;
+const ago = (ms) => words$1().ago(ms);
+function clip$2(text, max = LABEL_MAX) {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+const changedText = (pending) => words$1().changed(pending.restore + pending.remove);
+const confirmOf = (pending) => words$1().confirm(pending.restore + pending.remove);
+function notesOf(pending) {
+  const said = words$1();
+  return [pending.commits > 0 ? said.commitsKept(pending.commits) : "", pending.isIndexMoved ? said.indexBack : "", said.ignoredKept].filter((note) => note !== "");
+}
+const emptyText = () => `${words$1().emptyLead} · ${words$1().emptyRest}`;
+const targetOf = (turn, label, max = LABEL_MAX) => turn === null || turn === undefined ? `"${clip$2(label, max)}"` : words$1().turn(turn);
+const QUESTION_LABEL_MAX = 40;
+const questionOf = (pending) => words$1().question(targetOf(pending.turn, pending.entry.label, QUESTION_LABEL_MAX));
+function titleOf(entry, meta) {
+  const own = meta[entry.ref] ?? {};
+  const prefix = SAFETY_PREFIXES.find((start) => entry.label.startsWith(start));
+  if (own.isSafety === true || prefix !== undefined)
+    return { title: words$1().beforeUndo, label: entry.label.slice((prefix ?? words$1().safetyPrefix).length) };
+  return { title: own.turn === undefined ? words$1().saved : words$1().turn(own.turn), label: entry.label };
+}
+const headerMeta = (view, now) => view.entries[0] === undefined ? "" : words$1().headerMeta(view.entries.length, ago(now - view.entries[0].at));
+const motion$1 = paneMotion$1();
+function picture(ui, drawing, key, opts) {
+  const { Svg } = ui;
+  return h(Svg, {
+    key,
+    ...motion$1.pic(key, drawing, opts)
+  });
+}
+function confirmCard(ui, pending, opts) {
+  const { Box, Button } = ui;
+  const frame = { width: svgWidth(opts.look.columns, { ...WIDTH$1, reserve: CARD_RESERVE }), mode: opts.look.theme.mode };
+  const said = words$1();
+  const head = headSvg(frame, { label: said.undo, meta: said.undoMeta, lead: questionOf(pending), rest: changedText(pending) });
+  const confirm = confirmOf(pending);
+  return h(Box, {
+    flexDirection: "column",
+    borderStyle: "single",
+    borderColor: boxColor(opts.look.theme, "amber", "line"),
+    paddingX: 2,
+    paddingY: 1,
+    rowGap: 1
+  }, picture(ui, head, "cp-card-head"), picture(ui, diffstatSvg(frame, pending), "cp-card-stat"), notesOf(pending).map((note, index) => h(ui.Text, {
+    key: `cp-note-${index}`,
+    dimColor: true,
+    wrap: "wrap"
+  }, note)), h(Box, {
+    flexDirection: "row",
+    columnGap: 1
+  }, h(Button, {
+    key: "cp-confirm",
+    variant: "secondary",
+    hotkey: confirm.hotkey,
+    label: confirm.label,
+    onPress: opts.actions.onConfirm
+  }), h(Button, {
+    key: "cp-cancel",
+    variant: "secondary",
+    hotkey: said.cancel.hotkey,
+    label: said.cancel.label,
+    autoFocus: true,
+    onPress: opts.actions.onCancel
+  })));
+}
+function rowSpecs(view, opts) {
+  const last = view.entries.length - 1;
+  return view.entries.map((entry, index) => ({
+    ...titleOf(entry, opts.meta),
+    when: ago(opts.now - entry.at),
+    meta: opts.meta[entry.ref] ?? {},
+    isNewest: index === 0,
+    isFirst: index === 0,
+    isLast: index === last
+  }));
+}
+function rowPicture(ui, row) {
+  const { when, ...shows } = row.spec;
+  return picture(ui, rowSvg$1(row.frame, { ...row.spec, isStacked: row.isStacked }), `cp-svg-${row.ref}`, { isRow: true, shows: { ...shows, isStacked: row.isStacked, frame: row.frame, isAged: when !== "" } });
+}
+function timeline(ui, view, opts) {
+  const { Box } = ui;
+  const frame = { width: svgWidth(opts.look.columns, WIDTH$1), mode: opts.look.theme.mode };
+  const specs = rowSpecs(view, opts);
+  const isStacked = specs.some((spec) => !rowFits(frame, spec));
+  return h(Box, {
+    flexDirection: "column"
+  }, view.entries.map((entry, index) => {
+    const spec = specs[index];
+    const drawing = rowPicture(ui, { frame, spec, isStacked, ref: entry.ref });
+    return PressRow(ui, { box: `cp-row-${index}`, key: `cp-undo-${index}`, drawing, onPress: () => opts.actions.onUndo(entry) });
+  }));
+}
+const STATUS_LOOK = {
+  busy: { dimColor: true },
+  success: { color: "success" },
+  error: { color: "error" },
+  info: { dimColor: true }
+};
+function statusRow(ui, view, actions) {
+  const { Box, Text, Button } = ui;
+  const status = view.status;
+  if (status === null)
+    return null;
+  const look = STATUS_LOOK[status.tone];
+  const glyph = { busy: "◐", success: "✓", error: "✕", info: "›" }[status.tone];
+  const redo = status.redo;
+  return h(Box, {
+    flexDirection: "row",
+    columnGap: 1,
+    alignItems: "center"
+  }, h(Text, {
+    ...look
+  }, glyph), h(Text, null, status.text), redo !== undefined && h(Button, {
+    key: "cp-redo",
+    plain: true,
+    hotkey: "y",
+    label: words$1().redo,
+    onPress: () => actions.onUndo(redo)
+  }));
+}
+function paneTree(ui, view, opts) {
+  const { Box } = ui;
+  if (!opts.look.isRich)
+    return textPane(ui, view, opts);
+  const frame = { width: svgWidth(opts.look.columns, WIDTH$1), mode: opts.look.theme.mode };
+  const count = view.entries.length;
+  const said = words$1();
+  const turns = view.entries.filter((entry) => titleOf(entry, opts.meta).title !== said.beforeUndo).length;
+  const lead = count === 0 ? { lead: said.emptyLead, rest: said.emptyRest, joiner: " · " } : { lead: said.turnsSaved(turns), rest: "" };
+  const newest = view.entries[0];
+  const meta = newest !== undefined && turns === count ? said.newest(ago(opts.now - newest.at)) : headerMeta(view, opts.now);
+  const head = headSvg(frame, { label: said.title, meta, ...lead });
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, picture(ui, head, "cp-head", { shows: { lead, turns, count, frame } }), statusRow(ui, view, opts.actions), view.pending !== null && confirmCard(ui, view.pending, opts), view.pending === null && count > 0 && timeline(ui, view, opts));
+}
+
+const CP_VIEW = { plugin: "checkpoint", key: "view" };
+const CP_META = { plugin: "checkpoint", key: "meta" };
+const CP_THEME = { plugin: "checkpoint", key: "theme" };
+const EMPTY_VIEW = { entries: [], status: null, isBusy: false, pending: null };
+async function checkpointsPage($, ui, site, act) {
+  setLang(lang$1());
+  const view = (await $.state.get(CP_VIEW)).value ?? EMPTY_VIEW;
+  const meta = (await $.state.get(CP_META)).value ?? {};
+  const theme = (await $.state.get(CP_THEME)).value ?? AUTO;
+  const actions = {
+    onUndo: (entry) => act("undo", entry.ref),
+    onConfirm: () => act("confirm"),
+    onCancel: () => act("cancel")
+  };
+  const look = { theme, columns: site.columns, isRich: site.surface !== "terminal" };
+  return paneTree(ui, view, { now: await $.clock.now(), meta, look, actions });
 }
 
 let current = "en";
@@ -7342,13 +8272,15 @@ async function planPage($, ui, site) {
   return planPane(ui, view, site);
 }
 
-const HUB_DRAWN = ["plan", "agents"];
+const HUB_DRAWN = ["plan", "agents", "checkpoints"];
 async function pageOf($, o) {
   switch (o.page) {
     case "plan":
       return planPage($, o.ui, o.site);
     case "agents":
       return agentsPage($, o.ui, o.site, o.act);
+    case "checkpoints":
+      return checkpointsPage($, o.ui, o.site, o.act);
     default:
       return null;
   }
@@ -8383,7 +9315,7 @@ const WORDS = {
 const MARK = { done: "✓", live: "●", failed: "✗", stopped: "—" };
 const MARK_KEY = { done: undefined, live: "claude", failed: "error", stopped: undefined };
 function endOf(state) {
-  const words = pick$1(WORDS);
+  const words = pick$2(WORDS);
   if (state === "failed")
     return `${MARK.failed} ${words.failed}`;
   return state === "stopped" ? `${MARK.stopped} ${words.stopped}` : MARK[state];
@@ -8510,7 +9442,7 @@ function groupTrail(draw, calls) {
     trail.more > 0 ? h(Text, {
       key: "plain-more",
       dimColor: true
-    }, pick$1(WORDS).more(trail.more)) : null
+    }, pick$2(WORDS).more(trail.more)) : null
   ].filter((part) => part !== null);
 }
 const drawOf = ($, e) => {
@@ -8685,7 +9617,7 @@ async function partsOf($) {
 }
 function startHooks(on, options) {
   on("session.start", async ($, e, next) => {
-    setLang$2(await $.env.get("MODZ_LANG").catch(() => {
+    setLang$3(await $.env.get("MODZ_LANG").catch(() => {
       return;
     }));
     const started = await next(e);

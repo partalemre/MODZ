@@ -41,7 +41,7 @@ There are no plugin options. Set `MODZ_THEME=light` or `MODZ_THEME=dark` in the 
 
 - After each prompt, the first `Write`, `Edit`, `MultiEdit` or `NotebookEdit` call waits for one snapshot. Writes in parallel wait for the same snapshot, so none of them lands in it.
 - In a git repo, the work tree goes into a private index and is committed under `refs/checkpoints/<session>/<time>`. Your branch, `HEAD`, staging area and stash are never touched, and checkpoint refs are not pushed.
-- Outside a repo, a shadow repo at `~/.cache/claude-checkpoint/<folder>.git` is used. It never runs on your home folder or `/`.
+- Outside a repo, a shadow repo at `~/.cache/claude-checkpoint/<folder>.git` is used. It never runs on your home folder, `/`, or the Downloads, Desktop and Documents folders themselves (a project inside them is fine). A folder's copy that no session has used for 30 days is deleted when a session starts.
 - `.gitignore` is respected. `node_modules` and files over 5 MB are skipped.
 - The newest 30 checkpoints per project are kept; older refs are deleted and git's normal `gc` collects the objects.
 - Before an undo, a safety checkpoint of the current state is taken, so the undo can itself be undone. Changed and deleted files come back with `git restore`; files created after the checkpoint are removed. Ignored files and files over 5 MB are left alone.

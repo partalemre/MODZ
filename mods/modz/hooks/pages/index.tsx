@@ -7,13 +7,14 @@ import type { EngineInterface, RenderElement } from 'claude-code'
 
 import { HomeButton } from '../kit/home'
 import { agentsPage } from './agents'
+import { checkpointsPage } from './checkpoints'
 import { planPage } from './plan'
 import type { PageAct, PageSite } from './site'
 
 type Ui = Record<string, any>
 
 // The pages the hub draws; any other row still asks its mod for a pane of its own.
-export const HUB_DRAWN: readonly string[] = ['plan', 'agents']
+export const HUB_DRAWN: readonly string[] = ['plan', 'agents', 'checkpoints']
 
 // The engine follows `$` only into functions it can name, so each page is called by name here, one case a page.
 async function pageOf($: EngineInterface, o: { page: string; ui: Ui; site: PageSite; act: PageAct }): Promise<RenderElement | null> {
@@ -22,6 +23,8 @@ async function pageOf($: EngineInterface, o: { page: string; ui: Ui; site: PageS
       return planPage($, o.ui, o.site)
     case 'agents':
       return agentsPage($, o.ui, o.site, o.act)
+    case 'checkpoints':
+      return checkpointsPage($, o.ui, o.site, o.act)
     default:
       return null
   }

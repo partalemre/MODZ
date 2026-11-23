@@ -4143,16 +4143,23 @@ const HUB_DRAWN = ["plan"];
 const PLAN_TASKS = { plugin: "plan-steps", key: "tasks" };
 const PLAN_DOC = { plugin: "plan-steps", key: "doc" };
 const PLAN_TRACKS = { plugin: "plan-steps", key: "tracks" };
-async function pageTree($, e, o) {
-  const ui = $.ui.resolve(e);
-  const { Box } = ui;
+const BEAT = { plugin: "modz", key: "beat" };
+const HOME_ROWS = 1;
+const DEFAULT_ROWS = 24;
+async function planPage($, ui, site) {
   const tasks = (await $.state.get(PLAN_TASKS)).value ?? [];
   const doc = (await $.state.get(PLAN_DOC)).value ?? null;
   const tracks = (await $.state.get(PLAN_TRACKS)).value ?? {};
   const view = { plan: resolvePlan(tasks, doc), tracks, now: await $.clock.now(), theme: "auto", touchedAt: 0 };
+  return planPane(ui, view, { ...site, rows: Math.max(site.rows - HOME_ROWS, 1) });
+}
+async function pageTree($, e, o) {
+  await $.state.get(BEAT);
+  const site = { columns: o.columns, rows: e.props.scroll?.bodyRows || e.viewport?.rows || DEFAULT_ROWS, surface: o.surface };
+  const { Box } = o.ui;
   return h(Box, {
     flexDirection: "column"
-  }, HomeButton(ui, o.onHome), planPane(ui, view, { ...o.site, rows: o.site.rows - 1 }));
+  }, HomeButton(o.ui, o.onHome), await planPage($, o.ui, site));
 }
 
 const textOf$1 = (entry, lang) => entry[lang === "tr" ? 1 : 0];
@@ -5411,6 +5418,7 @@ const beatAtom = atom({ plugin: "modz", key: "beat" }, 0);
 const updatesAtom = atom({ plugin: "modz", key: "updates" }, null);
 const unansweredAtom = atom({ plugin: "modz", key: "unanswered" }, null);
 const ON = { plugin: "modz", key: "isOn" };
+const DRAWN = { plugin: "modz", key: "drawn" };
 const LAYOUT_KEY = "layout";
 const DEFAULT_COLUMNS = 80;
 async function themeNow($) {
@@ -5434,14 +5442,19 @@ async function saveLayout($, change) {
   await update($, layoutAtom, () => next);
   await $.store.set(LAYOUT_KEY, next);
 }
+async function showPage($, page) {
+  hubKept.isHeld = true;
+  await $.state.set(STAGE, { pane: page, at: Date.now() });
+  await $.ui.open({ id: PANE, title: TITLE, focus: true });
+  const up = new Set((await $.ui.panes().catch(() => [])).map((each) => each.id));
+  for (const own of OWN_PANES)
+    if (own !== PANE && up.has(own))
+      await closeQuietly($, own);
+}
 async function openOrPoint($, pane) {
   const [mod, card] = Object.entries(await read($, cardsAtom)).find(([, each]) => each.pane === pane && each.isBandOnly === true) ?? [];
-  if (HUB_DRAWN.includes(pane)) {
-    hubKept.isHeld = true;
-    await $.state.set(STAGE, { pane, at: Date.now() });
-    await $.ui.open({ id: PANE, title: TITLE, focus: true });
-    return;
-  }
+  if (HUB_DRAWN.includes(pane))
+    return showPage($, pane);
   if (card === undefined)
     return openPane(swapOf($), pane);
   $.ui.toast(hubWords().inBand(card.title ?? String(mod)));
@@ -5474,6 +5487,7 @@ function startHooks(on, options) {
     }));
     await update($, layoutAtom, () => saved);
     await $.state.set(ON, true);
+    await $.state.set(DRAWN, HUB_DRAWN);
     await $.command.register({ name: "modz", description: hubWords().command });
     fillSideRows($);
     if (options.openOnStart === true) {
@@ -5545,8 +5559,8 @@ function paneHooks(on) {
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
     const staged = paneOf((await $.state.get(STAGE)).value);
     if (staged !== null && HUB_DRAWN.includes(staged)) {
-      const site = { columns: e.props.bodyColumns || DEFAULT_COLUMNS, rows: e.props.scroll?.bodyRows || e.viewport?.rows || 24, surface: e.surface };
-      return pinned(e, await pageTree($, e, { page: staged, site, onHome: () => void openHub($) }));
+      const onHome = () => void openHub($).catch((cause) => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: "debug" }));
+      return pinned(e, await pageTree($, e, { page: staged, ui: $.ui.resolve(e), columns: e.props.bodyColumns || DEFAULT_COLUMNS, surface: e.surface, onHome }));
     }
     if (!hubKept.isHeld) {
       hubKept.isHeld = true;

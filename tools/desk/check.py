@@ -140,13 +140,26 @@ def check_home(desk, engine, inst):
         return f'Pane {inst}: no ← MODZ button'
     if not desk.press('modz-home', tree=tree).get('handled'):
         return f'Pane {inst}: the ← MODZ press was dropped'
-    return None if wait(lambda: ids(engine) == [HUB], OPEN_WAIT_S) else f'Pane {inst}: ← MODZ left {ids(engine)} (want the hub alone)'
+    back = wait(lambda: ids(engine) == [HUB] and shows_rows(desk), OPEN_WAIT_S)
+    return None if back else f'Pane {inst}: ← MODZ left {ids(engine)} (want the hub alone, drawing its rows)'
+
+
+# Rows whose page the hub draws in its own pane (mods/modz/hooks/pages.tsx): the panel stays the hub's.
+HUB_PAGES = ('open-plan',)
+
+
+def shows_rows(desk):
+    """Whether the hub's pane draws the hub (its rows), not one of the pages it draws."""
+    return any(key.startswith('open-') for key, _ in walk(desk.render(HUB), 'Button'))
 
 
 def bring_hub(desk, engine):
-    """The hub alone in the panel, by /modz when a check left something else there."""
+    """The hub alone in the panel, by "← modz" on a page it draws or /modz when a check left something else there."""
     if ids(engine) == [HUB]:
-        return True
+        if shows_rows(desk):
+            return True
+        desk.press('modz-home', tree=desk.render(HUB))
+        return wait(lambda: shows_rows(desk), OPEN_WAIT_S)
     engine.say('/modz')
     return wait(lambda: HUB in ids(engine), OPEN_WAIT_S * 2)
 
@@ -159,6 +172,9 @@ def press_row(desk, engine, row):
     desk.render(HUB, props={'isFocused': False, 'bodyColumns': 80})
     if not desk.press(row, tree=stale).get('handled'):
         return f'hub {row}: a press on the earlier tree was dropped'
+    if row in HUB_PAGES:
+        paged = wait(lambda: ids(engine) == [HUB] and not shows_rows(desk), OPEN_WAIT_S)
+        return None if paged else f'hub {row}: the hub\'s pane did not turn to the page (panel {ids(engine)})'
     swapped = wait(lambda: len(ids(engine)) == 1 and ids(engine) != [HUB], OPEN_WAIT_S)
     return None if swapped else f'hub {row}: the panel holds {ids(engine)}, want only the row\'s pane'
 

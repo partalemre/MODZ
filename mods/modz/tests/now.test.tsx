@@ -186,8 +186,14 @@ test('a meter mod hosted in the Usage pane has no row of its own, card or no car
 
 test('desktop: a press on a live line opens its mod\'s pane for the detail', { timeoutMs: 20_000, plugins: reporters }, async ($: any, on: any) => {
   const asked: unknown[] = []
+  const staged: unknown[] = []
   on('state.set', { plugin: 'modz', key: 'open' }, (_: unknown, e: any, next: any) => {
     asked.push(e.value?.pane)
+
+    return next(e)
+  })
+  on('state.set', { plugin: 'modz', key: 'stage' }, (_: unknown, e: any, next: any) => {
+    staged.push(e.value?.pane)
 
     return next(e)
   })
@@ -196,7 +202,9 @@ test('desktop: a press on a live line opens its mod\'s pane for the detail', { t
   await ui.press({ key: 'now-open-agents-1' })
   await ui.press({ key: 'open-plan' })
 
-  expect(asked).toEqual(['agents', 'plan'])
+  // The plan page is drawn by the hub in its own pane (hooks/pages.tsx): its mod is not asked for a pane.
+  expect(asked).toEqual(['agents'])
+  expect(staged.at(-1)).toBe('plan')
 })
 
 test('terminal: the same lines are read as text under "Şu an"', { timeoutMs: 20_000, plugins: reporters }, async ($: any, on: any) => {

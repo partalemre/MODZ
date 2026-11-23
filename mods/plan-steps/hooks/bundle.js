@@ -2720,6 +2720,12 @@ async function openPane($, focus = true) {
     await reportShown($);
   pane.ticker ??= $.clock.every(TICK_MS, () => void update($, tickAtom, (tick) => tick + 1));
 }
+async function askForPage($) {
+  const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+  if (!Array.isArray(drawn) || !drawn.includes(HUB_PANE))
+    return openPane($);
+  await $.state.set({ plugin: "plan-steps", key: "home" }, { pane: HUB_PANE, at: await $.clock.now() });
+}
 const keepNouns = ($) => ({
   isListed: async () => (await $.ui.panes()).some((up) => up.id === PANE),
   reopen: () => openPane($, false),
@@ -2754,7 +2760,7 @@ async function startWatch($) {
 }
 function opening(on) {
   on("command.run", { command: "steps" }, async ($) => {
-    await openPane($);
+    await askForPage($);
     return {};
   });
   on("session.attach", async ($, e, next) => {

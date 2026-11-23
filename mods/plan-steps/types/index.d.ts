@@ -88,7 +88,7 @@ declare module 'claude-code' {
       tick: number
       hub: HubCard
       // The person pressed "← MODZ" in the Plan pane; the hub hears it and comes forward.
-      home: { at: number }
+      home: { at: number; pane?: string }
       // The Plan pane is open: the MODZ hub puts it in its one panel and closes the rest (kit/stage.ts).
       shown: { pane: string; at: number }
       carried: CarriedPlan | null
@@ -99,6 +99,6 @@ declare module 'claude-code' {
       held: HeldFinish | null
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
-    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number }; drawn: readonly string[] }
   }
 }

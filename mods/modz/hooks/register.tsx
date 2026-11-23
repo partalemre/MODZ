@@ -49,6 +49,7 @@ const beatAtom = atom({ plugin: 'modz', key: 'beat' } as const, 0)
 const updatesAtom = atom({ plugin: 'modz', key: 'updates' } as const, null as Updates | null)
 const unansweredAtom = atom({ plugin: 'modz', key: 'unanswered' } as const, null as string | null)
 const ON = { plugin: 'modz', key: 'isOn' } as const
+const DRAWN = { plugin: 'modz', key: 'drawn' } as const
 const LAYOUT_KEY = 'layout'
 const DEFAULT_COLUMNS = 80
 
@@ -80,15 +81,20 @@ async function saveLayout($: EngineInterface, change: (layout: HubLayout) => Hub
   await $.store.set(LAYOUT_KEY, next)
 }
 
+// A page the hub draws itself (pages.tsx): the stage names it and the one pane comes up; the hub's other panes go,
+// and a mod pane still open closes on the stage write (kit/stage.ts), so the panel never holds two.
+async function showPage($: EngineInterface, page: string): Promise<void> {
+  hubKept.isHeld = true
+  await $.state.set(STAGE, { pane: page, at: Date.now() })
+  await $.ui.open({ id: PANE, title: TITLE, focus: true })
+  const up = new Set((await $.ui.panes().catch(() => [])).map(each => each.id))
+  for (const own of OWN_PANES) if (own !== PANE && up.has(own)) await closeQuietly($, own)
+}
+
 // A mod with no pane answers on its card above the prompt: the press says where, and nothing is asked to open.
 async function openOrPoint($: EngineInterface, pane: string): Promise<void> {
   const [mod, card] = Object.entries(await read($, cardsAtom)).find(([, each]) => each.pane === pane && each.isBandOnly === true) ?? []
-  if (HUB_DRAWN.includes(pane)) {
-    hubKept.isHeld = true
-    await $.state.set(STAGE, { pane, at: Date.now() })
-    await $.ui.open({ id: PANE, title: TITLE, focus: true })
-    return
-  }
+  if (HUB_DRAWN.includes(pane)) return showPage($, pane)
   if (card === undefined) return openPane(swapOf($), pane)
   $.ui.toast(hubWords().inBand(card.title ?? String(mod)))
 }
@@ -137,6 +143,8 @@ function startHooks(on: On, options: Options): void {
     const saved = layoutOf(await $.store.get(LAYOUT_KEY).catch(() => undefined))
     await update($, layoutAtom, () => saved)
     await $.state.set(ON, true)
+    // The pages this hub draws in its own pane: their mods then ask for them here rather than open a pane.
+    await $.state.set(DRAWN, HUB_DRAWN)
     await $.command.register({ name: 'modz', description: hubWords().command })
     fillSideRows($)
     if (options.openOnStart === true) {
@@ -231,8 +239,9 @@ function paneHooks(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const staged = paneOf((await $.state.get(STAGE)).value)
     if (staged !== null && HUB_DRAWN.includes(staged)) {
-      const site = { columns: e.props.bodyColumns || DEFAULT_COLUMNS, rows: e.props.scroll?.bodyRows || e.viewport?.rows || 24, surface: e.surface }
-      return pinned(e, await pageTree($, e, { page: staged, site, onHome: () => void openHub($) }))
+      const onHome = () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: 'debug' }))
+
+      return pinned(e, await pageTree($, e, { page: staged, ui: $.ui.resolve(e), columns: e.props.bodyColumns || DEFAULT_COLUMNS, surface: e.surface, onHome }))
     }
     if (!hubKept.isHeld) {
       hubKept.isHeld = true

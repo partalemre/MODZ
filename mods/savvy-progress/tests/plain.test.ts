@@ -76,3 +76,8 @@ test('input it cannot read still gives a sentence, never a throw or a broken one
 test('a subagent handing its report back is said in words', () => {
   expect(plainCall('SubagentHandback', { message: 'done' }, 'tr')).toBe('Bitirdiği işin raporunu kendisini başlatan sohbete teslim ediyor')
 })
+
+test('grouping marks and shell keywords are never named as the command', () => {
+  for (const line of ['(cd /x && make)', '{ ls; }', 'if true; then npm test; fi', '! grep -q x f'])
+    expect(plainShell(line, 'tr')).not.toMatch(/"[({!]"|"(if|then)"/)
+})

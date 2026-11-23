@@ -34,7 +34,7 @@ type Timer = { cancel: () => void }
 
 // Session-local facts. `isSettled`: a finished plan's status line was cleared. `touchedAt`: the last
 // time the plan or the step under way moved; `quiet` re-checks the status line once that goes stale.
-const flags = { cwd: '', isSettled: false, touchedAt: 0, quiet: null as Timer | null, status: null as string | undefined | null }
+const flags = { cwd: '', isStatusLine: false, isSettled: false, touchedAt: 0, quiet: null as Timer | null, status: null as string | undefined | null }
 
 // Every sync recomputes the status line; it is sent only when its words change.
 function showStatus($: EngineInterface, text: string | undefined): void {
@@ -81,7 +81,8 @@ async function sync($: EngineInterface): Promise<void> {
   const progress = plan === null ? null : progressOf(plan)
   const state = planState(plan, { now, touchedAt: flags.touchedAt })
   if (progress === null || progress.done < progress.total) flags.isSettled = false
-  showStatus($, flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks))
+  // The session strip already shows the plan; the footer line repeats it only when asked.
+  showStatus($, !flags.isStatusLine || flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks))
   await writeHub($, hubOf(progress, state, plan === null ? null : currentStep(plan, tracks)))
 }
 
@@ -245,6 +246,7 @@ function tracking(on: On): void {
 }
 
 export const register: Register = (on, options) => {
+  flags.isStatusLine = options.statusLine === true
   lifecycle(on)
   tracking(on)
   wireCarry(on)

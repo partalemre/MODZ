@@ -1032,9 +1032,12 @@ function splitRedirects(words) {
   }
   return { kept, out };
 }
+const GLUE = new Set(["", "!", "if", "then", "else", "elif", "do", "while", "until", "time"]);
 function callOf(command) {
   const { kept, out } = splitRedirects(wordsOf$1(command));
-  const words = [...kept];
+  const words = kept.map((word) => word.replace(/^[({]+/, ""));
+  while (words.length > 0 && GLUE.has(words[0] ?? ""))
+    words.shift();
   while (words.length > 0 && (WRAPPERS.has(words[0] ?? "") || /^\w+\+?=/.test(words[0] ?? "")))
     words.shift();
   const [first, ...args] = words;

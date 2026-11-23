@@ -311,8 +311,8 @@ MODZ'un amacı: ajanın ne yaptığını, hiç kod yazmamış biri de net anlas�
    Tek tek az şey söyleyen çağrılar (dosya okuma, arama) sayısıyla tek adıma toplanır; iki adım arasındaki bekleme söylenmez.
    **Neden:** ajanın bir adımdan önce yazdığı cümle (`reasonOf(answer)`: `turn.step` yanıtının görünen metni) o adımın
    çağrılarının nedenidir; Ajanlar panelindeki adım adım kayıtta "Neden: …" diye çağrıların üstünde durur. Ajan bunu
-   yazsın diye modz her turda bir kez, ilk araç sonucuyla, kısa bir istek ekler (`sayWhy` seçeneği; adım başına birkaç
-   kelimelik çıktı harcar, kapatılabilir). İki çıktıyı ayırmak için ekrana basılan satır (`echo ---`) adım sayılmaz.
+   yazsın diye modz isteğe bağlı olarak her turda bir kez kısa bir istek ekler (`sayWhy`, varsayılan kapalı: aynı
+   cümle üç yerde tekrarlanıyordu ve her adımda çıktı harcıyordu). İki çıktıyı ayırmak için ekrana basılan satır (`echo ---`) adım sayılmaz.
    **Dosyalar açılır:** bir adımın adını andığı dosya, dosyayı açan bağlantıdır. Masaüstüne dosya bağlantısı yalnızca
    `Markdown` içinde gider (`Link` orada düz yazı çizilir), bu yüzden dosyalı satır tek satırlık markdown yazılır.
 5. **Kısa kalır.** Sade olmak uzun olmak değildir; Svg'de ölçülen yuvalara sığar (§3). Sığmıyorsa cümle kısalır, yuva büyümez.

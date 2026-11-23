@@ -2924,7 +2924,7 @@ const LIVE_AGENT = ["async_launched", "teammate_spawned"];
 const DESK_PLAN = "mcp__ccd_turn__update_plan";
 const DESK_WRAP_UP = "mcp__ccd_turn__wrap_up";
 const hubRef = { plugin: "plan-steps", key: "hub" };
-const flags = { cwd: "", isSettled: false, touchedAt: 0, quiet: null, status: null };
+const flags = { cwd: "", isStatusLine: false, isSettled: false, touchedAt: 0, quiet: null, status: null };
 function showStatus($, text) {
   if (text === flags.status)
     return;
@@ -2958,7 +2958,7 @@ async function sync($) {
   const state = planState(plan, { now, touchedAt: flags.touchedAt });
   if (progress === null || progress.done < progress.total)
     flags.isSettled = false;
-  showStatus($, flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks));
+  showStatus($, !flags.isStatusLine || flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks));
   await writeHub($, hubOf(progress, state, plan === null ? null : currentStep(plan, tracks)));
 }
 async function touch($) {
@@ -3112,6 +3112,7 @@ function tracking(on) {
   }).catch(($, e, next) => next(e));
 }
 const register = (on, options) => {
+  flags.isStatusLine = options.statusLine === true;
   lifecycle(on);
   tracking(on);
   wireCarry(on);

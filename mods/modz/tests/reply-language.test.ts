@@ -56,6 +56,7 @@ const run = async ($: any, command: string) => ((await $.tool.call({ tool: 'Bash
 
 // The language reminder alone: the say-why request has its own test below.
 const QUIET = { options: { sayWhy: false } }
+const ASKS_WHY = { options: { sayWhy: true } }
 
 async function begin($: any, turnId: string) {
   await $.turn.start({ text: 'testleri çalıştır', turnId })
@@ -94,7 +95,7 @@ test('turned off: no reminder even in Turkish', { options: { keepReplyLanguage: 
   expect(await run($, 'english')).toEqual([])
 })
 
-test('once a turn, the first tool result asks Claude to say what each step is for, in the person\'s language', async ($: any, on: any) => {
+test('once a turn, the first tool result asks Claude to say what each step is for, in the person\'s language', ASKS_WHY, async ($: any, on: any) => {
   stubTurn(on, { MODZ_LANG: 'tr' })
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
   await begin($, 't1')
@@ -104,9 +105,16 @@ test('once a turn, the first tool result asks Claude to say what each step is fo
   expect(await run($, 'english')).toEqual([whyReminderOf({ name: 'Turkish' }), reminderOf({ name: 'Turkish' })])
 })
 
-test('with no target language the request names the user\'s language', async ($: any, on: any) => {
+test('with no target language the request names the user\'s language', ASKS_WHY, async ($: any, on: any) => {
   stubTurn(on, {})
   await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
   await begin($, 't1')
   expect((await run($, 'code'))[0]).toContain("in the user's language")
+})
+
+test('by default no step request is added', async ($: any, on: any) => {
+  stubTurn(on, { MODZ_LANG: 'tr' })
+  await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' })
+  await begin($, 't1')
+  expect(await run($, 'turkish')).toEqual([])
 })

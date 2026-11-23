@@ -100,9 +100,13 @@ function splitRedirects(words: string[]): { kept: string[]; out: string } {
   return { kept, out }
 }
 
+const GLUE = new Set(['', '!', 'if', 'then', 'else', 'elif', 'do', 'while', 'until', 'time'])
+
 function callOf(command: string): Call | null {
   const { kept, out } = splitRedirects(wordsOf(command))
-  const words = [...kept]
+  // `(cd x && …)`, `{ …; }`, `if x; then y`: grouping marks and shell keywords are not the command.
+  const words = kept.map(word => word.replace(/^[({]+/, ''))
+  while (words.length > 0 && GLUE.has(words[0] ?? '')) words.shift()
   // `FOO=1 sudo BAR=2 cmd`: settings and wrappers come off the front until the command itself leads.
   while (words.length > 0 && (WRAPPERS.has(words[0] ?? '') || /^\w+\+?=/.test(words[0] ?? ''))) words.shift()
   const [first, ...args] = words

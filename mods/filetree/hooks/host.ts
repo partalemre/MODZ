@@ -1,6 +1,6 @@
 import type { EngineInterface, Timer } from 'claude-code'
 
-import type { Activity, FileTree, HubCard, Look, ReadCost, Theme, TurnLog } from '../types'
+import type { Activity, Feel, FileTree, HubCard, Look, ReadCost, Theme, TurnLog } from '../types'
 import type { ApiMessage } from './readcost'
 
 type Engine = EngineInterface
@@ -21,9 +21,13 @@ export type StateHost = {
   setLook(look: Look): Promise<void>
   theme(): Promise<Theme | undefined>
   setTheme(theme: Theme): Promise<void>
-  // Whether the MODZ hub runs, and a request for it to come forward (the "← MODZ" button).
+  feel(): Promise<Feel | undefined>
+  setFeel(feel: Feel): Promise<void>
+  // Whether the MODZ hub runs, and a request for it to come forward (the "← MODZ" button); with a pane, for that page.
   isHubOn(): Promise<boolean>
-  goHome(): Promise<void>
+  goHome(pane?: string): Promise<void>
+  // Whether the hub draws this mod's page in its own pane (modz.drawn): it is then asked for it, no pane opens.
+  isHubDrawing(): Promise<boolean>
   // The pane, opened when asked, now holds the MODZ panel: the hub and every other pane step aside (kit/stage.ts).
   reportShown(): Promise<void>
 }

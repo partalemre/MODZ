@@ -22,6 +22,7 @@ import { HUB_PANE, paneOf } from './kit/stage'
 import { pinned } from './kit/pin'
 import { catalogDrawings, closeQuietly, copy, hubDrawings, hubKept, openHub, show } from './own-panes'
 import { modzTree } from './pane'
+import { wireFilesPage } from './pages/files'
 import { HUB_DRAWN, pageTree } from './pages/index'
 import { wirePlainRows } from './plain-rows'
 import { noteAnswer, openPane, stepAside, toggleHub } from './swap'
@@ -296,6 +297,7 @@ export const register: Register = (on, options) => {
   wireCards(on)
   wireUpkeep(on)
   paneHooks(on)
+  wireFilesPage(on)
   footerHooks(on)
   wireLanguageKeeper(on, options)
   wirePlainRows(on, options)

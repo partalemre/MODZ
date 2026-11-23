@@ -3,7 +3,7 @@ import { type Host, patch } from './host'
 import { osName } from './platform'
 import { mem } from './session'
 import type { FileTree } from '../types'
-import { inside, join, type Row } from './tree'
+import { inside, join } from './tree'
 
 const SIZE_TIMEOUT_MS = 15_000
 const SIZE_JOBS = 2
@@ -72,9 +72,6 @@ function pumpSizes(h: Host): void {
       })
   }
 }
-
-// The listed folders in view whose size is not known yet.
-export const unsized = (t: FileTree, rows: Row[]): string[] => rows.filter(r => r.node.kind === 'dir' && !(r.node.id in t.dirSizes)).map(r => r.node.id)
 
 export function wantSizes(h: Host, dirs: string[]): void {
   for (const dir of dirs) if (!sizing.has(dir) && !mem.sizeQueue.includes(dir)) mem.sizeQueue.push(dir)

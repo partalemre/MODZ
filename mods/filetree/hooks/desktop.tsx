@@ -1,21 +1,17 @@
 import type { ElementTable } from 'claude-code'
 
 import type { FileTree } from '../types'
-import { actionsOf } from './actions'
 import { type CostRow, type Drawn, type GitRow, heroCard, type LegendItem, sectionLine, touchedCard } from './cards'
 import { activityChip, footer } from './chrome'
 import { costText, turnCost } from './costtext'
-import type { Host } from './host'
 import { paneMotion } from './kit/moving'
 import { heroOf, touchedRows } from './now'
 import type { RowsProps } from './rows'
 import { desktopRow, PX_PER_COL } from './rowspec'
 import { heroInput, type Room, rowCtx, type Scene, treeWindow } from './scene'
-import { jump, search } from './search'
-import { mem } from './session'
-import { unsized, wantSizes } from './sizes'
 import { mix, paletteOf, roleOfTone, shimmerTones } from './theme'
-import { drawActions, drawFind, drawMore } from './toolbar'
+import { drawActions, drawFind, drawMore, type FilesActs } from './toolbar'
+import { unsized } from './tree'
 import { words } from './words'
 
 type Ui = ElementTable<'desktop'>
@@ -87,7 +83,7 @@ function cardsOf(s: Scene, w: number) {
   }
 }
 
-export function drawDesktop(host: Host, ui: Ui, frame: { s: Scene; room: Room; home: JSX.Element | null }) {
+export function drawDesktop(ui: Ui, frame: { s: Scene; room: Room; home: JSX.Element | null }, act: FilesActs) {
   const { Box, Client, Svg } = ui
   const { s, room, home } = frame
   const { t, look } = s
@@ -99,15 +95,15 @@ export function drawDesktop(host: Host, ui: Ui, frame: { s: Scene; room: Room; h
   const ctx = rowCtx(s, room.width - 1, true)
   const win = treeWindow(s, Math.max(MIN_BODY, room.bodyRows - fixed), { toSpec: r => desktopRow(ctx, r), colors: { thumb: pal.lineStrong, track: pal.line, note: pal.lo } })
   const bar = win.bar ? { ...win.bar, isOverlay: true } : null
-  if (t.showSize) wantSizes(host, unsized(t, win.rows))
+  if (t.showSize) act.sizes(unsized(t, win.rows))
   const chip = s.latest ? activityChip(ui, s.latest, { unicode: true, colorOf: tone => pal.roles[roleOfTone(tone)].fg }) : null
   // The full body width, so the cards end where the tree's right column does. A frame needs its box, so the
   // drawing's size goes with it; a narrower slot than the columns promise caps the frame's width, and the
   // drawing's viewBox scales it down inside instead of cutting it.
   const svg = (key: string, card: { drawn: Drawn; shows?: unknown }) => <Svg key={key} {...motion.pic(key, card.drawn, { shows: card.shows })} />
-  const find = { onInput: (v: string) => void search(host, v), onSubmit: (v: string) => void jump(host, v) }
-  const rows = { rows: win.specs, active: t.cursor, activeBg: pal.line, hoverBg: mix(pal.line, pal.sheet, 0.5), tones: shimmerTones(pal, look.isLight), pointer: mem.pointer, ...(bar ? { bar } : {}) } satisfies RowsProps
-  const tools = { t, act: actionsOf(host, t), search: find }
+  const find = { onInput: act.find, onSubmit: act.jump }
+  const rows = { rows: win.specs, active: t.cursor, activeBg: pal.line, hoverBg: mix(pal.line, pal.sheet, 0.5), tones: shimmerTones(pal, look.isLight), pointer: s.feel.pointer, ...(bar ? { bar } : {}) } satisfies RowsProps
+  const tools = { t, act: act.tool, search: find }
   return (
     <Box flexDirection="column" gap={1} minHeight={Math.max(1, room.bodyRows)}>
       {home}

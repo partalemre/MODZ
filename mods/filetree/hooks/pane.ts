@@ -1,5 +1,6 @@
 import type { FileNode } from '../types'
 import { cancelFlash } from './flash'
+import { HUB_PANE } from './hub'
 import { detectRepo, refreshGit } from './gitread'
 import { type Host, patch } from './host'
 import { ancestorsOf, posix, emptyTree, inside } from './tree'
@@ -7,6 +8,7 @@ import { loadDirs, openDirs, revealPaths } from './listing'
 import { openFile } from './platform'
 import { dropIndex } from './search'
 import { mem } from './session'
+import { feelNow } from './scene'
 import { forgetSizes } from './sizes'
 import { words } from './words'
 
@@ -17,10 +19,18 @@ export async function cwdOf(h: Host): Promise<string> {
   return posix(await h.cwd())
 }
 
+// What the drawing reads from module memory, kept in state for the hub's page (start.ts, hubact.ts); written only
+// when it changed, and never from this mod's own drawing, which may start the first look.
+export async function saveFeel(h: Host): Promise<void> {
+  const feel = feelNow()
+  if (JSON.stringify(await h.feel()) !== JSON.stringify(feel)) await h.setFeel(feel)
+}
+
 // Calm: the pane opens when the person asks; on its own the mod only retitles an open pane,
-// so only an asked-for open takes the MODZ panel.
+// so only an asked-for open takes the MODZ panel. A hub that draws this page is asked for it instead.
 export async function showPane(h: Host, isAsked: boolean): Promise<void> {
-  if (isAsked) {
+  if (isAsked && (await h.isHubDrawing())) await h.goHome(HUB_PANE)
+  else if (isAsked) {
     if ((await h.openPane(true)).isPlaced) await h.reportShown()
   } else if (!mem.noDock && (await h.isPaneOpen())) await h.openPane(false)
 }

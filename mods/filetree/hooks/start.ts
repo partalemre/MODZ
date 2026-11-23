@@ -1,7 +1,7 @@
 import { unlit } from './flash'
 import { type Host, patch } from './host'
 import { loadTheme } from './look'
-import { cwdOf, inApp, openFromHub, reset, showPane } from './pane'
+import { cwdOf, inApp, openFromHub, reset, saveFeel, showPane } from './pane'
 import { finePointerOk, fontState } from './platform'
 import { mem } from './session'
 import { shortPath } from './listing'
@@ -71,6 +71,14 @@ export async function openByCommand(h: Host, e: { args?: string; presentation: {
   const root = arg ? resolve(cwd, arg, mem.home) : cwd
   await reset(h, root, true)
   return w.opened(shortPath(root), mem.follow)
+}
+
+// The hub turned to this mod's page in its own pane: the first look, and the tree, with no pane of this mod's.
+export async function showInHub(h: Host): Promise<void> {
+  mem.noDock = false
+  if (await prepareLook(h)) await settleTree(h)
+  else if ((await h.tree()).nodes.length === 0) await reset(h, await cwdOf(h))
+  await saveFeel(h)
 }
 
 // The MODZ main panel's open request: the first one is the first look.

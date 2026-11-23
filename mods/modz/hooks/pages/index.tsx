@@ -6,19 +6,22 @@
 import type { EngineInterface, RenderElement } from 'claude-code'
 
 import { HomeButton } from '../kit/home'
+import { filesPage } from './files'
 import { planPage } from './plan'
 import type { PageAct, PageSite } from './site'
 
 type Ui = Record<string, any>
 
 // The pages the hub draws; any other row still asks its mod for a pane of its own.
-export const HUB_DRAWN: readonly string[] = ['plan']
+export const HUB_DRAWN: readonly string[] = ['plan', 'files']
 
 // The engine follows `$` only into functions it can name, so each page is called by name here, one case a page.
 async function pageOf($: EngineInterface, o: { page: string; ui: Ui; site: PageSite; act: PageAct }): Promise<RenderElement | null> {
   switch (o.page) {
     case 'plan':
       return planPage($, o.ui, o.site)
+    case 'files':
+      return filesPage($, o.ui, o.site, o.act)
     default:
       return null
   }

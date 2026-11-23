@@ -157,7 +157,10 @@ export function cardText(s: State, now: number): string {
     lines.push(row(labels.even, say().even(pings, { every: fmtDuration(s.every), span: fmtDuration(pings * s.every) })))
   }
   lines.push(row(labels.guard, guardRow(s)))
-  const paid = s.misses.reduce((a, m) => a + (m.usd ?? 0), 0)
-  lines.push(row(labels.session, say().session(s.misses.length, fmtUsd(paid))))
+  const priced = s.misses.filter(m => m.usd != null)
+  const paid = fmtUsd(priced.reduce((a, m) => a + (m.usd ?? 0), 0))
+  // A cold write with no price row is counted apart, never totalled as $0.00.
+  const unpriced = s.misses.length - priced.length
+  lines.push(row(labels.session, say().session(s.misses.length, unpriced ? say().unpricedPaid(priced.length ? paid : null, unpriced) : paid)))
   return lines.join('\n')
 }

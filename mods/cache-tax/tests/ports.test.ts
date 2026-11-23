@@ -4,6 +4,7 @@ import type { ModelForkResult, PromptSubmitInput } from 'claude-code'
 
 import { freshState, seedFromResume } from '../hooks/register'
 import { onPrompt } from '../hooks/guard'
+import { priceOf } from '../hooks/core'
 import type { GuardIo } from '../hooks/guard'
 
 import { HOUR, MIN, START, prompt, run, session, step, turn, usage, warm, world } from './world'
@@ -217,5 +218,34 @@ describe('/keepwarm always takes a window of its own (upstream 90bcd45)', () => 
     expect(r.drop).toMatch(/sonra \/keepwarm sohbeti hazır tutar/)
     const card = await $.command.run(run('cache-tax', ''))
     expect(card.text).toMatch(/keepwarm    açık, 12 sa kaldı.*\(always\)/)
+  })
+})
+
+describe('only listed model versions are priced (upstream 771b3d8)', () => {
+  for (const [model, write] of [['claude-opus-4-1-20250805', 30], ['claude-opus-4-20250514', 30], ['claude-opus-4@20250514', 30], ['claude-opus-4-5-20251101', 10],
+    ['claude-sonnet-4-6', 6], ['claude-sonnet-4-5@20250929', 6], ['claude-haiku-4-5-20251001', 2], ['claude-3-5-haiku-20241022', 1.6],
+    ['global.anthropic.claude-sonnet-4-6-v1:0', 6], ['claude-opus-5-5[1m]', 8], ['Claude Fable 5.2', 16]] as const) {
+    test(`${model} is priced from its own row`, () => {
+      expect(priceOf(model, 1000)?.[1]).toBe(write)
+    })
+  }
+
+  for (const model of ['claude-opus-4-9', 'claude-sonnet-4-7', 'claude-sonnet-6', 'claude-haiku-6', 'claude-3-haiku-20240307', 'claude-3-7-sonnet-20250219', 'claude-fable-5-3']) {
+    test(`${model}, a version the table does not list, borrows no other row`, () => {
+      expect(priceOf(model, 1000)).toBe(null)
+    })
+  }
+
+  test('a cold write on a model with no price row is counted, never totalled as $0', async ($, on) => {
+    mock.clock(on, { now: START })
+    const model = 'claude-fable-5-3'
+    const w = world(on, [], { model })
+    await $.session.start(session)
+    await $.turn.complete(turn({ usage: usage({ model }) }))
+    w.current.stepWrite = 150000
+    await step($, model)
+    await $.turn.complete(turn({ usage: usage({ model, cache_read_input_tokens: 0, cache_creation_input_tokens: 150000 }) }))
+    const card = await $.command.run(run('cache-tax', 'status'))
+    expect(card.text).toMatch(/sohbet 1 kez baştan okundu, 1 kez fiyatsız/)
   })
 })

@@ -51,13 +51,19 @@ test('terminal: the same row with a glyph where the picture would be', async ($,
   expect(await pictures(ui)).toEqual([])
 })
 
-test('a command line of several jobs tells each on its own numbered line, none hidden behind a count', async ($, on) => {
+test('a command line of several jobs is one line, never a numbered break-down', async ($, on) => {
   await start($, on)
   const ui = await $.ui.mount(row(bash('du -sh . && git status && rm -rf demo', undefined, { isErrored: true }), 'desktop'))
   const text = await said(ui)
-  expect(text).not.toContain('adım daha')
-  expect(text).toMatch(/1\. .+ 2\. .+ 3\. .+ ✗ başarısız oldu$/)
-  expect(await pictures(ui)).toEqual(['inceleme', 'inceleme', 'silme'])
+  expect(text).not.toMatch(/\b1\. /)
+  expect(text).toMatch(/✗ başarısız oldu$/)
+  expect(await pictures(ui)).toHaveLength(1)
+})
+
+test("a call with the agent's own words shows those words alone", async ($, on) => {
+  await start($, on)
+  const ui = await $.ui.mount(row(bash('du -sh . && git status', 'Diskte ne kadar yer kaldığına bak'), 'desktop'))
+  expect(await said(ui)).toBe('engine row Diskte ne kadar yer kaldığına bak')
 })
 
 test('a call that ended badly says so after its sentence; one that went well adds no mark of its own', async ($, on) => {
@@ -69,7 +75,7 @@ test('a call that ended badly says so after its sentence; one that went well add
   expect(await said(cut)).toBe('engine row [a.ts](<file:///w/a.ts>) dosyasını okuyor — yarıda kesildi')
 })
 
-test("a folded run leads each step with the agent's own words, then what that means, and how it ended", async ($, on) => {
+test("a folded run leads each step with the agent's own words alone, and how it ended", async ($, on) => {
   await start($, on)
   const ui = await $.ui.mount(group([
     bash('gh pr view 70 --json state', 'İki isteğin birleştirilebilir olduğuna bak'),
@@ -78,9 +84,9 @@ test("a folded run leads each step with the agent's own words, then what that me
   ]))
   expect(await said(ui)).toBe([
     'engine row',
-    "İki isteğin birleştirilebilir olduğuna bak GitHub’daki değişiklik isteklerine (PR) bakıyor ✓",
-    "70 numaralı isteği main'e birleştir Bir değişiklik isteğini (PR) ana koda birleştiriyor ✓",
-    'Birleşmiş halde skins modunu dene Modun testlerini çalıştırıyor ✗ başarısız oldu',
+    'İki isteğin birleştirilebilir olduğuna bak ✓',
+    "70 numaralı isteği main'e birleştir ✓",
+    'Birleşmiş halde skins modunu dene ✗ başarısız oldu',
   ].join(' '))
   // The first picture is the order of the work: two GitHub steps, then a check.
   expect(await pictures(ui)).toEqual(['GitHub ×2 → kontrol', 'GitHub', 'GitHub', 'kontrol'])

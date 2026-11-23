@@ -304,7 +304,8 @@ MODZ'un amacı: ajanın ne yaptığını, hiç kod yazmamış biri de net anlas�
 4. **Araç çağrıları.** Bir araç çağrısı gösterilen her yerde (satır, kart, geçmiş) `kit/plain.ts` `plainCall(tool, input, lang)`
    cümlesi öne gelir; aracın kendi adı ve hedefi isteyen için arkasında, soluk durur. Kural tablosudur: model çağrısı yok.
    Ajan çağrıyla birlikte kendi açıklamasını yazdıysa (`purposeOf(input)`: komutun `description` alanı) o söz öne
-   geçer, kural cümlesi "bu ne demek" olarak arkasında soluk durur; açıklama çağrının içinden okunur, token harcamaz.
+   geçer ve tek başına durur: altına ikinci bir kural cümlesi ya da birden çok işi yapan bir komut için numaralı döküm
+   yazılmaz (sahibi 2026-11-23: "çok kalabalık"). Açıklama çağrının içinden okunur, token harcamaz.
    **İşin resmi:** her adımın başında işin türünü gösteren çıplak ikon durur (`kindOf`: inceleme, arama, değişiklik,
    komut, kontrol, sürüm kaydı, GitHub, kurulum, silme, internet…); katlanmış bir grup, türlerin sırasını tek küçük
    çizimde verir ("inceleme ×2 — GitHub ×2"). Renk yine yalnızca durumdur (§0): süren adım vurgu, başarısız adım Flare.

@@ -65,7 +65,8 @@ function tick($: EngineInterface, c: Ctx, now: number) {
   const key = bandKey(c.s, now)
   if (key === c.drawn) return
   c.drawn = key
-  $.ui.invalidate('ui.render')
+  // The band reads this, so the engine redraws the band alone (`$.ui.invalidate` would redraw every mod's sites).
+  void $.state.set({ plugin: 'cache-tax', key: 'drawn' }, key).catch(() => $.ui.log('cache-tax: the band could not be redrawn'))
 }
 
 async function readPrefs($: EngineInterface, prefs: Prefs) {

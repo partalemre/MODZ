@@ -12,6 +12,6 @@ declare module 'claude-code' {
   interface PluginState {
     // Written by hud-pro, which owns it: true while it runs, so /cache-tax opens its Usage pane at this mod's section.
     'hud-pro': { host: boolean }
-    'cache-tax': { section: UsageSection; openUsage: { section: string; at: number } }
+    'cache-tax': { section: UsageSection; drawn: string; openUsage: { section: string; at: number } }
   }
 }

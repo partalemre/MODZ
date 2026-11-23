@@ -63,7 +63,7 @@ declare module 'claude-code' {
   interface PluginState {
     // `isOn` is true while the hub runs: a mod's pane then draws its "← MODZ" button (kit/home.tsx). `unanswered`
     // names the pane of a row whose mod did not put it up when asked.
-    modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean; unanswered: string | null; links: Links | null; weights: Weights | null; updates: Updates | null }
+    modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean; unanswered: string | null; beat: number; links: Links | null; weights: Weights | null; updates: Updates | null }
     // Each listed mod's own hub line (hooks/hub.ts BASES), which the hub listens for and keeps.
     'savvy-progress': { hub: HubCard; home: ModzHome; shown: ModzStage }
     filetree: { hub: HubCard; home: ModzHome; shown: ModzStage }

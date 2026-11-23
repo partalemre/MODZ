@@ -1426,12 +1426,6 @@ function usageHooks(on) {
       await setMode($, mode);
     return done;
   }).catch(($, e, next) => next(e));
-  on("state.set", { key: "notice" }, async ($, e, next) => {
-    const done = await next(e);
-    if (session.lowered !== null && e.plugin !== "effort-router")
-      $.ui.invalidate("ui.render");
-    return done;
-  }).catch(($, e, next) => next(e));
   on("state.set", { plugin: "modz", key: "open" }, async ($, e, next) => {
     const done = await next(e);
     const pane = e.value?.pane;

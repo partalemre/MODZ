@@ -1510,11 +1510,12 @@ function wireUpkeep(on) {
 }
 
 const cardsAtom$1 = atom({ plugin: "modz", key: "cards" }, {});
+const beatAtom$1 = atom({ plugin: "modz", key: "beat" }, 0);
 const BEAT_MS = 1e4;
 let beat = null;
 async function redrawShown($) {
   if ((await $.ui.panes()).some((pane) => pane.id === HUB_PANE && pane.isShown))
-    $.ui.invalidate("ui.render");
+    await update($, beatAtom$1, (n) => n + 1);
 }
 function keepBeat($, cards) {
   if (!hasRunningClock(cards)) {
@@ -4347,6 +4348,7 @@ const OWN_PANES = [PANE, MODS_PANE, ...SIDE_PANES];
 const cardsAtom = atom({ plugin: "modz", key: "cards" }, {});
 const layoutAtom = atom({ plugin: "modz", key: "layout" }, EMPTY_LAYOUT);
 const editingAtom = atom({ plugin: "modz", key: "isEditing" }, false);
+const beatAtom = atom({ plugin: "modz", key: "beat" }, 0);
 const updatesAtom = atom({ plugin: "modz", key: "updates" }, null);
 const unansweredAtom = atom({ plugin: "modz", key: "unanswered" }, null);
 const ON = { plugin: "modz", key: "isOn" };
@@ -4391,6 +4393,7 @@ function actionsOf($) {
 }
 const frameOf = async ($, site) => ({ ...site, theme: await themeNow($), actions: actionsOf($), stable: hubDrawings });
 async function partsOf($) {
+  await read($, beatAtom);
   const [cards, layout, isEditing] = [await read($, cardsAtom), await read($, layoutAtom), await read($, editingAtom)];
   const host = await $.state.get({ plugin: "hud-pro", key: "host" }).catch(() => ({ value: false }));
   return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()), isUsageHosting: host.value === true, hasUpdate: (await read($, updatesAtom))?.hasNew === true };

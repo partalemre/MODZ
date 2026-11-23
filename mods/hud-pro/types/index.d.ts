@@ -65,6 +65,8 @@ export type SlotNotice = { id: number; text: string; expiresAt: number }
 declare module 'claude-code' {
   interface PluginState {
     'hud-pro': {
+      // Moved when the gauges' drawing would differ; read by the band and the pane so only they redraw.
+      beat: number
       usage: HudUsage | null
       turn: HudTurn
       lastTurn: HudTurn | null

@@ -121,6 +121,7 @@ type On = Parameters<Register>[0]
 
 function onPane(on: On) {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    await $.state.get({ plugin: 'hud-pro', key: 'beat' })
     const turn = await read($, turnAtom)
     const ui = $.ui.resolve(e)
     const isHubOn = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true
@@ -198,6 +199,8 @@ function onBand(on: On) {
     const theirs = await next(e)
     try {
       if (e.props.hasSurvey) return theirs
+      // Read so the minute refresh (register.ts) redraws the band alone.
+      await $.state.get({ plugin: 'hud-pro', key: 'beat' })
       const ui = $.ui.resolve(e)
       const notice = await noticeRow($, ui)
       const row = await hudRow($, { ui, surface: e.surface, columns: e.props.bodyColumns, isWorking: e.props.isWorking })

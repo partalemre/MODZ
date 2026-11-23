@@ -43,6 +43,7 @@ const cardsAtom = atom({ plugin: 'modz', key: 'cards' } as const, {} as Record<s
 // The person's arrangement, mirrored from `$.store` (kept across sessions) so a change redraws the hub.
 const layoutAtom = atom({ plugin: 'modz', key: 'layout' } as const, EMPTY_LAYOUT)
 const editingAtom = atom({ plugin: 'modz', key: 'isEditing' } as const, false)
+const beatAtom = atom({ plugin: 'modz', key: 'beat' } as const, 0)
 // The pane of a row whose mod did not put it up when asked (openPane's watchdog); the row says so until pressed again.
 const updatesAtom = atom({ plugin: 'modz', key: 'updates' } as const, null as Updates | null)
 const unansweredAtom = atom({ plugin: 'modz', key: 'unanswered' } as const, null as string | null)
@@ -107,6 +108,8 @@ const frameOf = async ($: EngineInterface, site: Site): Promise<Frame> => ({ ...
 // What the hub is drawn from (view.ts), read where `$` is. A clock that cannot be read costs the running times
 // their exactness, never the hub.
 async function partsOf($: EngineInterface): Promise<Parts> {
+  // Read so the cards' beat (cards.ts) redraws the hub alone.
+  await read($, beatAtom)
   const [cards, layout, isEditing] = [await read($, cardsAtom), await read($, layoutAtom), await read($, editingAtom)]
 
   // hud-pro says when its Usage pane hosts the other meter mods; nobody saying so means nobody hosts.

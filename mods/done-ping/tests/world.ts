@@ -25,6 +25,8 @@ export type Spy = {
   // The status files other sessions keep in ~/.claude/sessions, and the pids ps says still run.
   sessions?: Record<string, unknown>[]
   alive?: number[]
+  // What ps prints on stderr when it cannot answer (Git for Windows, BusyBox: no -o); it then exits 1.
+  psError?: string
   // terminal-notifier's own exit code, as when its notifications are turned off; others use exitCode.
   notifierExit?: number
 }
@@ -41,6 +43,7 @@ export const decisionOf = (e: any) => (e.tool === 'PushNotification' || e.input?
 const ok = (stdout: string, exitCode = 0) => ({ value: { exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } })
 
 function processAnswer(spy: Spy, argv: string[]) {
+  if (argv[0] === 'ps' && spy.psError !== undefined) return { value: { ...ok('', 1).value, stderr: spy.psError } }
   if (argv[0] === 'ps') return ok((spy.alive ?? []).join('\n'), spy.alive?.length ? 0 : 1)
   if (argv[0] === 'lsappinfo') return argv[1] === 'front' ? ok('ASN:0x0-0x1:\n') : ok(`"CFBundleIdentifier"="${spy.front}"\n`)
 

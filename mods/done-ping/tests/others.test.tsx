@@ -66,3 +66,17 @@ test('/done-ping turned off stops looking at other sessions: no ps, until it is 
   await spy.clock.advance(POLL_MS)
   expect(spy.runs.slice(before).some(argv => argv[0] === 'ps')).toBe(true)
 })
+
+test('a ps that cannot answer (Git for Windows, BusyBox: no -o) takes every file at its word', async ($, on) => {
+  const spy = spyOf({ lang: null, psError: 'ps: unknown option -- o', sessions: [waiting({})] })
+  await setup($, on, spy)
+
+  expect(JSON.stringify(await (await $.ui.mount(bandOf('terminal') as any)).drawn())).toMatch(/web-shop/)
+})
+
+test('a ps that finds none of them running (exit 1, nothing on stderr) shows no wait', async ($, on) => {
+  const spy = spyOf({ lang: null, alive: [], sessions: [waiting({})] })
+  await setup($, on, spy)
+
+  expect(JSON.stringify(await (await $.ui.mount(bandOf('terminal') as any)).drawn())).not.toMatch(/web-shop/)
+})

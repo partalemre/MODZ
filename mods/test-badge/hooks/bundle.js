@@ -1819,6 +1819,11 @@ async function askFix($, card) {
   await $.prompt.submit({ text: fixPrompt(card) }).catch((error) => $.ui.log(`test-badge: could not send the CI prompt (${String(error)})`, { to: "debug" }));
 }
 async function openDetails($) {
+  const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+  if (Array.isArray(drawn) && drawn.includes(HUB_PANE)) {
+    await $.state.set({ plugin: "test-badge", key: "home" }, { pane: HUB_PANE, at: await $.clock.now() });
+    return;
+  }
   motion.reset();
   const opened = await $.ui.open({ id: PANE$1, title: words().paneTitle, focus: true });
   try {
@@ -1851,7 +1856,7 @@ function hookBand(on) {
       badge,
       now,
       hasDetails: !badge.isRunning && isFailing(badge),
-      onDetails: () => void openDetails($),
+      onDetails: () => void openDetails($).catch((error) => $.ui.log(`test-badge: the details could not open (${String(error)})`, { to: "debug" })),
       onDismiss: badge.isRunning || !isNotice ? undefined : () => void update($, noticeAtom$2, () => null)
     }, theirs));
   });
@@ -2093,6 +2098,34 @@ function hookHandoff(on) {
     live.offer = null;
     return next({ ...e, context: [...e.context ?? [], offer.context] });
   }).catch(($, e, next) => next(e));
+}
+
+const FILTERS = ["all", "unit", "e2e", "lint", "typecheck"];
+const SURFACES = ["terminal", "desktop", "mobile", "vscode"];
+function openOf(arg) {
+  try {
+    const pair = JSON.parse(String(arg));
+    if (!Array.isArray(pair))
+      return null;
+    const [index, surface] = pair;
+    if (!Number.isInteger(index) || index < 0 || typeof surface !== "string" || !SURFACES.includes(surface))
+      return null;
+    return { kind: "open", index, surface };
+  } catch {
+    return null;
+  }
+}
+function pagePressOf(value) {
+  if (typeof value !== "object" || value === null)
+    return null;
+  const { page, action, arg } = value;
+  if (page !== HUB_PANE)
+    return null;
+  if (action === "rerun")
+    return { kind: "rerun" };
+  if (action === "filter")
+    return typeof arg === "string" && FILTERS.includes(arg) ? { kind: "filter", filter: arg } : null;
+  return action === "open" ? openOf(arg) : null;
 }
 
 function overridesOf(options) {
@@ -2538,6 +2571,12 @@ function hookRuns(on, overrides) {
   on("state.set", { plugin: "test-badge", key: "rerun" }, async ($, e, next) => {
     const done = await next(e);
     runAll($, overrides, { edited: flags.lastEdited, isAuto: false }).catch((error) => debug($, `test-badge: run failed (${String(error)})`));
+    return done;
+  }).catch(($, e, next) => next(e));
+  on("state.set", { plugin: "modz", key: "act" }, async ($, e, next) => {
+    const done = await next(e);
+    if (pagePressOf(e.value)?.kind === "rerun")
+      $.clock.after(0, () => void runAll($, overrides, { edited: flags.lastEdited, isAuto: false }).catch((error) => debug($, `test-badge: run failed (${String(error)})`)));
     return done;
   }).catch(($, e, next) => next(e));
   on("state.set", { plugin: "test-badge", key: "isEnabled" }, async ($, e, next) => {
@@ -2996,13 +3035,33 @@ async function openPane($) {
   if (opened.isPlaced)
     await reportShown($);
 }
+async function askForPage($) {
+  const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+  if (!Array.isArray(drawn) || !drawn.includes(HUB_PANE))
+    return openPane($);
+  const at = await $.clock.now();
+  $.clock.after(0, () => void $.state.set(homeRef, { pane: HUB_PANE, at }).catch((error) => $.ui.log(`test-badge: could not ask the hub for the page (${String(error)})`, { to: "debug" })));
+}
+async function onAct($, value, overrides) {
+  const press = pagePressOf(value);
+  if (press === null)
+    return;
+  if (press.kind === "rerun")
+    return;
+  if (press.kind === "filter")
+    return void await update($, filterAtom, () => press.filter);
+  const badge = await read($, badgeAtom);
+  const failure = failuresOf(badge)[press.index];
+  if (failure !== undefined)
+    await openFailure($, failure, { root: badge.root ?? await $.session.cwd(), template: overrides.open, surface: press.surface });
+}
 async function runCommand($, arg) {
   if (arg === "run") {
     await update($, rerunAtom, (count) => count + 1);
     return words().commandRunning;
   }
   if (arg === "details") {
-    await openPane($);
+    await askForPage($);
     return words().commandDetails;
   }
   const isOn = SWITCH_ARGS.get(arg) ?? !await read($, enabledAtom);
@@ -3012,17 +3071,25 @@ async function runCommand($, arg) {
     await update($, noticeAtom, () => null);
   return words().commandSwitched(isOn);
 }
-function hookHub(on) {
+function hookHub(on, overrides) {
   on("state.set", { plugin: "modz", key: "open" }, async ($, e, next) => {
     const done = await next(e);
     if (isOpenFor(e.value, HUB_PANE))
-      await openPane($);
+      await askForPage($);
     return done;
   }).catch(($, e, next) => next(e));
   on("state.set", { plugin: "modz", key: "stage" }, async ($, e, next) => {
     const done = await next(e);
-    if (isOffStage(e.value, HUB_PANE))
+    const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+    const isInHub = paneOf(e.value) === HUB_PANE && Array.isArray(drawn) && drawn.includes(HUB_PANE);
+    if (isOffStage(e.value, HUB_PANE) || isInHub)
       await $.ui.close({ id: PANE });
+    return done;
+  }).catch(($, e, next) => next(e));
+  on("state.set", { plugin: "modz", key: "act" }, async ($, e, next) => {
+    const done = await next(e);
+    const value = e.value;
+    $.clock.after(0, () => void onAct($, value, overrides).catch((error) => $.ui.log(`test-badge: a press on the hub's page failed (${String(error)})`, { to: "debug" })));
     return done;
   }).catch(($, e, next) => next(e));
 }
@@ -3053,7 +3120,7 @@ const register = (on, options) => {
   const overrides = overridesOf(options);
   hookRuns(on, overrides);
   on("command.run", { command: COMMAND }, async ($, e) => ({ text: await runCommand($, e.args.trim().toLowerCase()) }));
-  hookHub(on);
+  hookHub(on, overrides);
   hookBand(on);
   hookPane(on, overrides);
   hookCi(on);

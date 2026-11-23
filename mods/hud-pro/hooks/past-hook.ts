@@ -5,13 +5,12 @@ import { pastsOf } from './past'
 import { EMPTY_LOG, isLog } from './past-log'
 import { scanLog } from './past-scan'
 import type { ScanIo } from './past-scan'
-import type { HudLog, HudPast, HudRange } from '../types'
+import { HUB_PANE } from './hub'
+import type { HudLog } from '../types'
 
 // The Usage pane's history: the transcripts' folder from the session's own transcript path, the log kept in the
 // store across sessions, and a read of the changed transcripts as the pane opens and then at most every few
 // minutes while it stays open, in a dispatch of its own and one at a time. Until a read has worked nothing shows.
-
-export type PastView = { past: HudPast; choose: (range: HudRange) => void }
 
 const PANE = 'hud-pro'
 const LOG_KEY = 'hud-pro.past'
@@ -62,7 +61,7 @@ async function readTranscripts($: EngineInterface, root: string): Promise<void> 
 }
 
 // A read starts when the last one is old.
-async function readIfOld($: EngineInterface): Promise<void> {
+export async function readIfOld($: EngineInterface): Promise<void> {
   await loadLog($)
   const root = await read($, rootAtom)
   const nowMs = await $.clock.now()
@@ -73,20 +72,27 @@ async function readIfOld($: EngineInterface): Promise<void> {
   $.clock.after(1, () => readTranscripts($, root))
 }
 
-// While the pane stays open, a read every few minutes; a closed pane reads nothing.
+// While the pane stays open, or the MODZ hub shows its Usage page, a read every few minutes; else nothing is read.
 async function tick($: EngineInterface): Promise<void> {
   try {
-    if ((await $.ui.panes()).some(pane => pane.id === PANE)) await readIfOld($)
+    const stage = (await $.state.get({ plugin: 'modz', key: 'stage' })).value
+    const drawn = (await $.state.get({ plugin: 'modz', key: 'drawn' })).value
+    const isPage = stage?.pane === HUB_PANE && Array.isArray(drawn) && drawn.includes(HUB_PANE)
+    if (isPage || (await $.ui.panes()).some(pane => pane.id === PANE)) await readIfOld($)
   } catch (error) {
     $.ui.log(`hud-pro: history tick failed (${why(error)})`, { to: 'debug' })
   }
 }
 
-// What the pane shows of the history: the range chosen, or nothing until a read has worked.
-export function pastViewOf(pasts: { week: HudPast; month: HudPast } | null, spec: { range: HudRange; choose: PastView['choose'] }): PastView | null {
-  if (pasts === null) return null
-
-  return { past: spec.range === 30 ? pasts.month : pasts.week, choose: spec.choose }
+// The history is read as the Usage view comes up (this mod's pane, or the page the hub draws), then every few minutes.
+export async function startReading($: EngineInterface): Promise<void> {
+  try {
+    await readIfOld($)
+    if (!kept.isTicking) $.clock.every(PAST_REFRESH_MS, () => void tick($))
+    kept.isTicking = true
+  } catch (error) {
+    $.ui.log(`hud-pro: history read not started (${why(error)})`, { to: 'debug' })
+  }
 }
 
 type On = Parameters<Register>[0]
@@ -102,14 +108,7 @@ export function onPast(on: On) {
 
   on('ui.open', async ($, e, next) => {
     const opened = await next(e)
-    if (e.id !== PANE) return opened
-    try {
-      await readIfOld($)
-      if (!kept.isTicking) $.clock.every(PAST_REFRESH_MS, () => void tick($))
-      kept.isTicking = true
-    } catch (error) {
-      $.ui.log(`hud-pro: history read not started (${why(error)})`, { to: 'debug' })
-    }
+    if (e.id === PANE) await startReading($)
 
     return opened
   }).catch(($, e, next) => next(e))

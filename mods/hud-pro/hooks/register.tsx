@@ -11,6 +11,7 @@ import { setLang } from './lang'
 import { gaugeViews } from './model'
 import type { Forecasts } from './model'
 import { paceOf } from './pace'
+import { isPageShown, keepPageBreakdown, onPage } from './page'
 import { onPast } from './past-hook'
 import { isSame } from './same'
 import { expired, resetSlot } from './slot'
@@ -124,7 +125,11 @@ function onUsage(on: On) {
   // Any compaction of the main conversation (/compact, auto, the button); a precompute installs nothing.
   on('session.compact', async ($, e, next) => {
     const result = await next(e)
-    if (e.agentId === undefined && e.trigger !== 'precompute') forgetBreakdown()
+    if (e.agentId === undefined && e.trigger !== 'precompute') {
+      forgetBreakdown()
+      // The hub's Usage page reads the window from state: read it again at once.
+      if (await isPageShown($)) await keepPageBreakdown($, true)
+    }
 
     return result
   })
@@ -137,6 +142,7 @@ function onUsage(on: On) {
       await noticeHigh($, fresh)
       await record($, fresh)
       await noticeFill($, fresh)
+      if (await isPageShown($)) await keepPageBreakdown($)
     } catch {
       $.ui.log('hud-pro: measure failed', { to: 'debug' })
     }
@@ -152,4 +158,5 @@ export const register: Register = (on, options) => {
   onCommand(on)
   band.setting = isBandMode(options?.band) ? options.band : 'auto'
   onDraw(on)
+  onPage(on)
 }

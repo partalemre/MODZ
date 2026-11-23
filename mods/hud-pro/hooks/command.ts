@@ -13,6 +13,9 @@ export const PANE = 'hud-pro'
 export const HIDDEN_KEY = 'hud-pro.hidden'
 
 const hiddenAtom = atom({ plugin: 'hud-pro', key: 'isHidden' } as const, false)
+// The section the Usage view leads with: the one a meter mod's command asked for, or none (Limits first).
+const focusAtom = atom({ plugin: 'hud-pro', key: 'focus' } as const, null as string | null)
+const homeRef = { plugin: 'hud-pro', key: 'home' } as const
 
 async function toggle($: EngineInterface): Promise<{ text: string }> {
   await update($, hiddenAtom, isHidden => !isHidden)
@@ -33,17 +36,24 @@ async function reportShown($: EngineInterface): Promise<void> {
   }
 }
 
-// The section the pane leads with: the one a meter mod's command asked for, or none (Limits first).
-export const focus: { section: string | null } = { section: null }
 
 // The meter mods whose sections the pane draws, by the section each publishes.
 const SECTION_OF: Readonly<Record<string, string>> = { 'session-budget': 'budget', 'cache-tax': 'cache', 'effort-router': 'effort' }
 // The hub's Effort row asks for effort-router's pane, which the Usage pane stands in for once that mod reports.
 const EFFORT_PANE = 'effort'
 
-// Opens the pane, or brings it forward when it is open already; never closes it.
+// Opens the pane, or brings it forward when it is open already; never closes it. A hub that draws the Usage page in
+// its own pane (modz.drawn) is asked for it through this mod's `home` instead; deferred, since asked inside a write
+// of the hub's (its open request) the hub would not hear it.
 async function openPane($: EngineInterface, section: string | null = null): Promise<void> {
-  focus.section = section
+  await update($, focusAtom, () => section)
+  const drawn = (await $.state.get({ plugin: 'modz', key: 'drawn' })).value
+  if (Array.isArray(drawn) && drawn.includes(HUB_PANE)) {
+    const at = await $.clock.now()
+    $.clock.after(0, () => void $.state.set(homeRef, { pane: HUB_PANE, at }).catch(() => $.ui.log('hud-pro: could not ask the hub for the Usage page', { to: 'debug' })))
+
+    return
+  }
   motion.reset()
   const opened = await $.ui.open({ id: PANE, title: words().paneTitle, focus: true, closeOnEscape: true })
   if (opened.isPlaced) await reportShown($)

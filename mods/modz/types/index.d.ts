@@ -75,14 +75,19 @@ declare module 'claude-code' {
     // The plan page the hub draws itself (hooks/pages.tsx) reads what plan-steps keeps.
     'plan-steps': { hub: HubCard; home: ModzHome; shown: ModzStage; tasks: unknown; doc: unknown; tracks: unknown }
     transceiver: { hub: HubCard; home: ModzHome; shown: ModzStage }
-    'test-badge': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    // The Tests page the hub draws itself (hooks/pages/tests.tsx) reads what test-badge keeps.
+    'test-badge': { hub: HubCard; home: ModzHome; shown: ModzStage; badge: unknown; filter: unknown; theme: unknown; ci: unknown; commands: unknown }
     // The Restore points page the hub draws itself (hooks/pages/checkpoints.tsx) reads what checkpoint keeps.
     checkpoint: { hub: HubCard; home: ModzHome; shown: ModzStage; view: unknown; meta: unknown; theme: unknown }
     'replay-theater': { hub: HubCard; home: ModzHome; shown: ModzStage }
     // `host`: true while hud-pro's Usage pane hosts session-budget, cache-tax and effort-router, which then have no hub row.
-    'hud-pro': { hub: HubCard; home: ModzHome; shown: ModzStage; host: boolean }
+    // The Usage page the hub draws itself (hooks/pages/usage.tsx) reads what hud-pro keeps, and the sections it hosts.
+    'hud-pro': { hub: HubCard; home: ModzHome; shown: ModzStage; host: boolean; beat: unknown; usage: unknown; turn: unknown; lastTurn: unknown; history: unknown; isCompacting: unknown; contextTurns: unknown; lastCompact: unknown; isLive: unknown; past: unknown; pastRange: unknown; shares: unknown; focus: unknown; breakdown: unknown }
     skins: { hub: HubCard; home: ModzHome; shown: ModzStage }
-    'effort-router': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    'effort-router': { hub: HubCard; home: ModzHome; shown: ModzStage; section: unknown }
+    // Sections the Usage page shows for the meter mods hud-pro hosts.
+    'session-budget': { section: unknown }
+    'cache-tax': { section: unknown }
     handoff: { hub: HubCard; home: ModzHome; shown: ModzStage }
   }
 }

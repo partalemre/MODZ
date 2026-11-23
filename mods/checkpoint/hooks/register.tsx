@@ -190,8 +190,8 @@ async function toggle($: EngineInterface, arg: string): Promise<void> {
   $.ui.toast(words().toggled(isOn))
 }
 
-// `isFocused` for the main panel's request: an open pane comes forward. Once up it takes a running hub's panel (kit/stage.ts).
-async function openPane($: EngineInterface, isFocused = false): Promise<void> {
+// What the list shows, read anew as it comes up (its own pane, or the page the hub draws).
+async function refresh($: EngineInterface): Promise<void> {
   try {
     const repo = await repoOf($)
     const entries = repo === null ? [] : await list(runnerOf($), repo)
@@ -200,6 +200,11 @@ async function openPane($: EngineInterface, isFocused = false): Promise<void> {
   } catch {
     $.ui.log('checkpoint: could not list checkpoints', { to: 'debug' })
   }
+}
+
+// `isFocused` for the main panel's request: an open pane comes forward. Once up it takes a running hub's panel (kit/stage.ts).
+async function openPane($: EngineInterface, isFocused = false): Promise<void> {
+  await refresh($)
   motion.reset()
   const opened = await $.ui.open({ id: PANE, title: words().title, ...(isFocused ? { focus: true } : {}) })
   try {
@@ -208,6 +213,25 @@ async function openPane($: EngineInterface, isFocused = false): Promise<void> {
   } catch (error) {
     $.ui.log(`checkpoint: shown failed (${String(error)})`, { to: 'debug' })
   }
+}
+
+// A hub that draws this list in its own pane (modz.drawn) is asked for it through this mod's `home`; else the pane opens.
+async function askForPage($: EngineInterface, isFocused = false): Promise<void> {
+  const drawn = (await $.state.get({ plugin: 'modz', key: 'drawn' })).value
+  if (!Array.isArray(drawn) || !drawn.includes(HUB_PANE)) return openPane($, isFocused)
+  await $.state.set(HOME, { pane: HUB_PANE, at: await $.clock.now() })
+}
+
+// A press on the page the hub draws (modz.act), done as this pane's own button does it; the ref names the checkpoint.
+async function onAct($: EngineInterface, value: unknown): Promise<void> {
+  const press = (value ?? {}) as { page?: unknown; action?: unknown; arg?: unknown }
+  if (press.page !== HUB_PANE) return
+  if (press.action === 'confirm') return confirm($)
+  if (press.action === 'cancel') return setView($, { pending: null, status: null })
+  if (press.action !== 'undo') return
+  const view = await read($, viewAtom)
+  const entry = [...view.entries, ...(view.status?.redo === undefined ? [] : [view.status.redo])].find(each => each.ref === press.arg)
+  if (entry !== undefined) await ask($, entry)
 }
 
 type On = Parameters<Register>[0]
@@ -236,7 +260,7 @@ function hookCommands(on: On): void {
 
   on('command.run', { command: TOGGLE }, async ($, e) => (await toggle($, e.args.trim().toLowerCase()), {}))
 
-  on('command.run', { command: PANE }, async $ => (await openPane($), {}))
+  on('command.run', { command: PANE }, async $ => (await askForPage($), {}))
 }
 
 // Both hooks hand the event on untouched: nothing reaches the prompt or a tool result.
@@ -276,7 +300,25 @@ export const register: Register = on => {
   // The main panel's open request: opens only, so a pane already open comes forward instead of closing.
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
     const done = await next(e)
-    if (isOpenFor(e.value, HUB_PANE)) await openPane($, true)
+    if (isOpenFor(e.value, HUB_PANE)) await askForPage($, true)
+
+    return done
+  }).catch(($, e, next) => next(e))
+
+  // The hub puts this list in its own pane: what it shows is read anew, as the pane does on opening.
+  on('state.set', { plugin: 'modz', key: 'stage' }, async ($, e, next) => {
+    const done = await next(e)
+    const drawn = (await $.state.get({ plugin: 'modz', key: 'drawn' })).value
+    if (isOpenFor(e.value, HUB_PANE) && Array.isArray(drawn) && drawn.includes(HUB_PANE)) await refresh($)
+
+    return done
+  }).catch(($, e, next) => next(e))
+
+  // A press on the hub's page: the git work runs after the hub's write settles, so this mod's own writes are heard.
+  on('state.set', { plugin: 'modz', key: 'act' }, async ($, e, next) => {
+    const done = await next(e)
+    const value: unknown = e.value
+    $.clock.after(0, () => void onAct($, value).catch(cause => $.ui.log(`checkpoint: a press on the hub's page failed (${String(cause)})`, { to: 'debug' })))
 
     return done
   }).catch(($, e, next) => next(e))

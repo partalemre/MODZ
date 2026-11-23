@@ -74,7 +74,8 @@ declare module 'claude-code' {
     'plan-steps': { hub: HubCard; home: ModzHome; shown: ModzStage; tasks: unknown; doc: unknown; tracks: unknown }
     transceiver: { hub: HubCard; home: ModzHome; shown: ModzStage }
     'test-badge': { hub: HubCard; home: ModzHome; shown: ModzStage }
-    checkpoint: { hub: HubCard; home: ModzHome; shown: ModzStage }
+    // The Restore points page the hub draws itself (hooks/pages/checkpoints.tsx) reads what checkpoint keeps.
+    checkpoint: { hub: HubCard; home: ModzHome; shown: ModzStage; view: unknown; meta: unknown; theme: unknown }
     'replay-theater': { hub: HubCard; home: ModzHome; shown: ModzStage }
     // `host`: true while hud-pro's Usage pane hosts session-budget, cache-tax and effort-router, which then have no hub row.
     'hud-pro': { hub: HubCard; home: ModzHome; shown: ModzStage; host: boolean }

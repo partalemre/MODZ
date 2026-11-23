@@ -1512,7 +1512,7 @@ async function toggle($, arg) {
   await $.store.set(STORE_KEY, isOn);
   $.ui.toast(words().toggled(isOn));
 }
-async function openPane($, isFocused = false) {
+async function refresh($) {
   try {
     const repo = await repoOf($);
     const entries = repo === null ? [] : await list(runnerOf($), repo);
@@ -1521,6 +1521,9 @@ async function openPane($, isFocused = false) {
   } catch {
     $.ui.log("checkpoint: could not list checkpoints", { to: "debug" });
   }
+}
+async function openPane($, isFocused = false) {
+  await refresh($);
   motion.reset();
   const opened = await $.ui.open({ id: PANE, title: words().title, ...isFocused ? { focus: true } : {} });
   try {
@@ -1530,6 +1533,27 @@ async function openPane($, isFocused = false) {
   } catch (error) {
     $.ui.log(`checkpoint: shown failed (${String(error)})`, { to: "debug" });
   }
+}
+async function askForPage($, isFocused = false) {
+  const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+  if (!Array.isArray(drawn) || !drawn.includes(HUB_PANE))
+    return openPane($, isFocused);
+  await $.state.set(HOME, { pane: HUB_PANE, at: await $.clock.now() });
+}
+async function onAct($, value) {
+  const press = value ?? {};
+  if (press.page !== HUB_PANE)
+    return;
+  if (press.action === "confirm")
+    return confirm($);
+  if (press.action === "cancel")
+    return setView($, { pending: null, status: null });
+  if (press.action !== "undo")
+    return;
+  const view = await read($, viewAtom);
+  const entry = [...view.entries, ...view.status?.redo === undefined ? [] : [view.status.redo]].find((each) => each.ref === press.arg);
+  if (entry !== undefined)
+    await ask($, entry);
 }
 function hookCommands(on) {
   on("session.start", async ($, e, next) => {
@@ -1556,7 +1580,7 @@ function hookCommands(on) {
     return done;
   });
   on("command.run", { command: TOGGLE }, async ($, e) => (await toggle($, e.args.trim().toLowerCase()), {}));
-  on("command.run", { command: PANE }, async ($) => (await openPane($), {}));
+  on("command.run", { command: PANE }, async ($) => (await askForPage($), {}));
 }
 function hookTurns(on) {
   on("prompt.submit", async ($, e, next) => (armTurn(e.text), next(e))).catch(($, e, next) => next(e));
@@ -1590,7 +1614,20 @@ const register = (on) => {
   on("state.set", { plugin: "modz", key: "open" }, async ($, e, next) => {
     const done = await next(e);
     if (isOpenFor(e.value, HUB_PANE))
-      await openPane($, true);
+      await askForPage($, true);
+    return done;
+  }).catch(($, e, next) => next(e));
+  on("state.set", { plugin: "modz", key: "stage" }, async ($, e, next) => {
+    const done = await next(e);
+    const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+    if (isOpenFor(e.value, HUB_PANE) && Array.isArray(drawn) && drawn.includes(HUB_PANE))
+      await refresh($);
+    return done;
+  }).catch(($, e, next) => next(e));
+  on("state.set", { plugin: "modz", key: "act" }, async ($, e, next) => {
+    const done = await next(e);
+    const value = e.value;
+    $.clock.after(0, () => void onAct($, value).catch((cause) => $.ui.log(`checkpoint: a press on the hub's page failed (${String(cause)})`, { to: "debug" })));
     return done;
   }).catch(($, e, next) => next(e));
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {

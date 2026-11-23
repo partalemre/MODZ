@@ -144,8 +144,8 @@ def check_home(desk, engine, inst):
     return None if back else f'Pane {inst}: ← MODZ left {ids(engine)} (want the hub alone, drawing its rows)'
 
 
-# Rows whose page the hub draws in its own pane (mods/modz/hooks/pages.tsx): the panel stays the hub's.
-HUB_PAGES = ('open-plan',)
+# Rows whose page the hub draws in its own pane (mods/modz/hooks/pages/): the panel stays the hub's.
+HUB_PAGES = ('open-plan', 'open-checkpoints')
 
 
 def shows_rows(desk):
@@ -290,7 +290,9 @@ def is_linked_here(repo):
     return os.path.realpath(link) == os.path.realpath(os.path.join(repo, 'mods', 'modz'))
 
 
-RELOAD_ROW = 'open-checkpoints'
+# A row whose mod opens a pane of its own (the hub draws the Restore points and Plan pages itself).
+RELOAD_ROW = 'open-tests'
+RELOAD_PANE = 'test-badge'
 RELOADED = 'modz@skills-dir reloaded in'
 
 
@@ -309,8 +311,8 @@ def swap_then_reload(engine, desk, home, log):
         return 'reload: the hub could not be brought up'
     stale = desk.render(HUB)
     desk.hold(HUB)
-    if not desk.press(RELOAD_ROW, tree=stale).get('handled') or not wait(lambda: ids(engine) == ['checkpoints'], OPEN_WAIT_S):
-        return f'reload: {RELOAD_ROW} left {ids(engine)}, want the checkpoints pane alone'
+    if not desk.press(RELOAD_ROW, tree=stale).get('handled') or not wait(lambda: ids(engine) == [RELOAD_PANE], OPEN_WAIT_S):
+        return f'reload: {RELOAD_ROW} left {ids(engine)}, want the {RELOAD_PANE} pane alone'
     before = reloads(log)
     with open(os.path.join(home, 'skills', HUB, 'hooks', 'bundle.js'), 'a') as bundle:
         bundle.write(f'\n// rebuilt {time.time()}\n')
@@ -319,7 +321,7 @@ def swap_then_reload(engine, desk, home, log):
     time.sleep(SETTLE_S)
     desk.render(HUB)
     time.sleep(SETTLE_S)
-    return None if ids(engine) == ['checkpoints'] else f'reload: a draw of the reloaded hub left {ids(engine)}, want the checkpoints pane alone'
+    return None if ids(engine) == [RELOAD_PANE] else f'reload: a draw of the reloaded hub left {ids(engine)}, want the {RELOAD_PANE} pane alone'
 
 
 def check_hub_reload(repo):

@@ -4,7 +4,7 @@ import { mock } from 'claude-code/testing'
 
 type Call = { argv: string[]; env: Record<string, string>; stdin?: string }
 // `env` answers `$.env.get`: MODZ_LANG=tr for the Turkish tests, left out for the English ones.
-export type Fake = { env: Record<string, string>; calls: Call[]; isRepo: boolean; big: string; refs: string; diff: string; numstat?: string; asked: string[]; answer: string; body?: string; ahead?: string }
+export type Fake = { env: Record<string, string>; calls: Call[]; isRepo: boolean; big: string; refs: string; diff: string; numstat?: string; asked: string[]; answer: string; body?: string; ahead?: string; opened?: string[] }
 
 export const ok = (stdout = '', exitCode = 0) => ({ exitCode, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false })
 
@@ -42,7 +42,7 @@ export function stub(on: any, fake: Fake, record: { seen?: any[]; stored?: Recor
   on('session.id', () => ({ value: 'sess-1' }))
   on('ui.log', () => ({ value: undefined }))
   on('ui.toast', (_: any, e: any) => (fake.asked.push(`toast:${e.text}`), { value: undefined }))
-  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('ui.open', (_: any, e: any) => (fake.opened?.push(e.id), { value: { isPlaced: true } }))
   on('store.get', () => ({ value: undefined }))
   on('store.set', (_: any, e: any) => ((stored[e.key] = e.value), { value: undefined }))
   on('command.register', () => ({ value: undefined }))

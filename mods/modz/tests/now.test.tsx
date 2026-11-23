@@ -206,7 +206,10 @@ test('terminal: the same lines are read as text under "Şu an"', { timeoutMs: 20
   expect(await ui.findAll({ type: 'Text', text: /41\/42 geçti/ })).toHaveLength(1)
 })
 
-test('a running time moves on the hub\'s own beat without one state write; with none running nothing is drawn again', { timeoutMs: 20_000, options: { openOnStart: true }, plugins: reporters }, async ($: any, on: any) => {
+// The hub's beat (hooks/cards.ts).
+const BEAT_MS = 10_000
+
+test('a running time moves on the hub\'s own beat, one write of its own per beat; with none running nothing is drawn again', { timeoutMs: 20_000, options: { openOnStart: true }, plugins: reporters }, async ($: any, on: any) => {
   const { seen } = stubWorld(on, { hasOwnClock: true })
   const clock = mock.clock(on, { now: START })
   let writes = 0
@@ -229,7 +232,8 @@ test('a running time moves on the hub\'s own beat without one state write; with 
 
   expect(seen.draws).toBeGreaterThan(busyDraws)
   expect(await alts(ui)).toContain('testleri yaz: 3 dk')
-  expect(writes).toBe(busyWrites)
+  // The beat writes the hub's own value, so only the hub redraws; no other state moves.
+  expect(writes - busyWrites).toBe((3 * MINUTE) / BEAT_MS)
 
   // Behind a mod's pane the hub tells nothing, so the beat draws nothing.
   await ui.press({ key: 'open-modz-mods' })

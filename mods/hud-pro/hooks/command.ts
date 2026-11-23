@@ -4,7 +4,6 @@ import type { EngineInterface, Register } from 'claude-code'
 import { BAND_KEY, band, parseBand } from './band-mode'
 import { HUB_PANE, isOwnOpen } from './hub'
 import { motion } from './pane-motion'
-import { LOUDER } from './slot'
 import { isOffStage, shownOf } from './stage'
 import { words } from './words'
 
@@ -111,17 +110,5 @@ function onUsageAsks(on: On) {
 
     return done
   }).catch(($: EngineInterface, e: any, next: any) => next(e))
-  // A section that changed draws again; so does the band when a louder notice comes or goes (slot.ts).
-  on('state.set', { key: 'section' } as any, async ($: EngineInterface, e: any, next: any) => {
-    const done = await next(e)
-    if (SECTION_OF[e.plugin] !== undefined) $.ui.invalidate('ui.render')
-
-    return done
-  }).catch(($: EngineInterface, e: any, next: any) => next(e))
-  on('state.set', { key: 'notice' } as any, async ($: EngineInterface, e: any, next: any) => {
-    const done = await next(e)
-    if ((LOUDER as readonly string[]).includes(e.plugin)) $.ui.invalidate('ui.render')
-
-    return done
-  }).catch(($: EngineInterface, e: any, next: any) => next(e))
+  // A changed section or louder notice needs no hook: the drawing reads them, so the engine redraws just its readers.
 }

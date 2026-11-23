@@ -89,7 +89,7 @@ async function redrawIfMoved($: EngineInterface): Promise<void> {
   const gauges = usage === null ? null : gaugeViews(usage, nowMs, await forecastsOf($, usage))
   if (isSame(gauges, shownGauges) && left === queue) return
   shownGauges = gauges
-  $.ui.invalidate('ui.render')
+  await $.state.set({ plugin: 'hud-pro', key: 'beat' }, nowMs)
 }
 
 async function setup($: EngineInterface): Promise<void> {

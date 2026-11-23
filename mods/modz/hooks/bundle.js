@@ -1510,11 +1510,12 @@ function wireUpkeep(on) {
 }
 
 const cardsAtom$1 = atom({ plugin: "modz", key: "cards" }, {});
+const beatAtom$1 = atom({ plugin: "modz", key: "beat" }, 0);
 const BEAT_MS = 1e4;
 let beat = null;
 async function redrawShown($) {
   if ((await $.ui.panes()).some((pane) => pane.id === HUB_PANE && pane.isShown))
-    $.ui.invalidate("ui.render");
+    await update($, beatAtom$1, (n) => n + 1);
 }
 function keepBeat($, cards) {
   if (!hasRunningClock(cards)) {
@@ -4853,12 +4854,6 @@ function plainCall(tool, input, lang) {
   const template = textOf$1(entry, lang);
   return named === "" && /(^|[^[])\{x\}/.test(template.replace(/\[[^\]]*\]/g, "")) ? fill(textOf$1(OTHER.tool, lang), tool) : fill(template, named);
 }
-function partsOf$1(tool, input, lang) {
-  const command = tool === "Bash" || tool === "PowerShell" ? fieldsOf$1(input).command : undefined;
-  const parts = typeof command === "string" ? leadsOf(command).map((call) => ({ kind: commandKind(call), text: callSay(call, lang) ?? "" })) : [];
-  const unique = parts.filter((part, i) => part.text !== "" && parts.findIndex((other) => other.text === part.text) === i);
-  return unique.length > 1 ? unique : [{ kind: kindOf(tool, input), text: plainCall(tool, input, lang) }];
-}
 
 const FILES_MAX = 4;
 const RESULT_MAX = 110;
@@ -5140,7 +5135,7 @@ function stepOf(bucket, lang) {
   const state = worst(bucket.map((told) => told.state));
   const files = bucket.flatMap((told) => told.file === undefined ? [] : [told.file]).filter((file, i, all) => all.findIndex((other) => other.path === file.path) === i);
   if (first.why !== "")
-    return { kind: first.kind, text: first.why, note: first.said.includes(first.why) ? "" : first.said, count: bucket.length, state, files };
+    return { kind: first.kind, text: first.why, note: "", count: bucket.length, state, files };
   const names = unique(bucket.map((told) => told.name).filter((name) => name !== ""));
   const many = MANY[first.kind];
   if (many !== undefined && names.length > 1)
@@ -5276,14 +5271,11 @@ function callTrail(draw, call) {
   const { Text } = draw.ui;
   const step = stepOfCall(call);
   const hasEnd = step.state === "failed" || step.state === "stopped";
-  const parts = partsOf$1(call.tool, call.input, lang());
   const why = purposeOf(call.input);
   const files = step.files.length > 0 ? step.files : commandFiles(call.input);
-  const isSaid = why === "" || step.text.includes(why);
-  const lead = isSaid ? [] : [stepRow(draw, { ...step, text: why, note: "", files }, "plain-why", false)];
-  const told = parts.length < 2 ? [stepRow(draw, isSaid ? { ...step, files } : { ...step, files: [] }, "plain-0", hasEnd)] : parts.map((part, i) => stepRow(draw, { ...step, kind: part.kind, text: `${i + 1}. ${part.text}`, files: [] }, `plain-${i}`, hasEnd && i === parts.length - 1));
+  const told = stepRow(draw, { ...step, text: why === "" ? step.text : why, note: "", files }, "plain-0", hasEnd);
   const result = resultLine(call, lang());
-  return [...lead, ...told, ...result === "" ? [] : [h(Text, {
+  return [told, ...result === "" ? [] : [h(Text, {
     key: "plain-result",
     dimColor: true
   }, result)]];
@@ -5415,6 +5407,7 @@ const OWN_PANES = [PANE, MODS_PANE, ...SIDE_PANES];
 const cardsAtom = atom({ plugin: "modz", key: "cards" }, {});
 const layoutAtom = atom({ plugin: "modz", key: "layout" }, EMPTY_LAYOUT);
 const editingAtom = atom({ plugin: "modz", key: "isEditing" }, false);
+const beatAtom = atom({ plugin: "modz", key: "beat" }, 0);
 const updatesAtom = atom({ plugin: "modz", key: "updates" }, null);
 const unansweredAtom = atom({ plugin: "modz", key: "unanswered" }, null);
 const ON = { plugin: "modz", key: "isOn" };
@@ -5465,6 +5458,7 @@ function actionsOf($) {
 }
 const frameOf = async ($, site) => ({ ...site, theme: await themeNow($), actions: actionsOf($), stable: hubDrawings });
 async function partsOf($) {
+  await read($, beatAtom);
   const [cards, layout, isEditing] = [await read($, cardsAtom), await read($, layoutAtom), await read($, editingAtom)];
   const host = await $.state.get({ plugin: "hud-pro", key: "host" }).catch(() => ({ value: false }));
   return { market: await marketSoon(diskOf($)), cards, layout, isEditing, unanswered: await read($, unansweredAtom), now: await $.clock.now().catch(() => Date.now()), isUsageHosting: host.value === true, hasUpdate: (await read($, updatesAtom))?.hasNew === true };

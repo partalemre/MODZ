@@ -49,6 +49,8 @@ export function wireBand(on: On, c: { s: State; prefs: Prefs }) {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const theirs = await next(e)
     if (!s.hasBand || e.props.hasSurvey) return theirs
+    // Read so the minute tick (register.ts) redraws this band alone.
+    await $.state.get({ plugin: 'cache-tax', key: 'drawn' })
     const band = { s, prefs: c.prefs, actions: actions($, s), columns: e.props.bodyColumns, now: await $.clock.now() }
     if (e.surface === 'desktop') return pinned(e, composeBand({ surface: 'desktop', ui: $.ui.resolve(e) }, theirs, band))
     if (e.surface === 'terminal') return pinned(e, composeBand({ surface: 'terminal', ui: $.ui.resolve(e) }, theirs, band))

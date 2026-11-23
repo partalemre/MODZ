@@ -6,7 +6,7 @@ import type { Register, RenderElement } from 'claude-code'
 
 import { GLYPH } from './kit/icons'
 import { lang, pick } from './kit/lang'
-import { KIND_ICON, kindOf, partsOf, plainCall, purposeOf } from './kit/plain'
+import { KIND_ICON, kindOf, plainCall, purposeOf } from './kit/plain'
 import { commandFiles, resultLine } from './plain-detail'
 import { flowPic, kindPic } from './plain-flow'
 import { fileOf, isTold, stateOf, trailOf } from './plain-trail'
@@ -134,25 +134,19 @@ function under(draw: Draw, row: RenderElement, trail: RenderElement[]): RenderEl
   return <Box flexDirection="column">{row}{trail}</Box>
 }
 
-// A single row says its ending itself, so the step adds one only when the call went wrong. A command line that
-// does several jobs tells each on its own numbered line, in order, none hidden behind a count.
+// One line a call: the agent's own words for it when it gave some, else the plain sentence, with the files it
+// touches. A row says its ending itself, so the step adds one only when the call went wrong. The owner found the
+// numbered break-down of a command and a second, quieter sentence under each step too crowded (2026-11-23).
 function callTrail(draw: Draw, call: ToldCall): RenderElement[] {
   const { Text } = draw.ui
   const step = stepOfCall(call)
   const hasEnd = step.state === 'failed' || step.state === 'stopped'
-  const parts = partsOf(call.tool, call.input, lang())
-  // Why the call was made, in the agent's own words, leads; the files a command touches go with it, by name.
   const why = purposeOf(call.input)
   const files = step.files.length > 0 ? step.files : commandFiles(call.input)
-  // A sentence that already holds those words (a helper agent's job) says them once.
-  const isSaid = why === '' || step.text.includes(why)
-  const lead = isSaid ? [] : [stepRow(draw, { ...step, text: why, note: '', files }, 'plain-why', false)]
-  const told = parts.length < 2
-    ? [stepRow(draw, isSaid ? { ...step, files } : { ...step, files: [] }, 'plain-0', hasEnd)]
-    : parts.map((part, i) => stepRow(draw, { ...step, kind: part.kind, text: `${i + 1}. ${part.text}`, files: [] }, `plain-${i}`, hasEnd && i === parts.length - 1))
+  const told = stepRow(draw, { ...step, text: why === '' ? step.text : why, note: '', files }, 'plain-0', hasEnd)
   const result = resultLine(call, lang())
 
-  return [...lead, ...told, ...(result === '' ? [] : [<Text key="plain-result" dimColor>{result}</Text>])]
+  return [told, ...(result === '' ? [] : [<Text key="plain-result" dimColor>{result}</Text>])]
 }
 
 function groupTrail(draw: Draw, calls: readonly ToldCall[]): RenderElement[] {

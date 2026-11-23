@@ -12,6 +12,7 @@ import { fillSideRows } from './upkeep'
 
 // State refs live in each file that reads them: the engine follows literals, not imports.
 const cardsAtom = atom({ plugin: 'modz', key: 'cards' } as const, {} as Record<string, HubCard>)
+const beatAtom = atom({ plugin: 'modz', key: 'beat' } as const, 0)
 
 type On = Parameters<Register>[0]
 type Timer = { cancel: () => void }
@@ -20,12 +21,13 @@ type Timer = { cancel: () => void }
 const BEAT_MS = 10_000
 let beat: Timer | null = null
 
-// One beat: the hub is drawn again, but only while it is the pane shown (behind a mod's pane there is nothing to tell).
+// One beat, only while the hub is the pane shown: its own value moves, and the hub, which reads it, alone redraws
+// (`$.ui.invalidate` would redraw every site of every mod).
 async function redrawShown($: EngineInterface): Promise<void> {
-  if ((await $.ui.panes()).some(pane => pane.id === HUB_PANE && pane.isShown)) $.ui.invalidate('ui.render')
+  if ((await $.ui.panes()).some(pane => pane.id === HUB_PANE && pane.isShown)) await update($, beatAtom, n => n + 1)
 }
 
-// The beat runs only while a card shows a running time. It writes nothing: the redraw reads the clock.
+// The beat runs only while a card shows a running time.
 function keepBeat($: EngineInterface, cards: Record<string, HubCard>): void {
   if (!hasRunningClock(cards)) {
     beat?.cancel()

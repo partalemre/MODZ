@@ -424,35 +424,6 @@ function paneMotion() {
 
 const motion = paneMotion();
 
-const NOTICE_MS = 30000;
-const LOUDER = ["reflect", "you-should-know", "cache-tax", "session-budget", "effort-router"];
-const shownAt = new Map;
-function isLive(notice, nowMs) {
-  if (notice === undefined || notice === null)
-    return false;
-  const expiresAt = notice.expiresAt;
-  return typeof expiresAt !== "number" || expiresAt <= 0 || expiresAt > nowMs;
-}
-function headToDraw(queue, nowMs) {
-  const head = queue[0];
-  if (head === undefined)
-    return null;
-  if (!shownAt.has(head.id))
-    shownAt.set(head.id, nowMs);
-  return head;
-}
-function expired(queue, nowMs) {
-  const head = queue[0];
-  const since = head === undefined ? undefined : shownAt.get(head.id);
-  if (head === undefined || since === undefined || nowMs - since < NOTICE_MS)
-    return queue;
-  shownAt.delete(head.id);
-  return queue.slice(1);
-}
-function resetSlot() {
-  shownAt.clear();
-}
-
 const paneOf = (value) => {
   if (typeof value !== "object" || value === null)
     return null;
@@ -542,18 +513,6 @@ function onUsageAsks(on) {
     const section = SECTION_OF[e.plugin];
     if (section !== undefined)
       await openPane($, section);
-    return done;
-  }).catch(($, e, next) => next(e));
-  on("state.set", { key: "section" }, async ($, e, next) => {
-    const done = await next(e);
-    if (SECTION_OF[e.plugin] !== undefined)
-      $.ui.invalidate("ui.render");
-    return done;
-  }).catch(($, e, next) => next(e));
-  on("state.set", { key: "notice" }, async ($, e, next) => {
-    const done = await next(e);
-    if (LOUDER.includes(e.plugin))
-      $.ui.invalidate("ui.render");
     return done;
   }).catch(($, e, next) => next(e));
 }
@@ -2146,6 +2105,34 @@ function pinned(site, tree) {
   return pinNode(tree, ctx);
 }
 
+const NOTICE_MS = 30000;
+const shownAt = new Map;
+function isLive(notice, nowMs) {
+  if (notice === undefined || notice === null)
+    return false;
+  const expiresAt = notice.expiresAt;
+  return typeof expiresAt !== "number" || expiresAt <= 0 || expiresAt > nowMs;
+}
+function headToDraw(queue, nowMs) {
+  const head = queue[0];
+  if (head === undefined)
+    return null;
+  if (!shownAt.has(head.id))
+    shownAt.set(head.id, nowMs);
+  return head;
+}
+function expired(queue, nowMs) {
+  const head = queue[0];
+  const since = head === undefined ? undefined : shownAt.get(head.id);
+  if (head === undefined || since === undefined || nowMs - since < NOTICE_MS)
+    return queue;
+  shownAt.delete(head.id);
+  return queue.slice(1);
+}
+function resetSlot() {
+  shownAt.clear();
+}
+
 const usageAtom$2 = atom({ plugin: "hud-pro", key: "usage" }, null);
 const turnAtom$1 = atom({ plugin: "hud-pro", key: "turn" }, { requests: 0, input: 0, output: 0, cacheRead: 0 });
 const lastTurnAtom$1 = atom({ plugin: "hud-pro", key: "lastTurn" }, null);
@@ -2220,6 +2207,7 @@ async function pressSection($, section, action) {
 }
 function onPane(on) {
   on("ui.render", { component: "Pane", requestId: PANE$1 }, async ($, e) => {
+    await $.state.get({ plugin: "hud-pro", key: "beat" });
     const turn = await read($, turnAtom$1);
     const ui = $.ui.resolve(e);
     const isHubOn = (await $.state.get({ plugin: "modz", key: "isOn" })).value === true;
@@ -2287,6 +2275,7 @@ function onBand(on) {
     try {
       if (e.props.hasSurvey)
         return theirs;
+      await $.state.get({ plugin: "hud-pro", key: "beat" });
       const ui = $.ui.resolve(e);
       const notice = await noticeRow($, ui);
       const row = await hudRow($, { ui, surface: e.surface, columns: e.props.bodyColumns, isWorking: e.props.isWorking });
@@ -2463,7 +2452,7 @@ async function redrawIfMoved($) {
   if (isSame(gauges, shownGauges) && left === queue)
     return;
   shownGauges = gauges;
-  $.ui.invalidate("ui.render");
+  await $.state.set({ plugin: "hud-pro", key: "beat" }, nowMs);
 }
 async function setup($) {
   await $.state.set({ plugin: "hud-pro", key: "host" }, true);

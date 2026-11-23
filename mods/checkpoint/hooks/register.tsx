@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
-import { apply, gitBinary, list, locate, madeSince, numstat, plan, prune, snapshot, takenWith } from './git'
+import { apply, dropStale, gitBinary, list, locate, madeSince, numstat, plan, prune, snapshot, takenWith } from './git'
 import type { Repo, Run, Scoped } from './git'
 import { HUB_PANE, hubOf, isOpenFor } from './hub'
 import { scopeOf } from './key'
@@ -254,6 +254,8 @@ function hookCommands(on: On): void {
     }
     const done = await next(e)
     await greetHub($)
+    const home = (await $.env.get('HOME')) || (await $.env.get('USERPROFILE')) || ''
+    void dropStale(runnerOf($), home).catch(cause => $.ui.log(`checkpoint: old stores could not be dropped (${String(cause)})`, { to: 'debug' }))
 
     return done
   })

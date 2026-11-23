@@ -69,6 +69,14 @@ function chunks(items) {
   return out;
 }
 const literal = (path) => `:(literal)${path}`;
+const BROAD = ["", "Downloads", "Desktop", "Documents"];
+const STORE_DAYS = 30;
+const storeOf = (home) => `${home}/.cache/claude-checkpoint`;
+async function dropStale(run, home) {
+  if (home === "")
+    return;
+  await run(["find", storeOf(home), "-mindepth", "1", "-maxdepth", "1", "-type", "d", "-name", "*.git", "-mtime", `+${STORE_DAYS}`, "-exec", "rm", "-rf", "{}", "+"], { cwd: home });
+}
 async function locate(run, opts) {
   const { cwd, home, bin } = opts;
   const found = await run([bin, "rev-parse", "--show-toplevel", "--absolute-git-dir"], { cwd });
@@ -76,9 +84,9 @@ async function locate(run, opts) {
 `);
   if (found.exitCode === 0 && root !== undefined && gitDir !== undefined)
     return { root, gitDir, isShadow: false, bin };
-  if (home === "" || cwd === home || cwd === "/")
+  if (home === "" || cwd === "/" || BROAD.some((name) => cwd === (name === "" ? home : `${home}/${name}`)))
     return null;
-  const repo = { root: cwd, gitDir: `${home}/.cache/claude-checkpoint/${keyOf(cwd)}.git`, isShadow: true, bin };
+  const repo = { root: cwd, gitDir: `${storeOf(home)}/${keyOf(cwd)}.git`, isShadow: true, bin };
   const probe = await run([bin, `--git-dir=${repo.gitDir}`, "rev-parse", "--git-dir"], { cwd });
   if (probe.exitCode !== 0 && opts.isProbeOnly === true)
     return null;
@@ -1577,6 +1585,8 @@ function hookCommands(on) {
     }
     const done = await next(e);
     await greetHub($);
+    const home = await $.env.get("HOME") || await $.env.get("USERPROFILE") || "";
+    dropStale(runnerOf($), home).catch((cause) => $.ui.log(`checkpoint: old stores could not be dropped (${String(cause)})`, { to: "debug" }));
     return done;
   });
   on("command.run", { command: TOGGLE }, async ($, e) => (await toggle($, e.args.trim().toLowerCase()), {}));

@@ -66,15 +66,28 @@ function chunks<T>(items: T[]): T[][] {
 
 const literal = (path: string) => `:(literal)${path}`
 
+// Folders under home that collect whatever comes along, never one project ('' is home itself).
+const BROAD = ['', 'Downloads', 'Desktop', 'Documents']
+// A shadow store not written for this long is dropped: each snapshot writes its private index there (writeTree).
+export const STORE_DAYS = 30
+
+const storeOf = (home: string): string => `${home}/.cache/claude-checkpoint`
+
+// Drops the shadow stores of folders no session has snapshotted for STORE_DAYS; a real repo's refs are left alone.
+export async function dropStale(run: Run, home: string): Promise<void> {
+  if (home === '') return
+  await run(['find', storeOf(home), '-mindepth', '1', '-maxdepth', '1', '-type', 'd', '-name', '*.git', '-mtime', `+${STORE_DAYS}`, '-exec', 'rm', '-rf', '{}', '+'], { cwd: home })
+}
+
 // `isProbeOnly` finds a shadow repo made before but never makes one (a look at what exists, not a snapshot).
 export async function locate(run: Run, opts: { cwd: string; home: string; bin: string; isProbeOnly?: boolean }): Promise<Repo | null> {
   const { cwd, home, bin } = opts
   const found = await run([bin, 'rev-parse', '--show-toplevel', '--absolute-git-dir'], { cwd })
   const [root, gitDir] = found.stdout.trim().split('\n')
   if (found.exitCode === 0 && root !== undefined && gitDir !== undefined) return { root, gitDir, isShadow: false, bin }
-  // A shadow repo of a home folder or the disk root would copy far too much.
-  if (home === '' || cwd === home || cwd === '/') return null
-  const repo: Repo = { root: cwd, gitDir: `${home}/.cache/claude-checkpoint/${keyOf(cwd)}.git`, isShadow: true, bin }
+  // A shadow repo of a home folder, the disk root or a catch-all folder would copy far too much.
+  if (home === '' || cwd === '/' || BROAD.some(name => cwd === (name === '' ? home : `${home}/${name}`))) return null
+  const repo: Repo = { root: cwd, gitDir: `${storeOf(home)}/${keyOf(cwd)}.git`, isShadow: true, bin }
   const probe = await run([bin, `--git-dir=${repo.gitDir}`, 'rev-parse', '--git-dir'], { cwd })
   if (probe.exitCode !== 0 && opts.isProbeOnly === true) return null
   if (probe.exitCode !== 0) {

@@ -22,6 +22,7 @@ import { HUB_PANE, paneOf } from './kit/stage'
 import { pinned } from './kit/pin'
 import { catalogDrawings, closeQuietly, copy, hubDrawings, hubKept, openHub, show } from './own-panes'
 import { modzTree } from './pane'
+import { HUB_DRAWN, pageTree } from './pages'
 import { wirePlainRows } from './plain-rows'
 import { noteAnswer, openPane, stepAside, toggleHub } from './swap'
 import type { Swap } from './swap'
@@ -81,6 +82,12 @@ async function saveLayout($: EngineInterface, change: (layout: HubLayout) => Hub
 // A mod with no pane answers on its card above the prompt: the press says where, and nothing is asked to open.
 async function openOrPoint($: EngineInterface, pane: string): Promise<void> {
   const [mod, card] = Object.entries(await read($, cardsAtom)).find(([, each]) => each.pane === pane && each.isBandOnly === true) ?? []
+  if (HUB_DRAWN.includes(pane)) {
+    hubKept.isHeld = true
+    await $.state.set(STAGE, { pane, at: Date.now() })
+    await $.ui.open({ id: PANE, title: TITLE, focus: true })
+    return
+  }
   if (card === undefined) return openPane(swapOf($), pane)
   $.ui.toast(hubWords().inBand(card.title ?? String(mod)))
 }
@@ -169,7 +176,7 @@ function stageHooks(on: On): void {
     if (from !== 'modz') {
       // A value that names a pane asks for that mod's pane, as a press on its row here would.
       const pane = paneOf(e.value)
-      const go = () => (pane === null ? openHub($) : openPane(swapOf($), pane))
+      const go = () => (pane === null ? openHub($) : openOrPoint($, pane))
       $.clock.after(0, () => void go().catch(cause => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: 'debug' })))
     }
 
@@ -219,6 +226,11 @@ async function reopenKept($: EngineInterface): Promise<void> {
 
 function paneHooks(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    const staged = paneOf((await $.state.get(STAGE)).value)
+    if (staged !== null && HUB_DRAWN.includes(staged)) {
+      const site = { columns: e.props.bodyColumns || DEFAULT_COLUMNS, rows: e.props.scroll?.bodyRows || e.viewport?.rows || 24, surface: e.surface }
+      return pinned(e, await pageTree($, e, { page: staged, site, onHome: () => void openHub($) }))
+    }
     if (!hubKept.isHeld) {
       hubKept.isHeld = true
       $.clock.after(0, () => void reopenKept($).catch(cause => $.ui.log(`modz: the kept hub tab could not be opened: ${String(cause)}`, { to: 'debug' })))

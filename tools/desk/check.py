@@ -145,7 +145,7 @@ def check_home(desk, engine, inst):
 
 
 # Rows whose page the hub draws in its own pane (mods/modz/hooks/pages/): the panel stays the hub's.
-HUB_PAGES = ('open-plan', 'open-agents', 'open-checkpoints', 'open-files')
+HUB_PAGES = ('open-plan', 'open-agents', 'open-checkpoints', 'open-files', 'open-tests', 'open-usage')
 
 
 def shows_rows(desk):
@@ -290,9 +290,9 @@ def is_linked_here(repo):
     return os.path.realpath(link) == os.path.realpath(os.path.join(repo, 'mods', 'modz'))
 
 
-# A row whose mod opens a pane of its own (the hub draws the Restore points and Plan pages itself).
-RELOAD_ROW = 'open-tests'
-RELOAD_PANE = 'test-badge'
+# A row whose mod opens a pane of its own (the hub draws the Tests, Usage, Restore points and Plan pages itself).
+RELOAD_ROW = 'open-handoff'
+RELOAD_PANE = 'handoff'
 RELOADED = 'modz@skills-dir reloaded in'
 
 

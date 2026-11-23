@@ -8,10 +8,12 @@ import { hookHandoff } from './handoff'
 import { HUB_PANE, isOpenFor } from './hub'
 import { EMPTY, OPEN_TIMEOUT_MS } from './limits'
 import { openCandidates, pathOf, placeOf } from './open'
+import { pagePressOf } from './page-act'
+import { failuresOf } from './parse'
 import { overridesOf, type Overrides } from './options'
 import { withHome } from './home'
 import { hookRuns } from './runs'
-import { isOffStage, shownOf } from './stage'
+import { isOffStage, paneOf, shownOf } from './stage'
 import { pinned } from './pin'
 import { AUTO } from './tidemark'
 import { motion } from './pane-pic'
@@ -70,6 +72,27 @@ async function openPane($: EngineInterface): Promise<void> {
   if (opened.isPlaced) await reportShown($)
 }
 
+// A hub that draws this pane in its own (modz.drawn) is asked for its page through this mod's `home`; else the pane
+// opens. Deferred: asked inside the hub's own open request, the hub would not hear this write (re-entry).
+async function askForPage($: EngineInterface): Promise<void> {
+  const drawn = (await $.state.get({ plugin: 'modz', key: 'drawn' })).value
+  if (!Array.isArray(drawn) || !drawn.includes(HUB_PANE)) return openPane($)
+  const at = await $.clock.now()
+  $.clock.after(0, () => void $.state.set(homeRef, { pane: HUB_PANE, at }).catch(error => $.ui.log(`test-badge: could not ask the hub for the page (${String(error)})`, { to: 'debug' })))
+}
+
+// A press on the hub's page (modz.act), done as this pane's own button does it.
+async function onAct($: EngineInterface, value: unknown, overrides: Overrides): Promise<void> {
+  const press = pagePressOf(value)
+  if (press === null) return
+  // A rerun is runs.ts's to start, from the same write.
+  if (press.kind === 'rerun') return
+  if (press.kind === 'filter') return void (await update($, filterAtom, () => press.filter))
+  const badge = await read($, badgeAtom)
+  const failure = failuresOf(badge)[press.index]
+  if (failure !== undefined) await openFailure($, failure, { root: badge.root ?? (await $.session.cwd()), template: overrides.open, surface: press.surface })
+}
+
 async function runCommand($: EngineInterface, arg: string): Promise<string> {
   if (arg === 'run') {
     await update($, rerunAtom, count => count + 1)
@@ -77,7 +100,7 @@ async function runCommand($: EngineInterface, arg: string): Promise<string> {
     return words().commandRunning
   }
   if (arg === 'details') {
-    await openPane($)
+    await askForPage($)
 
     return words().commandDetails
   }
@@ -91,16 +114,27 @@ async function runCommand($: EngineInterface, arg: string): Promise<string> {
 
 // The main panel's open request opens the details pane, or brings it forward; it never closes it. Another
 // pane taking the main panel closes it, so it never waits as a tab.
-function hookHub(on: On): void {
+function hookHub(on: On, overrides: Overrides): void {
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
     const done = await next(e)
-    if (isOpenFor(e.value, HUB_PANE)) await openPane($)
+    if (isOpenFor(e.value, HUB_PANE)) await askForPage($)
 
     return done
   }).catch(($, e, next) => next(e))
   on('state.set', { plugin: 'modz', key: 'stage' }, async ($, e, next) => {
     const done = await next(e)
-    if (isOffStage(e.value, HUB_PANE)) await $.ui.close({ id: PANE })
+    // The hub drawing this page in its own pane counts as another pane taking the panel.
+    const drawn = (await $.state.get({ plugin: 'modz', key: 'drawn' })).value
+    const isInHub = paneOf(e.value) === HUB_PANE && Array.isArray(drawn) && drawn.includes(HUB_PANE)
+    if (isOffStage(e.value, HUB_PANE) || isInHub) await $.ui.close({ id: PANE })
+
+    return done
+  }).catch(($, e, next) => next(e))
+  // Run after the hub's write settles, so the hub hears this mod's writes.
+  on('state.set', { plugin: 'modz', key: 'act' }, async ($, e, next) => {
+    const done = await next(e)
+    const value: unknown = e.value
+    $.clock.after(0, () => void onAct($, value, overrides).catch(error => $.ui.log(`test-badge: a press on the hub's page failed (${String(error)})`, { to: 'debug' })))
 
     return done
   }).catch(($, e, next) => next(e))
@@ -133,7 +167,7 @@ export const register: Register = (on, options) => {
   const overrides = overridesOf(options)
   hookRuns(on, overrides)
   on('command.run', { command: COMMAND }, async ($, e) => ({ text: await runCommand($, e.args.trim().toLowerCase()) }))
-  hookHub(on)
+  hookHub(on, overrides)
   hookBand(on)
   hookPane(on, overrides)
   hookCi(on)

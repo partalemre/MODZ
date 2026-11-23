@@ -4,14 +4,14 @@ import type { EngineInterface, Register, RenderElement } from 'claude-code'
 import { bandRow } from './band'
 import { band, isAlertsOnly } from './band-mode'
 import type { ContextView } from './breakdown'
-import { PANE, focus } from './command'
+import { PANE } from './command'
 import { compactedOf, forecastsFrom, forgetBreakdown, freshBreakdown, keepBreakdown, keepLast, reasonOf } from './context'
 import type { Forecasts } from './model'
 import { paceOf } from './pace'
 import { paceSection } from './pace-section'
 import { paneTree, withHome } from './pane'
 import type { CardData } from './pane'
-import { pastViewOf } from './past-hook'
+import { pastViewOf } from './past'
 import { pinned } from './pin'
 import { isSection } from './sections'
 import { headToDraw, isLive } from './slot'
@@ -34,6 +34,7 @@ const pastAtom = atom({ plugin: 'hud-pro', key: 'past' } as const, null)
 const rangeAtom = atom({ plugin: 'hud-pro', key: 'pastRange' } as const, 7)
 const sharesAtom = atom({ plugin: 'hud-pro', key: 'shares' } as const, [])
 const noticesAtom = atom({ plugin: 'hud-pro', key: 'notices' } as const, [])
+const focusAtom = atom({ plugin: 'hud-pro', key: 'focus' } as const, null as string | null)
 
 async function forecastsOf($: EngineInterface, usage: HudUsage | null): Promise<Forecasts> {
   return forecastsFrom({ history: await read($, historyAtom), turns: await read($, contextTurnsAtom), usage })
@@ -55,8 +56,9 @@ async function breakdownView($: EngineInterface): Promise<ContextView | null> {
 
 // Compacts as /compact does, through the engine's own call. A press's own work is abandoned when the
 // press ends, so a timer starts it in a dispatch of its own that lasts until it ends; the buttons
-// hide until then. A refusal (a turn running) says why in one toast.
-function compactNow($: EngineInterface): void {
+// hide until then. A refusal (a turn running) says why in one toast. `then`: more work once it compacted (the
+// hub's Usage page reads the window again; this mod's own compact hook does not hear a compaction asked from here).
+export function compactNow($: EngineInterface, then?: () => Promise<void>): void {
   void update($, compactingAtom, () => true)
   $.clock.after(1, () =>
     $.session
@@ -65,6 +67,7 @@ function compactNow($: EngineInterface): void {
         forgetBreakdown()
         const done = compactedOf(result, await $.clock.now())
         if (done !== null) await update($, lastCompactAtom, () => done)
+        await then?.()
       })
       .catch((error: unknown) => $.ui.toast(words().compactFailed(reasonOf(error))))
       .finally(() => update($, compactingAtom, () => false)),
@@ -108,7 +111,7 @@ async function sectionsOf($: EngineInterface, usage: HudUsage | null): Promise<U
 
 // A section's button: written for the mod that owns the section, which hears it and acts; then drawn again, since
 // that mod's new section was written inside this write, where this mod's own hooks hear nothing.
-async function pressSection($: EngineInterface, section: string, action: string): Promise<void> {
+export async function pressSection($: EngineInterface, section: string, action: string): Promise<void> {
   try {
     await $.state.set({ plugin: 'hud-pro', key: 'press' }, { section, action, at: await $.clock.now() })
     $.ui.invalidate('ui.render')
@@ -138,7 +141,7 @@ function onPane(on: On) {
       forecasts: await forecastsOf($, usage),
       past: pastViewOf(await read($, pastAtom), { range: await read($, rangeAtom), choose: range => void update($, rangeAtom, () => range) }),
       sections: { sections: await sectionsOf($, usage), press: (section, action) => void pressSection($, section, action) },
-      focus: focus.section,
+      focus: await read($, focusAtom),
       ...(e.surface !== 'terminal' && 'Svg' in ui ? { svg: ui.Svg } : {}),
     })
 

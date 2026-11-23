@@ -10,12 +10,14 @@ import { agentsPage } from './agents'
 import { checkpointsPage } from './checkpoints'
 import { filesPage } from './files'
 import { planPage } from './plan'
+import { testsPage } from './tests'
+import { usagePage } from './usage'
 import type { PageAct, PageSite } from './site'
 
 type Ui = Record<string, any>
 
 // The pages the hub draws; any other row still asks its mod for a pane of its own.
-export const HUB_DRAWN: readonly string[] = ['plan', 'agents', 'checkpoints', 'files']
+export const HUB_DRAWN: readonly string[] = ['plan', 'agents', 'checkpoints', 'files', 'tests', 'usage']
 
 // The engine follows `$` only into functions it can name, so each page is called by name here, one case a page.
 async function pageOf($: EngineInterface, o: { page: string; ui: Ui; site: PageSite; act: PageAct }): Promise<RenderElement | null> {
@@ -28,6 +30,10 @@ async function pageOf($: EngineInterface, o: { page: string; ui: Ui; site: PageS
       return checkpointsPage($, o.ui, o.site, o.act)
     case 'files':
       return filesPage($, o.ui, o.site, o.act)
+    case 'tests':
+      return testsPage($, o.ui, o.site, o.act)
+    case 'usage':
+      return usagePage($, o.ui, o.site, o.act)
     default:
       return null
   }

@@ -439,6 +439,8 @@ const shownOf = (pane, at) => ({ pane, at });
 const PANE$1 = "hud-pro";
 const HIDDEN_KEY = "hud-pro.hidden";
 const hiddenAtom$2 = atom({ plugin: "hud-pro", key: "isHidden" }, false);
+const focusAtom$2 = atom({ plugin: "hud-pro", key: "focus" }, null);
+const homeRef = { plugin: "hud-pro", key: "home" };
 async function toggle($) {
   await update($, hiddenAtom$2, (isHidden) => !isHidden);
   const isHidden = await read($, hiddenAtom$2);
@@ -454,11 +456,16 @@ async function reportShown($) {
     $.ui.log("hud-pro: could not tell the hub the pane is shown", { to: "debug" });
   }
 }
-const focus = { section: null };
 const SECTION_OF = { "session-budget": "budget", "cache-tax": "cache", "effort-router": "effort" };
 const EFFORT_PANE = "effort";
 async function openPane($, section = null) {
-  focus.section = section;
+  await update($, focusAtom$2, () => section);
+  const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+  if (Array.isArray(drawn) && drawn.includes(HUB_PANE)) {
+    const at = await $.clock.now();
+    $.clock.after(0, () => void $.state.set(homeRef, { pane: HUB_PANE, at }).catch(() => $.ui.log("hud-pro: could not ask the hub for the Usage page", { to: "debug" })));
+    return;
+  }
   motion.reset();
   const opened = await $.ui.open({ id: PANE$1, title: words().paneTitle, focus: true, closeOnEscape: true });
   if (opened.isPlaced)
@@ -630,8 +637,9 @@ function keepLast(nowMs) {
   cached = { at: nowMs, view: cached?.view ?? null };
   return cached.view;
 }
+const compactPoint = () => compactAt;
 function forecastsFrom(input) {
-  const limit = compactAt ?? input.usage?.context?.window ?? null;
+  const limit = (input.compactAt === undefined ? compactAt : input.compactAt) ?? input.usage?.context?.window ?? null;
   return { history: input.history, turnsLeft: limit === null ? null : turnsLeftOf(input.turns, limit) };
 }
 function compactedOf(result, at) {
@@ -1464,6 +1472,11 @@ function isLog(value) {
 }
 
 const RANGES = [7, 30];
+function pastViewOf(pasts, spec) {
+  if (pasts === null)
+    return null;
+  return { past: spec.range === 30 ? pasts.month : pasts.week, choose: spec.choose };
+}
 const LEVELS = 4;
 const MODEL = /^claude-([a-z]+)-(\d+(?:-\d{1,2})*)(?:-\d{8})?$/;
 function modelName(id) {
@@ -1905,163 +1918,6 @@ function withHome(ui, spec) {
   }, HomeButton(ui, spec.goHome), spec.tree);
 }
 
-const JSONL = ".jsonl";
-const BATCH = 200;
-const AWK = [
-  "function last(s, key,   at, i) { at = 0; while ((i = index(substr(s, at + 1), key)) > 0) at += i; return at }",
-  'index($0, "\\"type\\":\\"assistant\\"") {',
-  '  if (!match($0, /"message":\\{"model":"[^"]*","id":"msg_[A-Za-z0-9]+"/)) next; head = substr($0, RSTART + 11, RLENGTH - 11)',
-  '  u = last($0, "\\"usage\\":{"); t = last($0, "\\"timestamp\\":\\""); if (u == 0 || t == 0) next',
-  "  rest = substr($0, u + 8); depth = 0; n = length(rest)",
-  '  for (i = 1; i <= n; i++) { c = substr(rest, i, 1); if (c == "{") depth++; else if (c == "}" && --depth == 0) break }',
-  '  if (depth != 0 || !match(substr($0, t), /^"timestamp":"[^"]*"/)) next',
-  '  print FILENAME "\\t{" head "," substr($0, t, RLENGTH) ",\\"usage\\":" substr(rest, 1, i) "}"',
-  "}"
-].join(`
-`);
-const isRecent = (entry, sinceMs) => entry.kind === "file" && entry.name.endsWith(JSONL) && entry.mtimeMs >= sinceMs;
-const stampOf = (dir, entry) => ({ path: `${dir}/${entry.name}`, size: entry.size, mtimeMs: entry.mtimeMs });
-async function projectFiles(io, dir, sinceMs) {
-  const entries = await io.list(dir);
-  const folders = new Set(entries.filter((entry) => entry.kind === "dir").map((entry) => entry.name));
-  const sessions = entries.filter((entry) => isRecent(entry, sinceMs));
-  const files = sessions.map((entry) => stampOf(dir, entry));
-  for (const session of sessions) {
-    const id = session.name.slice(0, -JSONL.length);
-    if (!folders.has(id))
-      continue;
-    const agents = `${dir}/${id}/subagents`;
-    const inside = await io.list(agents).catch(() => []);
-    files.push(...inside.filter((entry) => isRecent(entry, sinceMs)).map((entry) => stampOf(agents, entry)));
-  }
-  return files;
-}
-async function transcriptFiles(io, root, sinceMs) {
-  const projects = (await io.list(root)).filter((entry) => entry.kind === "dir");
-  const files = [];
-  for (const project of projects)
-    files.push(...await projectFiles(io, `${root}/${project.name}`, sinceMs));
-  return files;
-}
-async function extract(io, paths, onRow) {
-  const stream = io.spawn(["awk", AWK, ...paths]);
-  let rest = "";
-  const take = (line) => {
-    const row = parseLine(line);
-    if (row !== null)
-      onRow(row);
-  };
-  for await (const chunk of stream) {
-    if (chunk.stream !== "stdout")
-      continue;
-    const lines = (rest + chunk.text).split(`
-`);
-    rest = lines.pop() ?? "";
-    lines.forEach(take);
-  }
-  if (rest !== "")
-    take(rest);
-  const { code } = await stream.result;
-  if (code !== 0)
-    throw new Error(`awk ended with ${code ?? "a signal"}`);
-}
-const isSame$1 = (kept, file) => kept !== undefined && kept[0] === file.size && kept[1] === file.mtimeMs;
-async function scanLog(io, spec) {
-  const sinceMs = dayStart(spec.nowMs, DAYS_KEPT - 1);
-  const files = await transcriptFiles(io, spec.root, sinceMs);
-  const changed = files.filter((file) => !isSame$1(spec.log.files[file.path], file));
-  const open = openLog(spec.log.days);
-  for (let index = 0;index < changed.length; index += BATCH) {
-    await extract(io, changed.slice(index, index + BATCH).map((file) => file.path), (row) => addRow(open, row));
-  }
-  return { version: LOG_VERSION, at: spec.nowMs, days: closeLog(open, dayKey(sinceMs)), files: Object.fromEntries(files.map((file) => [file.path, [file.size, file.mtimeMs]])) };
-}
-
-const PANE = "hud-pro";
-const LOG_KEY = "hud-pro.past";
-const PAST_REFRESH_MS = 300000;
-const pastAtom$1 = atom({ plugin: "hud-pro", key: "past" }, null);
-const rootAtom = atom({ plugin: "hud-pro", key: "pastRoot" }, "");
-const kept = { log: null, isLoaded: false, isReading: false, isTicking: false, triedAt: Number.NEGATIVE_INFINITY };
-const folderOf = (path) => path.slice(0, Math.max(0, Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"))));
-const rootOf = (transcript) => transcript.endsWith(".jsonl") ? folderOf(folderOf(transcript)) : "";
-const why = (error) => error instanceof Error ? error.message : String(error);
-function scanIo($) {
-  return { list: (dir) => $.fs.list(dir), spawn: (argv) => $.process.spawn({ argv }) };
-}
-async function loadLog($) {
-  if (kept.isLoaded)
-    return;
-  kept.isLoaded = true;
-  const saved = await $.store.get(LOG_KEY).catch(() => {
-    return;
-  });
-  if (!isLog(saved))
-    return;
-  kept.log = saved;
-  const nowMs = await $.clock.now();
-  await update($, pastAtom$1, () => pastsOf(saved.days, nowMs));
-}
-async function readTranscripts($, root) {
-  try {
-    const nowMs = await $.clock.now();
-    const log = await scanLog(scanIo($), { root, log: kept.log ?? EMPTY_LOG, nowMs });
-    kept.log = log;
-    await update($, pastAtom$1, () => pastsOf(log.days, nowMs));
-    await $.store.set(LOG_KEY, log).catch((error) => $.ui.log(`hud-pro: history not kept (${why(error)})`, { to: "debug" }));
-  } catch (error) {
-    $.ui.log(`hud-pro: transcripts not readable (${why(error)})`, { to: "debug" });
-  } finally {
-    kept.isReading = false;
-  }
-}
-async function readIfOld($) {
-  await loadLog($);
-  const root = await read($, rootAtom);
-  const nowMs = await $.clock.now();
-  const lastMs = Math.max(kept.log?.at ?? Number.NEGATIVE_INFINITY, kept.triedAt);
-  if (root === "" || kept.isReading || nowMs - lastMs < PAST_REFRESH_MS)
-    return;
-  kept.isReading = true;
-  kept.triedAt = nowMs;
-  $.clock.after(1, () => readTranscripts($, root));
-}
-async function tick($) {
-  try {
-    if ((await $.ui.panes()).some((pane) => pane.id === PANE))
-      await readIfOld($);
-  } catch (error) {
-    $.ui.log(`hud-pro: history tick failed (${why(error)})`, { to: "debug" });
-  }
-}
-function pastViewOf(pasts, spec) {
-  if (pasts === null)
-    return null;
-  return { past: spec.range === 30 ? pasts.month : pasts.week, choose: spec.choose };
-}
-function onPast(on) {
-  on("classic.SessionStart", async ($, e, next) => {
-    const root = rootOf(typeof e.transcript_path === "string" ? e.transcript_path : "");
-    if (root !== "")
-      await update($, rootAtom, () => root);
-    return next(e);
-  }).catch(($, e, next) => next(e));
-  on("ui.open", async ($, e, next) => {
-    const opened = await next(e);
-    if (e.id !== PANE)
-      return opened;
-    try {
-      await readIfOld($);
-      if (!kept.isTicking)
-        $.clock.every(PAST_REFRESH_MS, () => void tick($));
-      kept.isTicking = true;
-    } catch (error) {
-      $.ui.log(`hud-pro: history read not started (${why(error)})`, { to: "debug" });
-    }
-    return opened;
-  }).catch(($, e, next) => next(e));
-}
-
 const FIRST_PINNED = 1e9;
 const pins = new Map;
 function handleFor(id) {
@@ -2142,10 +1998,11 @@ const compactingAtom = atom({ plugin: "hud-pro", key: "isCompacting" }, false);
 const contextTurnsAtom$2 = atom({ plugin: "hud-pro", key: "contextTurns" }, []);
 const lastCompactAtom = atom({ plugin: "hud-pro", key: "lastCompact" }, null);
 const liveAtom$1 = atom({ plugin: "hud-pro", key: "isLive" }, false);
-const pastAtom = atom({ plugin: "hud-pro", key: "past" }, null);
-const rangeAtom = atom({ plugin: "hud-pro", key: "pastRange" }, 7);
+const pastAtom$1 = atom({ plugin: "hud-pro", key: "past" }, null);
+const rangeAtom$1 = atom({ plugin: "hud-pro", key: "pastRange" }, 7);
 const sharesAtom$1 = atom({ plugin: "hud-pro", key: "shares" }, []);
 const noticesAtom$1 = atom({ plugin: "hud-pro", key: "notices" }, []);
+const focusAtom$1 = atom({ plugin: "hud-pro", key: "focus" }, null);
 async function forecastsOf$1($, usage) {
   return forecastsFrom({ history: await read($, historyAtom$1), turns: await read($, contextTurnsAtom$2), usage });
 }
@@ -2161,13 +2018,14 @@ async function breakdownView($) {
     return keepLast(nowMs);
   }
 }
-function compactNow($) {
+function compactNow($, then) {
   update($, compactingAtom, () => true);
   $.clock.after(1, () => $.session.compact().then(async (result) => {
     forgetBreakdown();
     const done = compactedOf(result, await $.clock.now());
     if (done !== null)
       await update($, lastCompactAtom, () => done);
+    await then?.();
   }).catch((error) => $.ui.toast(words().compactFailed(reasonOf(error)))).finally(() => update($, compactingAtom, () => false)));
 }
 async function goHome($) {
@@ -2221,9 +2079,9 @@ function onPane(on) {
       card: await cardData($),
       isLive: await read($, liveAtom$1),
       forecasts: await forecastsOf$1($, usage),
-      past: pastViewOf(await read($, pastAtom), { range: await read($, rangeAtom), choose: (range) => void update($, rangeAtom, () => range) }),
+      past: pastViewOf(await read($, pastAtom$1), { range: await read($, rangeAtom$1), choose: (range) => void update($, rangeAtom$1, () => range) }),
       sections: { sections: await sectionsOf($, usage), press: (section, action) => void pressSection($, section, action) },
-      focus: focus.section,
+      focus: await read($, focusAtom$1),
       ...e.surface !== "terminal" && "Svg" in ui ? { svg: ui.Svg } : {}
     });
     return pinned(e, isHubOn ? withHome(ui, { tree, goHome: () => void goHome($) }) : tree);
@@ -2294,6 +2152,239 @@ function onBand(on) {
 function onDraw(on) {
   onPane(on);
   onBand(on);
+}
+
+const JSONL = ".jsonl";
+const BATCH = 200;
+const AWK = [
+  "function last(s, key,   at, i) { at = 0; while ((i = index(substr(s, at + 1), key)) > 0) at += i; return at }",
+  'index($0, "\\"type\\":\\"assistant\\"") {',
+  '  if (!match($0, /"message":\\{"model":"[^"]*","id":"msg_[A-Za-z0-9]+"/)) next; head = substr($0, RSTART + 11, RLENGTH - 11)',
+  '  u = last($0, "\\"usage\\":{"); t = last($0, "\\"timestamp\\":\\""); if (u == 0 || t == 0) next',
+  "  rest = substr($0, u + 8); depth = 0; n = length(rest)",
+  '  for (i = 1; i <= n; i++) { c = substr(rest, i, 1); if (c == "{") depth++; else if (c == "}" && --depth == 0) break }',
+  '  if (depth != 0 || !match(substr($0, t), /^"timestamp":"[^"]*"/)) next',
+  '  print FILENAME "\\t{" head "," substr($0, t, RLENGTH) ",\\"usage\\":" substr(rest, 1, i) "}"',
+  "}"
+].join(`
+`);
+const isRecent = (entry, sinceMs) => entry.kind === "file" && entry.name.endsWith(JSONL) && entry.mtimeMs >= sinceMs;
+const stampOf = (dir, entry) => ({ path: `${dir}/${entry.name}`, size: entry.size, mtimeMs: entry.mtimeMs });
+async function projectFiles(io, dir, sinceMs) {
+  const entries = await io.list(dir);
+  const folders = new Set(entries.filter((entry) => entry.kind === "dir").map((entry) => entry.name));
+  const sessions = entries.filter((entry) => isRecent(entry, sinceMs));
+  const files = sessions.map((entry) => stampOf(dir, entry));
+  for (const session of sessions) {
+    const id = session.name.slice(0, -JSONL.length);
+    if (!folders.has(id))
+      continue;
+    const agents = `${dir}/${id}/subagents`;
+    const inside = await io.list(agents).catch(() => []);
+    files.push(...inside.filter((entry) => isRecent(entry, sinceMs)).map((entry) => stampOf(agents, entry)));
+  }
+  return files;
+}
+async function transcriptFiles(io, root, sinceMs) {
+  const projects = (await io.list(root)).filter((entry) => entry.kind === "dir");
+  const files = [];
+  for (const project of projects)
+    files.push(...await projectFiles(io, `${root}/${project.name}`, sinceMs));
+  return files;
+}
+async function extract(io, paths, onRow) {
+  const stream = io.spawn(["awk", AWK, ...paths]);
+  let rest = "";
+  const take = (line) => {
+    const row = parseLine(line);
+    if (row !== null)
+      onRow(row);
+  };
+  for await (const chunk of stream) {
+    if (chunk.stream !== "stdout")
+      continue;
+    const lines = (rest + chunk.text).split(`
+`);
+    rest = lines.pop() ?? "";
+    lines.forEach(take);
+  }
+  if (rest !== "")
+    take(rest);
+  const { code } = await stream.result;
+  if (code !== 0)
+    throw new Error(`awk ended with ${code ?? "a signal"}`);
+}
+const isSame$1 = (kept, file) => kept !== undefined && kept[0] === file.size && kept[1] === file.mtimeMs;
+async function scanLog(io, spec) {
+  const sinceMs = dayStart(spec.nowMs, DAYS_KEPT - 1);
+  const files = await transcriptFiles(io, spec.root, sinceMs);
+  const changed = files.filter((file) => !isSame$1(spec.log.files[file.path], file));
+  const open = openLog(spec.log.days);
+  for (let index = 0;index < changed.length; index += BATCH) {
+    await extract(io, changed.slice(index, index + BATCH).map((file) => file.path), (row) => addRow(open, row));
+  }
+  return { version: LOG_VERSION, at: spec.nowMs, days: closeLog(open, dayKey(sinceMs)), files: Object.fromEntries(files.map((file) => [file.path, [file.size, file.mtimeMs]])) };
+}
+
+const PANE = "hud-pro";
+const LOG_KEY = "hud-pro.past";
+const PAST_REFRESH_MS = 300000;
+const pastAtom = atom({ plugin: "hud-pro", key: "past" }, null);
+const rootAtom = atom({ plugin: "hud-pro", key: "pastRoot" }, "");
+const kept = { log: null, isLoaded: false, isReading: false, isTicking: false, triedAt: Number.NEGATIVE_INFINITY };
+const folderOf = (path) => path.slice(0, Math.max(0, Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"))));
+const rootOf = (transcript) => transcript.endsWith(".jsonl") ? folderOf(folderOf(transcript)) : "";
+const why = (error) => error instanceof Error ? error.message : String(error);
+function scanIo($) {
+  return { list: (dir) => $.fs.list(dir), spawn: (argv) => $.process.spawn({ argv }) };
+}
+async function loadLog($) {
+  if (kept.isLoaded)
+    return;
+  kept.isLoaded = true;
+  const saved = await $.store.get(LOG_KEY).catch(() => {
+    return;
+  });
+  if (!isLog(saved))
+    return;
+  kept.log = saved;
+  const nowMs = await $.clock.now();
+  await update($, pastAtom, () => pastsOf(saved.days, nowMs));
+}
+async function readTranscripts($, root) {
+  try {
+    const nowMs = await $.clock.now();
+    const log = await scanLog(scanIo($), { root, log: kept.log ?? EMPTY_LOG, nowMs });
+    kept.log = log;
+    await update($, pastAtom, () => pastsOf(log.days, nowMs));
+    await $.store.set(LOG_KEY, log).catch((error) => $.ui.log(`hud-pro: history not kept (${why(error)})`, { to: "debug" }));
+  } catch (error) {
+    $.ui.log(`hud-pro: transcripts not readable (${why(error)})`, { to: "debug" });
+  } finally {
+    kept.isReading = false;
+  }
+}
+async function readIfOld($) {
+  await loadLog($);
+  const root = await read($, rootAtom);
+  const nowMs = await $.clock.now();
+  const lastMs = Math.max(kept.log?.at ?? Number.NEGATIVE_INFINITY, kept.triedAt);
+  if (root === "" || kept.isReading || nowMs - lastMs < PAST_REFRESH_MS)
+    return;
+  kept.isReading = true;
+  kept.triedAt = nowMs;
+  $.clock.after(1, () => readTranscripts($, root));
+}
+async function tick($) {
+  try {
+    const stage = (await $.state.get({ plugin: "modz", key: "stage" })).value;
+    const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+    const isPage = stage?.pane === HUB_PANE && Array.isArray(drawn) && drawn.includes(HUB_PANE);
+    if (isPage || (await $.ui.panes()).some((pane) => pane.id === PANE))
+      await readIfOld($);
+  } catch (error) {
+    $.ui.log(`hud-pro: history tick failed (${why(error)})`, { to: "debug" });
+  }
+}
+async function startReading($) {
+  try {
+    await readIfOld($);
+    if (!kept.isTicking)
+      $.clock.every(PAST_REFRESH_MS, () => void tick($));
+    kept.isTicking = true;
+  } catch (error) {
+    $.ui.log(`hud-pro: history read not started (${why(error)})`, { to: "debug" });
+  }
+}
+function onPast(on) {
+  on("classic.SessionStart", async ($, e, next) => {
+    const root = rootOf(typeof e.transcript_path === "string" ? e.transcript_path : "");
+    if (root !== "")
+      await update($, rootAtom, () => root);
+    return next(e);
+  }).catch(($, e, next) => next(e));
+  on("ui.open", async ($, e, next) => {
+    const opened = await next(e);
+    if (e.id === PANE)
+      await startReading($);
+    return opened;
+  }).catch(($, e, next) => next(e));
+}
+
+function sectionPress(arg) {
+  try {
+    const pair = JSON.parse(String(arg));
+    if (!Array.isArray(pair) || pair.length !== 2)
+      return null;
+    const [section, action] = pair;
+    return typeof section === "string" && typeof action === "string" ? { kind: "press", section, action } : null;
+  } catch {
+    return null;
+  }
+}
+function pagePressOf(value) {
+  if (typeof value !== "object" || value === null)
+    return null;
+  const { page, action, arg } = value;
+  if (page !== HUB_PANE)
+    return null;
+  if (action === "compact")
+    return { kind: "compact" };
+  if (action === "range") {
+    const range = RANGES.find((each) => String(each) === arg);
+    return range === undefined ? null : { kind: "range", range };
+  }
+  return action === "press" ? sectionPress(arg) : null;
+}
+
+const breakdownAtom = atom({ plugin: "hud-pro", key: "breakdown" }, null);
+const focusAtom = atom({ plugin: "hud-pro", key: "focus" }, null);
+const rangeAtom = atom({ plugin: "hud-pro", key: "pastRange" }, 7);
+async function isPageShown($) {
+  const stage = (await $.state.get({ plugin: "modz", key: "stage" })).value;
+  const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+  return stage?.pane === HUB_PANE && Array.isArray(drawn) && drawn.includes(HUB_PANE);
+}
+async function keepPageBreakdown($, isForced = false) {
+  const nowMs = await $.clock.now();
+  if (!isForced && freshBreakdown(nowMs) !== undefined && await read($, breakdownAtom) !== null)
+    return;
+  let view;
+  try {
+    view = keepBreakdown(nowMs, (await $.session.usage({ breakdown: "summary" })).context.breakdown);
+  } catch {
+    $.ui.log("hud-pro: context breakdown failed", { to: "debug" });
+    view = keepLast(nowMs);
+  }
+  await update($, breakdownAtom, () => ({ at: nowMs, view, compactAt: compactPoint() }));
+}
+async function onAct($, value) {
+  const press = pagePressOf(value);
+  if (press === null)
+    return;
+  if (press.kind === "compact")
+    return compactNow($, () => keepPageBreakdown($, true));
+  if (press.kind === "range")
+    return void await update($, rangeAtom, () => press.range);
+  await pressSection($, press.section, press.action);
+}
+function onPage(on) {
+  on("state.set", { plugin: "modz", key: "stage" }, async ($, e, next) => {
+    const done = await next(e);
+    if (await isPageShown($)) {
+      await $.ui.close({ id: PANE$1 });
+      await keepPageBreakdown($);
+      await startReading($);
+    } else if (e.value?.pane !== HUB_PANE && await read($, focusAtom) !== null)
+      await update($, focusAtom, () => null);
+    return done;
+  }).catch(($, e, next) => next(e));
+  on("state.set", { plugin: "modz", key: "act" }, async ($, e, next) => {
+    const done = await next(e);
+    const value = e.value;
+    $.clock.after(0, () => void onAct($, value).catch(() => $.ui.log("hud-pro: a press on the hub's Usage page failed", { to: "debug" })));
+    return done;
+  }).catch(($, e, next) => next(e));
 }
 
 function isSame(a, b) {
@@ -2482,8 +2573,11 @@ function onUsage(on) {
   });
   on("session.compact", async ($, e, next) => {
     const result = await next(e);
-    if (e.agentId === undefined && e.trigger !== "precompute")
+    if (e.agentId === undefined && e.trigger !== "precompute") {
       forgetBreakdown();
+      if (await isPageShown($))
+        await keepPageBreakdown($, true);
+    }
     return result;
   });
   on("session.measure", async ($, e, next) => {
@@ -2495,6 +2589,8 @@ function onUsage(on) {
       await noticeHigh($, fresh);
       await record($, fresh);
       await noticeFill($, fresh);
+      if (await isPageShown($))
+        await keepPageBreakdown($);
     } catch {
       $.ui.log("hud-pro: measure failed", { to: "debug" });
     }
@@ -2508,6 +2604,7 @@ const register = (on, options) => {
   onCommand(on);
   band.setting = isBandMode(options?.band) ? options.band : "auto";
   onDraw(on);
+  onPage(on);
 };
 
 export { register };

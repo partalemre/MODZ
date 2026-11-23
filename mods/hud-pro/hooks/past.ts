@@ -6,6 +6,15 @@ import type { HudCell, HudLog, HudPast, HudRange } from '../types'
 // the model that answered most replies, and a heatmap cell per day shaded against the range's busiest day.
 
 export const RANGES: readonly HudRange[] = [7, 30]
+
+export type PastView = { past: HudPast; choose: (range: HudRange) => void }
+
+// What the pane shows of the history: the range chosen, or nothing until a read has worked.
+export function pastViewOf(pasts: { week: HudPast; month: HudPast } | null, spec: { range: HudRange; choose: PastView['choose'] }): PastView | null {
+  if (pasts === null) return null
+
+  return { past: spec.range === 30 ? pasts.month : pasts.week, choose: spec.choose }
+}
 // Shades above "none": the busiest day of the range is the top one.
 export const LEVELS = 4
 

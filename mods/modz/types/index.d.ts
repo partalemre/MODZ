@@ -68,14 +68,16 @@ declare module 'claude-code' {
     // names the pane of a row whose mod did not put it up when asked.
     modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean; unanswered: string | null; beat: number; drawn: readonly string[]; act: ModzAct; links: Links | null; weights: Weights | null; updates: Updates | null }
     // Each listed mod's own hub line (hooks/hub.ts BASES), which the hub listens for and keeps.
-    'savvy-progress': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    // The agents page the hub draws itself (hooks/pages/agents.tsx) reads what savvy-progress keeps.
+    'savvy-progress': { hub: HubCard; home: ModzHome; shown: ModzStage; agents: unknown; flow: unknown; job: unknown; tasks: unknown; panel: unknown; limit: unknown; types: unknown; crab: unknown; chats: unknown }
     // The Files page the hub draws itself (hooks/pages/files.tsx) reads what filetree keeps.
     filetree: { hub: HubCard; home: ModzHome; shown: ModzStage; tree: unknown; theme: unknown; activity: unknown; turn: unknown; reads: unknown; look: unknown; feel: unknown }
     // The plan page the hub draws itself (hooks/pages.tsx) reads what plan-steps keeps.
     'plan-steps': { hub: HubCard; home: ModzHome; shown: ModzStage; tasks: unknown; doc: unknown; tracks: unknown }
     transceiver: { hub: HubCard; home: ModzHome; shown: ModzStage }
     'test-badge': { hub: HubCard; home: ModzHome; shown: ModzStage }
-    checkpoint: { hub: HubCard; home: ModzHome; shown: ModzStage }
+    // The Restore points page the hub draws itself (hooks/pages/checkpoints.tsx) reads what checkpoint keeps.
+    checkpoint: { hub: HubCard; home: ModzHome; shown: ModzStage; view: unknown; meta: unknown; theme: unknown }
     'replay-theater': { hub: HubCard; home: ModzHome; shown: ModzStage }
     // `host`: true while hud-pro's Usage pane hosts session-budget, cache-tax and effort-router, which then have no hub row.
     'hud-pro': { hub: HubCard; home: ModzHome; shown: ModzStage; host: boolean }

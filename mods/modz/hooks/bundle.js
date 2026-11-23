@@ -33,7 +33,7 @@ const PATHS = {
   star: "M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 17l-5.4 3 1.2-6-4.5-4.2 6.1-.7z"
 };
 const ICON_NAMES = Object.keys(PATHS);
-const GLYPH = {
+const GLYPH$1 = {
   trash: "⌫",
   shield: "◈",
   key: "⚷",
@@ -69,7 +69,7 @@ const EMPTY_LAYOUT = { hidden: [], order: [] };
 const PANE_ID$1 = /^[\w-]{1,64}$/;
 const MAX_PANES = 64;
 const panesOf = (value) => Array.isArray(value) ? [...new Set(value.filter((pane) => typeof pane === "string" && PANE_ID$1.test(pane)))].slice(0, MAX_PANES) : [];
-function layoutOf(value) {
+function layoutOf$1(value) {
   if (typeof value !== "object" || value === null)
     return EMPTY_LAYOUT;
   const raw = value;
@@ -99,14 +99,14 @@ function setHidden(layout, opts) {
 }
 const isHidden = (layout, pane) => layout.hidden.includes(pane);
 
-let current$2 = "en";
-const langOf$1 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
-function setLang$1(value) {
-  current$2 = langOf$1(value);
-  return current$2;
+let current$4 = "en";
+const langOf$4 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
+function setLang$4(value) {
+  current$4 = langOf$4(value);
+  return current$4;
 }
-const lang = () => current$2;
-const pick$2 = (table) => table[current$2];
+const lang$1 = () => current$4;
+const pick$3 = (table) => table[current$4];
 
 const count$2 = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const PANES = {
@@ -146,7 +146,7 @@ const PANES = {
   }
 };
 function paneWords(pane) {
-  const table = pick$2(PANES);
+  const table = pick$3(PANES);
   return table[pane] ?? { title: pane, hint: "" };
 }
 const HUB = {
@@ -227,8 +227,8 @@ const HUB = {
     helpInstall: "Kurulu değil:"
   }
 };
-const hubWords = () => pick$2(HUB);
-const badgeWord = () => pick$2({ en: "Beta", tr: "Beta" });
+const hubWords = () => pick$3(HUB);
+const badgeWord = () => pick$3({ en: "Beta", tr: "Beta" });
 const CATALOG = {
   en: {
     groups: { look: "Look", safety: "Safety", meter: "Meter", flow: "Flow", other: "Other" },
@@ -291,7 +291,7 @@ const CATALOG = {
     noCommand: "komut yok"
   }
 };
-const catalogWords = () => pick$2(CATALOG);
+const catalogWords = () => pick$3(CATALOG);
 function placeLine(mod) {
   const words = catalogWords();
   const source = mod.upstream === null ? "modz" : words.from(mod.upstream);
@@ -332,7 +332,7 @@ function guestEntry(mod, card) {
 const TONES$1 = ["idle", "live", "ok", "warn", "bad"];
 const DETAIL_MAX = 60;
 const TITLE_MAX$1 = 32;
-const BADGE_MAX = 12;
+const BADGE_MAX$1 = 12;
 const PANE_ID = /^[\w-]{1,64}$/;
 const textOf$3 = (value, max) => typeof value === "string" && value.trim() !== "" ? value.trim().slice(0, max) : undefined;
 const LINES_MAX$1 = 4;
@@ -367,7 +367,7 @@ function cardOf(value) {
     hint: textOf$3(card.hint, DETAIL_MAX),
     icon: textOf$3(card.icon, TITLE_MAX$1),
     section: SECTIONS.includes(card.section) ? card.section : undefined,
-    badge: textOf$3(card.badge, BADGE_MAX),
+    badge: textOf$3(card.badge, BADGE_MAX$1),
     live: liveOf$1(card.live),
     isBandOnly: card.isBandOnly === true ? true : undefined
   };
@@ -443,18 +443,18 @@ const paneOf = (value) => {
 };
 
 const USAGE_PANE = "usage";
-const SECOND$1 = 1000;
-const MINUTE_S = 60;
+const SECOND$6 = 1000;
+const MINUTE_S$1 = 60;
 const HOUR_M = 60;
 const STEP_S = 10;
 function elapsedText(ms) {
   const ago = hubWords().ago;
-  const seconds = Math.max(0, Math.floor(ms / SECOND$1));
+  const seconds = Math.max(0, Math.floor(ms / SECOND$6));
   if (seconds < STEP_S)
     return ago.now;
-  if (seconds < MINUTE_S)
+  if (seconds < MINUTE_S$1)
     return ago.seconds(Math.floor(seconds / STEP_S) * STEP_S);
-  const minutes = Math.floor(seconds / MINUTE_S);
+  const minutes = Math.floor(seconds / MINUTE_S$1);
   return minutes < HOUR_M ? ago.minutes(minutes) : ago.hours(Math.floor(minutes / HOUR_M), minutes % HOUR_M);
 }
 const RANK_BAD = 4;
@@ -477,7 +477,7 @@ function linesOf$1(card, now) {
     return { label: line.label, value: [ran, line.value].filter(Boolean).join(" · ") };
   });
 }
-function nowOf(rows, now) {
+function nowOf$1(rows, now) {
   return rows.flatMap((row) => isNow(row.card) ? [{ row, lines: linesOf$1(row.card, now), more: row.card.live?.more ?? 0, rank: rankOf(row.card) }] : []).sort((a, b) => b.rank - a.rank).map(({ row, lines, more }) => ({ row, lines, more }));
 }
 const hasRunningClock = (cards) => Object.values(cards).some((card) => card.live?.lines.some((line) => line.since !== undefined) === true);
@@ -558,7 +558,7 @@ const LINKS = {
     connectedCount: (n) => `${n} çalışıyor`
   }
 };
-const linkWords = () => pick$2(LINKS);
+const linkWords = () => pick$3(LINKS);
 const WEIGHT$1 = {
   en: {
     lead: (days) => `Plugins and skills you have not used in ${days} days. Claude reads each one's listing in every chat.`,
@@ -593,7 +593,7 @@ const WEIGHT$1 = {
     count: (n, tokens) => `${n} kullanılmıyor · ~${short$1(tokens, ",", " bin")} token`
   }
 };
-const weightWords = () => pick$2(WEIGHT$1);
+const weightWords = () => pick$3(WEIGHT$1);
 const UPDATES = {
   en: {
     lead: "New MODZ versions come from GitHub. Nothing new runs on your computer until you take it.",
@@ -630,7 +630,7 @@ const UPDATES = {
     cardCurrent: "güncel"
   }
 };
-const updateWords = () => pick$2(UPDATES);
+const updateWords = () => pick$3(UPDATES);
 
 const WAIT_FRESH_MS = 24 * 60 * 60 * 1000;
 const ERROR_MAX = 80;
@@ -643,7 +643,7 @@ function linkName(name) {
   return server === plugin ? String(server) : `${server} (${plugin})`;
 }
 const byName = (a, b) => linkName(a).localeCompare(linkName(b));
-function waitingOf(cache, now) {
+function waitingOf$1(cache, now) {
   if (typeof cache !== "object" || cache === null)
     return [];
   return Object.entries(cache).filter(([, entry]) => now - Number(entry?.timestamp) <= WAIT_FRESH_MS).map(([name]) => name);
@@ -660,7 +660,7 @@ function linksOf$1(facts) {
   const connected = [...new Set(facts.servers)].filter((name) => !told.has(wireName(name))).sort(byName);
   for (const name of connected)
     told.add(wireName(name));
-  const waiting = waitingOf(facts.authCache, facts.now).filter((name) => !told.has(wireName(name))).sort(byName);
+  const waiting = waitingOf$1(facts.authCache, facts.now).filter((name) => !told.has(wireName(name))).sort(byName);
   return { connected, waiting, failed: failed.sort((a, b) => byName(a.name, b.name)), pending: pending.sort(byName) };
 }
 const hasLinks = (links) => links.connected.length + links.waiting.length + links.failed.length + links.pending.length > 0;
@@ -786,7 +786,7 @@ function installedCommit(installedText, key) {
   const sha = isRecord$1(first) ? first.gitCommitSha : undefined;
   return typeof sha === "string" ? sha : undefined;
 }
-function headOf(lsRemote) {
+function headOf$1(lsRemote) {
   return /^([0-9a-f]{40})\s+HEAD$/m.exec(lsRemote)?.[1];
 }
 const isNewer = (installed, head) => installed !== undefined && head !== undefined && installed !== head;
@@ -805,7 +805,7 @@ function updatesCard(updates, at) {
 
 const GROUPS = ["look", "safety", "meter", "flow", "other"];
 const BOTH = ["desktop", "terminal"];
-const META = {
+const META$1 = {
   skins: { group: "look", summary: { en: "Themes the transcript; /skin switches it", tr: "Transkripti temalarla çizer; /skin ile değişir" } },
   filetree: { group: "look", summary: { en: "Files Claude touches and their git status", tr: "Claude'un dokunduğu dosyalar ve git durumu" } },
   "replay-theater": { group: "look", upstream: "anthropics/claude-code-playground", summary: { en: "Replays the last turn's edits step by step", tr: "Son turun düzenlemelerini adım adım oynatır" } },
@@ -858,14 +858,14 @@ function installedMarketRoot(install, knownText) {
     known = undefined;
   }
   const entry = isRecord(known) ? known[install.market] : undefined;
-  const location = isRecord(entry) ? text(entry.installLocation) : undefined;
+  const location = isRecord(entry) ? text$1(entry.installLocation) : undefined;
   return (location ?? `${install.pluginsDir}/marketplaces/${install.market}`).replaceAll("\\", "/").replace(/\/+$/, "");
 }
 const SAFE_NAME = /^[\w.-]+$/;
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-function text(value) {
+function text$1(value) {
   return typeof value === "string" && value !== "" ? value : undefined;
 }
 async function readJson(read, path) {
@@ -877,16 +877,16 @@ async function readJson(read, path) {
   }
 }
 function upstreamOf(name, manifest) {
-  return githubName(manifest?.repository) ?? githubName(manifest?.homepage) ?? META[name]?.upstream ?? githubName(manifest?.author?.url);
+  return githubName(manifest?.repository) ?? githubName(manifest?.homepage) ?? META$1[name]?.upstream ?? githubName(manifest?.author?.url);
 }
 function infoOf(facts) {
   const { name, entry, manifest, problem } = facts;
-  const meta = META[name];
-  const summary = meta?.summary === undefined ? undefined : pick$2(meta.summary);
+  const meta = META$1[name];
+  const summary = meta?.summary === undefined ? undefined : pick$3(meta.summary);
   return {
     name,
-    version: text(manifest?.version) ?? text(entry.version) ?? null,
-    description: problem ?? summary ?? text(manifest?.description) ?? text(entry.description) ?? facts.note ?? (manifest ? "" : catalogWords().unreadable),
+    version: text$1(manifest?.version) ?? text$1(entry.version) ?? null,
+    description: problem ?? summary ?? text$1(manifest?.description) ?? text$1(entry.description) ?? facts.note ?? (manifest ? "" : catalogWords().unreadable),
     group: meta?.group ?? "other",
     surfaces: meta?.surfaces ?? BOTH,
     upstream: upstreamOf(name, manifest),
@@ -904,7 +904,7 @@ async function enabledOf(spec) {
   return isLinked ? true : null;
 }
 function remoteNote(source) {
-  const repo = isRecord(source) ? text(source.repo) ?? githubName(source.url) ?? undefined : undefined;
+  const repo = isRecord(source) ? text$1(source.repo) ?? githubName(source.url) ?? undefined : undefined;
   const remote = catalogWords().remote;
   return repo === undefined ? remote : `${remote} (${repo})`;
 }
@@ -920,7 +920,7 @@ async function entryInfo(spec) {
   const { index, options, enabled } = spec;
   const hasLink = options.hasLink ?? (async () => false);
   const entry = isRecord(spec.entry) ? spec.entry : {};
-  const name = text(entry.name);
+  const name = text$1(entry.name);
   const invalid = catalogWords().invalid;
   if (name === undefined)
     return infoOf({ name: catalogWords().entry(index + 1), entry, manifest: undefined, isEnabled: null, problem: invalid });
@@ -934,7 +934,7 @@ async function entryInfo(spec) {
 }
 async function loadCatalog(options) {
   const market = await readJson(options.read, `${options.root}/.claude-plugin/marketplace.json`);
-  const name = text(market?.name) ?? "modz";
+  const name = text$1(market?.name) ?? "modz";
   const plugins = market?.plugins;
   const entries = Array.isArray(plugins) ? plugins : [];
   const enabled = Object.fromEntries(Object.entries(options.enabledPlugins ?? {}).filter(([key]) => key.endsWith(`@${name}`)).map(([key, value]) => [key.slice(0, -name.length - 1), value]));
@@ -967,7 +967,7 @@ async function enabledPlugins(disk) {
     return {};
   }
 }
-async function homeOf(disk) {
+async function homeOf$1(disk) {
   const home = await disk.env.home().catch(() => {
     return;
   }) || await disk.env.userProfile().catch(() => {
@@ -976,7 +976,7 @@ async function homeOf(disk) {
   return home ? home.replaceAll("\\", "/").replace(/\/+$/, "") : undefined;
 }
 async function skillLinks(disk) {
-  const home = await homeOf(disk);
+  const home = await homeOf$1(disk);
   const cwd = await disk.cwd().catch(() => {
     return;
   });
@@ -1019,7 +1019,7 @@ async function keepUpdated(disk) {
   const install = installOf(disk.root);
   if (install === undefined)
     return;
-  const home = await homeOf(disk);
+  const home = await homeOf$1(disk);
   const configDir = await disk.env.configDir() ?? (home === undefined ? undefined : `${home}/.claude`);
   if (configDir === undefined)
     return;
@@ -1035,7 +1035,7 @@ async function keepUpdated(disk) {
   disk.log(`modz: auto-update turned on for the ${install.market} marketplace`);
 }
 async function settingsPathOf(disk) {
-  const home = await homeOf(disk);
+  const home = await homeOf$1(disk);
   const configDir = await disk.env.configDir() ?? (home === undefined ? undefined : `${home}/.claude`);
   return configDir === undefined ? undefined : `${configDir}/settings.json`;
 }
@@ -1052,7 +1052,7 @@ async function updatesOf(disk, ask) {
   const known = { isInstalled: true, isAuto, mods: installedFrom(installedText, install.market), market: install.market };
   if (ask.run === undefined || url === undefined || installed === undefined)
     return { ...known, hasNew: ask.hadNew };
-  return { ...known, hasNew: isNewer(installed, headOf((await ask.run(["git", "ls-remote", url, "HEAD"])).stdout)) };
+  return { ...known, hasNew: isNewer(installed, headOf$1((await ask.run(["git", "ls-remote", url, "HEAD"])).stdout)) };
 }
 async function setAutoUpdate(disk, isOn) {
   const install = installOf(disk.root);
@@ -1070,7 +1070,7 @@ async function setAutoUpdate(disk, isOn) {
   return true;
 }
 
-function stableDrawings$2() {
+function stableDrawings$4() {
   const kept = new Map;
   return {
     reset: () => kept.clear(),
@@ -1086,14 +1086,14 @@ function stableDrawings$2() {
   };
 }
 
-const TITLE$2 = "modz";
+const TITLE$3 = "modz";
 const STAGE$2 = { plugin: "modz", key: "stage" };
-const hubDrawings = stableDrawings$2();
-const catalogDrawings = stableDrawings$2();
+const hubDrawings = stableDrawings$4();
+const catalogDrawings = stableDrawings$4();
 const hubKept = { isHeld: false };
 const closeQuietly = ($, id) => $.ui.close({ id }).catch((cause) => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: "debug" }));
 async function show($, pane, isFocused = true) {
-  const title = pane === HUB_PANE ? TITLE$2 : paneWords(pane).title;
+  const title = pane === HUB_PANE ? TITLE$3 : paneWords(pane).title;
   hubKept.isHeld = true;
   if (pane === HUB_PANE)
     hubDrawings.reset();
@@ -1475,7 +1475,7 @@ function refreshSide($, pane) {
     refreshUpdates($, false).catch(log($, "reading the updates"));
 }
 async function fill$1($) {
-  setLang$1(await $.env.get("MODZ_LANG").catch(() => {
+  setLang$4(await $.env.get("MODZ_LANG").catch(() => {
     return;
   }));
   await refreshLinks($, false);
@@ -1566,7 +1566,7 @@ const isHubShown = (panes) => panes.some((pane) => pane.isShown && HUB_PANES.has
 const PROBE_MODEL = "haiku";
 const PROBE_TIMEOUT_MS = 20000;
 const PROBE_MAX_TOKENS = 8;
-const EN$2 = {
+const EN$3 = {
   title: "MODZ check: what Claude Code answers in this chat",
   version: "Claude Code version",
   surfaces: "Where this chat draws",
@@ -1581,7 +1581,7 @@ const EN$2 = {
   someFailed: "The lines marked ✗ are why a panel shows 0 or stays quiet. Send this text to the mod author."
 };
 const WORDS$4 = {
-  en: EN$2,
+  en: EN$3,
   tr: {
     title: "MODZ sınaması: Claude Code bu sohbette neye cevap veriyor",
     version: "Claude Code sürümü",
@@ -1597,10 +1597,10 @@ const WORDS$4 = {
     someFailed: "✗ işaretli satırlar bir panelin 0 göstermesinin ya da susmasının nedeni. Bu metni modun yazarına gönder."
   }
 };
-const line = (label, probe) => `${probe.isOk ? "✓" : "✗"} ${label}: ${probe.said}`;
+const line$1 = (label, probe) => `${probe.isOk ? "✓" : "✗"} ${label}: ${probe.said}`;
 function checkText(facts) {
-  const w = pick$2(WORDS$4);
-  const probes = [line(w.version, facts.version), line(w.surfaces, facts.surfaces), line(w.cost, facts.cost), line(w.model, facts.model)];
+  const w = pick$3(WORDS$4);
+  const probes = [line$1(w.version, facts.version), line$1(w.surfaces, facts.surfaces), line$1(w.cost, facts.cost), line$1(w.model, facts.model)];
   const isAllOk = [facts.version, facts.surfaces, facts.cost, facts.model].every((probe) => probe.isOk);
   return [w.title, "", ...probes, `  ${w.system}: ${facts.system}`, `  ${w.mods}: ${facts.mods.join(", ") || w.none}`, "", isAllOk ? w.allOk : w.someFailed].join(`
 `);
@@ -1613,7 +1613,7 @@ async function modelProbe($) {
   return { isOk: false, said: reply.reason === "api-error" ? `${reply.reason} ${reply.status ?? ""} ${reply.error ?? ""}`.trim() : reply.reason };
 }
 async function checkFacts($, mods) {
-  const w = pick$2(WORDS$4);
+  const w = pick$3(WORDS$4);
   const [version, surfaces, cost, model, os] = await Promise.all([
     $.session.version().then((v) => ({ isOk: true, said: v.version }), failed),
     $.session.surfaces().then((list) => list.length > 0 ? { isOk: true, said: list.join(", ") } : { isOk: false, said: w.noSurface }, failed),
@@ -1789,7 +1789,7 @@ const REGULAR = [
   762,
   466
 ];
-const BOLD = [
+const BOLD$5 = [
   252,
   351,
   563,
@@ -1926,7 +1926,7 @@ const PER_MILLE = 1000;
 const WEIGHT_LOW = 400;
 const WEIGHT_SPAN = 300;
 const UNKNOWN_EM = 0.6;
-const WIDE_EM$1 = 1;
+const WIDE_EM$2 = 1;
 const FIRST_WIDE = 11904;
 const TRACKING = [
   [10.5, 0.0146],
@@ -1947,51 +1947,51 @@ function trackingAt(size) {
   const [x1, y1] = TRACKING[upper] ?? last;
   return y0 + (y1 - y0) * (size - x0) / (x1 - x0);
 }
-function charEm(char, boldness) {
+function charEm$2(char, boldness) {
   const i = INDEX.get(char);
   if (i === undefined)
-    return (char.codePointAt(0) ?? 0) >= FIRST_WIDE ? WIDE_EM$1 : UNKNOWN_EM;
+    return (char.codePointAt(0) ?? 0) >= FIRST_WIDE ? WIDE_EM$2 : UNKNOWN_EM;
   const regular = REGULAR[i] ?? UNKNOWN_EM * PER_MILLE;
-  const bold = BOLD[i] ?? regular;
+  const bold = BOLD$5[i] ?? regular;
   return (regular + (bold - regular) * boldness) / PER_MILLE;
 }
-function textWidth(text, size, weight = WEIGHT_LOW) {
+function textWidth$1(text, size, weight = WEIGHT_LOW) {
   const boldness = Math.max(0, Math.min(1, (weight - WEIGHT_LOW) / WEIGHT_SPAN));
   const chars = [...text];
-  const advance = chars.reduce((sum, char) => sum + charEm(char, boldness), 0);
+  const advance = chars.reduce((sum, char) => sum + charEm$2(char, boldness), 0);
   return Math.max(0, (advance + chars.length * trackingAt(size)) * size);
 }
 
-const STAGGER_MS$2 = 45;
-const EASE$2 = "cubic-bezier(.2,.8,.2,1)";
-const RULES$2 = {
-  "m-in": `.m-in{animation:m-in .42s ${EASE$2} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
-  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$2} both}@keyframes m-fade{from{opacity:0}}`,
-  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$2} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
-  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$2} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
+const STAGGER_MS$4 = 45;
+const EASE$4 = "cubic-bezier(.2,.8,.2,1)";
+const RULES$4 = {
+  "m-in": `.m-in{animation:m-in .42s ${EASE$4} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
+  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$4} both}@keyframes m-fade{from{opacity:0}}`,
+  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$4} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
+  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$4} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
   "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
-  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$2} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
-  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$2} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
+  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$4} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
+  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$4} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
   "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
   "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
-  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$2}}svg:hover .m-wash{opacity:.12}`,
-  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$2}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
+  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$4}}svg:hover .m-wash{opacity:.12}`,
+  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$4}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
 };
-const REDUCED$4 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
-function motionCss$2(body) {
-  const used = Object.keys(RULES$2).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
-  return used.length === 0 ? "" : `${used.map((name) => RULES$2[name]).join("")}${REDUCED$4}`;
+const REDUCED$6 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+function motionCss$4(body) {
+  const used = Object.keys(RULES$4).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
+  return used.length === 0 ? "" : `${used.map((name) => RULES$4[name]).join("")}${REDUCED$6}`;
 }
-const MOTION_CSS$1 = Object.values(RULES$2).join("");
-const isEntering$2 = (cue) => cue.phase === "enter";
-function entering$2(body, cue, kind = "in") {
-  if (!isEntering$2(cue))
+const MOTION_CSS$1 = Object.values(RULES$4).join("");
+const isEntering$4 = (cue) => cue.phase === "enter";
+function entering$4(body, cue, kind = "in") {
+  if (!isEntering$4(cue))
     return body;
-  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$2}ms">${body}</g>`;
+  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$4}ms">${body}</g>`;
 }
-const delayOf = (cue, step) => `animation-delay:${cue.order * STAGGER_MS$2 + step}ms`;
+const delayOf = (cue, step) => `animation-delay:${cue.order * STAGGER_MS$4 + step}ms`;
 
-const DARK$3 = {
+const DARK$4 = {
   sheet: "#191917",
   card: "#1F1F1C",
   inset: "#171715",
@@ -2011,7 +2011,7 @@ const DARK$3 = {
     plan: { fg: "#E07BC0", tint: "#351F2E", line: "#6B3A5C" }
   }
 };
-const LIGHT$3 = {
+const LIGHT$4 = {
   sheet: "#F4F2EC",
   card: "#FFFFFF",
   inset: "#F6F4EF",
@@ -2032,9 +2032,9 @@ const LIGHT$3 = {
   }
 };
 const ROLE_NAMES$2 = ["read", "edit", "run", "ok", "warn", "danger", "plan"];
-const FONT$3 = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`;
-const MONO$2 = `ui-monospace, 'SF Mono', Menlo, monospace`;
-function varsOf(palette) {
+const FONT$4 = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`;
+const MONO$4 = `ui-monospace, 'SF Mono', Menlo, monospace`;
+function varsOf$1(palette) {
   const base = ["sheet", "card", "inset", "line", "strong", "track", "hi", "mid", "lo"];
   const neutral = base.map((key) => `--${key}:${palette[key]}`);
   const roles = ROLE_NAMES$2.flatMap((name) => {
@@ -2047,8 +2047,8 @@ function roleClasses() {
   return ROLE_NAMES$2.map((name) => `.fg-${name}{fill:var(--${name})}.bg-${name}{fill:var(--${name}-t)}.st-${name}{stroke:var(--${name})}.ln-${name}{stroke:var(--${name}-l)}`).join("");
 }
 const TYPE_CSS = [
-  `text{font-family:${FONT$3}}`,
-  `.num{font-family:${MONO$2};font-variant-numeric:tabular-nums}`,
+  `text{font-family:${FONT$4}}`,
+  `.num{font-family:${MONO$4};font-variant-numeric:tabular-nums}`,
   ".hi{fill:var(--hi)}.mid{fill:var(--mid)}.lo{fill:var(--lo)}",
   ".eb{font-size:10.5px;font-weight:700;letter-spacing:.1em}",
   ".hl{font-size:17px;font-weight:620}.ti{font-size:13px;font-weight:600}",
@@ -2057,15 +2057,15 @@ const TYPE_CSS = [
   ".f-line{fill:var(--line)}.f-strong{fill:var(--strong)}.f-mid{fill:var(--mid)}"
 ].join("");
 const MOTION_CSS = ".breathe{animation:breathe 1.8s ease-in-out infinite}@keyframes breathe{50%{opacity:.45}}";
-const REDUCED$3 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+const REDUCED$5 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
 function styleOf() {
-  const dark = varsOf(DARK$3);
-  return `<style>svg{${varsOf(LIGHT$3)}}svg.t-dark{${dark}}@media (prefers-color-scheme: dark){svg.t-auto{${dark}}}${TYPE_CSS}${roleClasses()}${MOTION_CSS}${REDUCED$3}</style>`;
+  const dark = varsOf$1(DARK$4);
+  return `<style>svg{${varsOf$1(LIGHT$4)}}svg.t-dark{${dark}}@media (prefers-color-scheme: dark){svg.t-auto{${dark}}}${TYPE_CSS}${roleClasses()}${MOTION_CSS}${REDUCED$5}</style>`;
 }
-const SCHEME$3 = { light: "light", dark: "dark", auto: "light dark" };
-function svgDoc$2(doc) {
+const SCHEME$5 = { light: "light", dark: "dark", auto: "light dark" };
+function svgDoc$3(doc) {
   const width = Math.round(doc.width);
-  const scheme = `:root{color-scheme:${SCHEME$3[doc.theme]}}`;
+  const scheme = `:root{color-scheme:${SCHEME$5[doc.theme]}}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" class="t-${doc.theme}" width="${width}" height="${doc.height}" viewBox="0 0 ${width} ${doc.height}">${styleOf()}<style>${scheme}${doc.css ?? ""}</style>${doc.body}</svg>`;
 }
 function themeOf(value) {
@@ -2075,58 +2075,58 @@ function themeOf(value) {
   return name.includes("dark") ? "dark" : "auto";
 }
 
-const settled = (spec) => spec.cue === undefined ? svgDoc$2(spec) : svgDoc$2({ width: spec.width, height: spec.height, theme: spec.theme, body: entering$2(spec.body, spec.cue), css: MOTION_CSS$1 });
-const HEAD = 44;
+const settled = (spec) => spec.cue === undefined ? svgDoc$3(spec) : svgDoc$3({ width: spec.width, height: spec.height, theme: spec.theme, body: entering$4(spec.body, spec.cue), css: MOTION_CSS$1 });
+const HEAD$1 = 44;
 const GROUP = 28;
-const ROW$2 = 62;
-const TEXT_X = 16;
-const GAP$2 = 6;
-function esc(text) {
+const ROW$4 = 62;
+const TEXT_X$1 = 16;
+const GAP$4 = 6;
+function esc$1(text) {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-const MONO_EM$1 = 0.6;
+const MONO_EM$4 = 0.6;
 const WEIGHT_BODY = 500;
-function measure$2(text, size, weight = WEIGHT_BODY) {
-  return textWidth(text, size, weight);
+function measure$3(text, size, weight = WEIGHT_BODY) {
+  return textWidth$1(text, size, weight);
 }
-const monoMeasure = (text, size) => [...text].length * size * MONO_EM$1;
-function fit$2(text, width, font) {
+const monoMeasure = (text, size) => [...text].length * size * MONO_EM$4;
+function fit$3(text, width, font) {
   const { size, weight = WEIGHT_BODY } = font;
-  if (measure$2(text, size, weight) <= width)
+  if (measure$3(text, size, weight) <= width)
     return text;
   const chars = [...text];
-  while (chars.length > 1 && measure$2(`${chars.join("").trimEnd()}…`, size, weight) > width)
+  while (chars.length > 1 && measure$3(`${chars.join("").trimEnd()}…`, size, weight) > width)
     chars.pop();
   return `${chars.join("").trimEnd()}…`;
 }
-function headSvg(spec) {
-  const meta = spec.meta === "" ? "" : `<text x="${spec.width - TEXT_X}" y="28" text-anchor="end" style="font-size:11.5px" class="num ${spec.metaRole === null ? "lo" : `fg-${spec.metaRole}`}">${esc(spec.meta)}</text>`;
-  const title = fit$2(spec.title, spec.width - TEXT_X * 2 - measure$2(spec.meta, 12) - GAP$2 * 2, { size: 16, weight: 600 });
-  const body = `<text x="${TEXT_X}" y="28" style="font-size:16px;font-weight:600" class="hi">${esc(title)}</text>${meta}`;
-  return { source: settled({ width: spec.width, height: HEAD, theme: spec.theme, body, cue: spec.cue }), alt: `${catalogWords().allMods}: ${spec.title}${spec.meta === "" ? "" : ` · ${spec.meta}`}`, height: HEAD };
+function headSvg$1(spec) {
+  const meta = spec.meta === "" ? "" : `<text x="${spec.width - TEXT_X$1}" y="28" text-anchor="end" style="font-size:11.5px" class="num ${spec.metaRole === null ? "lo" : `fg-${spec.metaRole}`}">${esc$1(spec.meta)}</text>`;
+  const title = fit$3(spec.title, spec.width - TEXT_X$1 * 2 - measure$3(spec.meta, 12) - GAP$4 * 2, { size: 16, weight: 600 });
+  const body = `<text x="${TEXT_X$1}" y="28" style="font-size:16px;font-weight:600" class="hi">${esc$1(title)}</text>${meta}`;
+  return { source: settled({ width: spec.width, height: HEAD$1, theme: spec.theme, body, cue: spec.cue }), alt: `${catalogWords().allMods}: ${spec.title}${spec.meta === "" ? "" : ` · ${spec.meta}`}`, height: HEAD$1 };
 }
 function labelSvg(spec) {
   const { label } = spec;
   const count = catalogWords().mods(spec.count);
-  const body = `<text x="${TEXT_X}" y="${GROUP - 8}" style="font-size:11px;font-weight:600" class="lo">${esc(label)}</text><text x="${spec.width - TEXT_X}" y="${GROUP - 8}" text-anchor="end" style="font-size:11px" class="num lo">${esc(count)}</text>`;
+  const body = `<text x="${TEXT_X$1}" y="${GROUP - 8}" style="font-size:11px;font-weight:600" class="lo">${esc$1(label)}</text><text x="${spec.width - TEXT_X$1}" y="${GROUP - 8}" text-anchor="end" style="font-size:11px" class="num lo">${esc$1(count)}</text>`;
   return { source: settled({ width: spec.width, height: GROUP, theme: spec.theme, body, cue: spec.cue }), alt: `${label}: ${count}`, height: GROUP };
 }
 const groupSvg = (spec) => labelSvg({ ...spec, label: catalogWords().groups[spec.group] });
 const GUIDE = { one: 28, two: 44 };
 function guideSvg(spec) {
   const { guide, width } = spec;
-  const right = width - TEXT_X;
+  const right = width - TEXT_X$1;
   const words = catalogWords();
   const options = guide.options.length === 0 ? "" : words.options(guide.options.join(", "));
   const height = options === "" ? GUIDE.one : GUIDE.two;
-  const name = fit$2(guide.mod, (right - TEXT_X) / 2, { size: 13, weight: 560 });
-  const room = Math.floor((right - TEXT_X - measure$2(name, 13, 560) - GAP$2 * 2) / (11.5 * MONO_EM$1));
+  const name = fit$3(guide.mod, (right - TEXT_X$1) / 2, { size: 13, weight: 560 });
+  const room = Math.floor((right - TEXT_X$1 - measure$3(name, 13, 560) - GAP$4 * 2) / (11.5 * MONO_EM$4));
   const all = commandsLine(guide);
   const commands = [...all].length <= room ? all : `${[...all].slice(0, Math.max(1, room - 1)).join("")}…`;
   const body = [
-    `<text x="${TEXT_X}" y="19" style="font-size:13px;font-weight:560" class="hi">${esc(name)}</text>`,
-    all === "" ? "" : `<text x="${right}" y="19" text-anchor="end" style="font-size:11.5px" class="num mid">${esc(commands)}</text>`,
-    options === "" ? "" : `<text x="${TEXT_X}" y="36" style="font-size:11px" class="lo">${esc(fit$2(options, right - TEXT_X, { size: 11 }))}</text>`
+    `<text x="${TEXT_X$1}" y="19" style="font-size:13px;font-weight:560" class="hi">${esc$1(name)}</text>`,
+    all === "" ? "" : `<text x="${right}" y="19" text-anchor="end" style="font-size:11.5px" class="num mid">${esc$1(commands)}</text>`,
+    options === "" ? "" : `<text x="${TEXT_X$1}" y="36" style="font-size:11px" class="lo">${esc$1(fit$3(options, right - TEXT_X$1, { size: 11 }))}</text>`
   ].join("");
   const alt = [guide.mod, all === "" ? words.noCommand : all, options].filter(Boolean).join(" · ");
   return { source: settled({ width, height, theme: spec.theme, body, cue: spec.cue }), alt, height };
@@ -2147,23 +2147,23 @@ function stateLabel(mod) {
     return words.stateUnknown;
   return mod.isEnabled ? words.onWord : words.offWord;
 }
-function rowSvg$1(spec) {
+function rowSvg$3(spec) {
   const { mod, width } = spec;
-  const right = width - TEXT_X;
+  const right = width - TEXT_X$1;
   const versionText = mod.version === null ? "" : `v${mod.version}`;
   const state = stateWord(mod);
   const edge = [state?.text, versionText].filter(Boolean).join(" · ");
-  const name = fit$2(mod.name, right - TEXT_X - monoMeasure(edge, 11.5) - GAP$2 * 2, { size: 13, weight: 560 });
+  const name = fit$3(mod.name, right - TEXT_X$1 - monoMeasure(edge, 11.5) - GAP$4 * 2, { size: 13, weight: 560 });
   const isQuiet = mod.isEnabled === false;
-  const lineRoom = right - TEXT_X;
+  const lineRoom = right - TEXT_X$1;
   const body = [
-    `<text x="${TEXT_X}" y="21" style="font-size:13px;font-weight:560" class="${isQuiet ? "lo" : "hi"}">${esc(name)}</text>`,
-    edge === "" ? "" : `<text x="${right}" y="21" text-anchor="end" style="font-size:11.5px" class="num ${state?.ink ?? "lo"}">${esc(edge)}</text>`,
-    `<text x="${TEXT_X}" y="39" style="font-size:12px" class="${mod.isHealthy ? isQuiet ? "lo" : "mid" : "fg-danger"}">${esc(fit$2(mod.description, lineRoom, { size: 12 }))}</text>`,
-    `<text x="${TEXT_X}" y="55" style="font-size:11px" class="lo">${esc(fit$2(placeLine(mod), lineRoom, { size: 11 }))}</text>`
+    `<text x="${TEXT_X$1}" y="21" style="font-size:13px;font-weight:560" class="${isQuiet ? "lo" : "hi"}">${esc$1(name)}</text>`,
+    edge === "" ? "" : `<text x="${right}" y="21" text-anchor="end" style="font-size:11.5px" class="num ${state?.ink ?? "lo"}">${esc$1(edge)}</text>`,
+    `<text x="${TEXT_X$1}" y="39" style="font-size:12px" class="${mod.isHealthy ? isQuiet ? "lo" : "mid" : "fg-danger"}">${esc$1(fit$3(mod.description, lineRoom, { size: 12 }))}</text>`,
+    `<text x="${TEXT_X$1}" y="55" style="font-size:11px" class="lo">${esc$1(fit$3(placeLine(mod), lineRoom, { size: 11 }))}</text>`
   ].join("");
   const alt = `${[mod.name, versionText].filter(Boolean).join(" ")} · ${placeLine(mod)} · ${stateLabel(mod)} · ${mod.description}`;
-  return { source: settled({ width, height: ROW$2, theme: spec.theme, body, cue: spec.cue }), alt, height: ROW$2 };
+  return { source: settled({ width, height: ROW$4, theme: spec.theme, body, cue: spec.cue }), alt, height: ROW$4 };
 }
 
 const LETTERS = {
@@ -2229,10 +2229,10 @@ function pixelWord(word, o) {
 }
 
 const NARROW$1 = 280;
-const WIDE$1 = 520;
+const WIDE$2 = 520;
 const between = (k, from, to) => Math.round((from + (to - from) * k) * 10) / 10;
 function sizesOf(width) {
-  const k = Math.max(0, Math.min(1, (width - NARROW$1) / (WIDE$1 - NARROW$1)));
+  const k = Math.max(0, Math.min(1, (width - NARROW$1) / (WIDE$2 - NARROW$1)));
   const row = Math.round(between(k, 30, 38));
   const inset = between(k, 16, 22);
   const icon = between(k, 16, 20);
@@ -2262,8 +2262,8 @@ const BADGE_GAP = 6;
 const HUB_CSS = [
   "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}"
 ].join("");
-const doc = (spec) => svgDoc$2({ ...spec, css: motionCss$2(spec.body) || HUB_CSS });
-const LIVE_DOT = { r: 3, gap: 9 };
+const doc = (spec) => svgDoc$3({ ...spec, css: motionCss$4(spec.body) || HUB_CSS });
+const LIVE_DOT$1 = { r: 3, gap: 9 };
 function valueOf(card) {
   if (card === null || card.detail === "")
     return null;
@@ -2276,45 +2276,45 @@ function glyphInk(card) {
   return role === null ? "f-mid" : `fg-${role}`;
 }
 function hubHeadSvg(spec) {
-  const isDropping = isEntering$2(spec.cue);
+  const isDropping = isEntering$4(spec.cue);
   const cellAttrs = isDropping ? (at) => ` class="m-px" style="${delayOf(spec.cue, at.index * LETTER_MS + at.row * ROW_MS + at.col * COLUMN_MS)}"` : undefined;
   const z = sizesOf(spec.width);
   const mark = pixelWord("modz", { x: z.inset, y: (z.head - 7 * z.mark.pitch) / 2, ...z.mark, className: "fg-edit", cellAttrs });
-  const meta = `<text x="${spec.width - z.inset}" y="${z.head / 2 + 4}" text-anchor="end" style="font-size:${z.meta}px" class="num lo">${esc(spec.meta)}</text>`;
-  const body = mark.svg + entering$2(meta, { ...spec.cue, order: spec.cue.order + 4 }, "fade");
-  const css = HUB_CSS + motionCss$2(body);
-  return { source: svgDoc$2({ width: spec.width, height: z.head, theme: spec.theme, body, css }), alt: `modz · ${spec.meta}`, height: z.head };
+  const meta = `<text x="${spec.width - z.inset}" y="${z.head / 2 + 4}" text-anchor="end" style="font-size:${z.meta}px" class="num lo">${esc$1(spec.meta)}</text>`;
+  const body = mark.svg + entering$4(meta, { ...spec.cue, order: spec.cue.order + 4 }, "fade");
+  const css = HUB_CSS + motionCss$4(body);
+  return { source: svgDoc$3({ width: spec.width, height: z.head, theme: spec.theme, body, css }), alt: `modz · ${spec.meta}`, height: z.head };
 }
-function sectionSvg(spec) {
+function sectionSvg$1(spec) {
   const z = sizesOf(spec.width);
-  const body = `<text x="${z.inset}" y="${z.section - 8}" style="font-size:${z.label}px;font-weight:600" class="lo">${esc(spec.label)}</text>`;
-  return { source: doc({ width: spec.width, height: z.section, theme: spec.theme, body: entering$2(body, spec.cue, "fade") }), alt: spec.label, height: z.section };
+  const body = `<text x="${z.inset}" y="${z.section - 8}" style="font-size:${z.label}px;font-weight:600" class="lo">${esc$1(spec.label)}</text>`;
+  return { source: doc({ width: spec.width, height: z.section, theme: spec.theme, body: entering$4(body, spec.cue, "fade") }), alt: spec.label, height: z.section };
 }
 function rowIcon(row, z) {
   const glyph = pixelGlyph(row.entry.icon, { x: z.inset, y: (z.row - z.icon) / 2, box: z.icon, ...z.glyph, className: glyphInk(row.card) });
   return isLive(row.card) ? `<g class="m-breathe">${glyph}</g>` : glyph;
 }
 const isLive = (card) => card !== null && card.detail !== "" && card.tone === "live";
-function titleOf(row, z) {
+function titleOf$1(row, z) {
   const title = row.entry.title;
-  const titleEnd = z.textX + measure$2(title, z.title.size, z.title.weight);
-  const text = `<text x="${z.textX}" y="${z.baseline}" style="font-size:${z.title.size}px;font-weight:500" class="hi">${esc(title)}</text>`;
+  const titleEnd = z.textX + measure$3(title, z.title.size, z.title.weight);
+  const text = `<text x="${z.textX}" y="${z.baseline}" style="font-size:${z.title.size}px;font-weight:500" class="hi">${esc$1(title)}</text>`;
   const badge = row.entry.badge;
   if (badge === null)
     return { svg: text, end: titleEnd };
   const word = badge.toLocaleLowerCase();
-  const tag = `<text x="${titleEnd + BADGE_GAP}" y="${z.baseline}" style="font-size:${z.label}px;font-weight:500" class="lo">${esc(word)}</text>`;
-  return { svg: text + tag, end: titleEnd + BADGE_GAP + measure$2(word, z.label, 500) };
+  const tag = `<text x="${titleEnd + BADGE_GAP}" y="${z.baseline}" style="font-size:${z.label}px;font-weight:500" class="lo">${esc$1(word)}</text>`;
+  return { svg: text + tag, end: titleEnd + BADGE_GAP + measure$3(word, z.label, 500) };
 }
 const NARROW_VALUE = { size: 12, weight: 400 };
 function shortValue(text, width, font = NARROW_VALUE) {
-  const fits = (candidate) => measure$2(candidate, font.size, font.weight) <= width;
+  const fits = (candidate) => measure$3(candidate, font.size, font.weight) <= width;
   if (fits(text))
     return text;
   const first = text.split(" · ")[0] ?? text;
   const words = first.split(" ");
   if (words.length === 1)
-    return fit$2(first, width, font);
+    return fit$3(first, width, font);
   for (let n = words.length;n >= 2; n--) {
     const kept = words.slice(0, n).join(" ");
     if (fits(kept))
@@ -2328,39 +2328,39 @@ function valueSvg(value, room) {
   const text = shortValue(value.text, room.to - room.from, room.z.value);
   if (text === "")
     return "";
-  const words = `<text x="${room.to}" y="${room.z.baseline}" text-anchor="end" style="font-size:${room.z.value.size}px;font-variant-numeric:tabular-nums" class="${value.ink}">${esc(text)}</text>`;
+  const words = `<text x="${room.to}" y="${room.z.baseline}" text-anchor="end" style="font-size:${room.z.value.size}px;font-variant-numeric:tabular-nums" class="${value.ink}">${esc$1(text)}</text>`;
   if (!value.isLive)
     return words;
-  const x = room.to - measure$2(text, room.z.value.size, room.z.value.weight) - LIVE_DOT.gap;
+  const x = room.to - measure$3(text, room.z.value.size, room.z.value.weight) - LIVE_DOT$1.gap;
   const y = room.z.row / 2;
-  const dot = (cls) => `<circle cx="${x}" cy="${y}" r="${LIVE_DOT.r}" class="fg-edit${cls}"/>`;
+  const dot = (cls) => `<circle cx="${x}" cy="${y}" r="${LIVE_DOT$1.r}" class="fg-edit${cls}"/>`;
   return dot(" m-ring") + dot("") + words;
 }
 function hubRowSvg(spec) {
   const { width, row } = spec;
   const z = sizesOf(width);
-  const title = titleOf(row, z);
+  const title = titleOf$1(row, z);
   const value = spec.buttonRoom > 0 ? null : valueOf(row.card);
   const body = [
     rowIcon(row, z),
     title.svg,
-    valueSvg(value, { from: title.end + VALUE_GAP + (value?.isLive ? LIVE_DOT.gap + LIVE_DOT.r * 2 : 0), to: width - z.inset, z })
+    valueSvg(value, { from: title.end + VALUE_GAP + (value?.isLive ? LIVE_DOT$1.gap + LIVE_DOT$1.r * 2 : 0), to: width - z.inset, z })
   ].join("");
   const alt = `${row.entry.title}${row.entry.badge === null ? "" : ` (${row.entry.badge})`}${value === null ? "" : `: ${value.text}`}`;
-  return { source: doc({ width, height: z.row, theme: spec.theme, body: entering$2(body, spec.cue) }), alt, height: z.row };
+  return { source: doc({ width, height: z.row, theme: spec.theme, body: entering$4(body, spec.cue) }), alt, height: z.row };
 }
 function hubLineSvg(spec) {
   const z = sizesOf(spec.width);
   const right = spec.width - z.inset;
   const { value } = spec.line;
-  const room = right - z.textX - (value === "" ? 0 : measure$2(value, z.label, 400) + VALUE_GAP);
-  const label = fit$2(spec.line.label, room, { size: z.value.size, weight: 400 });
+  const room = right - z.textX - (value === "" ? 0 : measure$3(value, z.label, 400) + VALUE_GAP);
+  const label = fit$3(spec.line.label, room, { size: z.value.size, weight: 400 });
   const y = z.line / 2 + z.value.size * 0.35;
   const body = [
-    `<text x="${z.textX}" y="${y}" style="font-size:${z.value.size}px" class="mid">${esc(label)}</text>`,
-    value === "" ? "" : `<text x="${right}" y="${y}" text-anchor="end" style="font-size:${z.label}px;font-variant-numeric:tabular-nums" class="lo">${esc(value)}</text>`
+    `<text x="${z.textX}" y="${y}" style="font-size:${z.value.size}px" class="mid">${esc$1(label)}</text>`,
+    value === "" ? "" : `<text x="${right}" y="${y}" text-anchor="end" style="font-size:${z.label}px;font-variant-numeric:tabular-nums" class="lo">${esc$1(value)}</text>`
   ].join("");
-  return { source: doc({ width: spec.width, height: z.line, theme: spec.theme, body: entering$2(body, spec.cue) }), alt: [spec.line.label, value].filter(Boolean).join(": "), height: z.line };
+  return { source: doc({ width: spec.width, height: z.line, theme: spec.theme, body: entering$4(body, spec.cue) }), alt: [spec.line.label, value].filter(Boolean).join(": "), height: z.line };
 }
 
 const DESKTOP_FOOT$1 = { paddingX: 2, marginTop: 1 };
@@ -2404,15 +2404,15 @@ function firstRunRow(ui, view, pen) {
   }, words.firstRun)), pen.press({ box: "row-add-mods", key: "add-mods", drawing: built, pane: MODS_PANE }));
 }
 
-const BLANK = "ㅤ";
-const CELL_PX = 11.9;
-const BUTTON_PX = 28;
-const RUN_SPAN = 2;
-const LINE_SPAN = "400%";
-function PressCover(ui, o) {
+const BLANK$2 = "ㅤ";
+const CELL_PX$2 = 11.9;
+const BUTTON_PX$3 = 28;
+const RUN_SPAN$2 = 2;
+const LINE_SPAN$2 = "400%";
+function PressCover$2(ui, o) {
   const { Box, Button } = ui;
-  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX * 2)));
-  const label = BLANK.repeat(Math.ceil(o.width * RUN_SPAN / CELL_PX));
+  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX$3 * 2)));
+  const label = BLANK$2.repeat(Math.ceil(o.width * RUN_SPAN$2 / CELL_PX$2));
   const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey };
   return h(Box, {
     position: "absolute",
@@ -2426,7 +2426,7 @@ function PressCover(ui, o) {
   }, Array.from({ length: lines }, (_, i) => h(Box, {
     key: `${o.key}~line${i}`,
     flexDirection: "row",
-    width: LINE_SPAN,
+    width: LINE_SPAN$2,
     marginLeft: -1,
     flexShrink: 0
   }, h(Button, {
@@ -2437,32 +2437,32 @@ function PressCover(ui, o) {
     onPress: o.onPress
   }))));
 }
-const STILL = "<style>*{animation:none!important;transition:none!important}</style>";
-const stillSource = (source) => source.replace(/<\/svg>\s*$/, `${STILL}</svg>`);
-function stillSvg(ui, drawing) {
+const STILL$2 = "<style>*{animation:none!important;transition:none!important}</style>";
+const stillSource$2 = (source) => source.replace(/<\/svg>\s*$/, `${STILL$2}</svg>`);
+function stillSvg$2(ui, drawing) {
   if (drawing.type !== "Svg")
     return drawing;
   const { Svg } = ui;
   const { key, source, alt, width, height } = drawing.props;
   return h(Svg, {
     key,
-    source: stillSource(source),
+    source: stillSource$2(source),
     alt,
     width,
     height
   });
 }
-const FALLBACK_PX = 52;
-const FALLBACK_WIDTH_PX = 360;
-function PressRow(ui, o) {
+const FALLBACK_PX$2 = 52;
+const FALLBACK_WIDTH_PX$2 = 360;
+function PressRow$2(ui, o) {
   const { Box } = ui;
   const props = o.drawing.type === "Svg" ? o.drawing.props : {};
-  const width = props.width ?? FALLBACK_WIDTH_PX;
-  const height = props.height ?? FALLBACK_PX;
+  const width = props.width ?? FALLBACK_WIDTH_PX$2;
+  const height = props.height ?? FALLBACK_PX$2;
   return h(Box, {
     key: o.box,
     alignSelf: "flex-start"
-  }, stillSvg(ui, o.drawing), PressCover(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
+  }, stillSvg$2(ui, o.drawing), PressCover$2(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
 }
 
 const linesOf = (item) => item.more > 0 ? [...item.lines, { label: hubWords().more(item.more), value: "" }] : item.lines;
@@ -2484,7 +2484,7 @@ function nowDesktop(ui, now, tools) {
   const { Box } = ui;
   const { width, theme } = tools;
   const label = hubWords().now;
-  const eyebrow = tools.keep("eyebrow-now", { width, theme, label }, (cue) => sectionSvg({ width, theme, label, cue }));
+  const eyebrow = tools.keep("eyebrow-now", { width, theme, label }, (cue) => sectionSvg$1({ width, theme, label, cue }));
   return h(Box, {
     key: "now",
     flexDirection: "column"
@@ -2514,9 +2514,9 @@ function terminalGroup(ui, item, button) {
     columnGap: 1
   }, color === undefined ? h(Text, {
     dimColor: true
-  }, GLYPH[entry.icon]) : h(Text, {
+  }, GLYPH$1[entry.icon]) : h(Text, {
     color
-  }, GLYPH[entry.icon]), h(Text, {
+  }, GLYPH$1[entry.icon]), h(Text, {
     bold: true
   }, entry.title), detailText(ui, tone, card?.detail ?? ""), h(Box, {
     flexGrow: 1
@@ -2546,12 +2546,12 @@ function nowTerminal(ui, now, button) {
   }, hubWords().now), now.map((item) => terminalGroup(ui, item, button)));
 }
 
-const PX_PER_COLUMN$2 = 9;
+const PX_PER_COLUMN$3 = 9;
 const WIDTH_MIN$1 = 240;
 const WIDTH_MAX$1 = 640;
 const EDIT_BUTTON_ROOM = 136;
 const INSET = 1;
-const hubWidth = (columns) => Math.max(WIDTH_MIN$1, Math.min(WIDTH_MAX$1, columns * PX_PER_COLUMN$2 - PX_PER_COLUMN$2));
+const hubWidth = (columns) => Math.max(WIDTH_MIN$1, Math.min(WIDTH_MAX$1, columns * PX_PER_COLUMN$3 - PX_PER_COLUMN$3));
 const inSection = (rows, section) => rows.filter((row) => row.entry.section === section);
 function rowControls(ui, view, opts) {
   const { Box, Button } = ui;
@@ -2663,7 +2663,7 @@ function pressRow(ui, view, opts) {
     width,
     height: drawing.height
   });
-  return PressRow(ui, { box: opts.box, key: opts.key, drawing: svg, onPress: () => view.actions.onOpen(pane) });
+  return PressRow$2(ui, { box: opts.box, key: opts.key, drawing: svg, onPress: () => view.actions.onOpen(pane) });
 }
 function desktopGroup(ui, view, opts) {
   const { Box } = ui;
@@ -2671,7 +2671,7 @@ function desktopGroup(ui, view, opts) {
   const { width, theme } = pen;
   const buttonRoom = view.isEditing ? EDIT_BUTTON_ROOM : 0;
   const panes = group.isHiddenGroup ? null : group.rows.map((row) => row.entry.pane);
-  const eyebrow = pen.keep(`eyebrow-${group.key}`, { width, theme, label: group.label }, (cue) => sectionSvg({ width, theme, label: group.label, cue }));
+  const eyebrow = pen.keep(`eyebrow-${group.key}`, { width, theme, label: group.label }, (cue) => sectionSvg$1({ width, theme, label: group.label, cue }));
   return h(Box, {
     key: `section-${group.key}`,
     flexDirection: "column"
@@ -2757,9 +2757,9 @@ function terminalRow$2(ui, view, opts) {
     columnGap: 1
   }, glyphColor === undefined ? h(Text, {
     dimColor: true
-  }, GLYPH[row.entry.icon]) : h(Text, {
+  }, GLYPH$1[row.entry.icon]) : h(Text, {
     color: glyphColor
-  }, GLYPH[row.entry.icon]), h(Text, {
+  }, GLYPH$1[row.entry.icon]), h(Text, {
     bold: true
   }, row.entry.title), row.entry.badge === null ? null : h(Text, {
     color: "permission"
@@ -2827,7 +2827,7 @@ const NAMED = [
 const MIN_WORDS = 30;
 const SAMPLE_CHARS = 4000;
 const PROSE_SHARE = 0.2;
-function targetOf(opts) {
+function targetOf$1(opts) {
   if (typeof opts.setting === "string" && opts.setting.trim() !== "") {
     const name = opts.setting.trim();
     const named = NAMED.find((entry) => entry.pattern.test(name));
@@ -2836,15 +2836,15 @@ function targetOf(opts) {
   return opts.uiLang === "tr" ? { name: "Turkish", profile: TURKISH } : undefined;
 }
 const wordsOf$2 = (text) => text.slice(0, SAMPLE_CHARS).toLowerCase().match(/\p{L}+/gu) ?? [];
-function shareOf(words, profile) {
+function shareOf$1(words, profile) {
   const hits = words.filter((word) => profile.words.has(word) || profile.letters?.test(word) === true).length;
   return hits / words.length;
 }
 function needsReminder(opts) {
   const words = wordsOf$2(opts.text);
-  if (words.length < MIN_WORDS || shareOf(words, ENGLISH) < PROSE_SHARE)
+  if (words.length < MIN_WORDS || shareOf$1(words, ENGLISH) < PROSE_SHARE)
     return false;
-  return opts.target.profile === undefined || shareOf(words, opts.target.profile) < PROSE_SHARE;
+  return opts.target.profile === undefined || shareOf$1(words, opts.target.profile) < PROSE_SHARE;
 }
 const reminderOf = (target) => `Reply in ${target.name}, the user's language; keep code, paths and identifiers as they are. ` + `Write each tool call's description in ${target.name} too, in plain words.`;
 const whyReminderOf = (target) => {
@@ -2873,7 +2873,7 @@ function wireLanguageKeeper(on, options) {
     if (asksWhy)
       unasked.add(agentId ?? MAIN);
     if (agentId === undefined)
-      armed = targetOf({ setting: await languageSetting($), uiLang: lang() });
+      armed = targetOf$1({ setting: await languageSetting($), uiLang: lang$1() });
     return next(e);
   });
   on("tool.call", async (_$, e, next) => {
@@ -2892,13 +2892,13 @@ function wireLanguageKeeper(on, options) {
   });
 }
 
-const PX_PER_COLUMN$1 = 9;
+const PX_PER_COLUMN$2 = 9;
 const WIDTH_MIN = 320;
 const WIDTH_MAX = 900;
 function groupsOf(mods) {
   return GROUPS.map((group) => [group, mods.filter((mod) => mod.group === group)]).filter(([, list]) => list.length > 0);
 }
-function stateOf$1(mod) {
+function stateOf$2(mod) {
   const words = catalogWords();
   if (!mod.isHealthy)
     return { glyph: "✕", color: "error", word: words.brokenWord };
@@ -2908,7 +2908,7 @@ function stateOf$1(mod) {
 }
 function terminalRow$1(ui, mod) {
   const { Box, Text } = ui;
-  const state = stateOf$1(mod);
+  const state = stateOf$2(mod);
   return h(Box, {
     key: `mod-${mod.name}`,
     flexDirection: "column"
@@ -3036,7 +3036,7 @@ function terminalTree(ui, view) {
 }
 function desktopTree(ui, view) {
   const { Box, Svg } = ui;
-  const width = Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, view.columns * PX_PER_COLUMN$1 - PX_PER_COLUMN$1));
+  const width = Math.max(WIDTH_MIN, Math.min(WIDTH_MAX, view.columns * PX_PER_COLUMN$2 - PX_PER_COLUMN$2));
   const health = healthOf(view.market.mods);
   let order = 0;
   const draw = (key, what, build) => {
@@ -3058,7 +3058,7 @@ function desktopTree(ui, view) {
   return h(Box, {
     flexDirection: "column",
     rowGap: 1
-  }, draw("head", [title, health], (cue) => headSvg({ width, theme: view.theme, title, meta: health.text, metaRole: health.isBad ? "danger" : null, cue })), installSection(ui, view, label("install", words.install, installsOf(view.market).length)), guides.length === 0 ? null : h(Box, {
+  }, draw("head", [title, health], (cue) => headSvg$1({ width, theme: view.theme, title, meta: health.text, metaRole: health.isBad ? "danger" : null, cue })), installSection(ui, view, label("install", words.install, installsOf(view.market).length)), guides.length === 0 ? null : h(Box, {
     key: "guide",
     flexDirection: "column"
   }, label("guide", words.guide, guides.length), guides.map((guide) => h(Box, {
@@ -3068,7 +3068,7 @@ function desktopTree(ui, view) {
     flexDirection: "column"
   }, draw(`eyebrow-${group}`, [group, list.length], (cue) => groupSvg({ width, theme: view.theme, group, count: list.length, cue })), list.map((mod) => h(Box, {
     key: `mod-${mod.name}`
-  }, draw(`row-${mod.name}`, mod, (cue) => rowSvg$1({ width, theme: view.theme, mod, cue })))))));
+  }, draw(`row-${mod.name}`, mod, (cue) => rowSvg$3({ width, theme: view.theme, mod, cue })))))));
 }
 const modzTree = (ui, view) => withHome(ui, catalogTree(ui, view), view.onHome);
 function catalogTree(ui, view) {
@@ -3095,7 +3095,7 @@ function mix(a, b, t) {
 }
 const DARK_LO = "#8E8A80";
 const LIGHT_LO = "#77726A";
-const DARK$2 = {
+const DARK$3 = {
   sheet: "#191917",
   card: "#1F1F1C",
   inset: "#171715",
@@ -3117,7 +3117,7 @@ const DARK$2 = {
     neutral: { fg: DARK_LO, tint: "#2A2A27", line: "#3A3935" }
   }
 };
-const LIGHT$2 = {
+const LIGHT$3 = {
   sheet: "#F4F2EC",
   card: "#FFFFFF",
   inset: "#F6F4EF",
@@ -3139,7 +3139,7 @@ const LIGHT$2 = {
     neutral: { fg: LIGHT_LO, tint: "#EFECE5", line: "#DCD7CC" }
   }
 };
-const paletteOf = (isLight) => isLight ? LIGHT$2 : DARK$2;
+const paletteOf = (isLight) => isLight ? LIGHT$3 : DARK$3;
 const TONE_ROLE = {
   purple: "read",
   blue: "read",
@@ -3165,11 +3165,11 @@ function shimmerTones(p, isLight) {
   return out;
 }
 
-const FONT$2 = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`;
-const MONO$1 = `ui-monospace, 'SF Mono', Menlo, monospace`;
+const FONT$3 = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`;
+const MONO$3 = `ui-monospace, 'SF Mono', Menlo, monospace`;
 const BOLD_WIDTH = 1.07;
 const escape$1 = (text) => text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-function measure$1(text, size, isBold = false) {
+function measure$2(text, size, isBold = false) {
   const plain = [...text].reduce((sum, ch) => {
     if ("iljtfıI.,:;|!'` ".includes(ch))
       return sum + size * 0.3;
@@ -3181,20 +3181,20 @@ function measure$1(text, size, isBold = false) {
 }
 function fitMiddle(text, width, font) {
   const { size, isBold = false } = font;
-  if (measure$1(text, size, isBold) <= width)
+  if (measure$2(text, size, isBold) <= width)
     return text;
   const chars = [...text];
   let keep = chars.length - 1;
   while (keep > 2) {
     const head = Math.ceil(keep / 2);
     const cut = `${chars.slice(0, head).join("")}…${chars.slice(chars.length - (keep - head)).join("")}`;
-    if (measure$1(cut, size, isBold) <= width)
+    if (measure$2(cut, size, isBold) <= width)
       return cut;
     keep -= 1;
   }
   return `${chars[0] ?? ""}…`;
 }
-const ROLE_NAMES$1 = Object.keys(DARK$2.roles);
+const ROLE_NAMES$1 = Object.keys(DARK$3.roles);
 function rules(p) {
   const base = `.hi{fill:${p.hi}}.mid{fill:${p.mid}}.lo{fill:${p.lo}}.card{fill:${p.card};stroke:${p.line}}.track{fill:${p.track}}.s-mid{stroke:${p.mid}}`;
   const roles = ROLE_NAMES$1.map((r) => {
@@ -3204,13 +3204,13 @@ function rules(p) {
   return base + roles.join("");
 }
 function style(look) {
-  const fonts = `text{font-family:${FONT$2}}.num{font-family:${MONO$1};font-variant-numeric:tabular-nums}`;
+  const fonts = `text{font-family:${FONT$3}}.num{font-family:${MONO$3};font-variant-numeric:tabular-nums}`;
   const breathe = ".breathe{animation:breathe 1.8s ease-in-out infinite}@keyframes breathe{50%{opacity:.35}}";
   const motion = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
-  const scheme = look.isAuto ? `@media (prefers-color-scheme: light){${rules(LIGHT$2)}}@media (prefers-color-scheme: dark){${rules(DARK$2)}}` : "";
+  const scheme = look.isAuto ? `@media (prefers-color-scheme: light){${rules(LIGHT$3)}}@media (prefers-color-scheme: dark){${rules(DARK$3)}}` : "";
   return `<style>${fonts}${breathe}${rules(paletteOf(look.isLight))}${scheme}${motion}</style>`;
 }
-const svgDoc$1 = ({ width, height }, look, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${style(look)}${body}</svg>`;
+const svgDoc$2 = ({ width, height }, look, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${style(look)}${body}</svg>`;
 const ICONS = {
   eye: '<path d="M2.5 12c2.2-4.3 5.4-6.5 9.5-6.5s7.3 2.2 9.5 6.5c-2.2 4.3-5.4 6.5-9.5 6.5S4.7 16.3 2.5 12z"/><circle cx="12" cy="12" r="3.2"/>',
   pencil: '<path d="M15.2 4.8l4 4L8.6 19.4 3.8 20.2l.8-4.8z"/><path d="M13 7l4 4"/>',
@@ -3224,17 +3224,17 @@ function icon(name, { x, y, size }) {
 }
 const groupLabel = (text, { x, y, anchor = "start" }) => `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="12" font-weight="600" class="lo">${escape$1(text)}</text>`;
 
-let current$1 = "en";
-const langOf = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
-function setLang(value) {
-  current$1 = langOf(value);
-  return current$1;
+let current$3 = "en";
+const langOf$3 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
+function setLang$3(value) {
+  current$3 = langOf$3(value);
+  return current$3;
 }
-const pick$1 = (table) => table[current$1];
+const pick$2 = (table) => table[current$3];
 
 const count$1 = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const files = (n) => count$1(n, "file", "files");
-const EN$1 = {
+const EN$2 = {
   title: "Files",
   command: "Opens the file tree; add a folder to show it instead (empty: the current folder)",
   needsFullscreen: "The file tree opens in a side panel, which needs the full-screen layout. Run /tui fullscreen, then /filetree.",
@@ -3318,7 +3318,7 @@ const EN$1 = {
   hubCommit: "new version saved · all saved",
   hubClean: "all saved"
 };
-const TR$1 = {
+const TR$2 = {
   title: "Dosyalar",
   command: "Dosya ağacını açar; başka bir klasör göstermek için onu yaz (boşsa şu anki klasör)",
   needsFullscreen: "Dosya ağacı yan panelde açılır; bunun için tam ekran düzen gerekir. Önce /tui fullscreen, sonra /filetree çalıştır.",
@@ -3402,27 +3402,27 @@ const TR$1 = {
   hubCommit: "yeni sürüm kaydedildi · hepsi kayıtlı",
   hubClean: "hepsi kayıtlı"
 };
-const words$1 = () => pick$1({ en: EN$1, tr: TR$1 });
+const words$2 = () => pick$2({ en: EN$2, tr: TR$2 });
 
-const PAD$1 = 2;
-const GAP$1 = 12;
-const TITLE$1 = 13;
-const SUB = 12;
-const ROW$1 = 13;
+const PAD$2 = 2;
+const GAP$3 = 12;
+const TITLE$2 = 13;
+const SUB$1 = 12;
+const ROW$3 = 13;
 const LINE$3 = 22;
-const TITLE_Y = 15;
-const LINES_TOP = TITLE_Y;
+const TITLE_Y$1 = 15;
+const LINES_TOP = TITLE_Y$1;
 const ICON_INDENT = 20;
-const ICON$2 = 14;
+const ICON$3 = 14;
 const ICON_LIFT = 11.5;
-const DOT_R$1 = 3;
+const DOT_R$3 = 3;
 const MIN_SUB = 56;
 function fitEnd(text, width, font) {
   const { size, isBold = false } = font;
-  if (measure$1(text, size, isBold) <= width)
+  if (measure$2(text, size, isBold) <= width)
     return text;
   const chars = [...text];
-  while (chars.length > 1 && measure$1(`${chars.join("")}…`, size, isBold) > width)
+  while (chars.length > 1 && measure$2(`${chars.join("")}…`, size, isBold) > width)
     chars.pop();
   return `${chars.join("")}…`;
 }
@@ -3434,7 +3434,7 @@ function spans(parts, width, size) {
     if (room < size)
       break;
     const text = fitEnd(p.text, room, { size, isBold: p.isBold });
-    used += measure$1(text, size, p.isBold);
+    used += measure$2(text, size, p.isBold);
     const weight = p.isBold ? ' font-weight="650"' : "";
     out.push(`<tspan class="${p.cls}${p.isNum ? " num" : ""}"${weight}>${escape$1(text)}</tspan>`);
     if (text !== p.text)
@@ -3444,62 +3444,62 @@ function spans(parts, width, size) {
 }
 function titleLine(hero, { x, y, width }) {
   const { lead, name, tail } = hero.title;
-  const room = width - measure$1(lead + tail, TITLE$1, true);
-  const fitted = name ? fitMiddle(name, Math.max(TITLE$1 * 3, room), { size: TITLE$1, isBold: true }) : "";
-  const full = fitEnd(`${lead}${fitted}${tail}`, width, { size: TITLE$1, isBold: true });
-  return `<text x="${x}" y="${y}" font-size="${TITLE$1}" font-weight="600" class="hi">${escape$1(full)}</text>`;
+  const room = width - measure$2(lead + tail, TITLE$2, true);
+  const fitted = name ? fitMiddle(name, Math.max(TITLE$2 * 3, room), { size: TITLE$2, isBold: true }) : "";
+  const full = fitEnd(`${lead}${fitted}${tail}`, width, { size: TITLE$2, isBold: true });
+  return `<text x="${x}" y="${y}" font-size="${TITLE$2}" font-weight="600" class="hi">${escape$1(full)}</text>`;
 }
 function gitLine(git, y, w) {
-  const said = words$1();
+  const said = words$2();
   const status = git.changed ? [
     ...git.add ? [{ text: `+${git.add} `, cls: "f-ok", isNum: true }] : [],
     ...git.del ? [{ text: `−${git.del} `, cls: "f-danger", isNum: true }] : [],
     ...git.add || git.del ? [{ text: "· ", cls: "lo" }] : [],
     { text: said.changes(git.changed), cls: "f-warn" }
   ] : [{ text: said.cleanNoChanges, cls: "mid" }];
-  const statusW = status.reduce((s, p) => s + measure$1(p.text, ROW$1, p.isBold), 0);
+  const statusW = status.reduce((s, p) => s + measure$2(p.text, ROW$3, p.isBold), 0);
   const moves = `${git.ahead ? ` ↑${git.ahead}` : ""}${git.behind ? ` ↓${git.behind}` : ""}`;
-  const nameRoom = w - 2 * PAD$1 - ICON_INDENT - statusW - measure$1(moves, ROW$1, true) - GAP$1;
-  const name = fitMiddle(git.branch, Math.max(40, nameRoom), { size: ROW$1, isBold: true });
-  const upRoom = nameRoom - measure$1(name, ROW$1, true) - 10;
+  const nameRoom = w - 2 * PAD$2 - ICON_INDENT - statusW - measure$2(moves, ROW$3, true) - GAP$3;
+  const name = fitMiddle(git.branch, Math.max(40, nameRoom), { size: ROW$3, isBold: true });
+  const upRoom = nameRoom - measure$2(name, ROW$3, true) - 10;
   const upstream = git.upstream && upRoom > 40 ? `<tspan dx="8" font-size="12" class="lo">${escape$1(fitMiddle(git.upstream, upRoom, { size: 12 }))}</tspan>` : "";
-  const branch = `<text x="${PAD$1 + ICON_INDENT}" y="${y}" font-size="${ROW$1}"><tspan font-weight="560" class="hi">${escape$1(name)}</tspan>${git.ahead ? `<tspan font-weight="650" class="mid"> ↑${git.ahead}</tspan>` : ""}${git.behind ? `<tspan font-weight="650" class="f-warn"> ↓${git.behind}</tspan>` : ""}${upstream}</text>`;
-  const right = `<text x="${w - PAD$1}" y="${y}" text-anchor="end" font-size="${ROW$1}">${spans(status, statusW + 4, ROW$1)}</text>`;
-  return `${icon("branch", { x: PAD$1, y: y - ICON_LIFT, size: ICON$2 })}${branch}${right}`;
+  const branch = `<text x="${PAD$2 + ICON_INDENT}" y="${y}" font-size="${ROW$3}"><tspan font-weight="560" class="hi">${escape$1(name)}</tspan>${git.ahead ? `<tspan font-weight="650" class="mid"> ↑${git.ahead}</tspan>` : ""}${git.behind ? `<tspan font-weight="650" class="f-warn"> ↓${git.behind}</tspan>` : ""}${upstream}</text>`;
+  const right = `<text x="${w - PAD$2}" y="${y}" text-anchor="end" font-size="${ROW$3}">${spans(status, statusW + 4, ROW$3)}</text>`;
+  return `${icon("branch", { x: PAD$2, y: y - ICON_LIFT, size: ICON$3 })}${branch}${right}`;
 }
 function costLine(cost, y, w) {
-  const said = words$1();
+  const said = words$2();
   const [lead = "", tail = ""] = said.costTurn;
   const left = cost.turn ? [{ text: lead, cls: "mid" }, { text: cost.turn, cls: "hi", isBold: true, isNum: true }, { text: tail, cls: "mid" }] : [{ text: said.costNone, cls: "lo" }];
-  const leftW = left.reduce((s, p) => s + measure$1(p.text, ROW$1, p.isBold), 0);
-  const room = w - 2 * PAD$1 - ICON_INDENT;
+  const leftW = left.reduce((s, p) => s + measure$2(p.text, ROW$3, p.isBold), 0);
+  const room = w - 2 * PAD$2 - ICON_INDENT;
   const right = cost.session ? said.costSession(cost.session) : "";
-  const rightW = right ? measure$1(right, 12) + GAP$1 : 0;
+  const rightW = right ? measure$2(right, 12) + GAP$3 : 0;
   const isRightShown = right !== "" && leftW + rightW <= room;
-  const head = `<text x="${PAD$1 + ICON_INDENT}" y="${y}" font-size="${ROW$1}">${spans(left, room - (isRightShown ? rightW : 0), ROW$1)}</text>`;
-  const tailText = isRightShown ? `<text x="${w - PAD$1}" y="${y}" text-anchor="end" font-size="12" class="lo">${escape$1(right)}</text>` : "";
-  return `${icon("eye", { x: PAD$1, y: y - ICON_LIFT, size: ICON$2 })}${head}${tailText}`;
+  const head = `<text x="${PAD$2 + ICON_INDENT}" y="${y}" font-size="${ROW$3}">${spans(left, room - (isRightShown ? rightW : 0), ROW$3)}</text>`;
+  const tailText = isRightShown ? `<text x="${w - PAD$2}" y="${y}" text-anchor="end" font-size="12" class="lo">${escape$1(right)}</text>` : "";
+  return `${icon("eye", { x: PAD$2, y: y - ICON_LIFT, size: ICON$3 })}${head}${tailText}`;
 }
 function legendLine(items, { y, w }) {
-  let x = PAD$1 + ICON_INDENT;
+  let x = PAD$2 + ICON_INDENT;
   return items.map((item) => {
-    if (x + 11 + measure$1(item.label, 12) > w - PAD$1)
+    if (x + 11 + measure$2(item.label, 12) > w - PAD$2)
       return "";
     const dot = `<circle cx="${x + 3}" cy="${y - 4}" r="3" class="f-${item.role}"/>`;
     const label = `<text x="${x + 11}" y="${y}" font-size="12" class="lo">${escape$1(item.label)}</text>`;
-    x += 11 + measure$1(item.label, 12) + 14;
+    x += 11 + measure$2(item.label, 12) + 14;
     return dot + label;
   }).join("");
 }
-const leadDot = (hero) => `<circle cx="${PAD$1 + ICON$2 / 2}" cy="${TITLE_Y - 4.5}" r="${DOT_R$1}" class="${hero.isLive === true ? "f-edit breathe" : "lo"}"/>`;
-function nowLine$1(hero, w) {
-  const x = PAD$1 + ICON_INDENT;
-  const width = w - x - PAD$1;
-  const head = titleLine(hero, { x, y: TITLE_Y, width });
+const leadDot = (hero) => `<circle cx="${PAD$2 + ICON$3 / 2}" cy="${TITLE_Y$1 - 4.5}" r="${DOT_R$3}" class="${hero.isLive === true ? "f-edit breathe" : "lo"}"/>`;
+function nowLine$2(hero, w) {
+  const x = PAD$2 + ICON_INDENT;
+  const width = w - x - PAD$2;
+  const head = titleLine(hero, { x, y: TITLE_Y$1, width });
   const said = `${hero.title.lead}${hero.title.name}${hero.title.tail}`;
-  const used = measure$1(said, TITLE$1, true) + 8;
+  const used = measure$2(said, TITLE$2, true) + 8;
   const room = width - used;
-  const sub = hero.sub.length && room >= MIN_SUB ? `<text x="${x + used}" y="${TITLE_Y}" font-size="${SUB}">${spans(hero.sub, room, SUB)}</text>` : "";
+  const sub = hero.sub.length && room >= MIN_SUB ? `<text x="${x + used}" y="${TITLE_Y$1}" font-size="${SUB$1}">${spans(hero.sub, room, SUB$1)}</text>` : "";
   return head + sub;
 }
 function heroCard(hero, { git, cost, legend }, { look, w }) {
@@ -3512,59 +3512,59 @@ function heroCard(hero, { git, cost, legend }, { look, w }) {
   if (legend.length)
     rows.push(legendLine(legend, { y: y += LINE$3, w }));
   const h = y + 8;
-  const [lead = "", tail = ""] = words$1().costTurn;
+  const [lead = "", tail = ""] = words$2().costTurn;
   const costAlt = cost?.turn ? ` · ${lead}${cost.turn}${tail}` : "";
   const alt = `${hero.label}: ${hero.title.lead}${hero.title.name}${hero.title.tail}. ${hero.sub.map((p) => p.text).join("")}${costAlt}`;
-  return { source: svgDoc$1({ width: w, height: h }, look, leadDot(hero) + nowLine$1(hero, w) + rows.join("")), width: w, height: h, alt };
+  return { source: svgDoc$2({ width: w, height: h }, look, leadDot(hero) + nowLine$2(hero, w) + rows.join("")), width: w, height: h, alt };
 }
 const ROW_H = 24;
-const HEAD_H$1 = 22;
+const HEAD_H$2 = 22;
 const MAX_ROWS = 6;
 const ROW_BASE = 16;
 function touchedRow(r, y, w) {
-  const wordW = measure$1(r.pill.text, 12);
+  const wordW = measure$2(r.pill.text, 12);
   const diff = r.diff ? `${r.diff[0] ? `+${r.diff[0]}` : ""}${r.diff[0] && r.diff[1] ? " " : ""}${r.diff[1] ? `−${r.diff[1]}` : ""}` : "";
-  const diffW = diff ? measure$1(diff, 12) + GAP$1 : 0;
-  const unit = r.cost ? ` ${words$1().tokUnit}` : "";
-  const costW = r.cost ? measure$1(`${r.cost}${unit}`, 12) + GAP$1 : 0;
-  const room = w - 2 * PAD$1 - wordW - diffW - costW - GAP$1;
-  const name = fitMiddle(r.name, Math.max(48, room * 0.7), { size: ROW$1 });
-  const dirRoom = room - measure$1(name, ROW$1) - 8;
+  const diffW = diff ? measure$2(diff, 12) + GAP$3 : 0;
+  const unit = r.cost ? ` ${words$2().tokUnit}` : "";
+  const costW = r.cost ? measure$2(`${r.cost}${unit}`, 12) + GAP$3 : 0;
+  const room = w - 2 * PAD$2 - wordW - diffW - costW - GAP$3;
+  const name = fitMiddle(r.name, Math.max(48, room * 0.7), { size: ROW$3 });
+  const dirRoom = room - measure$2(name, ROW$3) - 8;
   const dir = r.dir && dirRoom > 24 ? fitMiddle(r.dir, dirRoom, { size: 12 }) : "";
   const base = y + ROW_BASE;
   const parts = [
-    `<text x="${PAD$1}" y="${base}" font-size="${ROW$1}"><tspan class="hi">${escape$1(name)}</tspan>${dir ? `<tspan dx="8" font-size="12" class="lo">${escape$1(dir)}</tspan>` : ""}</text>`,
-    `<text x="${w - PAD$1}" y="${base}" text-anchor="end" font-size="12" class="${r.pill.role ? `f-${r.pill.role}` : "lo"}">${escape$1(r.pill.text)}</text>`
+    `<text x="${PAD$2}" y="${base}" font-size="${ROW$3}"><tspan class="hi">${escape$1(name)}</tspan>${dir ? `<tspan dx="8" font-size="12" class="lo">${escape$1(dir)}</tspan>` : ""}</text>`,
+    `<text x="${w - PAD$2}" y="${base}" text-anchor="end" font-size="12" class="${r.pill.role ? `f-${r.pill.role}` : "lo"}">${escape$1(r.pill.text)}</text>`
   ];
   if (diff) {
     const [add = 0, del = 0] = r.diff ?? [];
     const plus = add ? `<tspan class="f-ok">+${add}</tspan>` : "";
     const minus = del ? `<tspan class="f-danger">${add ? " " : ""}−${del}</tspan>` : "";
-    parts.push(`<text x="${w - PAD$1 - wordW - GAP$1}" y="${base}" text-anchor="end" font-size="12" class="num">${plus}${minus}</text>`);
+    parts.push(`<text x="${w - PAD$2 - wordW - GAP$3}" y="${base}" text-anchor="end" font-size="12" class="num">${plus}${minus}</text>`);
   }
   if (r.cost) {
     const tokens = `<tspan class="num mid">${escape$1(r.cost)}</tspan><tspan class="lo">${escape$1(unit)}</tspan>`;
-    parts.push(`<text x="${w - PAD$1 - wordW - diffW - GAP$1}" y="${base}" text-anchor="end" font-size="12">${tokens}</text>`);
+    parts.push(`<text x="${w - PAD$2 - wordW - diffW - GAP$3}" y="${base}" text-anchor="end" font-size="12">${tokens}</text>`);
   }
   return parts.join("");
 }
 function touchedCard(rows, look, w) {
-  const said = words$1();
+  const said = words$2();
   const title = said.touchedTitle(rows.length);
   const shown = rows.slice(0, MAX_ROWS);
   const more = rows.length - shown.length;
-  const body = shown.length ? shown.map((r, i) => touchedRow(r, HEAD_H$1 + i * ROW_H, w)).join("") : `<text x="2" y="${HEAD_H$1 + 16}" font-size="${SUB}" class="lo">${escape$1(said.noTouchThisTurn)}</text>`;
-  const listH = shown.length ? HEAD_H$1 + shown.length * ROW_H : HEAD_H$1 + 22;
+  const body = shown.length ? shown.map((r, i) => touchedRow(r, HEAD_H$2 + i * ROW_H, w)).join("") : `<text x="2" y="${HEAD_H$2 + 16}" font-size="${SUB$1}" class="lo">${escape$1(said.noTouchThisTurn)}</text>`;
+  const listH = shown.length ? HEAD_H$2 + shown.length * ROW_H : HEAD_H$2 + 22;
   const moreLine = more > 0 ? `<text x="2" y="${listH + 14}" font-size="12" class="lo">${escape$1(said.moreFiles(more))}</text>` : "";
   const h = listH + (more > 0 ? 20 : 0);
-  const head = groupLabel(title, { x: PAD$1, y: 15 });
+  const head = groupLabel(title, { x: PAD$2, y: 15 });
   const alt = `${title}: ${rows.map((r) => `${r.name} ${r.pill.text}${r.cost ? ` ${r.cost} ${said.tokUnit}` : ""}`).join(", ") || said.noneYet}`;
-  return { source: svgDoc$1({ width: w, height: h }, look, head + body + moreLine), width: w, height: h, alt };
+  return { source: svgDoc$2({ width: w, height: h }, look, head + body + moreLine), width: w, height: h, alt };
 }
 function sectionLine({ label, name }, { look, w }) {
   const h = 22;
-  const fitted = fitMiddle(name, w - 2 * PAD$1, { size: 12, isBold: true });
-  return { source: svgDoc$1({ width: w, height: h }, look, groupLabel(fitted, { x: PAD$1, y: 15 })), width: w, height: h, alt: `${label} · ${name}` };
+  const fitted = fitMiddle(name, w - 2 * PAD$2, { size: 12, isBold: true });
+  return { source: svgDoc$2({ width: w, height: h }, look, groupLabel(fitted, { x: PAD$2, y: 15 })), width: w, height: h, alt: `${label} · ${name}` };
 }
 
 const mem = {
@@ -3610,7 +3610,7 @@ const DEFAULT_THEME = {
   selection: "#6b7280",
   bg: ""
 };
-function emptyTree(root) {
+function emptyTree$1(root) {
   return {
     root,
     nodes: [],
@@ -3707,7 +3707,7 @@ function visibleRows(t) {
   walk(t.root, 0);
   return rows;
 }
-function stamp(ms, now = Date.now()) {
+function stamp$1(ms, now = Date.now()) {
   if (!ms)
     return "";
   const d = new Date(ms);
@@ -3715,7 +3715,7 @@ function stamp(ms, now = Date.now()) {
   const p = (v) => String(v).padStart(2, "0");
   if (d.toDateString() === today.toDateString())
     return `${p(d.getHours())}:${p(d.getMinutes())}`;
-  const w = words$1();
+  const w = words$2();
   const day = w.day(d.getDate(), w.months[d.getMonth()] ?? "");
   return d.getFullYear() === today.getFullYear() ? day : w.dayOfYear(day, d.getFullYear());
 }
@@ -3731,15 +3731,15 @@ function formatSize(bytes) {
     v /= 1024;
     i++;
   }
-  return `${v < 100 ? v.toFixed(1).replace(".", words$1().decimal) : Math.round(v)} ${units[i]}`;
+  return `${v < 100 ? v.toFixed(1).replace(".", words$2().decimal) : Math.round(v)} ${units[i]}`;
 }
 const unsized = (t, rows) => rows.filter((r) => r.node.kind === "dir" && !(r.node.id in t.dirSizes)).map((r) => r.node.id);
 
-function shortPath(path) {
+function shortPath$1(path) {
   return path;
 }
 
-const relOrShort = (t, id) => id !== t.root && inside(t.root, id) ? id.slice(t.root.endsWith("/") ? t.root.length : t.root.length + 1) : shortPath(id);
+const relOrShort = (t, id) => id !== t.root && inside(t.root, id) ? id.slice(t.root.endsWith("/") ? t.root.length : t.root.length + 1) : shortPath$1(id);
 function activityChip(ui, a, look) {
   const { Box, Text } = ui;
   const color = look.colorOf(a.state === "failed" ? "red" : a.tone);
@@ -3767,7 +3767,7 @@ function footer(ui, s, chip) {
   }, h(Text, {
     dimColor: true,
     wrap: "truncate-start"
-  }, words$1().selected, relOrShort(s.t, s.t.selected))) : null, h(Box, {
+  }, words$2().selected, relOrShort(s.t, s.t.selected))) : null, h(Box, {
     flexGrow: 1
   }), chip);
 }
@@ -3784,32 +3784,4344 @@ const sumOf = (costs) => costs.reduce((acc, c) => merge(acc, c), NO_COST);
 const MARK$1 = { exact: "", share: "≈", guess: "~" };
 const THOUSAND = 1000;
 const DECIMAL_BELOW = 100;
-const grouped = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, words$1().thousands);
+const grouped = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, words$2().thousands);
 function short(n) {
   if (n < THOUSAND)
     return String(Math.round(n));
   const k = n / THOUSAND;
-  return k < DECIMAL_BELOW ? `${k.toFixed(1).replace(".", words$1().decimal)}k` : `${Math.round(k)}k`;
+  return k < DECIMAL_BELOW ? `${k.toFixed(1).replace(".", words$2().decimal)}k` : `${Math.round(k)}k`;
 }
-const costText = (c, isShort = false) => `${MARK$1[c.kind]}${isShort ? short(c.tokens) : grouped(c.tokens)}`;
+const costText$1 = (c, isShort = false) => `${MARK$1[c.kind]}${isShort ? short(c.tokens) : grouped(c.tokens)}`;
 function turnCost(turn) {
   const all = Object.values(turn.costs ?? {});
   return all.length ? sumOf(all) : null;
 }
 function rowCost(turn, id) {
   const c = turn.costs?.[id];
-  return c ? `${costText(c, true)} ${words$1().tokUnit}` : "";
+  return c ? `${costText$1(c, true)} ${words$2().tokUnit}` : "";
 }
+
+const FILL$4 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
+const DONE$3 = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
+const HAS_DONE$3 = /\bdata-m-done\b/;
+const WIDTH$4 = /\swidth="([\d.]+)"/;
+const CLASS$3 = /\sclass="([^"]*)"/;
+const STYLE$3 = /\sstyle="([^"]*)"/;
+const MIN_RATIO_STEP$3 = 0.02;
+const RATIO_DIGITS$3 = 3;
+const widthOf$4 = (tag) => Number(WIDTH$4.exec(tag)?.[1] ?? 0);
+function withClass$3(tag, name, extra = "") {
+  const tagged = CLASS$3.test(tag) ? tag.replace(CLASS$3, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
+  return tagged.replace(/\s*\/?>$/, `${extra}$&`);
+}
+function slideFills$3(before, now) {
+  const old = before.match(FILL$4) ?? [];
+  if (old.length !== (now.match(FILL$4) ?? []).length)
+    return now;
+  let index = 0;
+  return now.replace(FILL$4, (tag) => {
+    const was = old[index++];
+    const from = was === undefined ? 0 : widthOf$4(was);
+    const to = widthOf$4(tag);
+    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP$3)
+      return tag;
+    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS$3)}`;
+    const styled = STYLE$3.test(tag) ? tag.replace(STYLE$3, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
+    return withClass$3(styled, "m-from");
+  });
+}
+function drawDone$3(before, now) {
+  if (HAS_DONE$3.test(before))
+    return now;
+  return now.replace(DONE$3, (tag) => withClass$3(tag, "m-draw", ' pathLength="1"'));
+}
+function markChanges$3(before, now) {
+  return drawDone$3(before, slideFills$3(before, now));
+}
+
+const STAGGER_MS$3 = 45;
+const EASE$3 = "cubic-bezier(.2,.8,.2,1)";
+const SHEEN$3 = "#A39E93";
+const RULES$3 = {
+  "m-in": `.m-in{animation:m-in .42s ${EASE$3} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
+  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$3} both}@keyframes m-fade{from{opacity:0}}`,
+  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$3} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
+  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$3} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
+  "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
+  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$3} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
+  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$3} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
+  "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
+  "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
+  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$3}}svg:hover .m-wash{opacity:.12}`,
+  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$3}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
+};
+const REDUCED$4 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+function motionCss$3(body) {
+  const used = Object.keys(RULES$3).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
+  return used.length === 0 ? "" : `${used.map((name) => RULES$3[name]).join("")}${REDUCED$4}`;
+}
+Object.values(RULES$3).join("");
+const isEntering$3 = (cue) => cue.phase === "enter";
+function entering$3(body, cue, kind = "in") {
+  if (!isEntering$3(cue))
+    return body;
+  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$3}ms">${body}</g>`;
+}
+const FLASH$3 = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN$3}" fill-opacity=".22" class="m-flash"/>`;
+const WASH$3 = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
+
+function stableDrawings$3() {
+  const kept = new Map;
+  return {
+    reset: () => kept.clear(),
+    draw: (key, what, build) => {
+      const signature = typeof what === "string" ? what : JSON.stringify(what);
+      const before = kept.get(key);
+      if (before !== undefined && before.what === signature)
+        return before.drawing;
+      const drawing = build(before === undefined ? "enter" : "change");
+      kept.set(key, { what: signature, drawing });
+      return drawing;
+    }
+  };
+}
+
+const TAG_WIDTH$3 = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
+const SVG$3 = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
+const SCHEME$4 = "<style>:root{color-scheme:light dark}</style>";
+const SAYS_SCHEME$3 = /(^|[^-\w])color-scheme\s*:/;
+const PASS_MS$3 = 120;
+const MAX_ORDER$3 = 12;
+const LIVE_MS$3 = 30000;
+function animate$3(source, spec) {
+  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges$3(spec.before, source) : source;
+  const parts = SVG$3.exec(moved);
+  if (parts === null)
+    return source;
+  const [, open, inner = "", close] = parts;
+  const scheme = SAYS_SCHEME$3.test(inner) ? "" : SCHEME$4;
+  const lit = `${spec.isRow === true ? WASH$3 : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH$3 : ""}${inner}`;
+  const body = entering$3(lit, spec.cue);
+  const css = motionCss$3(body);
+  return `${open}${scheme}${css === "" ? "" : `<style>${css}</style>`}${body}${close}`;
+}
+function paneMotion$3() {
+  const drawings = stableDrawings$3();
+  const shown = new Map;
+  const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 };
+  const begin = () => {
+    const now = Date.now();
+    if (now - pass.at > PASS_MS$3)
+      pass.entered = 0;
+    pass.at = now;
+  };
+  return {
+    reset: () => {
+      drawings.reset();
+      shown.clear();
+    },
+    pic: (key, pic, opts = {}) => {
+      begin();
+      const what = `${opts.isRow === true ? "row:" : ""}${pic.source}`;
+      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH$3.exec(pic.source)?.[1]), source: pic.source };
+      const source = drawings.draw(key, what, (built) => {
+        const order = built === "enter" ? Math.min(MAX_ORDER$3, pass.entered++) : 0;
+        const before = shown.get(key);
+        const isQuiet = before !== undefined && (before.shows === now.shows || before.width !== now.width);
+        const phase = built === "change" && isQuiet ? "still" : built;
+        const lastChange = before?.changedAt ?? Number.NEGATIVE_INFINITY;
+        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS$3;
+        shown.set(key, { ...now, changedAt: phase === "change" ? pass.at : lastChange });
+        return animate$3(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
+      });
+      return { ...pic, source, isInteractive: true };
+    }
+  };
+}
+
+const ROLE = { read: "read", edit: "edit", commit: "ok" };
+const baseName$1 = (id) => id.slice(id.lastIndexOf("/") + 1);
+function relDir(id, root) {
+  const rel = id.startsWith(`${root}/`) ? id.slice(root.length + 1) : id;
+  const cut = rel.lastIndexOf("/");
+  return cut < 0 ? "" : rel.slice(0, cut);
+}
+const relPath = (id, root) => id.startsWith(`${root}/`) ? id.slice(root.length + 1) : id;
+const where = (id, root) => {
+  const dir = relDir(id, root);
+  return { text: dir ? words$2().inDir(dir) : words$2().inRoot, cls: "mid" };
+};
+function diffParts(diff) {
+  if (!diff || diff[0] === 0 && diff[1] === 0)
+    return [];
+  return [
+    ...diff[0] ? [{ text: ` +${diff[0]}`, cls: "f-ok", isNum: true }] : [],
+    ...diff[1] ? [{ text: ` −${diff[1]}`, cls: "f-danger", isNum: true }] : []
+  ];
+}
+const count = (turn, role) => turn.touches.filter((t) => t.role === role).length;
+function tally(turn) {
+  const w = words$2();
+  const parts = [
+    count(turn, "read") ? w.openedFiles(count(turn, "read")) : "",
+    count(turn, "edit") ? w.editedFiles(count(turn, "edit")) : ""
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : w.noTouchYet;
+}
+function liveHero(input, latest) {
+  const same = input.turn.touches.filter((t) => t.role === latest.role && input.live.has(t.id));
+  const w = words$2();
+  const [lead = "", tail = ""] = w.liveOne[latest.role];
+  const isMany = same.length > 1;
+  const title = isMany ? { lead: w.liveMany[latest.role](same.length), name: "", tail: "" } : { lead, name: baseName$1(latest.id), tail };
+  const sub = latest.role === "commit" ? shaParts(input) : [where(latest.id, input.root)];
+  return { label: w.now, title, sub };
+}
+function shaParts(input) {
+  const sha = input.turn.sha ? [{ text: input.turn.sha, cls: "mid", isNum: true }] : [];
+  const branch = input.branch ? [{ text: `${sha.length ? " · " : ""}${words$2().onBranch(input.branch)}`, cls: "lo" }] : [];
+  return [...sha, ...branch];
+}
+const quiet = (label, lead, sub) => ({
+  label,
+  title: { lead, name: "", tail: "" },
+  sub: [{ text: sub, cls: "mid" }]
+});
+function names(touches) {
+  return touches.map((t) => baseName$1(t.id)).join(", ");
+}
+function doneHero(input) {
+  const { turn, root } = input;
+  const w = words$2();
+  const commits = count(turn, "commit");
+  if (commits || turn.committed) {
+    const n = Math.max(commits, turn.committed);
+    return { label: w.done, title: { lead: w.committedN(n), name: "", tail: "" }, sub: shaParts(input) };
+  }
+  const edits = turn.touches.filter((t) => t.role === "edit");
+  const reads = count(turn, "read");
+  const opened = reads ? [{ text: ` · ${w.openedFiles(reads)}`, cls: "lo" }] : [];
+  if (edits.length) {
+    const first = edits[0];
+    const sub = edits.length === 1 ? [{ text: relPath(first.id, root), cls: "mid" }, ...diffParts(input.diff[first.id])] : [{ text: names(edits), cls: "mid" }];
+    return { label: w.done, title: { lead: w.editedN(edits.length), name: "", tail: "" }, sub: [...sub, ...opened] };
+  }
+  if (reads) {
+    const sub = [{ text: names(turn.touches), cls: "mid" }];
+    return { label: w.done, title: { lead: w.readN(reads), name: "", tail: "" }, sub };
+  }
+  return quiet(w.done, w.untouched, w.untouchedSub);
+}
+function runningHero(input) {
+  const { turn } = input;
+  const w = words$2();
+  const latest = [...turn.touches].filter((t) => input.live.has(t.id)).sort((a, b) => a.at - b.at).pop();
+  if (latest)
+    return liveHero(input, latest);
+  if (input.isCommitting) {
+    const sub = input.branch ? [{ text: w.toBranch(input.branch), cls: "mid" }] : [];
+    return { label: w.now, title: { lead: w.committing, name: "", tail: "" }, sub };
+  }
+  return quiet(w.now, w.thinking, tally(turn));
+}
+function heroOf(input) {
+  const { turn } = input;
+  if (turn.isRunning)
+    return { ...runningHero(input), isLive: true };
+  if (!turn.hasRun)
+    return quiet(words$2().now, words$2().waiting, words$2().waitingSub);
+  return doneHero(input);
+}
+const heroText = (h) => `${h.title.lead}${h.title.name}${h.title.tail}`;
+const subText = (h) => h.sub.map((p) => p.text).join("");
+function touchedRows(input) {
+  const { turn, root } = input;
+  const w = words$2();
+  return turn.touches.map((t) => {
+    const isLive = turn.isRunning && input.live.has(t.id);
+    const diff = t.role === "read" ? undefined : input.diff[t.id];
+    const cost = turn.costs?.[t.id];
+    return {
+      name: baseName$1(t.id),
+      dir: relDir(t.id, root),
+      pill: { text: (isLive ? w.pillLive : w.pillDone)[t.role], role: isLive ? ROLE[t.role] : null },
+      ...diff && (diff[0] || diff[1]) ? { diff } : {},
+      ...cost ? { cost: costText$1(cost) } : {}
+    };
+  });
+}
+
+const ICON$2 = {
+  commit: { nerd: "", plain: "●" },
+  push: { nerd: "\uDB81\uDD52", plain: "↑" },
+  pull: { nerd: "\uDB81\uDD53", plain: "↓" },
+  branch: { nerd: "", plain: "⑂" },
+  merge: { nerd: "", plain: "⑃" },
+  pr: { nerd: "", plain: "⇄" },
+  github: { nerd: "", plain: "◎" },
+  stash: { nerd: "\uDB80\uDDBC", plain: "≡" },
+  undo: { nerd: "\uDB81\uDD4C", plain: "↶" },
+  tag: { nerd: "", plain: "⌖" },
+  git: { nerd: "", plain: "±" }
+};
+const TONES = {
+  orange: { bright: ["#f97316", "#fb923c", "#fdba74", "#ffedd5"], dim: ["#8a4316", "#a3562a", "#bd7444", "#d29267"], solid: "#f97316" },
+  green: { bright: ["#22c55e", "#4ade80", "#86efac", "#dcfce7"], dim: ["#14532d", "#166534", "#2f7a47", "#4f9a66"], solid: "#4ade80" },
+  teal: { bright: ["#14b8a6", "#2dd4bf", "#5eead4", "#ccfbf1"], dim: ["#0f5e57", "#16786f", "#2a9488", "#4fb3a8"], solid: "#2dd4bf" },
+  blue: { bright: ["#3b82f6", "#60a5fa", "#93c5fd", "#dbeafe"], dim: ["#1e3a8a", "#1d4ed8", "#3b6fd1", "#6b93dc"], solid: "#60a5fa" },
+  iris: { bright: ["#a855f7", "#c084fc", "#d8b4fe", "#f3e8ff"], dim: ["#581c87", "#6b21a8", "#8b47c4", "#a874d6"], solid: "#c084fc" },
+  purple: { bright: ["#a855f7", "#c084fc", "#d8b4fe", "#f3e8ff"], dim: ["#581c87", "#6b21a8", "#8b47c4", "#a874d6"], solid: "#c084fc" },
+  cyan: { bright: ["#06b6d4", "#22d3ee", "#67e8f9", "#cffafe"], dim: ["#155e75", "#0e7490", "#2b8ea3", "#5aa9b8"], solid: "#22d3ee" },
+  red: { bright: ["#ef4444", "#f87171", "#fca5a5", "#fee2e2"], dim: ["#7f1d1d", "#991b1b", "#b54040", "#c96a6a"], solid: "#f87171" }
+};
+const BRANCH_ICON = ICON$2.branch;
+
+const cp = (n) => String.fromCodePoint(n);
+const CHEVRON_OPEN = cp(62588);
+const CHEVRON_CLOSED = cp(62560);
+const NAMES$1 = {
+  "agents.md": 983892,
+  "changelog.md": 983892,
+  "contributing.md": 983892,
+  "todo.md": 983892,
+  "readme.md": 983892,
+  license: 58890,
+  dockerfile: 985192,
+  makefile: 987236,
+  "cmakelists.txt": 987236,
+  justfile: 984503,
+  gemfile: 986413,
+  rakefile: 986413,
+  "cargo.toml": 59058,
+  "cargo.lock": 59058,
+  "pyproject.toml": 59058,
+  "requirements.txt": 988686,
+  "go.mod": 985850,
+  "go.sum": 985043,
+  "package.json": 984614,
+  "package-lock.json": 984614,
+  "tsconfig.json": 984614,
+  ".prettierrc": 984614,
+  ".eslintrc": 984614,
+  "pnpm-lock.yaml": 59048,
+  "yarn.lock": 59048,
+  ".gitignore": 983714,
+  ".gitmodules": 984211,
+  ".editorconfig": 58962
+};
+const EXTS = {
+  lua: 58912,
+  py: 58886,
+  pyi: 58886,
+  js: 58892,
+  mjs: 58892,
+  cjs: 58892,
+  ts: 58920,
+  jsx: 58917,
+  tsx: 59322,
+  json: 58891,
+  jsonc: 58891,
+  yaml: 59048,
+  yml: 59048,
+  sh: 59285,
+  bash: 59285,
+  zsh: 59285,
+  fish: 59285,
+  md: 983892,
+  markdown: 983892,
+  css: 59064,
+  scss: 983836,
+  html: 59190,
+  htm: 59190,
+  go: 58919,
+  rs: 59019,
+  rb: 59281,
+  php: 58888,
+  java: 59192,
+  cs: 983835,
+  sql: 59142,
+  graphql: 61966,
+  gql: 61966,
+  xml: 984512,
+  toml: 59058,
+  ini: 986050,
+  conf: 984211,
+  pdf: 60139,
+  svg: 984865,
+  jpg: 983589,
+  jpeg: 983589,
+  png: 58893,
+  gif: 986488,
+  webp: 983583,
+  mp4: 983595,
+  mkv: 983595,
+  mov: 983595,
+  mp3: 983587,
+  wav: 983587,
+  flac: 983587,
+  zip: 984516,
+  gz: 984516,
+  xz: 984516,
+  tar: 984516,
+  qml: 62325,
+  cpp: 58909,
+  cc: 58909,
+  cxx: 58909,
+  c: 58910,
+  h: 985845,
+  hpp: 985845,
+  vue: 59040,
+  svelte: 59031,
+  csv: 58954,
+  txt: 985514
+};
+function fileIcon(n, open, isRepo) {
+  if (n.kind === "link")
+    return cp(62593);
+  if (n.kind === "dir" && isRepo)
+    return cp(983714);
+  if (n.kind === "dir")
+    return cp(open ? 58878 : 58879);
+  const lower = n.name.toLowerCase();
+  const named = NAMES$1[lower];
+  if (named)
+    return cp(named);
+  const dot = lower.lastIndexOf(".");
+  const ext = dot >= 0 ? lower.slice(dot + 1) : "";
+  return cp(EXTS[ext] ?? 983572);
+}
+const GIT_COLOR = {
+  A: "#98c379",
+  "?": "#98c379",
+  R: "#61afef",
+  C: "#61afef",
+  M: "#e5c07b",
+  T: "#e5c07b"
+};
+
+const ADD_COLOR$1 = "#98c379";
+const DEL_COLOR$1 = "#e06c75";
+const PX_PER_COL$1 = 9;
+const NAME_PX = 14;
+const LEVEL_CELLS = 2;
+const RIGHT_GAP_PX = 10;
+const MIN_NAME_PX = 72;
+function clean(segs) {
+  for (const seg of segs)
+    for (const k of Object.keys(seg))
+      if (seg[k] === undefined)
+        delete seg[k];
+  return segs;
+}
+function countSegs(c, theme) {
+  if (!c)
+    return [];
+  const out = [];
+  if (c[0] > 0)
+    out.push({ t: ` ?:${c[0]}`, c: GIT_COLOR["?"] });
+  if (c[1] > 0)
+    out.push({ t: ` M:${c[1]}`, c: GIT_COLOR.M });
+  if (c[2] > 0)
+    out.push({ t: ` D:${c[2]}`, c: theme.urgent });
+  return out;
+}
+function statusOf(ctx, id) {
+  return ctx.t.git[id] ?? (underAny(dirname(id), ctx.untracked, ctx.t.root) ? "?" : undefined);
+}
+function metaOf$1(ctx, r) {
+  const { t } = ctx;
+  const n = r.node;
+  if (t.showSize) {
+    if (n.kind === "dir")
+      return n.id in t.dirSizes ? formatSize(t.dirSizes[n.id] ?? -1) : "…";
+    return n.kind === "file" || n.kind === "link" && n.size > 0 ? formatSize(n.size) : "";
+  }
+  return t.diff[n.id] || n.kind !== "file" ? "" : stamp$1(n.mtime, ctx.now);
+}
+const fit$2 = (name, cols) => name.length > cols ? name.slice(0, Math.max(1, cols - 1)) + "…" : name;
+function gitColorOf(status, theme) {
+  if (status === "D" || status === "U")
+    return theme.urgent;
+  return status ? GIT_COLOR[status] ?? theme.muted : undefined;
+}
+function terminalColors(theme, n, git) {
+  if (git.isIgnored)
+    return { icon: theme.muted, name: theme.muted };
+  if (git.color !== undefined)
+    return { icon: git.color, name: git.color };
+  if (n.hidden)
+    return { icon: theme.muted, name: theme.muted };
+  return { icon: n.kind === "dir" ? theme.accent : theme.muted, name: theme.fg || undefined };
+}
+function badgeText(ctx, s) {
+  if (s.hasCounts)
+    return "";
+  if (s.status)
+    return ` ${s.status}`;
+  if (!s.isIgnored)
+    return "  ";
+  return ctx.unicode ? " ⊘" : " ";
+}
+function caretOf(r, unicode) {
+  if (r.node.kind !== "dir")
+    return "  ";
+  if (unicode)
+    return (r.open ? "▾" : "▸") + " ";
+  return (r.open ? CHEVRON_OPEN : CHEVRON_CLOSED) + " ";
+}
+function glyphOf$1(ctx, r) {
+  const n = r.node;
+  if (!ctx.unicode)
+    return fileIcon(n, r.open, n.kind === "dir" && n.id === ctx.t.top);
+  return n.kind === "dir" ? "■" : "·";
+}
+function terminalRow(ctx, r) {
+  const { t, theme, unicode } = ctx;
+  const n = r.node;
+  const status = statusOf(ctx, n.id);
+  const isIgnored = !status && underAny(n.id, ctx.ignored, t.root);
+  const gitColor = gitColorOf(status, theme);
+  const isBright = ctx.bright.has(n.id);
+  const isDim = !isBright && ctx.dimmed.has(n.id);
+  const tone = t.flashTones[n.id] ?? "orange";
+  const colors = terminalColors(theme, n, { color: gitColor, isIgnored });
+  const loc = t.diff[n.id];
+  const meta = metaOf$1(ctx, r);
+  const cost = ctx.costOf(n.id);
+  const locText = loc ? `${loc[0] ? ` +${loc[0]}` : ""}${loc[1] ? ` -${loc[1]}` : ""}` : "";
+  const dirCounts = n.kind === "dir" ? countSegs(t.counts[n.id], theme) : [];
+  const badge = badgeText(ctx, { status, isIgnored, hasCounts: dirCounts.length > 0 });
+  const countsText = dirCounts.map((c) => c.t).join("");
+  const cols = Math.max(4, ctx.width - r.depth * 2 - 6 - (meta ? meta.length + 1 : 0) - (cost ? cost.length + 1 : 0) - locText.length - badge.length - countsText.length);
+  const caret = caretOf(r, unicode);
+  const glyph = glyphOf$1(ctx, r);
+  const lit = isBright || isDim;
+  const left = [
+    { t: "  ".repeat(r.depth) },
+    { t: caret, c: theme.muted },
+    lit ? { t: glyph + " ", sh: tone, dim: isDim, one: true } : { t: glyph + " ", c: colors.icon },
+    lit ? { t: fit$2(n.name, cols), sh: tone, dim: isDim, b: isBright } : { t: fit$2(n.name, cols), c: colors.name, b: n.id === t.selected, s: status === "D" && n.kind !== "dir" }
+  ];
+  const right = [];
+  if (cost)
+    right.push({ t: ` ${cost}`, c: TONES.blue?.solid ?? theme.accent });
+  if (meta)
+    right.push({ t: ` ${meta}`, c: theme.muted });
+  if (loc && loc[0] > 0)
+    right.push({ t: ` +${loc[0]}`, c: ADD_COLOR$1 });
+  if (loc && loc[1] > 0)
+    right.push({ t: ` -${loc[1]}`, c: DEL_COLOR$1 });
+  right.push(...dirCounts);
+  if (badge)
+    right.push({ t: badge, c: status ? gitColor : theme.muted, b: true });
+  return { id: n.id, left: clean(left), right: clean(right) };
+}
+const changesIn = (ctx, n) => n.kind === "dir" ? (ctx.t.counts[n.id] ?? [0, 0, 0]).reduce((a, b) => a + b, 0) : 0;
+function desktopPrefix(ctx, r, role) {
+  const { pal } = ctx;
+  const chevron = r.node.kind === "dir" ? r.open ? "⌄" : "›" : "";
+  const guides = Array.from({ length: r.depth }, () => ({ t: "│", c: pal.lineStrong, cells: LEVEL_CELLS }));
+  return [...guides, { t: chevron, c: role ? pal.roles[role].fg : pal.lo, cells: LEVEL_CELLS }];
+}
+function desktopRight(ctx, r, role) {
+  const { t, pal } = ctx;
+  const n = r.node;
+  const live = role ? ctx.pillOf(n.id, role) : "";
+  if (role && live)
+    return { must: [{ t: ` ${live}`, c: pal.roles[role].fg }], may: [] };
+  const changes = changesIn(ctx, n);
+  if (changes && !t.showSize)
+    return { must: [{ t: ` ${changes}`, c: pal.roles.warn.fg }], may: [] };
+  const loc = t.diff[n.id];
+  const must = [];
+  if (loc && !t.showSize) {
+    if (loc[0] > 0)
+      must.push({ t: ` +${loc[0]}`, c: pal.roles.ok.fg });
+    if (loc[1] > 0)
+      must.push({ t: ` −${loc[1]}`, c: pal.roles.danger.fg });
+  }
+  const cost = ctx.costOf(n.id);
+  const meta = metaOf$1(ctx, r);
+  return { must, may: [...cost ? [{ t: ` ${cost}`, c: pal.mid }] : [], ...meta ? [{ t: ` ${meta}`, c: pal.lo }] : []] };
+}
+const widthOf$3 = (segs) => measure$2(segs.map((x) => x.t).join(""), NAME_PX);
+function fitRow(ctx, r, right, isBold) {
+  const room = (ctx.width - (r.depth + 1) * LEVEL_CELLS) * PX_PER_COL$1;
+  const whole = measure$2(r.node.name, NAME_PX, isBold);
+  const must = room - widthOf$3(right.must) < MIN_NAME_PX ? [] : right.must;
+  const kept = [...must];
+  for (const seg of right.may)
+    if (whole + widthOf$3([...kept, seg]) + RIGHT_GAP_PX <= room)
+      kept.push(seg);
+  return { name: fitMiddle(r.node.name, Math.max(MIN_NAME_PX, room - widthOf$3(kept) - RIGHT_GAP_PX), { size: NAME_PX, isBold }), right: kept };
+}
+function nameColor(ctx, id, isHidden) {
+  const { pal } = ctx;
+  const status = statusOf(ctx, id);
+  if (status === "D" || status === "U")
+    return pal.roles.danger.fg;
+  if (status)
+    return pal.roles.warn.fg;
+  return isHidden || underAny(id, ctx.ignored, ctx.t.root) ? pal.lo : pal.hi;
+}
+function desktopRow(ctx, r) {
+  const { t } = ctx;
+  const n = r.node;
+  const isBright = ctx.bright.has(n.id);
+  const isDim = !isBright && ctx.dimmed.has(n.id);
+  const tone = t.flashTones[n.id] ?? "orange";
+  const role = isBright ? roleOfTone(tone) : null;
+  const isBold = isBright || isDim || n.id === t.selected;
+  const { name, right } = fitRow(ctx, r, desktopRight(ctx, r, role), isBold);
+  const status = statusOf(ctx, n.id);
+  const label = isBright || isDim ? { t: name, sh: tone, dim: isDim, b: true } : { t: name, c: nameColor(ctx, n.id, n.hidden), b: n.id === t.selected, s: status === "D" && n.kind !== "dir" };
+  return { id: n.id, left: clean([...desktopPrefix(ctx, r, role), label]), right: clean(right), ...role ? { bg: ctx.pal.roles[role].tint } : {} };
+}
+
+const BRANCH_ROW = "#branch";
+
+const NO_TURN = { isRunning: false, hasRun: false, touches: [], sha: "", committed: 0, costs: {} };
+
+const ACTIVITY_TTL_MS = 45000;
+
+const RUNNING_MAX_MS = 600000;
+const LIVE_SPREAD_MS = 1500;
+const PIN_SHARE = 3;
+const MIN_REST = 3;
+function sceneFrom(p) {
+  const { t, now } = p;
+  const live = p.activities.filter((a) => now - a.at < (a.state === "running" ? RUNNING_MAX_MS : ACTIVITY_TTL_MS));
+  return {
+    t,
+    theme: p.theme ?? DEFAULT_THEME,
+    now,
+    latest: [...live].reverse().find((a) => a.state === "running") ?? live[live.length - 1],
+    bright: new Set(t.flashOn ? t.flash : []),
+    dimmed: new Set(t.flashOn ? t.flashDim : []),
+    turn: p.turn,
+    readTotal: p.readTotal,
+    look: p.look ?? { isLight: false, isAuto: true },
+    isCommitting: live.some((a) => a.kind === "git commit" && a.state === "running"),
+    feel: p.feel
+  };
+}
+function liveOf(s) {
+  const lit = s.turn.touches.filter((x) => s.bright.has(x.id));
+  const latest = [...lit].sort((a, b) => a.at - b.at).pop();
+  if (!latest || !s.turn.isRunning)
+    return new Set;
+  return new Set(lit.filter((x) => x.role === latest.role && latest.at - x.at <= LIVE_SPREAD_MS).map((x) => x.id));
+}
+function heroInput(s) {
+  return { turn: s.turn, live: liveOf(s), root: s.t.root, isCommitting: s.isCommitting, branch: s.t.branch?.head ?? "", diff: s.t.diff };
+}
+function rowCtx(s, width, unicode) {
+  const commits = new Set(s.turn.touches.filter((x) => x.role === "commit").map((x) => x.id));
+  const live = liveOf(s);
+  const w = words$2();
+  const pills = w.rowLive;
+  const pillOf = (id, role) => {
+    if (role === "ok")
+      return commits.has(id) ? w.rowCommitted : w.rowStaged;
+    return live.has(id) ? pills[role] ?? "" : "";
+  };
+  const { t } = s;
+  const costOf = (id) => rowCost(s.turn, id);
+  return { t, bright: s.bright, dimmed: s.dimmed, ignored: new Set(t.ignored), untracked: new Set(t.untrackedDirs), width, now: s.now, unicode, theme: s.theme, pal: paletteOf(s.look.isLight), pillOf, costOf };
+}
+function spanOf$1(s, rows, room) {
+  const { t } = s;
+  if (t.scroll !== null)
+    return { from: Math.max(0, Math.min(t.scroll, Math.max(0, rows.length - room))), pinned: [] };
+  const isFollowing = s.feel.followClaude && t.flashOn;
+  const isLit = (id) => s.bright.has(id) || s.dimmed.has(id);
+  const focus = isFollowing ? [...t.flash].reverse().find((id) => id !== BRANCH_ROW) ?? t.cursor : t.cursor;
+  const at = Math.max(0, rows.findIndex((r) => r.node.id === focus));
+  const lit = isFollowing ? rows.findIndex((r) => isLit(r.node.id)) : -1;
+  const cap = Math.max(1, Math.floor(room / PIN_SHARE));
+  const centered = lit >= 0 && at - lit < room - 2 ? Math.max(0, lit - 1) : at - Math.floor(room / 2);
+  let from = Math.max(0, Math.min(centered, rows.length - room));
+  let pinned = isFollowing ? rows.slice(0, from).filter((r) => isLit(r.node.id)).slice(-cap) : [];
+  if (pinned.length) {
+    const rest = Math.max(MIN_REST, room - pinned.length);
+    from = Math.max(0, Math.min(at - Math.floor(rest / 2), rows.length - rest));
+    pinned = rows.slice(0, from).filter((r) => isLit(r.node.id)).slice(-cap);
+  }
+  return { from, pinned };
+}
+function treeWindow(s, room, draw) {
+  const rows = visibleRows(s.t);
+  const { from, pinned } = spanOf$1(s, rows, room);
+  const max = Math.max(0, rows.length - room);
+  mem.view = { from, max };
+  const shown = rows.slice(from, from + room - pinned.length);
+  const { toSpec, colors } = draw;
+  const note = (text) => ({ id: "", left: [{ t: text, c: colors.note }], right: [] });
+  const specs = [...rows.length === 0 ? [note(words$2().emptyFolder)] : [], ...pinned.map(toSpec), ...pinned.length > 0 ? [note("  ⋮")] : [], ...shown.map(toSpec)];
+  const barSize = Math.max(1, Math.round(specs.length * shown.length / Math.max(1, rows.length)));
+  const bar = { pos: max ? Math.round(from / max * (specs.length - barSize)) : 0, size: barSize, thumb: colors.thumb, track: colors.track };
+  return { rows: [...pinned, ...shown], specs, ...rows.length > shown.length + pinned.length ? { bar } : {} };
+}
+
+const MORE_KEYS = ["size", "hidden", "up", "cwd", "unselect"];
+function toolLabels(t) {
+  const { tools } = words$2();
+  return {
+    refresh: tools.refresh,
+    collapse: tools.collapse,
+    size: t.showSize ? tools.showDates : tools.showSizes,
+    up: tools.up,
+    cwd: tools.cwd,
+    hidden: t.showHidden ? tools.hideHidden : tools.showHidden,
+    unselect: tools.unselect,
+    more: t.showTools ? tools.less : tools.more
+  };
+}
+const SHORTCUT_KEYS = ["r", "c", "s", ".", "u", "p", "x"];
+const shortcuts = () => SHORTCUT_KEYS.map((key, i) => [key, words$2().shortcuts[i] ?? ""]);
+function drawFind(ui, bar) {
+  const { Box, Button, Input } = ui;
+  const { t } = bar;
+  const w = words$2();
+  return h(Box, {
+    flexDirection: "row",
+    gap: 1,
+    alignItems: "center"
+  }, h(Box, {
+    flexGrow: 1,
+    flexShrink: 1
+  }, h(Input, {
+    key: "q",
+    placeholder: w.find,
+    submitLabel: w.findOpen,
+    autoFocus: true,
+    value: t.query,
+    onInput: bar.search.onInput,
+    onSubmit: bar.search.onSubmit
+  })), t.query ? h(Button, {
+    key: "clear",
+    plain: true,
+    dimColor: true,
+    label: w.clear,
+    onPress: () => bar.search.onInput("")
+  }) : null);
+}
+function drawActions(ui, bar) {
+  const { Box, Button } = ui;
+  const { t, act } = bar;
+  const labels = toolLabels(t);
+  return h(Box, {
+    flexDirection: "row",
+    flexShrink: 0,
+    columnGap: 1,
+    alignItems: "center"
+  }, h(Button, {
+    key: "collapse",
+    plain: true,
+    dimColor: true,
+    label: labels.collapse,
+    onPress: act.collapse
+  }), h(Button, {
+    key: "refresh",
+    plain: true,
+    dimColor: true,
+    label: labels.refresh,
+    onPress: act.refresh
+  }), h(Button, {
+    key: "more",
+    plain: true,
+    dimColor: !t.showTools,
+    label: labels.more,
+    onPress: act.more
+  }));
+}
+function drawMore(ui, bar) {
+  const { Box, Button, Text } = ui;
+  const { t, act } = bar;
+  if (!t.showTools)
+    return null;
+  const labels = toolLabels(t);
+  const w = words$2();
+  const more = MORE_KEYS.filter((k) => k !== "unselect" || t.selected);
+  return h(Box, {
+    flexDirection: "column",
+    gap: 1
+  }, h(Box, {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 1
+  }, more.map((k) => h(Button, {
+    key: k,
+    plain: true,
+    dimColor: true,
+    label: labels[k],
+    onPress: act[k]
+  }))), h(Box, {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 2
+  }, h(Text, {
+    dimColor: true
+  }, w.whileFocused), shortcuts().map(([key, what]) => h(Text, {
+    dimColor: true
+  }, h(Text, {
+    bold: true
+  }, key), " ", what))));
+}
+
+const ROW_PX = 18;
+const MIN_SVG_W = 240;
+const MAX_SVG_W = 900;
+const TOOLBAR_ROWS = 3;
+const TOOLBAR_OPEN_ROWS = 9;
+const FOOTER_ROWS = 2;
+const MIN_BODY$1 = 5;
+const ACTIONS_PX = 260;
+const MIN_NAME_W = 90;
+function gitRowOf(t) {
+  if (!t.top || !t.branch)
+    return null;
+  const [add, del] = t.diff[t.root] ?? [0, 0];
+  const changed = (t.counts[t.root] ?? [0, 0, 0]).reduce((a, b) => a + b, 0);
+  return { branch: t.branch.head, upstream: t.branch.upstream, ahead: t.branch.ahead, behind: t.branch.behind, changed, add, del };
+}
+function costRowOf(s) {
+  const total = s.readTotal;
+  if (!total || total.reads === 0)
+    return null;
+  const turn = turnCost(s.turn);
+  return { turn: turn ? costText$1(turn) : null, session: total.reads > (turn?.reads ?? 0) ? costText$1(total) : null };
+}
+function legendOf(s, git) {
+  const tones = s.t.flashOn ? Object.values(s.t.flashTones).map(roleOfTone) : [];
+  const has = (role) => s.turn.touches.some((x) => x.role === role) || tones.includes(role);
+  const { legend } = words$2();
+  return [
+    ...has("read") ? [{ role: "read", label: legend.read }] : [],
+    ...has("edit") ? [{ role: "edit", label: legend.edit }] : [],
+    ...git?.changed ? [{ role: "warn", label: legend.warn }] : []
+  ];
+}
+const motion$3 = paneMotion$3();
+function cardsOf(s, w) {
+  const { t, look } = s;
+  const input = heroInput(s);
+  const git = gitRowOf(t);
+  const cost = costRowOf(s);
+  const hero = heroOf(input);
+  const legend = legendOf(s, git);
+  const touchedList = touchedRows(input);
+  const section = sectionLine({ label: words$2().allFiles, name: (t.top ? t.top : t.root).split("/").pop() ?? "" }, { look, w: w - ACTIONS_PX >= MIN_NAME_W ? w - ACTIONS_PX : w });
+  return {
+    hero: { drawn: heroCard(hero, { git, cost, legend }, { look, w }), shows: { hero, git, legend, isCounted: Boolean(cost?.turn), isSummed: Boolean(cost?.session), look, w } },
+    touched: touchedList.length ? { drawn: touchedCard(touchedList, look, w), shows: { rows: touchedList.map(({ cost: c, ...row }) => ({ ...row, isCounted: c !== undefined })), look, w } } : null,
+    section: { drawn: section }
+  };
+}
+function drawDesktop(ui, frame, act) {
+  const { Box, Client, Svg } = ui;
+  const { s, room, home } = frame;
+  const { t, look } = s;
+  const pal = paletteOf(look.isLight);
+  const { hero, touched, section } = cardsOf(s, Math.max(MIN_SVG_W, Math.min(MAX_SVG_W, room.width * PX_PER_COL$1)));
+  const lines = (px) => Math.ceil(px / ROW_PX) + 1;
+  const toolRows = t.showTools ? TOOLBAR_OPEN_ROWS : TOOLBAR_ROWS;
+  const fixed = lines(hero.drawn.height) + (touched ? lines(touched.drawn.height) : 0) + lines(section.drawn.height) + toolRows + FOOTER_ROWS;
+  const ctx = rowCtx(s, room.width - 1, true);
+  const win = treeWindow(s, Math.max(MIN_BODY$1, room.bodyRows - fixed), { toSpec: (r) => desktopRow(ctx, r), colors: { thumb: pal.lineStrong, track: pal.line, note: pal.lo } });
+  const bar = win.bar ? { ...win.bar, isOverlay: true } : null;
+  if (t.showSize)
+    act.sizes(unsized(t, win.rows));
+  const chip = s.latest ? activityChip(ui, s.latest, { unicode: true, colorOf: (tone) => pal.roles[roleOfTone(tone)].fg }) : null;
+  const svg = (key, card) => h(Svg, {
+    key,
+    ...motion$3.pic(key, card.drawn, { shows: card.shows })
+  });
+  const find = { onInput: act.find, onSubmit: act.jump };
+  const rows = { rows: win.specs, active: t.cursor, activeBg: pal.line, hoverBg: mix(pal.line, pal.sheet, 0.5), tones: shimmerTones(pal, look.isLight), pointer: s.feel.pointer, ...bar ? { bar } : {} };
+  const tools = { t, act: act.tool, search: find };
+  return h(Box, {
+    flexDirection: "column",
+    gap: 1,
+    minHeight: Math.max(1, room.bodyRows)
+  }, home, svg("ft-hero", hero), drawFind(ui, tools), touched ? svg("ft-touched", touched) : null, h(Box, {
+    flexDirection: "column"
+  }, h(Box, {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between"
+  }, svg("ft-section", section), drawActions(ui, tools)), drawMore(ui, tools), h(Client, {
+    key: "rows",
+    module: "./rows.tsx",
+    props: rows
+  })), h(Box, {
+    flexGrow: 1
+  }), footer(ui, s, chip) ?? h(Box, {
+    height: 1
+  }));
+}
+
+const TERMINAL_TONE = { purple: "blue", iris: "purple" };
+const SHIMMER = Object.fromEntries(Object.keys(TONES).map((k) => {
+  const v = TONES[TERMINAL_TONE[k] ?? k] ?? TONES[k];
+  return [k, { bright: v?.bright ?? [], dim: v?.dim ?? [] }];
+}));
+const ADD_COLOR = "#98c379";
+const DEL_COLOR = "#e06c75";
+const HEAD_ROWS = 2;
+const MIN_BODY = 5;
+const FAINT_BASE = 38;
+const FAINT_SHARE = 0.3;
+const SESSION_COST_COLS = 70;
+function faint(hex) {
+  const v = parseInt(hex.slice(1), 16);
+  const ch = (shift) => Math.round(FAINT_BASE + ((v >> shift & 255) - FAINT_BASE) * FAINT_SHARE);
+  return `#${[16, 8, 0].map((x) => ch(x).toString(16).padStart(2, "0")).join("")}`;
+}
+function branchTotals(ui, s) {
+  const { Box, Text } = ui;
+  const { t, theme } = s;
+  const totals = t.diff[t.root] ?? [0, 0];
+  const rootCounts = countSegs(t.counts[t.root], theme);
+  return h(Box, {
+    flexDirection: "row",
+    flexShrink: 0
+  }, totals[0] > 0 && h(Text, {
+    color: ADD_COLOR
+  }, ` +${totals[0]}`), totals[1] > 0 && h(Text, {
+    color: DEL_COLOR
+  }, ` -${totals[1]}`), rootCounts.map((c) => h(Text, {
+    color: c.c
+  }, c.t)), rootCounts.length === 0 && totals[0] === 0 && totals[1] === 0 && h(Text, {
+    color: theme.muted
+  }, ` ${words$2().clean}`));
+}
+function terminalBranch(ui, s, unicode) {
+  const { Box, Text } = ui;
+  const { t, theme } = s;
+  if (!t.top || !t.branch)
+    return null;
+  const b = t.branch;
+  const isFlash = s.bright.has(BRANCH_ROW);
+  const tone = TONES[t.flashTones[BRANCH_ROW] ?? "teal"]?.solid;
+  return h(Box, {
+    flexDirection: "row",
+    height: 1,
+    overflow: "hidden"
+  }, h(Box, {
+    flexDirection: "row",
+    flexShrink: 0
+  }, h(Text, {
+    color: isFlash ? tone ?? theme.accent : theme.accent
+  }, (unicode ? BRANCH_ICON.plain : BRANCH_ICON.nerd) + " "), h(Text, {
+    bold: true,
+    color: isFlash ? tone ?? (theme.fg || undefined) : theme.fg || undefined
+  }, b.head), b.ahead > 0 && h(Text, {
+    color: "success"
+  }, ` ↑${b.ahead}`), b.behind > 0 && h(Text, {
+    color: "warning"
+  }, ` ↓${b.behind}`)), b.upstream && h(Box, {
+    flexShrink: 1,
+    overflow: "hidden"
+  }, h(Text, {
+    color: theme.muted,
+    wrap: "truncate-end"
+  }, ` ${b.upstream}`)), h(Box, {
+    flexGrow: 1
+  }), branchTotals(ui, s));
+}
+function searchRow(ui, at) {
+  const { Box, Button, Input } = ui;
+  const { t } = at;
+  return h(Box, {
+    flexDirection: "row",
+    gap: 1
+  }, h(Box, {
+    flexGrow: 1
+  }, h(Input, {
+    key: "q",
+    ...at.label ? { label: at.label } : {},
+    placeholder: words$2().find,
+    submitLabel: words$2().findGo,
+    autoFocus: true,
+    value: t.query,
+    onInput: at.act.find,
+    onSubmit: at.act.jump
+  })), t.query ? h(Button, {
+    key: "clear",
+    plain: true,
+    dimColor: true,
+    label: at.clear,
+    onPress: () => at.act.find("")
+  }) : null);
+}
+function headRow(ui, at) {
+  const { Box, Text, Button } = ui;
+  const { t, theme, unicode, act } = at;
+  const header = t.top ? [t.top.split("/").pop() ?? t.top, t.prefix.replace(/\/$/, "")].filter(Boolean).join("/") : t.root.split("/").pop() || t.root;
+  const icon = (key, glyph, isDim = true) => h(Button, {
+    key,
+    plain: true,
+    dimColor: isDim,
+    label: unicode ? glyph.plain : glyph.nerd,
+    onPress: act[key]
+  });
+  return h(Box, {
+    flexDirection: "row"
+  }, h(Text, {
+    bold: true,
+    color: theme.accent,
+    wrap: "truncate-start"
+  }, header), h(Box, {
+    flexGrow: 1
+  }), h(Box, {
+    flexDirection: "row",
+    gap: 2
+  }, icon("up", { plain: "↑", nerd: "\uDB80\uDC5D" }), icon("cwd", { plain: "⌂", nerd: "\uDB80\uDEDC" }, !at.isFollowing), icon("refresh", { plain: "↻", nerd: "\uDB81\uDC50" }), icon("hidden", t.showHidden ? { plain: "◉", nerd: "\uDB80\uDE08" } : { plain: "○", nerd: "\uDB80\uDE09" }, !t.showHidden), icon("size", { plain: "Σ", nerd: "\uDB80\uDECA" }, !t.showSize), icon("collapse", { plain: "⊟", nerd: "" }), t.selected ? icon("unselect", { plain: "⊘", nerd: "\uDB81\uDF77" }, false) : null, h(Text, null, " ")));
+}
+function costLabel(s, width) {
+  const turn = turnCost(s.turn);
+  const total = s.readTotal;
+  const said = words$2();
+  const parts = [
+    turn ? `${costText$1(turn)} ${said.tokUnit}` : "",
+    total && total.reads > (turn?.reads ?? 0) && width >= SESSION_COST_COLS ? said.costSession(costText$1(total, true)) : ""
+  ];
+  return parts.filter(Boolean).join(" · ");
+}
+function nowLine$1(ui, s, width) {
+  const { Box, Text } = ui;
+  const hero = heroOf(heroInput(s));
+  const cost = costLabel(s, width);
+  return h(Box, {
+    flexDirection: "row",
+    height: 1,
+    overflow: "hidden"
+  }, h(Box, {
+    flexDirection: "row",
+    flexShrink: 1,
+    overflow: "hidden"
+  }, h(Text, {
+    bold: true,
+    dimColor: true
+  }, `${hero.label}  `), h(Text, {
+    wrap: "truncate-end"
+  }, heroText(hero)), h(Text, {
+    dimColor: true,
+    wrap: "truncate-end"
+  }, ` · ${subText(hero)}`)), h(Box, {
+    flexGrow: 1
+  }), cost ? h(Text, {
+    color: "suggestion"
+  }, ` ${cost}`) : null);
+}
+function fixedRows(s) {
+  const { t } = s;
+  return HEAD_ROWS + Number(!t.top || Boolean(t.branch)) + Number(Boolean(t.selected || s.latest)) + Number(s.turn.hasRun);
+}
+function drawTerminal(ui, frame, act) {
+  const { Box, Text, Client } = ui;
+  const { s, room, home } = frame;
+  const { t, theme } = s;
+  const { glyphs, noNerd } = s.feel;
+  const unicode = glyphs === "plain" || glyphs === "auto" && noNerd;
+  const ctx = rowCtx(s, room.width, unicode);
+  const win = treeWindow(s, Math.max(MIN_BODY, room.bodyRows - fixedRows(s)), { toSpec: (r) => terminalRow(ctx, r), colors: { thumb: theme.accent, track: theme.muted, note: theme.muted } });
+  if (t.showSize)
+    act.sizes(unsized(t, win.rows));
+  const chip = s.latest ? activityChip(ui, s.latest, { unicode, colorOf: (tone) => TONES[tone]?.solid ?? theme.accent }) : null;
+  const rows = { rows: win.specs, active: t.cursor, activeBg: theme.selection, hoverBg: faint(theme.selection), tones: SHIMMER, pointer: s.feel.pointer, ...win.bar ? { bar: win.bar } : {} };
+  return h(Box, {
+    flexDirection: "column",
+    minHeight: Math.max(1, room.bodyRows),
+    backgroundColor: theme.bg || undefined
+  }, home, headRow(ui, { t, theme, unicode, isFollowing: s.feel.follow, act: act.tool }), terminalBranch(ui, s, unicode), !t.top && h(Text, {
+    color: theme.muted
+  }, unicode ? "± " : " ", words$2().noRepo), s.turn.hasRun && nowLine$1(ui, s, room.width), searchRow(ui, { t, act, label: "/ ", clear: unicode ? "×" : "\uDB80\uDD56" }), h(Client, {
+    key: "rows",
+    module: "./rows.tsx",
+    props: rows
+  }), h(Box, {
+    flexGrow: 1
+  }), footer(ui, s, chip));
+}
+
+const TREE = { plugin: "filetree", key: "tree" };
+const THEME = { plugin: "filetree", key: "theme" };
+const ACTIVITY = { plugin: "filetree", key: "activity" };
+const TURN = { plugin: "filetree", key: "turn" };
+const READS = { plugin: "filetree", key: "reads" };
+const LOOK = { plugin: "filetree", key: "look" };
+const FEEL = { plugin: "filetree", key: "feel" };
+const STAGE$1 = { plugin: "modz", key: "stage" };
+const ACT$1 = { plugin: "modz", key: "act" };
+const PAGE = "files";
+const MIN_WIDTH = 24;
+const FEEL_DEFAULT = { glyphs: "auto", noNerd: false, pointer: true, followClaude: true, follow: true };
+const shown = { at: -1, isLoaded: false };
+async function filesPage($, ui, site, act) {
+  setLang$3(lang$1());
+  const t = { ...emptyTree$1(""), ...(await $.state.get(TREE)).value };
+  const parts = {
+    theme: (await $.state.get(THEME)).value,
+    activities: (await $.state.get(ACTIVITY)).value ?? [],
+    turn: { ...NO_TURN, ...(await $.state.get(TURN)).value },
+    readTotal: (await $.state.get(READS)).value,
+    look: (await $.state.get(LOOK)).value,
+    feel: { ...FEEL_DEFAULT, ...(await $.state.get(FEEL)).value }
+  };
+  const staged = (await $.state.get(STAGE$1)).value;
+  const at = typeof staged?.at === "number" ? staged.at : -1;
+  const isLoaded = t.nodes.length > 0;
+  if (at !== shown.at || isLoaded !== shown.isLoaded)
+    motion$3.reset();
+  Object.assign(shown, { at, isLoaded });
+  const s = sceneFrom({ ...parts, t, now: await $.clock.now() });
+  const tool = Object.fromEntries(Object.keys(toolLabels(t)).map((key) => [key, () => act(key)]));
+  const acts = { tool, find: (v) => act("find", v), jump: (v) => act("jump", v), sizes: () => {
+    return;
+  } };
+  const frame = { s, room: { width: Math.max(MIN_WIDTH, site.columns), bodyRows: site.rows }, home: null };
+  return site.surface === "desktop" ? drawDesktop(ui, frame, acts) : drawTerminal(ui, frame, acts);
+}
+async function isFilesUp($) {
+  return paneOf((await $.state.get(STAGE$1)).value) === PAGE;
+}
+async function handOn($, action, sent) {
+  await $.state.set(ACT$1, { page: PAGE, action, arg: JSON.stringify({ ...sent, view: mem.view }), at: Date.now() });
+}
+function wireFilesPage(on) {
+  on("ui.message", async ($, e, next) => {
+    if (e.requestId !== HUB_PANE || e.element !== "rows" || !await isFilesUp($))
+      return next(e);
+    await handOn($, "rows", { data: e.data, surface: e.surface });
+    return {};
+  });
+  on("ui.scroll", { component: "Pane", requestId: HUB_PANE }, async ($, e, next) => {
+    if (!await isFilesUp($))
+      return next(e);
+    await handOn($, "scroll", { by: e.by });
+    return {};
+  });
+  on("ui.focus", { component: "Pane", requestId: HUB_PANE }, async ($, e, next) => {
+    const done = await next(e);
+    if (await isFilesUp($))
+      await handOn($, "focus", {});
+    return done;
+  });
+}
+
+let current$2 = "en";
+const langOf$2 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
+function setLang$2(value) {
+  current$2 = langOf$2(value);
+  return current$2;
+}
+const upper$2 = (text) => text.toLocaleUpperCase(current$2);
+
+const plural$2 = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const en = {
+  pane: "Agents",
+  command: "Open or close the Agents panel: running, done and planned helper agents; progress, cost, timeline, quiet-agent warning; message, stop and new task",
+  cost: "Cost",
+  tokens: "Tokens",
+  time: "Time",
+  collapse: "Collapse",
+  expand: "Expand",
+  running: "Running",
+  finished: "Finished",
+  planned: "Planned",
+  emptyTitle: "No agents yet",
+  paneFailed: "The pane could not be drawn; here is the plain list.",
+  moreAgents: (n) => `+${n} more ${n === 1 ? "agent" : "agents"}`,
+  empty: "Hand out a task and a crab gets to work: its status, progress and cost show here live.",
+  round: "round",
+  failed: "failed",
+  aborted: "stopped",
+  tokensWord: "tokens",
+  agentsCount: "agents",
+  isRunning: "running",
+  isFinished: "done",
+  isPlanned: "planned",
+  opened: "Agents panel opened.",
+  closed: "Agents panel closed.",
+  done: "Done",
+  plan: "Plan",
+  design: "Design",
+  tasks: "Tasks",
+  review: "Review",
+  agents: "Agents",
+  busy: "running",
+  total: "total",
+  completed: "completed",
+  starting: "starting",
+  mainName: "Main session",
+  mainType: "this chat",
+  mainTask: "The work in this chat",
+  dismiss: "Close",
+  brief: "Task",
+  history: "Work history",
+  context: "memory",
+  limit: "5h allowance",
+  limitTile: "of 5h allowance",
+  kinds: { read: "read", edit: "edit", run: "run", agent: "agent", other: "other" },
+  efforts: { low: "light thinking", medium: "medium thinking", high: "deep thinking", xhigh: "very deep thinking", max: "deepest thinking" },
+  cheerFailed: "(×_×) did not finish",
+  show: "Show",
+  hide: "Hide",
+  details: "Details",
+  current: "Now",
+  thinking: "Thinking",
+  lastStep: "Last step",
+  doing: { read: "Reading", edit: "Editing", run: "Running a command", agent: "Working with an agent", other: "Using a tool" },
+  files: "Files touched",
+  moreFiles: (n) => `+${plural$2(n, "more file", "more files")}`,
+  showAll: "Show all",
+  showLess: "Show less",
+  ago: (span) => `${span} ago`,
+  timeline: "Timeline",
+  now: "now",
+  look: "Look",
+  failedNow: "failed",
+  newTask: "New task",
+  agentLabel: "Agent",
+  taskLabel: "Task",
+  taskHint: "Describe the work, Enter starts it",
+  start: "start",
+  cancel: "Cancel",
+  noTypes: "No agent types known yet.",
+  noDescription: "No description.",
+  spawnFailed: "Could not start the agent",
+  builtins: { "general-purpose": "Research, search and multi-step work", Explore: "Scans the code fast, changes nothing", Plan: "Plans how the work will be done" },
+  sources: { "built-in": "built-in", plugin: "plugin", project: "project", user: "user" },
+  shareOf: (share) => `≈${share}% of the 5-hour usage allowance`,
+  earlier: (n) => `${plural$2(n, "earlier step", "earlier steps")} hidden`,
+  logOpen: (n) => `Show every step (${n})`,
+  logClose: "Close the log",
+  log: "Step-by-step log",
+  because: "Why",
+  after: (list) => `after ${list}`,
+  tools: (n) => plural$2(n, "step", "steps"),
+  errors: (n) => `${n} failed`,
+  crew: (n) => plural$2(n, "agent", "agents"),
+  stripCost: "cost",
+  stripTokens: "tokens",
+  stripTime: "agent time",
+  stripLast: (cost) => `last turn ${cost}`,
+  stripTurns: (n) => plural$2(n, "turn", "turns"),
+  stripPerTurn: (span) => `${span} per turn`,
+  stripDoing: { read: "reading", edit: "writing", run: "command", agent: "leading agents", other: "thinking" },
+  rowDoing: { read: "reading", search: "searching", edit: "writing", run: "running a command", test: "checking", save: "saving a version", web: "on the internet", message: "sending word", agent: "leading agents", wait: "waiting", other: "thinking" },
+  rowStep: (done, total) => `step ${done}/${total}`,
+  rowPlan: (at, of, subject) => `plan step ${at}/${of}: ${subject}`,
+  rowEnded: { done: "finished", failed: "did not finish" },
+  stripPlan: "plan",
+  stripPlanDone: "done",
+  stripWeek: "week",
+  stripFive: "5 hours",
+  stripRunsOut: (when) => `runs out ${when}`,
+  stripFull: "used up",
+  stripDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  stripResting: { sleeping: "asleep", working: "working", happy: "pleased", worried: "uneasy" },
+  stripStep: (n, subject) => `Step ${n}: ${subject}`,
+  stripTeam: {
+    fresh: (n) => `${n} new`,
+    away: (name) => `${name} is not working right now`,
+    working: "working now",
+    isWorking: (name) => `${name} is working now`,
+    worked: (name, ago) => `${name} worked ${ago}`,
+    on: (branch) => `on the line of work ${branch}`,
+    more: (n) => `and ${n} more on this project`,
+    wrote: (name) => `${name} wrote`,
+    aiWrote: (name) => `${name}'s AI wrote`
+  },
+  hubCrew: (n) => `${n} running`,
+  pct: (n) => `${n}%`,
+  minutes: (n) => `${n} min`,
+  seconds: (n) => `${n}s`,
+  hours: (n) => `${n} h`,
+  quiet: (span) => `quiet ${span}`,
+  longTool: (_tool, span) => `one step running ${span}`,
+  stopWho: (name) => `Stop ${name}`,
+  messageTo: (name) => `Message ${name}, Enter sends`,
+  you: "You",
+  answering: (name) => `${name} is answering…`,
+  followUp: (name) => `Ask ${name} a follow-up, Enter sends`,
+  launched: (name) => `${name} got to work`,
+  denied: (reason) => `Refused: ${reason}`,
+  decimal: ".",
+  message: "Message",
+  send: "send",
+  stop: "Stop",
+  delivered: "Message delivered",
+  stopAsked: "Stop requested",
+  stopRefused: "Stop refused",
+  stopFailed: "Could not stop this agent",
+  allDone: "All done",
+  liveCount: (n) => `${n} running`,
+  endedCount: (n) => `${n} done`,
+  plannedCount: (n) => `${n} planned`,
+  notDelivered: (reason) => `Not delivered: ${reason}`,
+  chats: {
+    title: "Other chats",
+    waitingTitle: "Waiting on you",
+    waiting: (span) => span ? `waiting ${span}` : "waiting",
+    states: { working: "working", idle: "idle" },
+    untitled: "New chat",
+    more: (n) => `+${n} more`,
+    agentsTitle: "Agents in other chats",
+    emptyHere: "No agents in this chat",
+    hubWaits: (n) => n === 1 ? "1 chat waits" : `${n} chats wait`,
+    hubWorks: (n) => n === 1 ? "1 chat working" : `${n} chats working`
+  },
+  crab: {
+    moods: { sleeping: "napping", working: "working", happy: "happy", worried: "worried" },
+    level: (n) => `Lv ${n}`
+  }
+};
+
+const ru = {
+  ...en,
+  pane: "Агенты",
+  command: "Открыть или закрыть панель агентов: работающие, завершённые и запланированные субагенты; прогресс, стоимость, хронология, предупреждение о молчащем агенте; сообщение, остановка и новая задача",
+  cost: "Стоимость",
+  tokens: "Токены",
+  time: "Время",
+  collapse: "Свернуть",
+  expand: "Развернуть",
+  running: "Работают",
+  finished: "Завершены",
+  planned: "Запланированы",
+  emptyTitle: "Агентов пока нет",
+  paneFailed: "Панель не отрисовалась, вот простой список.",
+  moreAgents: (n) => `ещё агентов: ${n}`,
+  empty: "Дай задачу, и краб возьмётся за дело: статус, прогресс и стоимость появятся здесь.",
+  round: "раунд",
+  failed: "ошибка",
+  aborted: "остановлен",
+  tokensWord: "токенов",
+  agentsCount: "агентов",
+  isRunning: "работает",
+  isFinished: "завершён",
+  isPlanned: "запланирована",
+  opened: "Панель агентов открыта.",
+  closed: "Панель агентов закрыта.",
+  done: "Готово",
+  plan: "План",
+  design: "Дизайн",
+  tasks: "Задачи",
+  review: "Ревью",
+  agents: "Агенты",
+  busy: "в работе",
+  total: "всего",
+  completed: "готово",
+  starting: "запуск",
+  mainName: "Главная сессия",
+  mainType: "этот чат",
+  mainTask: "Работа в этом чате",
+  dismiss: "Закрыть",
+  brief: "Задача",
+  history: "История работы",
+  context: "память",
+  limit: "5ч",
+  limitTile: "доля 5ч",
+  current: "Сейчас",
+  thinking: "Думает",
+  lastStep: "Последний шаг",
+  doing: { read: "Читает", edit: "Правит", run: "Выполняет команду", agent: "Работает с агентом", other: "Использует инструмент" },
+  files: "Затронутые файлы",
+  moreFiles: (n) => `ещё файлов: ${n}`,
+  showAll: "Показать целиком",
+  showLess: "Свернуть",
+  ago: (span) => `${span} назад`,
+  kinds: { read: "чтение", edit: "правка", run: "команда", agent: "агент", other: "другое" },
+  efforts: { low: "лёгкое обдумывание", medium: "среднее обдумывание", high: "глубокое обдумывание", xhigh: "очень глубокое обдумывание", max: "самое глубокое обдумывание" },
+  cheerFailed: "(×_×) не вышло",
+  show: "Показать",
+  hide: "Скрыть",
+  details: "Подробнее",
+  timeline: "Хронология",
+  now: "сейчас",
+  look: "Открыть",
+  failedNow: "упал с ошибкой",
+  newTask: "Новая задача",
+  agentLabel: "Агент",
+  taskLabel: "Задача",
+  taskHint: "Опиши работу, Enter запустит",
+  start: "запустить",
+  cancel: "Отмена",
+  noTypes: "Типы агентов пока не известны.",
+  noDescription: "Без описания.",
+  spawnFailed: "Не удалось запустить агента",
+  builtins: { "general-purpose": "Исследование, поиск и многошаговая работа", Explore: "Быстрый поиск по коду, только чтение", Plan: "Составляет план реализации" },
+  sources: { "built-in": "встроенный", plugin: "плагин", project: "проект", user: "пользователь" },
+  shareOf: (share) => `≈${share}% лимита 5ч`,
+  earlier: (n) => `скрыто ранних шагов: ${n}`,
+  logOpen: (n) => `Показать все шаги (${n})`,
+  logClose: "Закрыть журнал",
+  log: "Пошаговый журнал",
+  because: "Зачем",
+  after: (list) => `после ${list}`,
+  tools: (n) => `шагов: ${n}`,
+  errors: (n) => `ошибок: ${n}`,
+  crew: (n) => `агентов: ${n}`,
+  stripCost: "стоимость",
+  stripTokens: "токены",
+  stripTime: "время агентов",
+  stripLast: (cost) => `последний ход ${cost}`,
+  stripTurns: (n) => `ходов: ${n}`,
+  stripPerTurn: (span) => `${span} за ход`,
+  stripDoing: { read: "читает", edit: "пишет", run: "команда", agent: "ведёт агентов", other: "думает" },
+  rowDoing: { read: "читает", search: "ищет", edit: "пишет", run: "выполняет команду", test: "проверяет", save: "сохраняет версию", web: "в интернете", message: "передаёт сообщение", agent: "ведёт агентов", wait: "ждёт", other: "думает" },
+  rowStep: (done, total) => `шаг ${done}/${total}`,
+  rowPlan: (at, of, subject) => `шаг плана ${at}/${of}: ${subject}`,
+  rowEnded: { done: "закончил", failed: "не закончил" },
+  stripPlan: "план",
+  stripPlanDone: "готов",
+  stripWeek: "неделя",
+  stripFive: "5 часов",
+  stripRunsOut: (when) => `кончится ${when}`,
+  stripFull: "исчерпан",
+  stripDays: ["вс", "пн", "вт", "ср", "чт", "пт", "сб"],
+  stripResting: { sleeping: "спит", working: "работает", happy: "доволен", worried: "встревожен" },
+  stripStep: (n, subject) => `Шаг ${n}: ${subject}`,
+  stripTeam: {
+    fresh: (n) => `новых: ${n}`,
+    away: (name) => `${name} сейчас не работает`,
+    working: "работает сейчас",
+    isWorking: (name) => `${name} работает сейчас`,
+    worked: (name, ago) => `${name} работал(а) ${ago}`,
+    on: (branch) => `ветка работы ${branch}`,
+    more: (n) => `и ещё ${n} в этом проекте`,
+    wrote: (name) => `${name} написал(а)`,
+    aiWrote: (name) => `ИИ пользователя ${name} написал`
+  },
+  hubCrew: (n) => `агентов: ${n}`,
+  minutes: (n) => `${n} мин`,
+  seconds: (n) => `${n} с`,
+  hours: (n) => `${n} ч`,
+  quiet: (span) => `молчит ${span}`,
+  longTool: (_tool, span) => `один шаг идёт ${span}`,
+  stopWho: (name) => `Остановить ${name}`,
+  messageTo: (name) => `Написать ${name}, Enter отправит`,
+  you: "Вы",
+  answering: (name) => `${name} отвечает…`,
+  followUp: (name) => `Задать ${name} ещё вопрос, Enter отправит`,
+  launched: (name) => `${name} взялся за дело`,
+  denied: (reason) => `Отклонено: ${reason}`,
+  decimal: ",",
+  message: "Сообщение",
+  send: "отправить",
+  stop: "Остановить",
+  delivered: "Сообщение доставлено",
+  stopAsked: "Остановка запрошена",
+  stopRefused: "Остановка отклонена",
+  stopFailed: "Не удалось остановить агента",
+  allDone: "Всё готово",
+  liveCount: (n) => `работают: ${n}`,
+  endedCount: (n) => `завершено: ${n}`,
+  plannedCount: (n) => `в плане: ${n}`,
+  notDelivered: (reason) => `Не доставлено: ${reason}`,
+  chats: {
+    title: "Другие чаты",
+    waitingTitle: "Ждут тебя",
+    waiting: (span) => span ? `ждёт ${span}` : "ждёт",
+    states: { working: "работает", idle: "свободен" },
+    untitled: "Новый чат",
+    more: (n) => `+${n} ещё`,
+    agentsTitle: "Агенты в других чатах",
+    emptyHere: "В этом чате агентов нет",
+    hubWaits: (n) => `чатов ждёт: ${n}`,
+    hubWorks: (n) => `чатов в работе: ${n}`
+  },
+  crab: {
+    moods: { sleeping: "спит", working: "работает", happy: "доволен", worried: "волнуется" },
+    level: (n) => `Ур ${n}`
+  }
+};
+
+const VOWELS = "aeıioöuü";
+const HARMONY = { a: "ı", ı: "ı", e: "i", i: "i", o: "u", u: "u", ö: "ü", ü: "ü" };
+const BACK = "aıou";
+const lastVowel = (lower) => [...lower].reverse().find((ch) => VOWELS.includes(ch)) ?? "i";
+const suffixed = (name, pick) => {
+  const lower = name.toLocaleLowerCase("tr");
+  const buffer = VOWELS.includes(lower.at(-1) ?? "") ? "y" : "";
+  return `${name}'${buffer}${pick(lastVowel(lower))}`;
+};
+const accusative = (name) => suffixed(name, (vowel) => HARMONY[vowel] ?? "i");
+const dative = (name) => suffixed(name, (vowel) => BACK.includes(vowel) ? "a" : "e");
+const tr = {
+  pane: "Ajanlar",
+  command: "Ajanlar panelini aç/kapat: çalışan, biten ve planlı yardımcı ajanlar; ilerleme, maliyet, zaman çizelgesi, sessiz ajan uyarısı; mesaj, durdur ve yeni görev",
+  cost: "Maliyet",
+  tokens: "Token",
+  time: "Süre",
+  collapse: "Daralt",
+  expand: "Genişlet",
+  running: "Çalışıyor",
+  finished: "Bitti",
+  planned: "Planlı",
+  emptyTitle: "Henüz ajan yok",
+  paneFailed: "Panel çizilemedi, düz liste gösteriliyor.",
+  moreAgents: (n) => `+${n} ajan daha`,
+  empty: "Bir görev ver, bir yengeç işe koyulsun: durumu, ilerlemesi ve maliyeti burada canlı görünür.",
+  round: "tur",
+  failed: "hata",
+  aborted: "durduruldu",
+  tokensWord: "token",
+  agentsCount: "ajan",
+  isRunning: "çalışıyor",
+  isFinished: "bitti",
+  isPlanned: "planlı",
+  opened: "Ajanlar paneli açıldı.",
+  closed: "Ajanlar paneli kapandı.",
+  done: "Bitti",
+  plan: "Plan",
+  design: "Tasarım",
+  tasks: "Görevler",
+  review: "Gözden geçirme",
+  agents: "Ajanlar",
+  busy: "çalışıyor",
+  total: "toplam",
+  completed: "tamamlandı",
+  starting: "başlıyor",
+  mainName: "Ana oturum",
+  mainType: "bu sohbet",
+  mainTask: "Bu sohbetteki iş",
+  dismiss: "Kapat",
+  brief: "Görev",
+  history: "İş geçmişi",
+  context: "hafıza",
+  limit: "5 saatlik hak",
+  limitTile: "5 saatlik haktan",
+  kinds: { read: "okuma", edit: "düzenleme", run: "komut", agent: "ajan", other: "diğer" },
+  efforts: { low: "az düşünme", medium: "orta düşünme", high: "derin düşünme", xhigh: "çok derin düşünme", max: "en derin düşünme" },
+  cheerFailed: "(×_×) olmadı",
+  show: "Göster",
+  hide: "Gizle",
+  details: "Detay",
+  current: "Şu an",
+  thinking: "Düşünüyor",
+  lastStep: "Son adım",
+  doing: { read: "Okuyor", edit: "Düzenliyor", run: "Komut çalıştırıyor", agent: "Ajanla çalışıyor", other: "Araç kullanıyor" },
+  files: "Dokunduğu dosyalar",
+  moreFiles: (n) => `+${n} dosya daha`,
+  showAll: "Tamamını göster",
+  showLess: "Kısalt",
+  ago: (span) => `${span} önce`,
+  timeline: "Zaman çizelgesi",
+  now: "şimdi",
+  look: "Bak",
+  failedNow: "hata verdi",
+  newTask: "Yeni görev",
+  agentLabel: "Ajan",
+  taskLabel: "Görev",
+  taskHint: "İşi anlat, Enter başlatır",
+  start: "başlat",
+  cancel: "Vazgeç",
+  noTypes: "Henüz bilinen ajan türü yok.",
+  noDescription: "Açıklama yok.",
+  spawnFailed: "Ajan başlatılamadı",
+  builtins: { "general-purpose": "Araştırma, arama ve çok adımlı iş", Explore: "Kodu hızlıca tarar, hiçbir şeyi değiştirmez", Plan: "İşin nasıl yapılacağını planlar" },
+  sources: { "built-in": "yerleşik", plugin: "eklenti", project: "proje", user: "kullanıcı" },
+  shareOf: (share) => `5 saatlik kullanım hakkının ≈%${share} kadarı`,
+  earlier: (n) => `${n} önceki adım gizli`,
+  logOpen: (n) => `Tüm adımları göster (${n})`,
+  logClose: "Kaydı kapat",
+  log: "Adım adım kayıt",
+  because: "Neden",
+  after: (list) => `${list} sonrası`,
+  tools: (n) => `${n} adım`,
+  errors: (n) => `${n} hata`,
+  crew: (n) => `${n} ajan`,
+  stripCost: "maliyet",
+  stripTokens: "token",
+  stripTime: "ajan süresi",
+  stripLast: (cost) => `son tur ${cost}`,
+  stripTurns: (n) => `${n} tur`,
+  stripPerTurn: (span) => `tur başına ${span}`,
+  stripDoing: { read: "okuyor", edit: "yazıyor", run: "komut", agent: "ajan yönetiyor", other: "düşünüyor" },
+  rowDoing: { read: "okuyor", search: "arıyor", edit: "yazıyor", run: "komut çalıştırıyor", test: "kontrol ediyor", save: "sürüm kaydediyor", web: "internette", message: "haber gönderiyor", agent: "ajan yönetiyor", wait: "bekliyor", other: "düşünüyor" },
+  rowStep: (done, total) => `adım ${done}/${total}`,
+  rowPlan: (at, of, subject) => `planın ${at}/${of}. adımı: ${subject}`,
+  rowEnded: { done: "işini bitirdi", failed: "işi yarıda kaldı" },
+  stripPlan: "plan",
+  stripPlanDone: "tamam",
+  stripWeek: "hafta",
+  stripFive: "5 saat",
+  stripRunsOut: (when) => `${when} biter`,
+  stripFull: "doldu",
+  stripDays: ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"],
+  stripResting: { sleeping: "uyuyor", working: "çalışıyor", happy: "keyifli", worried: "tedirgin" },
+  stripStep: (n, subject) => `${n}. adım: ${subject}`,
+  stripTeam: {
+    fresh: (n) => `${n} yeni`,
+    away: (name) => `${name} şu an çalışmıyor`,
+    working: "şimdi çalışıyor",
+    isWorking: (name) => `${name} şimdi çalışıyor`,
+    worked: (name, ago) => `${name} ${ago} çalıştı`,
+    on: (branch) => `çalışma dalı ${branch}`,
+    more: (n) => `bu projede ${n} kişi daha`,
+    wrote: (name) => `${name} yazdı`,
+    aiWrote: (name) => `${name} adlı kişinin yapay zekâsı yazdı`
+  },
+  hubCrew: (n) => `${n} ajan`,
+  pct: (n) => `%${n}`,
+  minutes: (n) => `${n} dk`,
+  seconds: (n) => `${n} sn`,
+  hours: (n) => `${n} sa`,
+  quiet: (span) => `sessiz ${span}`,
+  longTool: (_tool, span) => `tek adım ${span} sürüyor`,
+  stopWho: (name) => `${accusative(name)} durdur`,
+  messageTo: (name) => `${dative(name)} yaz, Enter gönderir`,
+  you: "Sen",
+  answering: (name) => `${name} yanıtlıyor…`,
+  followUp: (name) => `${dative(name)} devam sorusu sor, Enter gönderir`,
+  launched: (name) => `${name} işe koyuldu`,
+  denied: (reason) => `Reddedildi: ${reason}`,
+  decimal: ",",
+  message: "Mesaj",
+  send: "gönder",
+  stop: "Durdur",
+  delivered: "Mesaj iletildi",
+  stopAsked: "Durdurma istendi",
+  stopRefused: "Durdurma reddedildi",
+  stopFailed: "Bu ajan durdurulamadı",
+  allDone: "Hepsi bitti",
+  liveCount: (n) => `${n} çalışıyor`,
+  endedCount: (n) => `${n} bitti`,
+  plannedCount: (n) => `${n} planlı`,
+  notDelivered: (reason) => `İletilemedi: ${reason}`,
+  chats: {
+    title: "Diğer sohbetler",
+    waitingTitle: "Seni bekliyor",
+    waiting: (span) => span ? `${span} bekliyor` : "bekliyor",
+    states: { working: "çalışıyor", idle: "boşta" },
+    untitled: "Yeni sohbet",
+    more: (n) => `+${n} daha`,
+    agentsTitle: "Diğer sohbetlerdeki ajanlar",
+    emptyHere: "Bu sohbette ajan yok",
+    hubWaits: (n) => `${n} sohbet bekliyor`,
+    hubWorks: (n) => `${n} sohbet çalışıyor`
+  },
+  crab: {
+    moods: { sleeping: "uyuyor", working: "çalışıyor", happy: "mutlu", worried: "endişeli" },
+    level: (n) => `Sv ${n}`
+  }
+};
+
+const STRINGS = { tr, en, ru };
+let lang = "en";
+const t = () => STRINGS[lang];
+const setLang$1 = (next) => {
+  lang = next;
+  setLang$2(next);
+};
+const langOf$1 = (value) => {
+  if (typeof value !== "string" || !value.trim())
+    return null;
+  if (/^(tr|turk|türk)/i.test(value.trim()))
+    return "tr";
+  if (/^(ru|russian|рус)/i.test(value.trim()))
+    return "ru";
+  return "en";
+};
+
+const KILO = 1000;
+const MEGA = 1e6;
+const COST_WIDE = 10;
+const SECOND$5 = 1000;
+const MINUTE_S = 60;
+const HOUR_S = 3600;
+const EM_NARROW = 0.3;
+const EM_WIDE = 0.72;
+const EM_BODY = 0.56;
+const EM_FULL = 1;
+const WIDE$1 = /[\u1100-\u115F\u2E80-\u303E\u3041-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uA960-\uA97F\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF01-\uFF60\uFFE0-\uFFE6\u{1F300}-\u{1FAFF}\u{20000}-\u{3FFFD}]/u;
+const xml = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c);
+const clip$3 = (s, max) => s.length > max ? s.slice(0, Math.max(1, max - 1)) + "…" : s;
+const charEm$1 = (ch) => {
+  if (WIDE$1.test(ch))
+    return EM_FULL;
+  if (/[\s.,:;'|!il1ıİ()[\]]/.test(ch))
+    return EM_NARROW;
+  if (/[A-ZÇĞÖŞÜА-ЯЁmwшщжюМШЩЖЮ@%]/.test(ch))
+    return EM_WIDE;
+  return EM_BODY;
+};
+const textWidth = (s, size) => [...s].reduce((w, ch) => w + charEm$1(ch) * size, 0);
+const fitText = (s, size, maxW) => {
+  if (textWidth(s, size) <= maxW)
+    return s;
+  let out = "";
+  for (const ch of s) {
+    if (textWidth(out + ch + "…", size) > maxW)
+      break;
+    out += ch;
+  }
+  return out + "…";
+};
+const fitStart$1 = (s, size, maxW) => {
+  if (textWidth(s, size) <= maxW)
+    return s;
+  const chars = [...s];
+  while (chars.length && textWidth("…" + chars.join(""), size) > maxW)
+    chars.shift();
+  return chars.length ? "…" + chars.join("") : "";
+};
+const MONO_EM$3 = 0.62;
+const monoWidth = (s, size) => [...s].length * MONO_EM$3 * size;
+const fitMono = (s, opts) => {
+  const room = Math.floor(opts.maxW / (MONO_EM$3 * opts.size));
+  const chars = [...s];
+  if (chars.length <= room)
+    return s;
+  if (room < 2)
+    return "";
+  return opts.isFromStart ? "…" + chars.slice(-(room - 1)).join("") : chars.slice(0, room - 1).join("") + "…";
+};
+const fixed = (n, digits) => n.toFixed(digits).replace(".", t().decimal);
+const fmtTokens = (n) => {
+  if (n >= MEGA)
+    return `${fixed(n / MEGA, 1)}M`;
+  if (n >= KILO)
+    return `${Math.round(n / KILO)}k`;
+  return `${Math.round(n)}`;
+};
+const fmtCost = (usd) => `$${usd < COST_WIDE ? fixed(usd, 2) : fixed(usd, 1)}`;
+const fmtTime = (ms) => {
+  const s = Math.max(0, Math.round(ms / SECOND$5));
+  const h = Math.floor(s / HOUR_S);
+  const m = Math.floor(s % HOUR_S / MINUTE_S);
+  const ss = String(s % MINUTE_S).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+};
+const modelName = (id) => {
+  const m = /(fable|mythos|opus|sonnet|haiku)-(\d+)(?:-(\d{1,2})(?!\d))?/i.exec(id);
+  const [, family = "", major = "", minor] = m ?? [];
+  if (!family)
+    return id.replace(/^claude-/, "").replace(/\[.*\]$/, "") || "—";
+  return `${family.charAt(0).toUpperCase()}${family.slice(1).toLowerCase()} ${major}${minor ? "." + minor : ""}`;
+};
+const norm = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+const PATH_DEPTH = 3;
+const shortPath = (path, depth = PATH_DEPTH) => {
+  const parts = path.split("/").filter(Boolean);
+  const tail = parts.slice(-depth).join("/");
+  return parts.length > depth ? `…/${tail}` : path;
+};
+
+const DEFAULT_TYPE = "general-purpose";
+const BUILTIN_TYPES = [
+  { name: DEFAULT_TYPE, description: "Research, search and multi-step work", source: "built-in" },
+  { name: "Explore", description: "Fast, read-only code search", source: "built-in" },
+  { name: "Plan", description: "Drafts an implementation plan", source: "built-in" }
+];
+const chosenOf = (types, draft) => types.find((type) => type.name === draft?.type) ?? types[0];
+const describe = (type) => t().builtins[type.name] ?? (type.description || t().noDescription);
+const sourceWord = (source) => t().sources[source] ?? source;
+
+const LEVELS = [10, 50, 200, 1000];
+const restingCrab = (turns) => ({ mood: "sleeping", turns, endedAt: 0 });
+const levelOf = (turns) => 1 + LEVELS.filter((threshold) => turns >= threshold).length;
+
+const BARE = ["onCompact", "onDone", "onTimeline", "onChats", "onNewTask", "onCancelTask"];
+const ONE = ["onToggle", "onLook", "onBrief", "onStop", "onLog", "onPickType", "onStartTask"];
+const SEND = "onSend";
+function pageHandlers(act) {
+  const bare = Object.fromEntries(BARE.map((name) => [name, () => act(name)]));
+  const one = Object.fromEntries(ONE.map((name) => [name, (arg) => act(name, arg)]));
+  return { ...bare, ...one, onSend: (id, text) => act(SEND, JSON.stringify([id, text])) };
+}
+
+const SHELLS = ["#D97757", "#4FA3C7", "#6BB26F", "#B07CC6", "#E07A9A", "#7C93B8", "#4DB6A0", "#B8977A"];
+const EYES = ["dot", "tall", "wide", "wink"];
+const NAMES = ["Pip", "Mako", "Nori", "Kiko", "Sol", "Fenn", "Coral", "Rio", "Zuzu", "Moss", "Dune", "Juno", "Otto", "Lumi", "Skip", "Nemo"];
+const CLAY = SHELLS[0] ?? "#D97757";
+const hashOf = (id) => [...id].reduce((sum, ch) => sum * 31 + ch.charCodeAt(0) >>> 0, 7);
+const lookAt = (slot) => ({
+  shell: SHELLS[slot % SHELLS.length] ?? CLAY,
+  eyes: EYES[Math.floor(slot / SHELLS.length) % EYES.length] ?? "dot",
+  name: NAMES[slot % NAMES.length] ?? "Pip"
+});
+const lookOf$1 = (a) => {
+  const look = lookAt(a.look ?? hashOf(a.id));
+  return a.isMain === true ? { ...look, name: t().mainName } : look;
+};
+
+const PRICES_5 = {
+  "fable-5-2": [8, 40, 0.2, 16],
+  "mythos-5-2": [8, 40, 0.2, 16],
+  "fable-5-1": [10, 50, 0.25, 20],
+  "mythos-5-1": [10, 50, 0.25, 20],
+  "fable-5": [10, 50, 1, 20],
+  "mythos-5": [10, 50, 1, 20],
+  "opus-5-5": [4, 20, 0.2, 8],
+  "opus-5": [5, 25, 0.5, 10],
+  "sonnet-5-5": [2, 10, 0.1, 4],
+  "sonnet-5": [2, 10, 0.2, 4],
+  "haiku-5-5": [0.1, 0.5, 0.01, 0.2]
+};
+const GEN_5 = /(fable|mythos|opus|sonnet|haiku)-((?:[5-9]|[1-9]\d)(?:-\d{1,2})?)(?!\d)/;
+const EARLIER = [
+  [/opus-4(?:-[01])?(?:$|[^-\d]|-20\d{6})/, [15, 75, 1.5, 30]],
+  ["opus-4", [5, 25, 0.5, 10]],
+  ["sonnet", [3, 15, 0.3, 6]],
+  ["3-5-haiku", [0.8, 4, 0.08, 1.6]],
+  ["haiku-3-5", [0.8, 4, 0.08, 1.6]],
+  ["haiku", [1, 5, 0.1, 2]]
+];
+const LONG_PROMPT = 1e5;
+const LONG_PRICES = { "haiku-5-5": [0.5, 2.5, 0.05, 1] };
+const priceOf = (model, prompt) => {
+  const id = model.toLowerCase().replace(/[\s.]+/g, "-");
+  const gen5 = GEN_5.exec(id);
+  if (gen5) {
+    const key = `${gen5[1]}-${gen5[2]}`;
+    return (prompt > LONG_PROMPT ? LONG_PRICES[key] : undefined) ?? PRICES_5[key] ?? null;
+  }
+  return EARLIER.find(([family]) => typeof family === "string" ? id.includes(family) : family.test(id))?.[1] ?? null;
+};
+const isPriced = (model) => priceOf(model, 0) !== null;
+const costText = (a) => isPriced(a.model) ? `≈${fmtCost(a.costUsd)}` : "";
+
+const countTasks = (list) => ({
+  done: list.filter((task) => task.status === "completed").length,
+  active: list.filter((task) => task.status === "in_progress").length,
+  total: list.length
+});
+
+const isRunning = (a) => a.status === "running";
+const elapsed = (a, at) => (a.endedAt ?? Math.max(at, a.startedAt)) - a.startedAt;
+const ctxOf = (a) => a.contextMax ? Math.min(100, Math.round(a.contextTokens / a.contextMax * 100)) : 0;
+const totals = (list, at) => {
+  if (!list.length)
+    return { cost: 0, tokens: 0, time: 0 };
+  const start = Math.min(...list.map((a) => a.startedAt));
+  const end = Math.max(...list.map((a) => a.endedAt ?? Math.max(at, a.startedAt)));
+  return {
+    cost: list.reduce((sum, a) => sum + a.costUsd, 0),
+    tokens: list.reduce((sum, a) => sum + a.tokens, 0),
+    time: end - start
+  };
+};
+
+const plannedOf = (f, list) => {
+  if (!f || f.isFinished)
+    return [];
+  const started = new Set(list.map((a) => norm(a.description)));
+  return (f.tasks ?? []).map((task, i) => ({ ...task, n: i + 1 })).filter((task) => !started.has(norm(task.title)));
+};
+
+const SECOND$4 = 1000;
+const MINUTE$3 = 60 * SECOND$4;
+const HOUR$2 = 60 * MINUTE$3;
+const QUIET_MS = 2 * MINUTE$3;
+const LONG_TOOL_MS = 15 * MINUTE$3;
+const FAILURE_FRESH_MS = 10 * MINUTE$3;
+const roughSpan = (ms) => {
+  const s = t();
+  if (ms < MINUTE$3)
+    return s.seconds(Math.floor(ms / SECOND$4));
+  if (ms < HOUR$2)
+    return s.minutes(Math.floor(ms / MINUTE$3));
+  return s.hours(Math.floor(ms / HOUR$2));
+};
+function stuckOf(a, at) {
+  if (a.status !== "running" || a.isMain === true)
+    return null;
+  const open = (a.history ?? []).find((e) => e.endAt === undefined);
+  if (open)
+    return at - open.at >= LONG_TOOL_MS ? { reason: t().longTool(open.tool, roughSpan(at - open.at)), since: open.at } : null;
+  if (a.stepAt !== undefined)
+    return at - a.stepAt >= LONG_TOOL_MS ? { reason: t().quiet(roughSpan(at - a.stepAt)), since: a.stepAt } : null;
+  const heard = Math.max(a.heardAt ?? 0, a.startedAt);
+  return at - heard >= QUIET_MS ? { reason: t().quiet(roughSpan(at - heard)), since: heard } : null;
+}
+const attention = (a, reason, role) => ({
+  agentId: a.id,
+  name: lookOf$1(a).name,
+  title: a.description || a.type,
+  reason,
+  role
+});
+const isFreshFailure = (a, at) => a.status === "failed" && a.endReason !== "aborted" && a.endedAt !== undefined && at - a.endedAt < FAILURE_FRESH_MS;
+function attentionOf(list, at) {
+  const stuck = list.map((a) => ({ a, why: stuckOf(a, at) })).filter((x) => x.why !== null).sort((x, y) => x.why.since - y.why.since)[0];
+  if (stuck)
+    return attention(stuck.a, stuck.why.reason, "warn");
+  const failed = list.filter((a) => isFreshFailure(a, at)).sort((x, y) => (y.endedAt ?? 0) - (x.endedAt ?? 0))[0];
+  return failed ? attention(failed, t().failedNow, "danger") : null;
+}
+
+const NEAR_DONE = 0.99;
+const PERCENT$3 = 100;
+const partialOf = (a) => {
+  if (a.status !== "running")
+    return null;
+  if (a.stepTotal)
+    return Math.min(1, (a.stepDone ?? 0) / a.stepTotal);
+  const own = countTasks(a.todos ?? []);
+  return own.total ? own.done / own.total : null;
+};
+const creditOf$1 = (list) => {
+  const parts = list.map(partialOf).filter((p) => p !== null && p > 0);
+  return { sum: parts.reduce((sum, p) => sum + p, 0), isEstimate: parts.length > 0 };
+};
+const NO_CREDIT = { sum: 0, isEstimate: false };
+const ratioOf = ({ done, credit, total, isFinished }) => {
+  if (isFinished)
+    return 1;
+  if (!total)
+    return null;
+  const ratio = Math.min(NEAR_DONE, (done + credit.sum) / total);
+  return ratio > 0 ? ratio : null;
+};
+const jobAgents = (input) => {
+  const { job } = input;
+  if (!job || job.isHidden)
+    return [];
+  return input.agents.filter((a) => job.agentIds.includes(a.id));
+};
+const agentsTitle = (list) => {
+  const first = list[0];
+  const name = first ? first.description || first.type : t().agents;
+  return list.length > 1 ? `${name} +${list.length - 1}` : name;
+};
+const reportLabel = (f, running) => {
+  const s = t();
+  if (f.isFinished)
+    return s.done;
+  if (f.phase === "plan")
+    return s.plan;
+  if (f.phase === "design")
+    return s.design;
+  const word = f.phase === "review" ? s.review : s.tasks;
+  if (f.total)
+    return `${word} ${f.done}/${f.total}`;
+  return running ? `${word} · ${running} ${s.busy}` : word;
+};
+function reportView(f, list, input) {
+  const running = list.filter((a) => a.status === "running");
+  const credit = f.total ? creditOf$1(running) : NO_CREDIT;
+  const handed = new Set(list.map((a) => norm(a.description))).size;
+  const launched = f.total ? Math.min(f.total, Math.max(f.done + running.length, handed)) / f.total : 0;
+  const done = f.isFinished ? f.total : Math.min(f.done, f.total);
+  return {
+    source: "report",
+    title: f.title,
+    label: reportLabel(f, running.length),
+    ratio: ratioOf({ done: f.done, credit, total: f.total, isFinished: f.isFinished }),
+    isEstimate: credit.isEstimate && !f.isFinished,
+    launched: f.isFinished ? 1 : launched,
+    units: f.total,
+    done,
+    active: f.isFinished ? 0 : Math.max(0, Math.round(launched * f.total) - done),
+    isFinished: f.isFinished,
+    isWorking: running.length > 0,
+    crew: input.agents.length + plannedOf(f, input.agents).length,
+    failed: 0
+  };
+}
+function tasksView(tasks, list) {
+  const count = countTasks(tasks);
+  const running = list.filter((a) => a.status === "running").length;
+  const isFinished = count.done === count.total && running === 0;
+  return {
+    source: "tasks",
+    title: agentsTitle(list),
+    label: isFinished ? t().done : `${t().tasks} ${count.done}/${count.total}`,
+    ratio: ratioOf({ done: count.done, credit: NO_CREDIT, total: count.total, isFinished }),
+    isEstimate: false,
+    launched: isFinished ? 1 : (count.done + count.active) / count.total,
+    units: count.total,
+    done: count.done,
+    active: isFinished ? 0 : count.active,
+    isFinished,
+    isWorking: running > 0,
+    crew: list.length,
+    failed: 0
+  };
+}
+function agentsView(list) {
+  const s = t();
+  const running = list.filter((a) => a.status === "running");
+  const ended = list.length - running.length;
+  const failed = list.filter((a) => a.status === "failed").length;
+  const isFinished = running.length === 0;
+  const credit = creditOf$1(running);
+  const done = failed ? `${s.done} · ${s.errors(failed)}` : s.done;
+  return {
+    source: "agents",
+    title: agentsTitle(list),
+    label: isFinished ? done : `${s.agents} ${ended}/${list.length}`,
+    ratio: ratioOf({ done: ended, credit, total: list.length, isFinished }),
+    isEstimate: credit.isEstimate && !isFinished,
+    launched: 1,
+    units: list.length,
+    done: ended,
+    active: running.length,
+    isFinished,
+    isWorking: !isFinished,
+    crew: list.length,
+    failed
+  };
+}
+function deriveJob(input) {
+  const list = jobAgents(input);
+  if (input.flow)
+    return reportView(input.flow, list, input);
+  if (!list.length)
+    return null;
+  return input.tasks.length ? tasksView(input.tasks, list) : agentsView(list);
+}
+const percentText = (view) => {
+  if (view.ratio === null)
+    return "—";
+  const n = Math.max(1, Math.round(view.ratio * PERCENT$3));
+  return `${view.isEstimate ? "~" : ""}${t().pct(n)}`;
+};
+
+const MIN_POINTS = 0.5;
+const MIN_USD = 0.05;
+const TENTH = 0.1;
+const ONE_DECIMAL_BELOW = 10;
+const rateBetween = (track) => {
+  const points = track.percent - track.basePercent;
+  const usd = track.usd - track.baseUsd;
+  return points >= MIN_POINTS && usd >= MIN_USD ? points / usd : null;
+};
+const rateOf = (track) => track ? rateBetween(track) ?? track.carriedRate ?? null : null;
+const shareOf = (costUsd, track) => {
+  const rate = rateOf(track);
+  return rate === null ? null : costUsd * rate;
+};
+const shareNumber = (points) => {
+  if (points < TENTH)
+    return `<${fixed(TENTH, 1)}`;
+  return points < ONE_DECIMAL_BELOW ? fixed(points, 1) : String(Math.round(points));
+};
+
+const isMain = (a) => a.isMain === true;
+
+const crewView = (list) => deriveJob({ flow: null, agents: list, job: { agentIds: list.map((a) => a.id), startedAt: 0, isSealed: true, isHidden: false }, tasks: [] });
+const homeOf = (crab, running) => ({
+  mood: crab.mood,
+  level: t().crab.level(levelOf(crab.turns)),
+  isMoving: running.length === 0
+});
+const DRAWN_STEP_MS = 1e4;
+const lastEventOf = (a) => Math.max(a.startedAt, a.endedAt ?? 0, ...(a.history ?? []).map((e) => Math.max(e.at, e.endAt ?? 0)));
+const drawnClockOf = (list, at) => Math.max(Math.floor(at / DRAWN_STEP_MS) * DRAWN_STEP_MS, ...list.map(lastEventOf));
+function paneDataOf(state) {
+  const { list } = state;
+  const at = Math.max(state.now, ...list.map((a) => a.startedAt), 0);
+  const view = deriveJob({ flow: state.flow, agents: list, job: state.job, tasks: state.tasks }) ?? crewView(list);
+  const ended = (a) => a.endedAt ?? a.startedAt;
+  const live = list.filter(isRunning).reverse();
+  const running = [...live.filter(isMain), ...live.filter((a) => !isMain(a))];
+  return {
+    list,
+    running,
+    finished: list.filter((a) => !isRunning(a)).sort((a, b) => ended(b) - ended(a)),
+    planned: plannedOf(state.flow, list),
+    sum: totals(list, at),
+    view,
+    at,
+    drawnAt: drawnClockOf(list, at),
+    panel: state.panel,
+    limit: state.limit,
+    attention: attentionOf(list, at),
+    types: state.types,
+    home: homeOf(state.crab, running),
+    chats: state.chats
+  };
+}
+const summaryOf = (sum) => `≈${fmtCost(sum.cost)} · ${fmtTokens(sum.tokens)} ${t().tokensWord} · ${fmtTime(sum.time)}`;
+const toneOf = (d) => {
+  if (d.running.length)
+    return "run";
+  if (!d.list.length)
+    return "idle";
+  return d.view && d.view.failed > 0 ? "warn" : "ok";
+};
+const countsOf$2 = (d) => {
+  const s = t();
+  const ended = d.list.length - d.running.length;
+  return [d.running.length && s.liveCount(d.running.length), ended && s.endedCount(ended), d.planned.length && s.plannedCount(d.planned.length)].filter(Boolean).join(" · ");
+};
+function headerOf(d) {
+  const s = t();
+  const share = shareOf(d.sum.cost, d.limit);
+  const view = d.view;
+  return {
+    eyebrow: s.pane,
+    counts: countsOf$2(d),
+    headline: view?.title || s.crew(d.list.length),
+    percent: view ? percentText(view) : "—",
+    tone: toneOf(d),
+    meter: view,
+    stats: [
+      { label: s.cost, value: `≈${fmtCost(d.sum.cost)}` },
+      { label: s.tokens, value: fmtTokens(d.sum.tokens) },
+      { label: s.time, value: fmtTime(d.sum.time) },
+      ...share === null ? [] : [{ label: s.limitTile, value: `≈${s.pct(shareNumber(share))}` }]
+    ],
+    home: d.home
+  };
+}
+const drawnHeaderOf = (d) => headerOf({ ...d, sum: totals(d.list, d.drawnAt) });
+const totalsLineOf = (data) => data.stats.map((stat) => `${stat.label} ${stat.value}`).join(" · ");
+
+const waitingOf = (chats) => chats.filter((chat) => chat.state === "waiting");
+const crewedOf = (chats) => chats.filter((chat) => (chat.agents?.length ?? 0) > 0);
+const quietOf = (chats) => chats.filter((chat) => chat.state !== "waiting");
+const CHATS_MAX = 8;
+const CHAT_AGENTS_MAX = 6;
+function listedChats(chats) {
+  const listed = chats.slice(0, CHATS_MAX).map((chat) => chat.agents && chat.agents.length > CHAT_AGENTS_MAX ? { ...chat, agents: chat.agents.slice(0, CHAT_AGENTS_MAX) } : chat);
+  return { chats: listed, more: chats.length - listed.length };
+}
+
+const TIER_COLOR = {
+  fable: "#7F77DD",
+  heavy: "#D85A30",
+  careful: "#BA7517",
+  medium: "#378ADD",
+  light: "#1D9E75",
+  other: "#888780"
+};
+const TIER_MODEL = {
+  fable: "Fable · high",
+  heavy: "Opus · xhigh",
+  careful: "Opus · high",
+  medium: "Opus · medium",
+  light: "Opus · low"
+};
+const EFFORT_TIER = {
+  max: "heavy",
+  xhigh: "heavy",
+  high: "careful",
+  medium: "medium",
+  low: "light"
+};
+const colorOf = (tier) => TIER_COLOR[tier] ?? "#888780";
+const savvyTierOf = (type) => {
+  const bare = type.replace(/^[^:]*:/, "");
+  const tier = bare.replace(/^savvy-/, "").toLowerCase();
+  return bare.startsWith("savvy-") && Object.hasOwn(TIER_MODEL, tier) ? tier : null;
+};
+const effortTierOf = (effort = "") => Object.hasOwn(EFFORT_TIER, effort) ? EFFORT_TIER[effort] ?? null : null;
+const tierOf = (a) => savvyTierOf(a.type) ?? effortTierOf(a.effort) ?? "other";
+const costumeOf = (a) => savvyTierOf(a.type) ?? (a.type === "Explore" ? "explore" : tierOf(a));
+const effortWord = (effort = "") => t().efforts[effort] ?? effort;
+const tierWordOf = (a) => savvyTierOf(a.type) ?? (effortTierOf(a.effort) ? effortWord(a.effort) : a.type);
+const plannedTierOf = (tier) => Object.hasOwn(TIER_MODEL, tier) ? tier : "other";
+
+const INK = "#1F1E1D";
+const stamp = (f, { x, y, rows, map, cls }) => rows.forEach((row, dy) => [...row].forEach((ch, dx) => map[ch] && f([x + dx, y + dy, 1, 1], map[ch] ?? "", cls)));
+const eyesOf = (f, kind) => {
+  const isWide = kind === "wide";
+  const isTall = kind === "tall";
+  const y = isTall ? 11 : 12;
+  const h = isTall ? 3 : 2;
+  f([isWide ? 8 : 9, y, 2, h], INK);
+  if (kind === "wink")
+    f([19, 13, 3, 1], INK);
+  else
+    f([isWide ? 20 : 19, y, 2, h], INK);
+};
+const crabBody = (f, arm, look) => {
+  const c = look.shell;
+  f([7, 10, 16, 12], c);
+  f([3, 14, 4, 4], c);
+  f([23, 14 + (arm.front ?? 0), 4, 4], c, arm.cls);
+  if (arm.face)
+    arm.face.forEach((box) => f(box, INK));
+  else
+    eyesOf(f, look.eyes);
+  f([7, 22, 2, 4], c, "la");
+  f([17, 22, 2, 4], c, "la");
+  f([11, 22, 2, 4], c, "lb");
+  f([21, 22, 2, 4], c, "lb");
+};
+const CRAB_CSS = `<style>
+.run .la{animation:st .5s steps(1) infinite}.run .lb{animation:st .5s steps(1) infinite -.25s}
+.run .bd{animation:bob .5s steps(1) infinite -.125s}
+.run g{transform-box:fill-box}
+@keyframes st{50%{transform:translateY(-1px)}}@keyframes bob{50%{transform:translateY(1px)}}
+.c-fable.run{animation:float 1s ease-in-out infinite}
+.c-fable.run .la,.c-fable.run .lb,.c-fable.run .bd{animation:none}
+.c-fable.run .ant{animation:blink 1s steps(1) infinite}
+.c-fable.run .star{animation:blink .5s steps(1) infinite -.25s}
+@keyframes float{50%{transform:translateY(-2px)}}@keyframes blink{50%{opacity:.15}}
+.c-heavy.run .it{animation:scan 1s steps(1) infinite}
+.c-heavy.run .gl{animation:blink 1s steps(1) infinite -.5s}
+@keyframes scan{25%{transform:translate(-1px,1px)}50%{transform:translate(-2px,2px)}75%{transform:translate(-1px,1px)}}
+.c-careful.run .it{transform-origin:100% 100%;animation:twist .5s ease-in-out infinite}
+@keyframes twist{50%{transform:rotate(-35deg)}}
+.c-medium.run .pan{transform-origin:0 50%;animation:tilt 1s ease-in-out infinite}
+.c-medium.run .egg{animation:flip 1s ease-in-out infinite}
+@keyframes tilt{20%,40%{transform:rotate(-12deg)}}@keyframes flip{30%{transform:translateY(-5px) scaleY(-1)}60%{transform:translateY(0)}}
+.c-light.run .la{animation-duration:.25s}.c-light.run .lb{animation-duration:.25s;animation-delay:-.125s}
+.c-light.run .flag{transform-origin:0 50%;animation:wave .25s steps(1) infinite}
+@keyframes wave{50%{transform:skewY(-12deg) scaleX(.85)}}
+.c-explore.run .it{transform-origin:50% 100%;animation:fence .5s ease-in-out infinite}
+@keyframes fence{50%{transform:rotate(25deg)}}
+@media (prefers-reduced-motion: reduce){.run,.run g{animation:none!important}}
+</style>`;
+const COSTUMES = {
+  fable: (f, t, look) => {
+    crabBody(f, {}, look);
+    f([6, 7, 18, 1], "#E6E8EE");
+    f([5, 8, 1, 14], "#E6E8EE");
+    f([24, 8, 1, 14], "#E6E8EE");
+    f([6, 22, 18, 1], "#C9CCD2");
+    f([6, 8, 18, 14], "rgba(169,214,245,.32)");
+    f([8, 9, 2, 1], "#fff");
+    f([8, 10, 1, 2], "#fff");
+    f([14, 4, 2, 3], "#C9CCD2");
+    f([14, 2, 2, 2], t, "ant");
+    f([13, 18, 4, 2], t);
+    f([27, 3, 1, 3], "#F5C542", "star");
+    f([26, 4, 3, 1], "#F5C542", "star");
+  },
+  heavy: (f, t, look) => {
+    crabBody(f, { front: -4, cls: "it" }, look);
+    stamp(f, { x: 6, y: 3, rows: ["......bbbbbb......", "....bbcbbcbbbb....", "...bbbbbbbbbbbb...", "..bcbbcbbcbbcbbb..", ".bbbbbbbbbbbbbbbb.", "dddddddddddddddddd"], map: { b: "#7A4A26", c: "#A0703F", d: "#5A3519" } });
+    f([6, 9, 18, 1], t);
+    stamp(f, { x: 23, y: 1, rows: [".kkk.", "k...k", "k...k", "k...k", ".kkk."], map: { k: "#3A3A3C" }, cls: "it" });
+    f([24, 2, 3, 3], "rgba(169,214,245,.7)", "it");
+    f([25, 6, 1, 4], "#7A4A26", "it");
+    f([24, 2, 1, 1], "#fff", "gl");
+  },
+  careful: (f, t, look) => {
+    crabBody(f, {}, look);
+    stamp(f, { x: 6, y: 4, rows: [".....yyyyyyyy.....", "...yyyyyhhyyyyy...", "..yyyyyyhhyyyyyy..", "..yyyyyyhhyyyyyy..", ".yyyyyyyhhyyyyyyy.", "dddddddddddddddddd"], map: { y: "#F5C542", h: "#FBE08A", d: "#C99A1E" } });
+    f([13, 5, 4, 2], t);
+    stamp(f, { x: 0, y: 10, rows: [".s.s", "sss.", ".s..", ".s.."], map: { s: "#8E929A" }, cls: "it" });
+  },
+  medium: (f, t, look) => {
+    crabBody(f, { front: -4, cls: "pan" }, look);
+    stamp(f, { x: 6, y: 0, rows: ["........lll.......", ".......lllll......", ".wwwwgwwwwwwgwwwww", "wwwwwwwwwwwwwwwwww", "wwwwwwwwwwwwwwwwww", "wwwwwgwwwwwggwwwww", ".wwwwgwwwwwggwwwww", ".dddbbbbbbbbbbbbb.", ".dddbbbbbbbbbbbbb.", ".dddbbbbbbbbbbbbb."], map: { w: "#F4F3EE", l: "#F7F6F2", g: "#D2D1C8", b: t, d: "#B45F43" } });
+    f([22, 8, 7, 2], "#4A4A48", "pan");
+    f([26, 10, 1, 1], "#4A4A48", "pan");
+    f([24, 7, 3, 1], "#F5B731", "egg");
+  },
+  light: (f, t, look) => {
+    crabBody(f, { front: -4 }, look);
+    stamp(f, { x: 6, y: 5, rows: ["....rrrrrrrrrr....", "..rrrrrrwwrrrrrr..", ".rrrrrrrwwrrrrrrr.", ".rrrrrrrwwrrrrrrr.", ".rrrrrrrwwrrrrrrr.", ".kkkkkkkkkkkkkkkkr"], map: { r: t, w: "#F8F6F1", k: INK } });
+    f([25, 1, 1, 9], "#8E929A");
+    stamp(f, { x: 26, y: 1, rows: ["wkwk", "kwkw", "wkwk"], map: { w: "#F8F6F1", k: INK }, cls: "flag" });
+  },
+  explore: (f, _t, look) => {
+    crabBody(f, {}, look);
+    stamp(f, { x: 5, y: 3, rows: [".kk..............kk.", ".kkk....kkkk....kkk.", "..kkkkkkkwwkkkkkkk..", "..kkkkkkkkkkkkkkkk..", ".gggggggggggggggggg."], map: { k: "#55514C", w: "#F8F6F1", g: "#F5C542" } });
+    f([7, 11, 11, 1], INK);
+    f([18, 11, 4, 3], INK);
+    f([27, 6, 1, 9], "#C9CCD2", "it");
+    f([26, 15, 3, 1], "#7A4A26", "it");
+  },
+  other: (f, _t, look) => crabBody(f, {}, look),
+  mate: (f, _t, look) => {
+    crabBody(f, {}, look);
+    stamp(f, { x: 7, y: 3, rows: [".......ww.......", "......wwww......", "....bbbbbbbb....", "..bbbbbbbbbbbb..", ".bbbbbbbbbbbbbb.", ".bbbbbbbbbbbbbb.", "rrrrrrrrrrrrrrrr"], map: { w: "#F4F3EE", b: "#3E8E7E", r: "#2E6B5F" } });
+  }
+};
+const FACES$1 = {
+  sleeping: [[9, 13, 2, 1], [19, 13, 2, 1]],
+  working: undefined,
+  happy: [[9, 12, 2, 1], [8, 13, 1, 1], [11, 13, 1, 1], [19, 12, 2, 1], [18, 13, 1, 1], [21, 13, 1, 1]],
+  worried: [[9, 13, 2, 2], [19, 13, 2, 2]]
+};
+const SWEAT = "#7FB6E8";
+const HAPPY_CLAW = -4;
+const moodBody = (f, look, mood) => {
+  crabBody(f, { front: mood === "happy" ? HAPPY_CLAW : undefined, face: FACES$1[mood] }, look);
+  if (mood !== "worried")
+    return;
+  f([4, 8, 1, 1], SWEAT);
+  f([3, 9, 3, 2], SWEAT);
+};
+const CRAB_SCALE = 1.1;
+const crab = (x, y, opts) => {
+  const groups = new Map([["bd", []]]);
+  const f = ([cx, cy, w, h], c, cls = "bd") => {
+    if (!groups.has(cls))
+      groups.set(cls, []);
+    groups.get(cls)?.push(`<rect x="${cx}" y="${cy}" width="${w}" height="${h}" fill="${c}"/>`);
+  };
+  const look = opts.look ?? lookAt(0);
+  const draw = COSTUMES[opts.costume] ?? ((g, _t, l) => crabBody(g, {}, l));
+  const mood = opts.mood;
+  if (mood)
+    moodBody(f, look, mood);
+  else
+    draw(f, colorOf(opts.costume), look);
+  const group = (cls) => `<g class="${cls}">${(groups.get(cls) ?? []).join("")}</g>`;
+  const props = [...groups.keys()].filter((k) => k !== "bd" && k !== "la" && k !== "lb");
+  const body = `<g class="bd">${(groups.get("bd") ?? []).join("")}${props.map(group).join("")}</g>`;
+  const walk = opts.isWalking ? " run" : "";
+  return `<g transform="translate(${x},${y}) scale(${opts.scale ?? CRAB_SCALE})" opacity="${opts.isDim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${opts.costume}${walk}">${body}${group("la")}${group("lb")}</g></g>`;
+};
+
+const FONT$2 = "-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,system-ui,sans-serif";
+const MONO$2 = "ui-monospace,'SF Mono',Menlo,monospace";
+const NEUTRALS$1 = {
+  t: ["#1C1B19", "#F0EEE8"],
+  s: ["#4F4B44", "#C2BEB4"],
+  m: ["#706B63", "#8E8A80"],
+  k: ["#ECE8DF", "#34332F"],
+  card: ["#FFFFFF", "#1F1F1C"],
+  chip: ["#F6F4EF", "#171715"]
+};
+const STROKES = {
+  ln: ["#E4E0D6", "#2E2E2A"],
+  "i-m": ["#706B63", "#8E8A80"],
+  "i-s": ["#4F4B44", "#C2BEB4"],
+  rk: ["#ECE8DF", "#34332F"]
+};
+const ROLES$3 = {
+  read: { fg: ["#2464A0", "#7FB6E8"], tint: ["#E7F0F9", "#1E2B37"], line: ["#B9D3EC", "#2F4A63"] },
+  edit: { fg: ["#A94A26", "#E58A5F"], tint: ["#FBEDE6", "#38251D"], line: ["#EFC6B4", "#6A3E2D"] },
+  plan: { fg: ["#A8337F", "#E07BC0"], tint: ["#FBE9F4", "#351F2E"], line: ["#EDBFDC", "#6B3A5C"] },
+  run: { fg: ["#6243C4", "#B19CF3"], tint: ["#F0ECFC", "#29243D"], line: ["#CFC3F3", "#4A3F75"] },
+  ok: { fg: ["#1F6E43", "#6FC593"], tint: ["#E4F4EA", "#1B2F25"], line: ["#B5DEC4", "#2F5A42"] },
+  warn: { fg: ["#8A6000", "#E9B949"], tint: ["#FBF2D9", "#332D19"], line: ["#EBD48F", "#66552A"] },
+  danger: { fg: ["#C0263A", "#F2727F"], tint: ["#FCE8EA", "#3B2023"], line: ["#F1B9C0", "#74343C"] }
+};
+const rulesOf = (side) => {
+  const fills = Object.entries(NEUTRALS$1).map(([cls, pair]) => `.${cls}{fill:${pair[side]}}`);
+  const strokes = Object.entries(STROKES).map(([cls, pair]) => `.${cls}{stroke:${pair[side]}}`);
+  const roles = Object.entries(ROLES$3).map(([role, c]) => `.f-${role}{fill:${c.fg[side]}}.b-${role}{fill:${c.tint[side]}}.l-${role}{stroke:${c.line[side]}}.i-${role}{stroke:${c.fg[side]}}`);
+  return [...fills, ...strokes, ...roles].join("");
+};
+const TIDEMARK_CSS = `<style>
+${rulesOf(0)}
+@media (prefers-color-scheme: dark){${rulesOf(1)}}
+.live{animation:p 1.8s ease-in-out infinite}@keyframes p{50%{opacity:.35}}
+.chev{transition:transform .16s cubic-bezier(.2,.8,.2,1)}svg:hover .chev{transform:translateX(2px)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>`;
+const paneSvg = (W, H, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${TIDEMARK_CSS}${CRAB_CSS}${body}</svg>`;
+
+const CARD = { padX: 14, rx: 10, labelY: 24, firstRowY: 48, rowH: 22, bottom: 14 };
+const LABEL$5 = { size: 12, weight: 600 };
+const ROW$2 = { size: 13, waitSize: 12, gap: 10 };
+const BOLD$4 = 1.06;
+const rowSvg$2 = (row, y, W) => {
+  const right = W - CARD.padX;
+  const waitW = Math.ceil(textWidth(row.wait, ROW$2.waitSize) * BOLD$4);
+  const room = right - waitW - ROW$2.gap - CARD.padX;
+  const project = fitText(row.project, ROW$2.size * BOLD$4, room);
+  const titleRoom = room - textWidth(project, ROW$2.size) * BOLD$4;
+  const title = row.title ? fitText(` · ${row.title}`, ROW$2.size, titleRoom) : "";
+  const titleSpan = title && title !== "…" ? `<tspan class="s" font-weight="400">${xml(title)}</tspan>` : "";
+  return [
+    `<text x="${CARD.padX}" y="${y}" font-family="${FONT$2}" font-size="${ROW$2.size}" font-weight="560"><tspan class="t">${xml(project)}</tspan>${titleSpan}</text>`,
+    `<text class="f-warn" x="${right}" y="${y}" text-anchor="end" font-family="${FONT$2}" font-size="${ROW$2.waitSize}" font-weight="600">${xml(row.wait)}</text>`
+  ].join("");
+};
+const chatsCardSvg = (W, card) => {
+  const lines = card.rows.length + (card.more ? 1 : 0);
+  const height = CARD.firstRowY + (lines - 1) * CARD.rowH + CARD.bottom;
+  const rows = card.rows.map((row, i) => rowSvg$2(row, CARD.firstRowY + i * CARD.rowH, W));
+  const moreY = CARD.firstRowY + card.rows.length * CARD.rowH;
+  const more = card.more ? `<text class="m" x="${CARD.padX}" y="${moreY}" font-family="${FONT$2}" font-size="${ROW$2.waitSize}">${xml(card.more)}</text>` : "";
+  const body = [
+    `<rect class="card ln" x="0.5" y="0.5" width="${W - 1}" height="${height - 1}" rx="${CARD.rx}" stroke-width="1"/>`,
+    `<text class="m" x="${CARD.padX}" y="${CARD.labelY}" font-family="${FONT$2}" font-size="${LABEL$5.size}" font-weight="${LABEL$5.weight}">${xml(fitText(card.title, LABEL$5.size * BOLD$4, W - CARD.padX * 2))}</text>`,
+    ...rows,
+    more
+  ];
+  const alt = [card.title, ...card.rows.map((row) => [row.project, row.title, row.wait].filter(Boolean).join(" · ")), card.more].filter(Boolean).join(", ");
+  return { source: paneSvg(W, height, body.join("")), height, alt };
+};
+const LIST = { rowH: 24, size: 13, sizeSmall: 12, dot: 3, indent: 13, chipGap: 10 };
+const lineSvg = (line, y, W) => {
+  const base = y + LIST.rowH / 2 + LIST.size * 0.35;
+  const x = line.kind === "agent" ? LIST.indent : LIST.dot * 2 + 7;
+  const size = line.kind === "agent" ? LIST.sizeSmall : LIST.size;
+  const endW = line.end ? Math.ceil(textWidth(line.end, LIST.sizeSmall)) + LIST.chipGap : 0;
+  const room = W - x - endW;
+  const lead = fitText(line.lead, size * BOLD$4, room);
+  const rest = fitText(` · ${line.text}`, size, room - textWidth(lead, size) * BOLD$4);
+  const dot = line.kind === "chat" ? `<circle class="${line.isLive ? "f-edit live" : "m"}" cx="${LIST.dot}" cy="${y + LIST.rowH / 2}" r="${LIST.dot}"/>` : "";
+  const end = line.end ? `<text class="m" x="${W}" y="${base}" text-anchor="end" font-family="${FONT$2}" font-size="${LIST.sizeSmall}" font-variant-numeric="tabular-nums">${xml(line.end)}</text>` : "";
+  const restSpan = line.text && rest !== "…" ? `<tspan class="m">${xml(rest)}</tspan>` : "";
+  return `${dot}<text x="${x}" y="${base}" font-family="${FONT$2}" font-size="${size}"><tspan class="${line.kind === "chat" ? "t" : "s"}" font-weight="560">${xml(lead)}</tspan>${restSpan}</text>${end}`;
+};
+const chatLinesSvg = (W, lines) => {
+  const height = lines.length * LIST.rowH;
+  const alt = lines.map((line) => [line.lead, line.text, line.end].filter(Boolean).join(" · ")).join(", ");
+  return { source: paneSvg(W, height, lines.map((line, i) => lineSvg(line, i * LIST.rowH, W)).join("")), height, alt };
+};
+
+const FILL$3 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
+const DONE$2 = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
+const HAS_DONE$2 = /\bdata-m-done\b/;
+const WIDTH$3 = /\swidth="([\d.]+)"/;
+const CLASS$2 = /\sclass="([^"]*)"/;
+const STYLE$2 = /\sstyle="([^"]*)"/;
+const MIN_RATIO_STEP$2 = 0.02;
+const RATIO_DIGITS$2 = 3;
+const widthOf$2 = (tag) => Number(WIDTH$3.exec(tag)?.[1] ?? 0);
+function withClass$2(tag, name, extra = "") {
+  const tagged = CLASS$2.test(tag) ? tag.replace(CLASS$2, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
+  return tagged.replace(/\s*\/?>$/, `${extra}$&`);
+}
+function slideFills$2(before, now) {
+  const old = before.match(FILL$3) ?? [];
+  if (old.length !== (now.match(FILL$3) ?? []).length)
+    return now;
+  let index = 0;
+  return now.replace(FILL$3, (tag) => {
+    const was = old[index++];
+    const from = was === undefined ? 0 : widthOf$2(was);
+    const to = widthOf$2(tag);
+    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP$2)
+      return tag;
+    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS$2)}`;
+    const styled = STYLE$2.test(tag) ? tag.replace(STYLE$2, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
+    return withClass$2(styled, "m-from");
+  });
+}
+function drawDone$2(before, now) {
+  if (HAS_DONE$2.test(before))
+    return now;
+  return now.replace(DONE$2, (tag) => withClass$2(tag, "m-draw", ' pathLength="1"'));
+}
+function markChanges$2(before, now) {
+  return drawDone$2(before, slideFills$2(before, now));
+}
+
+const STAGGER_MS$2 = 45;
+const EASE$2 = "cubic-bezier(.2,.8,.2,1)";
+const SHEEN$2 = "#A39E93";
+const RULES$2 = {
+  "m-in": `.m-in{animation:m-in .42s ${EASE$2} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
+  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$2} both}@keyframes m-fade{from{opacity:0}}`,
+  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$2} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
+  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$2} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
+  "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
+  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$2} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
+  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$2} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
+  "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
+  "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
+  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$2}}svg:hover .m-wash{opacity:.12}`,
+  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$2}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
+};
+const REDUCED$3 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+function motionCss$2(body) {
+  const used = Object.keys(RULES$2).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
+  return used.length === 0 ? "" : `${used.map((name) => RULES$2[name]).join("")}${REDUCED$3}`;
+}
+Object.values(RULES$2).join("");
+const isEntering$2 = (cue) => cue.phase === "enter";
+function entering$2(body, cue, kind = "in") {
+  if (!isEntering$2(cue))
+    return body;
+  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$2}ms">${body}</g>`;
+}
+const FLASH$2 = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN$2}" fill-opacity=".22" class="m-flash"/>`;
+const WASH$2 = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
+
+function stableDrawings$2() {
+  const kept = new Map;
+  return {
+    reset: () => kept.clear(),
+    draw: (key, what, build) => {
+      const signature = typeof what === "string" ? what : JSON.stringify(what);
+      const before = kept.get(key);
+      if (before !== undefined && before.what === signature)
+        return before.drawing;
+      const drawing = build(before === undefined ? "enter" : "change");
+      kept.set(key, { what: signature, drawing });
+      return drawing;
+    }
+  };
+}
+
+const TAG_WIDTH$2 = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
+const SVG$2 = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
+const SCHEME$3 = "<style>:root{color-scheme:light dark}</style>";
+const SAYS_SCHEME$2 = /(^|[^-\w])color-scheme\s*:/;
+const PASS_MS$2 = 120;
+const MAX_ORDER$2 = 12;
+const LIVE_MS$2 = 30000;
+function animate$2(source, spec) {
+  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges$2(spec.before, source) : source;
+  const parts = SVG$2.exec(moved);
+  if (parts === null)
+    return source;
+  const [, open, inner = "", close] = parts;
+  const scheme = SAYS_SCHEME$2.test(inner) ? "" : SCHEME$3;
+  const lit = `${spec.isRow === true ? WASH$2 : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH$2 : ""}${inner}`;
+  const body = entering$2(lit, spec.cue);
+  const css = motionCss$2(body);
+  return `${open}${scheme}${css === "" ? "" : `<style>${css}</style>`}${body}${close}`;
+}
+function paneMotion$2() {
+  const drawings = stableDrawings$2();
+  const shown = new Map;
+  const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 };
+  const begin = () => {
+    const now = Date.now();
+    if (now - pass.at > PASS_MS$2)
+      pass.entered = 0;
+    pass.at = now;
+  };
+  return {
+    reset: () => {
+      drawings.reset();
+      shown.clear();
+    },
+    pic: (key, pic, opts = {}) => {
+      begin();
+      const what = `${opts.isRow === true ? "row:" : ""}${pic.source}`;
+      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH$2.exec(pic.source)?.[1]), source: pic.source };
+      const source = drawings.draw(key, what, (built) => {
+        const order = built === "enter" ? Math.min(MAX_ORDER$2, pass.entered++) : 0;
+        const before = shown.get(key);
+        const isQuiet = before !== undefined && (before.shows === now.shows || before.width !== now.width);
+        const phase = built === "change" && isQuiet ? "still" : built;
+        const lastChange = before?.changedAt ?? Number.NEGATIVE_INFINITY;
+        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS$2;
+        shown.set(key, { ...now, changedAt: phase === "change" ? pass.at : lastChange });
+        return animate$2(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
+      });
+      return { ...pic, source, isInteractive: true };
+    }
+  };
+}
+
+const motion$2 = paneMotion$2();
+function picture$1(ui, placed) {
+  const { Svg } = ui;
+  return h(Svg, {
+    key: placed.key,
+    ...motion$2.pic(placed.at, placed.pic, placed.opts)
+  });
+}
+
+const PILL = { h: 20, padX: 9, size: 11, dot: 3, dotGap: 6 };
+const BOLD$3 = 1.06;
+const LABEL$4 = { size: 12, weight: 600 };
+const HEAD = { h: 28, size: 13.5, gap: 10, nameGap: 7 };
+const CHEVRON_ROOM$1 = 22;
+const CHEVRON = 4.5;
+const STROKE$1 = 1.5;
+const SECTION_H = 18;
+const HEAD_H$1 = HEAD.h;
+const PILL_INK = {
+  run: { dot: "f-edit live", text: "f-edit" },
+  ok: { dot: "m", text: "s" },
+  warn: { dot: "f-warn", text: "f-warn" },
+  danger: { dot: "f-danger", text: "f-danger" }
+};
+const pillPart = (pill, x, y) => {
+  const width = Math.ceil(textWidth(pill.text, PILL.size) * BOLD$3 + PILL.padX * 2 + PILL.dot * 2 + PILL.dotGap);
+  const mid = y + PILL.h / 2;
+  const ink = PILL_INK[pill.role];
+  const body = [
+    `<rect class="k" x="${x}" y="${y}" width="${width}" height="${PILL.h}" rx="${PILL.h / 2}"/>`,
+    `<circle class="${ink.dot}" cx="${x + PILL.padX + PILL.dot}" cy="${mid}" r="${PILL.dot}"/>`,
+    `<text class="${ink.text}" x="${x + PILL.padX + PILL.dot * 2 + PILL.dotGap}" y="${mid + PILL.size * 0.35}" font-family="${FONT$2}" font-size="${PILL.size}" font-weight="600">${xml(pill.text)}</text>`
+  ];
+  return { body: body.join(""), width };
+};
+const chevronSvg = (x, y) => `<g class="chev"><path d="M${x} ${y - CHEVRON}l${CHEVRON} ${CHEVRON}-${CHEVRON} ${CHEVRON}" fill="none" stroke-width="${STROKE$1}" stroke-linecap="round" stroke-linejoin="round" class="i-m"/></g>`;
+const cardHeadSvg = (W, head, inset = 0) => {
+  const right = W - CHEVRON_ROOM$1;
+  const probe = pillPart(head.pill, 0, 0);
+  const pill = pillPart(head.pill, right - probe.width, (HEAD.h - PILL.h) / 2);
+  const nameW = textWidth(head.name, HEAD.size) * BOLD$3;
+  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap - inset);
+  const titleSpan = title === "…" ? "" : `<tspan class="s" dx="${HEAD.nameGap}">${xml(title)}</tspan>`;
+  const y = HEAD.h / 2 + HEAD.size * 0.35;
+  const body = [
+    `<text x="${inset}" y="${y}" font-family="${FONT$2}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
+    pill.body,
+    chevronSvg(W - CHEVRON_ROOM$1 / 2 - CHEVRON / 2, HEAD.h / 2)
+  ];
+  return paneSvg(W, HEAD.h, body.join(""));
+};
+const sectionSvg = (W, section) => {
+  const label = `<text class="m" x="0" y="${SECTION_H / 2 + LABEL$4.size * 0.36}" font-family="${FONT$2}" font-size="${LABEL$4.size}" font-weight="${LABEL$4.weight}">${xml(fitText(section.label, LABEL$4.size * BOLD$3, W))}</text>`;
+  return paneSvg(W, SECTION_H, label);
+};
+const SECTION_SVG_H = SECTION_H;
+const NOTICE = { h: 32, padX: 8, dot: 3, gap: 9, size: 13 };
+const noticeSvg = (W, notice) => {
+  const mid = NOTICE.h / 2;
+  const x = NOTICE.padX + NOTICE.dot * 2 + NOTICE.gap;
+  const lead = `${notice.name} `;
+  const reason = notice.reason;
+  const used = textWidth(lead, NOTICE.size) * BOLD$3 + textWidth(reason, NOTICE.size) * BOLD$3;
+  const title = fitText(` · ${notice.title}`, NOTICE.size, Math.max(0, W - x - CHEVRON_ROOM$1 - used));
+  const body = [
+    `<circle class="f-${notice.role}" cx="${NOTICE.padX + NOTICE.dot}" cy="${mid}" r="${NOTICE.dot}"/>`,
+    `<text x="${x}" y="${mid + NOTICE.size * 0.35}" font-family="${FONT$2}" font-size="${NOTICE.size}" font-weight="560"><tspan class="t">${xml(lead)}</tspan><tspan class="f-${notice.role}">${xml(reason)}</tspan><tspan class="s" font-weight="400">${xml(title === "…" ? "" : title)}</tspan></text>`,
+    chevronSvg(W - CHEVRON_ROOM$1 / 2 - CHEVRON / 2, mid)
+  ];
+  return paneSvg(W, NOTICE.h, body.join(""));
+};
+const NOTICE_H = NOTICE.h;
+
+const GAP$2 = 3;
+const MIN_SEG = 6;
+const classOf = (view, i) => {
+  const ok = view.done - view.failed;
+  if (i < ok)
+    return "m";
+  if (i < view.done)
+    return "f-danger";
+  return i < view.done + view.active ? "f-edit" : "k";
+};
+const RUN_SHARE = 0.34;
+const rect$1 = (track, { x, w, cls }) => `<rect class="${cls}" x="${x.toFixed(1)}" y="${track.y}" width="${Math.max(0, w).toFixed(1)}" height="${track.h}" rx="${track.h / 2}"/>`;
+const solid = (view, track) => {
+  const unit = track.w / Math.max(1, view.units);
+  const ok = view.done - view.failed;
+  const parts = [rect$1(track, { x: track.x, w: track.w, cls: "k" })];
+  const spans = [[0, ok, "m"], [ok, view.done, "f-danger"], [view.done, view.done + view.active, "f-edit"]];
+  for (const [from, to, cls] of spans)
+    if (to > from)
+      parts.push(rect$1(track, { x: track.x + from * unit, w: (to - from) * unit, cls }));
+  return parts.join("");
+};
+const running = (track, x, w) => rect$1(track, { x, w, cls: "k" }) + rect$1(track, { x, w: w * RUN_SHARE, cls: "f-edit live" });
+const meterSvg = (view, track) => {
+  const units = view.units;
+  if (units < 1)
+    return rect$1(track, { x: track.x, w: track.w, cls: "k" });
+  const seg = (track.w - GAP$2 * (units - 1)) / units;
+  if (seg < MIN_SEG)
+    return solid(view, track);
+  return Array.from({ length: units }, (_, i) => {
+    const x = track.x + i * (seg + GAP$2);
+    const cls = classOf(view, i);
+    return cls === "f-edit" ? running(track, x, seg) : rect$1(track, { x, w: seg, cls });
+  }).join("");
+};
+
+const HOME_LOOK = lookAt(0);
+const SNOOZE = { x1: 27, y1: 6, x2: 30, y2: 2.6, size1: 4.8, size2: 3.5, min1: 9, min2: 7 };
+const snoozeSvg = (x, y, scale) => {
+  const big = Math.max(SNOOZE.min1, SNOOZE.size1 * scale);
+  const small = Math.max(SNOOZE.min2, SNOOZE.size2 * scale);
+  const z = (zx, zy, size) => `<text class="m" x="${x + zx * scale}" y="${y + zy * scale}" font-family="${FONT$2}" font-size="${size}" font-weight="700">z</text>`;
+  return z(SNOOZE.x1, SNOOZE.y1, big) + z(SNOOZE.x2, SNOOZE.y2, small);
+};
+const homeCrab = (x, y, opts) => {
+  const { mood, isMoving } = opts.home;
+  const body = crab(x, y, { costume: "other", look: HOME_LOOK, mood, isWalking: isMoving && mood === "working", scale: opts.scale });
+  return mood === "sleeping" ? body + snoozeSvg(x, y, opts.scale) : body;
+};
+const LEVEL_PILL = { h: 16, padX: 7, size: 10 };
+const BOLD$2 = 1.06;
+const levelWidth = (text) => Math.ceil(textWidth(text, LEVEL_PILL.size) * BOLD$2 + LEVEL_PILL.padX * 2);
+const levelPill = (text, x, y) => {
+  const w = levelWidth(text);
+  const r = (LEVEL_PILL.h - 1) / 2;
+  return `<rect class="chip ln" x="${x + 0.5}" y="${y + 0.5}" width="${w - 1}" height="${LEVEL_PILL.h - 1}" rx="${r}" stroke-width="1"/><text class="s" x="${x + w / 2}" y="${y + LEVEL_PILL.h / 2 + LEVEL_PILL.size * 0.35}" text-anchor="middle" font-family="${FONT$2}" font-size="${LEVEL_PILL.size}" font-weight="600" font-variant-numeric="tabular-nums">${xml(text)}</text>`;
+};
+const FACES = { sleeping: "(-_-) zz", working: "(•_•)", happy: "(^_^)", worried: "(°_°;)" };
+
+const PAD$1 = 16;
+const RADIUS = 10;
+const LABEL$3 = { size: 12, weight: 600, y: 27 };
+const HEADLINE = { size: 17, y: 56 };
+const PERCENT$2 = { size: 26, y: 58 };
+const MONO_EM$2 = 0.6;
+const METER = { y: 70, h: 6 };
+const DIVIDER_Y = 92;
+const STATS = { top: 104, label: 11, value: 31, valueSize: 15, labelSize: 12, rule: 34, pitch: 46 };
+const BOLD$1 = 1.06;
+const DOT_R$2 = 3;
+const GAP$1 = 12;
+const HOME = { y: 11, scale: 1.5, room: 58 };
+const PILL_GAP = 8;
+const PILL_DROP = 4;
+const PERCENT_CLASS = { run: "t", ok: "t", warn: "f-warn", idle: "m" };
+const UNKNOWN = "—";
+const needOf = (stat) => Math.max(textWidth(stat.label, STATS.labelSize), textWidth(stat.value, STATS.valueSize) * BOLD$1) + GAP$1 * 2;
+const columnsOf = (inner, stats) => {
+  const need = Math.max(0, ...stats.map(needOf));
+  const fits = (cols) => inner / cols >= need;
+  if (fits(stats.length))
+    return stats.length;
+  return fits(2) ? 2 : 1;
+};
+const statSvg = (stat, { x, y, w }) => `<text class="m" x="${x}" y="${y + STATS.label}" font-family="${FONT$2}" font-size="${STATS.labelSize}">${xml(fitText(stat.label, STATS.labelSize, w))}</text>
+<text class="t" x="${x}" y="${y + STATS.value}" font-family="${FONT$2}" font-size="${STATS.valueSize}" font-weight="650" font-variant-numeric="tabular-nums">${xml(fitText(stat.value, STATS.valueSize, w))}</text>`;
+const statsSvg = (stats, inner) => {
+  const cols = columnsOf(inner, stats);
+  const rows = Math.ceil(stats.length / cols);
+  const colW = inner / cols;
+  const parts = stats.map((stat, i) => {
+    const col = i % cols;
+    const y = STATS.top + Math.floor(i / cols) * STATS.pitch;
+    const x = PAD$1 + col * colW;
+    return statSvg(stat, { x, y, w: colW - GAP$1 });
+  });
+  return { body: parts.join(`
+`), height: STATS.top + (rows - 1) * STATS.pitch + STATS.rule + PAD$1 };
+};
+const homeParts = (data, eyebrowEnd) => {
+  if (!data.home)
+    return { body: "", room: 0 };
+  const crab = homeCrab(PAD$1, HOME.y, { home: data.home, scale: HOME.scale });
+  const pill = levelPill(data.home.level, eyebrowEnd + PILL_GAP, LABEL$3.y - LEVEL_PILL.h + PILL_DROP);
+  return { body: crab + pill, room: PILL_GAP + levelWidth(data.home.level) };
+};
+const headerSvg = (W, data) => {
+  const inner = W - PAD$1 * 2;
+  const left = PAD$1 + (data.home ? HOME.room : 0);
+  const isLive = data.tone === "run";
+  const eyebrowX = left + (isLive ? DOT_R$2 * 2 + 7 : 0);
+  const eyebrowEnd = eyebrowX + textWidth(data.eyebrow, LABEL$3.size) * BOLD$1;
+  const home = homeParts(data, eyebrowEnd);
+  const isKnown = data.percent !== UNKNOWN;
+  const percentW = isKnown ? Math.ceil(data.percent.length * PERCENT$2.size * MONO_EM$2) : 0;
+  const isCountShown = textWidth(data.counts, LABEL$3.size) <= W - PAD$1 - eyebrowEnd - home.room - GAP$1;
+  const headline = fitText(data.headline, HEADLINE.size * 1.06, W - PAD$1 - left - percentW - (isKnown ? GAP$1 : 0));
+  const stats = statsSvg(data.stats, inner);
+  const dot = isLive ? `<circle class="f-edit live" cx="${left + DOT_R$2}" cy="${LABEL$3.y - 4}" r="${DOT_R$2}"/>` : "";
+  const body = [
+    `<rect class="card ln" x="0.5" y="0.5" width="${W - 1}" height="${stats.height - 1}" rx="${RADIUS}" stroke-width="1"/>`,
+    home.body,
+    dot,
+    `<text class="m" x="${eyebrowX}" y="${LABEL$3.y}" font-family="${FONT$2}" font-size="${LABEL$3.size}" font-weight="${LABEL$3.weight}">${xml(data.eyebrow)}</text>`,
+    isCountShown ? `<text class="m" x="${W - PAD$1}" y="${LABEL$3.y}" text-anchor="end" font-family="${FONT$2}" font-size="${LABEL$3.size}" font-variant-numeric="tabular-nums">${xml(data.counts)}</text>` : "",
+    `<text class="t" x="${left}" y="${HEADLINE.y}" font-family="${FONT$2}" font-size="${HEADLINE.size}" font-weight="620">${xml(headline)}</text>`,
+    isKnown ? `<text class="${PERCENT_CLASS[data.tone]}" x="${W - PAD$1}" y="${PERCENT$2.y}" text-anchor="end" font-family="${MONO$2}" font-size="${PERCENT$2.size}" font-weight="650">${xml(data.percent)}</text>` : "",
+    meterSvg(data.meter ?? { units: 0, done: 0, failed: 0, active: 0 }, { x: PAD$1, y: METER.y, w: inner, h: METER.h }),
+    `<line class="ln" x1="${PAD$1}" x2="${W - PAD$1}" y1="${DIVIDER_Y}" y2="${DIVIDER_Y}" stroke-width="1"/>`,
+    stats.body
+  ];
+  return { source: paneSvg(W, stats.height, body.join(`
+`)), height: stats.height };
+};
+
+const BLANK$1 = "ㅤ";
+const CELL_PX$1 = 11.9;
+const BUTTON_PX$2 = 28;
+const RUN_SPAN$1 = 2;
+const LINE_SPAN$1 = "400%";
+function PressCover$1(ui, o) {
+  const { Box, Button } = ui;
+  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX$2 * 2)));
+  const label = BLANK$1.repeat(Math.ceil(o.width * RUN_SPAN$1 / CELL_PX$1));
+  const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey };
+  return h(Box, {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "column",
+    justifyContent: "center",
+    overflow: "hidden"
+  }, Array.from({ length: lines }, (_, i) => h(Box, {
+    key: `${o.key}~line${i}`,
+    flexDirection: "row",
+    width: LINE_SPAN$1,
+    marginLeft: -1,
+    flexShrink: 0
+  }, h(Button, {
+    key: i === 0 ? o.key : `${o.key}~${i}`,
+    label,
+    plain: true,
+    ...i === 0 ? hotkey : {},
+    onPress: o.onPress
+  }))));
+}
+const STILL$1 = "<style>*{animation:none!important;transition:none!important}</style>";
+const stillSource$1 = (source) => source.replace(/<\/svg>\s*$/, `${STILL$1}</svg>`);
+function stillSvg$1(ui, drawing) {
+  if (drawing.type !== "Svg")
+    return drawing;
+  const { Svg } = ui;
+  const { key, source, alt, width, height } = drawing.props;
+  return h(Svg, {
+    key,
+    source: stillSource$1(source),
+    alt,
+    width,
+    height
+  });
+}
+const FALLBACK_PX$1 = 52;
+const FALLBACK_WIDTH_PX$1 = 360;
+function PressRow$1(ui, o) {
+  const { Box } = ui;
+  const props = o.drawing.type === "Svg" ? o.drawing.props : {};
+  const width = props.width ?? FALLBACK_WIDTH_PX$1;
+  const height = props.height ?? FALLBACK_PX$1;
+  return h(Box, {
+    key: o.box,
+    alignSelf: "flex-start"
+  }, stillSvg$1(ui, o.drawing), PressCover$1(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
+}
+
+const COMPACT_H = 32;
+const CRAB_PITCH = 36;
+const MORE_ROOM = 40;
+const LIVE_DOT = { x: 32, y: 4, r: 3 };
+const CRAB$1 = { w: 36, h: 32 };
+const PULSE = 12;
+const PULSE_CORE = 3;
+const stepsOf$1 = (a) => {
+  if (a.stepTotal)
+    return `${a.stepDone ?? 0}/${a.stepTotal}${a.stepNote ? " · " + a.stepNote : ""}`;
+  const own = countTasks(a.todos ?? []);
+  if (!own.total)
+    return "";
+  const active = (a.todos ?? []).find((task) => task.status === "in_progress");
+  return `${own.done}/${own.total}${active && a.status === "running" ? " · " + active.title : ""}`;
+};
+const activityOf = (a) => {
+  const s = t();
+  const steps = stepsOf$1(a);
+  if (a.status === "failed")
+    return [steps, a.endReason === "aborted" ? s.aborted : s.failed].filter(Boolean).join(" · ");
+  if (a.status === "done")
+    return steps || s.completed;
+  const tool = a.lastTool ? `› ${a.lastPlain ?? `${a.lastTool}${a.lastTarget ? " " + a.lastTarget : ""}`}` : s.starting;
+  return steps ? `${steps}  ${tool}` : tool;
+};
+const UNNAMED = ["", "inherit"];
+const modelLine = (a) => {
+  const round = a.round > 1 ? `${t().round} ${a.round}` : "";
+  const model = UNNAMED.includes(a.model) ? "" : modelName(a.model);
+  return [model, effortWord(a.effort), round].filter(Boolean).join(" · ");
+};
+const clockOf = (a, at) => {
+  const time = fmtTime(elapsed(a, at));
+  return a.status === "running" ? time : `${t().total} ${time}`;
+};
+const crabSvg = (opts) => paneSvg(CRAB$1.w, CRAB$1.h, crab(1, 0, opts));
+const CARD_CRAB = { w: 30, h: 28, scale: 0.92 };
+const cardCrabSvg = (opts) => paneSvg(CARD_CRAB.w, CARD_CRAB.h, crab(1, 0, { ...opts, scale: CARD_CRAB.scale }));
+const HERO_CRAB = { w: 76, h: 88, scale: 2.3, crabH: 66, pillGap: 4 };
+const GRID_MID = 15;
+const heroCrabSvg = (home) => {
+  const pillX = Math.max(0, Math.round(GRID_MID * HERO_CRAB.scale - levelWidth(home.level) / 2));
+  const pill = levelPill(home.level, pillX, HERO_CRAB.crabH + HERO_CRAB.pillGap);
+  return paneSvg(HERO_CRAB.w, HERO_CRAB.h, homeCrab(0, 2, { home, scale: HERO_CRAB.scale }) + pill);
+};
+const pulseSvg = () => {
+  const c = PULSE / 2;
+  return paneSvg(PULSE, PULSE, `<circle class="f-edit live" cx="${c}" cy="${c}" r="${PULSE_CORE}"/>`);
+};
+const plannedLine = (p) => {
+  const tier = plannedTierOf(p.tier);
+  const parts = [TIER_MODEL[tier] ?? ""];
+  if (p.after.length)
+    parts.push(t().after(p.after.join(", ")));
+  return parts.filter(Boolean).join(" · ");
+};
+const compactSvg = (W, icons) => {
+  const fit = Math.max(1, Math.floor((W - MORE_ROOM) / CRAB_PITCH));
+  const shown = icons.slice(0, fit);
+  const more = icons.length - shown.length;
+  const body = shown.map((ic, i) => crab(i * CRAB_PITCH, 0, { costume: ic.costume, look: ic.look, isDim: ic.isDim, isWalking: ic.isRunning }) + (ic.isRunning ? `<circle class="f-edit live" cx="${i * CRAB_PITCH + LIVE_DOT.x}" cy="${LIVE_DOT.y}" r="${LIVE_DOT.r}"/>` : "")).join("");
+  const plus = more ? `<text class="s" x="${shown.length * CRAB_PITCH + 4}" y="21" font-family="${FONT$2}" font-size="12">+${more}</text>` : "";
+  return paneSvg(W, COMPACT_H, body + plus);
+};
+
+const READ$1 = ["Read", "Grep", "Glob", "LS", "WebFetch", "WebSearch", "NotebookRead"];
+const EDIT$1 = ["Edit", "Write", "MultiEdit", "NotebookEdit"];
+const RUN = ["Bash", "BashOutput", "KillShell", "Monitor"];
+const AGENT = ["Agent", "Task", "SendMessage"];
+const kindOf$1 = (tool) => {
+  if (READ$1.includes(tool))
+    return "read";
+  if (EDIT$1.includes(tool))
+    return "edit";
+  if (RUN.includes(tool))
+    return "run";
+  return AGENT.includes(tool) ? "agent" : "other";
+};
+const KIND_GLYPH = { read: "◇", edit: "✎", run: "❯", agent: "◆", other: "•" };
+
+const LANES_MAX = 8;
+const MIN_SPAN_MS = 30000;
+const laneOf = (a, at) => {
+  const isLive = a.status === "running";
+  const end = isLive ? at : a.endedAt ?? a.startedAt;
+  const look = lookOf$1(a);
+  return {
+    id: a.id,
+    name: look.name,
+    shell: look.shell,
+    title: a.description || a.type,
+    status: a.status,
+    isStuck: stuckOf(a, at) !== null,
+    start: a.startedAt,
+    end: Math.max(end, a.startedAt),
+    segments: (a.history ?? []).map((e) => ({ from: e.at, to: e.endAt ?? (isLive ? at : e.at), kind: kindOf$1(e.tool) }))
+  };
+};
+function timelineOf(list, at) {
+  const lanes = [...list].sort((a, b) => a.startedAt - b.startedAt).slice(-LANES_MAX).map((a) => laneOf(a, at));
+  if (lanes.length === 0)
+    return null;
+  const t0 = Math.min(...lanes.map((lane) => lane.start));
+  const t1 = Math.max(...lanes.map((lane) => lane.end));
+  return { lanes, t0, t1, span: Math.max(MIN_SPAN_MS, t1 - t0), isLive: lanes.some((lane) => lane.status === "running") };
+}
+const cellOf = (lane, from, to) => {
+  if (to <= lane.start || from > lane.end)
+    return { kind: "none" };
+  let best = null;
+  let most = 0;
+  for (const seg of lane.segments) {
+    const overlap = Math.min(to, Math.max(seg.to, seg.from + 1)) - Math.max(from, seg.from);
+    if (overlap > most)
+      [best, most] = [seg.kind, overlap];
+  }
+  return { kind: best ?? "idle" };
+};
+const laneCells = (lane, tl, width) => {
+  const slice = tl.span / Math.max(1, width);
+  return Array.from({ length: width }, (_, i) => cellOf(lane, tl.t0 + i * slice, tl.t0 + (i + 1) * slice));
+};
+const runsOf = (cells) => {
+  const runs = [];
+  for (const cell of cells) {
+    const last = runs.at(-1);
+    if (last && last.kind === cell.kind)
+      last.length += 1;
+    else
+      runs.push({ kind: cell.kind, length: 1 });
+  }
+  return runs;
+};
+
+const TOP = 6;
+const LANE_H = 24;
+const AXIS_H = 20;
+const LABEL_W = 74;
+const RIGHT_PAD = 10;
+const NOW_ROOM = 44;
+const SEG_H = 10;
+const SEG_MIN = 3;
+const TRACK_H$1 = 2;
+const DOT_R$1 = 4;
+const CAP_R = 3.5;
+const NAME_SIZE$1 = 12;
+const MICRO = 10.5;
+const TICKS_MAX = 4;
+const SECOND$3 = 1000;
+const MINUTE$2 = 60 * SECOND$3;
+const STEPS_MS = [10 * SECOND$3, 30 * SECOND$3, MINUTE$2, 2 * MINUTE$2, 5 * MINUTE$2, 10 * MINUTE$2, 15 * MINUTE$2, 30 * MINUTE$2, 60 * MINUTE$2];
+const CAP = { running: "f-edit", done: "m", failed: "f-danger" };
+const ENDED_OPACITY = 0.6;
+const xOf = (scale, ms) => scale.x0 + (ms - scale.t0) / scale.span * (scale.x1 - scale.x0);
+const n1 = (v) => v.toFixed(1);
+function laneSvg(lane, y, scale) {
+  const cy = y + LANE_H / 2;
+  const isLive = lane.status === "running";
+  const start = xOf(scale, lane.start);
+  const end = Math.max(start + SEG_MIN, xOf(scale, lane.end));
+  const label = `<circle cx="${DOT_R$1 + 1}" cy="${cy}" r="${DOT_R$1}" fill="${lane.shell}"/><text class="${isLive ? "t" : "s"}" x="${DOT_R$1 * 2 + 8}" y="${cy + 4}" font-family="${FONT$2}" font-size="${NAME_SIZE$1}" font-weight="600">${xml(fitText(lane.name, NAME_SIZE$1, LABEL_W - DOT_R$1 * 2 - 12))}</text>`;
+  const track = `<rect class="k" x="${n1(start)}" y="${cy - TRACK_H$1 / 2}" width="${n1(end - start)}" height="${TRACK_H$1}" rx="1"/>`;
+  const segs = lane.segments.map((seg) => {
+    const x = xOf(scale, seg.from);
+    const w = Math.max(SEG_MIN, xOf(scale, seg.to) - x);
+    return `<rect class="s" x="${n1(x)}" y="${cy - SEG_H / 2}" width="${n1(w)}" height="${SEG_H}" rx="2.5"/>`;
+  }).join("");
+  const cap = `<circle class="${lane.isStuck ? "f-warn" : CAP[lane.status] ?? "f-edit"}" cx="${n1(end)}" cy="${cy}" r="${CAP_R}"/>`;
+  const notch = lane.isStuck ? `<rect class="f-warn" x="${n1(end + CAP_R + 3)}" y="${cy - SEG_H / 2 - 2}" width="3" height="${SEG_H + 4}" rx="1.5"/>` : "";
+  return `<g>${label}<g opacity="${isLive ? 1 : ENDED_OPACITY}">${track}${segs}</g>${cap}${notch}</g>`;
+}
+function axisSvg(scale, top, nowX) {
+  const step = STEPS_MS.find((ms) => scale.span / ms <= TICKS_MAX) ?? STEPS_MS.at(-1) ?? MINUTE$2;
+  const ticks = [];
+  for (let ms = 0;ms <= scale.span; ms += step) {
+    const x = xOf(scale, scale.t0 + ms);
+    if (nowX !== null && Math.abs(x - nowX) < NOW_ROOM && ms > 0)
+      continue;
+    const anchor = ms === 0 ? "start" : "middle";
+    ticks.push(`<rect class="k" x="${n1(x)}" y="${top}" width="1" height="4"/><text class="m" x="${n1(x)}" y="${top + 16}" text-anchor="${anchor}" font-family="${MONO$2}" font-size="${MICRO}">${fmtTime(ms)}</text>`);
+  }
+  return `<rect class="k" x="${scale.x0}" y="${top}" width="${n1(scale.x1 - scale.x0)}" height="1"/>${ticks.join("")}`;
+}
+const nowSvg$1 = (scale, at, rows) => {
+  const x = xOf(scale, at);
+  const anchor = x > scale.x1 - NOW_ROOM / 2 ? "end" : "middle";
+  return `<rect class="s" x="${n1(x)}" y="${rows.top - 4}" width="1" height="${rows.bottom - rows.top + 8}" opacity=".55"/>` + `<text class="s" x="${n1(anchor === "end" ? scale.x1 : x)}" y="${rows.bottom + 18}" text-anchor="${anchor}" font-family="${FONT$2}" font-size="${MICRO}" font-weight="600">${xml(t().now)}</text>`;
+};
+const altOf$1 = (tl) => {
+  const s = t();
+  const words = { running: s.isRunning, done: s.isFinished, failed: s.failed };
+  return `${s.timeline}: ${tl.lanes.map((lane) => `${lane.name} ${fmtTime(lane.end - lane.start)} ${words[lane.status] ?? ""}`.trim()).join(", ")}`;
+};
+function timelineSvg(W, tl) {
+  const scale = { x0: LABEL_W, x1: W - RIGHT_PAD, t0: tl.t0, span: tl.span };
+  const bottom = TOP + tl.lanes.length * LANE_H;
+  const height = bottom + AXIS_H + 4;
+  const lanes = tl.lanes.map((lane, i) => laneSvg(lane, TOP + i * LANE_H, scale)).join("");
+  const nowX = tl.isLive ? xOf(scale, tl.t1) : null;
+  const body = lanes + axisSvg(scale, bottom + 2, nowX) + (tl.isLive ? nowSvg$1(scale, tl.t1, { top: TOP, bottom }) : "");
+  return { source: paneSvg(W, height, body), height, alt: altOf$1(tl) };
+}
+
+const BUTTON_PX$1 = 76;
+const TERM_NAME = 6;
+const TERM_CLOCK = 2;
+const TIMELINE_MIN_AGENTS = 2;
+const homeAlt = (home) => `${HOME_LOOK.name}, ${t().crab.moods[home.mood]}, ${home.level}`;
+function deskHead$1(ui, d, layout) {
+  const data = drawnHeaderOf(d);
+  const { stats, ...shows } = data;
+  const head = headerSvg(layout.W, data);
+  const alt = [data.headline, data.percent, data.counts, totalsLineOf(data), homeAlt(d.home)].filter(Boolean).join(", ");
+  return picture$1(ui, { key: "head", at: "head", pic: { source: head.source, alt, width: layout.W, height: head.height }, opts: { shows: { ...shows, labels: stats.map((stat) => stat.label) } } });
+}
+function headTree(ui, d, layout) {
+  const { Box, Text } = ui;
+  if (layout.isDesktop)
+    return deskHead$1(ui, d, layout);
+  const data = headerOf(d);
+  const line = totalsLineOf(data);
+  return h(Box, {
+    flexDirection: "column"
+  }, h(Text, {
+    wrap: "truncate-end"
+  }, h(Text, {
+    dimColor: true
+  }, `${FACES[d.home.mood]} `), h(Text, {
+    bold: true
+  }, data.headline), h(Text, {
+    bold: true,
+    dimColor: data.tone === "idle"
+  }, `  ${data.percent}`)), h(Text, {
+    dimColor: true
+  }, [d.home.level, data.counts].filter(Boolean).join(" · ")), h(Text, {
+    dimColor: true
+  }, line));
+}
+function toolbarTree(ui, d, on) {
+  const { Box, Button } = ui;
+  const s = t();
+  const isDrafting = d.panel.draft?.isOpen === true;
+  return h(Box, {
+    key: "toolbar",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
+  }, h(Button, {
+    key: "new-task",
+    plain: true,
+    dimColor: isDrafting,
+    label: `＋ ${s.newTask}`,
+    onPress: on.onNewTask
+  }), h(Button, {
+    key: "compact",
+    label: d.panel.isCompact ? s.expand : s.collapse,
+    plain: true,
+    dimColor: true,
+    onPress: on.onCompact
+  }));
+}
+function attentionTree(ui, view) {
+  const { Box, Button, Text } = ui;
+  const { layout, on } = view;
+  const att = view.d.attention;
+  if (!att)
+    return null;
+  const onPress = () => on.onLook(att.agentId);
+  if (!layout.isDesktop) {
+    return h(Box, {
+      key: "attention",
+      flexDirection: "row",
+      columnGap: 1
+    }, h(Text, {
+      color: att.role === "warn" ? "warning" : "error",
+      wrap: "truncate-end"
+    }, `! ${att.name} ${att.reason}`, h(Text, {
+      dimColor: true
+    }, ` · ${att.title}`)), h(Button, {
+      key: "look",
+      plain: true,
+      label: t().look,
+      onPress
+    }));
+  }
+  const pic = { source: noticeSvg(layout.W, att), alt: `${att.name} ${att.reason}: ${att.title} (${t().look})`, width: layout.W, height: NOTICE_H };
+  const drawing = picture$1(ui, { key: "notice", at: "attention", pic, opts: { isRow: true } });
+  return PressRow$1(ui, { box: "attention", key: "look", drawing, onPress });
+}
+function sectionHead(ui, layout, head) {
+  const { Box, Button, Text } = ui;
+  const s = t();
+  const toggle = head.toggle;
+  if (!layout.isDesktop) {
+    if (!toggle)
+      return h(Text, {
+        key: `h-${head.label}`,
+        bold: true
+      }, head.label);
+    return h(Box, {
+      key: `h-${toggle.key}`,
+      flexDirection: "row"
+    }, h(Button, {
+      key: toggle.key,
+      plain: true,
+      label: `${toggle.isOpen ? "▾" : "▸"} ${head.label}`,
+      onPress: toggle.onPress
+    }));
+  }
+  const width = toggle ? layout.W - BUTTON_PX$1 : layout.W;
+  const svg = picture$1(ui, { key: "eyebrow", at: `eyebrow-${head.id}`, pic: { source: sectionSvg(width, head), alt: head.label, width, height: SECTION_SVG_H } });
+  if (!toggle)
+    return h(Box, {
+      key: `h-${head.label}`,
+      flexDirection: "row"
+    }, svg);
+  return h(Box, {
+    key: `h-${toggle.key}`,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    columnGap: 1
+  }, svg, h(Button, {
+    key: toggle.key,
+    plain: true,
+    dimColor: true,
+    label: toggle.isOpen ? s.hide : s.show,
+    onPress: toggle.onPress
+  }));
+}
+const RUN_GLYPH = { none: " ", idle: "─" };
+function termLane(ui, runs, label) {
+  const { Text } = ui;
+  return h(Text, {
+    key: `lane-${label.name}`,
+    wrap: "truncate-end"
+  }, h(Text, {
+    bold: true
+  }, label.name.padEnd(TERM_NAME)), runs.map((run, i) => h(Text, {
+    key: `r${i}`,
+    dimColor: run.kind === "idle"
+  }, (RUN_GLYPH[run.kind] ?? "━").repeat(run.length))), h(Text, {
+    color: label.key
+  }, ` ${label.end}`));
+}
+const END_GLYPH = { running: "●", done: "✓", failed: "✗", stuck: "!" };
+const END_KEY = { running: "claude", done: "subtle", failed: "error", stuck: "warning" };
+function termTimeline(ui, tl, layout) {
+  const { Box } = ui;
+  const width = Math.max(TERM_NAME, layout.cols - TERM_NAME - TERM_CLOCK - 1);
+  return h(Box, {
+    key: "timeline",
+    flexDirection: "column"
+  }, tl.lanes.map((lane) => {
+    const end = lane.isStuck ? "stuck" : lane.status;
+    return termLane(ui, runsOf(laneCells(lane, tl, width)), { name: lane.name, end: END_GLYPH[end] ?? "●", key: END_KEY[end] ?? "subtle" });
+  }));
+}
+function deskTimeline(ui, tl, layout) {
+  const drawing = timelineSvg(layout.W, tl);
+  const shows = { lanes: tl.lanes.map((lane) => [lane.id, lane.status, lane.isStuck]), isLive: tl.isLive };
+  return picture$1(ui, { key: "timeline", at: "timeline", pic: { ...drawing, width: layout.W }, opts: { shows } });
+}
+function timelineTree(ui, view) {
+  const { Box } = ui;
+  const { d, layout, on } = view;
+  const tl = d.list.length >= TIMELINE_MIN_AGENTS ? timelineOf(d.list, layout.isDesktop ? d.drawnAt : d.at) : null;
+  if (!tl)
+    return null;
+  const isOpen = d.panel.isTimelineHidden !== true;
+  const head = sectionHead(ui, layout, { id: "timeline", label: t().timeline, toggle: { key: "timeline", isOpen, onPress: on.onTimeline } });
+  return h(Box, {
+    key: "timeline-section",
+    flexDirection: "column",
+    rowGap: layout.isDesktop ? 1 : 0
+  }, head, isOpen && layout.isDesktop && deskTimeline(ui, tl, layout), isOpen && !layout.isDesktop && termTimeline(ui, tl, layout));
+}
+const glyphKeyOf = (a) => {
+  if (a.status === "failed")
+    return "error";
+  return a.status === "done" ? "subtle" : "claude";
+};
+const iconsOf = (d) => [
+  ...[...d.running, ...d.finished].map((a) => ({ costume: costumeOf(a), look: lookOf$1(a), isRunning: a.status === "running" && !stuckOf(a, d.at), isDim: false })),
+  ...d.planned.map((p, i) => ({ costume: plannedTierOf(p.tier), look: lookAt(i), isRunning: false, isDim: true }))
+];
+function compactTree(ui, d, layout) {
+  const { Text } = ui;
+  if (layout.isDesktop) {
+    return picture$1(ui, { key: "compact-icons", at: "compact", pic: { source: compactSvg(layout.W, iconsOf(d)), alt: `${d.list.length} ${t().agentsCount}, ${summaryOf(d.sum)}`, width: layout.W, height: COMPACT_H } });
+  }
+  const glyphs = [...d.running, ...d.finished].map((a) => h(Text, {
+    key: a.id,
+    color: glyphKeyOf(a)
+  }, `${a.status === "done" ? "✓" : "●"} `));
+  return h(Text, {
+    wrap: "truncate-end"
+  }, glyphs, d.planned.length ? h(Text, {
+    dimColor: true
+  }, "○ ".repeat(d.planned.length)) : null);
+}
+function emptyTree(ui, view) {
+  const { Box, Button, Text } = ui;
+  const { layout, on } = view;
+  const home = view.d.home;
+  const s = t();
+  const crab = layout.isDesktop && picture$1(ui, { key: "crab", at: "hero-crab", pic: { source: heroCrabSvg(home), alt: homeAlt(home), width: HERO_CRAB.w, height: HERO_CRAB.h } });
+  return h(Box, {
+    key: "empty",
+    flexDirection: "row",
+    columnGap: 2,
+    alignItems: "center"
+  }, crab, h(Box, {
+    flexDirection: "column",
+    rowGap: 1,
+    flexShrink: 1
+  }, !layout.isDesktop && h(Text, {
+    dimColor: true
+  }, `${FACES[home.mood]} · ${home.level}`), h(Text, {
+    bold: true
+  }, crewedOf(view.d.chats).length > 0 ? s.chats.emptyHere : s.emptyTitle), h(Text, {
+    dimColor: true
+  }, s.empty), h(Box, {
+    flexDirection: "row"
+  }, h(Button, {
+    key: "new-task",
+    variant: "primary",
+    label: `＋ ${s.newTask}`,
+    onPress: on.onNewTask
+  }))));
+}
+
+const MAX_WAITING_ROWS = 3;
+const MINUTES_PER_HOUR = 60;
+const spanOf = (minutes) => {
+  const s = t();
+  if (minutes >= MINUTES_PER_HOUR)
+    return s.hours(Math.floor(minutes / MINUTES_PER_HOUR));
+  return minutes >= 1 ? s.minutes(minutes) : "";
+};
+const rowOf = (chat) => ({
+  project: chat.project,
+  title: chat.title || t().chats.untitled,
+  wait: t().chats.waiting(spanOf(chat.minutes))
+});
+function waitingTree(ui, chats, layout) {
+  const { Box, Text } = ui;
+  const s = t().chats;
+  const waiting = waitingOf(chats);
+  if (!waiting.length)
+    return null;
+  const rows = waiting.slice(0, MAX_WAITING_ROWS).map(rowOf);
+  const rest = waiting.length - rows.length;
+  const more = rest > 0 ? s.more(rest) : "";
+  if (layout.isDesktop) {
+    const card = chatsCardSvg(layout.W, { title: s.waitingTitle, rows, more });
+    return picture$1(ui, { key: "chats-waiting", at: "chats-waiting", pic: { ...card, width: layout.W } });
+  }
+  return h(Box, {
+    key: "chats-waiting",
+    flexDirection: "column"
+  }, h(Text, {
+    bold: true,
+    dimColor: true
+  }, s.waitingTitle), rows.map((row, i) => h(Text, {
+    key: `wait-${i}`,
+    wrap: "truncate-end"
+  }, h(Text, {
+    bold: true
+  }, row.project), h(Text, {
+    dimColor: true
+  }, ` · ${row.title}  `), h(Text, {
+    color: "warning"
+  }, row.wait))), more !== "" && h(Text, {
+    dimColor: true
+  }, more));
+}
+const linesPicture = (ui, at, lines, W) => {
+  const drawn = chatLinesSvg(W, lines);
+  return picture$1(ui, { key: at, at, pic: { source: drawn.source, alt: drawn.alt, width: W, height: drawn.height } });
+};
+const chatLine = (chat) => ({
+  kind: "chat",
+  lead: chat.project,
+  text: chat.title || t().chats.untitled,
+  end: chat.state === "working" ? spanOf(chat.minutes) : t().chats.states.idle,
+  isLive: chat.state === "working"
+});
+const agentChatLine = (agent) => ({
+  kind: "agent",
+  lead: agent.name,
+  text: agent.title,
+  end: [spanOf(agent.minutes), agent.costUsd > 0 ? `≈${fmtCost(agent.costUsd)}` : ""].filter(Boolean).join(" · "),
+  isLive: true
+});
+const agentLine = (agent) => [agent.name, agent.title, spanOf(agent.minutes), agent.costUsd > 0 ? `≈${fmtCost(agent.costUsd)}` : ""].filter(Boolean).join(" · ");
+function crewTree(ui, chats, layout) {
+  const { Box, Text } = ui;
+  const s = t().chats;
+  const crewed = crewedOf(chats);
+  if (!crewed.length)
+    return null;
+  const count = crewed.reduce((sum, chat) => sum + (chat.agents?.length ?? 0), 0);
+  return h(Box, {
+    key: "chats-crew",
+    flexDirection: "column",
+    rowGap: 0
+  }, sectionHead(ui, layout, { id: "chats-crew", label: `${s.agentsTitle} · ${count}` }), layout.isDesktop && linesPicture(ui, "chats-crew-lines", crewed.flatMap((chat) => [chatLine(chat), ...(chat.agents ?? []).map(agentChatLine)]), layout.W), !layout.isDesktop && crewed.map((chat) => h(Box, {
+    key: `crew-${chat.id}`,
+    flexDirection: "column"
+  }, h(Text, {
+    wrap: "truncate-end"
+  }, h(Text, {
+    bold: true
+  }, chat.project), h(Text, {
+    dimColor: true
+  }, ` · ${chat.title || s.untitled}`)), chat.agents?.map((agent) => h(Text, {
+    key: `crew-${chat.id}-${agent.id}`,
+    dimColor: true,
+    wrap: "truncate-end"
+  }, `  ${agentLine(agent)}`)))));
+}
+function quietTree(ui, view) {
+  const { Box, Text } = ui;
+  const s = t().chats;
+  const quiet = quietOf(view.chats).filter((chat) => !chat.agents?.length);
+  if (!quiet.length)
+    return null;
+  const shown = view.isOpen ? quiet : quiet.filter((chat) => chat.state === "working");
+  const head = sectionHead(ui, view.layout, { id: "chats", label: `${s.title} · ${quiet.length}`, toggle: { key: "chats", isOpen: view.isOpen, onPress: view.onToggle } });
+  return h(Box, {
+    key: "chats-quiet",
+    flexDirection: "column",
+    rowGap: 0
+  }, head, view.layout.isDesktop && shown.length > 0 && linesPicture(ui, "chats-quiet-lines", shown.map(chatLine), view.layout.W), !view.layout.isDesktop && shown.map((chat) => h(Text, {
+    key: `chat-${chat.id}`,
+    wrap: "truncate-end"
+  }, h(Text, {
+    bold: true
+  }, chat.project), h(Text, {
+    dimColor: true
+  }, ` · ${chat.title || s.untitled} · ${s.states[chat.state === "working" ? "working" : "idle"]}`))));
+}
+
+function draftHead(ui, layout) {
+  const { Text } = ui;
+  const label = t().newTask;
+  if (!layout.isDesktop)
+    return h(Text, {
+      bold: true,
+      dimColor: true
+    }, label);
+  return picture$1(ui, { key: "draft-head", at: "draft-head", pic: { source: sectionSvg(layout.inner, { label }), alt: label, width: layout.inner, height: SECTION_SVG_H } });
+}
+function draftTree(ui, view, on) {
+  const { Box, Button, Input, Select, Text } = ui;
+  const s = t();
+  const chosen = chosenOf(view.types, view.draft);
+  const frame = view.layout.isDesktop ? { borderStyle: "round", paddingX: 2, paddingY: 1 } : {};
+  return h(Box, {
+    key: "draft",
+    flexDirection: "column",
+    rowGap: 1,
+    ...frame
+  }, draftHead(ui, view.layout), !chosen && h(Text, {
+    dimColor: true
+  }, s.noTypes), chosen && Select && h(Select, {
+    key: "dispatch-type",
+    label: s.agentLabel,
+    options: view.types.map((type) => ({ value: type.name, label: type.name })),
+    value: chosen.name,
+    onSelect: on.onPickType
+  }), chosen && h(Text, {
+    dimColor: true,
+    wrap: "truncate-end"
+  }, `${sourceWord(chosen.source)} · ${describe(chosen)}`), chosen && Input && h(Input, {
+    key: "dispatch-task",
+    label: s.taskLabel,
+    placeholder: s.taskHint,
+    value: "",
+    submitLabel: s.start,
+    autoFocus: true,
+    onSubmit: on.onStartTask
+  }), view.draft?.notice && h(Text, {
+    color: "warning"
+  }, view.draft.notice), h(Box, {
+    flexDirection: "row"
+  }, h(Button, {
+    key: "dispatch-cancel",
+    plain: true,
+    dimColor: true,
+    label: s.cancel,
+    onPress: on.onCancelTask
+  })));
+}
+
+const BRIEF_SHOWN = 280;
+const ANSWER_SHOWN = 900;
+function saidTree(ui, said) {
+  const { Box, Text } = ui;
+  return h(Box, {
+    key: said.key,
+    flexDirection: "column"
+  }, h(Text, {
+    bold: true
+  }, said.who), h(Box, {
+    flexDirection: "column",
+    borderStyle: "round",
+    borderDimColor: true,
+    paddingX: 1
+  }, h(Text, null, said.text)));
+}
+function briefTree(ui, a, ctx) {
+  const { Box, Button } = ui;
+  if (!a.brief)
+    return null;
+  const s = t();
+  const isLong = a.brief.length > BRIEF_SHOWN;
+  const isWhole = !isLong || ctx.briefOpen === a.id;
+  const text = isWhole ? a.brief : clip$3(a.brief, BRIEF_SHOWN);
+  return h(Box, {
+    key: `brief-box-${a.id}`,
+    flexDirection: "column"
+  }, saidTree(ui, { key: "asked", who: a.isAsked ? s.you : s.brief, text }), isLong && h(Box, {
+    flexDirection: "row",
+    justifyContent: "flex-end"
+  }, h(Button, {
+    key: `brief-${a.id}`,
+    plain: true,
+    dimColor: true,
+    label: isWhole ? s.showLess : s.showAll,
+    onPress: () => ctx.onBrief(a.id)
+  })));
+}
+const turnsOf = (a) => a.thread ?? (a.answer && a.status === "done" ? [{ from: "agent", text: a.answer, at: a.endedAt ?? a.startedAt }] : []);
+const turnTree = (ui, a, turn, i) => turn.from === "you" ? saidTree(ui, { key: `turn-${i}`, who: t().you, text: turn.text }) : saidTree(ui, { key: `turn-${i}`, who: lookOf$1(a).name, text: clip$3(turn.text, ANSWER_SHOWN) });
+const isAwaited = (a, turns) => a.status === "running" || a.status === "done" && turns.at(-1)?.from === "you";
+function tailTree(ui, a, turns) {
+  const { Text } = ui;
+  const s = t();
+  if (isAwaited(a, turns))
+    return h(Text, {
+      color: "claude"
+    }, `● ${s.answering(lookOf$1(a).name)}`);
+  if (a.status !== "failed")
+    return null;
+  return h(Text, {
+    color: "error"
+  }, `${s.cheerFailed} · ${a.endReason === "aborted" ? s.aborted : s.failedNow}`);
+}
+function conversationTree(ui, a, ctx) {
+  const { Box } = ui;
+  const turns = turnsOf(a);
+  return h(Box, {
+    key: `talk-${a.id}`,
+    flexDirection: "column",
+    rowGap: 1
+  }, briefTree(ui, a, ctx), turns.map((turn, i) => turnTree(ui, a, turn, i)), tailTree(ui, a, turns));
+}
+
+const filesShown = (files) => {
+  const latest = [...files].sort((x, y) => y.at - x.at);
+  return [...latest.filter((f) => f.edits > 0), ...latest.filter((f) => f.edits === 0)];
+};
+const EXT = /\.([a-z0-9]{1,5})$/i;
+const extOf = (path) => (EXT.exec(path)?.[1] ?? "").toUpperCase();
+
+const ICON$1 = {
+  read: '<circle cx="7" cy="7" r="4.5"/><path d="M10.4 10.4L14 14"/>',
+  edit: '<path d="M3 13l.8-3.2L10.6 3l2.4 2.4-6.8 6.8z"/><path d="M9.2 4.4l2.4 2.4"/>',
+  run: '<path d="M3 4.5L6.5 8 3 11.5"/><path d="M8.5 12h5"/>',
+  agent: '<path d="M8 2.5L13.5 8 8 13.5 2.5 8z"/>',
+  other: '<circle cx="8" cy="8" r="5"/>',
+  thinking: '<circle cx="3.5" cy="8" r=".9"/><circle cx="8" cy="8" r=".9"/><circle cx="12.5" cy="8" r=".9"/>',
+  done: '<path d="M3 8.5l3.2 3.2L13 4.8"/>',
+  failed: '<path d="M4 4l8 8M12 4l-8 8"/>'
+};
+const ICON_SIZE = 16;
+const STROKE = 1.5;
+const iconAt = (icon, opts) => `<g class="${opts.cls}" transform="translate(${opts.x} ${opts.y}) scale(${opts.scale ?? 1})" fill="none" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round">${ICON$1[icon]}</g>`;
+const NOW = { h: 42, textX: 26, iconY: 3, label: 12, labelY: 15, lineY: 34, line2: 13.5, mono: 12.5 };
+const BOLD = 1.06;
+const MID_BASELINE = 0.36;
+const lookOfNow = (now) => {
+  if (now.state === "done")
+    return { ink: "m", icon: "done" };
+  if (now.state === "failed")
+    return { ink: "f-danger", icon: "failed" };
+  if (now.state === "call")
+    return { ink: "f-edit", icon: now.kind };
+  return { ink: "f-edit", icon: "thinking" };
+};
+const capital$1 = (s) => upper$2(s.charAt(0)) + s.slice(1);
+const callLine = (now, x, room) => {
+  const tool = now.tool ? `${fitText(now.tool, NOW.line2 * BOLD, room)} ` : "";
+  const used = textWidth(tool, NOW.line2) * BOLD;
+  const shown = fitMono(now.target, { size: NOW.mono, maxW: Math.max(0, room - used), isFromStart: now.isPath });
+  return `<text x="${x}" y="${NOW.lineY}" font-family="${FONT$2}" font-size="${NOW.line2}" font-weight="620"><tspan class="t">${xml(tool)}</tspan><tspan class="s" font-family="${MONO$2}" font-size="${NOW.mono}" font-weight="450">${xml(shown)}</tspan></text>`;
+};
+const nowSvg = (W, now) => {
+  const look = lookOfNow(now);
+  const x = NOW.textX;
+  const verb = fitText(capital$1(now.verb), NOW.label * BOLD, W - x);
+  const body = [
+    iconAt(look.icon, { x: 0, y: NOW.iconY, cls: "i-s" }),
+    `<text class="${look.ink}" x="${x}" y="${NOW.labelY}" font-family="${FONT$2}" font-size="${NOW.label}" font-weight="600">${xml(verb)}</text>`,
+    now.tool ? callLine(now, x, W - x) : ""
+  ];
+  return paneSvg(W, NOW.h, body.join(""));
+};
+const NOW_H = NOW.h;
+const ROW$1 = { h: 26, badgeW: 34, badgeH: 17, badgeRx: 4, badge: 9, gap: 10, path: 12.5, count: 11.5, icon: 0.72, iconGap: 3, countGap: 10 };
+const BADGE_MAX = 4;
+const badgeOf = (path, y) => {
+  const ext = extOf(path).slice(0, BADGE_MAX);
+  const mid = y + ROW$1.h / 2;
+  return `<rect class="k" x="0" y="${mid - ROW$1.badgeH / 2}" width="${ROW$1.badgeW}" height="${ROW$1.badgeH}" rx="${ROW$1.badgeRx}"/>` + `<text class="m" x="${ROW$1.badgeW / 2}" y="${mid + ROW$1.badge * MID_BASELINE}" text-anchor="middle" font-family="${MONO$2}" font-size="${ROW$1.badge}" font-weight="600">${xml(ext || "·")}</text>`;
+};
+const countsOf$1 = (f) => [{ n: f.edits, icon: "edit", ink: "s" }, { n: f.reads, icon: "read", ink: "m" }].filter((c) => c.n > 0);
+const countW = (c) => ICON_SIZE * ROW$1.icon + ROW$1.iconGap + monoWidth(String(c.n), ROW$1.count);
+const countsSvg = (counts, opts) => {
+  let x = opts.right;
+  const mid = opts.y + ROW$1.h / 2;
+  const parts = [...counts].reverse().map((c) => {
+    x -= countW(c);
+    const part = iconAt(c.icon, { x, y: mid - ICON_SIZE * ROW$1.icon / 2, cls: `i-${c.ink}`, scale: ROW$1.icon }) + `<text class="${c.ink}" x="${x + ICON_SIZE * ROW$1.icon + ROW$1.iconGap}" y="${mid + ROW$1.count * MID_BASELINE}" font-family="${MONO$2}" font-size="${ROW$1.count}" font-weight="600">${c.n}</text>`;
+    x -= ROW$1.countGap;
+    return part;
+  });
+  return { body: parts.join(""), width: opts.right - x };
+};
+const pathSvg = (path, opts) => {
+  const short = shortPath(path);
+  const cut = short.lastIndexOf("/") + 1;
+  const name = fitText(short.slice(cut), ROW$1.path * BOLD, opts.room);
+  const dir = fitStart$1(short.slice(0, cut), ROW$1.path, opts.room - textWidth(name, ROW$1.path) * BOLD);
+  const y = opts.y + ROW$1.h / 2 + ROW$1.path * MID_BASELINE;
+  return `<text x="${ROW$1.badgeW + ROW$1.gap}" y="${y}" font-family="${FONT$2}" font-size="${ROW$1.path}"><tspan class="m">${xml(dir)}</tspan><tspan class="t" font-weight="560">${xml(name)}</tspan></text>`;
+};
+const filesSvg = (W, files) => {
+  const rows = files.map((f, i) => {
+    const y = i * ROW$1.h;
+    const counts = countsSvg(countsOf$1(f), { right: W, y });
+    const room = W - ROW$1.badgeW - ROW$1.gap - counts.width - ROW$1.gap;
+    return badgeOf(f.path, y) + pathSvg(f.path, { y, room }) + counts.body;
+  });
+  const height = Math.max(ROW$1.h, files.length * ROW$1.h);
+  return { source: paneSvg(W, height, rows.join("")), height };
+};
+
+const pad = (n) => String(n).padStart(2, "0");
+const timeOf = (at) => {
+  const date = new Date(at);
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+const nameOf$1 = (path) => path.split("/").filter(Boolean).at(-1) ?? path;
+const hrefOf$1 = (path) => `file://${encodeURI(path)}`;
+const linkOf = (path) => `[${nameOf$1(path).replace(/([\\`*_[\]<>])/g, "\\$1")}](<${hrefOf$1(path)}>)`;
+const filesMarkdown = (paths) => paths.filter((path) => path.startsWith("/")).map(linkOf).join(" · ");
+function fileLink(ui, e, key) {
+  const { Markdown } = ui;
+  if (!e.path || !Markdown)
+    return null;
+  return h(Markdown, {
+    key,
+    text: linkOf(e.path)
+  });
+}
+const endOf$1 = (e, isLive) => {
+  if (e.endAt !== undefined)
+    return e.isError ? `✗ ${t().failedNow}` : "✓";
+  return isLive ? "…" : "—";
+};
+function stepTree(ui, e, ctx) {
+  const { Box, Text } = ui;
+  const said = e.why ?? e.plain ?? e.tool;
+  const because = e.because && e.because !== ctx.prev?.because ? e.because : undefined;
+  const isFailed = e.endAt !== undefined && e.isError === true;
+  return h(Box, {
+    key: `log-${ctx.index}`,
+    flexDirection: "column"
+  }, because ? h(Text, {
+    wrap: "wrap"
+  }, h(Text, {
+    bold: true
+  }, `${t().because}: `), h(Text, null, because)) : null, h(Box, {
+    flexDirection: "row",
+    columnGap: 1
+  }, h(Box, {
+    flexShrink: 0
+  }, h(Text, {
+    dimColor: true
+  }, timeOf(e.at))), h(Box, {
+    flexShrink: 0
+  }, h(Text, {
+    dimColor: true
+  }, KIND_GLYPH[kindOf$1(e.tool)])), h(Box, {
+    flexDirection: "column",
+    flexGrow: 1,
+    flexShrink: 1
+  }, h(Text, {
+    wrap: "wrap"
+  }, said), h(Text, {
+    dimColor: true,
+    wrap: "wrap"
+  }, [e.why && e.plain ? e.plain : "", `${e.tool}${e.path ? "" : ` ${e.target}`}`.trim()].filter(Boolean).join(" · ")), fileLink(ui, e, `log-file-${ctx.index}`)), h(Box, {
+    flexShrink: 0
+  }, h(Text, {
+    color: isFailed ? "error" : "subtle"
+  }, endOf$1(e, ctx.isLive)))));
+}
+function logTree(ui, a) {
+  const { Box } = ui;
+  const list = a.history ?? [];
+  const isLive = a.status === "running";
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, list.map((e, index) => stepTree(ui, e, { isLive, index, prev: list[index - 1] })));
+}
+function logButton(ui, a, ctx) {
+  const { Box, Button } = ui;
+  const s = t();
+  const label = ctx.logOpen === a.id ? s.logClose : s.logOpen(a.history?.length ?? 0);
+  return h(Box, {
+    flexDirection: "row"
+  }, h(Button, {
+    key: `log-${a.id}`,
+    variant: "secondary",
+    label,
+    onPress: () => ctx.onLog(a.id)
+  }));
+}
+
+const BAR_H$1 = 18;
+const CHIPS_H = 22;
+const MIX_H = 8;
+const TRACK_H = 8;
+const PCT_GAP = 8;
+const PCT_W = 46;
+const PCT_SIZE = 12.5;
+const STRIPE = 8;
+const CHIP_GAP$1 = 6;
+const CHIP_PAD = 9;
+const CHIP_TEXT = 11.5;
+const RING_R$1 = 5.5;
+const RING_W = 2.2;
+const RING_SLOT = 17;
+const MIX_GAP = 2;
+const stripesOf = (filled, y, uid) => `<defs><pattern id="st${uid}" width="${STRIPE}" height="${STRIPE}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${STRIPE / 2}" height="${STRIPE}" fill="#fff" opacity=".28"/></pattern></defs><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" fill="url(#st${uid})"/>`;
+const FILL$2 = { running: "f-edit", done: "m", failed: "f-danger" };
+const LABEL$2 = { running: "s", done: "m", failed: "f-danger" };
+const progressBarSvg = (W, a, opts) => {
+  const y = (BAR_H$1 - TRACK_H) / 2;
+  const barW = Math.max(TRACK_H, W - PCT_W - PCT_GAP);
+  const filled = Math.max(TRACK_H, Math.round(barW * opts.progress.value));
+  const uid = a.id.replace(/\W/g, "");
+  const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`;
+  const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`;
+  const bar = `<rect data-m-fill="" class="${FILL$2[a.status] ?? "f-edit"}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
+  const isRunning = a.status === "running";
+  const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : "";
+  const label = `<text class="${LABEL$2[a.status] ?? "s"}" x="${barW + PCT_GAP}" y="${BAR_H$1 / 2 + PCT_SIZE * 0.34}" font-family="${MONO$2}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`;
+  return paneSvg(W, BAR_H$1, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`);
+};
+const ringOf = (x, ring) => {
+  const c = 2 * Math.PI * RING_R$1;
+  const dash = Math.max(0.6, Math.min(1, ring.ratio) * c);
+  const cx = x + CHIP_PAD + RING_R$1 - 1;
+  const cy = CHIPS_H / 2;
+  return `<circle cx="${cx}" cy="${cy}" r="${RING_R$1}" fill="none" class="rk" stroke-width="${RING_W}"/>` + `<circle cx="${cx}" cy="${cy}" r="${RING_R$1}" fill="none" class="i-s" stroke-width="${RING_W}" stroke-linecap="round" stroke-dasharray="${dash.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+};
+const chipWidth = (chip) => Math.ceil(textWidth(chip.text, CHIP_TEXT)) + CHIP_PAD * 2 + (chip.ring ? RING_SLOT : 0);
+const chipsSvg = (W, chips) => {
+  let x = 0;
+  let y = 0;
+  const parts = [];
+  for (const chip of chips) {
+    const w = Math.min(W, chipWidth(chip));
+    if (x > 0 && x + w > W) {
+      x = 0;
+      y += CHIPS_H + CHIP_GAP$1;
+    }
+    const tx = x + CHIP_PAD + (chip.ring ? RING_SLOT : 0);
+    parts.push(`<rect class="chip" x="${x}" y="${y}" width="${w}" height="${CHIPS_H}" rx="${CHIPS_H / 2}"/>`);
+    if (chip.ring)
+      parts.push(`<g transform="translate(0,${y})">${ringOf(x, chip.ring)}</g>`);
+    parts.push(`<text class="s" x="${tx}" y="${y + CHIPS_H / 2 + 4}" font-family="${FONT$2}" font-size="${CHIP_TEXT}" font-weight="500" font-variant-numeric="tabular-nums">${xml(chip.text)}</text>`);
+    x += w + CHIP_GAP$1;
+  }
+  const height = y + CHIPS_H;
+  return { source: paneSvg(W, height, parts.join("")), height };
+};
+const mixSvg = (W, parts) => {
+  const total = parts.reduce((sum, p) => sum + p.count, 0);
+  if (!total)
+    return paneSvg(W, MIX_H, `<rect class="k" width="${W}" height="${MIX_H}" rx="${MIX_H / 2}"/>`);
+  const room = W - MIX_GAP * (parts.length - 1);
+  let x = 0;
+  const segs = parts.map((p) => {
+    const w = Math.max(MIX_H, room * p.count / total);
+    const seg = `<rect class="m" x="${x.toFixed(1)}" width="${w.toFixed(1)}" height="${MIX_H}" rx="${MIX_H / 2}"/>`;
+    x += w + MIX_GAP;
+    return seg;
+  });
+  return paneSvg(W, MIX_H, segs.join(""));
+};
+
+const SECOND$2 = 1000;
+const PATH = /^[~.]?\//;
+const agoOf = (ms) => ms < SECOND$2 ? t().now : t().ago(roughSpan(ms));
+const stateOf$1 = (a, last) => {
+  if (a.status !== "running")
+    return a.status;
+  if (!last)
+    return "starting";
+  return last.endAt === undefined ? "call" : "thinking";
+};
+const verbOf = (a, state, kind) => {
+  const s = t();
+  const last = a.history?.at(-1);
+  if (state === "call")
+    return last?.why ?? last?.plain ?? s.doing[kind];
+  if (state === "thinking")
+    return s.thinking;
+  if (state === "starting")
+    return s.starting;
+  if (state === "done")
+    return s.completed;
+  return a.endReason === "aborted" ? s.aborted : s.failedNow;
+};
+function nowOf(a, at) {
+  const last = a.history?.at(-1);
+  const state = stateOf$1(a, last);
+  const kind = last ? kindOf$1(last.tool) : "other";
+  const isLatest = last !== undefined && last.tool === a.lastTool;
+  const target = (isLatest ? a.lastDetail : undefined) ?? last?.target ?? "";
+  const verb = verbOf(a, state, kind);
+  if (!last)
+    return { state, kind, verb, tool: "", target: "", isPath: false, span: "" };
+  const span = state === "call" ? roughSpan(at - last.at) : agoOf(at - last.at);
+  const said = state === "call" ? undefined : last.why ?? last.plain;
+  if (said)
+    return { state, kind, verb, tool: said, target: "", isPath: false, span };
+  return { state, kind, verb, tool: last.tool, target, isPath: PATH.test(target), span };
+}
+
+const RECENT_SHOWN = 8;
+const FILES_SHOWN$3 = 6;
+const KIND_ORDER = ["read", "edit", "run", "agent", "other"];
+const NOW_KEY = { call: "claude", thinking: "claude", starting: "claude", done: "subtle", failed: "error" };
+const capital = (s) => upper$2(s.charAt(0)) + s.slice(1);
+function nowText(ui, now) {
+  const { Box, Text } = ui;
+  const key = NOW_KEY[now.state];
+  const glyph = now.state === "call" ? KIND_GLYPH[now.kind] : "●";
+  return h(Box, {
+    flexDirection: "column"
+  }, h(Text, {
+    wrap: "truncate-end"
+  }, h(Text, {
+    color: key
+  }, `${glyph} `), h(Text, {
+    bold: true,
+    color: key
+  }, capital(now.verb)), now.span ? h(Text, {
+    dimColor: true
+  }, ` · ${now.span}`) : null), now.tool ? h(Box, {
+    flexDirection: "row",
+    columnGap: 1,
+    paddingLeft: 2
+  }, h(Text, {
+    bold: true
+  }, now.tool), h(Box, {
+    flexShrink: 1
+  }, h(Text, {
+    dimColor: true,
+    wrap: now.isPath ? "truncate-start" : "truncate-end"
+  }, now.target))) : null);
+}
+function deskNow(ui, a, now, ctx) {
+  const alt = [now.verb, now.span, now.tool, now.target].filter(Boolean).join(" · ");
+  return picture$1(ui, { key: "now", at: `now-${a.id}`, pic: { source: nowSvg(ctx.inner, now), alt, width: ctx.inner, height: NOW_H } });
+}
+function nowTree(ui, a, ctx) {
+  const { Box, Text } = ui;
+  const s = t();
+  const now = nowOf(a, ctx.at);
+  const steps = stepsOf$1(a);
+  const heading = h(Text, {
+    bold: true
+  }, a.status === "running" ? s.current : s.lastStep);
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: ctx.isDesktop ? 1 : 0
+  }, ctx.isDesktop && now.span ? h(Box, {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    columnGap: 1
+  }, heading, h(Text, {
+    dimColor: true
+  }, now.span)) : heading, ctx.isDesktop ? deskNow(ui, a, now, ctx) : nowText(ui, now), steps ? h(Text, {
+    dimColor: true,
+    wrap: "truncate-end"
+  }, `${s.tasks} ${steps}`) : null);
+}
+const outcomeOf = (e, isLive) => {
+  if (e.endAt !== undefined)
+    return e.isError ? { glyph: "✗", key: "error" } : { glyph: "✓", key: "subtle" };
+  return { glyph: isLive ? "…" : "—", key: "subtle" };
+};
+function eventTree(ui, e, ctx) {
+  const { Box, Text } = ui;
+  const kind = kindOf$1(e.tool);
+  const outcome = outcomeOf(e, ctx.isLive);
+  const said = e.why ?? e.plain;
+  const fine = e.why && e.plain ? ` · ${e.plain}` : `${said ? ` · ${e.tool}` : ""}${e.target ? ` ${e.target}` : ""}`;
+  const pulse = { source: pulseSvg(), alt: t().isRunning, width: PULSE, height: PULSE };
+  const end = e.endAt === undefined && ctx.isLive && ctx.isDesktop ? picture$1(ui, { key: "live", at: `live-${ctx.id}-${ctx.index}`, pic: pulse }) : h(Text, {
+    color: outcome.key
+  }, outcome.glyph);
+  return h(Box, {
+    key: `ev-${ctx.index}`,
+    flexDirection: "row",
+    alignItems: "center",
+    columnGap: 1
+  }, h(Text, {
+    dimColor: true
+  }, KIND_GLYPH[kind]), h(Box, {
+    flexGrow: 1,
+    flexShrink: 1
+  }, h(Text, {
+    wrap: "truncate-end"
+  }, said ? h(Text, null, said) : h(Text, {
+    bold: true
+  }, e.tool), fine ? h(Text, {
+    dimColor: true
+  }, fine) : null)), h(Box, {
+    flexShrink: 0,
+    flexDirection: "row",
+    columnGap: 1,
+    alignItems: "center"
+  }, h(Text, {
+    dimColor: true
+  }, agoOf(ctx.at - e.at)), end));
+}
+const mixOf = (history) => KIND_ORDER.map((kind) => ({ kind, count: history.filter((e) => kindOf$1(e.tool) === kind).length })).filter((p) => p.count > 0);
+function mixTree(ui, parts, ctx) {
+  const { Box, Text } = ui;
+  if (!parts.length)
+    return null;
+  const s = t();
+  const words = parts.map((p) => `${s.kinds[p.kind]} ${p.count}`).join(" · ");
+  const legend = parts.map((p, i) => h(Text, {
+    key: `k-${p.kind}`
+  }, h(Text, {
+    dimColor: true
+  }, `${KIND_GLYPH[p.kind]} `), h(Text, {
+    dimColor: true
+  }, `${s.kinds[p.kind]} ${p.count}${i < parts.length - 1 ? "   " : ""}`)));
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: ctx.isDesktop ? 1 : 0
+  }, ctx.isDesktop && picture$1(ui, { key: "mix", at: `mix-${ctx.id}`, pic: { source: mixSvg(ctx.inner, parts), alt: words, width: ctx.inner, height: MIX_H } }), h(Text, {
+    wrap: "truncate-end"
+  }, legend));
+}
+function historyTree(ui, a, ctx) {
+  const { Box, Text } = ui;
+  const s = t();
+  const list = a.history ?? [];
+  const shown = list.slice(-RECENT_SHOWN);
+  const hidden = list.length - shown.length;
+  const isLive = a.status === "running";
+  const isLog = ctx.logOpen === a.id;
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, h(Text, {
+    bold: true
+  }, `${isLog ? s.log : s.history} · ${s.tools(list.length)}`), mixTree(ui, mixOf(list), { ...ctx, id: a.id }), isLog ? logTree(ui, a) : h(Box, {
+    flexDirection: "column"
+  }, hidden > 0 && h(Text, {
+    dimColor: true
+  }, s.earlier(hidden)), shown.map((e, i) => eventTree(ui, e, { ...ctx, id: a.id, isLive, index: hidden + i }))), logButton(ui, a, ctx));
+}
+const fileWords = (f) => {
+  const s = t();
+  return [f.edits ? `${s.kinds.edit} ${f.edits}` : "", f.reads ? `${s.kinds.read} ${f.reads}` : ""].filter(Boolean).join(" · ");
+};
+function fileText(ui, f) {
+  const { Text } = ui;
+  const kind = f.edits ? "edit" : "read";
+  const counts = [f.edits ? `${KIND_GLYPH.edit}${f.edits}` : "", f.reads ? `${KIND_GLYPH.read}${f.reads}` : ""].filter(Boolean).join(" ");
+  return h(Text, {
+    key: `file-${f.path}`,
+    wrap: "truncate-middle"
+  }, h(Text, {
+    dimColor: true
+  }, `${KIND_GLYPH[kind]} `), h(Text, null, shortPath(f.path)), h(Text, {
+    dimColor: true
+  }, `  ${counts}`));
+}
+function filesTree(ui, a, ctx) {
+  const { Box, Text } = ui;
+  const all = filesShown(a.files ?? []);
+  if (!all.length)
+    return null;
+  const s = t();
+  const shown = all.slice(0, FILES_SHOWN$3);
+  const more = all.length - shown.length;
+  const drawn = ctx.isDesktop ? filesSvg(ctx.inner, shown) : null;
+  const alt = shown.map((f) => `${f.path} (${fileWords(f)})`).join(", ");
+  const links = filesMarkdown(shown.map((f) => f.path));
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: ctx.isDesktop ? 1 : 0
+  }, h(Text, {
+    bold: true
+  }, `${s.files} · ${all.length}`), drawn ? picture$1(ui, { key: "files", at: `files-${a.id}`, pic: { source: drawn.source, alt, width: ctx.inner, height: drawn.height } }) : shown.map((f) => fileText(ui, f)), ui.Markdown && links ? h(ui.Markdown, {
+    key: `file-links-${a.id}`,
+    dimColor: true,
+    text: links
+  }) : null, more > 0 && h(Text, {
+    dimColor: true
+  }, s.moreFiles(more)));
+}
+
+const PERCENT$1 = 100;
+const limitShareOf = (a, limit) => shareOf(a.costUsd, limit);
+const usageChipsOf = (a, limit) => {
+  const s = t();
+  const ctx = ctxOf(a);
+  const cost = costText(a);
+  const share = cost === "" ? null : limitShareOf(a, limit);
+  const chips = [
+    { text: `${s.context} ${s.pct(ctx)}`, ring: { ratio: ctx / PERCENT$1 } },
+    { text: `${fmtTokens(a.tokens)} ${s.tokensWord}` },
+    ...cost === "" ? [] : [{ text: cost }]
+  ];
+  if (share !== null)
+    chips.push({ text: `${s.limit} ≈${s.pct(shareNumber(share))}`, ring: { ratio: share / PERCENT$1 } });
+  return chips;
+};
+const chipsOf = (a, facts) => [{ text: `${t().time} ${fmtTime(elapsed(a, facts.at))}` }, ...usageChipsOf(a, facts.limit)];
+const metricsLine = (a, facts) => chipsOf(a, facts).map((chip) => chip.text).join(" · ");
+const progressLabel = (p) => `${p.isEstimate ? "~" : ""}${t().pct(Math.round(p.value * PERCENT$1))}`;
+
+const SIDE_BY_SIDE_PX = 480;
+function metricsTree(ui, a, ctx) {
+  const { Text } = ui;
+  const facts = { limit: ctx.limit, at: ctx.at };
+  const line = metricsLine(a, facts);
+  if (!ctx.isDesktop)
+    return h(Text, {
+      dimColor: true,
+      wrap: "truncate-end"
+    }, line);
+  const width = ctx.inner;
+  const chips = chipsSvg(width, a.status === "running" ? usageChipsOf(a, ctx.limit) : chipsOf(a, facts));
+  return picture$1(ui, { key: "chips", at: `chips-${a.id}`, pic: { source: chips.source, alt: line, width, height: chips.height } });
+}
+function actionsTree(ui, a, ctx) {
+  const { Box, Button, Input } = ui;
+  if (a.isMain === true)
+    return null;
+  const s = t();
+  const name = lookOf$1(a).name;
+  const isRunning = a.status === "running";
+  const field = Input && h(Input, {
+    key: `send-${a.id}`,
+    label: s.message,
+    placeholder: isRunning ? s.messageTo(name) : s.followUp(name),
+    value: "",
+    submitLabel: s.send,
+    onSubmit: (text) => ctx.onSend(a.id, text)
+  });
+  if (!isRunning)
+    return field ? h(Box, {
+      key: `actions-${a.id}`,
+      flexDirection: "column"
+    }, field) : null;
+  const stop = h(Button, {
+    key: `stop-${a.id}`,
+    variant: "secondary",
+    label: s.stopWho(name),
+    onPress: () => ctx.onStop(a.id)
+  });
+  if (!ctx.isDesktop || ctx.inner < SIDE_BY_SIDE_PX) {
+    return h(Box, {
+      key: `actions-${a.id}`,
+      flexDirection: "column",
+      rowGap: ctx.isDesktop ? 1 : 0
+    }, field, h(Box, {
+      flexDirection: "row",
+      justifyContent: ctx.isDesktop ? "flex-end" : "flex-start"
+    }, stop));
+  }
+  return h(Box, {
+    key: `actions-${a.id}`,
+    flexDirection: "row",
+    alignItems: "center",
+    columnGap: 1
+  }, field && h(Box, {
+    flexDirection: "column",
+    flexGrow: 1,
+    flexShrink: 1
+  }, field), stop);
+}
+function detailTree(ui, a, ctx) {
+  const { Box } = ui;
+  const hasWork = (a.history?.length ?? 0) > 0;
+  return h(Box, {
+    key: `detail-${a.id}`,
+    flexDirection: "column",
+    rowGap: 1,
+    marginTop: 1
+  }, conversationTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), metricsTree(ui, a, ctx));
+}
+
+const CURVE_CAP = 0.9;
+const CURVE_CALLS = 8;
+const EDIT_FLOOR = 0.45;
+const TEST_FLOOR = 0.7;
+const START = 0.04;
+const TEST_WORDS = /\b(test|vitest|jest|pytest|lint|tsc|validate|check)\b/i;
+const floorOf = (a) => {
+  const history = a.history ?? [];
+  const hasTest = history.some((e) => kindOf$1(e.tool) === "run" && TEST_WORDS.test(e.target));
+  if (hasTest)
+    return TEST_FLOOR;
+  return history.some((e) => kindOf$1(e.tool) === "edit") ? EDIT_FLOOR : 0;
+};
+const estimateOf = (a) => {
+  const calls = Math.max(a.toolCount || 0, a.history?.length ?? 0);
+  const curve = CURVE_CAP * (1 - Math.exp(-calls / CURVE_CALLS));
+  return Math.min(CURVE_CAP, Math.max(START, floorOf(a), curve));
+};
+const agentProgress = (a) => {
+  if (a.status !== "running")
+    return { value: 1, isEstimate: false };
+  const measured = partialOf(a);
+  return measured === null ? { value: estimateOf(a), isEstimate: true } : { value: measured, isEstimate: false };
+};
+
+const FRAME_PX = 34;
+const FRAME_COLS = 4;
+const GAP_PX = 8;
+const TERM_BAR_MAX = 24;
+const PCT_COLS = 6;
+const COST_COLS = 8;
+const ANSWER_LINE = 120;
+const BODY_PX = 14;
+const GLYPH = { running: "●", done: "✓", failed: "✗" };
+const STATUS_KEY = { running: "claude", done: "subtle", failed: "error" };
+const whoLine = (a) => {
+  const tier = tierWordOf(a);
+  return [tier, ...modelLine(a).split(" · ").filter((part) => part !== tier)].join(" · ");
+};
+const statusWord = (a) => {
+  const s = t();
+  if (a.status === "running")
+    return s.isRunning;
+  if (a.status === "done")
+    return s.isFinished;
+  return a.endReason === "aborted" ? s.aborted : s.failed;
+};
+const pillOf = (a, stuck) => {
+  if (stuck)
+    return { text: stuck.reason, role: "warn" };
+  if (a.status === "running")
+    return { text: statusWord(a), role: "run" };
+  if (a.status === "done")
+    return { text: statusWord(a), role: "ok" };
+  return { text: statusWord(a), role: a.endReason === "aborted" ? "warn" : "danger" };
+};
+const headOf = (a, stuck) => ({
+  name: lookOf$1(a).name,
+  title: a.description || a.type,
+  pill: pillOf(a, stuck)
+});
+const nowLine = (a, isOpen) => {
+  const answer = a.status === "done" && !isOpen ? a.answer?.split(`
+`).find((line) => line.trim()) : undefined;
+  if (answer)
+    return clip$3(answer.trim(), ANSWER_LINE);
+  if (a.status === "failed" && a.lastTool)
+    return `› ${a.lastPlain ?? `${a.lastTool}${a.lastTarget ? " " + a.lastTarget : ""}`}`;
+  return activityOf(a);
+};
+const barLabel = (a, progress) => {
+  if (a.status === "failed")
+    return "✗";
+  return progress.isEstimate && !a.toolCount ? "" : progressLabel(progress);
+};
+const termBar = (p, width) => {
+  const filled = Math.round(width * p.value);
+  return (p.isEstimate ? "╍" : "━").repeat(filled) + "─".repeat(Math.max(0, width - filled));
+};
+function termBarTree(ui, a, ctx) {
+  const { Box, Text } = ui;
+  const progress = agentProgress(a);
+  const width = Math.max(6, Math.min(TERM_BAR_MAX, ctx.inner - PCT_COLS - COST_COLS));
+  const key = STATUS_KEY[a.status] ?? "claude";
+  return h(Box, {
+    flexDirection: "row",
+    columnGap: 1
+  }, h(Text, {
+    color: key,
+    dimColor: progress.isEstimate
+  }, termBar(progress, width)), h(Text, {
+    bold: true,
+    color: key
+  }, barLabel(a, progress)), h(Text, null, costText(a)));
+}
+function termStatus(ui, a, stuck) {
+  const { Text } = ui;
+  if (stuck)
+    return h(Text, {
+      color: "warning"
+    }, `! ${stuck.reason}`);
+  return h(Text, {
+    color: STATUS_KEY[a.status] ?? "subtle"
+  }, `${GLYPH[a.status] ?? "●"} ${statusWord(a)}`);
+}
+function termSummary(ui, a, ctx) {
+  const { Box, Text, Button } = ui;
+  const isOpen = ctx.selected === a.id;
+  return h(Box, {
+    flexDirection: "column",
+    flexGrow: 1,
+    flexShrink: 1
+  }, h(Box, {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    columnGap: 1
+  }, h(Button, {
+    key: `open-${a.id}`,
+    plain: true,
+    label: `${isOpen ? "▾" : "▸"} ${a.description || a.type}`,
+    hover: { color: "claude" },
+    onPress: () => ctx.onToggle(a.id)
+  }), termStatus(ui, a, stuckOf(a, ctx.at))), termBarTree(ui, a, ctx), h(Box, {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    columnGap: 1
+  }, h(Text, {
+    wrap: "truncate-end"
+  }, h(Text, {
+    bold: true
+  }, lookOf$1(a).name), h(Text, {
+    dimColor: true
+  }, ` · ${[whoLine(a), t().tools(a.toolCount || 0)].filter(Boolean).join(" · ")}`)), h(Text, {
+    dimColor: true
+  }, clockOf(a, ctx.at))), a.status !== "done" && h(Text, {
+    wrap: "truncate-end",
+    dimColor: a.status !== "running"
+  }, activityOf(a)));
+}
+function termCard(ui, a, ctx) {
+  const { Box } = ui;
+  const isOpen = ctx.selected === a.id;
+  const frame = isOpen ? { borderStyle: "round", paddingX: 1 } : {};
+  return h(Box, {
+    key: a.id,
+    flexDirection: "column",
+    ...frame
+  }, termSummary(ui, a, isOpen ? { ...ctx, inner: ctx.inner - FRAME_COLS } : ctx), isOpen && detailTree(ui, a, { ...ctx, inner: ctx.inner - FRAME_COLS }));
+}
+function deskHead(ui, a, ctx) {
+  const { Box } = ui;
+  const look = lookOf$1(a);
+  const stuck = stuckOf(a, ctx.at);
+  const isOpen = ctx.selected === a.id;
+  const head = headOf(a, stuck);
+  const headW = ctx.inner - CARD_CRAB.w;
+  const crab = cardCrabSvg({ costume: costumeOf(a), look, isWalking: a.status === "running" && !stuck });
+  const alt = `${head.title}: ${head.name} · ${whoLine(a)} · ${head.pill.text} (${isOpen ? t().hide : t().details})`;
+  return h(Box, {
+    flexDirection: "row",
+    alignItems: "center"
+  }, picture$1(ui, { key: "crab", at: `crab-${a.id}`, pic: { source: crab, alt: `${look.name}, ${tierWordOf(a)}`, width: CARD_CRAB.w, height: CARD_CRAB.h } }), picture$1(ui, { key: "head", at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head, GAP_PX), alt, width: headW, height: HEAD_H$1 } }));
+}
+function deskFoot(ui, a, ctx) {
+  const { Box, Text } = ui;
+  const isOpen = ctx.selected === a.id;
+  const meta = [t().tools(a.toolCount || 0), clockOf(a, ctx.at), costText(a), whoLine(a)].filter(Boolean).join(" · ");
+  return h(Box, {
+    key: "foot",
+    flexDirection: "column"
+  }, h(Text, {
+    wrap: "truncate-end",
+    dimColor: a.status !== "running"
+  }, fitText(nowLine(a, isOpen), BODY_PX, ctx.inner)), h(Text, {
+    wrap: "truncate-end",
+    dimColor: true
+  }, fitText(meta, BODY_PX, ctx.inner)));
+}
+function deskBar(ui, a, ctx) {
+  const progress = agentProgress(a);
+  const label = barLabel(a, progress);
+  const pic = { source: progressBarSvg(ctx.inner, a, { progress, label }), alt: label || t().starting, width: ctx.inner, height: BAR_H$1 };
+  return picture$1(ui, { key: "bar", at: `bar-${a.id}`, pic, opts: { shows: { status: a.status, isEstimate: progress.isEstimate } } });
+}
+function deskCard(ui, a, ctx) {
+  const { Box } = ui;
+  const isOpen = ctx.selected === a.id;
+  return h(Box, {
+    key: a.id,
+    flexDirection: "column"
+  }, h(Box, {
+    key: "row",
+    flexDirection: "column",
+    alignSelf: "flex-start"
+  }, h(Box, {
+    key: "head-row",
+    alignSelf: "flex-start"
+  }, deskHead(ui, a, ctx), PressCover$1(ui, { key: `open-${a.id}`, width: ctx.inner, height: HEAD_H$1, onPress: () => ctx.onToggle(a.id) })), deskBar(ui, a, ctx), deskFoot(ui, a, ctx)), isOpen && detailTree(ui, a, ctx));
+}
+const agentRow = (ui, a, ctx) => ctx.isDesktop ? deskCard(ui, a, ctx) : termCard(ui, a, ctx);
+function plannedRow(ui, p, ctx) {
+  const { Box, Text } = ui;
+  const tier = plannedTierOf(p.tier);
+  const crab = { source: crabSvg({ costume: tier, isDim: true }), alt: tier, width: CRAB$1.w, height: CRAB$1.h };
+  return h(Box, {
+    key: `plan-${p.n}`,
+    flexDirection: "row",
+    columnGap: 1,
+    alignItems: "center"
+  }, ctx.isDesktop ? picture$1(ui, { key: "crab", at: `plan-crab-${p.n}`, pic: crab }) : h(Text, {
+    dimColor: true
+  }, "○"), h(Box, {
+    flexDirection: "column",
+    flexGrow: 1
+  }, h(Text, {
+    dimColor: true,
+    wrap: "truncate-end"
+  }, `${p.n}. ${p.title}`), h(Text, {
+    wrap: "truncate-end"
+  }, h(Text, {
+    dimColor: true
+  }, [tier, plannedLine(p)].filter(Boolean).join(" · ")))));
+}
+
+const MIN_W = 240;
+const MAX_W = 900;
+const PX_PER_COL = 9;
+const ROWS_MAX = 12;
+const isDoneOpenIn = (shown, d) => shown.isDoneOpen ?? d.running.length === 0;
+function listTree(ui, view) {
+  const { Box, Text } = ui;
+  const { d, layout, on } = view;
+  const s = t();
+  const ctx = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.isDesktop ? layout.W : layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen, logOpen: d.panel.logOpen };
+  const isDoneOpen = isDoneOpenIn(d.panel, d);
+  const running = d.running.slice(0, ROWS_MAX);
+  const finished = isDoneOpen ? d.finished.slice(0, ROWS_MAX - running.length) : [];
+  const planned = d.planned.slice(0, ROWS_MAX - running.length - finished.length);
+  const more = d.running.length + (isDoneOpen ? d.finished.length : 0) + d.planned.length - running.length - finished.length - planned.length;
+  return h(Box, {
+    key: "list",
+    flexDirection: "column",
+    rowGap: 1
+  }, d.running.length > 0 && sectionHead(ui, layout, { id: "running", label: `${s.running} · ${d.running.length}` }), running.map((a) => agentRow(ui, a, ctx)), d.finished.length > 0 && sectionHead(ui, layout, { id: "finished", label: `${s.finished} · ${d.finished.length}`, toggle: { key: "done", isOpen: isDoneOpen, onPress: on.onDone } }), finished.map((a) => agentRow(ui, a, ctx)), d.planned.length > 0 && sectionHead(ui, layout, { id: "planned", label: `${s.planned} · ${d.planned.length}` }), planned.map((p) => plannedRow(ui, p, ctx)), more > 0 && h(Text, {
+    key: "more",
+    dimColor: true
+  }, s.moreAgents(more)));
+}
+function paneTree$1(ui, view) {
+  const { Box } = ui;
+  const { d, layout, on } = view;
+  const isDrafting = d.panel.draft?.isOpen === true;
+  const form = isDrafting && draftTree(ui, { draft: d.panel.draft, types: d.types, layout }, on);
+  if (d.list.length === 0 && d.planned.length === 0) {
+    return h(Box, {
+      flexDirection: "column",
+      rowGap: 2
+    }, isDrafting ? form : emptyTree(ui, view));
+  }
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, headTree(ui, d, layout), toolbarTree(ui, d, on), attentionTree(ui, view), form, d.panel.isCompact ? compactTree(ui, d, layout) : timelineTree(ui, view), !d.panel.isCompact && listTree(ui, view));
+}
+function agentsTree(ui, view) {
+  const { Box, Text } = ui;
+  const { d, layout, on } = view;
+  const listed = listedChats(d.chats);
+  const quiet = quietTree(ui, { chats: listed.chats, layout, isOpen: d.panel.isChatsOpen === true, onToggle: on.onChats });
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, waitingTree(ui, d.chats, layout), paneTree$1(ui, view), crewTree(ui, listed.chats, layout), quiet, listed.more > 0 && h(Text, {
+    key: "chats-more",
+    dimColor: true
+  }, t().chats.more(listed.more)));
+}
+const layoutOf = (isDesktop, columns) => {
+  if (!isDesktop)
+    return { isDesktop, W: 0, inner: columns, cols: columns };
+  const W = Math.max(MIN_W, Math.min(MAX_W, columns * PX_PER_COL));
+  return { isDesktop, W, inner: W - FRAME_PX, cols: columns - FRAME_COLS };
+};
+
+const AGENTS = { plugin: "savvy-progress", key: "agents" };
+const FLOW = { plugin: "savvy-progress", key: "flow" };
+const JOB = { plugin: "savvy-progress", key: "job" };
+const TASKS$1 = { plugin: "savvy-progress", key: "tasks" };
+const PANEL = { plugin: "savvy-progress", key: "panel" };
+const LIMIT = { plugin: "savvy-progress", key: "limit" };
+const TYPES$1 = { plugin: "savvy-progress", key: "types" };
+const CRAB = { plugin: "savvy-progress", key: "crab" };
+const CHATS = { plugin: "savvy-progress", key: "chats" };
+async function speakHubLang($) {
+  setLang$1(langOf$1(await $.env.get("MODZ_LANG").catch(() => {
+    return;
+  })) ?? "en");
+}
+async function agentsPage($, ui, site, act) {
+  await speakHubLang($);
+  const kept = {
+    list: (await $.state.get(AGENTS)).value ?? [],
+    flow: (await $.state.get(FLOW)).value ?? null,
+    job: (await $.state.get(JOB)).value ?? null,
+    tasks: (await $.state.get(TASKS$1)).value ?? [],
+    now: await $.clock.now(),
+    panel: (await $.state.get(PANEL)).value ?? { isCompact: false },
+    limit: (await $.state.get(LIMIT)).value ?? null,
+    types: (await $.state.get(TYPES$1)).value ?? BUILTIN_TYPES,
+    crab: (await $.state.get(CRAB)).value ?? restingCrab(0),
+    chats: (await $.state.get(CHATS)).value ?? []
+  };
+  const isDesktop = site.surface === "desktop" && "Svg" in ui;
+  return agentsTree(ui, { d: paneDataOf(kept), layout: layoutOf(isDesktop, site.columns), on: pageHandlers(act) });
+}
+
+let current$1 = "en";
+const langOf = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
+function setLang(value) {
+  current$1 = langOf(value);
+  return current$1;
+}
+const pick$1 = (table) => table[current$1];
+const upper$1 = (text) => text.toLocaleUpperCase(current$1);
 
 const FILL$1 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
 const DONE$1 = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
 const HAS_DONE$1 = /\bdata-m-done\b/;
-const WIDTH$1 = /\swidth="([\d.]+)"/;
+const WIDTH$2 = /\swidth="([\d.]+)"/;
 const CLASS$1 = /\sclass="([^"]*)"/;
 const STYLE$1 = /\sstyle="([^"]*)"/;
 const MIN_RATIO_STEP$1 = 0.02;
 const RATIO_DIGITS$1 = 3;
-const widthOf$2 = (tag) => Number(WIDTH$1.exec(tag)?.[1] ?? 0);
+const widthOf$1 = (tag) => Number(WIDTH$2.exec(tag)?.[1] ?? 0);
 function withClass$1(tag, name, extra = "") {
   const tagged = CLASS$1.test(tag) ? tag.replace(CLASS$1, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
   return tagged.replace(/\s*\/?>$/, `${extra}$&`);
@@ -3821,8 +8133,8 @@ function slideFills$1(before, now) {
   let index = 0;
   return now.replace(FILL$1, (tag) => {
     const was = old[index++];
-    const from = was === undefined ? 0 : widthOf$2(was);
-    const to = widthOf$2(tag);
+    const from = was === undefined ? 0 : widthOf$1(was);
+    const to = widthOf$1(tag);
     if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP$1)
       return tag;
     const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS$1)}`;
@@ -3939,970 +8251,787 @@ function paneMotion$1() {
   };
 }
 
-const ROLE = { read: "read", edit: "edit", commit: "ok" };
-const baseName$1 = (id) => id.slice(id.lastIndexOf("/") + 1);
-function relDir(id, root) {
-  const rel = id.startsWith(`${root}/`) ? id.slice(root.length + 1) : id;
-  const cut = rel.lastIndexOf("/");
-  return cut < 0 ? "" : rel.slice(0, cut);
+const BLANK = "ㅤ";
+const CELL_PX = 11.9;
+const BUTTON_PX = 28;
+const RUN_SPAN = 2;
+const LINE_SPAN = "400%";
+function PressCover(ui, o) {
+  const { Box, Button } = ui;
+  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX * 2)));
+  const label = BLANK.repeat(Math.ceil(o.width * RUN_SPAN / CELL_PX));
+  const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey };
+  return h(Box, {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "column",
+    justifyContent: "center",
+    overflow: "hidden"
+  }, Array.from({ length: lines }, (_, i) => h(Box, {
+    key: `${o.key}~line${i}`,
+    flexDirection: "row",
+    width: LINE_SPAN,
+    marginLeft: -1,
+    flexShrink: 0
+  }, h(Button, {
+    key: i === 0 ? o.key : `${o.key}~${i}`,
+    label,
+    plain: true,
+    ...i === 0 ? hotkey : {},
+    onPress: o.onPress
+  }))));
 }
-const relPath = (id, root) => id.startsWith(`${root}/`) ? id.slice(root.length + 1) : id;
-const where = (id, root) => {
-  const dir = relDir(id, root);
-  return { text: dir ? words$1().inDir(dir) : words$1().inRoot, cls: "mid" };
-};
-function diffParts(diff) {
-  if (!diff || diff[0] === 0 && diff[1] === 0)
-    return [];
-  return [
-    ...diff[0] ? [{ text: ` +${diff[0]}`, cls: "f-ok", isNum: true }] : [],
-    ...diff[1] ? [{ text: ` −${diff[1]}`, cls: "f-danger", isNum: true }] : []
-  ];
-}
-const count = (turn, role) => turn.touches.filter((t) => t.role === role).length;
-function tally(turn) {
-  const w = words$1();
-  const parts = [
-    count(turn, "read") ? w.openedFiles(count(turn, "read")) : "",
-    count(turn, "edit") ? w.editedFiles(count(turn, "edit")) : ""
-  ].filter(Boolean);
-  return parts.length ? parts.join(" · ") : w.noTouchYet;
-}
-function liveHero(input, latest) {
-  const same = input.turn.touches.filter((t) => t.role === latest.role && input.live.has(t.id));
-  const w = words$1();
-  const [lead = "", tail = ""] = w.liveOne[latest.role];
-  const isMany = same.length > 1;
-  const title = isMany ? { lead: w.liveMany[latest.role](same.length), name: "", tail: "" } : { lead, name: baseName$1(latest.id), tail };
-  const sub = latest.role === "commit" ? shaParts(input) : [where(latest.id, input.root)];
-  return { label: w.now, title, sub };
-}
-function shaParts(input) {
-  const sha = input.turn.sha ? [{ text: input.turn.sha, cls: "mid", isNum: true }] : [];
-  const branch = input.branch ? [{ text: `${sha.length ? " · " : ""}${words$1().onBranch(input.branch)}`, cls: "lo" }] : [];
-  return [...sha, ...branch];
-}
-const quiet = (label, lead, sub) => ({
-  label,
-  title: { lead, name: "", tail: "" },
-  sub: [{ text: sub, cls: "mid" }]
-});
-function names(touches) {
-  return touches.map((t) => baseName$1(t.id)).join(", ");
-}
-function doneHero(input) {
-  const { turn, root } = input;
-  const w = words$1();
-  const commits = count(turn, "commit");
-  if (commits || turn.committed) {
-    const n = Math.max(commits, turn.committed);
-    return { label: w.done, title: { lead: w.committedN(n), name: "", tail: "" }, sub: shaParts(input) };
-  }
-  const edits = turn.touches.filter((t) => t.role === "edit");
-  const reads = count(turn, "read");
-  const opened = reads ? [{ text: ` · ${w.openedFiles(reads)}`, cls: "lo" }] : [];
-  if (edits.length) {
-    const first = edits[0];
-    const sub = edits.length === 1 ? [{ text: relPath(first.id, root), cls: "mid" }, ...diffParts(input.diff[first.id])] : [{ text: names(edits), cls: "mid" }];
-    return { label: w.done, title: { lead: w.editedN(edits.length), name: "", tail: "" }, sub: [...sub, ...opened] };
-  }
-  if (reads) {
-    const sub = [{ text: names(turn.touches), cls: "mid" }];
-    return { label: w.done, title: { lead: w.readN(reads), name: "", tail: "" }, sub };
-  }
-  return quiet(w.done, w.untouched, w.untouchedSub);
-}
-function runningHero(input) {
-  const { turn } = input;
-  const w = words$1();
-  const latest = [...turn.touches].filter((t) => input.live.has(t.id)).sort((a, b) => a.at - b.at).pop();
-  if (latest)
-    return liveHero(input, latest);
-  if (input.isCommitting) {
-    const sub = input.branch ? [{ text: w.toBranch(input.branch), cls: "mid" }] : [];
-    return { label: w.now, title: { lead: w.committing, name: "", tail: "" }, sub };
-  }
-  return quiet(w.now, w.thinking, tally(turn));
-}
-function heroOf(input) {
-  const { turn } = input;
-  if (turn.isRunning)
-    return { ...runningHero(input), isLive: true };
-  if (!turn.hasRun)
-    return quiet(words$1().now, words$1().waiting, words$1().waitingSub);
-  return doneHero(input);
-}
-const heroText = (h) => `${h.title.lead}${h.title.name}${h.title.tail}`;
-const subText = (h) => h.sub.map((p) => p.text).join("");
-function touchedRows(input) {
-  const { turn, root } = input;
-  const w = words$1();
-  return turn.touches.map((t) => {
-    const isLive = turn.isRunning && input.live.has(t.id);
-    const diff = t.role === "read" ? undefined : input.diff[t.id];
-    const cost = turn.costs?.[t.id];
-    return {
-      name: baseName$1(t.id),
-      dir: relDir(t.id, root),
-      pill: { text: (isLive ? w.pillLive : w.pillDone)[t.role], role: isLive ? ROLE[t.role] : null },
-      ...diff && (diff[0] || diff[1]) ? { diff } : {},
-      ...cost ? { cost: costText(cost) } : {}
-    };
+const STILL = "<style>*{animation:none!important;transition:none!important}</style>";
+const stillSource = (source) => source.replace(/<\/svg>\s*$/, `${STILL}</svg>`);
+function stillSvg(ui, drawing) {
+  if (drawing.type !== "Svg")
+    return drawing;
+  const { Svg } = ui;
+  const { key, source, alt, width, height } = drawing.props;
+  return h(Svg, {
+    key,
+    source: stillSource(source),
+    alt,
+    width,
+    height
   });
 }
-
-const ICON$1 = {
-  commit: { nerd: "", plain: "●" },
-  push: { nerd: "\uDB81\uDD52", plain: "↑" },
-  pull: { nerd: "\uDB81\uDD53", plain: "↓" },
-  branch: { nerd: "", plain: "⑂" },
-  merge: { nerd: "", plain: "⑃" },
-  pr: { nerd: "", plain: "⇄" },
-  github: { nerd: "", plain: "◎" },
-  stash: { nerd: "\uDB80\uDDBC", plain: "≡" },
-  undo: { nerd: "\uDB81\uDD4C", plain: "↶" },
-  tag: { nerd: "", plain: "⌖" },
-  git: { nerd: "", plain: "±" }
-};
-const TONES = {
-  orange: { bright: ["#f97316", "#fb923c", "#fdba74", "#ffedd5"], dim: ["#8a4316", "#a3562a", "#bd7444", "#d29267"], solid: "#f97316" },
-  green: { bright: ["#22c55e", "#4ade80", "#86efac", "#dcfce7"], dim: ["#14532d", "#166534", "#2f7a47", "#4f9a66"], solid: "#4ade80" },
-  teal: { bright: ["#14b8a6", "#2dd4bf", "#5eead4", "#ccfbf1"], dim: ["#0f5e57", "#16786f", "#2a9488", "#4fb3a8"], solid: "#2dd4bf" },
-  blue: { bright: ["#3b82f6", "#60a5fa", "#93c5fd", "#dbeafe"], dim: ["#1e3a8a", "#1d4ed8", "#3b6fd1", "#6b93dc"], solid: "#60a5fa" },
-  iris: { bright: ["#a855f7", "#c084fc", "#d8b4fe", "#f3e8ff"], dim: ["#581c87", "#6b21a8", "#8b47c4", "#a874d6"], solid: "#c084fc" },
-  purple: { bright: ["#a855f7", "#c084fc", "#d8b4fe", "#f3e8ff"], dim: ["#581c87", "#6b21a8", "#8b47c4", "#a874d6"], solid: "#c084fc" },
-  cyan: { bright: ["#06b6d4", "#22d3ee", "#67e8f9", "#cffafe"], dim: ["#155e75", "#0e7490", "#2b8ea3", "#5aa9b8"], solid: "#22d3ee" },
-  red: { bright: ["#ef4444", "#f87171", "#fca5a5", "#fee2e2"], dim: ["#7f1d1d", "#991b1b", "#b54040", "#c96a6a"], solid: "#f87171" }
-};
-const BRANCH_ICON = ICON$1.branch;
-
-const cp = (n) => String.fromCodePoint(n);
-const CHEVRON_OPEN = cp(62588);
-const CHEVRON_CLOSED = cp(62560);
-const NAMES = {
-  "agents.md": 983892,
-  "changelog.md": 983892,
-  "contributing.md": 983892,
-  "todo.md": 983892,
-  "readme.md": 983892,
-  license: 58890,
-  dockerfile: 985192,
-  makefile: 987236,
-  "cmakelists.txt": 987236,
-  justfile: 984503,
-  gemfile: 986413,
-  rakefile: 986413,
-  "cargo.toml": 59058,
-  "cargo.lock": 59058,
-  "pyproject.toml": 59058,
-  "requirements.txt": 988686,
-  "go.mod": 985850,
-  "go.sum": 985043,
-  "package.json": 984614,
-  "package-lock.json": 984614,
-  "tsconfig.json": 984614,
-  ".prettierrc": 984614,
-  ".eslintrc": 984614,
-  "pnpm-lock.yaml": 59048,
-  "yarn.lock": 59048,
-  ".gitignore": 983714,
-  ".gitmodules": 984211,
-  ".editorconfig": 58962
-};
-const EXTS = {
-  lua: 58912,
-  py: 58886,
-  pyi: 58886,
-  js: 58892,
-  mjs: 58892,
-  cjs: 58892,
-  ts: 58920,
-  jsx: 58917,
-  tsx: 59322,
-  json: 58891,
-  jsonc: 58891,
-  yaml: 59048,
-  yml: 59048,
-  sh: 59285,
-  bash: 59285,
-  zsh: 59285,
-  fish: 59285,
-  md: 983892,
-  markdown: 983892,
-  css: 59064,
-  scss: 983836,
-  html: 59190,
-  htm: 59190,
-  go: 58919,
-  rs: 59019,
-  rb: 59281,
-  php: 58888,
-  java: 59192,
-  cs: 983835,
-  sql: 59142,
-  graphql: 61966,
-  gql: 61966,
-  xml: 984512,
-  toml: 59058,
-  ini: 986050,
-  conf: 984211,
-  pdf: 60139,
-  svg: 984865,
-  jpg: 983589,
-  jpeg: 983589,
-  png: 58893,
-  gif: 986488,
-  webp: 983583,
-  mp4: 983595,
-  mkv: 983595,
-  mov: 983595,
-  mp3: 983587,
-  wav: 983587,
-  flac: 983587,
-  zip: 984516,
-  gz: 984516,
-  xz: 984516,
-  tar: 984516,
-  qml: 62325,
-  cpp: 58909,
-  cc: 58909,
-  cxx: 58909,
-  c: 58910,
-  h: 985845,
-  hpp: 985845,
-  vue: 59040,
-  svelte: 59031,
-  csv: 58954,
-  txt: 985514
-};
-function fileIcon(n, open, isRepo) {
-  if (n.kind === "link")
-    return cp(62593);
-  if (n.kind === "dir" && isRepo)
-    return cp(983714);
-  if (n.kind === "dir")
-    return cp(open ? 58878 : 58879);
-  const lower = n.name.toLowerCase();
-  const named = NAMES[lower];
-  if (named)
-    return cp(named);
-  const dot = lower.lastIndexOf(".");
-  const ext = dot >= 0 ? lower.slice(dot + 1) : "";
-  return cp(EXTS[ext] ?? 983572);
-}
-const GIT_COLOR = {
-  A: "#98c379",
-  "?": "#98c379",
-  R: "#61afef",
-  C: "#61afef",
-  M: "#e5c07b",
-  T: "#e5c07b"
-};
-
-const ADD_COLOR$1 = "#98c379";
-const DEL_COLOR$1 = "#e06c75";
-const PX_PER_COL = 9;
-const NAME_PX = 14;
-const LEVEL_CELLS = 2;
-const RIGHT_GAP_PX = 10;
-const MIN_NAME_PX = 72;
-function clean(segs) {
-  for (const seg of segs)
-    for (const k of Object.keys(seg))
-      if (seg[k] === undefined)
-        delete seg[k];
-  return segs;
-}
-function countSegs(c, theme) {
-  if (!c)
-    return [];
-  const out = [];
-  if (c[0] > 0)
-    out.push({ t: ` ?:${c[0]}`, c: GIT_COLOR["?"] });
-  if (c[1] > 0)
-    out.push({ t: ` M:${c[1]}`, c: GIT_COLOR.M });
-  if (c[2] > 0)
-    out.push({ t: ` D:${c[2]}`, c: theme.urgent });
-  return out;
-}
-function statusOf(ctx, id) {
-  return ctx.t.git[id] ?? (underAny(dirname(id), ctx.untracked, ctx.t.root) ? "?" : undefined);
-}
-function metaOf$1(ctx, r) {
-  const { t } = ctx;
-  const n = r.node;
-  if (t.showSize) {
-    if (n.kind === "dir")
-      return n.id in t.dirSizes ? formatSize(t.dirSizes[n.id] ?? -1) : "…";
-    return n.kind === "file" || n.kind === "link" && n.size > 0 ? formatSize(n.size) : "";
-  }
-  return t.diff[n.id] || n.kind !== "file" ? "" : stamp(n.mtime, ctx.now);
-}
-const fit$1 = (name, cols) => name.length > cols ? name.slice(0, Math.max(1, cols - 1)) + "…" : name;
-function gitColorOf(status, theme) {
-  if (status === "D" || status === "U")
-    return theme.urgent;
-  return status ? GIT_COLOR[status] ?? theme.muted : undefined;
-}
-function terminalColors(theme, n, git) {
-  if (git.isIgnored)
-    return { icon: theme.muted, name: theme.muted };
-  if (git.color !== undefined)
-    return { icon: git.color, name: git.color };
-  if (n.hidden)
-    return { icon: theme.muted, name: theme.muted };
-  return { icon: n.kind === "dir" ? theme.accent : theme.muted, name: theme.fg || undefined };
-}
-function badgeText(ctx, s) {
-  if (s.hasCounts)
-    return "";
-  if (s.status)
-    return ` ${s.status}`;
-  if (!s.isIgnored)
-    return "  ";
-  return ctx.unicode ? " ⊘" : " ";
-}
-function caretOf(r, unicode) {
-  if (r.node.kind !== "dir")
-    return "  ";
-  if (unicode)
-    return (r.open ? "▾" : "▸") + " ";
-  return (r.open ? CHEVRON_OPEN : CHEVRON_CLOSED) + " ";
-}
-function glyphOf(ctx, r) {
-  const n = r.node;
-  if (!ctx.unicode)
-    return fileIcon(n, r.open, n.kind === "dir" && n.id === ctx.t.top);
-  return n.kind === "dir" ? "■" : "·";
-}
-function terminalRow(ctx, r) {
-  const { t, theme, unicode } = ctx;
-  const n = r.node;
-  const status = statusOf(ctx, n.id);
-  const isIgnored = !status && underAny(n.id, ctx.ignored, t.root);
-  const gitColor = gitColorOf(status, theme);
-  const isBright = ctx.bright.has(n.id);
-  const isDim = !isBright && ctx.dimmed.has(n.id);
-  const tone = t.flashTones[n.id] ?? "orange";
-  const colors = terminalColors(theme, n, { color: gitColor, isIgnored });
-  const loc = t.diff[n.id];
-  const meta = metaOf$1(ctx, r);
-  const cost = ctx.costOf(n.id);
-  const locText = loc ? `${loc[0] ? ` +${loc[0]}` : ""}${loc[1] ? ` -${loc[1]}` : ""}` : "";
-  const dirCounts = n.kind === "dir" ? countSegs(t.counts[n.id], theme) : [];
-  const badge = badgeText(ctx, { status, isIgnored, hasCounts: dirCounts.length > 0 });
-  const countsText = dirCounts.map((c) => c.t).join("");
-  const cols = Math.max(4, ctx.width - r.depth * 2 - 6 - (meta ? meta.length + 1 : 0) - (cost ? cost.length + 1 : 0) - locText.length - badge.length - countsText.length);
-  const caret = caretOf(r, unicode);
-  const glyph = glyphOf(ctx, r);
-  const lit = isBright || isDim;
-  const left = [
-    { t: "  ".repeat(r.depth) },
-    { t: caret, c: theme.muted },
-    lit ? { t: glyph + " ", sh: tone, dim: isDim, one: true } : { t: glyph + " ", c: colors.icon },
-    lit ? { t: fit$1(n.name, cols), sh: tone, dim: isDim, b: isBright } : { t: fit$1(n.name, cols), c: colors.name, b: n.id === t.selected, s: status === "D" && n.kind !== "dir" }
-  ];
-  const right = [];
-  if (cost)
-    right.push({ t: ` ${cost}`, c: TONES.blue?.solid ?? theme.accent });
-  if (meta)
-    right.push({ t: ` ${meta}`, c: theme.muted });
-  if (loc && loc[0] > 0)
-    right.push({ t: ` +${loc[0]}`, c: ADD_COLOR$1 });
-  if (loc && loc[1] > 0)
-    right.push({ t: ` -${loc[1]}`, c: DEL_COLOR$1 });
-  right.push(...dirCounts);
-  if (badge)
-    right.push({ t: badge, c: status ? gitColor : theme.muted, b: true });
-  return { id: n.id, left: clean(left), right: clean(right) };
-}
-const changesIn = (ctx, n) => n.kind === "dir" ? (ctx.t.counts[n.id] ?? [0, 0, 0]).reduce((a, b) => a + b, 0) : 0;
-function desktopPrefix(ctx, r, role) {
-  const { pal } = ctx;
-  const chevron = r.node.kind === "dir" ? r.open ? "⌄" : "›" : "";
-  const guides = Array.from({ length: r.depth }, () => ({ t: "│", c: pal.lineStrong, cells: LEVEL_CELLS }));
-  return [...guides, { t: chevron, c: role ? pal.roles[role].fg : pal.lo, cells: LEVEL_CELLS }];
-}
-function desktopRight(ctx, r, role) {
-  const { t, pal } = ctx;
-  const n = r.node;
-  const live = role ? ctx.pillOf(n.id, role) : "";
-  if (role && live)
-    return { must: [{ t: ` ${live}`, c: pal.roles[role].fg }], may: [] };
-  const changes = changesIn(ctx, n);
-  if (changes && !t.showSize)
-    return { must: [{ t: ` ${changes}`, c: pal.roles.warn.fg }], may: [] };
-  const loc = t.diff[n.id];
-  const must = [];
-  if (loc && !t.showSize) {
-    if (loc[0] > 0)
-      must.push({ t: ` +${loc[0]}`, c: pal.roles.ok.fg });
-    if (loc[1] > 0)
-      must.push({ t: ` −${loc[1]}`, c: pal.roles.danger.fg });
-  }
-  const cost = ctx.costOf(n.id);
-  const meta = metaOf$1(ctx, r);
-  return { must, may: [...cost ? [{ t: ` ${cost}`, c: pal.mid }] : [], ...meta ? [{ t: ` ${meta}`, c: pal.lo }] : []] };
-}
-const widthOf$1 = (segs) => measure$1(segs.map((x) => x.t).join(""), NAME_PX);
-function fitRow(ctx, r, right, isBold) {
-  const room = (ctx.width - (r.depth + 1) * LEVEL_CELLS) * PX_PER_COL;
-  const whole = measure$1(r.node.name, NAME_PX, isBold);
-  const must = room - widthOf$1(right.must) < MIN_NAME_PX ? [] : right.must;
-  const kept = [...must];
-  for (const seg of right.may)
-    if (whole + widthOf$1([...kept, seg]) + RIGHT_GAP_PX <= room)
-      kept.push(seg);
-  return { name: fitMiddle(r.node.name, Math.max(MIN_NAME_PX, room - widthOf$1(kept) - RIGHT_GAP_PX), { size: NAME_PX, isBold }), right: kept };
-}
-function nameColor(ctx, id, isHidden) {
-  const { pal } = ctx;
-  const status = statusOf(ctx, id);
-  if (status === "D" || status === "U")
-    return pal.roles.danger.fg;
-  if (status)
-    return pal.roles.warn.fg;
-  return isHidden || underAny(id, ctx.ignored, ctx.t.root) ? pal.lo : pal.hi;
-}
-function desktopRow(ctx, r) {
-  const { t } = ctx;
-  const n = r.node;
-  const isBright = ctx.bright.has(n.id);
-  const isDim = !isBright && ctx.dimmed.has(n.id);
-  const tone = t.flashTones[n.id] ?? "orange";
-  const role = isBright ? roleOfTone(tone) : null;
-  const isBold = isBright || isDim || n.id === t.selected;
-  const { name, right } = fitRow(ctx, r, desktopRight(ctx, r, role), isBold);
-  const status = statusOf(ctx, n.id);
-  const label = isBright || isDim ? { t: name, sh: tone, dim: isDim, b: true } : { t: name, c: nameColor(ctx, n.id, n.hidden), b: n.id === t.selected, s: status === "D" && n.kind !== "dir" };
-  return { id: n.id, left: clean([...desktopPrefix(ctx, r, role), label]), right: clean(right), ...role ? { bg: ctx.pal.roles[role].tint } : {} };
-}
-
-const BRANCH_ROW = "#branch";
-
-const NO_TURN = { isRunning: false, hasRun: false, touches: [], sha: "", committed: 0, costs: {} };
-
-const ACTIVITY_TTL_MS = 45000;
-
-const RUNNING_MAX_MS = 600000;
-const LIVE_SPREAD_MS = 1500;
-const PIN_SHARE = 3;
-const MIN_REST = 3;
-function sceneFrom(p) {
-  const { t, now } = p;
-  const live = p.activities.filter((a) => now - a.at < (a.state === "running" ? RUNNING_MAX_MS : ACTIVITY_TTL_MS));
-  return {
-    t,
-    theme: p.theme ?? DEFAULT_THEME,
-    now,
-    latest: [...live].reverse().find((a) => a.state === "running") ?? live[live.length - 1],
-    bright: new Set(t.flashOn ? t.flash : []),
-    dimmed: new Set(t.flashOn ? t.flashDim : []),
-    turn: p.turn,
-    readTotal: p.readTotal,
-    look: p.look ?? { isLight: false, isAuto: true },
-    isCommitting: live.some((a) => a.kind === "git commit" && a.state === "running"),
-    feel: p.feel
-  };
-}
-function liveOf(s) {
-  const lit = s.turn.touches.filter((x) => s.bright.has(x.id));
-  const latest = [...lit].sort((a, b) => a.at - b.at).pop();
-  if (!latest || !s.turn.isRunning)
-    return new Set;
-  return new Set(lit.filter((x) => x.role === latest.role && latest.at - x.at <= LIVE_SPREAD_MS).map((x) => x.id));
-}
-function heroInput(s) {
-  return { turn: s.turn, live: liveOf(s), root: s.t.root, isCommitting: s.isCommitting, branch: s.t.branch?.head ?? "", diff: s.t.diff };
-}
-function rowCtx(s, width, unicode) {
-  const commits = new Set(s.turn.touches.filter((x) => x.role === "commit").map((x) => x.id));
-  const live = liveOf(s);
-  const w = words$1();
-  const pills = w.rowLive;
-  const pillOf = (id, role) => {
-    if (role === "ok")
-      return commits.has(id) ? w.rowCommitted : w.rowStaged;
-    return live.has(id) ? pills[role] ?? "" : "";
-  };
-  const { t } = s;
-  const costOf = (id) => rowCost(s.turn, id);
-  return { t, bright: s.bright, dimmed: s.dimmed, ignored: new Set(t.ignored), untracked: new Set(t.untrackedDirs), width, now: s.now, unicode, theme: s.theme, pal: paletteOf(s.look.isLight), pillOf, costOf };
-}
-function spanOf(s, rows, room) {
-  const { t } = s;
-  if (t.scroll !== null)
-    return { from: Math.max(0, Math.min(t.scroll, Math.max(0, rows.length - room))), pinned: [] };
-  const isFollowing = s.feel.followClaude && t.flashOn;
-  const isLit = (id) => s.bright.has(id) || s.dimmed.has(id);
-  const focus = isFollowing ? [...t.flash].reverse().find((id) => id !== BRANCH_ROW) ?? t.cursor : t.cursor;
-  const at = Math.max(0, rows.findIndex((r) => r.node.id === focus));
-  const lit = isFollowing ? rows.findIndex((r) => isLit(r.node.id)) : -1;
-  const cap = Math.max(1, Math.floor(room / PIN_SHARE));
-  const centered = lit >= 0 && at - lit < room - 2 ? Math.max(0, lit - 1) : at - Math.floor(room / 2);
-  let from = Math.max(0, Math.min(centered, rows.length - room));
-  let pinned = isFollowing ? rows.slice(0, from).filter((r) => isLit(r.node.id)).slice(-cap) : [];
-  if (pinned.length) {
-    const rest = Math.max(MIN_REST, room - pinned.length);
-    from = Math.max(0, Math.min(at - Math.floor(rest / 2), rows.length - rest));
-    pinned = rows.slice(0, from).filter((r) => isLit(r.node.id)).slice(-cap);
-  }
-  return { from, pinned };
-}
-function treeWindow(s, room, draw) {
-  const rows = visibleRows(s.t);
-  const { from, pinned } = spanOf(s, rows, room);
-  const max = Math.max(0, rows.length - room);
-  mem.view = { from, max };
-  const shown = rows.slice(from, from + room - pinned.length);
-  const { toSpec, colors } = draw;
-  const note = (text) => ({ id: "", left: [{ t: text, c: colors.note }], right: [] });
-  const specs = [...rows.length === 0 ? [note(words$1().emptyFolder)] : [], ...pinned.map(toSpec), ...pinned.length > 0 ? [note("  ⋮")] : [], ...shown.map(toSpec)];
-  const barSize = Math.max(1, Math.round(specs.length * shown.length / Math.max(1, rows.length)));
-  const bar = { pos: max ? Math.round(from / max * (specs.length - barSize)) : 0, size: barSize, thumb: colors.thumb, track: colors.track };
-  return { rows: [...pinned, ...shown], specs, ...rows.length > shown.length + pinned.length ? { bar } : {} };
-}
-
-const MORE_KEYS = ["size", "hidden", "up", "cwd", "unselect"];
-function toolLabels(t) {
-  const { tools } = words$1();
-  return {
-    refresh: tools.refresh,
-    collapse: tools.collapse,
-    size: t.showSize ? tools.showDates : tools.showSizes,
-    up: tools.up,
-    cwd: tools.cwd,
-    hidden: t.showHidden ? tools.hideHidden : tools.showHidden,
-    unselect: tools.unselect,
-    more: t.showTools ? tools.less : tools.more
-  };
-}
-const SHORTCUT_KEYS = ["r", "c", "s", ".", "u", "p", "x"];
-const shortcuts = () => SHORTCUT_KEYS.map((key, i) => [key, words$1().shortcuts[i] ?? ""]);
-function drawFind(ui, bar) {
-  const { Box, Button, Input } = ui;
-  const { t } = bar;
-  const w = words$1();
+const FALLBACK_PX = 52;
+const FALLBACK_WIDTH_PX = 360;
+function PressRow(ui, o) {
+  const { Box } = ui;
+  const props = o.drawing.type === "Svg" ? o.drawing.props : {};
+  const width = props.width ?? FALLBACK_WIDTH_PX;
+  const height = props.height ?? FALLBACK_PX;
   return h(Box, {
+    key: o.box,
+    alignSelf: "flex-start"
+  }, stillSvg(ui, o.drawing), PressCover(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
+}
+
+const AUTO = { mode: "auto", isLight: false };
+const NEUTRALS = ["card", "inset", "line", "strong", "track", "hi", "mid", "lo"];
+const ROLES$2 = ["tide", "kiln", "iris", "moss", "amber", "flare", "orchid"];
+const DARK$2 = {
+  card: "#1F1F1C",
+  inset: "#171715",
+  line: "#2E2E2A",
+  strong: "#45443F",
+  track: "#34332F",
+  hi: "#F0EEE8",
+  mid: "#C2BEB4",
+  lo: "#8E8A80",
+  tide: { fg: "#7FB6E8", tint: "#1E2B37", line: "#2F4A63" },
+  kiln: { fg: "#E58A5F", tint: "#38251D", line: "#6A3E2D" },
+  iris: { fg: "#B19CF3", tint: "#29243D", line: "#4A3F75" },
+  moss: { fg: "#6FC593", tint: "#1B2F25", line: "#2F5A42" },
+  amber: { fg: "#E9B949", tint: "#332D19", line: "#66552A" },
+  flare: { fg: "#F2727F", tint: "#3B2023", line: "#74343C" },
+  orchid: { fg: "#E07BC0", tint: "#351F2E", line: "#6B3A5C" }
+};
+const LIGHT$2 = {
+  card: "#FFFFFF",
+  inset: "#F6F4EF",
+  line: "#E4E0D6",
+  strong: "#CFC9BC",
+  track: "#ECE8DF",
+  hi: "#1C1B19",
+  mid: "#4F4B44",
+  lo: "#77726A",
+  tide: { fg: "#2464A0", tint: "#E7F0F9", line: "#B9D3EC" },
+  kiln: { fg: "#A94A26", tint: "#FBEDE6", line: "#EFC6B4" },
+  iris: { fg: "#6243C4", tint: "#F0ECFC", line: "#CFC3F3" },
+  moss: { fg: "#1F6E43", tint: "#E4F4EA", line: "#B5DEC4" },
+  amber: { fg: "#8A6000", tint: "#FBF2D9", line: "#EBD48F" },
+  flare: { fg: "#C0263A", tint: "#FCE8EA", line: "#F1B9C0" },
+  orchid: { fg: "#A8337F", tint: "#FBE9F4", line: "#EDBFDC" }
+};
+const THEME_KEY = {
+  tide: "suggestion",
+  kiln: "claude",
+  iris: "permission",
+  moss: "success",
+  amber: "warning",
+  flare: "error",
+  orchid: "merged"
+};
+const varsOf = (palette) => [
+  ...NEUTRALS.map((name) => `--${name}:${palette[name]}`),
+  ...ROLES$2.flatMap((role) => [`--${role}:${palette[role].fg}`, `--${role}-t:${palette[role].tint}`, `--${role}-l:${palette[role].line}`])
+].join(";");
+function themeCss() {
+  return `svg,.t-dark{${varsOf(DARK$2)}}.t-light{${varsOf(LIGHT$2)}}@media (prefers-color-scheme: light){.t-auto{${varsOf(LIGHT$2)}}}`;
+}
+function boxColor(theme, role, part = "fg") {
+  if (theme.mode === "auto")
+    return THEME_KEY[role];
+  return (theme.isLight ? LIGHT$2 : DARK$2)[role][part];
+}
+
+const SANS = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`;
+const MONO$1 = `ui-monospace, 'SF Mono', Menlo, monospace`;
+const PX_PER_COLUMN$1 = 9;
+const MONO_EM$1 = 0.6;
+const BOLD_FROM = 600;
+const BOLD_WIDEN$1 = 1.06;
+const ENTITIES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+const MOTION$1 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+const esc = (text) => text.replace(/[&<>"]/g, (ch) => ENTITIES[ch] ?? ch);
+const px = (value) => String(Math.round(value * 10) / 10);
+const NARROW_CHAR = /[\s.,:;'|!il1()[\]ıjtf`]/;
+const WIDE_CHAR = /[A-ZÇĞİÖŞÜmwMW@%]/;
+const NARROW_EM$1 = 0.3;
+const WIDE_EM$1 = 0.72;
+const PLAIN_EM = 0.56;
+function charEm(ch) {
+  if (NARROW_CHAR.test(ch))
+    return NARROW_EM$1;
+  return WIDE_CHAR.test(ch) ? WIDE_EM$1 : PLAIN_EM;
+}
+function measure$1(text, font) {
+  const chars = [...text];
+  const em = font.isMono === true ? chars.length * MONO_EM$1 : chars.reduce((sum, ch) => sum + charEm(ch), 0);
+  const widen = (font.weight ?? 0) >= BOLD_FROM ? BOLD_WIDEN$1 : 1;
+  return em * font.size * widen;
+}
+function cut(text, box) {
+  const { width, font, isFromStart } = box;
+  if (measure$1(text, font) <= width)
+    return text;
+  const chars = [...text];
+  while (chars.length > 1 && measure$1(`${chars.join("")}…`, font) > width) {
+    if (isFromStart)
+      chars.shift();
+    else
+      chars.pop();
+  }
+  return isFromStart ? `…${chars.join("")}` : `${chars.join("")}…`;
+}
+const fit$1 = (text, width, font) => cut(text, { width, font, isFromStart: false });
+const fitStart = (text, width, font) => cut(text, { width, font, isFromStart: true });
+function wrap$1(text, width, spec) {
+  const lines = [];
+  let current = "";
+  for (const word of text.split(/\s+/).filter((part) => part !== "")) {
+    const next = current === "" ? word : `${current} ${word}`;
+    if (current === "" || measure$1(next, spec.font) <= width)
+      current = next;
+    else {
+      lines.push(current);
+      current = word;
+    }
+  }
+  if (current !== "")
+    lines.push(current);
+  if (lines.length <= spec.maxLines)
+    return lines.map((line) => fit$1(line, width, spec.font));
+  const kept = lines.slice(0, spec.maxLines);
+  const last = kept.length - 1;
+  return kept.map((line, index) => index === last ? fit$1(`${line} ${lines.slice(spec.maxLines).join(" ")}`, width, spec.font) : line);
+}
+function svgWidth(columns, range) {
+  const room = (columns - (range.reserve ?? 0)) * PX_PER_COLUMN$1;
+  return Math.round(Math.max(range.min, Math.min(range.max, room)));
+}
+function svgDoc$1(spec) {
+  const { width, height } = spec;
+  const style = `${themeCss()}text{font-family:${SANS};font-variant-numeric:tabular-nums}.mono{font-family:${MONO$1}}${MOTION$1}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" class="t-${spec.mode}" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><style>${style}</style>${spec.body}</svg>`;
+}
+function text(spec) {
+  const attrs = [`x="${px(spec.x)}"`, `y="${px(spec.y)}"`, `font-size="${spec.size}"`];
+  if (spec.weight !== undefined)
+    attrs.push(`font-weight="${spec.weight}"`);
+  if (spec.anchor !== undefined && spec.anchor !== "start")
+    attrs.push(`text-anchor="${spec.anchor}"`);
+  if (spec.isMono === true)
+    attrs.push('class="mono"');
+  return `<text ${attrs.join(" ")} style="fill:var(--${spec.ink})">${esc(spec.text)}</text>`;
+}
+function runs(spec) {
+  const spans = spec.parts.map((part) => {
+    const weight = part.weight === undefined ? "" : ` font-weight="${part.weight}"`;
+    const mono = part.isMono === true ? ' class="mono"' : "";
+    return `<tspan${weight}${mono} style="fill:var(--${part.ink})">${esc(part.text)}</tspan>`;
+  });
+  return `<text x="${px(spec.x)}" y="${px(spec.y)}" font-size="${spec.size}">${spans.join("")}</text>`;
+}
+function rect(spec) {
+  const fill = spec.fill === undefined ? "fill:none" : `fill:var(--${spec.fill})`;
+  const stroke = spec.stroke === undefined ? "" : `;stroke:var(--${spec.stroke})`;
+  const cls = spec.className === undefined ? "" : ` class="${spec.className}"`;
+  return `<rect${cls} x="${px(spec.x)}" y="${px(spec.y)}" width="${px(spec.w)}" height="${px(spec.h)}" rx="${spec.rx ?? 0}" style="${fill}${stroke}"/>`;
+}
+function line(spec) {
+  const dash = spec.dash === undefined ? "" : ` stroke-dasharray="${spec.dash}"`;
+  return `<line x1="${px(spec.x1)}" y1="${px(spec.y1)}" x2="${px(spec.x2)}" y2="${px(spec.y2)}" stroke-width="1"${dash} style="stroke:var(--${spec.ink})"/>`;
+}
+function fileBadge$1(spec) {
+  const name = spec.path.split("/").pop() ?? spec.path;
+  const dot = name.lastIndexOf(".");
+  const ext = dot > 0 ? name.slice(dot + 1) : "";
+  const label = upper$1(ext === "" ? "·" : ext.slice(0, 3));
+  return rect({ x: spec.x, y: spec.y, w: 26, h: 16, rx: 4, fill: "track" }) + text({ size: 9.5, weight: 600, isMono: true, x: spec.x + 13, y: spec.y + 11.5, text: label, ink: "lo", anchor: "middle" });
+}
+function monogram(spec) {
+  return rect({ x: spec.x, y: spec.y, w: 16, h: 16, rx: 4, fill: "track" }) + text({ size: 10, weight: 600, isMono: true, x: spec.x + 8, y: spec.y + 11.5, text: spec.glyph, ink: "lo", anchor: "middle" });
+}
+function bar$1(spec) {
+  const radius = spec.height / 2;
+  const track = rect({ x: spec.x, y: spec.y, w: spec.width, h: spec.height, rx: radius, fill: "track" });
+  let left = spec.x;
+  const fills = spec.parts.filter((part) => part.value > 0).map((part) => {
+    const width = Math.max(spec.height, spec.width * part.value / Math.max(1, spec.total) - 2);
+    const drawn = rect({ x: left, y: spec.y, w: width, h: spec.height, rx: radius, fill: part.ink });
+    left += width + 2;
+    return drawn;
+  });
+  return track + fills.join("");
+}
+
+const SECOND$1 = 1000;
+const MINUTE$1 = 60 * SECOND$1;
+const HOUR$1 = 60 * MINUTE$1;
+const DAY = 24 * HOUR$1;
+const plural$1 = (count, one, many) => `${count} ${count === 1 ? one : many}`;
+function agoEn(ms) {
+  if (ms < MINUTE$1)
+    return "just now";
+  if (ms < HOUR$1)
+    return `${Math.round(ms / MINUTE$1)}m ago`;
+  if (ms < DAY)
+    return `${Math.round(ms / HOUR$1)}h ago`;
+  return `${Math.round(ms / DAY)}d ago`;
+}
+function agoTr(ms) {
+  if (ms < MINUTE$1)
+    return `${Math.max(0, Math.round(ms / SECOND$1))} sn önce`;
+  if (ms < HOUR$1)
+    return `${Math.round(ms / MINUTE$1)} dk önce`;
+  if (ms < DAY)
+    return `${Math.round(ms / HOUR$1)} sa önce`;
+  return `${Math.round(ms / DAY)} g önce`;
+}
+const EN$1 = {
+  title: "Restore points",
+  ago: agoEn,
+  hubDetail: (count) => `${count} saved`,
+  headerMeta: (count, ago) => `${count} saved · newest ${ago}`,
+  newest: (ago) => `newest ${ago}`,
+  emptyLead: "No restore points yet",
+  emptyRest: "one is saved quietly before the first file change",
+  turnsSaved: (turns) => `${plural$1(turns, "turn", "turns")} saved`,
+  turn: (number) => `Turn ${number}`,
+  saved: "Restore point",
+  beforeUndo: "Before undo",
+  safetyPrefix: "before undo: ",
+  undo: "Undo",
+  undoMeta: "the current state is saved first",
+  question: (target) => `Go back to before ${target}?`,
+  changed: (count) => `${plural$1(count, "file", "files")} will change`,
+  confirm: (count) => ({ label: `Restore ${plural$1(count, "file", "files")}`, hotkey: "r" }),
+  cancel: { label: "Cancel", hotkey: "c" },
+  redo: "Redo",
+  files: (count) => `+${plural$1(count, "file", "files")}`,
+  undone: "undone",
+  willDelete: "will be deleted",
+  moreFiles: (count) => `+ ${plural$1(count, "more file", "more files")}`,
+  more: (count) => `+ ${count} more`,
+  toRestore: (count) => `${count} to restore`,
+  toDelete: (count) => `${count} to delete`,
+  lines: "lines",
+  summary: (restore, remove) => [`${plural$1(restore, "file", "files")} will be restored`, remove > 0 ? `${plural$1(remove, "new file", "new files")} will be deleted` : ""].filter(Boolean).join(", ") + ". The current state is saved first.",
+  checking: "Checking…",
+  undoing: "Undoing…",
+  noRepo: "This folder has no version history (git).",
+  alreadyThere: "The files already match this restore point.",
+  failed: "Couldn't undo; the reason is in Claude Code's log (debug log).",
+  commitsKept: (count) => `${plural$1(count, "saved version", "saved versions")} (commits) made since this point stay in the history; the undo shows up as new changes on top.`,
+  indexBack: "Files marked for the next saved version (staged) go back as they were too.",
+  ignoredKept: "Files git is told to skip (such as the secrets file .env) are not covered and stay as they are.",
+  restored: (count, target) => `Restored ${plural$1(count, "file", "files")} to before ${target}.`,
+  toggled: (isOn) => `restore points ${isOn ? "on" : "off"}`,
+  toggleLine: "Quietly saves a restore point before each turn's first file change: on/off",
+  paneLine: "Lists the restore points; undoes a turn",
+  promptFallback: "turn"
+};
+const TR$1 = {
+  title: "Geri dönüş noktaları",
+  ago: agoTr,
+  hubDetail: (count) => `${count} nokta`,
+  headerMeta: (count, ago) => `${count} nokta · en yenisi ${ago}`,
+  newest: (ago) => `en yenisi ${ago}`,
+  emptyLead: "Henüz geri dönüş noktası yok",
+  emptyRest: "ilk dosya değişikliğinden önce sessizce alınır",
+  turnsSaved: (turns) => `${turns} tur kayıtlı`,
+  turn: (number) => `Tur ${number}`,
+  saved: "Geri dönüş noktası",
+  beforeUndo: "Geri almadan önce",
+  safetyPrefix: "geri almadan önce: ",
+  undo: "Geri al",
+  undoMeta: "şimdiki hal önce kaydedilir",
+  question: (target) => `${target} öncesine dönülsün mü?`,
+  changed: (count) => `${count} dosya değişecek`,
+  confirm: (count) => ({ label: `${count} dosyayı geri al`, hotkey: "g" }),
+  cancel: { label: "Vazgeç", hotkey: "v" },
+  redo: "Yinele",
+  files: (count) => `+${count} dosya`,
+  undone: "geri alındı",
+  willDelete: "silinecek",
+  moreFiles: (count) => `+${count} dosya daha`,
+  more: (count) => `+${count} daha`,
+  toRestore: (count) => `${count} geri yüklenecek`,
+  toDelete: (count) => `${count} silinecek`,
+  lines: "satır",
+  summary: (restore, remove) => [`${restore} dosya geri yüklenecek`, remove > 0 ? `${remove} yeni dosya silinecek` : ""].filter(Boolean).join(", ") + ". Önce şimdiki hal kaydedilir.",
+  checking: "Denetleniyor…",
+  undoing: "Geri alınıyor…",
+  noRepo: "Bu klasörün sürüm geçmişi (git) yok.",
+  alreadyThere: "Dosyalar zaten bu noktadaki gibi.",
+  failed: "Geri alınamadı; nedeni Claude Code günlüğünde (debug log).",
+  commitsKept: (count) => `Bu noktadan sonraki ${count} kayıt (commit) geçmişte kalır; geri alma bunların üstüne yeni değişiklik olarak görünür.`,
+  indexBack: "Sonraki kayda hazırlanan (staged) dosyalar da eski haline döner.",
+  ignoredKept: "Git'in atladığı dosyalar (gizli ayar dosyası .env gibi) kapsanmaz, olduğu gibi kalır.",
+  restored: (count, target) => `${count} dosya ${target} öncesine döndü.`,
+  toggled: (isOn) => `geri dönüş noktaları ${isOn ? "açık" : "kapalı"}`,
+  toggleLine: "Her turun ilk dosya değişikliğinden önce sessizce geri dönüş noktası alır: aç/kapa",
+  paneLine: "Geri dönüş noktalarını listeler; bir turu geri alır",
+  promptFallback: "tur"
+};
+const SAFETY_PREFIXES = [EN$1.safetyPrefix, TR$1.safetyPrefix];
+const words$1 = () => pick$1({ en: EN$1, tr: TR$1 });
+
+const HEAD_LEAD_Y = 18;
+const HEAD_PAD_BOTTOM = 6;
+const SUB_LINE_H = 18;
+const LEAD = { size: 16, weight: 600 };
+const SUB = { size: 12 };
+const ROW_MIN_H = 48;
+const ROW_PAD_BOTTOM = 10;
+const DOT_X$2 = 8;
+const DOT_Y = 15;
+const TEXT_X = 26;
+const TITLE_Y = 19;
+const LABEL_Y = 38;
+const LABEL_LINE_H = 17;
+const LABEL_LINES = 2;
+const CHIP = 16;
+const CHIP_GAP = 4;
+const RIGHT_GAP = 12;
+const FILES_GAP = 10;
+const TITLE$1 = { size: 13, weight: 560 };
+const WHEN = { size: 13 };
+const LABEL$1 = { size: 12 };
+const META = { size: 11, isMono: true };
+const STRIKE_FIT = 0.95;
+const CHEVRON_ROOM = 28;
+const CHEVRON_INSET = 18;
+const drawing = (frame, spec) => ({ source: svgDoc$1({ width: frame.width, height: spec.height, mode: frame.mode, body: spec.body }), width: frame.width, height: spec.height, alt: spec.alt });
+function headLines(room, spec) {
+  const joiner = spec.joiner ?? " ";
+  const isRestInline = spec.rest === "" || measure$1(`${spec.lead}${joiner}${spec.rest}`, LEAD) <= room;
+  const rest = isRestInline ? [] : wrap$1(spec.rest, room, { font: SUB, maxLines: LABEL_LINES }).map((part) => ({ text: part, ink: "mid" }));
+  const meta = spec.meta === "" ? [] : [{ text: fit$1(spec.meta, room, SUB), ink: "lo" }];
+  return { inline: isRestInline && spec.rest !== "" ? `${joiner}${spec.rest}` : "", sub: [...rest, ...meta] };
+}
+function headSvg(frame, spec) {
+  const room = frame.width;
+  const lines = headLines(room, spec);
+  const lead = fit$1(spec.lead, room, LEAD);
+  const subs = lines.sub.map((part, index) => text({ ...SUB, x: 0, y: HEAD_LEAD_Y + SUB_LINE_H * (index + 1), text: part.text, ink: part.ink }));
+  const body = runs({ x: 0, y: HEAD_LEAD_Y, size: LEAD.size, parts: [{ text: lead, ink: "hi", weight: LEAD.weight }, { text: lines.inline, ink: "mid", weight: 500 }] }) + subs.join("");
+  const height = HEAD_LEAD_Y + SUB_LINE_H * lines.sub.length + HEAD_PAD_BOTTOM;
+  const meta = spec.meta === "" ? "" : ` · ${spec.meta}`;
+  const rest = spec.rest === "" ? "" : `${spec.joiner ?? " "}${spec.rest}`;
+  return drawing(frame, { height, body, alt: `${spec.label}: ${spec.lead}${rest}${meta}` });
+}
+function dotOf(spec) {
+  const { meta } = spec;
+  if (meta.isSafety === true)
+    return rect({ x: DOT_X$2 - 3.5, y: DOT_Y - 3.5, w: 7, h: 7, rx: 1.5, fill: "card", stroke: "lo" });
+  if (meta.isUndone === true)
+    return `<circle cx="${DOT_X$2}" cy="${DOT_Y}" r="4" stroke-dasharray="2 1.6" style="fill:var(--card);stroke:var(--lo)"/>`;
+  if (spec.isNewest)
+    return `<circle cx="${DOT_X$2}" cy="${DOT_Y}" r="4" style="fill:var(--kiln)"/>`;
+  return `<circle cx="${DOT_X$2}" cy="${DOT_Y}" r="4" style="fill:var(--strong)"/>`;
+}
+function railOf(spec, height) {
+  const top = spec.isFirst ? DOT_Y : 0;
+  const bottom = spec.isLast ? DOT_Y : height;
+  return top === bottom ? "" : line({ x1: DOT_X$2, y1: top, x2: DOT_X$2, y2: bottom, ink: "line" });
+}
+const filesText$1 = (meta) => meta.files === undefined || meta.files === 0 ? "" : words$1().files(meta.files);
+function factsOf(meta, at) {
+  const tools = meta.tools ?? [];
+  const chipsW = tools.length === 0 ? 0 : tools.length * (CHIP + CHIP_GAP) - CHIP_GAP;
+  const files = filesText$1(meta);
+  const filesW = files === "" ? 0 : measure$1(files, META);
+  const gap = chipsW > 0 && filesW > 0 ? FILES_GAP : 0;
+  const chipsX = at.isCountFirst ? at.x + filesW + gap : at.x;
+  const filesX = at.isCountFirst ? at.x : at.x + chipsW + gap;
+  const chips = tools.map((glyph, index) => monogram({ x: chipsX + index * (CHIP + CHIP_GAP), y: at.y, glyph }));
+  const label = files === "" ? "" : text({ ...META, x: filesX, y: at.y + 12, text: files, ink: meta.isUndone === true ? "lo" : "mid" });
+  return { svg: chips.join("") + label, width: chipsW + gap + filesW };
+}
+const factsWidth = (meta) => factsOf(meta, { x: 0, y: 0, isCountFirst: false }).width;
+const headWidth = (spec) => measure$1(spec.title, TITLE$1) + measure$1(`  ${spec.when}`, WHEN);
+function rowFits(frame, spec) {
+  const facts = factsWidth(spec.meta);
+  return facts === 0 || TEXT_X + headWidth(spec) + RIGHT_GAP + facts + CHEVRON_ROOM <= frame.width;
+}
+function struck(spec) {
+  const width = measure$1(spec.text, spec.font) * STRIKE_FIT;
+  const y = spec.y - spec.font.size * 0.32;
+  return line({ x1: spec.x - 1, y1: y, x2: spec.x + width + 1, y2: y, ink: "lo" });
+}
+const titleInkOf = (meta) => meta.isUndone === true ? "lo" : "hi";
+const chevron = (x, y) => `<path d="M${x} ${y - 4.5}l4.5 4.5-4.5 4.5" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--lo)"/>`;
+function rowSvg$1(frame, spec) {
+  const { meta } = spec;
+  const isUndone = meta.isUndone === true;
+  const titleInk = titleInkOf(meta);
+  const head = runs({ x: TEXT_X, y: TITLE_Y, size: TITLE$1.size, parts: [{ text: spec.title, ink: titleInk, weight: TITLE$1.weight }, { text: `  ${spec.when}`, ink: "lo", weight: 400 }] });
+  const labels = wrap$1(spec.label, frame.width - TEXT_X - CHEVRON_ROOM, { font: LABEL$1, maxLines: LABEL_LINES });
+  const labelY = (index) => LABEL_Y + index * LABEL_LINE_H;
+  const body = labels.map((part, index) => text({ ...LABEL$1, x: TEXT_X, y: labelY(index), text: part, ink: isUndone ? "lo" : "mid" })).join("");
+  const lastY = labelY(Math.max(0, labels.length - 1));
+  const hasFacts = factsWidth(meta) > 0;
+  const factsTop = spec.isStacked ? lastY + ROW_PAD_BOTTOM - 2 : TITLE_Y - 15;
+  const facts = factsOf(meta, { x: spec.isStacked ? TEXT_X : frame.width - CHEVRON_ROOM - factsWidth(meta), y: factsTop, isCountFirst: !spec.isStacked });
+  const bottom = spec.isStacked && hasFacts ? factsTop + CHIP : lastY;
+  const height = Math.max(ROW_MIN_H, Math.ceil(bottom + ROW_PAD_BOTTOM));
+  const strikes = isUndone ? [struck({ x: TEXT_X, y: TITLE_Y, text: spec.title, font: TITLE$1 }), ...labels.map((part, index) => struck({ x: TEXT_X, y: labelY(index), text: part, font: LABEL$1 }))].join("") : "";
+  const all = railOf(spec, height) + dotOf(spec) + head + facts.svg + body + strikes + chevron(frame.width - CHEVRON_INSET, height / 2);
+  const files = filesText$1(meta);
+  return drawing(frame, { height, body: all, alt: `${words$1().undo}: ${spec.title}, ${spec.when}${isUndone ? `, ${words$1().undone}` : ""}${files === "" ? "" : `, ${files}`}: ${spec.label}` });
+}
+const STAT_LINE_Y = 17;
+const STAT_NOTE_Y = 37;
+const STAT_BAR_W = 60;
+const STAT_GAP = 12;
+const FILE_X = 34;
+const FILE_ROW_H = 24;
+const FILE_ROW_TALL = 38;
+const FILE_NAME = { size: 12.5 };
+const FILE_DIR = { size: 11 };
+const TAG = { size: 11 };
+const countsOf = (file) => `+${file.added} −${file.removed}`;
+const rightOfFile = (file) => measure$1(countsOf(file), META) + (file.isRemoved ? measure$1(words$1().willDelete, TAG) + STAT_GAP : 0);
+const fileFits = (frame, file) => FILE_X + measure$1(file.path, FILE_NAME) + STAT_GAP + rightOfFile(file) <= frame.width;
+function fileRow$1(frame, file, at) {
+  const countsW = measure$1(countsOf(file), META);
+  const room = frame.width - FILE_X - STAT_GAP - rightOfFile(file);
+  const cut = file.path.lastIndexOf("/");
+  const name = at.isTall && cut >= 0 ? file.path.slice(cut + 1) : file.path;
+  const folder = at.isTall && cut >= 0 ? file.path.slice(0, cut + 1) : "";
+  const tag = file.isRemoved ? text({ ...TAG, x: frame.width - countsW - STAT_GAP, y: at.y + 15, text: words$1().willDelete, ink: "flare", anchor: "end" }) : "";
+  const under = folder === "" ? "" : text({ ...FILE_DIR, x: FILE_X, y: at.y + 30, text: fitStart(folder, frame.width - FILE_X, FILE_DIR), ink: "lo" });
+  return fileBadge$1({ x: 0, y: at.y + 3, path: file.path }) + text({ ...FILE_NAME, x: FILE_X, y: at.y + 15, text: fitStart(name, room, FILE_NAME), ink: "hi" }) + under + tag + runs({ x: frame.width - countsW, y: at.y + 15, size: META.size, parts: [{ text: `+${file.added}`, ink: countInk(file.added, "moss"), isMono: true }, { text: ` −${file.removed}`, ink: countInk(file.removed, "flare"), isMono: true }] });
+}
+const countInk = (count, ink) => count === 0 ? "lo" : ink;
+const MORE_H$1 = 22;
+function moreOf(pending, y) {
+  const more = pending.restore + pending.remove - pending.files.length;
+  if (more <= 0)
+    return { svg: "", height: 0, text: "" };
+  const said = words$1().moreFiles(more);
+  return { svg: text({ size: 11.5, x: FILE_X, y: y + 15, text: said, ink: "lo" }), height: MORE_H$1, text: said };
+}
+function diffstatSvg(frame, pending) {
+  const total = pending.added + pending.removed;
+  const sumFont = { size: 13, isMono: true };
+  const summary = runs({ x: 0, y: STAT_LINE_Y, size: sumFont.size, parts: [{ text: `+${pending.added}`, ink: "moss", weight: 650, isMono: true }, { text: ` −${pending.removed}`, ink: "flare", weight: 650, isMono: true }] });
+  const sumW = measure$1(`+${pending.added} −${pending.removed}`, sumFont) + STAT_GAP;
+  const blocks = bar$1({ x: sumW, y: STAT_LINE_Y - 8, width: STAT_BAR_W, height: 6, total: Math.max(1, total), parts: [{ value: pending.added, ink: "moss" }, { value: pending.removed, ink: "flare" }] });
+  const parts = [words$1().toRestore(pending.restore), pending.remove > 0 ? words$1().toDelete(pending.remove) : ""].filter((part) => part !== "").join(" · ");
+  const noteX = sumW + STAT_BAR_W + STAT_GAP;
+  const isNoteBeside = noteX + measure$1(parts, { size: 11.5 }) <= frame.width;
+  const note = text({ size: 11.5, x: isNoteBeside ? noteX : 0, y: isNoteBeside ? STAT_LINE_Y : STAT_NOTE_Y, text: parts, ink: "lo" });
+  const statH = (isNoteBeside ? STAT_LINE_Y : STAT_NOTE_Y) + 13;
+  const isTall = pending.files.some((file) => !fileFits(frame, file));
+  const rowH = isTall ? FILE_ROW_TALL : FILE_ROW_H;
+  const files = pending.files.map((file, index) => fileRow$1(frame, file, { y: statH + index * rowH, isTall }));
+  const more = moreOf(pending, statH + pending.files.length * rowH);
+  const height = statH + pending.files.length * rowH + more.height;
+  const listed = [...pending.files.map((file) => file.path), ...more.text === "" ? [] : [more.text]].join(", ");
+  return drawing(frame, { height, body: summary + blocks + note + files.join("") + more.svg, alt: `+${pending.added} −${pending.removed} ${words$1().lines}, ${parts}: ${listed}` });
+}
+
+const summaryText = (pending) => words$1().summary(pending.restore, pending.remove);
+function confirmText(ui, pending, opts) {
+  const { Box, Text, Button } = ui;
+  const more = pending.restore + pending.remove - pending.files.length;
+  const said = words$1();
+  const confirm = confirmOf(pending);
+  return h(Box, {
+    flexDirection: "column",
+    borderStyle: "single",
+    borderColor: "warning",
+    paddingX: 1
+  }, h(Text, {
+    color: "warning",
+    bold: true,
+    wrap: "truncate"
+  }, `${questionOf(pending)} ${changedText(pending)}`), h(Box, {
     flexDirection: "row",
-    gap: 1,
-    alignItems: "center"
-  }, h(Box, {
-    flexGrow: 1,
-    flexShrink: 1
-  }, h(Input, {
-    key: "q",
-    placeholder: w.find,
-    submitLabel: w.findOpen,
-    autoFocus: true,
-    value: t.query,
-    onInput: bar.search.onInput,
-    onSubmit: bar.search.onSubmit
-  })), t.query ? h(Button, {
-    key: "clear",
-    plain: true,
+    columnGap: 1
+  }, h(Text, {
+    color: "success"
+  }, `+${pending.added}`), h(Text, {
+    color: "error"
+  }, `−${pending.removed}`), h(Text, null, summaryText(pending))), pending.files.map((file, index) => h(Text, {
+    key: `cp-path-${index}`,
     dimColor: true,
-    label: w.clear,
-    onPress: () => bar.search.onInput("")
-  }) : null);
-}
-function drawActions(ui, bar) {
-  const { Box, Button } = ui;
-  const { t, act } = bar;
-  const labels = toolLabels(t);
-  return h(Box, {
+    wrap: "truncate-start"
+  }, `› ${file.path}${file.isRemoved ? ` (${said.willDelete})` : ""}`)), more > 0 && h(Text, {
+    dimColor: true
+  }, said.more(more)), notesOf(pending).map((note, index) => h(Text, {
+    key: `cp-note-${index}`,
+    dimColor: true,
+    wrap: "wrap"
+  }, note)), h(Box, {
     flexDirection: "row",
-    flexShrink: 0,
     columnGap: 1,
-    alignItems: "center"
+    marginTop: 1
   }, h(Button, {
-    key: "collapse",
-    plain: true,
-    dimColor: true,
-    label: labels.collapse,
-    onPress: act.collapse
+    key: "cp-confirm",
+    variant: "secondary",
+    hotkey: confirm.hotkey,
+    label: confirm.label,
+    onPress: opts.actions.onConfirm
   }), h(Button, {
-    key: "refresh",
-    plain: true,
-    dimColor: true,
-    label: labels.refresh,
-    onPress: act.refresh
-  }), h(Button, {
-    key: "more",
-    plain: true,
-    dimColor: !t.showTools,
-    label: labels.more,
-    onPress: act.more
+    key: "cp-cancel",
+    variant: "secondary",
+    hotkey: said.cancel.hotkey,
+    label: said.cancel.label,
+    autoFocus: true,
+    onPress: opts.actions.onCancel
+  })));
+}
+function glyphOf(meta) {
+  if (meta.isSafety === true)
+    return "◆";
+  return meta.isUndone === true ? "○" : "●";
+}
+function rowText(ui, view, spec) {
+  const { Box, Text, Button } = ui;
+  const entry = view.entries[spec.index];
+  if (entry === undefined)
+    return null;
+  const meta = spec.opts.meta[entry.ref] ?? {};
+  const named = titleOf(entry, spec.opts.meta);
+  const isUndone = meta.isUndone === true;
+  const glyph = glyphOf(meta);
+  const facts = [ago(spec.opts.now - entry.at), meta.files ? words$1().files(meta.files) : "", (meta.tools ?? []).join(" ")].filter((part) => part !== "");
+  return h(Box, {
+    key: `cp-row-${spec.index}`,
+    flexDirection: "row",
+    columnGap: 1
+  }, h(Text, {
+    ...spec.index === 0 && !isUndone ? { color: "claude" } : { dimColor: true }
+  }, glyph), h(Box, {
+    flexDirection: "column",
+    flexGrow: 1
+  }, h(Box, {
+    flexDirection: "row",
+    columnGap: 1
+  }, h(Text, {
+    bold: !isUndone,
+    dimColor: isUndone,
+    strikethrough: isUndone
+  }, named.title), h(Text, {
+    dimColor: true
+  }, facts.join(" · "))), h(Text, {
+    wrap: "truncate",
+    dimColor: isUndone,
+    strikethrough: isUndone
+  }, named.label)), h(Button, {
+    key: `cp-undo-${spec.index}`,
+    variant: "secondary",
+    dimColor: view.isBusy,
+    label: words$1().undo,
+    onPress: () => spec.opts.actions.onUndo(entry)
   }));
 }
-function drawMore(ui, bar) {
-  const { Box, Button, Text } = ui;
-  const { t, act } = bar;
-  if (!t.showTools)
-    return null;
-  const labels = toolLabels(t);
-  const w = words$1();
-  const more = MORE_KEYS.filter((k) => k !== "unselect" || t.selected);
+function textPane(ui, view, opts) {
+  const { Box, Text } = ui;
   return h(Box, {
-    flexDirection: "column",
-    gap: 1
-  }, h(Box, {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 1
-  }, more.map((k) => h(Button, {
-    key: k,
-    plain: true,
-    dimColor: true,
-    label: labels[k],
-    onPress: act[k]
-  }))), h(Box, {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    columnGap: 2
-  }, h(Text, {
-    dimColor: true
-  }, w.whileFocused), shortcuts().map(([key, what]) => h(Text, {
-    dimColor: true
-  }, h(Text, {
-    bold: true
-  }, key), " ", what))));
-}
-
-const ROW_PX = 18;
-const MIN_SVG_W = 240;
-const MAX_SVG_W = 900;
-const TOOLBAR_ROWS = 3;
-const TOOLBAR_OPEN_ROWS = 9;
-const FOOTER_ROWS = 2;
-const MIN_BODY$1 = 5;
-const ACTIONS_PX = 260;
-const MIN_NAME_W = 90;
-function gitRowOf(t) {
-  if (!t.top || !t.branch)
-    return null;
-  const [add, del] = t.diff[t.root] ?? [0, 0];
-  const changed = (t.counts[t.root] ?? [0, 0, 0]).reduce((a, b) => a + b, 0);
-  return { branch: t.branch.head, upstream: t.branch.upstream, ahead: t.branch.ahead, behind: t.branch.behind, changed, add, del };
-}
-function costRowOf(s) {
-  const total = s.readTotal;
-  if (!total || total.reads === 0)
-    return null;
-  const turn = turnCost(s.turn);
-  return { turn: turn ? costText(turn) : null, session: total.reads > (turn?.reads ?? 0) ? costText(total) : null };
-}
-function legendOf(s, git) {
-  const tones = s.t.flashOn ? Object.values(s.t.flashTones).map(roleOfTone) : [];
-  const has = (role) => s.turn.touches.some((x) => x.role === role) || tones.includes(role);
-  const { legend } = words$1();
-  return [
-    ...has("read") ? [{ role: "read", label: legend.read }] : [],
-    ...has("edit") ? [{ role: "edit", label: legend.edit }] : [],
-    ...git?.changed ? [{ role: "warn", label: legend.warn }] : []
-  ];
-}
-const motion$1 = paneMotion$1();
-function cardsOf(s, w) {
-  const { t, look } = s;
-  const input = heroInput(s);
-  const git = gitRowOf(t);
-  const cost = costRowOf(s);
-  const hero = heroOf(input);
-  const legend = legendOf(s, git);
-  const touchedList = touchedRows(input);
-  const section = sectionLine({ label: words$1().allFiles, name: (t.top ? t.top : t.root).split("/").pop() ?? "" }, { look, w: w - ACTIONS_PX >= MIN_NAME_W ? w - ACTIONS_PX : w });
-  return {
-    hero: { drawn: heroCard(hero, { git, cost, legend }, { look, w }), shows: { hero, git, legend, isCounted: Boolean(cost?.turn), isSummed: Boolean(cost?.session), look, w } },
-    touched: touchedList.length ? { drawn: touchedCard(touchedList, look, w), shows: { rows: touchedList.map(({ cost: c, ...row }) => ({ ...row, isCounted: c !== undefined })), look, w } } : null,
-    section: { drawn: section }
-  };
-}
-function drawDesktop(ui, frame, act) {
-  const { Box, Client, Svg } = ui;
-  const { s, room, home } = frame;
-  const { t, look } = s;
-  const pal = paletteOf(look.isLight);
-  const { hero, touched, section } = cardsOf(s, Math.max(MIN_SVG_W, Math.min(MAX_SVG_W, room.width * PX_PER_COL)));
-  const lines = (px) => Math.ceil(px / ROW_PX) + 1;
-  const toolRows = t.showTools ? TOOLBAR_OPEN_ROWS : TOOLBAR_ROWS;
-  const fixed = lines(hero.drawn.height) + (touched ? lines(touched.drawn.height) : 0) + lines(section.drawn.height) + toolRows + FOOTER_ROWS;
-  const ctx = rowCtx(s, room.width - 1, true);
-  const win = treeWindow(s, Math.max(MIN_BODY$1, room.bodyRows - fixed), { toSpec: (r) => desktopRow(ctx, r), colors: { thumb: pal.lineStrong, track: pal.line, note: pal.lo } });
-  const bar = win.bar ? { ...win.bar, isOverlay: true } : null;
-  if (t.showSize)
-    act.sizes(unsized(t, win.rows));
-  const chip = s.latest ? activityChip(ui, s.latest, { unicode: true, colorOf: (tone) => pal.roles[roleOfTone(tone)].fg }) : null;
-  const svg = (key, card) => h(Svg, {
-    key,
-    ...motion$1.pic(key, card.drawn, { shows: card.shows })
-  });
-  const find = { onInput: act.find, onSubmit: act.jump };
-  const rows = { rows: win.specs, active: t.cursor, activeBg: pal.line, hoverBg: mix(pal.line, pal.sheet, 0.5), tones: shimmerTones(pal, look.isLight), pointer: s.feel.pointer, ...bar ? { bar } : {} };
-  const tools = { t, act: act.tool, search: find };
-  return h(Box, {
-    flexDirection: "column",
-    gap: 1,
-    minHeight: Math.max(1, room.bodyRows)
-  }, home, svg("ft-hero", hero), drawFind(ui, tools), touched ? svg("ft-touched", touched) : null, h(Box, {
     flexDirection: "column"
   }, h(Box, {
     flexDirection: "row",
-    flexWrap: "wrap",
-    alignItems: "center",
-    justifyContent: "space-between"
-  }, svg("ft-section", section), drawActions(ui, tools)), drawMore(ui, tools), h(Client, {
-    key: "rows",
-    module: "./rows.tsx",
-    props: rows
-  })), h(Box, {
-    flexGrow: 1
-  }), footer(ui, s, chip) ?? h(Box, {
-    height: 1
-  }));
-}
-
-const TERMINAL_TONE = { purple: "blue", iris: "purple" };
-const SHIMMER = Object.fromEntries(Object.keys(TONES).map((k) => {
-  const v = TONES[TERMINAL_TONE[k] ?? k] ?? TONES[k];
-  return [k, { bright: v?.bright ?? [], dim: v?.dim ?? [] }];
-}));
-const ADD_COLOR = "#98c379";
-const DEL_COLOR = "#e06c75";
-const HEAD_ROWS = 2;
-const MIN_BODY = 5;
-const FAINT_BASE = 38;
-const FAINT_SHARE = 0.3;
-const SESSION_COST_COLS = 70;
-function faint(hex) {
-  const v = parseInt(hex.slice(1), 16);
-  const ch = (shift) => Math.round(FAINT_BASE + ((v >> shift & 255) - FAINT_BASE) * FAINT_SHARE);
-  return `#${[16, 8, 0].map((x) => ch(x).toString(16).padStart(2, "0")).join("")}`;
-}
-function branchTotals(ui, s) {
-  const { Box, Text } = ui;
-  const { t, theme } = s;
-  const totals = t.diff[t.root] ?? [0, 0];
-  const rootCounts = countSegs(t.counts[t.root], theme);
-  return h(Box, {
-    flexDirection: "row",
-    flexShrink: 0
-  }, totals[0] > 0 && h(Text, {
-    color: ADD_COLOR
-  }, ` +${totals[0]}`), totals[1] > 0 && h(Text, {
-    color: DEL_COLOR
-  }, ` -${totals[1]}`), rootCounts.map((c) => h(Text, {
-    color: c.c
-  }, c.t)), rootCounts.length === 0 && totals[0] === 0 && totals[1] === 0 && h(Text, {
-    color: theme.muted
-  }, ` ${words$1().clean}`));
-}
-function terminalBranch(ui, s, unicode) {
-  const { Box, Text } = ui;
-  const { t, theme } = s;
-  if (!t.top || !t.branch)
-    return null;
-  const b = t.branch;
-  const isFlash = s.bright.has(BRANCH_ROW);
-  const tone = TONES[t.flashTones[BRANCH_ROW] ?? "teal"]?.solid;
-  return h(Box, {
-    flexDirection: "row",
-    height: 1,
-    overflow: "hidden"
-  }, h(Box, {
-    flexDirection: "row",
-    flexShrink: 0
-  }, h(Text, {
-    color: isFlash ? tone ?? theme.accent : theme.accent
-  }, (unicode ? BRANCH_ICON.plain : BRANCH_ICON.nerd) + " "), h(Text, {
-    bold: true,
-    color: isFlash ? tone ?? (theme.fg || undefined) : theme.fg || undefined
-  }, b.head), b.ahead > 0 && h(Text, {
-    color: "success"
-  }, ` ↑${b.ahead}`), b.behind > 0 && h(Text, {
-    color: "warning"
-  }, ` ↓${b.behind}`)), b.upstream && h(Box, {
-    flexShrink: 1,
-    overflow: "hidden"
-  }, h(Text, {
-    color: theme.muted,
-    wrap: "truncate-end"
-  }, ` ${b.upstream}`)), h(Box, {
-    flexGrow: 1
-  }), branchTotals(ui, s));
-}
-function searchRow(ui, at) {
-  const { Box, Button, Input } = ui;
-  const { t } = at;
-  return h(Box, {
-    flexDirection: "row",
-    gap: 1
-  }, h(Box, {
-    flexGrow: 1
-  }, h(Input, {
-    key: "q",
-    ...at.label ? { label: at.label } : {},
-    placeholder: words$1().find,
-    submitLabel: words$1().findGo,
-    autoFocus: true,
-    value: t.query,
-    onInput: at.act.find,
-    onSubmit: at.act.jump
-  })), t.query ? h(Button, {
-    key: "clear",
-    plain: true,
-    dimColor: true,
-    label: at.clear,
-    onPress: () => at.act.find("")
-  }) : null);
-}
-function headRow(ui, at) {
-  const { Box, Text, Button } = ui;
-  const { t, theme, unicode, act } = at;
-  const header = t.top ? [t.top.split("/").pop() ?? t.top, t.prefix.replace(/\/$/, "")].filter(Boolean).join("/") : t.root.split("/").pop() || t.root;
-  const icon = (key, glyph, isDim = true) => h(Button, {
-    key,
-    plain: true,
-    dimColor: isDim,
-    label: unicode ? glyph.plain : glyph.nerd,
-    onPress: act[key]
-  });
-  return h(Box, {
-    flexDirection: "row"
-  }, h(Text, {
-    bold: true,
-    color: theme.accent,
-    wrap: "truncate-start"
-  }, header), h(Box, {
-    flexGrow: 1
-  }), h(Box, {
-    flexDirection: "row",
-    gap: 2
-  }, icon("up", { plain: "↑", nerd: "\uDB80\uDC5D" }), icon("cwd", { plain: "⌂", nerd: "\uDB80\uDEDC" }, !at.isFollowing), icon("refresh", { plain: "↻", nerd: "\uDB81\uDC50" }), icon("hidden", t.showHidden ? { plain: "◉", nerd: "\uDB80\uDE08" } : { plain: "○", nerd: "\uDB80\uDE09" }, !t.showHidden), icon("size", { plain: "Σ", nerd: "\uDB80\uDECA" }, !t.showSize), icon("collapse", { plain: "⊟", nerd: "" }), t.selected ? icon("unselect", { plain: "⊘", nerd: "\uDB81\uDF77" }, false) : null, h(Text, null, " ")));
-}
-function costLabel(s, width) {
-  const turn = turnCost(s.turn);
-  const total = s.readTotal;
-  const said = words$1();
-  const parts = [
-    turn ? `${costText(turn)} ${said.tokUnit}` : "",
-    total && total.reads > (turn?.reads ?? 0) && width >= SESSION_COST_COLS ? said.costSession(costText(total, true)) : ""
-  ];
-  return parts.filter(Boolean).join(" · ");
-}
-function nowLine(ui, s, width) {
-  const { Box, Text } = ui;
-  const hero = heroOf(heroInput(s));
-  const cost = costLabel(s, width);
-  return h(Box, {
-    flexDirection: "row",
-    height: 1,
-    overflow: "hidden"
-  }, h(Box, {
-    flexDirection: "row",
-    flexShrink: 1,
-    overflow: "hidden"
+    justifyContent: "space-between",
+    columnGap: 1
   }, h(Text, {
     bold: true,
     dimColor: true
-  }, `${hero.label}  `), h(Text, {
-    wrap: "truncate-end"
-  }, heroText(hero)), h(Text, {
-    dimColor: true,
-    wrap: "truncate-end"
-  }, ` · ${subText(hero)}`)), h(Box, {
-    flexGrow: 1
-  }), cost ? h(Text, {
-    color: "suggestion"
-  }, ` ${cost}`) : null);
-}
-function fixedRows(s) {
-  const { t } = s;
-  return HEAD_ROWS + Number(!t.top || Boolean(t.branch)) + Number(Boolean(t.selected || s.latest)) + Number(s.turn.hasRun);
-}
-function drawTerminal(ui, frame, act) {
-  const { Box, Text, Client } = ui;
-  const { s, room, home } = frame;
-  const { t, theme } = s;
-  const { glyphs, noNerd } = s.feel;
-  const unicode = glyphs === "plain" || glyphs === "auto" && noNerd;
-  const ctx = rowCtx(s, room.width, unicode);
-  const win = treeWindow(s, Math.max(MIN_BODY, room.bodyRows - fixedRows(s)), { toSpec: (r) => terminalRow(ctx, r), colors: { thumb: theme.accent, track: theme.muted, note: theme.muted } });
-  if (t.showSize)
-    act.sizes(unsized(t, win.rows));
-  const chip = s.latest ? activityChip(ui, s.latest, { unicode, colorOf: (tone) => TONES[tone]?.solid ?? theme.accent }) : null;
-  const rows = { rows: win.specs, active: t.cursor, activeBg: theme.selection, hoverBg: faint(theme.selection), tones: SHIMMER, pointer: s.feel.pointer, ...win.bar ? { bar: win.bar } : {} };
-  return h(Box, {
-    flexDirection: "column",
-    minHeight: Math.max(1, room.bodyRows),
-    backgroundColor: theme.bg || undefined
-  }, home, headRow(ui, { t, theme, unicode, isFollowing: s.feel.follow, act: act.tool }), terminalBranch(ui, s, unicode), !t.top && h(Text, {
-    color: theme.muted
-  }, unicode ? "± " : " ", words$1().noRepo), s.turn.hasRun && nowLine(ui, s, room.width), searchRow(ui, { t, act, label: "/ ", clear: unicode ? "×" : "\uDB80\uDD56" }), h(Client, {
-    key: "rows",
-    module: "./rows.tsx",
-    props: rows
-  }), h(Box, {
-    flexGrow: 1
-  }), footer(ui, s, chip));
+  }, words$1().title), h(Text, {
+    dimColor: true
+  }, headerMeta(view, opts.now))), h(Text, null, " "), statusRow(ui, view, opts.actions), view.pending !== null && confirmText(ui, view.pending, opts), view.pending === null && view.entries.length === 0 && h(Text, {
+    dimColor: true
+  }, emptyText()), view.pending === null && view.entries.map((_, index) => rowText(ui, view, { index, opts })));
 }
 
-const TREE = { plugin: "filetree", key: "tree" };
-const THEME = { plugin: "filetree", key: "theme" };
-const ACTIVITY = { plugin: "filetree", key: "activity" };
-const TURN = { plugin: "filetree", key: "turn" };
-const READS = { plugin: "filetree", key: "reads" };
-const LOOK = { plugin: "filetree", key: "look" };
-const FEEL = { plugin: "filetree", key: "feel" };
-const STAGE$1 = { plugin: "modz", key: "stage" };
-const ACT$1 = { plugin: "modz", key: "act" };
-const PAGE = "files";
-const MIN_WIDTH = 24;
-const FEEL_DEFAULT = { glyphs: "auto", noNerd: false, pointer: true, followClaude: true, follow: true };
-async function filesPage($, ui, site, act) {
-  setLang(lang());
-  const t = { ...emptyTree(""), ...(await $.state.get(TREE)).value };
-  const parts = {
-    theme: (await $.state.get(THEME)).value,
-    activities: (await $.state.get(ACTIVITY)).value ?? [],
-    turn: { ...NO_TURN, ...(await $.state.get(TURN)).value },
-    readTotal: (await $.state.get(READS)).value,
-    look: (await $.state.get(LOOK)).value,
-    feel: { ...FEEL_DEFAULT, ...(await $.state.get(FEEL)).value }
+const LABEL_MAX = 60;
+const WIDTH$1 = { min: 240, max: 860 };
+const CARD_RESERVE = 6;
+const ago = (ms) => words$1().ago(ms);
+function clip$2(text, max = LABEL_MAX) {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+const changedText = (pending) => words$1().changed(pending.restore + pending.remove);
+const confirmOf = (pending) => words$1().confirm(pending.restore + pending.remove);
+function notesOf(pending) {
+  const said = words$1();
+  return [pending.commits > 0 ? said.commitsKept(pending.commits) : "", pending.isIndexMoved ? said.indexBack : "", said.ignoredKept].filter((note) => note !== "");
+}
+const emptyText = () => `${words$1().emptyLead} · ${words$1().emptyRest}`;
+const targetOf = (turn, label, max = LABEL_MAX) => turn === null || turn === undefined ? `"${clip$2(label, max)}"` : words$1().turn(turn);
+const QUESTION_LABEL_MAX = 40;
+const questionOf = (pending) => words$1().question(targetOf(pending.turn, pending.entry.label, QUESTION_LABEL_MAX));
+function titleOf(entry, meta) {
+  const own = meta[entry.ref] ?? {};
+  const prefix = SAFETY_PREFIXES.find((start) => entry.label.startsWith(start));
+  if (own.isSafety === true || prefix !== undefined)
+    return { title: words$1().beforeUndo, label: entry.label.slice((prefix ?? words$1().safetyPrefix).length) };
+  return { title: own.turn === undefined ? words$1().saved : words$1().turn(own.turn), label: entry.label };
+}
+const headerMeta = (view, now) => view.entries[0] === undefined ? "" : words$1().headerMeta(view.entries.length, ago(now - view.entries[0].at));
+const motion$1 = paneMotion$1();
+function picture(ui, drawing, key, opts) {
+  const { Svg } = ui;
+  return h(Svg, {
+    key,
+    ...motion$1.pic(key, drawing, opts)
+  });
+}
+function confirmCard(ui, pending, opts) {
+  const { Box, Button } = ui;
+  const frame = { width: svgWidth(opts.look.columns, { ...WIDTH$1, reserve: CARD_RESERVE }), mode: opts.look.theme.mode };
+  const said = words$1();
+  const head = headSvg(frame, { label: said.undo, meta: said.undoMeta, lead: questionOf(pending), rest: changedText(pending) });
+  const confirm = confirmOf(pending);
+  return h(Box, {
+    flexDirection: "column",
+    borderStyle: "single",
+    borderColor: boxColor(opts.look.theme, "amber", "line"),
+    paddingX: 2,
+    paddingY: 1,
+    rowGap: 1
+  }, picture(ui, head, "cp-card-head"), picture(ui, diffstatSvg(frame, pending), "cp-card-stat"), notesOf(pending).map((note, index) => h(ui.Text, {
+    key: `cp-note-${index}`,
+    dimColor: true,
+    wrap: "wrap"
+  }, note)), h(Box, {
+    flexDirection: "row",
+    columnGap: 1
+  }, h(Button, {
+    key: "cp-confirm",
+    variant: "secondary",
+    hotkey: confirm.hotkey,
+    label: confirm.label,
+    onPress: opts.actions.onConfirm
+  }), h(Button, {
+    key: "cp-cancel",
+    variant: "secondary",
+    hotkey: said.cancel.hotkey,
+    label: said.cancel.label,
+    autoFocus: true,
+    onPress: opts.actions.onCancel
+  })));
+}
+function rowSpecs(view, opts) {
+  const last = view.entries.length - 1;
+  return view.entries.map((entry, index) => ({
+    ...titleOf(entry, opts.meta),
+    when: ago(opts.now - entry.at),
+    meta: opts.meta[entry.ref] ?? {},
+    isNewest: index === 0,
+    isFirst: index === 0,
+    isLast: index === last
+  }));
+}
+function rowPicture(ui, row) {
+  const { when, ...shows } = row.spec;
+  return picture(ui, rowSvg$1(row.frame, { ...row.spec, isStacked: row.isStacked }), `cp-svg-${row.ref}`, { isRow: true, shows: { ...shows, isStacked: row.isStacked, frame: row.frame, isAged: when !== "" } });
+}
+function timeline(ui, view, opts) {
+  const { Box } = ui;
+  const frame = { width: svgWidth(opts.look.columns, WIDTH$1), mode: opts.look.theme.mode };
+  const specs = rowSpecs(view, opts);
+  const isStacked = specs.some((spec) => !rowFits(frame, spec));
+  return h(Box, {
+    flexDirection: "column"
+  }, view.entries.map((entry, index) => {
+    const spec = specs[index];
+    const drawing = rowPicture(ui, { frame, spec, isStacked, ref: entry.ref });
+    return PressRow(ui, { box: `cp-row-${index}`, key: `cp-undo-${index}`, drawing, onPress: () => opts.actions.onUndo(entry) });
+  }));
+}
+const STATUS_LOOK = {
+  busy: { dimColor: true },
+  success: { color: "success" },
+  error: { color: "error" },
+  info: { dimColor: true }
+};
+function statusRow(ui, view, actions) {
+  const { Box, Text, Button } = ui;
+  const status = view.status;
+  if (status === null)
+    return null;
+  const look = STATUS_LOOK[status.tone];
+  const glyph = { busy: "◐", success: "✓", error: "✕", info: "›" }[status.tone];
+  const redo = status.redo;
+  return h(Box, {
+    flexDirection: "row",
+    columnGap: 1,
+    alignItems: "center"
+  }, h(Text, {
+    ...look
+  }, glyph), h(Text, null, status.text), redo !== undefined && h(Button, {
+    key: "cp-redo",
+    plain: true,
+    hotkey: "y",
+    label: words$1().redo,
+    onPress: () => actions.onUndo(redo)
+  }));
+}
+function paneTree(ui, view, opts) {
+  const { Box } = ui;
+  if (!opts.look.isRich)
+    return textPane(ui, view, opts);
+  const frame = { width: svgWidth(opts.look.columns, WIDTH$1), mode: opts.look.theme.mode };
+  const count = view.entries.length;
+  const said = words$1();
+  const turns = view.entries.filter((entry) => titleOf(entry, opts.meta).title !== said.beforeUndo).length;
+  const lead = count === 0 ? { lead: said.emptyLead, rest: said.emptyRest, joiner: " · " } : { lead: said.turnsSaved(turns), rest: "" };
+  const newest = view.entries[0];
+  const meta = newest !== undefined && turns === count ? said.newest(ago(opts.now - newest.at)) : headerMeta(view, opts.now);
+  const head = headSvg(frame, { label: said.title, meta, ...lead });
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, picture(ui, head, "cp-head", { shows: { lead, turns, count, frame } }), statusRow(ui, view, opts.actions), view.pending !== null && confirmCard(ui, view.pending, opts), view.pending === null && count > 0 && timeline(ui, view, opts));
+}
+
+const CP_VIEW = { plugin: "checkpoint", key: "view" };
+const CP_META = { plugin: "checkpoint", key: "meta" };
+const CP_THEME = { plugin: "checkpoint", key: "theme" };
+const EMPTY_VIEW = { entries: [], status: null, isBusy: false, pending: null };
+async function checkpointsPage($, ui, site, act) {
+  setLang(lang$1());
+  const view = (await $.state.get(CP_VIEW)).value ?? EMPTY_VIEW;
+  const meta = (await $.state.get(CP_META)).value ?? {};
+  const theme = (await $.state.get(CP_THEME)).value ?? AUTO;
+  const actions = {
+    onUndo: (entry) => act("undo", entry.ref),
+    onConfirm: () => act("confirm"),
+    onCancel: () => act("cancel")
   };
-  const s = sceneFrom({ ...parts, t, now: await $.clock.now() });
-  const tool = Object.fromEntries(Object.keys(toolLabels(t)).map((key) => [key, () => act(key)]));
-  const acts = { tool, find: (v) => act("find", v), jump: (v) => act("jump", v), sizes: () => {
-    return;
-  } };
-  const frame = { s, room: { width: Math.max(MIN_WIDTH, site.columns), bodyRows: site.rows }, home: null };
-  return site.surface === "desktop" ? drawDesktop(ui, frame, acts) : drawTerminal(ui, frame, acts);
-}
-async function isFilesUp($) {
-  return paneOf((await $.state.get(STAGE$1)).value) === PAGE;
-}
-async function handOn($, action, sent) {
-  await $.state.set(ACT$1, { page: PAGE, action, arg: JSON.stringify({ ...sent, view: mem.view }), at: Date.now() });
-}
-function wireFilesPage(on) {
-  on("ui.message", async ($, e, next) => {
-    if (e.requestId !== HUB_PANE || e.element !== "rows" || !await isFilesUp($))
-      return next(e);
-    await handOn($, "rows", { data: e.data, surface: e.surface });
-    return {};
-  });
-  on("ui.scroll", { component: "Pane", requestId: HUB_PANE }, async ($, e, next) => {
-    if (!await isFilesUp($))
-      return next(e);
-    await handOn($, "scroll", { by: e.by });
-    return {};
-  });
-  on("ui.focus", { component: "Pane", requestId: HUB_PANE }, async ($, e, next) => {
-    const done = await next(e);
-    if (await isFilesUp($))
-      await handOn($, "focus", {});
-    return done;
-  });
+  const look = { theme, columns: site.columns, isRich: site.surface !== "terminal" };
+  return paneTree(ui, view, { now: await $.clock.now(), meta, look, actions });
 }
 
 let current = "en";
@@ -5968,11 +10097,15 @@ async function planPage($, ui, site) {
   return planPane(ui, view, site);
 }
 
-const HUB_DRAWN = ["plan", "files"];
+const HUB_DRAWN = ["plan", "agents", "checkpoints", "files"];
 async function pageOf($, o) {
   switch (o.page) {
     case "plan":
       return planPage($, o.ui, o.site);
+    case "agents":
+      return agentsPage($, o.ui, o.site, o.act);
+    case "checkpoints":
+      return checkpointsPage($, o.ui, o.site, o.act);
     case "files":
       return filesPage($, o.ui, o.site, o.act);
     default:
@@ -6846,7 +10979,7 @@ const CAP_EM = 0.7;
 const DECIMALS = 100;
 const num = (value) => String(Math.round(value * DECIMALS) / DECIMALS);
 const escapeXml = (text) => text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] ?? char);
-const sans = (size, weight) => (text) => textWidth(text, size, weight);
+const sans = (size, weight) => (text) => textWidth$1(text, size, weight);
 const baseline = (top, height, size) => Math.round(top + height / 2 + size * CAP_EM / 2);
 const SCHEME = ":root{color-scheme:light dark}";
 function toPic(part) {
@@ -6882,11 +11015,11 @@ const CELLS = { cell: 1.8, pitch: 2.2 };
 const glyphAt = (kind, state, x, y) => pixelGlyph(KIND_ICON[kind], { x, y, box: ICON, ...CELLS, className: `f-${PAINT[state]}` });
 function kindPic(kind, state) {
   const body = glyphAt(kind, state, 0, 0);
-  return toPic({ body, width: ICON, height: ICON, alt: kindWord(kind, lang()) });
+  return toPic({ body, width: ICON, height: ICON, alt: kindWord(kind, lang$1()) });
 }
 function stopAt(stop, x) {
   const icon = glyphAt(stop.kind, stop.state, x, (HEIGHT - ICON) / 2);
-  const word = kindWord(stop.kind, lang());
+  const word = kindWord(stop.kind, lang$1());
   const wordX = x + ICON + LABEL_GAP;
   const label = textEl({ x: wordX, y: baseline(0, HEIGHT, LABEL.size), text: word, paint: "mid", ...LABEL });
   const end = wordX + sans(LABEL.size, LABEL.weight)(word);
@@ -6900,7 +11033,7 @@ const joinAt = (x) => ({
   body: rectEl({ x: x + GAP, y: HEIGHT / 2 - 0.5, width: JOIN, height: 1, paint: "line-strong" }),
   x: x + GAP + JOIN + GAP
 });
-const altOf = (flow) => flow.map((stop) => stop.count > 1 ? `${kindWord(stop.kind, lang())} ×${stop.count}` : kindWord(stop.kind, lang())).join(" → ");
+const altOf = (flow) => flow.map((stop) => stop.count > 1 ? `${kindWord(stop.kind, lang$1())} ×${stop.count}` : kindWord(stop.kind, lang$1())).join(" → ");
 function flowPic(flow) {
   if (flow.length < 2)
     return null;
@@ -7009,21 +11142,21 @@ const WORDS = {
 const MARK = { done: "✓", live: "●", failed: "✗", stopped: "—" };
 const MARK_KEY = { done: undefined, live: "claude", failed: "error", stopped: undefined };
 function endOf(state) {
-  const words = pick$2(WORDS);
+  const words = pick$3(WORDS);
   if (state === "failed")
     return `${MARK.failed} ${words.failed}`;
   return state === "stopped" ? `${MARK.stopped} ${words.stopped}` : MARK[state];
 }
 function stepOfCall(call) {
   const file = fileOf(call.input);
-  return { kind: kindOf(call.tool, call.input), text: plainCall(call.tool, call.input, lang()), note: "", count: 1, state: stateOf(call), files: file === undefined ? [] : [file] };
+  return { kind: kindOf(call.tool, call.input), text: plainCall(call.tool, call.input, lang$1()), note: "", count: 1, state: stateOf(call), files: file === undefined ? [] : [file] };
 }
 function iconOf(draw, step) {
   const { Svg, Text } = draw.ui;
   if (draw.isText)
     return h(Text, {
       dimColor: true
-    }, GLYPH[KIND_ICON[step.kind]]);
+    }, GLYPH$1[KIND_ICON[step.kind]]);
   const pic = kindPic(step.kind, step.state);
   return h(Svg, {
     source: pic.source,
@@ -7114,7 +11247,7 @@ function callTrail(draw, call) {
   const why = purposeOf(call.input);
   const files = step.files.length > 0 ? step.files : commandFiles(call.input);
   const told = stepRow(draw, { ...step, text: why === "" ? step.text : why, note: "", files }, "plain-0", hasEnd);
-  const result = resultLine(call, lang());
+  const result = resultLine(call, lang$1());
   return [told, ...result === "" ? [] : [h(Text, {
     key: "plain-result",
     dimColor: true
@@ -7122,7 +11255,7 @@ function callTrail(draw, call) {
 }
 function groupTrail(draw, calls) {
   const { Svg, Text } = draw.ui;
-  const trail = trailOf(calls, lang());
+  const trail = trailOf(calls, lang$1());
   const flow = draw.isText ? null : flowPic(trail.flow);
   return [
     flow === null ? null : h(Svg, {
@@ -7136,7 +11269,7 @@ function groupTrail(draw, calls) {
     trail.more > 0 ? h(Text, {
       key: "plain-more",
       dimColor: true
-    }, pick$2(WORDS).more(trail.more)) : null
+    }, pick$3(WORDS).more(trail.more)) : null
   ].filter((part) => part !== null);
 }
 const drawOf = ($, e) => {
@@ -7232,7 +11365,7 @@ function viewOf(parts, frame) {
   const presence = withHosted(presenceOf(parts.market), parts.isUsageHosting);
   const rows = withUnanswered(rowsOf(parts.cards, presence, parts.layout), parts.unanswered, hubWords().noAnswer);
   const hidden = hiddenRowsOf(parts.cards, presence, parts.layout);
-  return { rows, hidden, focus: focusOf(rows), now: nowOf(rows, parts.now), meta: metaOf(parts.market, parts.hasUpdate === true), isEditing: parts.isEditing, ...frame };
+  return { rows, hidden, focus: focusOf(rows), now: nowOf$1(rows, parts.now), meta: metaOf(parts.market, parts.hasUpdate === true), isEditing: parts.isEditing, ...frame };
 }
 function plainViewOf(parts, frame) {
   const rows = rowsOf(parts.cards, withHosted(presenceOf(parts.market), parts.isUsageHosting));
@@ -7311,11 +11444,11 @@ async function partsOf($) {
 }
 function startHooks(on, options) {
   on("session.start", async ($, e, next) => {
-    setLang$1(await $.env.get("MODZ_LANG").catch(() => {
+    setLang$4(await $.env.get("MODZ_LANG").catch(() => {
       return;
     }));
     const started = await next(e);
-    const saved = layoutOf(await $.store.get(LAYOUT_KEY).catch(() => {
+    const saved = layoutOf$1(await $.store.get(LAYOUT_KEY).catch(() => {
       return;
     }));
     await update($, layoutAtom, () => saved);

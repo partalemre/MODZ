@@ -200,11 +200,12 @@ test('desktop: a press on a live line opens its mod\'s pane for the detail', { t
   const { ui } = await busyHub($, on, 'desktop')
 
   await ui.press({ key: 'now-open-agents-1' })
+  await ui.press({ key: 'modz-home' })
   await ui.press({ key: 'open-plan' })
 
-  // The plan page is drawn by the hub in its own pane (hooks/pages.tsx): its mod is not asked for a pane.
-  expect(asked).toEqual(['agents'])
-  expect(staged.at(-1)).toBe('plan')
+  // The Agents and Plan pages are drawn by the hub in its own pane (hooks/pages/): their mods are not asked for a pane.
+  expect(asked).toEqual([])
+  expect(staged.slice(-3)).toEqual(['agents', 'modz', 'plan'])
 })
 
 test('terminal: the same lines are read as text under "Şu an"', { timeoutMs: 20_000, plugins: reporters }, async ($: any, on: any) => {

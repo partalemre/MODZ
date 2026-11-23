@@ -3,7 +3,7 @@
 // their posts, the pane's wheel and its focus reach the hub; they are handed on to filetree like any press.
 import type { EngineInterface, Register, RenderElement } from 'claude-code'
 
-import { drawDesktop } from '../../../filetree/hooks/desktop'
+import { drawDesktop, motion } from '../../../filetree/hooks/desktop'
 import { setLang as setFilesLang } from '../../../filetree/hooks/lang'
 import { sceneFrom } from '../../../filetree/hooks/scene'
 import { mem as filesMem } from '../../../filetree/hooks/session'
@@ -31,6 +31,11 @@ const PAGE = 'files'
 const MIN_WIDTH = 24
 const FEEL_DEFAULT = { glyphs: 'auto', noNerd: false, pointer: true, followClaude: true, follow: true }
 
+// The stage write that turned the hub to this page, and whether its tree had loaded: a new write, or the tree that
+// filetree loads only once the page is up, means the page opened anew, so its cards enter as they do in filetree's
+// own pane (filetree/hooks/desktop.tsx `opening`), which opens once its tree is there.
+const shown = { at: -1, isLoaded: false }
+
 type Ui = Record<string, any>
 // filetree's own shapes, taken from its functions: its types file would bring its view of every mod's state.
 type Parts = Parameters<typeof sceneFrom>[0]
@@ -47,6 +52,11 @@ export async function filesPage($: EngineInterface, ui: Ui, site: PageSite, act:
     look: (await $.state.get(LOOK)).value as Parts['look'],
     feel: { ...FEEL_DEFAULT, ...((await $.state.get(FEEL)).value as Partial<Parts['feel']> | undefined) },
   }
+  const staged = (await $.state.get(STAGE)).value as { at?: unknown } | undefined
+  const at = typeof staged?.at === 'number' ? staged.at : -1
+  const isLoaded = t.nodes.length > 0
+  if (at !== shown.at || isLoaded !== shown.isLoaded) motion.reset()
+  Object.assign(shown, { at, isLoaded })
   const s = sceneFrom({ ...parts, t, now: await $.clock.now() })
   const tool = Object.fromEntries(Object.keys(toolLabels(t)).map(key => [key, () => act(key)])) as Record<ToolKey, () => void>
   // Sizes are asked for by filetree after each press (filetree/hooks/hubact.ts): a drawing writes nothing.

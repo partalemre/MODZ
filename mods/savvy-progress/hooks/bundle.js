@@ -3815,7 +3815,18 @@ function startWatch($) {
   let looks = 0;
   $.clock.every(SCAN_MS, () => void watchPane(paneHeld, keepNouns($), ++looks % BEAT_LOOKS === 0));
 }
+async function isHubDrawn($) {
+  const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+  return Array.isArray(drawn) && drawn.includes(HUB_PANE);
+}
+async function askHub($) {
+  await $.state.set(HOME$1, { pane: HUB_PANE, at: await $.clock.now() });
+}
 async function togglePane($) {
+  if (await isHubDrawn($)) {
+    await askHub($);
+    return true;
+  }
   const isOpen = (await $.ui.panes()).some((p) => p.id === PANE);
   if (isOpen) {
     paneHeld.isHeld = true;
@@ -3946,13 +3957,17 @@ function onOpen(on) {
   }).catch(($, e, next) => next(e));
   on("state.set", { plugin: "modz", key: "open" }, async ($, e, next) => {
     const done = await next(e);
-    if (isOwnOpen(e.value))
+    if (!isOwnOpen(e.value))
+      return done;
+    if (await isHubDrawn($))
+      $.clock.after(0, () => void askHub($).catch((cause) => $.ui.log(`savvy-progress: could not ask MODZ for the page: ${String(cause)}`, { to: "debug" })));
+    else
       await openPane($);
     return done;
   }).catch(($, e, next) => next(e));
   on("state.set", { plugin: "modz", key: "stage" }, async ($, e, next) => {
     const done = await next(e);
-    if (isOffStage(e.value, HUB_PANE)) {
+    if (isOffStage(e.value, HUB_PANE) || paneOf(e.value) === HUB_PANE && await isHubDrawn($)) {
       paneHeld.isHeld = true;
       await $.ui.close({ id: PANE });
     }
@@ -4031,122 +4046,7 @@ function onBand(on, opts) {
   });
 }
 
-const PILL = { h: 20, padX: 9, size: 11, dot: 3, dotGap: 6 };
-const BOLD$3 = 1.06;
-const LABEL$3 = { size: 12, weight: 600 };
-const HEAD = { h: 28, size: 13.5, gap: 10, nameGap: 7 };
-const CHEVRON_ROOM = 22;
-const CHEVRON = 4.5;
-const STROKE$1 = 1.5;
-const SECTION_H = 18;
-const HEAD_H = HEAD.h;
-const PILL_INK = {
-  run: { dot: "f-edit live", text: "f-edit" },
-  ok: { dot: "m", text: "s" },
-  warn: { dot: "f-warn", text: "f-warn" },
-  danger: { dot: "f-danger", text: "f-danger" }
-};
-const pillPart = (pill, x, y) => {
-  const width = Math.ceil(textWidth(pill.text, PILL.size) * BOLD$3 + PILL.padX * 2 + PILL.dot * 2 + PILL.dotGap);
-  const mid = y + PILL.h / 2;
-  const ink = PILL_INK[pill.role];
-  const body = [
-    `<rect class="k" x="${x}" y="${y}" width="${width}" height="${PILL.h}" rx="${PILL.h / 2}"/>`,
-    `<circle class="${ink.dot}" cx="${x + PILL.padX + PILL.dot}" cy="${mid}" r="${PILL.dot}"/>`,
-    `<text class="${ink.text}" x="${x + PILL.padX + PILL.dot * 2 + PILL.dotGap}" y="${mid + PILL.size * 0.35}" font-family="${FONT}" font-size="${PILL.size}" font-weight="600">${xml(pill.text)}</text>`
-  ];
-  return { body: body.join(""), width };
-};
-const chevronSvg = (x, y) => `<g class="chev"><path d="M${x} ${y - CHEVRON}l${CHEVRON} ${CHEVRON}-${CHEVRON} ${CHEVRON}" fill="none" stroke-width="${STROKE$1}" stroke-linecap="round" stroke-linejoin="round" class="i-m"/></g>`;
-const cardHeadSvg = (W, head, inset = 0) => {
-  const right = W - CHEVRON_ROOM;
-  const probe = pillPart(head.pill, 0, 0);
-  const pill = pillPart(head.pill, right - probe.width, (HEAD.h - PILL.h) / 2);
-  const nameW = textWidth(head.name, HEAD.size) * BOLD$3;
-  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap - inset);
-  const titleSpan = title === "…" ? "" : `<tspan class="s" dx="${HEAD.nameGap}">${xml(title)}</tspan>`;
-  const y = HEAD.h / 2 + HEAD.size * 0.35;
-  const body = [
-    `<text x="${inset}" y="${y}" font-family="${FONT}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
-    pill.body,
-    chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, HEAD.h / 2)
-  ];
-  return paneSvg(W, HEAD.h, body.join(""));
-};
-const sectionSvg = (W, section) => {
-  const label = `<text class="m" x="0" y="${SECTION_H / 2 + LABEL$3.size * 0.36}" font-family="${FONT}" font-size="${LABEL$3.size}" font-weight="${LABEL$3.weight}">${xml(fitText(section.label, LABEL$3.size * BOLD$3, W))}</text>`;
-  return paneSvg(W, SECTION_H, label);
-};
-const SECTION_SVG_H = SECTION_H;
-const NOTICE = { h: 32, padX: 8, dot: 3, gap: 9, size: 13 };
-const noticeSvg = (W, notice) => {
-  const mid = NOTICE.h / 2;
-  const x = NOTICE.padX + NOTICE.dot * 2 + NOTICE.gap;
-  const lead = `${notice.name} `;
-  const reason = notice.reason;
-  const used = textWidth(lead, NOTICE.size) * BOLD$3 + textWidth(reason, NOTICE.size) * BOLD$3;
-  const title = fitText(` · ${notice.title}`, NOTICE.size, Math.max(0, W - x - CHEVRON_ROOM - used));
-  const body = [
-    `<circle class="f-${notice.role}" cx="${NOTICE.padX + NOTICE.dot}" cy="${mid}" r="${NOTICE.dot}"/>`,
-    `<text x="${x}" y="${mid + NOTICE.size * 0.35}" font-family="${FONT}" font-size="${NOTICE.size}" font-weight="560"><tspan class="t">${xml(lead)}</tspan><tspan class="f-${notice.role}">${xml(reason)}</tspan><tspan class="s" font-weight="400">${xml(title === "…" ? "" : title)}</tspan></text>`,
-    chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, mid)
-  ];
-  return paneSvg(W, NOTICE.h, body.join(""));
-};
-const NOTICE_H = NOTICE.h;
-
 const types$2 = atom({ plugin: "savvy-progress", key: "types" }, BUILTIN_TYPES);
-function draftHead(ui, layout) {
-  const { Text } = ui;
-  const label = t().newTask;
-  if (!layout.isDesktop)
-    return h(Text, {
-      bold: true,
-      dimColor: true
-    }, label);
-  return picture(ui, { key: "draft-head", at: "draft-head", pic: { source: sectionSvg(layout.inner, { label }), alt: label, width: layout.inner, height: SECTION_SVG_H } });
-}
-function draftTree(ui, view, on) {
-  const { Box, Button, Input, Select, Text } = ui;
-  const s = t();
-  const chosen = chosenOf(view.types, view.draft);
-  const frame = view.layout.isDesktop ? { borderStyle: "round", paddingX: 2, paddingY: 1 } : {};
-  return h(Box, {
-    key: "draft",
-    flexDirection: "column",
-    rowGap: 1,
-    ...frame
-  }, draftHead(ui, view.layout), !chosen && h(Text, {
-    dimColor: true
-  }, s.noTypes), chosen && Select && h(Select, {
-    key: "dispatch-type",
-    label: s.agentLabel,
-    options: view.types.map((type) => ({ value: type.name, label: type.name })),
-    value: chosen.name,
-    onSelect: on.onPickType
-  }), chosen && h(Text, {
-    dimColor: true,
-    wrap: "truncate-end"
-  }, `${sourceWord(chosen.source)} · ${describe(chosen)}`), chosen && Input && h(Input, {
-    key: "dispatch-task",
-    label: s.taskLabel,
-    placeholder: s.taskHint,
-    value: "",
-    submitLabel: s.start,
-    autoFocus: true,
-    onSubmit: on.onStartTask
-  }), view.draft?.notice && h(Text, {
-    color: "warning"
-  }, view.draft.notice), h(Box, {
-    flexDirection: "row"
-  }, h(Button, {
-    key: "dispatch-cancel",
-    plain: true,
-    dimColor: true,
-    label: s.cancel,
-    onPress: on.onCancelTask
-  })));
-}
 function onDispatch(on) {
   on("agent.offer", async ($, e, next) => {
     const answer = await next(e);
@@ -4404,16 +4304,100 @@ function onEvents(on) {
   onSteps(on);
 }
 
+const HOME_LABEL = "← modz";
+function HomeButton(ui, onPress) {
+  const { Box, Button } = ui;
+  return h(Box, {
+    key: "modz-home-row",
+    flexDirection: "row"
+  }, h(Button, {
+    key: "modz-home",
+    label: HOME_LABEL,
+    plain: true,
+    dimColor: true,
+    onPress
+  }));
+}
+
+const crewView = (list) => deriveJob({ flow: null, agents: list, job: { agentIds: list.map((a) => a.id), startedAt: 0, isSealed: true, isHidden: false }, tasks: [] });
+const homeOf = (crab, running) => ({
+  mood: crab.mood,
+  level: t().crab.level(levelOf(crab.turns)),
+  isMoving: running.length === 0
+});
+const DRAWN_STEP_MS = 1e4;
+const lastEventOf = (a) => Math.max(a.startedAt, a.endedAt ?? 0, ...(a.history ?? []).map((e) => Math.max(e.at, e.endAt ?? 0)));
+const drawnClockOf = (list, at) => Math.max(Math.floor(at / DRAWN_STEP_MS) * DRAWN_STEP_MS, ...list.map(lastEventOf));
+function paneDataOf(state) {
+  const { list } = state;
+  const at = Math.max(state.now, ...list.map((a) => a.startedAt), 0);
+  const view = deriveJob({ flow: state.flow, agents: list, job: state.job, tasks: state.tasks }) ?? crewView(list);
+  const ended = (a) => a.endedAt ?? a.startedAt;
+  const live = list.filter(isRunning).reverse();
+  const running = [...live.filter(isMain), ...live.filter((a) => !isMain(a))];
+  return {
+    list,
+    running,
+    finished: list.filter((a) => !isRunning(a)).sort((a, b) => ended(b) - ended(a)),
+    planned: plannedOf(state.flow, list),
+    sum: totals(list, at),
+    view,
+    at,
+    drawnAt: drawnClockOf(list, at),
+    panel: state.panel,
+    limit: state.limit,
+    attention: attentionOf(list, at),
+    types: state.types,
+    home: homeOf(state.crab, running),
+    chats: state.chats
+  };
+}
+const summaryOf = (sum) => `≈${fmtCost(sum.cost)} · ${fmtTokens(sum.tokens)} ${t().tokensWord} · ${fmtTime(sum.time)}`;
+const toneOf = (d) => {
+  if (d.running.length)
+    return "run";
+  if (!d.list.length)
+    return "idle";
+  return d.view && d.view.failed > 0 ? "warn" : "ok";
+};
+const countsOf$1 = (d) => {
+  const s = t();
+  const ended = d.list.length - d.running.length;
+  return [d.running.length && s.liveCount(d.running.length), ended && s.endedCount(ended), d.planned.length && s.plannedCount(d.planned.length)].filter(Boolean).join(" · ");
+};
+function headerOf(d) {
+  const s = t();
+  const share = shareOf(d.sum.cost, d.limit);
+  const view = d.view;
+  return {
+    eyebrow: s.pane,
+    counts: countsOf$1(d),
+    headline: view?.title || s.crew(d.list.length),
+    percent: view ? percentText(view) : "—",
+    tone: toneOf(d),
+    meter: view,
+    stats: [
+      { label: s.cost, value: `≈${fmtCost(d.sum.cost)}` },
+      { label: s.tokens, value: fmtTokens(d.sum.tokens) },
+      { label: s.time, value: fmtTime(d.sum.time) },
+      ...share === null ? [] : [{ label: s.limitTile, value: `≈${s.pct(shareNumber(share))}` }]
+    ],
+    home: d.home
+  };
+}
+const drawnHeaderOf = (d) => headerOf({ ...d, sum: totals(d.list, d.drawnAt) });
+const totalsLineOf = (data) => data.stats.map((stat) => `${stat.label} ${stat.value}`).join(" · ");
+
 const CARD = { padX: 14, rx: 10, labelY: 24, firstRowY: 48, rowH: 22, bottom: 14 };
-const LABEL$2 = { size: 12, weight: 600 };
+const LABEL$3 = { size: 12, weight: 600 };
 const ROW$1 = { size: 13, waitSize: 12, gap: 10 };
-const BOLD$2 = 1.06;
+const BOLD$3 = 1.06;
 const rowSvg = (row, y, W) => {
   const right = W - CARD.padX;
-  const waitW = Math.ceil(textWidth(row.wait, ROW$1.waitSize) * BOLD$2);
+  const waitW = Math.ceil(textWidth(row.wait, ROW$1.waitSize) * BOLD$3);
   const room = right - waitW - ROW$1.gap - CARD.padX;
-  const project = fitText(row.project, ROW$1.size * BOLD$2, room);
-  const titleRoom = room - textWidth(project, ROW$1.size) * BOLD$2;
+  const project = fitText(row.project, ROW$1.size * BOLD$3, room);
+  const titleRoom = room - textWidth(project, ROW$1.size) * BOLD$3;
   const title = row.title ? fitText(` · ${row.title}`, ROW$1.size, titleRoom) : "";
   const titleSpan = title && title !== "…" ? `<tspan class="s" font-weight="400">${xml(title)}</tspan>` : "";
   return [
@@ -4429,7 +4413,7 @@ const chatsCardSvg = (W, card) => {
   const more = card.more ? `<text class="m" x="${CARD.padX}" y="${moreY}" font-family="${FONT}" font-size="${ROW$1.waitSize}">${xml(card.more)}</text>` : "";
   const body = [
     `<rect class="card ln" x="0.5" y="0.5" width="${W - 1}" height="${height - 1}" rx="${CARD.rx}" stroke-width="1"/>`,
-    `<text class="m" x="${CARD.padX}" y="${CARD.labelY}" font-family="${FONT}" font-size="${LABEL$2.size}" font-weight="${LABEL$2.weight}">${xml(fitText(card.title, LABEL$2.size * BOLD$2, W - CARD.padX * 2))}</text>`,
+    `<text class="m" x="${CARD.padX}" y="${CARD.labelY}" font-family="${FONT}" font-size="${LABEL$3.size}" font-weight="${LABEL$3.weight}">${xml(fitText(card.title, LABEL$3.size * BOLD$3, W - CARD.padX * 2))}</text>`,
     ...rows,
     more
   ];
@@ -4443,8 +4427,8 @@ const lineSvg = (line, y, W) => {
   const size = line.kind === "agent" ? LIST.sizeSmall : LIST.size;
   const endW = line.end ? Math.ceil(textWidth(line.end, LIST.sizeSmall)) + LIST.chipGap : 0;
   const room = W - x - endW;
-  const lead = fitText(line.lead, size * BOLD$2, room);
-  const rest = fitText(` · ${line.text}`, size, room - textWidth(lead, size) * BOLD$2);
+  const lead = fitText(line.lead, size * BOLD$3, room);
+  const rest = fitText(` · ${line.text}`, size, room - textWidth(lead, size) * BOLD$3);
   const dot = line.kind === "chat" ? `<circle class="${line.isLive ? "f-edit live" : "m"}" cx="${LIST.dot}" cy="${y + LIST.rowH / 2}" r="${LIST.dot}"/>` : "";
   const end = line.end ? `<text class="m" x="${W}" y="${base}" text-anchor="end" font-family="${FONT}" font-size="${LIST.sizeSmall}" font-variant-numeric="tabular-nums">${xml(line.end)}</text>` : "";
   const restSpan = line.text && rest !== "…" ? `<tspan class="m">${xml(rest)}</tspan>` : "";
@@ -4455,6 +4439,70 @@ const chatLinesSvg = (W, lines) => {
   const alt = lines.map((line) => [line.lead, line.text, line.end].filter(Boolean).join(" · ")).join(", ");
   return { source: paneSvg(W, height, lines.map((line, i) => lineSvg(line, i * LIST.rowH, W)).join("")), height, alt };
 };
+
+const PILL = { h: 20, padX: 9, size: 11, dot: 3, dotGap: 6 };
+const BOLD$2 = 1.06;
+const LABEL$2 = { size: 12, weight: 600 };
+const HEAD = { h: 28, size: 13.5, gap: 10, nameGap: 7 };
+const CHEVRON_ROOM = 22;
+const CHEVRON = 4.5;
+const STROKE$1 = 1.5;
+const SECTION_H = 18;
+const HEAD_H = HEAD.h;
+const PILL_INK = {
+  run: { dot: "f-edit live", text: "f-edit" },
+  ok: { dot: "m", text: "s" },
+  warn: { dot: "f-warn", text: "f-warn" },
+  danger: { dot: "f-danger", text: "f-danger" }
+};
+const pillPart = (pill, x, y) => {
+  const width = Math.ceil(textWidth(pill.text, PILL.size) * BOLD$2 + PILL.padX * 2 + PILL.dot * 2 + PILL.dotGap);
+  const mid = y + PILL.h / 2;
+  const ink = PILL_INK[pill.role];
+  const body = [
+    `<rect class="k" x="${x}" y="${y}" width="${width}" height="${PILL.h}" rx="${PILL.h / 2}"/>`,
+    `<circle class="${ink.dot}" cx="${x + PILL.padX + PILL.dot}" cy="${mid}" r="${PILL.dot}"/>`,
+    `<text class="${ink.text}" x="${x + PILL.padX + PILL.dot * 2 + PILL.dotGap}" y="${mid + PILL.size * 0.35}" font-family="${FONT}" font-size="${PILL.size}" font-weight="600">${xml(pill.text)}</text>`
+  ];
+  return { body: body.join(""), width };
+};
+const chevronSvg = (x, y) => `<g class="chev"><path d="M${x} ${y - CHEVRON}l${CHEVRON} ${CHEVRON}-${CHEVRON} ${CHEVRON}" fill="none" stroke-width="${STROKE$1}" stroke-linecap="round" stroke-linejoin="round" class="i-m"/></g>`;
+const cardHeadSvg = (W, head, inset = 0) => {
+  const right = W - CHEVRON_ROOM;
+  const probe = pillPart(head.pill, 0, 0);
+  const pill = pillPart(head.pill, right - probe.width, (HEAD.h - PILL.h) / 2);
+  const nameW = textWidth(head.name, HEAD.size) * BOLD$2;
+  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap - inset);
+  const titleSpan = title === "…" ? "" : `<tspan class="s" dx="${HEAD.nameGap}">${xml(title)}</tspan>`;
+  const y = HEAD.h / 2 + HEAD.size * 0.35;
+  const body = [
+    `<text x="${inset}" y="${y}" font-family="${FONT}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
+    pill.body,
+    chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, HEAD.h / 2)
+  ];
+  return paneSvg(W, HEAD.h, body.join(""));
+};
+const sectionSvg = (W, section) => {
+  const label = `<text class="m" x="0" y="${SECTION_H / 2 + LABEL$2.size * 0.36}" font-family="${FONT}" font-size="${LABEL$2.size}" font-weight="${LABEL$2.weight}">${xml(fitText(section.label, LABEL$2.size * BOLD$2, W))}</text>`;
+  return paneSvg(W, SECTION_H, label);
+};
+const SECTION_SVG_H = SECTION_H;
+const NOTICE = { h: 32, padX: 8, dot: 3, gap: 9, size: 13 };
+const noticeSvg = (W, notice) => {
+  const mid = NOTICE.h / 2;
+  const x = NOTICE.padX + NOTICE.dot * 2 + NOTICE.gap;
+  const lead = `${notice.name} `;
+  const reason = notice.reason;
+  const used = textWidth(lead, NOTICE.size) * BOLD$2 + textWidth(reason, NOTICE.size) * BOLD$2;
+  const title = fitText(` · ${notice.title}`, NOTICE.size, Math.max(0, W - x - CHEVRON_ROOM - used));
+  const body = [
+    `<circle class="f-${notice.role}" cx="${NOTICE.padX + NOTICE.dot}" cy="${mid}" r="${NOTICE.dot}"/>`,
+    `<text x="${x}" y="${mid + NOTICE.size * 0.35}" font-family="${FONT}" font-size="${NOTICE.size}" font-weight="560"><tspan class="t">${xml(lead)}</tspan><tspan class="f-${notice.role}">${xml(reason)}</tspan><tspan class="s" font-weight="400">${xml(title === "…" ? "" : title)}</tspan></text>`,
+    chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, mid)
+  ];
+  return paneSvg(W, NOTICE.h, body.join(""));
+};
+const NOTICE_H = NOTICE.h;
 
 const PAD = 16;
 const RADIUS = 10;
@@ -4658,75 +4706,6 @@ const compactSvg = (W, icons) => {
   const plus = more ? `<text class="s" x="${shown.length * CRAB_PITCH + 4}" y="21" font-family="${FONT}" font-size="12">+${more}</text>` : "";
   return paneSvg(W, COMPACT_H, body + plus);
 };
-
-const crewView = (list) => deriveJob({ flow: null, agents: list, job: { agentIds: list.map((a) => a.id), startedAt: 0, isSealed: true, isHidden: false }, tasks: [] });
-const homeOf = (crab, running) => ({
-  mood: crab.mood,
-  level: t().crab.level(levelOf(crab.turns)),
-  isMoving: running.length === 0
-});
-const DRAWN_STEP_MS = 1e4;
-const lastEventOf = (a) => Math.max(a.startedAt, a.endedAt ?? 0, ...(a.history ?? []).map((e) => Math.max(e.at, e.endAt ?? 0)));
-const drawnClockOf = (list, at) => Math.max(Math.floor(at / DRAWN_STEP_MS) * DRAWN_STEP_MS, ...list.map(lastEventOf));
-function paneDataOf(state) {
-  const { list } = state;
-  const at = Math.max(state.now, ...list.map((a) => a.startedAt), 0);
-  const view = deriveJob({ flow: state.flow, agents: list, job: state.job, tasks: state.tasks }) ?? crewView(list);
-  const ended = (a) => a.endedAt ?? a.startedAt;
-  const live = list.filter(isRunning).reverse();
-  const running = [...live.filter(isMain), ...live.filter((a) => !isMain(a))];
-  return {
-    list,
-    running,
-    finished: list.filter((a) => !isRunning(a)).sort((a, b) => ended(b) - ended(a)),
-    planned: plannedOf(state.flow, list),
-    sum: totals(list, at),
-    view,
-    at,
-    drawnAt: drawnClockOf(list, at),
-    panel: state.panel,
-    limit: state.limit,
-    attention: attentionOf(list, at),
-    types: state.types,
-    home: homeOf(state.crab, running),
-    chats: state.chats
-  };
-}
-const summaryOf = (sum) => `≈${fmtCost(sum.cost)} · ${fmtTokens(sum.tokens)} ${t().tokensWord} · ${fmtTime(sum.time)}`;
-const toneOf = (d) => {
-  if (d.running.length)
-    return "run";
-  if (!d.list.length)
-    return "idle";
-  return d.view && d.view.failed > 0 ? "warn" : "ok";
-};
-const countsOf$1 = (d) => {
-  const s = t();
-  const ended = d.list.length - d.running.length;
-  return [d.running.length && s.liveCount(d.running.length), ended && s.endedCount(ended), d.planned.length && s.plannedCount(d.planned.length)].filter(Boolean).join(" · ");
-};
-function headerOf(d) {
-  const s = t();
-  const share = shareOf(d.sum.cost, d.limit);
-  const view = d.view;
-  return {
-    eyebrow: s.pane,
-    counts: countsOf$1(d),
-    headline: view?.title || s.crew(d.list.length),
-    percent: view ? percentText(view) : "—",
-    tone: toneOf(d),
-    meter: view,
-    stats: [
-      { label: s.cost, value: `≈${fmtCost(d.sum.cost)}` },
-      { label: s.tokens, value: fmtTokens(d.sum.tokens) },
-      { label: s.time, value: fmtTime(d.sum.time) },
-      ...share === null ? [] : [{ label: s.limitTile, value: `≈${s.pct(shareNumber(share))}` }]
-    ],
-    home: d.home
-  };
-}
-const drawnHeaderOf = (d) => headerOf({ ...d, sum: totals(d.list, d.drawnAt) });
-const totalsLineOf = (data) => data.stats.map((stat) => `${stat.label} ${stat.value}`).join(" · ");
 
 const LANES_MAX = 8;
 const MIN_SPAN_MS = 30000;
@@ -5192,19 +5171,56 @@ function quietTree(ui, view) {
   }, ` · ${chat.title || s.untitled} · ${s.states[chat.state === "working" ? "working" : "idle"]}`))));
 }
 
-const HOME_LABEL = "← modz";
-function HomeButton(ui, onPress) {
-  const { Box, Button } = ui;
+function draftHead(ui, layout) {
+  const { Text } = ui;
+  const label = t().newTask;
+  if (!layout.isDesktop)
+    return h(Text, {
+      bold: true,
+      dimColor: true
+    }, label);
+  return picture(ui, { key: "draft-head", at: "draft-head", pic: { source: sectionSvg(layout.inner, { label }), alt: label, width: layout.inner, height: SECTION_SVG_H } });
+}
+function draftTree(ui, view, on) {
+  const { Box, Button, Input, Select, Text } = ui;
+  const s = t();
+  const chosen = chosenOf(view.types, view.draft);
+  const frame = view.layout.isDesktop ? { borderStyle: "round", paddingX: 2, paddingY: 1 } : {};
   return h(Box, {
-    key: "modz-home-row",
+    key: "draft",
+    flexDirection: "column",
+    rowGap: 1,
+    ...frame
+  }, draftHead(ui, view.layout), !chosen && h(Text, {
+    dimColor: true
+  }, s.noTypes), chosen && Select && h(Select, {
+    key: "dispatch-type",
+    label: s.agentLabel,
+    options: view.types.map((type) => ({ value: type.name, label: type.name })),
+    value: chosen.name,
+    onSelect: on.onPickType
+  }), chosen && h(Text, {
+    dimColor: true,
+    wrap: "truncate-end"
+  }, `${sourceWord(chosen.source)} · ${describe(chosen)}`), chosen && Input && h(Input, {
+    key: "dispatch-task",
+    label: s.taskLabel,
+    placeholder: s.taskHint,
+    value: "",
+    submitLabel: s.start,
+    autoFocus: true,
+    onSubmit: on.onStartTask
+  }), view.draft?.notice && h(Text, {
+    color: "warning"
+  }, view.draft.notice), h(Box, {
     flexDirection: "row"
   }, h(Button, {
-    key: "modz-home",
-    label: HOME_LABEL,
+    key: "dispatch-cancel",
     plain: true,
     dimColor: true,
-    onPress
-  }));
+    label: s.cancel,
+    onPress: on.onCancelTask
+  })));
 }
 
 const BRIEF_SHOWN = 280;
@@ -6048,6 +6064,103 @@ function plannedRow(ui, p, ctx) {
   }, [tier, plannedLine(p)].filter(Boolean).join(" · ")))));
 }
 
+const MIN_W = 240;
+const MAX_W = 900;
+const PX_PER_COL = 9;
+const ROWS_MAX = 12;
+const isDoneOpenIn = (shown, d) => shown.isDoneOpen ?? d.running.length === 0;
+function listTree(ui, view) {
+  const { Box, Text } = ui;
+  const { d, layout, on } = view;
+  const s = t();
+  const ctx = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.isDesktop ? layout.W : layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen, logOpen: d.panel.logOpen };
+  const isDoneOpen = isDoneOpenIn(d.panel, d);
+  const running = d.running.slice(0, ROWS_MAX);
+  const finished = isDoneOpen ? d.finished.slice(0, ROWS_MAX - running.length) : [];
+  const planned = d.planned.slice(0, ROWS_MAX - running.length - finished.length);
+  const more = d.running.length + (isDoneOpen ? d.finished.length : 0) + d.planned.length - running.length - finished.length - planned.length;
+  return h(Box, {
+    key: "list",
+    flexDirection: "column",
+    rowGap: 1
+  }, d.running.length > 0 && sectionHead(ui, layout, { id: "running", label: `${s.running} · ${d.running.length}` }), running.map((a) => agentRow(ui, a, ctx)), d.finished.length > 0 && sectionHead(ui, layout, { id: "finished", label: `${s.finished} · ${d.finished.length}`, toggle: { key: "done", isOpen: isDoneOpen, onPress: on.onDone } }), finished.map((a) => agentRow(ui, a, ctx)), d.planned.length > 0 && sectionHead(ui, layout, { id: "planned", label: `${s.planned} · ${d.planned.length}` }), planned.map((p) => plannedRow(ui, p, ctx)), more > 0 && h(Text, {
+    key: "more",
+    dimColor: true
+  }, s.moreAgents(more)));
+}
+function paneTree(ui, view) {
+  const { Box } = ui;
+  const { d, layout, on } = view;
+  const isDrafting = d.panel.draft?.isOpen === true;
+  const form = isDrafting && draftTree(ui, { draft: d.panel.draft, types: d.types, layout }, on);
+  if (d.list.length === 0 && d.planned.length === 0) {
+    return h(Box, {
+      flexDirection: "column",
+      rowGap: 2
+    }, isDrafting ? form : emptyTree(ui, view));
+  }
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, headTree(ui, d, layout), toolbarTree(ui, d, on), attentionTree(ui, view), form, d.panel.isCompact ? compactTree(ui, d, layout) : timelineTree(ui, view), !d.panel.isCompact && listTree(ui, view));
+}
+function agentsTree(ui, view) {
+  const { Box, Text } = ui;
+  const { d, layout, on } = view;
+  const listed = listedChats(d.chats);
+  const quiet = quietTree(ui, { chats: listed.chats, layout, isOpen: d.panel.isChatsOpen === true, onToggle: on.onChats });
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, waitingTree(ui, d.chats, layout), paneTree(ui, view), crewTree(ui, listed.chats, layout), quiet, listed.more > 0 && h(Text, {
+    key: "chats-more",
+    dimColor: true
+  }, t().chats.more(listed.more)));
+}
+const layoutOf = (isDesktop, columns) => {
+  if (!isDesktop)
+    return { isDesktop, W: 0, inner: columns, cols: columns };
+  const W = Math.max(MIN_W, Math.min(MAX_W, columns * PX_PER_COL));
+  return { isDesktop, W, inner: W - FRAME_PX, cols: columns - FRAME_COLS };
+};
+
+const PAGE = "agents";
+const BARE = ["onCompact", "onDone", "onTimeline", "onChats", "onNewTask", "onCancelTask"];
+const ONE = ["onToggle", "onLook", "onBrief", "onStop", "onLog", "onPickType", "onStartTask"];
+const SEND = "onSend";
+const isOf = (list, action) => list.includes(action);
+const sendOf = (arg) => {
+  try {
+    const pair = JSON.parse(arg ?? "");
+    if (!Array.isArray(pair) || pair.length !== 2)
+      return null;
+    const [id, text] = pair;
+    return typeof id === "string" && typeof text === "string" ? [id, text] : null;
+  } catch {
+    return null;
+  }
+};
+function runPageAct(on, action, arg) {
+  const pair = action === SEND ? sendOf(arg) : null;
+  if (isOf(BARE, action))
+    on[action]();
+  else if (isOf(ONE, action) && typeof arg === "string")
+    on[action](arg);
+  else if (pair !== null)
+    on.onSend(...pair);
+  else
+    return false;
+  return true;
+}
+function pageActOf(value) {
+  if (typeof value !== "object" || value === null)
+    return null;
+  const { page, action, arg } = value;
+  if (page !== PAGE || typeof action !== "string")
+    return null;
+  return typeof arg === "string" ? { action, arg } : { action };
+}
+
 const deliveryText = (result) => result.isDelivered ? t().delivered : t().notDelivered(result.reason ?? "");
 
 const agents$3 = atom({ plugin: "savvy-progress", key: "agents" }, []);
@@ -6060,9 +6173,6 @@ const limit$1 = atom({ plugin: "savvy-progress", key: "limit" }, null);
 const types$1 = atom({ plugin: "savvy-progress", key: "types" }, BUILTIN_TYPES);
 const crab$1 = atom({ plugin: "savvy-progress", key: "crab" }, restingCrab(0));
 const chats$2 = atom({ plugin: "savvy-progress", key: "chats" }, []);
-const MIN_W = 240;
-const MAX_W = 900;
-const PX_PER_COL = 9;
 const MIN_COLS = 24;
 const DEFAULT_COLS = 40;
 async function sendTo($, id, text) {
@@ -6154,56 +6264,6 @@ function handlersOf($, d) {
     ...draftHandlers($, { draft: d.panel.draft, types: d.types })
   };
 }
-const ROWS_MAX = 12;
-const isDoneOpenIn = (shown, d) => shown.isDoneOpen ?? d.running.length === 0;
-function listTree(ui, view) {
-  const { Box, Text } = ui;
-  const { d, layout, on } = view;
-  const s = t();
-  const ctx = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.isDesktop ? layout.W : layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen, logOpen: d.panel.logOpen };
-  const isDoneOpen = isDoneOpenIn(d.panel, d);
-  const running = d.running.slice(0, ROWS_MAX);
-  const finished = isDoneOpen ? d.finished.slice(0, ROWS_MAX - running.length) : [];
-  const planned = d.planned.slice(0, ROWS_MAX - running.length - finished.length);
-  const more = d.running.length + (isDoneOpen ? d.finished.length : 0) + d.planned.length - running.length - finished.length - planned.length;
-  return h(Box, {
-    key: "list",
-    flexDirection: "column",
-    rowGap: 1
-  }, d.running.length > 0 && sectionHead(ui, layout, { id: "running", label: `${s.running} · ${d.running.length}` }), running.map((a) => agentRow(ui, a, ctx)), d.finished.length > 0 && sectionHead(ui, layout, { id: "finished", label: `${s.finished} · ${d.finished.length}`, toggle: { key: "done", isOpen: isDoneOpen, onPress: on.onDone } }), finished.map((a) => agentRow(ui, a, ctx)), d.planned.length > 0 && sectionHead(ui, layout, { id: "planned", label: `${s.planned} · ${d.planned.length}` }), planned.map((p) => plannedRow(ui, p, ctx)), more > 0 && h(Text, {
-    key: "more",
-    dimColor: true
-  }, s.moreAgents(more)));
-}
-function withChats(ui, view) {
-  const { Box, Text } = ui;
-  const { d, layout, on } = view;
-  const listed = listedChats(d.chats);
-  const quiet = quietTree(ui, { chats: listed.chats, layout, isOpen: d.panel.isChatsOpen === true, onToggle: on.onChats });
-  return h(Box, {
-    flexDirection: "column",
-    rowGap: 1
-  }, waitingTree(ui, d.chats, layout), paneTree(ui, view), crewTree(ui, listed.chats, layout), quiet, listed.more > 0 && h(Text, {
-    key: "chats-more",
-    dimColor: true
-  }, t().chats.more(listed.more)));
-}
-function paneTree(ui, view) {
-  const { Box } = ui;
-  const { d, layout, on } = view;
-  const isDrafting = d.panel.draft?.isOpen === true;
-  const form = isDrafting && draftTree(ui, { draft: d.panel.draft, types: d.types, layout }, on);
-  if (d.list.length === 0 && d.planned.length === 0) {
-    return h(Box, {
-      flexDirection: "column",
-      rowGap: 2
-    }, isDrafting ? form : emptyTree(ui, view));
-  }
-  return h(Box, {
-    flexDirection: "column",
-    rowGap: 1
-  }, headTree(ui, d, layout), toolbarTree(ui, d, on), attentionTree(ui, view), form, d.panel.isCompact ? compactTree(ui, d, layout) : timelineTree(ui, view), !d.panel.isCompact && listTree(ui, view));
-}
 async function goHome($) {
   try {
     await $.state.set({ plugin: "savvy-progress", key: "home" }, { at: await $.clock.now() });
@@ -6211,17 +6271,11 @@ async function goHome($) {
     $.ui.log(`savvy-progress: home failed (${String(error)})`, { to: "debug" });
   }
 }
-const layoutOf = (isDesktop, columns) => {
-  if (!isDesktop)
-    return { isDesktop, W: 0, inner: columns, cols: columns };
-  const W = Math.max(MIN_W, Math.min(MAX_W, columns * PX_PER_COL));
-  return { isDesktop, W, inner: W - FRAME_PX, cols: columns - FRAME_COLS };
-};
 async function drawnPane($, ui, room) {
   const { Box } = ui;
   const home = (await $.state.get({ plugin: "modz", key: "isOn" })).value === true && HomeButton(ui, () => void goHome($));
   const d = await paneData($);
-  const body = withChats(ui, { d, layout: layoutOf(room.isDesktop, room.columns), on: handlersOf($, d) });
+  const body = agentsTree(ui, { d, layout: layoutOf(room.isDesktop, room.columns), on: handlersOf($, d) });
   return h(Box, {
     flexDirection: "column",
     rowGap: 1
@@ -6238,6 +6292,10 @@ async function reopenPane($) {
   if (!opened.isPlaced || (await $.state.get({ plugin: "modz", key: "isOn" })).value !== true)
     return;
   await $.state.set({ plugin: "savvy-progress", key: "shown" }, shownOf(HUB_PANE, await $.clock.now()));
+}
+async function handOn($, press) {
+  if (!runPageAct(handlersOf($, await paneData($)), press.action, press.arg))
+    $.ui.log(`savvy-progress: unknown hub press ${press.action}`, { to: "debug" });
 }
 function onPane(on) {
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
@@ -6256,6 +6314,14 @@ function onPane(on) {
     paneHeld.needsDraw = true;
     return pinned(e, await plainOf($, $.ui.resolve(e)));
   });
+  on("state.set", { plugin: "modz", key: "act" }, async ($, e, next) => {
+    const done = await next(e);
+    const press = pageActOf(e.value);
+    if (press !== null) {
+      $.clock.after(0, () => void handOn($, press).catch((cause) => $.ui.log(`savvy-progress: the hub's ${press.action} press failed: ${String(cause)}`, { to: "debug" })));
+    }
+    return done;
+  }).catch(($, e, next) => next(e));
 }
 
 const self = atom({ plugin: "savvy-progress", key: "self" }, null);

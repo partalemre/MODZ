@@ -262,7 +262,8 @@ declare module 'claude-code' {
       teamShown: { roomId: string } | null
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
-    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
+    // `drawn` lists the pages the hub draws in its own pane; `act` is a press on one of them (hooks/page-act.ts).
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number }; drawn: readonly string[]; act: { page: string; action: string; arg?: string; at: number } }
     // The plan's steps as plan-steps keeps them; the session strip draws them as its path.
     // The Usage mod's forecast for the plan window it watches: when it runs out at its recent pace, if before the reset.
     'hud-pro': { pace: { window: string; fullAt: number | null } | null }

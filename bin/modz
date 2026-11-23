@@ -86,6 +86,9 @@ cmd_build() {
   local targets=("$@")
   [[ $# -eq 0 ]] && targets=($(mod_names))
   command -v bunx >/dev/null || { echo "modz build: bunx not found (https://bun.sh)" >&2; return 1; }
+  # The hub draws filetree's page with filetree's rows Client, whose module must be a file of modz: kept a copy here,
+  # so bundle-match fails on a copy left behind.
+  cp "$MODS/filetree/hooks/rows.tsx" "$MODS/modz/hooks/rows.tsx"
   MODZ_BUILD="${targets[*]}" bunx --bun -p "rollup@$ROLLUP_VERSION" rollup -c "$ROOT/tools/build/rollup.config.mjs" --silent
   local hooks
   for m in "${targets[@]}"; do

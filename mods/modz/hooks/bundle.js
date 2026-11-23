@@ -99,14 +99,15 @@ function setHidden(layout, opts) {
 }
 const isHidden = (layout, pane) => layout.hidden.includes(pane);
 
-let current$6 = "en";
+let current$5 = "en";
 const langOf$6 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
 function setLang$6(value) {
-  current$6 = langOf$6(value);
-  return current$6;
+  current$5 = langOf$6(value);
+  return current$5;
 }
-const lang$1 = () => current$6;
-const pick$5 = (table) => table[current$6];
+const lang$1 = () => current$5;
+const pick$4 = (table) => table[current$5];
+const upper$3 = (text) => text.toLocaleUpperCase(current$5);
 
 const count$2 = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const PANES = {
@@ -146,7 +147,7 @@ const PANES = {
   }
 };
 function paneWords(pane) {
-  const table = pick$5(PANES);
+  const table = pick$4(PANES);
   return table[pane] ?? { title: pane, hint: "" };
 }
 const HUB = {
@@ -227,8 +228,8 @@ const HUB = {
     helpInstall: "Kurulu değil:"
   }
 };
-const hubWords = () => pick$5(HUB);
-const badgeWord = () => pick$5({ en: "Beta", tr: "Beta" });
+const hubWords = () => pick$4(HUB);
+const badgeWord = () => pick$4({ en: "Beta", tr: "Beta" });
 const CATALOG = {
   en: {
     groups: { look: "Look", safety: "Safety", meter: "Meter", flow: "Flow", other: "Other" },
@@ -291,7 +292,7 @@ const CATALOG = {
     noCommand: "komut yok"
   }
 };
-const catalogWords = () => pick$5(CATALOG);
+const catalogWords = () => pick$4(CATALOG);
 function placeLine(mod) {
   const words = catalogWords();
   const source = mod.upstream === null ? "modz" : words.from(mod.upstream);
@@ -558,7 +559,7 @@ const LINKS = {
     connectedCount: (n) => `${n} çalışıyor`
   }
 };
-const linkWords = () => pick$5(LINKS);
+const linkWords = () => pick$4(LINKS);
 const WEIGHT$1 = {
   en: {
     lead: (days) => `Plugins and skills you have not used in ${days} days. Claude reads each one's listing in every chat.`,
@@ -593,7 +594,7 @@ const WEIGHT$1 = {
     count: (n, tokens) => `${n} kullanılmıyor · ~${short$2(tokens, ",", " bin")} token`
   }
 };
-const weightWords = () => pick$5(WEIGHT$1);
+const weightWords = () => pick$4(WEIGHT$1);
 const UPDATES = {
   en: {
     lead: "New MODZ versions come from GitHub. Nothing new runs on your computer until you take it.",
@@ -630,7 +631,7 @@ const UPDATES = {
     cardCurrent: "güncel"
   }
 };
-const updateWords = () => pick$5(UPDATES);
+const updateWords = () => pick$4(UPDATES);
 
 const WAIT_FRESH_MS = 24 * 60 * 60 * 1000;
 const ERROR_MAX = 80;
@@ -882,7 +883,7 @@ function upstreamOf(name, manifest) {
 function infoOf(facts) {
   const { name, entry, manifest, problem } = facts;
   const meta = META$2[name];
-  const summary = meta?.summary === undefined ? undefined : pick$5(meta.summary);
+  const summary = meta?.summary === undefined ? undefined : pick$4(meta.summary);
   return {
     name,
     version: text$2(manifest?.version) ?? text$2(entry.version) ?? null,
@@ -1070,7 +1071,7 @@ async function setAutoUpdate(disk, isOn) {
   return true;
 }
 
-function stableDrawings$6() {
+function stableDrawings() {
   const kept = new Map;
   return {
     reset: () => kept.clear(),
@@ -1088,8 +1089,8 @@ function stableDrawings$6() {
 
 const TITLE$4 = "modz";
 const STAGE$2 = { plugin: "modz", key: "stage" };
-const hubDrawings = stableDrawings$6();
-const catalogDrawings = stableDrawings$6();
+const hubDrawings = stableDrawings();
+const catalogDrawings = stableDrawings();
 const hubKept = { isHeld: false };
 const closeQuietly = ($, id) => $.ui.close({ id }).catch((cause) => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: "debug" }));
 async function show($, pane, isFocused = true) {
@@ -1609,7 +1610,7 @@ const WORDS$5 = {
 };
 const line$2 = (label, probe) => `${probe.isOk ? "✓" : "✗"} ${label}: ${probe.said}`;
 function checkText(facts) {
-  const w = pick$5(WORDS$5);
+  const w = pick$4(WORDS$5);
   const probes = [line$2(w.version, facts.version), line$2(w.surfaces, facts.surfaces), line$2(w.cost, facts.cost), line$2(w.model, facts.model)];
   const isAllOk = [facts.version, facts.surfaces, facts.cost, facts.model].every((probe) => probe.isOk);
   return [w.title, "", ...probes, `  ${w.system}: ${facts.system}`, `  ${w.mods}: ${facts.mods.join(", ") || w.none}`, "", isAllOk ? w.allOk : w.someFailed].join(`
@@ -1623,7 +1624,7 @@ async function modelProbe($) {
   return { isOk: false, said: reply.reason === "api-error" ? `${reply.reason} ${reply.status ?? ""} ${reply.error ?? ""}`.trim() : reply.reason };
 }
 async function checkFacts($, mods) {
-  const w = pick$5(WORDS$5);
+  const w = pick$4(WORDS$5);
   const [version, surfaces, cost, model, os] = await Promise.all([
     $.session.version().then((v) => ({ isOk: true, said: v.version }), failed),
     $.session.surfaces().then((list) => list.length > 0 ? { isOk: true, said: list.join(", ") } : { isOk: false, said: w.noSurface }, failed),
@@ -1972,34 +1973,37 @@ function textWidth$1(text, size, weight = WEIGHT_LOW) {
   return Math.max(0, (advance + chars.length * trackingAt(size)) * size);
 }
 
-const STAGGER_MS$6 = 45;
-const EASE$6 = "cubic-bezier(.2,.8,.2,1)";
-const RULES$6 = {
-  "m-in": `.m-in{animation:m-in .42s ${EASE$6} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
-  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$6} both}@keyframes m-fade{from{opacity:0}}`,
-  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$6} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
-  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$6} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
+const STAGGER_MS = 45;
+const EASE = "cubic-bezier(.2,.8,.2,1)";
+const SHEEN = "#A39E93";
+const RULES = {
+  "m-in": `.m-in{animation:m-in .42s ${EASE} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
+  "m-fade": `.m-fade{animation:m-fade .5s ${EASE} both}@keyframes m-fade{from{opacity:0}}`,
+  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
+  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
   "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
-  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$6} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
-  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$6} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
+  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
+  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
   "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
   "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
-  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$6}}svg:hover .m-wash{opacity:.12}`,
-  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$6}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
+  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE}}svg:hover .m-wash{opacity:.12}`,
+  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
 };
-const REDUCED$8 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
-function motionCss$6(body) {
-  const used = Object.keys(RULES$6).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
-  return used.length === 0 ? "" : `${used.map((name) => RULES$6[name]).join("")}${REDUCED$8}`;
+const REDUCED$2 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+function motionCss(body) {
+  const used = Object.keys(RULES).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
+  return used.length === 0 ? "" : `${used.map((name) => RULES[name]).join("")}${REDUCED$2}`;
 }
-const MOTION_CSS$1 = Object.values(RULES$6).join("");
-const isEntering$6 = (cue) => cue.phase === "enter";
-function entering$6(body, cue, kind = "in") {
-  if (!isEntering$6(cue))
+const MOTION_CSS$1 = Object.values(RULES).join("");
+const isEntering = (cue) => cue.phase === "enter";
+function entering(body, cue, kind = "in") {
+  if (!isEntering(cue))
     return body;
-  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$6}ms">${body}</g>`;
+  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS}ms">${body}</g>`;
 }
-const delayOf = (cue, step) => `animation-delay:${cue.order * STAGGER_MS$6 + step}ms`;
+const delayOf = (cue, step) => `animation-delay:${cue.order * STAGGER_MS + step}ms`;
+const FLASH = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN}" fill-opacity=".22" class="m-flash"/>`;
+const WASH = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
 
 const DARK$5 = {
   sheet: "#191917",
@@ -2067,15 +2071,15 @@ const TYPE_CSS = [
   ".f-line{fill:var(--line)}.f-strong{fill:var(--strong)}.f-mid{fill:var(--mid)}"
 ].join("");
 const MOTION_CSS = ".breathe{animation:breathe 1.8s ease-in-out infinite}@keyframes breathe{50%{opacity:.45}}";
-const REDUCED$7 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+const REDUCED$1 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
 function styleOf() {
   const dark = varsOf$2(DARK$5);
-  return `<style>svg{${varsOf$2(LIGHT$5)}}svg.t-dark{${dark}}@media (prefers-color-scheme: dark){svg.t-auto{${dark}}}${TYPE_CSS}${roleClasses()}${MOTION_CSS}${REDUCED$7}</style>`;
+  return `<style>svg{${varsOf$2(LIGHT$5)}}svg.t-dark{${dark}}@media (prefers-color-scheme: dark){svg.t-auto{${dark}}}${TYPE_CSS}${roleClasses()}${MOTION_CSS}${REDUCED$1}</style>`;
 }
-const SCHEME$7 = { light: "light", dark: "dark", auto: "light dark" };
+const SCHEME$2 = { light: "light", dark: "dark", auto: "light dark" };
 function svgDoc$5(doc) {
   const width = Math.round(doc.width);
-  const scheme = `:root{color-scheme:${SCHEME$7[doc.theme]}}`;
+  const scheme = `:root{color-scheme:${SCHEME$2[doc.theme]}}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" class="t-${doc.theme}" width="${width}" height="${doc.height}" viewBox="0 0 ${width} ${doc.height}">${styleOf()}<style>${scheme}${doc.css ?? ""}</style>${doc.body}</svg>`;
 }
 function themeOf(value) {
@@ -2085,7 +2089,7 @@ function themeOf(value) {
   return name.includes("dark") ? "dark" : "auto";
 }
 
-const settled = (spec) => spec.cue === undefined ? svgDoc$5(spec) : svgDoc$5({ width: spec.width, height: spec.height, theme: spec.theme, body: entering$6(spec.body, spec.cue), css: MOTION_CSS$1 });
+const settled = (spec) => spec.cue === undefined ? svgDoc$5(spec) : svgDoc$5({ width: spec.width, height: spec.height, theme: spec.theme, body: entering(spec.body, spec.cue), css: MOTION_CSS$1 });
 const HEAD$1 = 44;
 const GROUP = 28;
 const ROW$4 = 62;
@@ -2272,7 +2276,7 @@ const BADGE_GAP = 6;
 const HUB_CSS = [
   "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}"
 ].join("");
-const doc = (spec) => svgDoc$5({ ...spec, css: motionCss$6(spec.body) || HUB_CSS });
+const doc = (spec) => svgDoc$5({ ...spec, css: motionCss(spec.body) || HUB_CSS });
 const LIVE_DOT$2 = { r: 3, gap: 9 };
 function valueOf(card) {
   if (card === null || card.detail === "")
@@ -2286,19 +2290,19 @@ function glyphInk(card) {
   return role === null ? "f-mid" : `fg-${role}`;
 }
 function hubHeadSvg(spec) {
-  const isDropping = isEntering$6(spec.cue);
+  const isDropping = isEntering(spec.cue);
   const cellAttrs = isDropping ? (at) => ` class="m-px" style="${delayOf(spec.cue, at.index * LETTER_MS + at.row * ROW_MS + at.col * COLUMN_MS)}"` : undefined;
   const z = sizesOf(spec.width);
   const mark = pixelWord("modz", { x: z.inset, y: (z.head - 7 * z.mark.pitch) / 2, ...z.mark, className: "fg-edit", cellAttrs });
   const meta = `<text x="${spec.width - z.inset}" y="${z.head / 2 + 4}" text-anchor="end" style="font-size:${z.meta}px" class="num lo">${esc$2(spec.meta)}</text>`;
-  const body = mark.svg + entering$6(meta, { ...spec.cue, order: spec.cue.order + 4 }, "fade");
-  const css = HUB_CSS + motionCss$6(body);
+  const body = mark.svg + entering(meta, { ...spec.cue, order: spec.cue.order + 4 }, "fade");
+  const css = HUB_CSS + motionCss(body);
   return { source: svgDoc$5({ width: spec.width, height: z.head, theme: spec.theme, body, css }), alt: `modz · ${spec.meta}`, height: z.head };
 }
 function sectionSvg$1(spec) {
   const z = sizesOf(spec.width);
   const body = `<text x="${z.inset}" y="${z.section - 8}" style="font-size:${z.label}px;font-weight:600" class="lo">${esc$2(spec.label)}</text>`;
-  return { source: doc({ width: spec.width, height: z.section, theme: spec.theme, body: entering$6(body, spec.cue, "fade") }), alt: spec.label, height: z.section };
+  return { source: doc({ width: spec.width, height: z.section, theme: spec.theme, body: entering(body, spec.cue, "fade") }), alt: spec.label, height: z.section };
 }
 function rowIcon(row, z) {
   const glyph = pixelGlyph(row.entry.icon, { x: z.inset, y: (z.row - z.icon) / 2, box: z.icon, ...z.glyph, className: glyphInk(row.card) });
@@ -2357,7 +2361,7 @@ function hubRowSvg(spec) {
     valueSvg(value, { from: title.end + VALUE_GAP + (value?.isLive ? LIVE_DOT$2.gap + LIVE_DOT$2.r * 2 : 0), to: width - z.inset, z })
   ].join("");
   const alt = `${row.entry.title}${row.entry.badge === null ? "" : ` (${row.entry.badge})`}${value === null ? "" : `: ${value.text}`}`;
-  return { source: doc({ width, height: z.row, theme: spec.theme, body: entering$6(body, spec.cue) }), alt, height: z.row };
+  return { source: doc({ width, height: z.row, theme: spec.theme, body: entering(body, spec.cue) }), alt, height: z.row };
 }
 function hubLineSvg(spec) {
   const z = sizesOf(spec.width);
@@ -2370,7 +2374,7 @@ function hubLineSvg(spec) {
     `<text x="${z.textX}" y="${y}" style="font-size:${z.value.size}px" class="mid">${esc$2(label)}</text>`,
     value === "" ? "" : `<text x="${right}" y="${y}" text-anchor="end" style="font-size:${z.label}px;font-variant-numeric:tabular-nums" class="lo">${esc$2(value)}</text>`
   ].join("");
-  return { source: doc({ width: spec.width, height: z.line, theme: spec.theme, body: entering$6(body, spec.cue) }), alt: [spec.line.label, value].filter(Boolean).join(": "), height: z.line };
+  return { source: doc({ width: spec.width, height: z.line, theme: spec.theme, body: entering(body, spec.cue) }), alt: [spec.line.label, value].filter(Boolean).join(": "), height: z.line };
 }
 
 const DESKTOP_FOOT$1 = { paddingX: 2, marginTop: 1 };
@@ -2414,15 +2418,15 @@ function firstRunRow(ui, view, pen) {
   }, words.firstRun)), pen.press({ box: "row-add-mods", key: "add-mods", drawing: built, pane: MODS_PANE }));
 }
 
-const BLANK$3 = "ㅤ";
-const CELL_PX$3 = 11.9;
-const BUTTON_PX$4 = 28;
-const RUN_SPAN$3 = 2;
-const LINE_SPAN$3 = "400%";
-function PressCover$3(ui, o) {
+const BLANK = "ㅤ";
+const CELL_PX = 11.9;
+const BUTTON_PX$1 = 28;
+const RUN_SPAN = 2;
+const LINE_SPAN = "400%";
+function PressCover(ui, o) {
   const { Box, Button } = ui;
-  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX$4 * 2)));
-  const label = BLANK$3.repeat(Math.ceil(o.width * RUN_SPAN$3 / CELL_PX$3));
+  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX$1 * 2)));
+  const label = BLANK.repeat(Math.ceil(o.width * RUN_SPAN / CELL_PX));
   const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey };
   return h(Box, {
     position: "absolute",
@@ -2436,7 +2440,7 @@ function PressCover$3(ui, o) {
   }, Array.from({ length: lines }, (_, i) => h(Box, {
     key: `${o.key}~line${i}`,
     flexDirection: "row",
-    width: LINE_SPAN$3,
+    width: LINE_SPAN,
     marginLeft: -1,
     flexShrink: 0
   }, h(Button, {
@@ -2447,32 +2451,32 @@ function PressCover$3(ui, o) {
     onPress: o.onPress
   }))));
 }
-const STILL$3 = "<style>*{animation:none!important;transition:none!important}</style>";
-const stillSource$3 = (source) => source.replace(/<\/svg>\s*$/, `${STILL$3}</svg>`);
-function stillSvg$3(ui, drawing) {
+const STILL = "<style>*{animation:none!important;transition:none!important}</style>";
+const stillSource = (source) => source.replace(/<\/svg>\s*$/, `${STILL}</svg>`);
+function stillSvg(ui, drawing) {
   if (drawing.type !== "Svg")
     return drawing;
   const { Svg } = ui;
   const { key, source, alt, width, height } = drawing.props;
   return h(Svg, {
     key,
-    source: stillSource$3(source),
+    source: stillSource(source),
     alt,
     width,
     height
   });
 }
-const FALLBACK_PX$3 = 52;
-const FALLBACK_WIDTH_PX$3 = 360;
-function PressRow$3(ui, o) {
+const FALLBACK_PX = 52;
+const FALLBACK_WIDTH_PX = 360;
+function PressRow(ui, o) {
   const { Box } = ui;
   const props = o.drawing.type === "Svg" ? o.drawing.props : {};
-  const width = props.width ?? FALLBACK_WIDTH_PX$3;
-  const height = props.height ?? FALLBACK_PX$3;
+  const width = props.width ?? FALLBACK_WIDTH_PX;
+  const height = props.height ?? FALLBACK_PX;
   return h(Box, {
     key: o.box,
     alignSelf: "flex-start"
-  }, stillSvg$3(ui, o.drawing), PressCover$3(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
+  }, stillSvg(ui, o.drawing), PressCover(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
 }
 
 const linesOf = (item) => item.more > 0 ? [...item.lines, { label: hubWords().more(item.more), value: "" }] : item.lines;
@@ -2673,7 +2677,7 @@ function pressRow(ui, view, opts) {
     width,
     height: drawing.height
   });
-  return PressRow$3(ui, { box: opts.box, key: opts.key, drawing: svg, onPress: () => view.actions.onOpen(pane) });
+  return PressRow(ui, { box: opts.box, key: opts.key, drawing: svg, onPress: () => view.actions.onOpen(pane) });
 }
 function desktopGroup(ui, view, opts) {
   const { Box } = ui;
@@ -3234,13 +3238,13 @@ function icon$1(name, { x, y, size }) {
 }
 const groupLabel$1 = (text, { x, y, anchor = "start" }) => `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="12" font-weight="600" class="lo">${escape$2(text)}</text>`;
 
-let current$5 = "en";
+let current$4 = "en";
 const langOf$5 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
 function setLang$5(value) {
-  current$5 = langOf$5(value);
-  return current$5;
+  current$4 = langOf$5(value);
+  return current$4;
 }
-const pick$4 = (table) => table[current$5];
+const pick$3 = (table) => table[current$4];
 
 const count$1 = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const files = (n) => count$1(n, "file", "files");
@@ -3412,7 +3416,7 @@ const TR$5 = {
   hubCommit: "yeni sürüm kaydedildi · hepsi kayıtlı",
   hubClean: "hepsi kayıtlı"
 };
-const words$4 = () => pick$4({ en: EN$5, tr: TR$5 });
+const words$4 = () => pick$3({ en: EN$5, tr: TR$5 });
 
 const PAD$4 = 2;
 const GAP$3 = 12;
@@ -3811,117 +3815,70 @@ function rowCost(turn, id) {
   return c ? `${costText$2(c, true)} ${words$4().tokUnit}` : "";
 }
 
-const FILL$6 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
-const DONE$5 = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
-const HAS_DONE$5 = /\bdata-m-done\b/;
-const WIDTH$8 = /\swidth="([\d.]+)"/;
-const CLASS$5 = /\sclass="([^"]*)"/;
-const STYLE$5 = /\sstyle="([^"]*)"/;
-const MIN_RATIO_STEP$5 = 0.02;
-const RATIO_DIGITS$5 = 3;
-const widthOf$6 = (tag) => Number(WIDTH$8.exec(tag)?.[1] ?? 0);
-function withClass$5(tag, name, extra = "") {
-  const tagged = CLASS$5.test(tag) ? tag.replace(CLASS$5, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
+const FILL$1 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
+const DONE = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
+const HAS_DONE = /\bdata-m-done\b/;
+const WIDTH$3 = /\swidth="([\d.]+)"/;
+const CLASS = /\sclass="([^"]*)"/;
+const STYLE = /\sstyle="([^"]*)"/;
+const MIN_RATIO_STEP = 0.02;
+const RATIO_DIGITS = 3;
+const widthOf$1 = (tag) => Number(WIDTH$3.exec(tag)?.[1] ?? 0);
+function withClass(tag, name, extra = "") {
+  const tagged = CLASS.test(tag) ? tag.replace(CLASS, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
   return tagged.replace(/\s*\/?>$/, `${extra}$&`);
 }
-function slideFills$5(before, now) {
-  const old = before.match(FILL$6) ?? [];
-  if (old.length !== (now.match(FILL$6) ?? []).length)
+function slideFills(before, now) {
+  const old = before.match(FILL$1) ?? [];
+  if (old.length !== (now.match(FILL$1) ?? []).length)
     return now;
   let index = 0;
-  return now.replace(FILL$6, (tag) => {
+  return now.replace(FILL$1, (tag) => {
     const was = old[index++];
-    const from = was === undefined ? 0 : widthOf$6(was);
-    const to = widthOf$6(tag);
-    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP$5)
+    const from = was === undefined ? 0 : widthOf$1(was);
+    const to = widthOf$1(tag);
+    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP)
       return tag;
-    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS$5)}`;
-    const styled = STYLE$5.test(tag) ? tag.replace(STYLE$5, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
-    return withClass$5(styled, "m-from");
+    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS)}`;
+    const styled = STYLE.test(tag) ? tag.replace(STYLE, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
+    return withClass(styled, "m-from");
   });
 }
-function drawDone$5(before, now) {
-  if (HAS_DONE$5.test(before))
+function drawDone(before, now) {
+  if (HAS_DONE.test(before))
     return now;
-  return now.replace(DONE$5, (tag) => withClass$5(tag, "m-draw", ' pathLength="1"'));
+  return now.replace(DONE, (tag) => withClass(tag, "m-draw", ' pathLength="1"'));
 }
-function markChanges$5(before, now) {
-  return drawDone$5(before, slideFills$5(before, now));
-}
-
-const STAGGER_MS$5 = 45;
-const EASE$5 = "cubic-bezier(.2,.8,.2,1)";
-const SHEEN$5 = "#A39E93";
-const RULES$5 = {
-  "m-in": `.m-in{animation:m-in .42s ${EASE$5} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
-  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$5} both}@keyframes m-fade{from{opacity:0}}`,
-  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$5} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
-  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$5} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
-  "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
-  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$5} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
-  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$5} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
-  "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
-  "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
-  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$5}}svg:hover .m-wash{opacity:.12}`,
-  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$5}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
-};
-const REDUCED$6 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
-function motionCss$5(body) {
-  const used = Object.keys(RULES$5).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
-  return used.length === 0 ? "" : `${used.map((name) => RULES$5[name]).join("")}${REDUCED$6}`;
-}
-Object.values(RULES$5).join("");
-const isEntering$5 = (cue) => cue.phase === "enter";
-function entering$5(body, cue, kind = "in") {
-  if (!isEntering$5(cue))
-    return body;
-  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$5}ms">${body}</g>`;
-}
-const FLASH$5 = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN$5}" fill-opacity=".22" class="m-flash"/>`;
-const WASH$5 = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
-
-function stableDrawings$5() {
-  const kept = new Map;
-  return {
-    reset: () => kept.clear(),
-    draw: (key, what, build) => {
-      const signature = typeof what === "string" ? what : JSON.stringify(what);
-      const before = kept.get(key);
-      if (before !== undefined && before.what === signature)
-        return before.drawing;
-      const drawing = build(before === undefined ? "enter" : "change");
-      kept.set(key, { what: signature, drawing });
-      return drawing;
-    }
-  };
+function markChanges(before, now) {
+  return drawDone(before, slideFills(before, now));
 }
 
-const TAG_WIDTH$5 = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
-const SVG$5 = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
-const SCHEME$6 = "<style>:root{color-scheme:light dark}</style>";
-const SAYS_SCHEME$5 = /(^|[^-\w])color-scheme\s*:/;
-const PASS_MS$5 = 120;
-const MAX_ORDER$5 = 12;
-const LIVE_MS$5 = 30000;
-function animate$5(source, spec) {
-  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges$5(spec.before, source) : source;
-  const parts = SVG$5.exec(moved);
+const TAG_WIDTH = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
+const SVG = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
+const SCHEME$1 = "<style>:root{color-scheme:light dark}</style>";
+const SAYS_SCHEME = /(^|[^-\w])color-scheme\s*:/;
+const PASS_MS = 120;
+const MAX_ORDER = 12;
+const LIVE_MS = 30000;
+function animate(source, spec) {
+  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges(spec.before, source) : source;
+  const parts = SVG.exec(moved);
   if (parts === null)
     return source;
   const [, open, inner = "", close] = parts;
-  const scheme = SAYS_SCHEME$5.test(inner) ? "" : SCHEME$6;
-  const lit = `${spec.isRow === true ? WASH$5 : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH$5 : ""}${inner}`;
-  const body = entering$5(lit, spec.cue);
-  const css = motionCss$5(body);
+  const scheme = SAYS_SCHEME.test(inner) ? "" : SCHEME$1;
+  const lit = `${spec.isRow === true ? WASH : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH : ""}${inner}`;
+  const body = entering(lit, spec.cue);
+  const css = motionCss(body);
   return `${open}${scheme}${css === "" ? "" : `<style>${css}</style>`}${body}${close}`;
 }
-function paneMotion$5() {
-  const drawings = stableDrawings$5();
+function paneMotion() {
+  const drawings = stableDrawings();
   const shown = new Map;
   const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 };
   const begin = () => {
     const now = Date.now();
-    if (now - pass.at > PASS_MS$5)
+    if (now - pass.at > PASS_MS)
       pass.entered = 0;
     pass.at = now;
   };
@@ -3933,16 +3890,16 @@ function paneMotion$5() {
     pic: (key, pic, opts = {}) => {
       begin();
       const what = `${opts.isRow === true ? "row:" : ""}${pic.source}`;
-      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH$5.exec(pic.source)?.[1]), source: pic.source };
+      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH.exec(pic.source)?.[1]), source: pic.source };
       const source = drawings.draw(key, what, (built) => {
-        const order = built === "enter" ? Math.min(MAX_ORDER$5, pass.entered++) : 0;
+        const order = built === "enter" ? Math.min(MAX_ORDER, pass.entered++) : 0;
         const before = shown.get(key);
         const isQuiet = before !== undefined && (before.shows === now.shows || before.width !== now.width);
         const phase = built === "change" && isQuiet ? "still" : built;
         const lastChange = before?.changedAt ?? Number.NEGATIVE_INFINITY;
-        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS$5;
+        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS;
         shown.set(key, { ...now, changedAt: phase === "change" ? pass.at : lastChange });
-        return animate$5(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
+        return animate(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
       });
       return { ...pic, source, isInteractive: true };
     }
@@ -4354,16 +4311,16 @@ function desktopRight(ctx, r, role) {
   const meta = metaOf$2(ctx, r);
   return { must, may: [...cost ? [{ t: ` ${cost}`, c: pal.mid }] : [], ...meta ? [{ t: ` ${meta}`, c: pal.lo }] : []] };
 }
-const widthOf$5 = (segs) => measure$4(segs.map((x) => x.t).join(""), NAME_PX);
+const widthOf = (segs) => measure$4(segs.map((x) => x.t).join(""), NAME_PX);
 function fitRow(ctx, r, right, isBold) {
   const room = (ctx.width - (r.depth + 1) * LEVEL_CELLS) * PX_PER_COL$1;
   const whole = measure$4(r.node.name, NAME_PX, isBold);
-  const must = room - widthOf$5(right.must) < MIN_NAME_PX ? [] : right.must;
+  const must = room - widthOf(right.must) < MIN_NAME_PX ? [] : right.must;
   const kept = [...must];
   for (const seg of right.may)
-    if (whole + widthOf$5([...kept, seg]) + RIGHT_GAP_PX <= room)
+    if (whole + widthOf([...kept, seg]) + RIGHT_GAP_PX <= room)
       kept.push(seg);
-  return { name: fitMiddle(r.node.name, Math.max(MIN_NAME_PX, room - widthOf$5(kept) - RIGHT_GAP_PX), { size: NAME_PX, isBold }), right: kept };
+  return { name: fitMiddle(r.node.name, Math.max(MIN_NAME_PX, room - widthOf(kept) - RIGHT_GAP_PX), { size: NAME_PX, isBold }), right: kept };
 }
 function nameColor(ctx, id, isHidden) {
   const { pal } = ctx;
@@ -4391,6 +4348,706 @@ function desktopRow(ctx, r) {
 const BRANCH_ROW = "#branch";
 
 const NO_TURN$1 = { isRunning: false, hasRun: false, touches: [], sha: "", committed: 0, costs: {} };
+
+const textOf$1 = (entry, lang) => entry[lang === "tr" ? 1 : 0];
+function fill(template, x = "") {
+  const named = x.trim();
+  return template.replace(/\[([^\]]*)\]/g, (_, part) => named ? part : "").replace(/\{x\}/g, named);
+}
+const READ$1 = ["Reading a file[: {x}]", "Bir dosyayı okuyor[: {x}]", "file"];
+const SEARCH = ["Searching inside files[ for “{x}”]", "Dosyaların içinde[ “{x}”] arıyor", "arg"];
+const TESTS = ["Running the tests", "Testleri çalıştırıyor"];
+const BUILD = ["Building the project", "Projeyi derliyor (çalışır hale getiriyor)"];
+const INSTALL = ["Installing the packages the project needs", "Projenin ihtiyaç duyduğu paketleri kuruyor"];
+const LINT = ["Checking the code against the style rules", "Kodun yazım kurallarına uyduğunu denetliyor"];
+const TYPES$1 = ["Checking the code for type errors", "Kodda tip hatası var mı diye denetliyor"];
+const FORMAT = ["Tidying the code’s layout", "Kodun biçimini düzeltiyor"];
+const SCRIPT = ["Running a script[: {x}]", "Bir betik (küçük program) çalıştırıyor[: {x}]", "first"];
+const SHAPE = ["Tidying a command’s output", "Bir komutun çıktısını düzenliyor"];
+const PROCESSES = ["Looking at the running programs", "Çalışan programlara bakıyor"];
+const DATABASE = ["Querying the database", "Veritabanını sorguluyor"];
+const ARCHIVE = ["Working with an archive file", "Arşiv (sıkıştırılmış) dosyasıyla çalışıyor"];
+const SERVICE = ["Working with the {x} service", "{x} servisiyle çalışıyor"];
+const COMMANDS$1 = {
+  cat: READ$1,
+  head: READ$1,
+  tail: READ$1,
+  less: READ$1,
+  more: READ$1,
+  bat: READ$1,
+  grep: SEARCH,
+  rg: SEARCH,
+  ag: SEARCH,
+  ack: SEARCH,
+  ls: ["Listing the files in a folder", "Bir klasördeki dosyaları listeliyor"],
+  tree: ["Listing the files in a folder", "Bir klasördeki dosyaları listeliyor"],
+  find: ["Looking for files", "Dosya arıyor"],
+  fd: ["Looking for files", "Dosya arıyor"],
+  wc: ["Counting lines", "Satırları sayıyor"],
+  diff: ["Comparing two files", "İki dosyayı karşılaştırıyor"],
+  sed: ["Reading part of a file[: {x}]", "Bir dosyanın bir bölümünü okuyor[: {x}]", "file"],
+  awk: SHAPE,
+  sort: SHAPE,
+  uniq: SHAPE,
+  cut: SHAPE,
+  tr: SHAPE,
+  xargs: SHAPE,
+  tee: SHAPE,
+  column: SHAPE,
+  jq: ["Reading JSON data", "JSON verisini okuyor"],
+  cd: ["Moving to another folder", "Başka bir klasöre geçiyor"],
+  pwd: ["Checking which folder it is in", "Hangi klasörde olduğuna bakıyor"],
+  mkdir: ["Making a new folder[: {x}]", "Yeni bir klasör oluşturuyor[: {x}]", "file"],
+  touch: ["Making an empty file[: {x}]", "Boş bir dosya oluşturuyor[: {x}]", "file"],
+  cp: ["Copying files", "Dosya kopyalıyor"],
+  mv: ["Moving or renaming files", "Dosya taşıyor ya da adını değiştiriyor"],
+  rm: ["Deleting a file[: {x}]", "Dosya siliyor[: {x}]", "file"],
+  rmdir: ["Deleting an empty folder", "Boş bir klasörü siliyor"],
+  ln: ["Making a shortcut to a file", "Bir dosyaya kısayol oluşturuyor"],
+  chmod: ["Changing who may use a file", "Bir dosyanın izinlerini değiştiriyor"],
+  chown: ["Changing who owns a file", "Bir dosyanın sahibini değiştiriyor"],
+  echo: ["Printing a line of text[: “{x}”]", "Ekrana bir yazı yazdırıyor[: “{x}”]", "arg"],
+  printf: ["Printing a line of text[: “{x}”]", "Ekrana bir yazı yazdırıyor[: “{x}”]", "arg"],
+  curl: ["Fetching data from the internet[: {x}]", "İnternetten veri alıyor[: {x}]", "host"],
+  wget: ["Downloading from the internet[: {x}]", "İnternetten indiriyor[: {x}]", "host"],
+  kill: ["Stopping a running program", "Çalışan bir programı durduruyor"],
+  pkill: ["Stopping a running program", "Çalışan bir programı durduruyor"],
+  killall: ["Stopping a running program", "Çalışan bir programı durduruyor"],
+  ps: PROCESSES,
+  top: PROCESSES,
+  lsof: PROCESSES,
+  pgrep: PROCESSES,
+  sleep: ["Waiting a moment", "Kısa bir süre bekliyor"],
+  open: ["Opening a file or an app", "Bir dosyayı ya da uygulamayı açıyor"],
+  which: ["Checking whether a tool is installed", "Bir aracın kurulu olup olmadığına bakıyor"],
+  type: ["Checking whether a tool is installed", "Bir aracın kurulu olup olmadığına bakıyor"],
+  env: ["Looking at the environment settings", "Ortam ayarlarına bakıyor"],
+  printenv: ["Looking at the environment settings", "Ortam ayarlarına bakıyor"],
+  date: ["Checking the date and time", "Tarihe ve saate bakıyor"],
+  tar: ARCHIVE,
+  zip: ARCHIVE,
+  unzip: ARCHIVE,
+  gzip: ARCHIVE,
+  gunzip: ARCHIVE,
+  ssh: ["Connecting to another computer", "Başka bir bilgisayara bağlanıyor"],
+  scp: ["Copying files to another computer", "Başka bir bilgisayara dosya kopyalıyor"],
+  rsync: ["Copying files, only what changed", "Dosyaları kopyalıyor (yalnızca değişenleri)"],
+  sqlite3: DATABASE,
+  psql: DATABASE,
+  mysql: DATABASE,
+  du: ["Checking how much disk space is used", "Ne kadar disk alanı kullanıldığına bakıyor"],
+  df: ["Checking how much disk space is free", "Ne kadar boş disk alanı olduğuna bakıyor"],
+  stat: ["Looking at a file’s details", "Bir dosyanın bilgilerine bakıyor"],
+  file: ["Looking at a file’s details", "Bir dosyanın bilgilerine bakıyor"],
+  shasum: ["Taking a file’s fingerprint", "Bir dosyanın parmak izini (özetini) alıyor"],
+  md5: ["Taking a file’s fingerprint", "Bir dosyanın parmak izini (özetini) alıyor"],
+  screencapture: ["Taking a screenshot", "Ekran görüntüsü alıyor"],
+  ffmpeg: ["Processing a video or sound file", "Bir video ya da ses dosyasını işliyor"],
+  osascript: ["Driving a Mac app with a script", "Bir Mac uygulamasını betikle yönetiyor"],
+  tsc: TYPES$1,
+  eslint: LINT,
+  biome: LINT,
+  ruff: LINT,
+  prettier: FORMAT,
+  jest: TESTS,
+  vitest: TESTS,
+  pytest: TESTS,
+  mocha: TESTS,
+  playwright: TESTS,
+  python: SCRIPT,
+  python3: SCRIPT,
+  node: SCRIPT,
+  deno: SCRIPT,
+  ruby: SCRIPT,
+  bash: SCRIPT,
+  sh: SCRIPT,
+  zsh: SCRIPT,
+  swift: SCRIPT,
+  pip: INSTALL,
+  pip3: INSTALL,
+  uv: INSTALL,
+  poetry: INSTALL,
+  pod: INSTALL,
+  gem: INSTALL,
+  brew: ["Installing or updating a tool on this Mac", "Bu Mac’e bir araç kuruyor ya da güncelliyor"],
+  make: BUILD,
+  xcodebuild: BUILD,
+  gradle: BUILD,
+  gradlew: BUILD,
+  kubectl: ["Working with the servers the app runs on", "Uygulamanın çalıştığı sunucularla çalışıyor"],
+  supabase: SERVICE,
+  vercel: SERVICE,
+  wrangler: SERVICE,
+  firebase: SERVICE,
+  netlify: SERVICE,
+  aws: SERVICE,
+  gcloud: SERVICE
+};
+const GIT = {
+  rest: ["Working with the project’s saved history (git)", "Projenin kayıtlı geçmişiyle (git) çalışıyor"],
+  sub: {
+    status: ["Checking which files have changed", "Hangi dosyaların değiştiğine bakıyor"],
+    diff: ["Looking over the changes made", "Yapılan değişiklikleri inceliyor"],
+    log: ["Looking at the earlier saved versions", "Daha önce kaydedilmiş sürümlere bakıyor"],
+    show: ["Looking at an earlier saved version", "Daha önce kaydedilmiş bir sürüme bakıyor"],
+    blame: ["Checking who last changed each line", "Her satırı en son kimin değiştirdiğine bakıyor"],
+    add: ["Picking the changes to save", "Kaydedilecek değişiklikleri seçiyor"],
+    commit: ["Saving the changes as a new version (commit)", "Değişiklikleri yeni bir sürüm olarak kaydediyor (commit)"],
+    push: ["Sending the saved versions to the shared copy (push)", "Kaydedilen sürümleri ortak kopyaya gönderiyor (push)"],
+    pull: ["Bringing in what is new in the shared copy", "Ortak kopyadaki yenilikleri alıyor"],
+    fetch: ["Checking what is new in the shared copy", "Ortak kopyada ne yeni diye bakıyor"],
+    checkout: ["Switching to another line of work (branch)", "Başka bir çalışma dalına (branch) geçiyor"],
+    switch: ["Switching to another line of work (branch)", "Başka bir çalışma dalına (branch) geçiyor"],
+    branch: ["Looking at the lines of work (branches)", "Çalışma dallarına (branch) bakıyor"],
+    merge: ["Joining two lines of work", "İki çalışma dalını birleştiriyor"],
+    rebase: ["Moving its saved versions onto the newest code", "Kendi kayıtlarını en güncel kodun üstüne taşıyor"],
+    "cherry-pick": ["Copying one saved change onto this branch", "Kaydedilmiş tek bir değişikliği bu dala kopyalıyor"],
+    stash: ["Setting unfinished changes aside", "Yarım kalan değişiklikleri kenara koyuyor"],
+    reset: ["Taking back the changes picked for saving", "Kayıt için seçilen değişiklikleri geri çekiyor"],
+    restore: ["Putting files back as they were (unsaved edits are lost)", "Dosyaları eski haline döndürüyor (kaydedilmemiş değişiklikler silinir)"],
+    revert: ["Undoing an earlier saved version", "Daha önce kaydedilmiş bir sürümü geri alıyor"],
+    clean: ["Deleting files that were never saved", "Hiç kaydedilmemiş dosyaları siliyor"],
+    clone: ["Downloading a project", "Bir projeyi indiriyor"],
+    init: ["Starting to keep this folder’s history", "Bu klasörün geçmişini tutmaya başlıyor"],
+    worktree: ["Working with a separate copy of the project", "Projenin ayrı bir çalışma kopyasıyla çalışıyor"],
+    tag: ["Naming a saved version", "Kaydedilmiş bir sürüme ad veriyor"],
+    remote: ["Looking at where the shared copy lives", "Ortak kopyanın nerede durduğuna bakıyor"]
+  }
+};
+const GH = {
+  rest: ["Working with GitHub", "GitHub ile çalışıyor"],
+  sub: {
+    pr: ["Looking at the change requests (PRs) on GitHub", "GitHub’daki değişiklik isteklerine (PR) bakıyor"],
+    issue: ["Looking at the open notes (issues) on GitHub", "GitHub’daki açık kayıtlara (issue) bakıyor"],
+    run: ["Checking GitHub’s automatic checks", "GitHub’daki otomatik kontrollerin sonucuna bakıyor"],
+    workflow: ["Checking GitHub’s automatic checks", "GitHub’daki otomatik kontrollerin sonucuna bakıyor"],
+    api: ["Asking GitHub for information", "GitHub’dan bilgi alıyor"],
+    repo: ["Looking at a project on GitHub", "GitHub’daki bir projeye bakıyor"],
+    release: ["Working with a published version on GitHub", "GitHub’da yayımlanmış bir sürümle çalışıyor"]
+  }
+};
+const PACKAGE = {
+  rest: ["Running one of the project’s own jobs[: {x}]", "Projenin hazır işlerinden birini çalıştırıyor[: {x}]"],
+  sub: {
+    install: INSTALL,
+    i: INSTALL,
+    add: INSTALL,
+    ci: INSTALL,
+    update: INSTALL,
+    upgrade: INSTALL,
+    uninstall: ["Removing a package", "Bir paketi kaldırıyor"],
+    remove: ["Removing a package", "Bir paketi kaldırıyor"],
+    test: TESTS,
+    t: TESTS,
+    build: BUILD,
+    dev: ["Starting the app to try it out", "Uygulamayı denemek için başlatıyor"],
+    start: ["Starting the app", "Uygulamayı başlatıyor"],
+    serve: ["Starting the app", "Uygulamayı başlatıyor"],
+    lint: LINT,
+    typecheck: TYPES$1,
+    "type-check": TYPES$1,
+    check: LINT,
+    format: FORMAT,
+    publish: ["Publishing the package for everyone", "Paketi herkesin kullanımına yayımlıyor"]
+  }
+};
+const DOCKER = {
+  rest: ["Working with a container (a boxed-up app)", "Bir kapsayıcıyla (kutulanmış uygulama) çalışıyor"],
+  sub: {
+    build: ["Packing the app into a container", "Uygulamayı bir kapsayıcıya paketliyor"],
+    run: ["Starting a container (a boxed-up app)", "Bir kapsayıcıyı (kutulanmış uygulama) başlatıyor"],
+    ps: ["Looking at the running containers", "Çalışan kapsayıcılara bakıyor"],
+    logs: ["Reading a container’s log", "Bir kapsayıcının kayıtlarını okuyor"],
+    compose: ["Starting or stopping the app’s containers", "Uygulamanın kapsayıcılarını başlatıyor ya da durduruyor"]
+  }
+};
+const CLAUDE = {
+  rest: ["Running a Claude Code command", "Bir Claude Code komutu çalıştırıyor"],
+  sub: {
+    test: ["Running the mod’s tests", "Modun testlerini çalıştırıyor"],
+    validate: ["Checking that the mod follows the rules", "Modun kurallara uyduğunu denetliyor"],
+    install: ["Installing a mod", "Bir mod kuruyor"],
+    marketplace: ["Looking at where mods are installed from", "Modların kurulduğu kaynağa bakıyor"]
+  }
+};
+const FLUTTER = {
+  rest: ["Running a Flutter command", "Bir Flutter komutu çalıştırıyor"],
+  sub: {
+    run: ["Starting the app on a phone or simulator", "Uygulamayı telefonda ya da simülatörde başlatıyor"],
+    build: BUILD,
+    test: TESTS,
+    analyze: LINT,
+    format: FORMAT,
+    pub: INSTALL,
+    clean: ["Clearing the old build files", "Eski derleme dosyalarını temizliyor"]
+  }
+};
+const TOOLCHAIN = { rest: BUILD, sub: { test: TESTS, run: SCRIPT, install: INSTALL, fmt: FORMAT, clippy: LINT, vet: LINT } };
+const FAMILIES = {
+  git: GIT,
+  gh: GH,
+  npm: PACKAGE,
+  pnpm: PACKAGE,
+  yarn: PACKAGE,
+  bun: PACKAGE,
+  docker: DOCKER,
+  "docker-compose": DOCKER,
+  claude: CLAUDE,
+  flutter: FLUTTER,
+  dart: FLUTTER,
+  cargo: TOOLCHAIN,
+  go: TOOLCHAIN
+};
+const SHELL = {
+  newBranch: ["Starting a new line of work (branch)[: {x}]", "Yeni bir çalışma dalı (branch) açıyor[: {x}]"],
+  hardReset: ["Throwing away the changes not saved yet", "Henüz kaydedilmemiş değişiklikleri siliyor"],
+  discard: ["Putting files back as they were (unsaved edits are lost)", "Dosyaları eski haline döndürüyor (kaydedilmemiş değişiklikler silinir)"],
+  dropStash: ["Throwing away the changes that were set aside", "Kenara konmuş değişiklikleri siliyor"],
+  deleteBranch: ["Deleting a line of work (branch)[: {x}]", "Bir çalışma dalını (branch) siliyor[: {x}]"],
+  forcePush: ["Overwriting the shared copy with its own versions", "Ortak kopyanın üzerine kendi kayıtlarını yazıyor"],
+  prCreate: ["Opening a change request (PR) on GitHub", "GitHub’da bir değişiklik isteği (PR) açıyor"],
+  prMerge: ["Merging a change request (PR) into the main code", "Bir değişiklik isteğini (PR) ana koda birleştiriyor"],
+  deleteFolder: ["Deleting a folder and everything in it[: {x}]", "Bir klasörü içindekilerle birlikte siliyor[: {x}]"],
+  findDelete: ["Finding files and deleting them", "Dosyaları bulup siliyor"],
+  editInPlace: ["Changing a file by a rule[: {x}]", "Bir dosyayı kurala göre değiştiriyor[: {x}]"],
+  writeFile: ["Writing into a file[: {x}]", "Bir dosyaya yazıyor[: {x}]"],
+  inlineScript: ["Running a short script it just wrote", "O an yazdığı kısa bir betiği çalıştırıyor"],
+  ownScript: ["Running the project’s own script[: {x}]", "Projenin kendi betiğini çalıştırıyor[: {x}]"],
+  fetchedTool: ["Running the “{x}” tool", "“{x}” aracını çalıştırıyor"],
+  unknown: ["Running the “{x}” command", "“{x}” komutunu çalıştırıyor"],
+  any: ["Running a terminal command", "Bir terminal komutu çalıştırıyor"],
+  then: [", then ", ", sonra "],
+  more: [" (+{x} more)", " (+{x} adım daha)"]
+};
+
+const STEPS_SHOWN$1 = 2;
+const NAME_MAX$2 = 40;
+const WRAPPERS = new Set(["sudo", "time", "command", "exec", "nohup", "env", "then", "do", "else", "if", "while", "until", "!"]);
+const SILENT = new Set(["cd", "export", "set", "unset", "source", ".", "for", "done", "fi", "true", "false", ":", "[", "[[", "test", "local", "shift", "wait"]);
+const FILTERS = new Set(["grep", "rg", "sed", "awk", "head", "tail", "sort", "uniq", "wc", "cut", "tr", "tee", "xargs", "jq", "column", "less", "cat"]);
+const FETCHERS = new Set(["npx", "bunx", "uvx", "pipx"]);
+const PASS_ON = new Set(["run", "run-script", "exec", "x", "dlx", "-m", "plugin"]);
+const INLINE = new Set(["-c", "-e", "-"]);
+const PROPER = /^(GitHub|Git\b|Docker|Claude|Flutter|JSON|Python|iOS|Mac)/;
+const base = (path) => path.split("/").filter(Boolean).at(-1) ?? path;
+const clip$4 = (text) => text.length > NAME_MAX$2 ? `${text.slice(0, NAME_MAX$2 - 1)}…` : text;
+const isFlag = (word) => word.startsWith("-");
+const withoutHeredocs = (command) => command.replace(/\\\n/g, " ").replace(/<<-?\s*(['"]?)(\w+)\1[\s\S]*?\n\s*\2(?=\s|$)/g, "<<");
+function isOpenAt(scan, line, i) {
+  const ch = line[i] ?? "";
+  if (scan.quote !== "") {
+    if (ch === scan.quote && line[i - 1] !== "\\")
+      scan.quote = "";
+    return false;
+  }
+  if (ch === '"' || ch === "'" || ch === "`")
+    scan.quote = ch;
+  else if (ch === "(" || ch === "{")
+    scan.depth += 1;
+  else if (ch === ")" || ch === "}")
+    scan.depth = Math.max(0, scan.depth - 1);
+  return scan.quote === "" && scan.depth === 0;
+}
+function stepsOf$1(command) {
+  const line = withoutHeredocs(command);
+  const scan = { quote: "", depth: 0 };
+  const steps = [[]];
+  let word = "";
+  const close = (isStepEnd) => {
+    steps.at(-1)?.push(word.trim());
+    word = "";
+    if (isStepEnd)
+      steps.push([]);
+  };
+  for (let i = 0;i < line.length; i += 1) {
+    const ch = line[i] ?? "";
+    const two = line.slice(i, i + 2);
+    if (!isOpenAt(scan, line, i))
+      word += ch;
+    else if (two === "&&" || two === "||") {
+      close(true);
+      i += 1;
+    } else if (ch === ";" || ch === `
+`)
+      close(true);
+    else if (ch === "|")
+      close(false);
+    else if (ch === "&" && line[i - 1] !== ">" && line[i + 1] !== ">")
+      close(true);
+    else
+      word += ch;
+  }
+  close(false);
+  return steps.map((pipe) => pipe.filter(Boolean)).filter((pipe) => pipe.length > 0);
+}
+function wordsOf$1(command) {
+  const found = command.match(/(?:\$\([^)]*\)|"(?:\\.|[^"\\])*"|'[^']*'|\S)+/g) ?? [];
+  return found.map((word) => word.replace(/^(['"])([\s\S]*)\1$/, "$2"));
+}
+function splitRedirects(words) {
+  const kept = [];
+  let out = "";
+  for (let i = 0;i < words.length; i += 1) {
+    const word = words[i] ?? "";
+    const match = /^\d?>>?(.*)$/.exec(word);
+    if (match === null || word.includes(">&")) {
+      if (!/^\d?[<>]/.test(word))
+        kept.push(word);
+      continue;
+    }
+    const target = match[1] || words[i += 1] || "";
+    if (target !== "" && !target.startsWith("/dev/") && !target.startsWith("&"))
+      out = target;
+  }
+  return { kept, out };
+}
+const GLUE = new Set(["", "!", "if", "then", "else", "elif", "do", "while", "until", "time"]);
+function callOf(command) {
+  const { kept, out } = splitRedirects(wordsOf$1(command));
+  const words = kept.map((word) => word.replace(/^[({]+/, ""));
+  while (words.length > 0 && GLUE.has(words[0] ?? ""))
+    words.shift();
+  while (words.length > 0 && (WRAPPERS.has(words[0] ?? "") || /^\w+\+?=/.test(words[0] ?? "")))
+    words.shift();
+  const [first, ...args] = words;
+  return first === undefined || first.startsWith("#") ? null : { name: first, args, out };
+}
+const namedOf$1 = (kind, args) => {
+  const plain = args.filter((arg) => !isFlag(arg) && !/^\d+$/.test(arg));
+  if (kind === "first")
+    return clip$4(base(plain[0] ?? ""));
+  if (kind === "host")
+    return /^[a-z]+:\/\/([^/?#]+)/i.exec(plain.find((arg) => arg.includes("://")) ?? "")?.[1] ?? "";
+  if (kind === "file")
+    return clip$4(base(plain.at(-1) ?? ""));
+  return kind === "arg" ? clip$4(plain[0] ?? "") : "";
+};
+const say = (entry, lang, x = "") => fill(textOf$1(entry, lang), x);
+function familySay(family, args, lang) {
+  const words = args.filter((arg) => !isFlag(arg) || arg === "-m");
+  const at = words.findIndex((word) => !PASS_ON.has(word));
+  const sub = words[at] ?? words[0] ?? "";
+  const entry = family.sub[sub] ?? family.sub[words[0] ?? ""] ?? family.rest;
+  return say(entry, lang, entry === family.rest ? clip$4(sub) : namedOf$1(entry[2], words.slice(at + 1)));
+}
+function specialSay(call, lang) {
+  const { name, args } = call;
+  const has = (...flags) => args.some((arg) => flags.includes(arg));
+  const combined = (letter) => args.some((arg) => /^-[a-zA-Z]+$/.test(arg) && arg.includes(letter));
+  const second = args.filter((arg) => !isFlag(arg))[1] ?? "";
+  if (name === "git" && (args[0] === "checkout" || args[0] === "switch") && has("-b", "-B", "-c"))
+    return say(SHELL.newBranch, lang, clip$4(args.filter((arg) => !isFlag(arg))[1] ?? ""));
+  if (name === "git" && args[0] === "reset" && has("--hard", "--merge", "--keep"))
+    return say(SHELL.hardReset, lang);
+  if (name === "git" && args[0] === "checkout" && (has("--", ".") || has("-f", "--force")))
+    return say(SHELL.discard, lang);
+  if (name === "git" && args[0] === "stash" && (second === "drop" || second === "clear"))
+    return say(SHELL.dropStash, lang);
+  if (name === "git" && args[0] === "branch" && (has("-D", "--delete") || combined("d")))
+    return say(SHELL.deleteBranch, lang, clip$4(args.filter((arg) => !isFlag(arg))[1] ?? ""));
+  if (name === "git" && args[0] === "push" && (has("--force", "--force-with-lease") || combined("f")))
+    return say(SHELL.forcePush, lang);
+  if (name === "gh" && args[0] === "pr" && second === "create")
+    return say(SHELL.prCreate, lang);
+  if (name === "gh" && args[0] === "pr" && second === "merge")
+    return say(SHELL.prMerge, lang);
+  if (name === "rm" && (combined("r") || combined("R") || has("--recursive")))
+    return say(SHELL.deleteFolder, lang, namedOf$1("file", args));
+  if (name === "find" && has("-delete"))
+    return say(SHELL.findDelete, lang);
+  if (name === "sed" && (has("-i", "--in-place") || args.some((arg) => arg.startsWith("-i"))))
+    return say(SHELL.editInPlace, lang, namedOf$1("file", args));
+  if (call.out !== "" && (name === "echo" || name === "printf" || name === "cat"))
+    return say(SHELL.writeFile, lang, clip$4(base(call.out)));
+  return null;
+}
+function scriptSay(call, lang) {
+  const first = call.args[0] ?? "";
+  const isRunner = COMMANDS$1[call.name] === SCRIPT;
+  if (isRunner && (call.args.length === 0 || INLINE.has(first) || first === "<<"))
+    return say(SHELL.inlineScript, lang);
+  if (isRunner && first === "-m")
+    return callSay({ ...call, name: call.args[1] ?? "", args: call.args.slice(2) }, lang);
+  if (FETCHERS.has(call.name)) {
+    const tool = call.args.find((arg) => !isFlag(arg)) ?? "";
+    const known = callSay({ name: tool, args: call.args.slice(call.args.indexOf(tool) + 1), out: "" }, lang);
+    return known === say(SHELL.unknown, lang, clip$4(base(tool))) ? say(SHELL.fetchedTool, lang, clip$4(tool)) : known;
+  }
+  return null;
+}
+function callSay(call, lang) {
+  const name = base(call.name);
+  if (SILENT.has(name))
+    return null;
+  const special = specialSay({ ...call, name }, lang) ?? scriptSay({ ...call, name }, lang);
+  if (special !== null)
+    return special;
+  const family = FAMILIES[name];
+  if (family !== undefined)
+    return familySay(family, call.args, lang);
+  const entry = COMMANDS$1[name];
+  if (entry !== undefined)
+    return say(entry, lang, entry === SERVICE ? name : namedOf$1(entry[2], call.args));
+  if (call.name.includes("/"))
+    return say(SHELL.ownScript, lang, clip$4([name, ...call.args.filter((arg) => !isFlag(arg)).slice(0, 1)].join(" ")));
+  return say(SHELL.unknown, lang, clip$4(name));
+}
+function leadOf(pipe) {
+  const calls = pipe.map(callOf).filter((call) => call !== null);
+  return calls.find((call) => !FILTERS.has(base(call.name)) && !SILENT.has(base(call.name))) ?? calls[0] ?? null;
+}
+const WAITS = new Set(["sleep"]);
+const MARKERS = new Set(["echo", "printf"]);
+const isWait = (call) => WAITS.has(base(call.name)) || MARKERS.has(base(call.name)) && call.out === "";
+function leadsOf(command) {
+  const leads = stepsOf$1(command).map((pipe) => leadOf(pipe)).filter((call) => call !== null);
+  const hasWork = leads.some((call) => !isWait(call) && !SILENT.has(base(call.name)));
+  return hasWork ? leads.filter((call) => !isWait(call)) : leads;
+}
+const lowerFirst = (text, lang) => PROPER.test(text) ? text : text.charAt(0).toLocaleLowerCase(lang) + text.slice(1);
+function plainShell(command, lang) {
+  const steps = stepsOf$1(command);
+  const said = leadsOf(command).map((call) => callSay(call, lang) ?? "");
+  const unique = said.filter((text, i) => text !== "" && said.indexOf(text) === i);
+  if (unique.length === 0)
+    return say(steps.some((pipe) => pipe.some((c) => /^cd\b/.test(c))) ? COMMANDS$1.cd : SHELL.any, lang);
+  const shown = unique.slice(0, STEPS_SHOWN$1).map((text, i) => i === 0 ? text : lowerFirst(text, lang));
+  const more = unique.length - shown.length;
+  return shown.join(textOf$1(SHELL.then, lang)) + (more > 0 ? say(SHELL.more, lang, String(more)) : "");
+}
+
+const KIND_ICON = {
+  read: "eye",
+  search: "search",
+  edit: "pencil",
+  run: "terminal",
+  test: "shield",
+  save: "bookmark",
+  github: "branch",
+  install: "cube",
+  delete: "trash",
+  web: "globe",
+  agent: "sparkle",
+  wait: "clock",
+  ask: "bell",
+  plan: "list",
+  service: "plug"
+};
+const WORDS$4 = {
+  read: ["look", "inceleme"],
+  search: ["search", "arama"],
+  edit: ["change", "değişiklik"],
+  run: ["command", "komut"],
+  test: ["check", "kontrol"],
+  save: ["saved version", "sürüm kaydı"],
+  github: ["GitHub", "GitHub"],
+  install: ["install", "kurulum"],
+  delete: ["delete", "silme"],
+  web: ["internet", "internet"],
+  agent: ["helper agent", "yardımcı ajan"],
+  wait: ["wait", "bekleme"],
+  ask: ["question", "soru"],
+  plan: ["plan", "plan"],
+  service: ["connected service", "bağlı servis"]
+};
+const kindWord = (kind, lang) => WORDS$4[kind][lang === "tr" ? 1 : 0];
+const TOOL_KIND = {
+  Read: "read",
+  NotebookRead: "read",
+  Skill: "read",
+  BashOutput: "read",
+  TaskOutput: "read",
+  Monitor: "read",
+  Glob: "search",
+  Grep: "search",
+  LS: "search",
+  ToolSearch: "search",
+  Write: "edit",
+  Edit: "edit",
+  MultiEdit: "edit",
+  NotebookEdit: "edit",
+  WebSearch: "web",
+  WebFetch: "web",
+  Artifact: "web",
+  Agent: "agent",
+  Task: "agent",
+  SendMessage: "agent",
+  SubagentHandback: "agent",
+  TodoWrite: "plan",
+  TaskCreate: "plan",
+  TaskUpdate: "plan",
+  TaskList: "plan",
+  TaskGet: "plan",
+  EnterPlanMode: "plan",
+  ExitPlanMode: "plan",
+  AskUserQuestion: "ask",
+  ScheduleWakeup: "wait",
+  CronCreate: "wait"
+};
+const LOOKS = new Set(["cat", "head", "tail", "less", "ls", "wc", "stat", "file", "tree", "du", "which", "pwd", "echo", "diff"]);
+const SEARCHES = new Set(["grep", "rg", "find", "fd", "ag"]);
+const GIT_LOOKS = new Set(["status", "log", "diff", "show", "branch", "ls-files", "remote", "blame", "worktree", "rev-parse", "fetch"]);
+const INSTALLERS = new Set(["npm", "pnpm", "yarn", "bun", "pip", "pip3", "brew", "cargo", "gem", "apt", "apt-get", "flutter", "dart"]);
+const INSTALL_VERBS = new Set(["install", "add", "i", "ci", "get", "upgrade"]);
+const CHECK_WORD = /^(tests?|check|validate|lint|tsc|jest|vitest|pytest|typecheck|analyze)$/;
+const WEIGHT = ["wait", "read", "search", "run", "web", "test", "install", "github", "save", "delete"];
+const last = (path) => path.split("/").filter(Boolean).at(-1) ?? path;
+function commandKind(call) {
+  const name = last(call.name);
+  const verb = call.args.find((arg) => !arg.startsWith("-")) ?? "";
+  if (name === "sleep")
+    return "wait";
+  if (name === "gh")
+    return "github";
+  if (name === "git")
+    return GIT_LOOKS.has(verb) ? "read" : "save";
+  if (name === "rm" || name === "rmdir" || name === "find" && call.args.includes("-delete"))
+    return "delete";
+  if (name === "curl" || name === "wget")
+    return "web";
+  if ([name, ...call.args].some((word) => CHECK_WORD.test(last(word))))
+    return "test";
+  if (INSTALLERS.has(name) && call.args.some((arg) => INSTALL_VERBS.has(arg)))
+    return "install";
+  if (SEARCHES.has(name))
+    return "search";
+  return LOOKS.has(name) ? "read" : "run";
+}
+function shellKind(command) {
+  const kinds = leadsOf(command).map(commandKind);
+  return kinds.reduce((top, kind) => WEIGHT.indexOf(kind) > WEIGHT.indexOf(top) ? kind : top, kinds[0] ?? "run");
+}
+function serviceKind(tool) {
+  if (/browser|chrome|playwright|web_|exa|fetch/i.test(tool))
+    return "web";
+  return /github/i.test(tool) ? "github" : "service";
+}
+const fieldOf = (input, name) => {
+  const value = typeof input === "object" && input !== null ? input[name] : undefined;
+  return typeof value === "string" ? value.trim() : "";
+};
+function kindOf$1(tool, input) {
+  if (tool === "Bash" || tool === "PowerShell")
+    return shellKind(fieldOf(input, "command"));
+  if (tool.startsWith("mcp__"))
+    return serviceKind(tool);
+  return TOOL_KIND[tool] ?? "service";
+}
+const PURPOSE_MAX = 96;
+function purposeOf(input) {
+  const text = (fieldOf(input, "description") || fieldOf(input, "action_summary")).split(`
+`)[0]?.trim() ?? "";
+  return text.length > PURPOSE_MAX ? `${text.slice(0, PURPOSE_MAX - 1)}…` : text;
+}
+
+const NAME_MAX$1 = 48;
+const EDIT$1 = [["Changing the file {x}", "{x} dosyasını değiştiriyor"], "file_path", "file"];
+const TASKS$1 = [["Updating its to-do list", "Yapılacaklar listesini güncelliyor"]];
+const HELPER = [["Handing a job to a helper agent[: {x}]", "Bir yardımcı ajana iş veriyor[: {x}]"], "description"];
+const BACKGROUND = [["Checking on a command running in the background", "Arka planda çalışan komutun durumuna bakıyor"]];
+const STOP = [["Stopping a command running in the background", "Arka planda çalışan komutu durduruyor"]];
+const TIMER = [["Setting up work to run later", "Daha sonra çalışacak bir iş ayarlıyor"]];
+const TOOLS = {
+  Read: [["Reading the file {x}", "{x} dosyasını okuyor"], "file_path", "file"],
+  Write: [["Writing the file {x}", "{x} dosyasını yazıyor"], "file_path", "file"],
+  Edit: EDIT$1,
+  MultiEdit: EDIT$1,
+  NotebookEdit: [["Changing the notebook {x}", "{x} not defterini değiştiriyor"], "notebook_path", "file"],
+  Glob: [["Looking for files named like “{x}”", "Adı “{x}” kalıbına uyan dosyaları arıyor"], "pattern"],
+  Grep: [["Searching inside files for “{x}”", "Dosyaların içinde “{x}” arıyor"], "pattern"],
+  LS: [["Listing the files in a folder", "Bir klasördeki dosyaları listeliyor"]],
+  WebSearch: [["Searching the web for “{x}”", "İnternette “{x}” arıyor"], "query"],
+  WebFetch: [["Reading a web page[: {x}]", "Bir internet sayfasını okuyor[: {x}]"], "url", "host"],
+  Agent: HELPER,
+  Task: HELPER,
+  SubagentHandback: [["Handing its finished report back to the chat that started it", "Bitirdiği işin raporunu kendisini başlatan sohbete teslim ediyor"]],
+  SendMessage: [["Sending a message to another agent", "Başka bir ajana mesaj gönderiyor"]],
+  TodoWrite: TASKS$1,
+  TaskCreate: TASKS$1,
+  TaskUpdate: TASKS$1,
+  TaskList: TASKS$1,
+  TaskGet: TASKS$1,
+  update_plan: TASKS$1,
+  Skill: [["Loading a ready-made set of instructions[: {x}]", "Hazır bir talimat paketini (skill) yüklüyor[: {x}]"], "skill"],
+  ToolSearch: [["Looking for a tool it needs[: {x}]", "İhtiyaç duyduğu aracı arıyor[: {x}]"], "query", "tools"],
+  AskUserQuestion: [["Asking you a question", "Sana bir soru soruyor"]],
+  EnterPlanMode: [["Starting to write a plan before it acts", "İşe başlamadan önce plan yazmaya geçiyor"]],
+  ExitPlanMode: [["Showing you its plan for approval", "Hazırladığı planı onayına sunuyor"]],
+  BashOutput: BACKGROUND,
+  TaskOutput: BACKGROUND,
+  Monitor: BACKGROUND,
+  KillShell: STOP,
+  TaskStop: STOP,
+  Artifact: [["Publishing a page you can open", "Açabileceğin bir sayfa yayımlıyor"]],
+  ScheduleWakeup: TIMER,
+  CronCreate: TIMER,
+  EnterWorktree: [["Making a separate copy of the project to work in", "Çalışmak için projenin ayrı bir kopyasını açıyor"]]
+};
+const BROWSER = ["Using the browser", "Tarayıcıyı kullanıyor"];
+const SERVERS = [
+  [/browser|chrome|playwright/i, BROWSER],
+  [/computer/i, ["Using the mouse and keyboard on this computer", "Bu bilgisayarda fareyi ve klavyeyi kullanıyor"]],
+  [/github/i, ["Working on GitHub", "GitHub üzerinde çalışıyor"]],
+  [/context7/i, ["Reading a library’s up-to-date manual", "Bir kütüphanenin güncel kılavuzunu okuyor"]],
+  [/\brea\b/i, ["Taking an app apart to see how it works", "Bir uygulamanın içini açıp nasıl çalıştığına bakıyor"]],
+  [/simulator/i, ["Using the iPhone simulator", "iPhone simülatörünü kullanıyor"]],
+  [/terminal/i, ["Looking at your terminal", "Terminaline bakıyor"]],
+  [/ccd_|savvy|modz|skins|transceiver/i, ["Updating what the app shows you", "Uygulamanın sana gösterdiklerini güncelliyor"]]
+];
+const BROWSER_ACTS = [
+  [/navigate|open_url|preview_start/, ["Opening a page in the browser", "Tarayıcıda bir sayfa açıyor"]],
+  [/screenshot/, ["Taking a picture of the page", "Sayfanın görüntüsünü alıyor"]],
+  [/read_page|get_page|page_text|snapshot|find/, ["Reading the page in the browser", "Tarayıcıdaki sayfayı okuyor"]],
+  [/click|press|hover|drag/, ["Clicking on the page", "Sayfada bir yere tıklıyor"]],
+  [/type|fill|form_input|select/, ["Typing into the page", "Sayfaya yazı yazıyor"]],
+  [/console|network|javascript|evaluate/, ["Checking how the page runs", "Sayfanın nasıl çalıştığını denetliyor"]]
+];
+const OTHER = {
+  service: ["Using the connected “{x}” service", "Bağlı “{x}” servisini kullanıyor"],
+  tool: ["Using the “{x}” tool", "“{x}” aracını kullanıyor"],
+  command: ["Running a terminal command", "Bir terminal komutu çalıştırıyor"]
+};
+const fieldsOf$1 = (input) => typeof input === "object" && input !== null ? input : {};
+const clip$3 = (text) => text.length > NAME_MAX$1 ? `${text.slice(0, NAME_MAX$1 - 1)}…` : text;
+const firstLine = (text) => text.split(`
+`)[0]?.trim() ?? "";
+function namedOf(value, as) {
+  const text = typeof value === "string" ? firstLine(value) : "";
+  if (as === "file")
+    return text.split("/").filter(Boolean).at(-1) ?? "";
+  if (as === "host")
+    return /^[a-z]+:\/\/([^/?#]+)/i.exec(text)?.[1] ?? "";
+  if (as === "tools")
+    return clip$3(text.replace(/^select:/, "").split(",").map((name) => (name.split("__").at(-1) ?? name).replace(/_+/g, " ").trim()).join(", "));
+  return clip$3(text);
+}
+function serviceSay(tool, lang) {
+  const [, server = "", ...rest] = tool.split("__");
+  const name = rest.join(" ");
+  const known = SERVERS.find(([pattern]) => pattern.test(server))?.[1];
+  if (known === BROWSER)
+    return textOf$1(BROWSER_ACTS.find(([pattern]) => pattern.test(name))?.[1] ?? BROWSER, lang);
+  if (known !== undefined)
+    return textOf$1(known, lang);
+  const isId = /^[0-9a-f-]{20,}$/i.test(server);
+  return fill(textOf$1(isId ? OTHER.tool : OTHER.service, lang), clip$3((isId ? name : server).replace(/[_-]+/g, " ")));
+}
+function plainCall(tool, input, lang) {
+  const fields = fieldsOf$1(input);
+  if (tool === "Bash" || tool === "PowerShell") {
+    const command = typeof fields.command === "string" ? fields.command : "";
+    return command.trim() === "" ? textOf$1(OTHER.command, lang) : plainShell(command, lang);
+  }
+  if (tool.startsWith("mcp__"))
+    return serviceSay(tool, lang);
+  const known = TOOLS[tool];
+  if (known === undefined)
+    return fill(textOf$1(OTHER.tool, lang), clip$3(tool));
+  const [entry, field, as] = known;
+  const named = field === undefined ? "" : namedOf(fields[field], as);
+  const template = textOf$1(entry, lang);
+  return named === "" && /(^|[^[])\{x\}/.test(template.replace(/\[[^\]]*\]/g, "")) ? fill(textOf$1(OTHER.tool, lang), tool) : fill(template, named);
+}
 
 const ACTIVITY_TTL_MS = 45000;
 
@@ -4612,7 +5269,7 @@ function legendOf(s, git) {
     ...git?.changed ? [{ role: "warn", label: legend.warn }] : []
   ];
 }
-const motion$5 = paneMotion$5();
+const motion$5 = paneMotion();
 function cardsOf(s, w) {
   const { t, look } = s;
   const input = heroInput(s);
@@ -4922,13 +5579,13 @@ function wireFilesPage(on) {
   });
 }
 
-let current$4 = "en";
+let current$3 = "en";
 const langOf$4 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
 function setLang$4(value) {
-  current$4 = langOf$4(value);
-  return current$4;
+  current$3 = langOf$4(value);
+  return current$3;
 }
-const upper$3 = (text) => text.toLocaleUpperCase(current$4);
+const upper$2 = (text) => text.toLocaleUpperCase(current$3);
 
 const plural$4 = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const en = {
@@ -5451,7 +6108,7 @@ const EM_BODY = 0.56;
 const EM_FULL = 1;
 const WIDE$2 = /[\u1100-\u115F\u2E80-\u303E\u3041-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uA960-\uA97F\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF01-\uFF60\uFFE0-\uFFE6\u{1F300}-\u{1FAFF}\u{20000}-\u{3FFFD}]/u;
 const xml = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c);
-const clip$4 = (s, max) => s.length > max ? s.slice(0, Math.max(1, max - 1)) + "…" : s;
+const clip$2 = (s, max) => s.length > max ? s.slice(0, Math.max(1, max - 1)) + "…" : s;
 const charEm$2 = (ch) => {
   if (WIDE$2.test(ch))
     return EM_FULL;
@@ -6169,145 +6826,7 @@ const chatLinesSvg = (W, lines) => {
   return { source: paneSvg(W, height, lines.map((line, i) => lineSvg(line, i * LIST.rowH, W)).join("")), height, alt };
 };
 
-const FILL$5 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
-const DONE$4 = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
-const HAS_DONE$4 = /\bdata-m-done\b/;
-const WIDTH$7 = /\swidth="([\d.]+)"/;
-const CLASS$4 = /\sclass="([^"]*)"/;
-const STYLE$4 = /\sstyle="([^"]*)"/;
-const MIN_RATIO_STEP$4 = 0.02;
-const RATIO_DIGITS$4 = 3;
-const widthOf$4 = (tag) => Number(WIDTH$7.exec(tag)?.[1] ?? 0);
-function withClass$4(tag, name, extra = "") {
-  const tagged = CLASS$4.test(tag) ? tag.replace(CLASS$4, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
-  return tagged.replace(/\s*\/?>$/, `${extra}$&`);
-}
-function slideFills$4(before, now) {
-  const old = before.match(FILL$5) ?? [];
-  if (old.length !== (now.match(FILL$5) ?? []).length)
-    return now;
-  let index = 0;
-  return now.replace(FILL$5, (tag) => {
-    const was = old[index++];
-    const from = was === undefined ? 0 : widthOf$4(was);
-    const to = widthOf$4(tag);
-    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP$4)
-      return tag;
-    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS$4)}`;
-    const styled = STYLE$4.test(tag) ? tag.replace(STYLE$4, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
-    return withClass$4(styled, "m-from");
-  });
-}
-function drawDone$4(before, now) {
-  if (HAS_DONE$4.test(before))
-    return now;
-  return now.replace(DONE$4, (tag) => withClass$4(tag, "m-draw", ' pathLength="1"'));
-}
-function markChanges$4(before, now) {
-  return drawDone$4(before, slideFills$4(before, now));
-}
-
-const STAGGER_MS$4 = 45;
-const EASE$4 = "cubic-bezier(.2,.8,.2,1)";
-const SHEEN$4 = "#A39E93";
-const RULES$4 = {
-  "m-in": `.m-in{animation:m-in .42s ${EASE$4} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
-  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$4} both}@keyframes m-fade{from{opacity:0}}`,
-  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$4} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
-  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$4} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
-  "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
-  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$4} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
-  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$4} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
-  "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
-  "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
-  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$4}}svg:hover .m-wash{opacity:.12}`,
-  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$4}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
-};
-const REDUCED$5 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
-function motionCss$4(body) {
-  const used = Object.keys(RULES$4).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
-  return used.length === 0 ? "" : `${used.map((name) => RULES$4[name]).join("")}${REDUCED$5}`;
-}
-Object.values(RULES$4).join("");
-const isEntering$4 = (cue) => cue.phase === "enter";
-function entering$4(body, cue, kind = "in") {
-  if (!isEntering$4(cue))
-    return body;
-  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$4}ms">${body}</g>`;
-}
-const FLASH$4 = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN$4}" fill-opacity=".22" class="m-flash"/>`;
-const WASH$4 = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
-
-function stableDrawings$4() {
-  const kept = new Map;
-  return {
-    reset: () => kept.clear(),
-    draw: (key, what, build) => {
-      const signature = typeof what === "string" ? what : JSON.stringify(what);
-      const before = kept.get(key);
-      if (before !== undefined && before.what === signature)
-        return before.drawing;
-      const drawing = build(before === undefined ? "enter" : "change");
-      kept.set(key, { what: signature, drawing });
-      return drawing;
-    }
-  };
-}
-
-const TAG_WIDTH$4 = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
-const SVG$4 = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
-const SCHEME$5 = "<style>:root{color-scheme:light dark}</style>";
-const SAYS_SCHEME$4 = /(^|[^-\w])color-scheme\s*:/;
-const PASS_MS$4 = 120;
-const MAX_ORDER$4 = 12;
-const LIVE_MS$4 = 30000;
-function animate$4(source, spec) {
-  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges$4(spec.before, source) : source;
-  const parts = SVG$4.exec(moved);
-  if (parts === null)
-    return source;
-  const [, open, inner = "", close] = parts;
-  const scheme = SAYS_SCHEME$4.test(inner) ? "" : SCHEME$5;
-  const lit = `${spec.isRow === true ? WASH$4 : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH$4 : ""}${inner}`;
-  const body = entering$4(lit, spec.cue);
-  const css = motionCss$4(body);
-  return `${open}${scheme}${css === "" ? "" : `<style>${css}</style>`}${body}${close}`;
-}
-function paneMotion$4() {
-  const drawings = stableDrawings$4();
-  const shown = new Map;
-  const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 };
-  const begin = () => {
-    const now = Date.now();
-    if (now - pass.at > PASS_MS$4)
-      pass.entered = 0;
-    pass.at = now;
-  };
-  return {
-    reset: () => {
-      drawings.reset();
-      shown.clear();
-    },
-    pic: (key, pic, opts = {}) => {
-      begin();
-      const what = `${opts.isRow === true ? "row:" : ""}${pic.source}`;
-      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH$4.exec(pic.source)?.[1]), source: pic.source };
-      const source = drawings.draw(key, what, (built) => {
-        const order = built === "enter" ? Math.min(MAX_ORDER$4, pass.entered++) : 0;
-        const before = shown.get(key);
-        const isQuiet = before !== undefined && (before.shows === now.shows || before.width !== now.width);
-        const phase = built === "change" && isQuiet ? "still" : built;
-        const lastChange = before?.changedAt ?? Number.NEGATIVE_INFINITY;
-        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS$4;
-        shown.set(key, { ...now, changedAt: phase === "change" ? pass.at : lastChange });
-        return animate$4(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
-      });
-      return { ...pic, source, isInteractive: true };
-    }
-  };
-}
-
-const motion$4 = paneMotion$4();
+const motion$4 = paneMotion();
 function picture$2(ui, placed) {
   const { Svg } = ui;
   return h(Svg, {
@@ -6516,67 +7035,6 @@ const headerSvg$1 = (W, data) => {
 `)), height: stats.height };
 };
 
-const BLANK$2 = "ㅤ";
-const CELL_PX$2 = 11.9;
-const BUTTON_PX$3 = 28;
-const RUN_SPAN$2 = 2;
-const LINE_SPAN$2 = "400%";
-function PressCover$2(ui, o) {
-  const { Box, Button } = ui;
-  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX$3 * 2)));
-  const label = BLANK$2.repeat(Math.ceil(o.width * RUN_SPAN$2 / CELL_PX$2));
-  const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey };
-  return h(Box, {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "column",
-    justifyContent: "center",
-    overflow: "hidden"
-  }, Array.from({ length: lines }, (_, i) => h(Box, {
-    key: `${o.key}~line${i}`,
-    flexDirection: "row",
-    width: LINE_SPAN$2,
-    marginLeft: -1,
-    flexShrink: 0
-  }, h(Button, {
-    key: i === 0 ? o.key : `${o.key}~${i}`,
-    label,
-    plain: true,
-    ...i === 0 ? hotkey : {},
-    onPress: o.onPress
-  }))));
-}
-const STILL$2 = "<style>*{animation:none!important;transition:none!important}</style>";
-const stillSource$2 = (source) => source.replace(/<\/svg>\s*$/, `${STILL$2}</svg>`);
-function stillSvg$2(ui, drawing) {
-  if (drawing.type !== "Svg")
-    return drawing;
-  const { Svg } = ui;
-  const { key, source, alt, width, height } = drawing.props;
-  return h(Svg, {
-    key,
-    source: stillSource$2(source),
-    alt,
-    width,
-    height
-  });
-}
-const FALLBACK_PX$2 = 52;
-const FALLBACK_WIDTH_PX$2 = 360;
-function PressRow$2(ui, o) {
-  const { Box } = ui;
-  const props = o.drawing.type === "Svg" ? o.drawing.props : {};
-  const width = props.width ?? FALLBACK_WIDTH_PX$2;
-  const height = props.height ?? FALLBACK_PX$2;
-  return h(Box, {
-    key: o.box,
-    alignSelf: "flex-start"
-  }, stillSvg$2(ui, o.drawing), PressCover$2(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
-}
-
 const COMPACT_H = 32;
 const CRAB_PITCH = 36;
 const MORE_ROOM = 40;
@@ -6584,7 +7042,7 @@ const LIVE_DOT$1 = { x: 32, y: 4, r: 3 };
 const CRAB$1 = { w: 36, h: 32 };
 const PULSE = 12;
 const PULSE_CORE = 3;
-const stepsOf$1 = (a) => {
+const stepsOf = (a) => {
   if (a.stepTotal)
     return `${a.stepDone ?? 0}/${a.stepTotal}${a.stepNote ? " · " + a.stepNote : ""}`;
   const own = countTasks(a.todos ?? []);
@@ -6595,7 +7053,7 @@ const stepsOf$1 = (a) => {
 };
 const activityOf = (a) => {
   const s = t();
-  const steps = stepsOf$1(a);
+  const steps = stepsOf(a);
   if (a.status === "failed")
     return [steps, a.endReason === "aborted" ? s.aborted : s.failed].filter(Boolean).join(" · ");
   if (a.status === "done")
@@ -6643,14 +7101,14 @@ const compactSvg = (W, icons) => {
   return paneSvg(W, COMPACT_H, body + plus);
 };
 
-const READ$1 = ["Read", "Grep", "Glob", "LS", "WebFetch", "WebSearch", "NotebookRead"];
-const EDIT$1 = ["Edit", "Write", "MultiEdit", "NotebookEdit"];
+const READ = ["Read", "Grep", "Glob", "LS", "WebFetch", "WebSearch", "NotebookRead"];
+const EDIT = ["Edit", "Write", "MultiEdit", "NotebookEdit"];
 const RUN = ["Bash", "BashOutput", "KillShell", "Monitor"];
 const AGENT = ["Agent", "Task", "SendMessage"];
-const kindOf$1 = (tool) => {
-  if (READ$1.includes(tool))
+const kindOf = (tool) => {
+  if (READ.includes(tool))
     return "read";
-  if (EDIT$1.includes(tool))
+  if (EDIT.includes(tool))
     return "edit";
   if (RUN.includes(tool))
     return "run";
@@ -6673,7 +7131,7 @@ const laneOf = (a, at) => {
     isStuck: stuckOf(a, at) !== null,
     start: a.startedAt,
     end: Math.max(end, a.startedAt),
-    segments: (a.history ?? []).map((e) => ({ from: e.at, to: e.endAt ?? (isLive ? at : e.at), kind: kindOf$1(e.tool) }))
+    segments: (a.history ?? []).map((e) => ({ from: e.at, to: e.endAt ?? (isLive ? at : e.at), kind: kindOf(e.tool) }))
   };
 };
 function timelineOf(list, at) {
@@ -6781,7 +7239,7 @@ function timelineSvg(W, tl) {
   return { source: paneSvg(W, height, body), height, alt: altOf$1(tl) };
 }
 
-const BUTTON_PX$2 = 76;
+const BUTTON_PX = 76;
 const TERM_NAME = 6;
 const TERM_CLOCK = 2;
 const TIMELINE_MIN_AGENTS = 2;
@@ -6865,7 +7323,7 @@ function attentionTree(ui, view) {
   }
   const pic = { source: noticeSvg(layout.W, att), alt: `${att.name} ${att.reason}: ${att.title} (${t().look})`, width: layout.W, height: NOTICE_H };
   const drawing = picture$2(ui, { key: "notice", at: "attention", pic, opts: { isRow: true } });
-  return PressRow$2(ui, { box: "attention", key: "look", drawing, onPress });
+  return PressRow(ui, { box: "attention", key: "look", drawing, onPress });
 }
 function sectionHead(ui, layout, head) {
   const { Box, Button, Text } = ui;
@@ -6887,7 +7345,7 @@ function sectionHead(ui, layout, head) {
       onPress: toggle.onPress
     }));
   }
-  const width = toggle ? layout.W - BUTTON_PX$2 : layout.W;
+  const width = toggle ? layout.W - BUTTON_PX : layout.W;
   const svg = picture$2(ui, { key: "eyebrow", at: `eyebrow-${head.id}`, pic: { source: sectionSvg(width, head), alt: head.label, width, height: SECTION_SVG_H } });
   if (!toggle)
     return h(Box, {
@@ -7197,7 +7655,7 @@ function briefTree(ui, a, ctx) {
   const s = t();
   const isLong = a.brief.length > BRIEF_SHOWN;
   const isWhole = !isLong || ctx.briefOpen === a.id;
-  const text = isWhole ? a.brief : clip$4(a.brief, BRIEF_SHOWN);
+  const text = isWhole ? a.brief : clip$2(a.brief, BRIEF_SHOWN);
   return h(Box, {
     key: `brief-box-${a.id}`,
     flexDirection: "column"
@@ -7213,7 +7671,7 @@ function briefTree(ui, a, ctx) {
   })));
 }
 const turnsOf = (a) => a.thread ?? (a.answer && a.status === "done" ? [{ from: "agent", text: a.answer, at: a.endedAt ?? a.startedAt }] : []);
-const turnTree = (ui, a, turn, i) => turn.from === "you" ? saidTree(ui, { key: `turn-${i}`, who: t().you, text: turn.text }) : saidTree(ui, { key: `turn-${i}`, who: lookOf$1(a).name, text: clip$4(turn.text, ANSWER_SHOWN) });
+const turnTree = (ui, a, turn, i) => turn.from === "you" ? saidTree(ui, { key: `turn-${i}`, who: t().you, text: turn.text }) : saidTree(ui, { key: `turn-${i}`, who: lookOf$1(a).name, text: clip$2(turn.text, ANSWER_SHOWN) });
 const isAwaited = (a, turns) => a.status === "running" || a.status === "done" && turns.at(-1)?.from === "you";
 function tailTree$1(ui, a, turns) {
   const { Text } = ui;
@@ -7270,7 +7728,7 @@ const lookOfNow = (now) => {
     return { ink: "f-edit", icon: now.kind };
   return { ink: "f-edit", icon: "thinking" };
 };
-const capital$1 = (s) => upper$3(s.charAt(0)) + s.slice(1);
+const capital$1 = (s) => upper$2(s.charAt(0)) + s.slice(1);
 const callLine = (now, x, room) => {
   const tool = now.tool ? `${fitText(now.tool, NOW.line2 * BOLD, room)} ` : "";
   const used = textWidth(tool, NOW.line2) * BOLD;
@@ -7374,7 +7832,7 @@ function stepTree(ui, e, ctx) {
     flexShrink: 0
   }, h(Text, {
     dimColor: true
-  }, KIND_GLYPH[kindOf$1(e.tool)])), h(Box, {
+  }, KIND_GLYPH[kindOf(e.tool)])), h(Box, {
     flexDirection: "column",
     flexGrow: 1,
     flexShrink: 1
@@ -7428,7 +7886,7 @@ const RING_W = 2.2;
 const RING_SLOT = 17;
 const MIX_GAP = 2;
 const stripesOf = (filled, y, uid) => `<defs><pattern id="st${uid}" width="${STRIPE}" height="${STRIPE}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${STRIPE / 2}" height="${STRIPE}" fill="#fff" opacity=".28"/></pattern></defs><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" fill="url(#st${uid})"/>`;
-const FILL$4 = { running: "f-edit", done: "m", failed: "f-danger" };
+const FILL = { running: "f-edit", done: "m", failed: "f-danger" };
 const LABEL$2 = { running: "s", done: "m", failed: "f-danger" };
 const progressBarSvg = (W, a, opts) => {
   const y = (BAR_H$1 - TRACK_H) / 2;
@@ -7437,7 +7895,7 @@ const progressBarSvg = (W, a, opts) => {
   const uid = a.id.replace(/\W/g, "");
   const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`;
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`;
-  const bar = `<rect data-m-fill="" class="${FILL$4[a.status] ?? "f-edit"}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
+  const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? "f-edit"}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
   const isRunning = a.status === "running";
   const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : "";
   const label = `<text class="${LABEL$2[a.status] ?? "s"}" x="${barW + PCT_GAP}" y="${BAR_H$1 / 2 + PCT_SIZE * 0.34}" font-family="${MONO$4}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`;
@@ -7512,7 +7970,7 @@ const verbOf = (a, state, kind) => {
 function nowOf(a, at) {
   const last = a.history?.at(-1);
   const state = stateOf$1(a, last);
-  const kind = last ? kindOf$1(last.tool) : "other";
+  const kind = last ? kindOf(last.tool) : "other";
   const isLatest = last !== undefined && last.tool === a.lastTool;
   const target = (isLatest ? a.lastDetail : undefined) ?? last?.target ?? "";
   const verb = verbOf(a, state, kind);
@@ -7529,7 +7987,7 @@ const RECENT_SHOWN = 8;
 const FILES_SHOWN$3 = 6;
 const KIND_ORDER = ["read", "edit", "run", "agent", "other"];
 const NOW_KEY = { call: "claude", thinking: "claude", starting: "claude", done: "subtle", failed: "error" };
-const capital = (s) => upper$3(s.charAt(0)) + s.slice(1);
+const capital = (s) => upper$2(s.charAt(0)) + s.slice(1);
 function nowText(ui, now) {
   const { Box, Text } = ui;
   const key = NOW_KEY[now.state];
@@ -7566,7 +8024,7 @@ function nowTree(ui, a, ctx) {
   const { Box, Text } = ui;
   const s = t();
   const now = nowOf(a, ctx.at);
-  const steps = stepsOf$1(a);
+  const steps = stepsOf(a);
   const heading = h(Text, {
     bold: true
   }, a.status === "running" ? s.current : s.lastStep);
@@ -7591,7 +8049,7 @@ const outcomeOf = (e, isLive) => {
 };
 function eventTree(ui, e, ctx) {
   const { Box, Text } = ui;
-  const kind = kindOf$1(e.tool);
+  const kind = kindOf(e.tool);
   const outcome = outcomeOf(e, ctx.isLive);
   const said = e.why ?? e.plain;
   const fine = e.why && e.plain ? ` · ${e.plain}` : `${said ? ` · ${e.tool}` : ""}${e.target ? ` ${e.target}` : ""}`;
@@ -7624,7 +8082,7 @@ function eventTree(ui, e, ctx) {
     dimColor: true
   }, agoOf(ctx.at - e.at)), end));
 }
-const mixOf = (history) => KIND_ORDER.map((kind) => ({ kind, count: history.filter((e) => kindOf$1(e.tool) === kind).length })).filter((p) => p.count > 0);
+const mixOf = (history) => KIND_ORDER.map((kind) => ({ kind, count: history.filter((e) => kindOf(e.tool) === kind).length })).filter((p) => p.count > 0);
 function mixTree(ui, parts, ctx) {
   const { Box, Text } = ui;
   if (!parts.length)
@@ -7806,10 +8264,10 @@ const START = 0.04;
 const TEST_WORDS = /\b(test|vitest|jest|pytest|lint|tsc|validate|check)\b/i;
 const floorOf = (a) => {
   const history = a.history ?? [];
-  const hasTest = history.some((e) => kindOf$1(e.tool) === "run" && TEST_WORDS.test(e.target));
+  const hasTest = history.some((e) => kindOf(e.tool) === "run" && TEST_WORDS.test(e.target));
   if (hasTest)
     return TEST_FLOOR;
-  return history.some((e) => kindOf$1(e.tool) === "edit") ? EDIT_FLOOR : 0;
+  return history.some((e) => kindOf(e.tool) === "edit") ? EDIT_FLOOR : 0;
 };
 const estimateOf$1 = (a) => {
   const calls = Math.max(a.toolCount || 0, a.history?.length ?? 0);
@@ -7863,7 +8321,7 @@ const nowLine = (a, isOpen) => {
   const answer = a.status === "done" && !isOpen ? a.answer?.split(`
 `).find((line) => line.trim()) : undefined;
   if (answer)
-    return clip$4(answer.trim(), ANSWER_LINE);
+    return clip$2(answer.trim(), ANSWER_LINE);
   if (a.status === "failed" && a.lastTool)
     return `› ${a.lastPlain ?? `${a.lastTool}${a.lastTarget ? " " + a.lastTarget : ""}`}`;
   return activityOf(a);
@@ -7995,7 +8453,7 @@ function deskCard(ui, a, ctx) {
   }, h(Box, {
     key: "head-row",
     alignSelf: "flex-start"
-  }, deskHead(ui, a, ctx), PressCover$2(ui, { key: `open-${a.id}`, width: ctx.inner, height: HEAD_H$1, onPress: () => ctx.onToggle(a.id) })), deskBar(ui, a, ctx), deskFoot(ui, a, ctx)), isOpen && detailTree(ui, a, ctx));
+  }, deskHead(ui, a, ctx), PressCover(ui, { key: `open-${a.id}`, width: ctx.inner, height: HEAD_H$1, onPress: () => ctx.onToggle(a.id) })), deskBar(ui, a, ctx), deskFoot(ui, a, ctx)), isOpen && detailTree(ui, a, ctx));
 }
 const agentRow = (ui, a, ctx) => ctx.isDesktop ? deskCard(ui, a, ctx) : termCard(ui, a, ctx);
 function plannedRow(ui, p, ctx) {
@@ -8085,10 +8543,10 @@ const layoutOf = (isDesktop, columns) => {
 const AGENTS = { plugin: "savvy-progress", key: "agents" };
 const FLOW = { plugin: "savvy-progress", key: "flow" };
 const JOB = { plugin: "savvy-progress", key: "job" };
-const TASKS$1 = { plugin: "savvy-progress", key: "tasks" };
+const TASKS = { plugin: "savvy-progress", key: "tasks" };
 const PANEL = { plugin: "savvy-progress", key: "panel" };
 const LIMIT = { plugin: "savvy-progress", key: "limit" };
-const TYPES$1 = { plugin: "savvy-progress", key: "types" };
+const TYPES = { plugin: "savvy-progress", key: "types" };
 const CRAB = { plugin: "savvy-progress", key: "crab" };
 const CHATS = { plugin: "savvy-progress", key: "chats" };
 async function speakHubLang($) {
@@ -8102,11 +8560,11 @@ async function agentsPage($, ui, site, act) {
     list: (await $.state.get(AGENTS)).value ?? [],
     flow: (await $.state.get(FLOW)).value ?? null,
     job: (await $.state.get(JOB)).value ?? null,
-    tasks: (await $.state.get(TASKS$1)).value ?? [],
+    tasks: (await $.state.get(TASKS)).value ?? [],
     now: await $.clock.now(),
     panel: (await $.state.get(PANEL)).value ?? { isCompact: false },
     limit: (await $.state.get(LIMIT)).value ?? null,
-    types: (await $.state.get(TYPES$1)).value ?? BUILTIN_TYPES,
+    types: (await $.state.get(TYPES)).value ?? BUILTIN_TYPES,
     crab: (await $.state.get(CRAB)).value ?? restingCrab(0),
     chats: (await $.state.get(CHATS)).value ?? []
   };
@@ -8114,213 +8572,14 @@ async function agentsPage($, ui, site, act) {
   return agentsTree(ui, { d: paneDataOf(kept), layout: layoutOf(isDesktop, site.columns), on: pageHandlers(act) });
 }
 
-let current$3 = "en";
+let current$2 = "en";
 const langOf$2 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
 function setLang$2(value) {
-  current$3 = langOf$2(value);
-  return current$3;
+  current$2 = langOf$2(value);
+  return current$2;
 }
-const pick$3 = (table) => table[current$3];
-const upper$2 = (text) => text.toLocaleUpperCase(current$3);
-
-const FILL$3 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
-const DONE$3 = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
-const HAS_DONE$3 = /\bdata-m-done\b/;
-const WIDTH$6 = /\swidth="([\d.]+)"/;
-const CLASS$3 = /\sclass="([^"]*)"/;
-const STYLE$3 = /\sstyle="([^"]*)"/;
-const MIN_RATIO_STEP$3 = 0.02;
-const RATIO_DIGITS$3 = 3;
-const widthOf$3 = (tag) => Number(WIDTH$6.exec(tag)?.[1] ?? 0);
-function withClass$3(tag, name, extra = "") {
-  const tagged = CLASS$3.test(tag) ? tag.replace(CLASS$3, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
-  return tagged.replace(/\s*\/?>$/, `${extra}$&`);
-}
-function slideFills$3(before, now) {
-  const old = before.match(FILL$3) ?? [];
-  if (old.length !== (now.match(FILL$3) ?? []).length)
-    return now;
-  let index = 0;
-  return now.replace(FILL$3, (tag) => {
-    const was = old[index++];
-    const from = was === undefined ? 0 : widthOf$3(was);
-    const to = widthOf$3(tag);
-    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP$3)
-      return tag;
-    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS$3)}`;
-    const styled = STYLE$3.test(tag) ? tag.replace(STYLE$3, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
-    return withClass$3(styled, "m-from");
-  });
-}
-function drawDone$3(before, now) {
-  if (HAS_DONE$3.test(before))
-    return now;
-  return now.replace(DONE$3, (tag) => withClass$3(tag, "m-draw", ' pathLength="1"'));
-}
-function markChanges$3(before, now) {
-  return drawDone$3(before, slideFills$3(before, now));
-}
-
-const STAGGER_MS$3 = 45;
-const EASE$3 = "cubic-bezier(.2,.8,.2,1)";
-const SHEEN$3 = "#A39E93";
-const RULES$3 = {
-  "m-in": `.m-in{animation:m-in .42s ${EASE$3} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
-  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$3} both}@keyframes m-fade{from{opacity:0}}`,
-  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$3} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
-  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$3} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
-  "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
-  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$3} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
-  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$3} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
-  "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
-  "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
-  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$3}}svg:hover .m-wash{opacity:.12}`,
-  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$3}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
-};
-const REDUCED$4 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
-function motionCss$3(body) {
-  const used = Object.keys(RULES$3).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
-  return used.length === 0 ? "" : `${used.map((name) => RULES$3[name]).join("")}${REDUCED$4}`;
-}
-Object.values(RULES$3).join("");
-const isEntering$3 = (cue) => cue.phase === "enter";
-function entering$3(body, cue, kind = "in") {
-  if (!isEntering$3(cue))
-    return body;
-  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$3}ms">${body}</g>`;
-}
-const FLASH$3 = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN$3}" fill-opacity=".22" class="m-flash"/>`;
-const WASH$3 = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
-
-function stableDrawings$3() {
-  const kept = new Map;
-  return {
-    reset: () => kept.clear(),
-    draw: (key, what, build) => {
-      const signature = typeof what === "string" ? what : JSON.stringify(what);
-      const before = kept.get(key);
-      if (before !== undefined && before.what === signature)
-        return before.drawing;
-      const drawing = build(before === undefined ? "enter" : "change");
-      kept.set(key, { what: signature, drawing });
-      return drawing;
-    }
-  };
-}
-
-const TAG_WIDTH$3 = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
-const SVG$3 = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
-const SCHEME$4 = "<style>:root{color-scheme:light dark}</style>";
-const SAYS_SCHEME$3 = /(^|[^-\w])color-scheme\s*:/;
-const PASS_MS$3 = 120;
-const MAX_ORDER$3 = 12;
-const LIVE_MS$3 = 30000;
-function animate$3(source, spec) {
-  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges$3(spec.before, source) : source;
-  const parts = SVG$3.exec(moved);
-  if (parts === null)
-    return source;
-  const [, open, inner = "", close] = parts;
-  const scheme = SAYS_SCHEME$3.test(inner) ? "" : SCHEME$4;
-  const lit = `${spec.isRow === true ? WASH$3 : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH$3 : ""}${inner}`;
-  const body = entering$3(lit, spec.cue);
-  const css = motionCss$3(body);
-  return `${open}${scheme}${css === "" ? "" : `<style>${css}</style>`}${body}${close}`;
-}
-function paneMotion$3() {
-  const drawings = stableDrawings$3();
-  const shown = new Map;
-  const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 };
-  const begin = () => {
-    const now = Date.now();
-    if (now - pass.at > PASS_MS$3)
-      pass.entered = 0;
-    pass.at = now;
-  };
-  return {
-    reset: () => {
-      drawings.reset();
-      shown.clear();
-    },
-    pic: (key, pic, opts = {}) => {
-      begin();
-      const what = `${opts.isRow === true ? "row:" : ""}${pic.source}`;
-      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH$3.exec(pic.source)?.[1]), source: pic.source };
-      const source = drawings.draw(key, what, (built) => {
-        const order = built === "enter" ? Math.min(MAX_ORDER$3, pass.entered++) : 0;
-        const before = shown.get(key);
-        const isQuiet = before !== undefined && (before.shows === now.shows || before.width !== now.width);
-        const phase = built === "change" && isQuiet ? "still" : built;
-        const lastChange = before?.changedAt ?? Number.NEGATIVE_INFINITY;
-        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS$3;
-        shown.set(key, { ...now, changedAt: phase === "change" ? pass.at : lastChange });
-        return animate$3(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
-      });
-      return { ...pic, source, isInteractive: true };
-    }
-  };
-}
-
-const BLANK$1 = "ㅤ";
-const CELL_PX$1 = 11.9;
-const BUTTON_PX$1 = 28;
-const RUN_SPAN$1 = 2;
-const LINE_SPAN$1 = "400%";
-function PressCover$1(ui, o) {
-  const { Box, Button } = ui;
-  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX$1 * 2)));
-  const label = BLANK$1.repeat(Math.ceil(o.width * RUN_SPAN$1 / CELL_PX$1));
-  const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey };
-  return h(Box, {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "column",
-    justifyContent: "center",
-    overflow: "hidden"
-  }, Array.from({ length: lines }, (_, i) => h(Box, {
-    key: `${o.key}~line${i}`,
-    flexDirection: "row",
-    width: LINE_SPAN$1,
-    marginLeft: -1,
-    flexShrink: 0
-  }, h(Button, {
-    key: i === 0 ? o.key : `${o.key}~${i}`,
-    label,
-    plain: true,
-    ...i === 0 ? hotkey : {},
-    onPress: o.onPress
-  }))));
-}
-const STILL$1 = "<style>*{animation:none!important;transition:none!important}</style>";
-const stillSource$1 = (source) => source.replace(/<\/svg>\s*$/, `${STILL$1}</svg>`);
-function stillSvg$1(ui, drawing) {
-  if (drawing.type !== "Svg")
-    return drawing;
-  const { Svg } = ui;
-  const { key, source, alt, width, height } = drawing.props;
-  return h(Svg, {
-    key,
-    source: stillSource$1(source),
-    alt,
-    width,
-    height
-  });
-}
-const FALLBACK_PX$1 = 52;
-const FALLBACK_WIDTH_PX$1 = 360;
-function PressRow$1(ui, o) {
-  const { Box } = ui;
-  const props = o.drawing.type === "Svg" ? o.drawing.props : {};
-  const width = props.width ?? FALLBACK_WIDTH_PX$1;
-  const height = props.height ?? FALLBACK_PX$1;
-  return h(Box, {
-    key: o.box,
-    alignSelf: "flex-start"
-  }, stillSvg$1(ui, o.drawing), PressCover$1(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
-}
+const pick$2 = (table) => table[current$2];
+const upper$1 = (text) => text.toLocaleUpperCase(current$2);
 
 const AUTO$1 = { mode: "auto", isLight: false };
 const NEUTRALS$2 = ["card", "inset", "line", "strong", "track", "hi", "mid", "lo"];
@@ -8483,7 +8742,7 @@ function fileBadge$2(spec) {
   const name = spec.path.split("/").pop() ?? spec.path;
   const dot = name.lastIndexOf(".");
   const ext = dot > 0 ? name.slice(dot + 1) : "";
-  const label = upper$2(ext === "" ? "·" : ext.slice(0, 3));
+  const label = upper$1(ext === "" ? "·" : ext.slice(0, 3));
   return rect$1({ x: spec.x, y: spec.y, w: 26, h: 16, rx: 4, fill: "track" }) + text$1({ size: 9.5, weight: 600, isMono: true, x: spec.x + 13, y: spec.y + 11.5, text: label, ink: "lo", anchor: "middle" });
 }
 function monogram(spec) {
@@ -8612,7 +8871,7 @@ const TR$4 = {
   promptFallback: "tur"
 };
 const SAFETY_PREFIXES = [EN$4.safetyPrefix, TR$4.safetyPrefix];
-const words$3 = () => pick$3({ en: EN$4, tr: TR$4 });
+const words$3 = () => pick$2({ en: EN$4, tr: TR$4 });
 
 const HEAD_LEAD_Y = 18;
 const HEAD_PAD_BOTTOM = 6;
@@ -8885,10 +9144,10 @@ function textPane$1(ui, view, opts) {
 }
 
 const LABEL_MAX = 60;
-const WIDTH$5 = { min: 240, max: 860 };
+const WIDTH$2 = { min: 240, max: 860 };
 const CARD_RESERVE = 6;
 const ago$1 = (ms) => words$3().ago(ms);
-function clip$3(text, max = LABEL_MAX) {
+function clip$1(text, max = LABEL_MAX) {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 const changedText = (pending) => words$3().changed(pending.restore + pending.remove);
@@ -8898,7 +9157,7 @@ function notesOf(pending) {
   return [pending.commits > 0 ? said.commitsKept(pending.commits) : "", pending.isIndexMoved ? said.indexBack : "", said.ignoredKept].filter((note) => note !== "");
 }
 const emptyText = () => `${words$3().emptyLead} · ${words$3().emptyRest}`;
-const targetOf = (turn, label, max = LABEL_MAX) => turn === null || turn === undefined ? `"${clip$3(label, max)}"` : words$3().turn(turn);
+const targetOf = (turn, label, max = LABEL_MAX) => turn === null || turn === undefined ? `"${clip$1(label, max)}"` : words$3().turn(turn);
 const QUESTION_LABEL_MAX = 40;
 const questionOf = (pending) => words$3().question(targetOf(pending.turn, pending.entry.label, QUESTION_LABEL_MAX));
 function titleOf(entry, meta) {
@@ -8909,7 +9168,7 @@ function titleOf(entry, meta) {
   return { title: own.turn === undefined ? words$3().saved : words$3().turn(own.turn), label: entry.label };
 }
 const headerMeta = (view, now) => view.entries[0] === undefined ? "" : words$3().headerMeta(view.entries.length, ago$1(now - view.entries[0].at));
-const motion$3 = paneMotion$3();
+const motion$3 = paneMotion();
 function picture$1(ui, drawing, key, opts) {
   const { Svg } = ui;
   return h(Svg, {
@@ -8919,7 +9178,7 @@ function picture$1(ui, drawing, key, opts) {
 }
 function confirmCard(ui, pending, opts) {
   const { Box, Button } = ui;
-  const frame = { width: svgWidth$1(opts.look.columns, { ...WIDTH$5, reserve: CARD_RESERVE }), mode: opts.look.theme.mode };
+  const frame = { width: svgWidth$1(opts.look.columns, { ...WIDTH$2, reserve: CARD_RESERVE }), mode: opts.look.theme.mode };
   const said = words$3();
   const head = headSvg(frame, { label: said.undo, meta: said.undoMeta, lead: questionOf(pending), rest: changedText(pending) });
   const confirm = confirmOf(pending);
@@ -8969,7 +9228,7 @@ function rowPicture(ui, row) {
 }
 function timeline(ui, view, opts) {
   const { Box } = ui;
-  const frame = { width: svgWidth$1(opts.look.columns, WIDTH$5), mode: opts.look.theme.mode };
+  const frame = { width: svgWidth$1(opts.look.columns, WIDTH$2), mode: opts.look.theme.mode };
   const specs = rowSpecs(view, opts);
   const isStacked = specs.some((spec) => !rowFits(frame, spec));
   return h(Box, {
@@ -8977,7 +9236,7 @@ function timeline(ui, view, opts) {
   }, view.entries.map((entry, index) => {
     const spec = specs[index];
     const drawing = rowPicture(ui, { frame, spec, isStacked, ref: entry.ref });
-    return PressRow$1(ui, { box: `cp-row-${index}`, key: `cp-undo-${index}`, drawing, onPress: () => opts.actions.onUndo(entry) });
+    return PressRow(ui, { box: `cp-row-${index}`, key: `cp-undo-${index}`, drawing, onPress: () => opts.actions.onUndo(entry) });
   }));
 }
 const STATUS_LOOK = {
@@ -9012,7 +9271,7 @@ function paneTree$2(ui, view, opts) {
   const { Box } = ui;
   if (!opts.look.isRich)
     return textPane$1(ui, view, opts);
-  const frame = { width: svgWidth$1(opts.look.columns, WIDTH$5), mode: opts.look.theme.mode };
+  const frame = { width: svgWidth$1(opts.look.columns, WIDTH$2), mode: opts.look.theme.mode };
   const count = view.entries.length;
   const said = words$3();
   const turns = view.entries.filter((entry) => titleOf(entry, opts.meta).title !== said.beforeUndo).length;
@@ -9043,10 +9302,6 @@ async function checkpointsPage($, ui, site, act) {
   const look = { theme, columns: site.columns, isRich: site.surface !== "terminal" };
   return paneTree$2(ui, view, { now: await $.clock.now(), meta, look, actions });
 }
-
-let current$2 = "en";
-const pick$2 = (table) => table[current$2];
-const upper$1 = (text) => text.toLocaleUpperCase(current$2);
 
 const plural$2 = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const EN$3 = {
@@ -9123,8 +9378,8 @@ const TR$3 = {
   finishNotNow: "Şimdi değil",
   continuePrompt: (title) => `Plana sıradaki açık adımla devam et: ${title}. Görev listesini ilerledikçe güncel tut.`
 };
-const WORDS$4 = { en: EN$3, tr: TR$3 };
-const words$2 = () => pick$2(WORDS$4);
+const WORDS$3 = { en: EN$3, tr: TR$3 };
+const words$2 = () => pick$4(WORDS$3);
 
 const MATCH_MIN = 0.6;
 const MIN_WORD = 3;
@@ -9232,144 +9487,6 @@ function resolvePlan(tasks, doc) {
   if (matched.size < needed)
     return fromTasks(tasks);
   return { steps: fromDoc(doc, matched), source: `${doc.label} · ${words$2().tasksLabel}` };
-}
-
-const FILL$2 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
-const DONE$2 = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
-const HAS_DONE$2 = /\bdata-m-done\b/;
-const WIDTH$4 = /\swidth="([\d.]+)"/;
-const CLASS$2 = /\sclass="([^"]*)"/;
-const STYLE$2 = /\sstyle="([^"]*)"/;
-const MIN_RATIO_STEP$2 = 0.02;
-const RATIO_DIGITS$2 = 3;
-const widthOf$2 = (tag) => Number(WIDTH$4.exec(tag)?.[1] ?? 0);
-function withClass$2(tag, name, extra = "") {
-  const tagged = CLASS$2.test(tag) ? tag.replace(CLASS$2, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
-  return tagged.replace(/\s*\/?>$/, `${extra}$&`);
-}
-function slideFills$2(before, now) {
-  const old = before.match(FILL$2) ?? [];
-  if (old.length !== (now.match(FILL$2) ?? []).length)
-    return now;
-  let index = 0;
-  return now.replace(FILL$2, (tag) => {
-    const was = old[index++];
-    const from = was === undefined ? 0 : widthOf$2(was);
-    const to = widthOf$2(tag);
-    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP$2)
-      return tag;
-    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS$2)}`;
-    const styled = STYLE$2.test(tag) ? tag.replace(STYLE$2, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
-    return withClass$2(styled, "m-from");
-  });
-}
-function drawDone$2(before, now) {
-  if (HAS_DONE$2.test(before))
-    return now;
-  return now.replace(DONE$2, (tag) => withClass$2(tag, "m-draw", ' pathLength="1"'));
-}
-function markChanges$2(before, now) {
-  return drawDone$2(before, slideFills$2(before, now));
-}
-
-const STAGGER_MS$2 = 45;
-const EASE$2 = "cubic-bezier(.2,.8,.2,1)";
-const SHEEN$2 = "#A39E93";
-const RULES$2 = {
-  "m-in": `.m-in{animation:m-in .42s ${EASE$2} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
-  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$2} both}@keyframes m-fade{from{opacity:0}}`,
-  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$2} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
-  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$2} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
-  "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
-  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$2} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
-  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$2} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
-  "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
-  "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
-  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$2}}svg:hover .m-wash{opacity:.12}`,
-  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$2}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
-};
-const REDUCED$3 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
-function motionCss$2(body) {
-  const used = Object.keys(RULES$2).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
-  return used.length === 0 ? "" : `${used.map((name) => RULES$2[name]).join("")}${REDUCED$3}`;
-}
-Object.values(RULES$2).join("");
-const isEntering$2 = (cue) => cue.phase === "enter";
-function entering$2(body, cue, kind = "in") {
-  if (!isEntering$2(cue))
-    return body;
-  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$2}ms">${body}</g>`;
-}
-const FLASH$2 = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN$2}" fill-opacity=".22" class="m-flash"/>`;
-const WASH$2 = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
-
-function stableDrawings$2() {
-  const kept = new Map;
-  return {
-    reset: () => kept.clear(),
-    draw: (key, what, build) => {
-      const signature = typeof what === "string" ? what : JSON.stringify(what);
-      const before = kept.get(key);
-      if (before !== undefined && before.what === signature)
-        return before.drawing;
-      const drawing = build(before === undefined ? "enter" : "change");
-      kept.set(key, { what: signature, drawing });
-      return drawing;
-    }
-  };
-}
-
-const TAG_WIDTH$2 = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
-const SVG$2 = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
-const SCHEME$3 = "<style>:root{color-scheme:light dark}</style>";
-const SAYS_SCHEME$2 = /(^|[^-\w])color-scheme\s*:/;
-const PASS_MS$2 = 120;
-const MAX_ORDER$2 = 12;
-const LIVE_MS$2 = 30000;
-function animate$2(source, spec) {
-  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges$2(spec.before, source) : source;
-  const parts = SVG$2.exec(moved);
-  if (parts === null)
-    return source;
-  const [, open, inner = "", close] = parts;
-  const scheme = SAYS_SCHEME$2.test(inner) ? "" : SCHEME$3;
-  const lit = `${spec.isRow === true ? WASH$2 : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH$2 : ""}${inner}`;
-  const body = entering$2(lit, spec.cue);
-  const css = motionCss$2(body);
-  return `${open}${scheme}${css === "" ? "" : `<style>${css}</style>`}${body}${close}`;
-}
-function paneMotion$2() {
-  const drawings = stableDrawings$2();
-  const shown = new Map;
-  const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 };
-  const begin = () => {
-    const now = Date.now();
-    if (now - pass.at > PASS_MS$2)
-      pass.entered = 0;
-    pass.at = now;
-  };
-  return {
-    reset: () => {
-      drawings.reset();
-      shown.clear();
-    },
-    pic: (key, pic, opts = {}) => {
-      begin();
-      const what = `${opts.isRow === true ? "row:" : ""}${pic.source}`;
-      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH$2.exec(pic.source)?.[1]), source: pic.source };
-      const source = drawings.draw(key, what, (built) => {
-        const order = built === "enter" ? Math.min(MAX_ORDER$2, pass.entered++) : 0;
-        const before = shown.get(key);
-        const isQuiet = before !== undefined && (before.shows === now.shows || before.width !== now.width);
-        const phase = built === "change" && isQuiet ? "still" : built;
-        const lastChange = before?.changedAt ?? Number.NEGATIVE_INFINITY;
-        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS$2;
-        shown.set(key, { ...now, changedAt: phase === "change" ? pass.at : lastChange });
-        return animate$2(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
-      });
-      return { ...pic, source, isInteractive: true };
-    }
-  };
 }
 
 function baseName(path) {
@@ -9541,7 +9658,7 @@ function fileBadge$1(x, y, path) {
   const name = baseName(path);
   const dot = name.lastIndexOf(".");
   const ext = dot > 0 ? name.slice(dot + 1).toLowerCase() : "";
-  const label = escape$1(upper$1(ext === "" ? "·" : ext.slice(0, 3)));
+  const label = escape$1(upper$3(ext === "" ? "·" : ext.slice(0, 3)));
   return `<rect x="${x}" y="${y}" width="${BADGE$1.w}" height="${BADGE$1.h}" rx="4" fill="var(--track)"/><text x="${x + BADGE$1.w / 2}" y="${y + 11.5}" text-anchor="middle" class="mono badge lo">${label}</text>`;
 }
 function fileRow(path, frame) {
@@ -9670,7 +9787,7 @@ const BAR_X = 24;
 const BAR_H = 6;
 function sentence(width) {
   const say = words$2();
-  const how = wrap(`${upper$1(say.emptyHow.slice(0, 1))}${say.emptyHow.slice(1)}`, { width, size: HOW_SIZE, maxLines: HOW_LINES_MAX });
+  const how = wrap(`${upper$3(say.emptyHow.slice(0, 1))}${say.emptyHow.slice(1)}`, { width, size: HOW_SIZE, maxLines: HOW_LINES_MAX });
   const lines = how.map((line, n) => `<text x="0" y="${HOW_BASE + n * LINE$1}" class="label lo">${escape$1(line)}</text>`);
   return { svg: `<text x="0" y="${LEAD_BASE}" class="headline hi">${escape$1(say.emptyLead)}</text>${lines.join("")}`, bottom: HOW_BASE + (how.length - 1) * LINE$1 };
 }
@@ -10047,7 +10164,7 @@ function emptyPane(ui) {
     dimColor: true
   }, ` · ${words$2().emptyHow}`))));
 }
-const motion$2 = paneMotion$2();
+const motion$2 = paneMotion();
 function desktopPane(ui, view, layout) {
   const { Box, Svg } = ui;
   const width = widthFor(layout.columns - GUTTER_COLUMNS, SVG_RANGE);
@@ -10848,145 +10965,7 @@ function checkRowSvg(frame, spec) {
   return { source, width: frame.width, height: ROW_H, alt: `${check.name}: ${label}` };
 }
 
-const FILL$1 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
-const DONE$1 = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
-const HAS_DONE$1 = /\bdata-m-done\b/;
-const WIDTH$3 = /\swidth="([\d.]+)"/;
-const CLASS$1 = /\sclass="([^"]*)"/;
-const STYLE$1 = /\sstyle="([^"]*)"/;
-const MIN_RATIO_STEP$1 = 0.02;
-const RATIO_DIGITS$1 = 3;
-const widthOf$1 = (tag) => Number(WIDTH$3.exec(tag)?.[1] ?? 0);
-function withClass$1(tag, name, extra = "") {
-  const tagged = CLASS$1.test(tag) ? tag.replace(CLASS$1, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
-  return tagged.replace(/\s*\/?>$/, `${extra}$&`);
-}
-function slideFills$1(before, now) {
-  const old = before.match(FILL$1) ?? [];
-  if (old.length !== (now.match(FILL$1) ?? []).length)
-    return now;
-  let index = 0;
-  return now.replace(FILL$1, (tag) => {
-    const was = old[index++];
-    const from = was === undefined ? 0 : widthOf$1(was);
-    const to = widthOf$1(tag);
-    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP$1)
-      return tag;
-    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS$1)}`;
-    const styled = STYLE$1.test(tag) ? tag.replace(STYLE$1, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
-    return withClass$1(styled, "m-from");
-  });
-}
-function drawDone$1(before, now) {
-  if (HAS_DONE$1.test(before))
-    return now;
-  return now.replace(DONE$1, (tag) => withClass$1(tag, "m-draw", ' pathLength="1"'));
-}
-function markChanges$1(before, now) {
-  return drawDone$1(before, slideFills$1(before, now));
-}
-
-const STAGGER_MS$1 = 45;
-const EASE$1 = "cubic-bezier(.2,.8,.2,1)";
-const SHEEN$1 = "#A39E93";
-const RULES$1 = {
-  "m-in": `.m-in{animation:m-in .42s ${EASE$1} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
-  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$1} both}@keyframes m-fade{from{opacity:0}}`,
-  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$1} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
-  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$1} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
-  "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
-  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$1} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
-  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$1} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
-  "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
-  "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
-  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$1}}svg:hover .m-wash{opacity:.12}`,
-  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$1}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
-};
-const REDUCED$2 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
-function motionCss$1(body) {
-  const used = Object.keys(RULES$1).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
-  return used.length === 0 ? "" : `${used.map((name) => RULES$1[name]).join("")}${REDUCED$2}`;
-}
-Object.values(RULES$1).join("");
-const isEntering$1 = (cue) => cue.phase === "enter";
-function entering$1(body, cue, kind = "in") {
-  if (!isEntering$1(cue))
-    return body;
-  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$1}ms">${body}</g>`;
-}
-const FLASH$1 = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN$1}" fill-opacity=".22" class="m-flash"/>`;
-const WASH$1 = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
-
-function stableDrawings$1() {
-  const kept = new Map;
-  return {
-    reset: () => kept.clear(),
-    draw: (key, what, build) => {
-      const signature = typeof what === "string" ? what : JSON.stringify(what);
-      const before = kept.get(key);
-      if (before !== undefined && before.what === signature)
-        return before.drawing;
-      const drawing = build(before === undefined ? "enter" : "change");
-      kept.set(key, { what: signature, drawing });
-      return drawing;
-    }
-  };
-}
-
-const TAG_WIDTH$1 = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
-const SVG$1 = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
-const SCHEME$2 = "<style>:root{color-scheme:light dark}</style>";
-const SAYS_SCHEME$1 = /(^|[^-\w])color-scheme\s*:/;
-const PASS_MS$1 = 120;
-const MAX_ORDER$1 = 12;
-const LIVE_MS$1 = 30000;
-function animate$1(source, spec) {
-  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges$1(spec.before, source) : source;
-  const parts = SVG$1.exec(moved);
-  if (parts === null)
-    return source;
-  const [, open, inner = "", close] = parts;
-  const scheme = SAYS_SCHEME$1.test(inner) ? "" : SCHEME$2;
-  const lit = `${spec.isRow === true ? WASH$1 : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH$1 : ""}${inner}`;
-  const body = entering$1(lit, spec.cue);
-  const css = motionCss$1(body);
-  return `${open}${scheme}${css === "" ? "" : `<style>${css}</style>`}${body}${close}`;
-}
-function paneMotion$1() {
-  const drawings = stableDrawings$1();
-  const shown = new Map;
-  const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 };
-  const begin = () => {
-    const now = Date.now();
-    if (now - pass.at > PASS_MS$1)
-      pass.entered = 0;
-    pass.at = now;
-  };
-  return {
-    reset: () => {
-      drawings.reset();
-      shown.clear();
-    },
-    pic: (key, pic, opts = {}) => {
-      begin();
-      const what = `${opts.isRow === true ? "row:" : ""}${pic.source}`;
-      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH$1.exec(pic.source)?.[1]), source: pic.source };
-      const source = drawings.draw(key, what, (built) => {
-        const order = built === "enter" ? Math.min(MAX_ORDER$1, pass.entered++) : 0;
-        const before = shown.get(key);
-        const isQuiet = before !== undefined && (before.shows === now.shows || before.width !== now.width);
-        const phase = built === "change" && isQuiet ? "still" : built;
-        const lastChange = before?.changedAt ?? Number.NEGATIVE_INFINITY;
-        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS$1;
-        shown.set(key, { ...now, changedAt: phase === "change" ? pass.at : lastChange });
-        return animate$1(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
-      });
-      return { ...pic, source, isInteractive: true };
-    }
-  };
-}
-
-const motion$1 = paneMotion$1();
+const motion$1 = paneMotion();
 function picture(ui, drawing, key, opts) {
   const { Svg } = ui;
   return h(Svg, {
@@ -10995,7 +10974,7 @@ function picture(ui, drawing, key, opts) {
   });
 }
 
-const WIDTH$2 = { min: 300, max: 880 };
+const WIDTH$1 = { min: 300, max: 880 };
 const ROW_WIDTH$1 = { min: 220, max: 860, reserve: 8 };
 const GLYPH = { pending: "◐", pass: "✓", fail: "✕", skipped: "–" };
 const look = (role) => role === "lo" ? { dimColor: true } : { color: THEME_KEY[role] };
@@ -11010,7 +10989,7 @@ const logsLink = (ui, check, index) => {
 const headShows = (ci, frame) => ({ frame, number: ci.number, title: ci.title, phase: ci.phase, checks: ci.checks, talk: newTalkOf(ci), isChecked: ci.checkedAt !== null });
 function richSection(ui, view) {
   const { Box, Link } = ui;
-  const frame = { width: svgWidth(view.columns, WIDTH$2), mode: view.theme.mode };
+  const frame = { width: svgWidth(view.columns, WIDTH$1), mode: view.theme.mode };
   const rowFrame = { width: svgWidth(view.columns, ROW_WIDTH$1), mode: view.theme.mode };
   const { checks } = view.ci;
   return h(Box, {
@@ -11084,7 +11063,7 @@ function ciPart(ui, view) {
     return view.isRich ? richSection(ui, { ...view, ci }) : textSection(ui, { ...view, ci });
   const { Box, Text } = ui;
   if (view.isRich)
-    return picture(ui, noPrSvg({ width: svgWidth(view.columns, WIDTH$2), mode: view.theme.mode }), "tb-ci-none");
+    return picture(ui, noPrSvg({ width: svgWidth(view.columns, WIDTH$1), mode: view.theme.mode }), "tb-ci-none");
   return h(Box, {
     key: "tb-ci",
     flexDirection: "column"
@@ -11204,67 +11183,6 @@ function tailHeadSvg(frame, title) {
   return { source: svgDoc$1({ width: frame.width, height: FILE_H, mode: frame.mode, body }), width: frame.width, height: FILE_H, alt: title };
 }
 
-const BLANK = "ㅤ";
-const CELL_PX = 11.9;
-const BUTTON_PX = 28;
-const RUN_SPAN = 2;
-const LINE_SPAN = "400%";
-function PressCover(ui, o) {
-  const { Box, Button } = ui;
-  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX * 2)));
-  const label = BLANK.repeat(Math.ceil(o.width * RUN_SPAN / CELL_PX));
-  const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey };
-  return h(Box, {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: "column",
-    justifyContent: "center",
-    overflow: "hidden"
-  }, Array.from({ length: lines }, (_, i) => h(Box, {
-    key: `${o.key}~line${i}`,
-    flexDirection: "row",
-    width: LINE_SPAN,
-    marginLeft: -1,
-    flexShrink: 0
-  }, h(Button, {
-    key: i === 0 ? o.key : `${o.key}~${i}`,
-    label,
-    plain: true,
-    ...i === 0 ? hotkey : {},
-    onPress: o.onPress
-  }))));
-}
-const STILL = "<style>*{animation:none!important;transition:none!important}</style>";
-const stillSource = (source) => source.replace(/<\/svg>\s*$/, `${STILL}</svg>`);
-function stillSvg(ui, drawing) {
-  if (drawing.type !== "Svg")
-    return drawing;
-  const { Svg } = ui;
-  const { key, source, alt, width, height } = drawing.props;
-  return h(Svg, {
-    key,
-    source: stillSource(source),
-    alt,
-    width,
-    height
-  });
-}
-const FALLBACK_PX = 52;
-const FALLBACK_WIDTH_PX = 360;
-function PressRow(ui, o) {
-  const { Box } = ui;
-  const props = o.drawing.type === "Svg" ? o.drawing.props : {};
-  const width = props.width ?? FALLBACK_WIDTH_PX;
-  const height = props.height ?? FALLBACK_PX;
-  return h(Box, {
-    key: o.box,
-    alignSelf: "flex-start"
-  }, stillSvg(ui, o.drawing), PressCover(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
-}
-
 const LINE_WIDTH = 4;
 const ROW_INDENT$1 = 4;
 const ROW_GLYPH = "› ";
@@ -11273,7 +11191,7 @@ const MESSAGE_INDENT = ROW_GLYPH.length + LINE_WIDTH + NAME_GAP.length;
 const BAR_MAX$2 = 40;
 const BAR_MIN$2 = 8;
 const colorOf = (tone) => tone === "neutral" ? { dimColor: true } : { color: THEME_KEY[tone] };
-const clip$2 = (text, max) => text.length > max ? `${text.slice(0, Math.max(1, max - 1))}…` : text;
+const clip = (text, max) => text.length > max ? `${text.slice(0, Math.max(1, max - 1))}…` : text;
 function unplacedOf(spec) {
   const { outcome } = spec;
   if (outcome === null || outcome.status === "pass" || outcome.failures.length > 0)
@@ -11328,7 +11246,7 @@ function rowText(ui, view, failure) {
   const index = failuresOf(view.badge).indexOf(failure);
   const line = failure.line === null ? "" : String(failure.line);
   const meta = [suiteTag(failure.suite), durationText(failure.durationMs)].filter((part) => part !== "").join(" · ");
-  const label = clip$2(`${ROW_GLYPH}${line.padStart(LINE_WIDTH)}${NAME_GAP}${failure.name}`, view.columns - ROW_INDENT$1 - meta.length - 2);
+  const label = clip(`${ROW_GLYPH}${line.padStart(LINE_WIDTH)}${NAME_GAP}${failure.name}`, view.columns - ROW_INDENT$1 - meta.length - 2);
   return h(Box, {
     key: `tb-row-${index}`,
     flexDirection: "column",
@@ -11425,7 +11343,7 @@ function textPane(ui, view) {
 }
 
 const ROW_INDENT = 2;
-const WIDTH$1 = { min: 300, max: 880 };
+const WIDTH = { min: 300, max: 880 };
 const ROW_WIDTH = { min: 220, max: 880, reserve: ROW_INDENT };
 const failureKey = (failure) => `${failure.suite}:${failure.file ?? "-"}:${failure.line ?? "-"}:${failure.name}:${failure.message}`;
 function failureRow(ui, view, spec) {
@@ -11441,7 +11359,7 @@ function groupTree(ui, view, group) {
   const { Box } = ui;
   const all = failuresOf(view.badge);
   const width = svgWidth(view.columns, ROW_WIDTH);
-  const head = fileHeadSvg({ width: svgWidth(view.columns, WIDTH$1), mode: view.theme.mode }, { file: group.file, count: group.failures.length });
+  const head = fileHeadSvg({ width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }, { file: group.file, count: group.failures.length });
   return h(Box, {
     key: `tb-file-${group.file ?? "-"}`,
     flexDirection: "column"
@@ -11459,7 +11377,7 @@ function tailTree(ui, view, spec) {
   const unplaced = unplacedOf(spec);
   if (unplaced === null)
     return null;
-  const drawing = tailHeadSvg({ width: svgWidth(view.columns, WIDTH$1), mode: view.theme.mode }, unplaced.title);
+  const drawing = tailHeadSvg({ width: svgWidth(view.columns, WIDTH), mode: view.theme.mode }, unplaced.title);
   return h(Box, {
     key: `tb-tail-${spec.name}`,
     flexDirection: "column"
@@ -11484,7 +11402,7 @@ function meterOf({ tests, ...badge }) {
   return { passed: tests.passed, total: tests.total };
 }
 function localPart(ui, view, state) {
-  const frame = { width: svgWidth(view.columns, WIDTH$1), mode: view.theme.mode };
+  const frame = { width: svgWidth(view.columns, WIDTH), mode: view.theme.mode };
   const says = words$1().local;
   const rows = localRowsOf(state);
   const part = { title: says.title, meta: runMeta(view.badge, view.now), isLive: view.badge.isRunning, rows, meter: meterOf(view.badge), note: rows.length === 0 ? says.none : says.when };
@@ -11495,7 +11413,7 @@ function paneTree$1(ui, view) {
   if (!view.isRich)
     return textPane(ui, view);
   const state = { badge: view.badge, ci: view.ci, commands: view.commands };
-  const frame = { width: svgWidth(view.columns, WIDTH$1), mode: view.theme.mode };
+  const frame = { width: svgWidth(view.columns, WIDTH), mode: view.theme.mode };
   return h(Box, {
     flexDirection: "column",
     rowGap: 1
@@ -11506,7 +11424,7 @@ const BADGE = { plugin: "test-badge", key: "badge" };
 const FILTER = { plugin: "test-badge", key: "filter" };
 const THEME = { plugin: "test-badge", key: "theme" };
 const CI = { plugin: "test-badge", key: "ci" };
-const COMMANDS$1 = { plugin: "test-badge", key: "commands" };
+const COMMANDS = { plugin: "test-badge", key: "commands" };
 async function testsPage($, ui, site, act) {
   setLang$1(lang$1());
   const badge = (await $.state.get(BADGE)).value ?? EMPTY;
@@ -11521,7 +11439,7 @@ async function testsPage($, ui, site, act) {
     onRerun: () => act("rerun"),
     onFilter: (filter) => act("filter", filter),
     ci: (await $.state.get(CI)).value ?? null,
-    commands: (await $.state.get(COMMANDS$1)).value ?? null
+    commands: (await $.state.get(COMMANDS)).value ?? null
   };
   return paneTree$1(ui, view);
 }
@@ -11664,8 +11582,8 @@ const TR$1 = {
   pastLine: (spec) => [`${spec.active}/${spec.range} kullanılan gün`, `${spec.sessions} oturum`, `${spec.tokens} token okunup yazıldı`, `${spec.cache} hazır tutulan`, spec.model === null ? "" : `çoğunlukla ${spec.model}`].filter((part) => part !== "").join(" · "),
   dayTokens: (day, tokens) => `${day}: ${tokens} token`
 };
-const WORDS$3 = { en: EN$1, tr: TR$1 };
-const words = () => pick(WORDS$3);
+const WORDS$2 = { en: EN$1, tr: TR$1 };
+const words = () => pick(WORDS$2);
 
 const THOUSAND = 1000;
 const MILLION = 1e6;
@@ -11941,144 +11859,6 @@ function seriesOf(history, id) {
 }
 function costSeries(history) {
   return history.map((sample) => sample.cost).filter((value) => value !== undefined);
-}
-
-const FILL = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
-const DONE = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
-const HAS_DONE = /\bdata-m-done\b/;
-const WIDTH = /\swidth="([\d.]+)"/;
-const CLASS = /\sclass="([^"]*)"/;
-const STYLE = /\sstyle="([^"]*)"/;
-const MIN_RATIO_STEP = 0.02;
-const RATIO_DIGITS = 3;
-const widthOf = (tag) => Number(WIDTH.exec(tag)?.[1] ?? 0);
-function withClass(tag, name, extra = "") {
-  const tagged = CLASS.test(tag) ? tag.replace(CLASS, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
-  return tagged.replace(/\s*\/?>$/, `${extra}$&`);
-}
-function slideFills(before, now) {
-  const old = before.match(FILL) ?? [];
-  if (old.length !== (now.match(FILL) ?? []).length)
-    return now;
-  let index = 0;
-  return now.replace(FILL, (tag) => {
-    const was = old[index++];
-    const from = was === undefined ? 0 : widthOf(was);
-    const to = widthOf(tag);
-    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP)
-      return tag;
-    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS)}`;
-    const styled = STYLE.test(tag) ? tag.replace(STYLE, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
-    return withClass(styled, "m-from");
-  });
-}
-function drawDone(before, now) {
-  if (HAS_DONE.test(before))
-    return now;
-  return now.replace(DONE, (tag) => withClass(tag, "m-draw", ' pathLength="1"'));
-}
-function markChanges(before, now) {
-  return drawDone(before, slideFills(before, now));
-}
-
-const STAGGER_MS = 45;
-const EASE = "cubic-bezier(.2,.8,.2,1)";
-const SHEEN = "#A39E93";
-const RULES = {
-  "m-in": `.m-in{animation:m-in .42s ${EASE} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
-  "m-fade": `.m-fade{animation:m-fade .5s ${EASE} both}@keyframes m-fade{from{opacity:0}}`,
-  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
-  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
-  "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
-  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
-  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
-  "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
-  "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
-  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE}}svg:hover .m-wash{opacity:.12}`,
-  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
-};
-const REDUCED$1 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
-function motionCss(body) {
-  const used = Object.keys(RULES).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
-  return used.length === 0 ? "" : `${used.map((name) => RULES[name]).join("")}${REDUCED$1}`;
-}
-Object.values(RULES).join("");
-const isEntering = (cue) => cue.phase === "enter";
-function entering(body, cue, kind = "in") {
-  if (!isEntering(cue))
-    return body;
-  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS}ms">${body}</g>`;
-}
-const FLASH = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN}" fill-opacity=".22" class="m-flash"/>`;
-const WASH = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
-
-function stableDrawings() {
-  const kept = new Map;
-  return {
-    reset: () => kept.clear(),
-    draw: (key, what, build) => {
-      const signature = typeof what === "string" ? what : JSON.stringify(what);
-      const before = kept.get(key);
-      if (before !== undefined && before.what === signature)
-        return before.drawing;
-      const drawing = build(before === undefined ? "enter" : "change");
-      kept.set(key, { what: signature, drawing });
-      return drawing;
-    }
-  };
-}
-
-const TAG_WIDTH = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
-const SVG = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
-const SCHEME$1 = "<style>:root{color-scheme:light dark}</style>";
-const SAYS_SCHEME = /(^|[^-\w])color-scheme\s*:/;
-const PASS_MS = 120;
-const MAX_ORDER = 12;
-const LIVE_MS = 30000;
-function animate(source, spec) {
-  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges(spec.before, source) : source;
-  const parts = SVG.exec(moved);
-  if (parts === null)
-    return source;
-  const [, open, inner = "", close] = parts;
-  const scheme = SAYS_SCHEME.test(inner) ? "" : SCHEME$1;
-  const lit = `${spec.isRow === true ? WASH : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH : ""}${inner}`;
-  const body = entering(lit, spec.cue);
-  const css = motionCss(body);
-  return `${open}${scheme}${css === "" ? "" : `<style>${css}</style>`}${body}${close}`;
-}
-function paneMotion() {
-  const drawings = stableDrawings();
-  const shown = new Map;
-  const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 };
-  const begin = () => {
-    const now = Date.now();
-    if (now - pass.at > PASS_MS)
-      pass.entered = 0;
-    pass.at = now;
-  };
-  return {
-    reset: () => {
-      drawings.reset();
-      shown.clear();
-    },
-    pic: (key, pic, opts = {}) => {
-      begin();
-      const what = `${opts.isRow === true ? "row:" : ""}${pic.source}`;
-      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH.exec(pic.source)?.[1]), source: pic.source };
-      const source = drawings.draw(key, what, (built) => {
-        const order = built === "enter" ? Math.min(MAX_ORDER, pass.entered++) : 0;
-        const before = shown.get(key);
-        const isQuiet = before !== undefined && (before.shows === now.shows || before.width !== now.width);
-        const phase = built === "change" && isQuiet ? "still" : built;
-        const lastChange = before?.changedAt ?? Number.NEGATIVE_INFINITY;
-        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS;
-        shown.set(key, { ...now, changedAt: phase === "change" ? pass.at : lastChange });
-        return animate(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
-      });
-      return { ...pic, source, isInteractive: true };
-    }
-  };
 }
 
 const motion = paneMotion();
@@ -12960,706 +12740,6 @@ async function pageTree($, e, o) {
   }, HomeButton(o.ui, o.onHome), page);
 }
 
-const textOf$1 = (entry, lang) => entry[lang === "tr" ? 1 : 0];
-function fill(template, x = "") {
-  const named = x.trim();
-  return template.replace(/\[([^\]]*)\]/g, (_, part) => named ? part : "").replace(/\{x\}/g, named);
-}
-const READ = ["Reading a file[: {x}]", "Bir dosyayı okuyor[: {x}]", "file"];
-const SEARCH = ["Searching inside files[ for “{x}”]", "Dosyaların içinde[ “{x}”] arıyor", "arg"];
-const TESTS = ["Running the tests", "Testleri çalıştırıyor"];
-const BUILD = ["Building the project", "Projeyi derliyor (çalışır hale getiriyor)"];
-const INSTALL = ["Installing the packages the project needs", "Projenin ihtiyaç duyduğu paketleri kuruyor"];
-const LINT = ["Checking the code against the style rules", "Kodun yazım kurallarına uyduğunu denetliyor"];
-const TYPES = ["Checking the code for type errors", "Kodda tip hatası var mı diye denetliyor"];
-const FORMAT = ["Tidying the code’s layout", "Kodun biçimini düzeltiyor"];
-const SCRIPT = ["Running a script[: {x}]", "Bir betik (küçük program) çalıştırıyor[: {x}]", "first"];
-const SHAPE = ["Tidying a command’s output", "Bir komutun çıktısını düzenliyor"];
-const PROCESSES = ["Looking at the running programs", "Çalışan programlara bakıyor"];
-const DATABASE = ["Querying the database", "Veritabanını sorguluyor"];
-const ARCHIVE = ["Working with an archive file", "Arşiv (sıkıştırılmış) dosyasıyla çalışıyor"];
-const SERVICE = ["Working with the {x} service", "{x} servisiyle çalışıyor"];
-const COMMANDS = {
-  cat: READ,
-  head: READ,
-  tail: READ,
-  less: READ,
-  more: READ,
-  bat: READ,
-  grep: SEARCH,
-  rg: SEARCH,
-  ag: SEARCH,
-  ack: SEARCH,
-  ls: ["Listing the files in a folder", "Bir klasördeki dosyaları listeliyor"],
-  tree: ["Listing the files in a folder", "Bir klasördeki dosyaları listeliyor"],
-  find: ["Looking for files", "Dosya arıyor"],
-  fd: ["Looking for files", "Dosya arıyor"],
-  wc: ["Counting lines", "Satırları sayıyor"],
-  diff: ["Comparing two files", "İki dosyayı karşılaştırıyor"],
-  sed: ["Reading part of a file[: {x}]", "Bir dosyanın bir bölümünü okuyor[: {x}]", "file"],
-  awk: SHAPE,
-  sort: SHAPE,
-  uniq: SHAPE,
-  cut: SHAPE,
-  tr: SHAPE,
-  xargs: SHAPE,
-  tee: SHAPE,
-  column: SHAPE,
-  jq: ["Reading JSON data", "JSON verisini okuyor"],
-  cd: ["Moving to another folder", "Başka bir klasöre geçiyor"],
-  pwd: ["Checking which folder it is in", "Hangi klasörde olduğuna bakıyor"],
-  mkdir: ["Making a new folder[: {x}]", "Yeni bir klasör oluşturuyor[: {x}]", "file"],
-  touch: ["Making an empty file[: {x}]", "Boş bir dosya oluşturuyor[: {x}]", "file"],
-  cp: ["Copying files", "Dosya kopyalıyor"],
-  mv: ["Moving or renaming files", "Dosya taşıyor ya da adını değiştiriyor"],
-  rm: ["Deleting a file[: {x}]", "Dosya siliyor[: {x}]", "file"],
-  rmdir: ["Deleting an empty folder", "Boş bir klasörü siliyor"],
-  ln: ["Making a shortcut to a file", "Bir dosyaya kısayol oluşturuyor"],
-  chmod: ["Changing who may use a file", "Bir dosyanın izinlerini değiştiriyor"],
-  chown: ["Changing who owns a file", "Bir dosyanın sahibini değiştiriyor"],
-  echo: ["Printing a line of text[: “{x}”]", "Ekrana bir yazı yazdırıyor[: “{x}”]", "arg"],
-  printf: ["Printing a line of text[: “{x}”]", "Ekrana bir yazı yazdırıyor[: “{x}”]", "arg"],
-  curl: ["Fetching data from the internet[: {x}]", "İnternetten veri alıyor[: {x}]", "host"],
-  wget: ["Downloading from the internet[: {x}]", "İnternetten indiriyor[: {x}]", "host"],
-  kill: ["Stopping a running program", "Çalışan bir programı durduruyor"],
-  pkill: ["Stopping a running program", "Çalışan bir programı durduruyor"],
-  killall: ["Stopping a running program", "Çalışan bir programı durduruyor"],
-  ps: PROCESSES,
-  top: PROCESSES,
-  lsof: PROCESSES,
-  pgrep: PROCESSES,
-  sleep: ["Waiting a moment", "Kısa bir süre bekliyor"],
-  open: ["Opening a file or an app", "Bir dosyayı ya da uygulamayı açıyor"],
-  which: ["Checking whether a tool is installed", "Bir aracın kurulu olup olmadığına bakıyor"],
-  type: ["Checking whether a tool is installed", "Bir aracın kurulu olup olmadığına bakıyor"],
-  env: ["Looking at the environment settings", "Ortam ayarlarına bakıyor"],
-  printenv: ["Looking at the environment settings", "Ortam ayarlarına bakıyor"],
-  date: ["Checking the date and time", "Tarihe ve saate bakıyor"],
-  tar: ARCHIVE,
-  zip: ARCHIVE,
-  unzip: ARCHIVE,
-  gzip: ARCHIVE,
-  gunzip: ARCHIVE,
-  ssh: ["Connecting to another computer", "Başka bir bilgisayara bağlanıyor"],
-  scp: ["Copying files to another computer", "Başka bir bilgisayara dosya kopyalıyor"],
-  rsync: ["Copying files, only what changed", "Dosyaları kopyalıyor (yalnızca değişenleri)"],
-  sqlite3: DATABASE,
-  psql: DATABASE,
-  mysql: DATABASE,
-  du: ["Checking how much disk space is used", "Ne kadar disk alanı kullanıldığına bakıyor"],
-  df: ["Checking how much disk space is free", "Ne kadar boş disk alanı olduğuna bakıyor"],
-  stat: ["Looking at a file’s details", "Bir dosyanın bilgilerine bakıyor"],
-  file: ["Looking at a file’s details", "Bir dosyanın bilgilerine bakıyor"],
-  shasum: ["Taking a file’s fingerprint", "Bir dosyanın parmak izini (özetini) alıyor"],
-  md5: ["Taking a file’s fingerprint", "Bir dosyanın parmak izini (özetini) alıyor"],
-  screencapture: ["Taking a screenshot", "Ekran görüntüsü alıyor"],
-  ffmpeg: ["Processing a video or sound file", "Bir video ya da ses dosyasını işliyor"],
-  osascript: ["Driving a Mac app with a script", "Bir Mac uygulamasını betikle yönetiyor"],
-  tsc: TYPES,
-  eslint: LINT,
-  biome: LINT,
-  ruff: LINT,
-  prettier: FORMAT,
-  jest: TESTS,
-  vitest: TESTS,
-  pytest: TESTS,
-  mocha: TESTS,
-  playwright: TESTS,
-  python: SCRIPT,
-  python3: SCRIPT,
-  node: SCRIPT,
-  deno: SCRIPT,
-  ruby: SCRIPT,
-  bash: SCRIPT,
-  sh: SCRIPT,
-  zsh: SCRIPT,
-  swift: SCRIPT,
-  pip: INSTALL,
-  pip3: INSTALL,
-  uv: INSTALL,
-  poetry: INSTALL,
-  pod: INSTALL,
-  gem: INSTALL,
-  brew: ["Installing or updating a tool on this Mac", "Bu Mac’e bir araç kuruyor ya da güncelliyor"],
-  make: BUILD,
-  xcodebuild: BUILD,
-  gradle: BUILD,
-  gradlew: BUILD,
-  kubectl: ["Working with the servers the app runs on", "Uygulamanın çalıştığı sunucularla çalışıyor"],
-  supabase: SERVICE,
-  vercel: SERVICE,
-  wrangler: SERVICE,
-  firebase: SERVICE,
-  netlify: SERVICE,
-  aws: SERVICE,
-  gcloud: SERVICE
-};
-const GIT = {
-  rest: ["Working with the project’s saved history (git)", "Projenin kayıtlı geçmişiyle (git) çalışıyor"],
-  sub: {
-    status: ["Checking which files have changed", "Hangi dosyaların değiştiğine bakıyor"],
-    diff: ["Looking over the changes made", "Yapılan değişiklikleri inceliyor"],
-    log: ["Looking at the earlier saved versions", "Daha önce kaydedilmiş sürümlere bakıyor"],
-    show: ["Looking at an earlier saved version", "Daha önce kaydedilmiş bir sürüme bakıyor"],
-    blame: ["Checking who last changed each line", "Her satırı en son kimin değiştirdiğine bakıyor"],
-    add: ["Picking the changes to save", "Kaydedilecek değişiklikleri seçiyor"],
-    commit: ["Saving the changes as a new version (commit)", "Değişiklikleri yeni bir sürüm olarak kaydediyor (commit)"],
-    push: ["Sending the saved versions to the shared copy (push)", "Kaydedilen sürümleri ortak kopyaya gönderiyor (push)"],
-    pull: ["Bringing in what is new in the shared copy", "Ortak kopyadaki yenilikleri alıyor"],
-    fetch: ["Checking what is new in the shared copy", "Ortak kopyada ne yeni diye bakıyor"],
-    checkout: ["Switching to another line of work (branch)", "Başka bir çalışma dalına (branch) geçiyor"],
-    switch: ["Switching to another line of work (branch)", "Başka bir çalışma dalına (branch) geçiyor"],
-    branch: ["Looking at the lines of work (branches)", "Çalışma dallarına (branch) bakıyor"],
-    merge: ["Joining two lines of work", "İki çalışma dalını birleştiriyor"],
-    rebase: ["Moving its saved versions onto the newest code", "Kendi kayıtlarını en güncel kodun üstüne taşıyor"],
-    "cherry-pick": ["Copying one saved change onto this branch", "Kaydedilmiş tek bir değişikliği bu dala kopyalıyor"],
-    stash: ["Setting unfinished changes aside", "Yarım kalan değişiklikleri kenara koyuyor"],
-    reset: ["Taking back the changes picked for saving", "Kayıt için seçilen değişiklikleri geri çekiyor"],
-    restore: ["Putting files back as they were (unsaved edits are lost)", "Dosyaları eski haline döndürüyor (kaydedilmemiş değişiklikler silinir)"],
-    revert: ["Undoing an earlier saved version", "Daha önce kaydedilmiş bir sürümü geri alıyor"],
-    clean: ["Deleting files that were never saved", "Hiç kaydedilmemiş dosyaları siliyor"],
-    clone: ["Downloading a project", "Bir projeyi indiriyor"],
-    init: ["Starting to keep this folder’s history", "Bu klasörün geçmişini tutmaya başlıyor"],
-    worktree: ["Working with a separate copy of the project", "Projenin ayrı bir çalışma kopyasıyla çalışıyor"],
-    tag: ["Naming a saved version", "Kaydedilmiş bir sürüme ad veriyor"],
-    remote: ["Looking at where the shared copy lives", "Ortak kopyanın nerede durduğuna bakıyor"]
-  }
-};
-const GH = {
-  rest: ["Working with GitHub", "GitHub ile çalışıyor"],
-  sub: {
-    pr: ["Looking at the change requests (PRs) on GitHub", "GitHub’daki değişiklik isteklerine (PR) bakıyor"],
-    issue: ["Looking at the open notes (issues) on GitHub", "GitHub’daki açık kayıtlara (issue) bakıyor"],
-    run: ["Checking GitHub’s automatic checks", "GitHub’daki otomatik kontrollerin sonucuna bakıyor"],
-    workflow: ["Checking GitHub’s automatic checks", "GitHub’daki otomatik kontrollerin sonucuna bakıyor"],
-    api: ["Asking GitHub for information", "GitHub’dan bilgi alıyor"],
-    repo: ["Looking at a project on GitHub", "GitHub’daki bir projeye bakıyor"],
-    release: ["Working with a published version on GitHub", "GitHub’da yayımlanmış bir sürümle çalışıyor"]
-  }
-};
-const PACKAGE = {
-  rest: ["Running one of the project’s own jobs[: {x}]", "Projenin hazır işlerinden birini çalıştırıyor[: {x}]"],
-  sub: {
-    install: INSTALL,
-    i: INSTALL,
-    add: INSTALL,
-    ci: INSTALL,
-    update: INSTALL,
-    upgrade: INSTALL,
-    uninstall: ["Removing a package", "Bir paketi kaldırıyor"],
-    remove: ["Removing a package", "Bir paketi kaldırıyor"],
-    test: TESTS,
-    t: TESTS,
-    build: BUILD,
-    dev: ["Starting the app to try it out", "Uygulamayı denemek için başlatıyor"],
-    start: ["Starting the app", "Uygulamayı başlatıyor"],
-    serve: ["Starting the app", "Uygulamayı başlatıyor"],
-    lint: LINT,
-    typecheck: TYPES,
-    "type-check": TYPES,
-    check: LINT,
-    format: FORMAT,
-    publish: ["Publishing the package for everyone", "Paketi herkesin kullanımına yayımlıyor"]
-  }
-};
-const DOCKER = {
-  rest: ["Working with a container (a boxed-up app)", "Bir kapsayıcıyla (kutulanmış uygulama) çalışıyor"],
-  sub: {
-    build: ["Packing the app into a container", "Uygulamayı bir kapsayıcıya paketliyor"],
-    run: ["Starting a container (a boxed-up app)", "Bir kapsayıcıyı (kutulanmış uygulama) başlatıyor"],
-    ps: ["Looking at the running containers", "Çalışan kapsayıcılara bakıyor"],
-    logs: ["Reading a container’s log", "Bir kapsayıcının kayıtlarını okuyor"],
-    compose: ["Starting or stopping the app’s containers", "Uygulamanın kapsayıcılarını başlatıyor ya da durduruyor"]
-  }
-};
-const CLAUDE = {
-  rest: ["Running a Claude Code command", "Bir Claude Code komutu çalıştırıyor"],
-  sub: {
-    test: ["Running the mod’s tests", "Modun testlerini çalıştırıyor"],
-    validate: ["Checking that the mod follows the rules", "Modun kurallara uyduğunu denetliyor"],
-    install: ["Installing a mod", "Bir mod kuruyor"],
-    marketplace: ["Looking at where mods are installed from", "Modların kurulduğu kaynağa bakıyor"]
-  }
-};
-const FLUTTER = {
-  rest: ["Running a Flutter command", "Bir Flutter komutu çalıştırıyor"],
-  sub: {
-    run: ["Starting the app on a phone or simulator", "Uygulamayı telefonda ya da simülatörde başlatıyor"],
-    build: BUILD,
-    test: TESTS,
-    analyze: LINT,
-    format: FORMAT,
-    pub: INSTALL,
-    clean: ["Clearing the old build files", "Eski derleme dosyalarını temizliyor"]
-  }
-};
-const TOOLCHAIN = { rest: BUILD, sub: { test: TESTS, run: SCRIPT, install: INSTALL, fmt: FORMAT, clippy: LINT, vet: LINT } };
-const FAMILIES = {
-  git: GIT,
-  gh: GH,
-  npm: PACKAGE,
-  pnpm: PACKAGE,
-  yarn: PACKAGE,
-  bun: PACKAGE,
-  docker: DOCKER,
-  "docker-compose": DOCKER,
-  claude: CLAUDE,
-  flutter: FLUTTER,
-  dart: FLUTTER,
-  cargo: TOOLCHAIN,
-  go: TOOLCHAIN
-};
-const SHELL = {
-  newBranch: ["Starting a new line of work (branch)[: {x}]", "Yeni bir çalışma dalı (branch) açıyor[: {x}]"],
-  hardReset: ["Throwing away the changes not saved yet", "Henüz kaydedilmemiş değişiklikleri siliyor"],
-  discard: ["Putting files back as they were (unsaved edits are lost)", "Dosyaları eski haline döndürüyor (kaydedilmemiş değişiklikler silinir)"],
-  dropStash: ["Throwing away the changes that were set aside", "Kenara konmuş değişiklikleri siliyor"],
-  deleteBranch: ["Deleting a line of work (branch)[: {x}]", "Bir çalışma dalını (branch) siliyor[: {x}]"],
-  forcePush: ["Overwriting the shared copy with its own versions", "Ortak kopyanın üzerine kendi kayıtlarını yazıyor"],
-  prCreate: ["Opening a change request (PR) on GitHub", "GitHub’da bir değişiklik isteği (PR) açıyor"],
-  prMerge: ["Merging a change request (PR) into the main code", "Bir değişiklik isteğini (PR) ana koda birleştiriyor"],
-  deleteFolder: ["Deleting a folder and everything in it[: {x}]", "Bir klasörü içindekilerle birlikte siliyor[: {x}]"],
-  findDelete: ["Finding files and deleting them", "Dosyaları bulup siliyor"],
-  editInPlace: ["Changing a file by a rule[: {x}]", "Bir dosyayı kurala göre değiştiriyor[: {x}]"],
-  writeFile: ["Writing into a file[: {x}]", "Bir dosyaya yazıyor[: {x}]"],
-  inlineScript: ["Running a short script it just wrote", "O an yazdığı kısa bir betiği çalıştırıyor"],
-  ownScript: ["Running the project’s own script[: {x}]", "Projenin kendi betiğini çalıştırıyor[: {x}]"],
-  fetchedTool: ["Running the “{x}” tool", "“{x}” aracını çalıştırıyor"],
-  unknown: ["Running the “{x}” command", "“{x}” komutunu çalıştırıyor"],
-  any: ["Running a terminal command", "Bir terminal komutu çalıştırıyor"],
-  then: [", then ", ", sonra "],
-  more: [" (+{x} more)", " (+{x} adım daha)"]
-};
-
-const STEPS_SHOWN$1 = 2;
-const NAME_MAX$2 = 40;
-const WRAPPERS = new Set(["sudo", "time", "command", "exec", "nohup", "env", "then", "do", "else", "if", "while", "until", "!"]);
-const SILENT = new Set(["cd", "export", "set", "unset", "source", ".", "for", "done", "fi", "true", "false", ":", "[", "[[", "test", "local", "shift", "wait"]);
-const FILTERS = new Set(["grep", "rg", "sed", "awk", "head", "tail", "sort", "uniq", "wc", "cut", "tr", "tee", "xargs", "jq", "column", "less", "cat"]);
-const FETCHERS = new Set(["npx", "bunx", "uvx", "pipx"]);
-const PASS_ON = new Set(["run", "run-script", "exec", "x", "dlx", "-m", "plugin"]);
-const INLINE = new Set(["-c", "-e", "-"]);
-const PROPER = /^(GitHub|Git\b|Docker|Claude|Flutter|JSON|Python|iOS|Mac)/;
-const base = (path) => path.split("/").filter(Boolean).at(-1) ?? path;
-const clip$1 = (text) => text.length > NAME_MAX$2 ? `${text.slice(0, NAME_MAX$2 - 1)}…` : text;
-const isFlag = (word) => word.startsWith("-");
-const withoutHeredocs = (command) => command.replace(/\\\n/g, " ").replace(/<<-?\s*(['"]?)(\w+)\1[\s\S]*?\n\s*\2(?=\s|$)/g, "<<");
-function isOpenAt(scan, line, i) {
-  const ch = line[i] ?? "";
-  if (scan.quote !== "") {
-    if (ch === scan.quote && line[i - 1] !== "\\")
-      scan.quote = "";
-    return false;
-  }
-  if (ch === '"' || ch === "'" || ch === "`")
-    scan.quote = ch;
-  else if (ch === "(" || ch === "{")
-    scan.depth += 1;
-  else if (ch === ")" || ch === "}")
-    scan.depth = Math.max(0, scan.depth - 1);
-  return scan.quote === "" && scan.depth === 0;
-}
-function stepsOf(command) {
-  const line = withoutHeredocs(command);
-  const scan = { quote: "", depth: 0 };
-  const steps = [[]];
-  let word = "";
-  const close = (isStepEnd) => {
-    steps.at(-1)?.push(word.trim());
-    word = "";
-    if (isStepEnd)
-      steps.push([]);
-  };
-  for (let i = 0;i < line.length; i += 1) {
-    const ch = line[i] ?? "";
-    const two = line.slice(i, i + 2);
-    if (!isOpenAt(scan, line, i))
-      word += ch;
-    else if (two === "&&" || two === "||") {
-      close(true);
-      i += 1;
-    } else if (ch === ";" || ch === `
-`)
-      close(true);
-    else if (ch === "|")
-      close(false);
-    else if (ch === "&" && line[i - 1] !== ">" && line[i + 1] !== ">")
-      close(true);
-    else
-      word += ch;
-  }
-  close(false);
-  return steps.map((pipe) => pipe.filter(Boolean)).filter((pipe) => pipe.length > 0);
-}
-function wordsOf$1(command) {
-  const found = command.match(/(?:\$\([^)]*\)|"(?:\\.|[^"\\])*"|'[^']*'|\S)+/g) ?? [];
-  return found.map((word) => word.replace(/^(['"])([\s\S]*)\1$/, "$2"));
-}
-function splitRedirects(words) {
-  const kept = [];
-  let out = "";
-  for (let i = 0;i < words.length; i += 1) {
-    const word = words[i] ?? "";
-    const match = /^\d?>>?(.*)$/.exec(word);
-    if (match === null || word.includes(">&")) {
-      if (!/^\d?[<>]/.test(word))
-        kept.push(word);
-      continue;
-    }
-    const target = match[1] || words[i += 1] || "";
-    if (target !== "" && !target.startsWith("/dev/") && !target.startsWith("&"))
-      out = target;
-  }
-  return { kept, out };
-}
-const GLUE = new Set(["", "!", "if", "then", "else", "elif", "do", "while", "until", "time"]);
-function callOf(command) {
-  const { kept, out } = splitRedirects(wordsOf$1(command));
-  const words = kept.map((word) => word.replace(/^[({]+/, ""));
-  while (words.length > 0 && GLUE.has(words[0] ?? ""))
-    words.shift();
-  while (words.length > 0 && (WRAPPERS.has(words[0] ?? "") || /^\w+\+?=/.test(words[0] ?? "")))
-    words.shift();
-  const [first, ...args] = words;
-  return first === undefined || first.startsWith("#") ? null : { name: first, args, out };
-}
-const namedOf$1 = (kind, args) => {
-  const plain = args.filter((arg) => !isFlag(arg) && !/^\d+$/.test(arg));
-  if (kind === "first")
-    return clip$1(base(plain[0] ?? ""));
-  if (kind === "host")
-    return /^[a-z]+:\/\/([^/?#]+)/i.exec(plain.find((arg) => arg.includes("://")) ?? "")?.[1] ?? "";
-  if (kind === "file")
-    return clip$1(base(plain.at(-1) ?? ""));
-  return kind === "arg" ? clip$1(plain[0] ?? "") : "";
-};
-const say = (entry, lang, x = "") => fill(textOf$1(entry, lang), x);
-function familySay(family, args, lang) {
-  const words = args.filter((arg) => !isFlag(arg) || arg === "-m");
-  const at = words.findIndex((word) => !PASS_ON.has(word));
-  const sub = words[at] ?? words[0] ?? "";
-  const entry = family.sub[sub] ?? family.sub[words[0] ?? ""] ?? family.rest;
-  return say(entry, lang, entry === family.rest ? clip$1(sub) : namedOf$1(entry[2], words.slice(at + 1)));
-}
-function specialSay(call, lang) {
-  const { name, args } = call;
-  const has = (...flags) => args.some((arg) => flags.includes(arg));
-  const combined = (letter) => args.some((arg) => /^-[a-zA-Z]+$/.test(arg) && arg.includes(letter));
-  const second = args.filter((arg) => !isFlag(arg))[1] ?? "";
-  if (name === "git" && (args[0] === "checkout" || args[0] === "switch") && has("-b", "-B", "-c"))
-    return say(SHELL.newBranch, lang, clip$1(args.filter((arg) => !isFlag(arg))[1] ?? ""));
-  if (name === "git" && args[0] === "reset" && has("--hard", "--merge", "--keep"))
-    return say(SHELL.hardReset, lang);
-  if (name === "git" && args[0] === "checkout" && (has("--", ".") || has("-f", "--force")))
-    return say(SHELL.discard, lang);
-  if (name === "git" && args[0] === "stash" && (second === "drop" || second === "clear"))
-    return say(SHELL.dropStash, lang);
-  if (name === "git" && args[0] === "branch" && (has("-D", "--delete") || combined("d")))
-    return say(SHELL.deleteBranch, lang, clip$1(args.filter((arg) => !isFlag(arg))[1] ?? ""));
-  if (name === "git" && args[0] === "push" && (has("--force", "--force-with-lease") || combined("f")))
-    return say(SHELL.forcePush, lang);
-  if (name === "gh" && args[0] === "pr" && second === "create")
-    return say(SHELL.prCreate, lang);
-  if (name === "gh" && args[0] === "pr" && second === "merge")
-    return say(SHELL.prMerge, lang);
-  if (name === "rm" && (combined("r") || combined("R") || has("--recursive")))
-    return say(SHELL.deleteFolder, lang, namedOf$1("file", args));
-  if (name === "find" && has("-delete"))
-    return say(SHELL.findDelete, lang);
-  if (name === "sed" && (has("-i", "--in-place") || args.some((arg) => arg.startsWith("-i"))))
-    return say(SHELL.editInPlace, lang, namedOf$1("file", args));
-  if (call.out !== "" && (name === "echo" || name === "printf" || name === "cat"))
-    return say(SHELL.writeFile, lang, clip$1(base(call.out)));
-  return null;
-}
-function scriptSay(call, lang) {
-  const first = call.args[0] ?? "";
-  const isRunner = COMMANDS[call.name] === SCRIPT;
-  if (isRunner && (call.args.length === 0 || INLINE.has(first) || first === "<<"))
-    return say(SHELL.inlineScript, lang);
-  if (isRunner && first === "-m")
-    return callSay({ ...call, name: call.args[1] ?? "", args: call.args.slice(2) }, lang);
-  if (FETCHERS.has(call.name)) {
-    const tool = call.args.find((arg) => !isFlag(arg)) ?? "";
-    const known = callSay({ name: tool, args: call.args.slice(call.args.indexOf(tool) + 1), out: "" }, lang);
-    return known === say(SHELL.unknown, lang, clip$1(base(tool))) ? say(SHELL.fetchedTool, lang, clip$1(tool)) : known;
-  }
-  return null;
-}
-function callSay(call, lang) {
-  const name = base(call.name);
-  if (SILENT.has(name))
-    return null;
-  const special = specialSay({ ...call, name }, lang) ?? scriptSay({ ...call, name }, lang);
-  if (special !== null)
-    return special;
-  const family = FAMILIES[name];
-  if (family !== undefined)
-    return familySay(family, call.args, lang);
-  const entry = COMMANDS[name];
-  if (entry !== undefined)
-    return say(entry, lang, entry === SERVICE ? name : namedOf$1(entry[2], call.args));
-  if (call.name.includes("/"))
-    return say(SHELL.ownScript, lang, clip$1([name, ...call.args.filter((arg) => !isFlag(arg)).slice(0, 1)].join(" ")));
-  return say(SHELL.unknown, lang, clip$1(name));
-}
-function leadOf(pipe) {
-  const calls = pipe.map(callOf).filter((call) => call !== null);
-  return calls.find((call) => !FILTERS.has(base(call.name)) && !SILENT.has(base(call.name))) ?? calls[0] ?? null;
-}
-const WAITS = new Set(["sleep"]);
-const MARKERS = new Set(["echo", "printf"]);
-const isWait = (call) => WAITS.has(base(call.name)) || MARKERS.has(base(call.name)) && call.out === "";
-function leadsOf(command) {
-  const leads = stepsOf(command).map((pipe) => leadOf(pipe)).filter((call) => call !== null);
-  const hasWork = leads.some((call) => !isWait(call) && !SILENT.has(base(call.name)));
-  return hasWork ? leads.filter((call) => !isWait(call)) : leads;
-}
-const lowerFirst = (text, lang) => PROPER.test(text) ? text : text.charAt(0).toLocaleLowerCase(lang) + text.slice(1);
-function plainShell(command, lang) {
-  const steps = stepsOf(command);
-  const said = leadsOf(command).map((call) => callSay(call, lang) ?? "");
-  const unique = said.filter((text, i) => text !== "" && said.indexOf(text) === i);
-  if (unique.length === 0)
-    return say(steps.some((pipe) => pipe.some((c) => /^cd\b/.test(c))) ? COMMANDS.cd : SHELL.any, lang);
-  const shown = unique.slice(0, STEPS_SHOWN$1).map((text, i) => i === 0 ? text : lowerFirst(text, lang));
-  const more = unique.length - shown.length;
-  return shown.join(textOf$1(SHELL.then, lang)) + (more > 0 ? say(SHELL.more, lang, String(more)) : "");
-}
-
-const KIND_ICON = {
-  read: "eye",
-  search: "search",
-  edit: "pencil",
-  run: "terminal",
-  test: "shield",
-  save: "bookmark",
-  github: "branch",
-  install: "cube",
-  delete: "trash",
-  web: "globe",
-  agent: "sparkle",
-  wait: "clock",
-  ask: "bell",
-  plan: "list",
-  service: "plug"
-};
-const WORDS$2 = {
-  read: ["look", "inceleme"],
-  search: ["search", "arama"],
-  edit: ["change", "değişiklik"],
-  run: ["command", "komut"],
-  test: ["check", "kontrol"],
-  save: ["saved version", "sürüm kaydı"],
-  github: ["GitHub", "GitHub"],
-  install: ["install", "kurulum"],
-  delete: ["delete", "silme"],
-  web: ["internet", "internet"],
-  agent: ["helper agent", "yardımcı ajan"],
-  wait: ["wait", "bekleme"],
-  ask: ["question", "soru"],
-  plan: ["plan", "plan"],
-  service: ["connected service", "bağlı servis"]
-};
-const kindWord = (kind, lang) => WORDS$2[kind][lang === "tr" ? 1 : 0];
-const TOOL_KIND = {
-  Read: "read",
-  NotebookRead: "read",
-  Skill: "read",
-  BashOutput: "read",
-  TaskOutput: "read",
-  Monitor: "read",
-  Glob: "search",
-  Grep: "search",
-  LS: "search",
-  ToolSearch: "search",
-  Write: "edit",
-  Edit: "edit",
-  MultiEdit: "edit",
-  NotebookEdit: "edit",
-  WebSearch: "web",
-  WebFetch: "web",
-  Artifact: "web",
-  Agent: "agent",
-  Task: "agent",
-  SendMessage: "agent",
-  SubagentHandback: "agent",
-  TodoWrite: "plan",
-  TaskCreate: "plan",
-  TaskUpdate: "plan",
-  TaskList: "plan",
-  TaskGet: "plan",
-  EnterPlanMode: "plan",
-  ExitPlanMode: "plan",
-  AskUserQuestion: "ask",
-  ScheduleWakeup: "wait",
-  CronCreate: "wait"
-};
-const LOOKS = new Set(["cat", "head", "tail", "less", "ls", "wc", "stat", "file", "tree", "du", "which", "pwd", "echo", "diff"]);
-const SEARCHES = new Set(["grep", "rg", "find", "fd", "ag"]);
-const GIT_LOOKS = new Set(["status", "log", "diff", "show", "branch", "ls-files", "remote", "blame", "worktree", "rev-parse", "fetch"]);
-const INSTALLERS = new Set(["npm", "pnpm", "yarn", "bun", "pip", "pip3", "brew", "cargo", "gem", "apt", "apt-get", "flutter", "dart"]);
-const INSTALL_VERBS = new Set(["install", "add", "i", "ci", "get", "upgrade"]);
-const CHECK_WORD = /^(tests?|check|validate|lint|tsc|jest|vitest|pytest|typecheck|analyze)$/;
-const WEIGHT = ["wait", "read", "search", "run", "web", "test", "install", "github", "save", "delete"];
-const last = (path) => path.split("/").filter(Boolean).at(-1) ?? path;
-function commandKind(call) {
-  const name = last(call.name);
-  const verb = call.args.find((arg) => !arg.startsWith("-")) ?? "";
-  if (name === "sleep")
-    return "wait";
-  if (name === "gh")
-    return "github";
-  if (name === "git")
-    return GIT_LOOKS.has(verb) ? "read" : "save";
-  if (name === "rm" || name === "rmdir" || name === "find" && call.args.includes("-delete"))
-    return "delete";
-  if (name === "curl" || name === "wget")
-    return "web";
-  if ([name, ...call.args].some((word) => CHECK_WORD.test(last(word))))
-    return "test";
-  if (INSTALLERS.has(name) && call.args.some((arg) => INSTALL_VERBS.has(arg)))
-    return "install";
-  if (SEARCHES.has(name))
-    return "search";
-  return LOOKS.has(name) ? "read" : "run";
-}
-function shellKind(command) {
-  const kinds = leadsOf(command).map(commandKind);
-  return kinds.reduce((top, kind) => WEIGHT.indexOf(kind) > WEIGHT.indexOf(top) ? kind : top, kinds[0] ?? "run");
-}
-function serviceKind(tool) {
-  if (/browser|chrome|playwright|web_|exa|fetch/i.test(tool))
-    return "web";
-  return /github/i.test(tool) ? "github" : "service";
-}
-const fieldOf = (input, name) => {
-  const value = typeof input === "object" && input !== null ? input[name] : undefined;
-  return typeof value === "string" ? value.trim() : "";
-};
-function kindOf(tool, input) {
-  if (tool === "Bash" || tool === "PowerShell")
-    return shellKind(fieldOf(input, "command"));
-  if (tool.startsWith("mcp__"))
-    return serviceKind(tool);
-  return TOOL_KIND[tool] ?? "service";
-}
-const PURPOSE_MAX = 96;
-function purposeOf(input) {
-  const text = (fieldOf(input, "description") || fieldOf(input, "action_summary")).split(`
-`)[0]?.trim() ?? "";
-  return text.length > PURPOSE_MAX ? `${text.slice(0, PURPOSE_MAX - 1)}…` : text;
-}
-
-const NAME_MAX$1 = 48;
-const EDIT = [["Changing the file {x}", "{x} dosyasını değiştiriyor"], "file_path", "file"];
-const TASKS = [["Updating its to-do list", "Yapılacaklar listesini güncelliyor"]];
-const HELPER = [["Handing a job to a helper agent[: {x}]", "Bir yardımcı ajana iş veriyor[: {x}]"], "description"];
-const BACKGROUND = [["Checking on a command running in the background", "Arka planda çalışan komutun durumuna bakıyor"]];
-const STOP = [["Stopping a command running in the background", "Arka planda çalışan komutu durduruyor"]];
-const TIMER = [["Setting up work to run later", "Daha sonra çalışacak bir iş ayarlıyor"]];
-const TOOLS = {
-  Read: [["Reading the file {x}", "{x} dosyasını okuyor"], "file_path", "file"],
-  Write: [["Writing the file {x}", "{x} dosyasını yazıyor"], "file_path", "file"],
-  Edit: EDIT,
-  MultiEdit: EDIT,
-  NotebookEdit: [["Changing the notebook {x}", "{x} not defterini değiştiriyor"], "notebook_path", "file"],
-  Glob: [["Looking for files named like “{x}”", "Adı “{x}” kalıbına uyan dosyaları arıyor"], "pattern"],
-  Grep: [["Searching inside files for “{x}”", "Dosyaların içinde “{x}” arıyor"], "pattern"],
-  LS: [["Listing the files in a folder", "Bir klasördeki dosyaları listeliyor"]],
-  WebSearch: [["Searching the web for “{x}”", "İnternette “{x}” arıyor"], "query"],
-  WebFetch: [["Reading a web page[: {x}]", "Bir internet sayfasını okuyor[: {x}]"], "url", "host"],
-  Agent: HELPER,
-  Task: HELPER,
-  SubagentHandback: [["Handing its finished report back to the chat that started it", "Bitirdiği işin raporunu kendisini başlatan sohbete teslim ediyor"]],
-  SendMessage: [["Sending a message to another agent", "Başka bir ajana mesaj gönderiyor"]],
-  TodoWrite: TASKS,
-  TaskCreate: TASKS,
-  TaskUpdate: TASKS,
-  TaskList: TASKS,
-  TaskGet: TASKS,
-  update_plan: TASKS,
-  Skill: [["Loading a ready-made set of instructions[: {x}]", "Hazır bir talimat paketini (skill) yüklüyor[: {x}]"], "skill"],
-  ToolSearch: [["Looking for a tool it needs[: {x}]", "İhtiyaç duyduğu aracı arıyor[: {x}]"], "query", "tools"],
-  AskUserQuestion: [["Asking you a question", "Sana bir soru soruyor"]],
-  EnterPlanMode: [["Starting to write a plan before it acts", "İşe başlamadan önce plan yazmaya geçiyor"]],
-  ExitPlanMode: [["Showing you its plan for approval", "Hazırladığı planı onayına sunuyor"]],
-  BashOutput: BACKGROUND,
-  TaskOutput: BACKGROUND,
-  Monitor: BACKGROUND,
-  KillShell: STOP,
-  TaskStop: STOP,
-  Artifact: [["Publishing a page you can open", "Açabileceğin bir sayfa yayımlıyor"]],
-  ScheduleWakeup: TIMER,
-  CronCreate: TIMER,
-  EnterWorktree: [["Making a separate copy of the project to work in", "Çalışmak için projenin ayrı bir kopyasını açıyor"]]
-};
-const BROWSER = ["Using the browser", "Tarayıcıyı kullanıyor"];
-const SERVERS = [
-  [/browser|chrome|playwright/i, BROWSER],
-  [/computer/i, ["Using the mouse and keyboard on this computer", "Bu bilgisayarda fareyi ve klavyeyi kullanıyor"]],
-  [/github/i, ["Working on GitHub", "GitHub üzerinde çalışıyor"]],
-  [/context7/i, ["Reading a library’s up-to-date manual", "Bir kütüphanenin güncel kılavuzunu okuyor"]],
-  [/\brea\b/i, ["Taking an app apart to see how it works", "Bir uygulamanın içini açıp nasıl çalıştığına bakıyor"]],
-  [/simulator/i, ["Using the iPhone simulator", "iPhone simülatörünü kullanıyor"]],
-  [/terminal/i, ["Looking at your terminal", "Terminaline bakıyor"]],
-  [/ccd_|savvy|modz|skins|transceiver/i, ["Updating what the app shows you", "Uygulamanın sana gösterdiklerini güncelliyor"]]
-];
-const BROWSER_ACTS = [
-  [/navigate|open_url|preview_start/, ["Opening a page in the browser", "Tarayıcıda bir sayfa açıyor"]],
-  [/screenshot/, ["Taking a picture of the page", "Sayfanın görüntüsünü alıyor"]],
-  [/read_page|get_page|page_text|snapshot|find/, ["Reading the page in the browser", "Tarayıcıdaki sayfayı okuyor"]],
-  [/click|press|hover|drag/, ["Clicking on the page", "Sayfada bir yere tıklıyor"]],
-  [/type|fill|form_input|select/, ["Typing into the page", "Sayfaya yazı yazıyor"]],
-  [/console|network|javascript|evaluate/, ["Checking how the page runs", "Sayfanın nasıl çalıştığını denetliyor"]]
-];
-const OTHER = {
-  service: ["Using the connected “{x}” service", "Bağlı “{x}” servisini kullanıyor"],
-  tool: ["Using the “{x}” tool", "“{x}” aracını kullanıyor"],
-  command: ["Running a terminal command", "Bir terminal komutu çalıştırıyor"]
-};
-const fieldsOf$1 = (input) => typeof input === "object" && input !== null ? input : {};
-const clip = (text) => text.length > NAME_MAX$1 ? `${text.slice(0, NAME_MAX$1 - 1)}…` : text;
-const firstLine = (text) => text.split(`
-`)[0]?.trim() ?? "";
-function namedOf(value, as) {
-  const text = typeof value === "string" ? firstLine(value) : "";
-  if (as === "file")
-    return text.split("/").filter(Boolean).at(-1) ?? "";
-  if (as === "host")
-    return /^[a-z]+:\/\/([^/?#]+)/i.exec(text)?.[1] ?? "";
-  if (as === "tools")
-    return clip(text.replace(/^select:/, "").split(",").map((name) => (name.split("__").at(-1) ?? name).replace(/_+/g, " ").trim()).join(", "));
-  return clip(text);
-}
-function serviceSay(tool, lang) {
-  const [, server = "", ...rest] = tool.split("__");
-  const name = rest.join(" ");
-  const known = SERVERS.find(([pattern]) => pattern.test(server))?.[1];
-  if (known === BROWSER)
-    return textOf$1(BROWSER_ACTS.find(([pattern]) => pattern.test(name))?.[1] ?? BROWSER, lang);
-  if (known !== undefined)
-    return textOf$1(known, lang);
-  const isId = /^[0-9a-f-]{20,}$/i.test(server);
-  return fill(textOf$1(isId ? OTHER.tool : OTHER.service, lang), clip((isId ? name : server).replace(/[_-]+/g, " ")));
-}
-function plainCall(tool, input, lang) {
-  const fields = fieldsOf$1(input);
-  if (tool === "Bash" || tool === "PowerShell") {
-    const command = typeof fields.command === "string" ? fields.command : "";
-    return command.trim() === "" ? textOf$1(OTHER.command, lang) : plainShell(command, lang);
-  }
-  if (tool.startsWith("mcp__"))
-    return serviceSay(tool, lang);
-  const known = TOOLS[tool];
-  if (known === undefined)
-    return fill(textOf$1(OTHER.tool, lang), clip(tool));
-  const [entry, field, as] = known;
-  const named = field === undefined ? "" : namedOf(fields[field], as);
-  const template = textOf$1(entry, lang);
-  return named === "" && /(^|[^[])\{x\}/.test(template.replace(/\[[^\]]*\]/g, "")) ? fill(textOf$1(OTHER.tool, lang), tool) : fill(template, named);
-}
-
 const FILES_MAX = 4;
 const RESULT_MAX = 110;
 const FILE_WORD = /(?:~|\.{1,2})?\/?[\w@.-]+(?:\/[\w@.-]+)*\.(?:tsx?|jsx?|mjs|cjs|json|md|py|sh|html|css|ya?ml|toml|swift|dart|cs|go|rs|txt|svg|png)\b/g;
@@ -13922,7 +13002,7 @@ function fileOf(input) {
   return { name: path.split("/").filter(Boolean).at(-1) ?? path, path };
 }
 const toldOf = (call, lang) => ({
-  kind: kindOf(call.tool, call.input),
+  kind: kindOf$1(call.tool, call.input),
   why: purposeOf(call.input),
   said: plainCall(call.tool, call.input, lang),
   name: nameOf(call.input),
@@ -13974,14 +13054,14 @@ const WORDS = {
 const MARK = { done: "✓", live: "●", failed: "✗", stopped: "—" };
 const MARK_KEY = { done: undefined, live: "claude", failed: "error", stopped: undefined };
 function endOf(state) {
-  const words = pick$5(WORDS);
+  const words = pick$4(WORDS);
   if (state === "failed")
     return `${MARK.failed} ${words.failed}`;
   return state === "stopped" ? `${MARK.stopped} ${words.stopped}` : MARK[state];
 }
 function stepOfCall(call) {
   const file = fileOf(call.input);
-  return { kind: kindOf(call.tool, call.input), text: plainCall(call.tool, call.input, lang$1()), note: "", count: 1, state: stateOf(call), files: file === undefined ? [] : [file] };
+  return { kind: kindOf$1(call.tool, call.input), text: plainCall(call.tool, call.input, lang$1()), note: "", count: 1, state: stateOf(call), files: file === undefined ? [] : [file] };
 }
 function iconOf(draw, step) {
   const { Svg, Text } = draw.ui;
@@ -14101,7 +13181,7 @@ function groupTrail(draw, calls) {
     trail.more > 0 ? h(Text, {
       key: "plain-more",
       dimColor: true
-    }, pick$5(WORDS).more(trail.more)) : null
+    }, pick$4(WORDS).more(trail.more)) : null
   ].filter((part) => part !== null);
 }
 const drawOf = ($, e) => {
@@ -14358,8 +13438,9 @@ function paneHooks(on) {
     const staged = paneOf((await $.state.get(STAGE)).value);
     if (staged === MODS_PANE)
       return catalogPage($, e);
-    if (staged !== null && SIDE_PANES.includes(staged))
-      return sidePage($, e, staged);
+    const side = staged !== null && SIDE_PANES.includes(staged) ? await sidePage($, e, staged) : null;
+    if (side !== null)
+      return side;
     if (staged !== null && HUB_DRAWN.includes(staged)) {
       const onHome = () => void openHub($).catch((cause) => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: "debug" }));
       return pinned(e, await pageTree($, e, { page: staged, ui: $.ui.resolve(e), columns: e.props.bodyColumns || DEFAULT_COLUMNS, surface: e.surface, onHome }));

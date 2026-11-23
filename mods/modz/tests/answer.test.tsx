@@ -1,7 +1,8 @@
 // A hub press never vanishes: a row whose mod does not put its pane up says so and the hub stays; a hub whose
 // drawing throws still lists its rows, pressable under the keys they had; and one odd character in a mod's card
 // (an escape sequence out of a command's output) does not cost the whole hub.
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
+import { test } from './budget'
 
 import { stubWorld } from './world'
 

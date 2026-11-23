@@ -240,7 +240,8 @@ function paneHooks(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const staged = paneOf((await $.state.get(STAGE)).value)
     if (staged === MODS_PANE) return catalogPage($, e)
-    if (staged !== null && SIDE_PANES.includes(staged)) return sidePage($, e, staged)
+    const side = staged !== null && SIDE_PANES.includes(staged) ? await sidePage($, e, staged) : null
+    if (side !== null) return side
     if (staged !== null && HUB_DRAWN.includes(staged)) {
       const onHome = () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: 'debug' }))
 

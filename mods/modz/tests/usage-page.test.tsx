@@ -1,6 +1,7 @@
 // The Usage page the hub draws in its own pane (hooks/pages/usage.tsx), from what hud-pro keeps, with the sections
 // the meter mods it hosts publish.
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
+import { test } from './budget'
 
 import { stubWorld } from './world'
 

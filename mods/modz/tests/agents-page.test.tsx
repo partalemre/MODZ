@@ -1,6 +1,7 @@
 // The Agents page lives in the hub's own pane (hooks/pages/agents.tsx): the hub draws it from what savvy-progress
 // keeps, no second pane opens, and a press on it is handed to savvy-progress as `modz.act`.
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { stubWorld } from './world'
 

@@ -1,5 +1,6 @@
 // The hub's "Now" area: what fails, waits or runs is read on the hub itself, without opening a mod's pane.
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
+import { test } from './budget'
 
 import { cardOf, rowsOf, withHosted } from '../hooks/hub'
 import { elapsedText, nowOf } from '../hooks/now'

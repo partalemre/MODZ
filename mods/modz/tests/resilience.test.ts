@@ -1,6 +1,7 @@
 // The hub with the world as it really is: a removed mod's card still around, a catalog that cannot be
 // read, a mod in the marketplace whose folder is gone and one the catalog has no notes for.
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
+import { test } from './budget'
 
 import { MARKET_FILES } from './market-fixture'
 import { posix } from './world'

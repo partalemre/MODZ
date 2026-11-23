@@ -145,7 +145,7 @@ def check_home(desk, engine, inst):
 
 
 # Rows whose page the hub draws in its own pane (mods/modz/hooks/pages/): the panel stays the hub's.
-HUB_PAGES = ('open-plan', 'open-agents', 'open-checkpoints', 'open-files', 'open-tests', 'open-usage')
+HUB_PAGES = ('open-plan', 'open-agents', 'open-checkpoints', 'open-files', 'open-tests', 'open-usage', 'open-modz-mods', 'open-modz-links', 'open-modz-weight', 'open-modz-updates')
 
 
 def shows_rows(desk):
@@ -225,7 +225,7 @@ def check_guide(desk, engine):
     problem = press_row(desk, engine, f'open-{CATALOG}')
     if problem:
         return f'guide: {problem}'
-    rows = [alt for alt, _, _ in svgs(desk.render(CATALOG)) if GUIDE_ROW.match(str(alt))]
+    rows = [alt for alt, _, _ in svgs(desk.render(HUB)) if GUIDE_ROW.match(str(alt))]
     return None if rows else 'guide: the catalog lists no other mod\'s slash command'
 
 

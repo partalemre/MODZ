@@ -1,5 +1,6 @@
 // The Tests page the hub draws in its own pane (hooks/pages/tests.tsx), from what test-badge keeps.
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
+import { test } from './budget'
 
 import { stubWorld } from './world'
 

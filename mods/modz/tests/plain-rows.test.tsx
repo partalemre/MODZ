@@ -1,6 +1,7 @@
 // The trail in the conversation: under a tool row its sentence with a picture of the kind of work; under a folded
 // run the order of the work as one picture and its steps in the agent's own words. The engine's row is kept.
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
+import { test } from './budget'
 
 import { setLang } from '../hooks/kit/lang'
 import { kindOf, plainCall, purposeOf } from '../hooks/kit/plain'

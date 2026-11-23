@@ -1,7 +1,8 @@
 // The hub's motion on the desktop: each drawing is an interactive frame whose source changes only with what it
 // shows, so unchanged rows keep their frames (and their loops) across redraws, a changed row lights up once, and
 // the drawings enter again when the hub is put back in the panel.
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { stableDrawings } from '../hooks/kit/stable'
 import type { HubCard } from '../types'

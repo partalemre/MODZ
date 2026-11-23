@@ -1,5 +1,6 @@
 // One index of what a person can run, set and install: `/modz help` and the catalog pane's first sections.
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import type { Market, ModInfo } from '../hooks/catalog'
 import { guideOf, helpText, installsOf } from '../hooks/guide'

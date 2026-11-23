@@ -1,6 +1,7 @@
 // Draws the desktop MODZ pane from a snapshot of the real marketplace, for bin/preview:
 // the hub calm and busy, narrow and wide, with live work on its face, on a first run, and the catalog view.
-import { mock, test } from 'claude-code/testing'
+import { mock } from 'claude-code/testing'
+import { test } from './budget'
 
 import { MARKET_FILES } from './market-fixture'
 import { posix } from './world'

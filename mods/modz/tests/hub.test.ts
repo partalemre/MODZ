@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { cardOf, focusOf, presenceOf, rowsOf } from '../hooks/hub'
 import type { Presence } from '../hooks/hub'

@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { needsReminder, reminderOf, targetOf, whyReminderOf } from '../hooks/reply-language'
 import { stubWorld } from './world'

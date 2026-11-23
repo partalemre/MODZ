@@ -1,5 +1,6 @@
 // `/modz check`: each question the mods ask the engine, with its answer or why none came.
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { checkText, type CheckFacts } from '../hooks/check'
 import { setLang } from '../hooks/kit/lang'

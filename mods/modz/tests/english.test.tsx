@@ -1,5 +1,6 @@
 // With no MODZ_LANG the hub and the catalog speak English, in the film's words; MODZ_LANG=tr keeps Turkish.
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { stubWorld } from './world'
 

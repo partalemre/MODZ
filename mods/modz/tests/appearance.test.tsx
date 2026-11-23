@@ -1,6 +1,7 @@
 // The hub's drawings follow the app they are drawn in: Claude Code's `theme` setting is the terminal's, and unset
 // it reads `dark`, which once pinned the pane dark (black sheets, pale names) in a light desktop app.
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { stubWorld } from './world'
 

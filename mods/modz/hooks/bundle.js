@@ -33,7 +33,7 @@ const PATHS = {
   star: "M12 3.5l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 17l-5.4 3 1.2-6-4.5-4.2 6.1-.7z"
 };
 const ICON_NAMES = Object.keys(PATHS);
-const GLYPH = {
+const GLYPH$1 = {
   trash: "⌫",
   shield: "◈",
   key: "⚷",
@@ -69,7 +69,7 @@ const EMPTY_LAYOUT = { hidden: [], order: [] };
 const PANE_ID$1 = /^[\w-]{1,64}$/;
 const MAX_PANES = 64;
 const panesOf = (value) => Array.isArray(value) ? [...new Set(value.filter((pane) => typeof pane === "string" && PANE_ID$1.test(pane)))].slice(0, MAX_PANES) : [];
-function layoutOf(value) {
+function layoutOf$1(value) {
   if (typeof value !== "object" || value === null)
     return EMPTY_LAYOUT;
   const raw = value;
@@ -99,14 +99,14 @@ function setHidden(layout, opts) {
 }
 const isHidden = (layout, pane) => layout.hidden.includes(pane);
 
-let current$1 = "en";
-const langOf = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
-function setLang(value) {
-  current$1 = langOf(value);
-  return current$1;
+let current$2 = "en";
+const langOf$2 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
+function setLang$2(value) {
+  current$2 = langOf$2(value);
+  return current$2;
 }
-const lang = () => current$1;
-const pick$1 = (table) => table[current$1];
+const lang$1 = () => current$2;
+const pick$1 = (table) => table[current$2];
 
 const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const PANES = {
@@ -332,7 +332,7 @@ function guestEntry(mod, card) {
 const TONES = ["idle", "live", "ok", "warn", "bad"];
 const DETAIL_MAX = 60;
 const TITLE_MAX$1 = 32;
-const BADGE_MAX = 12;
+const BADGE_MAX$1 = 12;
 const PANE_ID = /^[\w-]{1,64}$/;
 const textOf$3 = (value, max) => typeof value === "string" && value.trim() !== "" ? value.trim().slice(0, max) : undefined;
 const LINES_MAX$1 = 4;
@@ -367,7 +367,7 @@ function cardOf(value) {
     hint: textOf$3(card.hint, DETAIL_MAX),
     icon: textOf$3(card.icon, TITLE_MAX$1),
     section: SECTIONS.includes(card.section) ? card.section : undefined,
-    badge: textOf$3(card.badge, BADGE_MAX),
+    badge: textOf$3(card.badge, BADGE_MAX$1),
     live: liveOf(card.live),
     isBandOnly: card.isBandOnly === true ? true : undefined
   };
@@ -443,18 +443,18 @@ const paneOf = (value) => {
 };
 
 const USAGE_PANE = "usage";
-const SECOND$1 = 1000;
-const MINUTE_S = 60;
+const SECOND$5 = 1000;
+const MINUTE_S$1 = 60;
 const HOUR_M = 60;
 const STEP_S = 10;
 function elapsedText(ms) {
   const ago = hubWords().ago;
-  const seconds = Math.max(0, Math.floor(ms / SECOND$1));
+  const seconds = Math.max(0, Math.floor(ms / SECOND$5));
   if (seconds < STEP_S)
     return ago.now;
-  if (seconds < MINUTE_S)
+  if (seconds < MINUTE_S$1)
     return ago.seconds(Math.floor(seconds / STEP_S) * STEP_S);
-  const minutes = Math.floor(seconds / MINUTE_S);
+  const minutes = Math.floor(seconds / MINUTE_S$1);
   return minutes < HOUR_M ? ago.minutes(minutes) : ago.hours(Math.floor(minutes / HOUR_M), minutes % HOUR_M);
 }
 const RANK_BAD = 4;
@@ -477,7 +477,7 @@ function linesOf$1(card, now) {
     return { label: line.label, value: [ran, line.value].filter(Boolean).join(" · ") };
   });
 }
-function nowOf(rows, now) {
+function nowOf$1(rows, now) {
   return rows.flatMap((row) => isNow(row.card) ? [{ row, lines: linesOf$1(row.card, now), more: row.card.live?.more ?? 0, rank: rankOf(row.card) }] : []).sort((a, b) => b.rank - a.rank).map(({ row, lines, more }) => ({ row, lines, more }));
 }
 const hasRunningClock = (cards) => Object.values(cards).some((card) => card.live?.lines.some((line) => line.since !== undefined) === true);
@@ -643,7 +643,7 @@ function linkName(name) {
   return server === plugin ? String(server) : `${server} (${plugin})`;
 }
 const byName = (a, b) => linkName(a).localeCompare(linkName(b));
-function waitingOf(cache, now) {
+function waitingOf$1(cache, now) {
   if (typeof cache !== "object" || cache === null)
     return [];
   return Object.entries(cache).filter(([, entry]) => now - Number(entry?.timestamp) <= WAIT_FRESH_MS).map(([name]) => name);
@@ -660,7 +660,7 @@ function linksOf$1(facts) {
   const connected = [...new Set(facts.servers)].filter((name) => !told.has(wireName(name))).sort(byName);
   for (const name of connected)
     told.add(wireName(name));
-  const waiting = waitingOf(facts.authCache, facts.now).filter((name) => !told.has(wireName(name))).sort(byName);
+  const waiting = waitingOf$1(facts.authCache, facts.now).filter((name) => !told.has(wireName(name))).sort(byName);
   return { connected, waiting, failed: failed.sort((a, b) => byName(a.name, b.name)), pending: pending.sort(byName) };
 }
 const hasLinks = (links) => links.connected.length + links.waiting.length + links.failed.length + links.pending.length > 0;
@@ -786,7 +786,7 @@ function installedCommit(installedText, key) {
   const sha = isRecord$1(first) ? first.gitCommitSha : undefined;
   return typeof sha === "string" ? sha : undefined;
 }
-function headOf(lsRemote) {
+function headOf$1(lsRemote) {
   return /^([0-9a-f]{40})\s+HEAD$/m.exec(lsRemote)?.[1];
 }
 const isNewer = (installed, head) => installed !== undefined && head !== undefined && installed !== head;
@@ -967,7 +967,7 @@ async function enabledPlugins(disk) {
     return {};
   }
 }
-async function homeOf(disk) {
+async function homeOf$1(disk) {
   const home = await disk.env.home().catch(() => {
     return;
   }) || await disk.env.userProfile().catch(() => {
@@ -976,7 +976,7 @@ async function homeOf(disk) {
   return home ? home.replaceAll("\\", "/").replace(/\/+$/, "") : undefined;
 }
 async function skillLinks(disk) {
-  const home = await homeOf(disk);
+  const home = await homeOf$1(disk);
   const cwd = await disk.cwd().catch(() => {
     return;
   });
@@ -1019,7 +1019,7 @@ async function keepUpdated(disk) {
   const install = installOf(disk.root);
   if (install === undefined)
     return;
-  const home = await homeOf(disk);
+  const home = await homeOf$1(disk);
   const configDir = await disk.env.configDir() ?? (home === undefined ? undefined : `${home}/.claude`);
   if (configDir === undefined)
     return;
@@ -1035,7 +1035,7 @@ async function keepUpdated(disk) {
   disk.log(`modz: auto-update turned on for the ${install.market} marketplace`);
 }
 async function settingsPathOf(disk) {
-  const home = await homeOf(disk);
+  const home = await homeOf$1(disk);
   const configDir = await disk.env.configDir() ?? (home === undefined ? undefined : `${home}/.claude`);
   return configDir === undefined ? undefined : `${configDir}/settings.json`;
 }
@@ -1052,7 +1052,7 @@ async function updatesOf(disk, ask) {
   const known = { isInstalled: true, isAuto, mods: installedFrom(installedText, install.market), market: install.market };
   if (ask.run === undefined || url === undefined || installed === undefined)
     return { ...known, hasNew: ask.hadNew };
-  return { ...known, hasNew: isNewer(installed, headOf((await ask.run(["git", "ls-remote", url, "HEAD"])).stdout)) };
+  return { ...known, hasNew: isNewer(installed, headOf$1((await ask.run(["git", "ls-remote", url, "HEAD"])).stdout)) };
 }
 async function setAutoUpdate(disk, isOn) {
   const install = installOf(disk.root);
@@ -1070,7 +1070,7 @@ async function setAutoUpdate(disk, isOn) {
   return true;
 }
 
-function stableDrawings$1() {
+function stableDrawings$2() {
   const kept = new Map;
   return {
     reset: () => kept.clear(),
@@ -1088,8 +1088,8 @@ function stableDrawings$1() {
 
 const TITLE$1 = "modz";
 const STAGE$1 = { plugin: "modz", key: "stage" };
-const hubDrawings = stableDrawings$1();
-const catalogDrawings = stableDrawings$1();
+const hubDrawings = stableDrawings$2();
+const catalogDrawings = stableDrawings$2();
 const hubKept = { isHeld: false };
 const closeQuietly = ($, id) => $.ui.close({ id }).catch((cause) => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: "debug" }));
 async function show($, pane, isFocused = true) {
@@ -1475,7 +1475,7 @@ function refreshSide($, pane) {
     refreshUpdates($, false).catch(log($, "reading the updates"));
 }
 async function fill$1($) {
-  setLang(await $.env.get("MODZ_LANG").catch(() => {
+  setLang$2(await $.env.get("MODZ_LANG").catch(() => {
     return;
   }));
   await refreshLinks($, false);
@@ -1789,7 +1789,7 @@ const REGULAR = [
   762,
   466
 ];
-const BOLD = [
+const BOLD$5 = [
   252,
   351,
   563,
@@ -1947,49 +1947,49 @@ function trackingAt(size) {
   const [x1, y1] = TRACKING[upper] ?? last;
   return y0 + (y1 - y0) * (size - x0) / (x1 - x0);
 }
-function charEm(char, boldness) {
+function charEm$1(char, boldness) {
   const i = INDEX.get(char);
   if (i === undefined)
     return (char.codePointAt(0) ?? 0) >= FIRST_WIDE ? WIDE_EM$1 : UNKNOWN_EM;
   const regular = REGULAR[i] ?? UNKNOWN_EM * PER_MILLE;
-  const bold = BOLD[i] ?? regular;
+  const bold = BOLD$5[i] ?? regular;
   return (regular + (bold - regular) * boldness) / PER_MILLE;
 }
-function textWidth(text, size, weight = WEIGHT_LOW) {
+function textWidth$1(text, size, weight = WEIGHT_LOW) {
   const boldness = Math.max(0, Math.min(1, (weight - WEIGHT_LOW) / WEIGHT_SPAN));
   const chars = [...text];
-  const advance = chars.reduce((sum, char) => sum + charEm(char, boldness), 0);
+  const advance = chars.reduce((sum, char) => sum + charEm$1(char, boldness), 0);
   return Math.max(0, (advance + chars.length * trackingAt(size)) * size);
 }
 
-const STAGGER_MS$1 = 45;
-const EASE$1 = "cubic-bezier(.2,.8,.2,1)";
-const RULES$1 = {
-  "m-in": `.m-in{animation:m-in .42s ${EASE$1} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
-  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$1} both}@keyframes m-fade{from{opacity:0}}`,
-  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$1} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
-  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$1} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
+const STAGGER_MS$2 = 45;
+const EASE$2 = "cubic-bezier(.2,.8,.2,1)";
+const RULES$2 = {
+  "m-in": `.m-in{animation:m-in .42s ${EASE$2} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
+  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$2} both}@keyframes m-fade{from{opacity:0}}`,
+  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$2} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
+  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$2} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
   "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
-  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$1} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
-  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$1} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
+  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$2} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
+  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$2} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
   "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
   "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
-  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$1}}svg:hover .m-wash{opacity:.12}`,
-  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$1}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
+  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$2}}svg:hover .m-wash{opacity:.12}`,
+  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$2}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
 };
-const REDUCED$3 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
-function motionCss$1(body) {
-  const used = Object.keys(RULES$1).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
-  return used.length === 0 ? "" : `${used.map((name) => RULES$1[name]).join("")}${REDUCED$3}`;
+const REDUCED$4 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+function motionCss$2(body) {
+  const used = Object.keys(RULES$2).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
+  return used.length === 0 ? "" : `${used.map((name) => RULES$2[name]).join("")}${REDUCED$4}`;
 }
-const MOTION_CSS$1 = Object.values(RULES$1).join("");
-const isEntering$1 = (cue) => cue.phase === "enter";
-function entering$1(body, cue, kind = "in") {
-  if (!isEntering$1(cue))
+const MOTION_CSS$1 = Object.values(RULES$2).join("");
+const isEntering$2 = (cue) => cue.phase === "enter";
+function entering$2(body, cue, kind = "in") {
+  if (!isEntering$2(cue))
     return body;
-  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$1}ms">${body}</g>`;
+  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$2}ms">${body}</g>`;
 }
-const delayOf = (cue, step) => `animation-delay:${cue.order * STAGGER_MS$1 + step}ms`;
+const delayOf = (cue, step) => `animation-delay:${cue.order * STAGGER_MS$2 + step}ms`;
 
 const DARK$2 = {
   sheet: "#191917",
@@ -2032,8 +2032,8 @@ const LIGHT$2 = {
   }
 };
 const ROLE_NAMES$1 = ["read", "edit", "run", "ok", "warn", "danger", "plan"];
-const FONT$2 = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`;
-const MONO$1 = `ui-monospace, 'SF Mono', Menlo, monospace`;
+const FONT$3 = `-apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui, sans-serif`;
+const MONO$2 = `ui-monospace, 'SF Mono', Menlo, monospace`;
 function varsOf(palette) {
   const base = ["sheet", "card", "inset", "line", "strong", "track", "hi", "mid", "lo"];
   const neutral = base.map((key) => `--${key}:${palette[key]}`);
@@ -2047,8 +2047,8 @@ function roleClasses() {
   return ROLE_NAMES$1.map((name) => `.fg-${name}{fill:var(--${name})}.bg-${name}{fill:var(--${name}-t)}.st-${name}{stroke:var(--${name})}.ln-${name}{stroke:var(--${name}-l)}`).join("");
 }
 const TYPE_CSS = [
-  `text{font-family:${FONT$2}}`,
-  `.num{font-family:${MONO$1};font-variant-numeric:tabular-nums}`,
+  `text{font-family:${FONT$3}}`,
+  `.num{font-family:${MONO$2};font-variant-numeric:tabular-nums}`,
   ".hi{fill:var(--hi)}.mid{fill:var(--mid)}.lo{fill:var(--lo)}",
   ".eb{font-size:10.5px;font-weight:700;letter-spacing:.1em}",
   ".hl{font-size:17px;font-weight:620}.ti{font-size:13px;font-weight:600}",
@@ -2057,15 +2057,15 @@ const TYPE_CSS = [
   ".f-line{fill:var(--line)}.f-strong{fill:var(--strong)}.f-mid{fill:var(--mid)}"
 ].join("");
 const MOTION_CSS = ".breathe{animation:breathe 1.8s ease-in-out infinite}@keyframes breathe{50%{opacity:.45}}";
-const REDUCED$2 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+const REDUCED$3 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
 function styleOf() {
   const dark = varsOf(DARK$2);
-  return `<style>svg{${varsOf(LIGHT$2)}}svg.t-dark{${dark}}@media (prefers-color-scheme: dark){svg.t-auto{${dark}}}${TYPE_CSS}${roleClasses()}${MOTION_CSS}${REDUCED$2}</style>`;
+  return `<style>svg{${varsOf(LIGHT$2)}}svg.t-dark{${dark}}@media (prefers-color-scheme: dark){svg.t-auto{${dark}}}${TYPE_CSS}${roleClasses()}${MOTION_CSS}${REDUCED$3}</style>`;
 }
-const SCHEME$2 = { light: "light", dark: "dark", auto: "light dark" };
+const SCHEME$3 = { light: "light", dark: "dark", auto: "light dark" };
 function svgDoc$1(doc) {
   const width = Math.round(doc.width);
-  const scheme = `:root{color-scheme:${SCHEME$2[doc.theme]}}`;
+  const scheme = `:root{color-scheme:${SCHEME$3[doc.theme]}}`;
   return `<svg xmlns="http://www.w3.org/2000/svg" class="t-${doc.theme}" width="${width}" height="${doc.height}" viewBox="0 0 ${width} ${doc.height}">${styleOf()}<style>${scheme}${doc.css ?? ""}</style>${doc.body}</svg>`;
 }
 function themeOf(value) {
@@ -2075,21 +2075,21 @@ function themeOf(value) {
   return name.includes("dark") ? "dark" : "auto";
 }
 
-const settled = (spec) => spec.cue === undefined ? svgDoc$1(spec) : svgDoc$1({ width: spec.width, height: spec.height, theme: spec.theme, body: entering$1(spec.body, spec.cue), css: MOTION_CSS$1 });
-const HEAD = 44;
+const settled = (spec) => spec.cue === undefined ? svgDoc$1(spec) : svgDoc$1({ width: spec.width, height: spec.height, theme: spec.theme, body: entering$2(spec.body, spec.cue), css: MOTION_CSS$1 });
+const HEAD$1 = 44;
 const GROUP = 28;
-const ROW$1 = 62;
+const ROW$3 = 62;
 const TEXT_X = 16;
-const GAP$1 = 6;
+const GAP$3 = 6;
 function esc(text) {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-const MONO_EM$1 = 0.6;
+const MONO_EM$3 = 0.6;
 const WEIGHT_BODY = 500;
 function measure$1(text, size, weight = WEIGHT_BODY) {
-  return textWidth(text, size, weight);
+  return textWidth$1(text, size, weight);
 }
-const monoMeasure = (text, size) => [...text].length * size * MONO_EM$1;
+const monoMeasure = (text, size) => [...text].length * size * MONO_EM$3;
 function fit$1(text, width, font) {
   const { size, weight = WEIGHT_BODY } = font;
   if (measure$1(text, size, weight) <= width)
@@ -2101,9 +2101,9 @@ function fit$1(text, width, font) {
 }
 function headSvg(spec) {
   const meta = spec.meta === "" ? "" : `<text x="${spec.width - TEXT_X}" y="28" text-anchor="end" style="font-size:11.5px" class="num ${spec.metaRole === null ? "lo" : `fg-${spec.metaRole}`}">${esc(spec.meta)}</text>`;
-  const title = fit$1(spec.title, spec.width - TEXT_X * 2 - measure$1(spec.meta, 12) - GAP$1 * 2, { size: 16, weight: 600 });
+  const title = fit$1(spec.title, spec.width - TEXT_X * 2 - measure$1(spec.meta, 12) - GAP$3 * 2, { size: 16, weight: 600 });
   const body = `<text x="${TEXT_X}" y="28" style="font-size:16px;font-weight:600" class="hi">${esc(title)}</text>${meta}`;
-  return { source: settled({ width: spec.width, height: HEAD, theme: spec.theme, body, cue: spec.cue }), alt: `${catalogWords().allMods}: ${spec.title}${spec.meta === "" ? "" : ` · ${spec.meta}`}`, height: HEAD };
+  return { source: settled({ width: spec.width, height: HEAD$1, theme: spec.theme, body, cue: spec.cue }), alt: `${catalogWords().allMods}: ${spec.title}${spec.meta === "" ? "" : ` · ${spec.meta}`}`, height: HEAD$1 };
 }
 function labelSvg(spec) {
   const { label } = spec;
@@ -2120,7 +2120,7 @@ function guideSvg(spec) {
   const options = guide.options.length === 0 ? "" : words.options(guide.options.join(", "));
   const height = options === "" ? GUIDE.one : GUIDE.two;
   const name = fit$1(guide.mod, (right - TEXT_X) / 2, { size: 13, weight: 560 });
-  const room = Math.floor((right - TEXT_X - measure$1(name, 13, 560) - GAP$1 * 2) / (11.5 * MONO_EM$1));
+  const room = Math.floor((right - TEXT_X - measure$1(name, 13, 560) - GAP$3 * 2) / (11.5 * MONO_EM$3));
   const all = commandsLine(guide);
   const commands = [...all].length <= room ? all : `${[...all].slice(0, Math.max(1, room - 1)).join("")}…`;
   const body = [
@@ -2147,13 +2147,13 @@ function stateLabel(mod) {
     return words.stateUnknown;
   return mod.isEnabled ? words.onWord : words.offWord;
 }
-function rowSvg$1(spec) {
+function rowSvg$2(spec) {
   const { mod, width } = spec;
   const right = width - TEXT_X;
   const versionText = mod.version === null ? "" : `v${mod.version}`;
   const state = stateWord(mod);
   const edge = [state?.text, versionText].filter(Boolean).join(" · ");
-  const name = fit$1(mod.name, right - TEXT_X - monoMeasure(edge, 11.5) - GAP$1 * 2, { size: 13, weight: 560 });
+  const name = fit$1(mod.name, right - TEXT_X - monoMeasure(edge, 11.5) - GAP$3 * 2, { size: 13, weight: 560 });
   const isQuiet = mod.isEnabled === false;
   const lineRoom = right - TEXT_X;
   const body = [
@@ -2163,7 +2163,7 @@ function rowSvg$1(spec) {
     `<text x="${TEXT_X}" y="55" style="font-size:11px" class="lo">${esc(fit$1(placeLine(mod), lineRoom, { size: 11 }))}</text>`
   ].join("");
   const alt = `${[mod.name, versionText].filter(Boolean).join(" ")} · ${placeLine(mod)} · ${stateLabel(mod)} · ${mod.description}`;
-  return { source: settled({ width, height: ROW$1, theme: spec.theme, body, cue: spec.cue }), alt, height: ROW$1 };
+  return { source: settled({ width, height: ROW$3, theme: spec.theme, body, cue: spec.cue }), alt, height: ROW$3 };
 }
 
 const LETTERS = {
@@ -2229,10 +2229,10 @@ function pixelWord(word, o) {
 }
 
 const NARROW$1 = 280;
-const WIDE$1 = 520;
+const WIDE$2 = 520;
 const between = (k, from, to) => Math.round((from + (to - from) * k) * 10) / 10;
 function sizesOf(width) {
-  const k = Math.max(0, Math.min(1, (width - NARROW$1) / (WIDE$1 - NARROW$1)));
+  const k = Math.max(0, Math.min(1, (width - NARROW$1) / (WIDE$2 - NARROW$1)));
   const row = Math.round(between(k, 30, 38));
   const inset = between(k, 16, 22);
   const icon = between(k, 16, 20);
@@ -2262,8 +2262,8 @@ const BADGE_GAP = 6;
 const HUB_CSS = [
   "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}"
 ].join("");
-const doc = (spec) => svgDoc$1({ ...spec, css: motionCss$1(spec.body) || HUB_CSS });
-const LIVE_DOT = { r: 3, gap: 9 };
+const doc = (spec) => svgDoc$1({ ...spec, css: motionCss$2(spec.body) || HUB_CSS });
+const LIVE_DOT$1 = { r: 3, gap: 9 };
 function valueOf(card) {
   if (card === null || card.detail === "")
     return null;
@@ -2276,19 +2276,19 @@ function glyphInk(card) {
   return role === null ? "f-mid" : `fg-${role}`;
 }
 function hubHeadSvg(spec) {
-  const isDropping = isEntering$1(spec.cue);
+  const isDropping = isEntering$2(spec.cue);
   const cellAttrs = isDropping ? (at) => ` class="m-px" style="${delayOf(spec.cue, at.index * LETTER_MS + at.row * ROW_MS + at.col * COLUMN_MS)}"` : undefined;
   const z = sizesOf(spec.width);
   const mark = pixelWord("modz", { x: z.inset, y: (z.head - 7 * z.mark.pitch) / 2, ...z.mark, className: "fg-edit", cellAttrs });
   const meta = `<text x="${spec.width - z.inset}" y="${z.head / 2 + 4}" text-anchor="end" style="font-size:${z.meta}px" class="num lo">${esc(spec.meta)}</text>`;
-  const body = mark.svg + entering$1(meta, { ...spec.cue, order: spec.cue.order + 4 }, "fade");
-  const css = HUB_CSS + motionCss$1(body);
+  const body = mark.svg + entering$2(meta, { ...spec.cue, order: spec.cue.order + 4 }, "fade");
+  const css = HUB_CSS + motionCss$2(body);
   return { source: svgDoc$1({ width: spec.width, height: z.head, theme: spec.theme, body, css }), alt: `modz · ${spec.meta}`, height: z.head };
 }
-function sectionSvg(spec) {
+function sectionSvg$1(spec) {
   const z = sizesOf(spec.width);
   const body = `<text x="${z.inset}" y="${z.section - 8}" style="font-size:${z.label}px;font-weight:600" class="lo">${esc(spec.label)}</text>`;
-  return { source: doc({ width: spec.width, height: z.section, theme: spec.theme, body: entering$1(body, spec.cue, "fade") }), alt: spec.label, height: z.section };
+  return { source: doc({ width: spec.width, height: z.section, theme: spec.theme, body: entering$2(body, spec.cue, "fade") }), alt: spec.label, height: z.section };
 }
 function rowIcon(row, z) {
   const glyph = pixelGlyph(row.entry.icon, { x: z.inset, y: (z.row - z.icon) / 2, box: z.icon, ...z.glyph, className: glyphInk(row.card) });
@@ -2331,9 +2331,9 @@ function valueSvg(value, room) {
   const words = `<text x="${room.to}" y="${room.z.baseline}" text-anchor="end" style="font-size:${room.z.value.size}px;font-variant-numeric:tabular-nums" class="${value.ink}">${esc(text)}</text>`;
   if (!value.isLive)
     return words;
-  const x = room.to - measure$1(text, room.z.value.size, room.z.value.weight) - LIVE_DOT.gap;
+  const x = room.to - measure$1(text, room.z.value.size, room.z.value.weight) - LIVE_DOT$1.gap;
   const y = room.z.row / 2;
-  const dot = (cls) => `<circle cx="${x}" cy="${y}" r="${LIVE_DOT.r}" class="fg-edit${cls}"/>`;
+  const dot = (cls) => `<circle cx="${x}" cy="${y}" r="${LIVE_DOT$1.r}" class="fg-edit${cls}"/>`;
   return dot(" m-ring") + dot("") + words;
 }
 function hubRowSvg(spec) {
@@ -2344,10 +2344,10 @@ function hubRowSvg(spec) {
   const body = [
     rowIcon(row, z),
     title.svg,
-    valueSvg(value, { from: title.end + VALUE_GAP + (value?.isLive ? LIVE_DOT.gap + LIVE_DOT.r * 2 : 0), to: width - z.inset, z })
+    valueSvg(value, { from: title.end + VALUE_GAP + (value?.isLive ? LIVE_DOT$1.gap + LIVE_DOT$1.r * 2 : 0), to: width - z.inset, z })
   ].join("");
   const alt = `${row.entry.title}${row.entry.badge === null ? "" : ` (${row.entry.badge})`}${value === null ? "" : `: ${value.text}`}`;
-  return { source: doc({ width, height: z.row, theme: spec.theme, body: entering$1(body, spec.cue) }), alt, height: z.row };
+  return { source: doc({ width, height: z.row, theme: spec.theme, body: entering$2(body, spec.cue) }), alt, height: z.row };
 }
 function hubLineSvg(spec) {
   const z = sizesOf(spec.width);
@@ -2360,7 +2360,7 @@ function hubLineSvg(spec) {
     `<text x="${z.textX}" y="${y}" style="font-size:${z.value.size}px" class="mid">${esc(label)}</text>`,
     value === "" ? "" : `<text x="${right}" y="${y}" text-anchor="end" style="font-size:${z.label}px;font-variant-numeric:tabular-nums" class="lo">${esc(value)}</text>`
   ].join("");
-  return { source: doc({ width: spec.width, height: z.line, theme: spec.theme, body: entering$1(body, spec.cue) }), alt: [spec.line.label, value].filter(Boolean).join(": "), height: z.line };
+  return { source: doc({ width: spec.width, height: z.line, theme: spec.theme, body: entering$2(body, spec.cue) }), alt: [spec.line.label, value].filter(Boolean).join(": "), height: z.line };
 }
 
 const DESKTOP_FOOT$1 = { paddingX: 2, marginTop: 1 };
@@ -2404,15 +2404,15 @@ function firstRunRow(ui, view, pen) {
   }, words.firstRun)), pen.press({ box: "row-add-mods", key: "add-mods", drawing: built, pane: MODS_PANE }));
 }
 
-const BLANK = "ㅤ";
-const CELL_PX = 11.9;
-const BUTTON_PX = 28;
-const RUN_SPAN = 2;
-const LINE_SPAN = "400%";
-function PressCover(ui, o) {
+const BLANK$1 = "ㅤ";
+const CELL_PX$1 = 11.9;
+const BUTTON_PX$2 = 28;
+const RUN_SPAN$1 = 2;
+const LINE_SPAN$1 = "400%";
+function PressCover$1(ui, o) {
   const { Box, Button } = ui;
-  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX * 2)));
-  const label = BLANK.repeat(Math.ceil(o.width * RUN_SPAN / CELL_PX));
+  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX$2 * 2)));
+  const label = BLANK$1.repeat(Math.ceil(o.width * RUN_SPAN$1 / CELL_PX$1));
   const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey };
   return h(Box, {
     position: "absolute",
@@ -2426,7 +2426,7 @@ function PressCover(ui, o) {
   }, Array.from({ length: lines }, (_, i) => h(Box, {
     key: `${o.key}~line${i}`,
     flexDirection: "row",
-    width: LINE_SPAN,
+    width: LINE_SPAN$1,
     marginLeft: -1,
     flexShrink: 0
   }, h(Button, {
@@ -2437,32 +2437,32 @@ function PressCover(ui, o) {
     onPress: o.onPress
   }))));
 }
-const STILL = "<style>*{animation:none!important;transition:none!important}</style>";
-const stillSource = (source) => source.replace(/<\/svg>\s*$/, `${STILL}</svg>`);
-function stillSvg(ui, drawing) {
+const STILL$1 = "<style>*{animation:none!important;transition:none!important}</style>";
+const stillSource$1 = (source) => source.replace(/<\/svg>\s*$/, `${STILL$1}</svg>`);
+function stillSvg$1(ui, drawing) {
   if (drawing.type !== "Svg")
     return drawing;
   const { Svg } = ui;
   const { key, source, alt, width, height } = drawing.props;
   return h(Svg, {
     key,
-    source: stillSource(source),
+    source: stillSource$1(source),
     alt,
     width,
     height
   });
 }
-const FALLBACK_PX = 52;
-const FALLBACK_WIDTH_PX = 360;
-function PressRow(ui, o) {
+const FALLBACK_PX$1 = 52;
+const FALLBACK_WIDTH_PX$1 = 360;
+function PressRow$1(ui, o) {
   const { Box } = ui;
   const props = o.drawing.type === "Svg" ? o.drawing.props : {};
-  const width = props.width ?? FALLBACK_WIDTH_PX;
-  const height = props.height ?? FALLBACK_PX;
+  const width = props.width ?? FALLBACK_WIDTH_PX$1;
+  const height = props.height ?? FALLBACK_PX$1;
   return h(Box, {
     key: o.box,
     alignSelf: "flex-start"
-  }, stillSvg(ui, o.drawing), PressCover(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
+  }, stillSvg$1(ui, o.drawing), PressCover$1(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
 }
 
 const linesOf = (item) => item.more > 0 ? [...item.lines, { label: hubWords().more(item.more), value: "" }] : item.lines;
@@ -2484,7 +2484,7 @@ function nowDesktop(ui, now, tools) {
   const { Box } = ui;
   const { width, theme } = tools;
   const label = hubWords().now;
-  const eyebrow = tools.keep("eyebrow-now", { width, theme, label }, (cue) => sectionSvg({ width, theme, label, cue }));
+  const eyebrow = tools.keep("eyebrow-now", { width, theme, label }, (cue) => sectionSvg$1({ width, theme, label, cue }));
   return h(Box, {
     key: "now",
     flexDirection: "column"
@@ -2514,9 +2514,9 @@ function terminalGroup(ui, item, button) {
     columnGap: 1
   }, color === undefined ? h(Text, {
     dimColor: true
-  }, GLYPH[entry.icon]) : h(Text, {
+  }, GLYPH$1[entry.icon]) : h(Text, {
     color
-  }, GLYPH[entry.icon]), h(Text, {
+  }, GLYPH$1[entry.icon]), h(Text, {
     bold: true
   }, entry.title), detailText(ui, tone, card?.detail ?? ""), h(Box, {
     flexGrow: 1
@@ -2663,7 +2663,7 @@ function pressRow(ui, view, opts) {
     width,
     height: drawing.height
   });
-  return PressRow(ui, { box: opts.box, key: opts.key, drawing: svg, onPress: () => view.actions.onOpen(pane) });
+  return PressRow$1(ui, { box: opts.box, key: opts.key, drawing: svg, onPress: () => view.actions.onOpen(pane) });
 }
 function desktopGroup(ui, view, opts) {
   const { Box } = ui;
@@ -2671,7 +2671,7 @@ function desktopGroup(ui, view, opts) {
   const { width, theme } = pen;
   const buttonRoom = view.isEditing ? EDIT_BUTTON_ROOM : 0;
   const panes = group.isHiddenGroup ? null : group.rows.map((row) => row.entry.pane);
-  const eyebrow = pen.keep(`eyebrow-${group.key}`, { width, theme, label: group.label }, (cue) => sectionSvg({ width, theme, label: group.label, cue }));
+  const eyebrow = pen.keep(`eyebrow-${group.key}`, { width, theme, label: group.label }, (cue) => sectionSvg$1({ width, theme, label: group.label, cue }));
   return h(Box, {
     key: `section-${group.key}`,
     flexDirection: "column"
@@ -2757,9 +2757,9 @@ function terminalRow$1(ui, view, opts) {
     columnGap: 1
   }, glyphColor === undefined ? h(Text, {
     dimColor: true
-  }, GLYPH[row.entry.icon]) : h(Text, {
+  }, GLYPH$1[row.entry.icon]) : h(Text, {
     color: glyphColor
-  }, GLYPH[row.entry.icon]), h(Text, {
+  }, GLYPH$1[row.entry.icon]), h(Text, {
     bold: true
   }, row.entry.title), row.entry.badge === null ? null : h(Text, {
     color: "permission"
@@ -2836,15 +2836,15 @@ function targetOf(opts) {
   return opts.uiLang === "tr" ? { name: "Turkish", profile: TURKISH } : undefined;
 }
 const wordsOf$2 = (text) => text.slice(0, SAMPLE_CHARS).toLowerCase().match(/\p{L}+/gu) ?? [];
-function shareOf(words, profile) {
+function shareOf$1(words, profile) {
   const hits = words.filter((word) => profile.words.has(word) || profile.letters?.test(word) === true).length;
   return hits / words.length;
 }
 function needsReminder(opts) {
   const words = wordsOf$2(opts.text);
-  if (words.length < MIN_WORDS || shareOf(words, ENGLISH) < PROSE_SHARE)
+  if (words.length < MIN_WORDS || shareOf$1(words, ENGLISH) < PROSE_SHARE)
     return false;
-  return opts.target.profile === undefined || shareOf(words, opts.target.profile) < PROSE_SHARE;
+  return opts.target.profile === undefined || shareOf$1(words, opts.target.profile) < PROSE_SHARE;
 }
 const reminderOf = (target) => `Reply in ${target.name}, the user's language; keep code, paths and identifiers as they are. ` + `Write each tool call's description in ${target.name} too, in plain words.`;
 const whyReminderOf = (target) => {
@@ -2873,7 +2873,7 @@ function wireLanguageKeeper(on, options) {
     if (asksWhy)
       unasked.add(agentId ?? MAIN);
     if (agentId === undefined)
-      armed = targetOf({ setting: await languageSetting($), uiLang: lang() });
+      armed = targetOf({ setting: await languageSetting($), uiLang: lang$1() });
     return next(e);
   });
   on("tool.call", async (_$, e, next) => {
@@ -2898,7 +2898,7 @@ const WIDTH_MAX = 900;
 function groupsOf(mods) {
   return GROUPS.map((group) => [group, mods.filter((mod) => mod.group === group)]).filter(([, list]) => list.length > 0);
 }
-function stateOf$1(mod) {
+function stateOf$2(mod) {
   const words = catalogWords();
   if (!mod.isHealthy)
     return { glyph: "✕", color: "error", word: words.brokenWord };
@@ -2908,7 +2908,7 @@ function stateOf$1(mod) {
 }
 function terminalRow(ui, mod) {
   const { Box, Text } = ui;
-  const state = stateOf$1(mod);
+  const state = stateOf$2(mod);
   return h(Box, {
     key: `mod-${mod.name}`,
     flexDirection: "column"
@@ -3068,7 +3068,7 @@ function desktopTree(ui, view) {
     flexDirection: "column"
   }, draw(`eyebrow-${group}`, [group, list.length], (cue) => groupSvg({ width, theme: view.theme, group, count: list.length, cue })), list.map((mod) => h(Box, {
     key: `mod-${mod.name}`
-  }, draw(`row-${mod.name}`, mod, (cue) => rowSvg$1({ width, theme: view.theme, mod, cue })))))));
+  }, draw(`row-${mod.name}`, mod, (cue) => rowSvg$2({ width, theme: view.theme, mod, cue })))))));
 }
 const modzTree = (ui, view) => withHome(ui, catalogTree(ui, view), view.onHome);
 function catalogTree(ui, view) {
@@ -3085,6 +3085,3198 @@ function catalogTree(ui, view) {
     }, words.emptyLine));
   }
   return view.surface === "desktop" ? desktopTree(ui, view) : terminalTree(ui, view);
+}
+
+let current$1 = "en";
+const langOf$1 = (value) => typeof value === "string" && /^tr/i.test(value.trim()) ? "tr" : "en";
+function setLang$1(value) {
+  current$1 = langOf$1(value);
+  return current$1;
+}
+const upper$1 = (text) => text.toLocaleUpperCase(current$1);
+
+const plural$1 = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const en = {
+  pane: "Agents",
+  command: "Open or close the Agents panel: running, done and planned helper agents; progress, cost, timeline, quiet-agent warning; message, stop and new task",
+  cost: "Cost",
+  tokens: "Tokens",
+  time: "Time",
+  collapse: "Collapse",
+  expand: "Expand",
+  running: "Running",
+  finished: "Finished",
+  planned: "Planned",
+  emptyTitle: "No agents yet",
+  paneFailed: "The pane could not be drawn; here is the plain list.",
+  moreAgents: (n) => `+${n} more ${n === 1 ? "agent" : "agents"}`,
+  empty: "Hand out a task and a crab gets to work: its status, progress and cost show here live.",
+  round: "round",
+  failed: "failed",
+  aborted: "stopped",
+  tokensWord: "tokens",
+  agentsCount: "agents",
+  isRunning: "running",
+  isFinished: "done",
+  isPlanned: "planned",
+  opened: "Agents panel opened.",
+  closed: "Agents panel closed.",
+  done: "Done",
+  plan: "Plan",
+  design: "Design",
+  tasks: "Tasks",
+  review: "Review",
+  agents: "Agents",
+  busy: "running",
+  total: "total",
+  completed: "completed",
+  starting: "starting",
+  mainName: "Main session",
+  mainType: "this chat",
+  mainTask: "The work in this chat",
+  dismiss: "Close",
+  brief: "Task",
+  history: "Work history",
+  context: "memory",
+  limit: "5h allowance",
+  limitTile: "of 5h allowance",
+  kinds: { read: "read", edit: "edit", run: "run", agent: "agent", other: "other" },
+  efforts: { low: "light thinking", medium: "medium thinking", high: "deep thinking", xhigh: "very deep thinking", max: "deepest thinking" },
+  cheerFailed: "(×_×) did not finish",
+  show: "Show",
+  hide: "Hide",
+  details: "Details",
+  current: "Now",
+  thinking: "Thinking",
+  lastStep: "Last step",
+  doing: { read: "Reading", edit: "Editing", run: "Running a command", agent: "Working with an agent", other: "Using a tool" },
+  files: "Files touched",
+  moreFiles: (n) => `+${plural$1(n, "more file", "more files")}`,
+  showAll: "Show all",
+  showLess: "Show less",
+  ago: (span) => `${span} ago`,
+  timeline: "Timeline",
+  now: "now",
+  look: "Look",
+  failedNow: "failed",
+  newTask: "New task",
+  agentLabel: "Agent",
+  taskLabel: "Task",
+  taskHint: "Describe the work, Enter starts it",
+  start: "start",
+  cancel: "Cancel",
+  noTypes: "No agent types known yet.",
+  noDescription: "No description.",
+  spawnFailed: "Could not start the agent",
+  builtins: { "general-purpose": "Research, search and multi-step work", Explore: "Scans the code fast, changes nothing", Plan: "Plans how the work will be done" },
+  sources: { "built-in": "built-in", plugin: "plugin", project: "project", user: "user" },
+  shareOf: (share) => `≈${share}% of the 5-hour usage allowance`,
+  earlier: (n) => `${plural$1(n, "earlier step", "earlier steps")} hidden`,
+  logOpen: (n) => `Show every step (${n})`,
+  logClose: "Close the log",
+  log: "Step-by-step log",
+  because: "Why",
+  after: (list) => `after ${list}`,
+  tools: (n) => plural$1(n, "step", "steps"),
+  errors: (n) => `${n} failed`,
+  crew: (n) => plural$1(n, "agent", "agents"),
+  stripCost: "cost",
+  stripTokens: "tokens",
+  stripTime: "agent time",
+  stripLast: (cost) => `last turn ${cost}`,
+  stripTurns: (n) => plural$1(n, "turn", "turns"),
+  stripPerTurn: (span) => `${span} per turn`,
+  stripDoing: { read: "reading", edit: "writing", run: "command", agent: "leading agents", other: "thinking" },
+  rowDoing: { read: "reading", search: "searching", edit: "writing", run: "running a command", test: "checking", save: "saving a version", web: "on the internet", message: "sending word", agent: "leading agents", wait: "waiting", other: "thinking" },
+  rowStep: (done, total) => `step ${done}/${total}`,
+  rowPlan: (at, of, subject) => `plan step ${at}/${of}: ${subject}`,
+  rowEnded: { done: "finished", failed: "did not finish" },
+  stripPlan: "plan",
+  stripPlanDone: "done",
+  stripWeek: "week",
+  stripFive: "5 hours",
+  stripRunsOut: (when) => `runs out ${when}`,
+  stripFull: "used up",
+  stripDays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+  stripResting: { sleeping: "asleep", working: "working", happy: "pleased", worried: "uneasy" },
+  stripStep: (n, subject) => `Step ${n}: ${subject}`,
+  stripTeam: {
+    fresh: (n) => `${n} new`,
+    away: (name) => `${name} is not working right now`,
+    working: "working now",
+    isWorking: (name) => `${name} is working now`,
+    worked: (name, ago) => `${name} worked ${ago}`,
+    on: (branch) => `on the line of work ${branch}`,
+    more: (n) => `and ${n} more on this project`,
+    wrote: (name) => `${name} wrote`,
+    aiWrote: (name) => `${name}'s AI wrote`
+  },
+  hubCrew: (n) => `${n} running`,
+  pct: (n) => `${n}%`,
+  minutes: (n) => `${n} min`,
+  seconds: (n) => `${n}s`,
+  hours: (n) => `${n} h`,
+  quiet: (span) => `quiet ${span}`,
+  longTool: (_tool, span) => `one step running ${span}`,
+  stopWho: (name) => `Stop ${name}`,
+  messageTo: (name) => `Message ${name}, Enter sends`,
+  you: "You",
+  answering: (name) => `${name} is answering…`,
+  followUp: (name) => `Ask ${name} a follow-up, Enter sends`,
+  launched: (name) => `${name} got to work`,
+  denied: (reason) => `Refused: ${reason}`,
+  decimal: ".",
+  message: "Message",
+  send: "send",
+  stop: "Stop",
+  delivered: "Message delivered",
+  stopAsked: "Stop requested",
+  stopRefused: "Stop refused",
+  stopFailed: "Could not stop this agent",
+  allDone: "All done",
+  liveCount: (n) => `${n} running`,
+  endedCount: (n) => `${n} done`,
+  plannedCount: (n) => `${n} planned`,
+  notDelivered: (reason) => `Not delivered: ${reason}`,
+  chats: {
+    title: "Other chats",
+    waitingTitle: "Waiting on you",
+    waiting: (span) => span ? `waiting ${span}` : "waiting",
+    states: { working: "working", idle: "idle" },
+    untitled: "New chat",
+    more: (n) => `+${n} more`,
+    agentsTitle: "Agents in other chats",
+    emptyHere: "No agents in this chat",
+    hubWaits: (n) => n === 1 ? "1 chat waits" : `${n} chats wait`,
+    hubWorks: (n) => n === 1 ? "1 chat working" : `${n} chats working`
+  },
+  crab: {
+    moods: { sleeping: "napping", working: "working", happy: "happy", worried: "worried" },
+    level: (n) => `Lv ${n}`
+  }
+};
+
+const ru = {
+  ...en,
+  pane: "Агенты",
+  command: "Открыть или закрыть панель агентов: работающие, завершённые и запланированные субагенты; прогресс, стоимость, хронология, предупреждение о молчащем агенте; сообщение, остановка и новая задача",
+  cost: "Стоимость",
+  tokens: "Токены",
+  time: "Время",
+  collapse: "Свернуть",
+  expand: "Развернуть",
+  running: "Работают",
+  finished: "Завершены",
+  planned: "Запланированы",
+  emptyTitle: "Агентов пока нет",
+  paneFailed: "Панель не отрисовалась, вот простой список.",
+  moreAgents: (n) => `ещё агентов: ${n}`,
+  empty: "Дай задачу, и краб возьмётся за дело: статус, прогресс и стоимость появятся здесь.",
+  round: "раунд",
+  failed: "ошибка",
+  aborted: "остановлен",
+  tokensWord: "токенов",
+  agentsCount: "агентов",
+  isRunning: "работает",
+  isFinished: "завершён",
+  isPlanned: "запланирована",
+  opened: "Панель агентов открыта.",
+  closed: "Панель агентов закрыта.",
+  done: "Готово",
+  plan: "План",
+  design: "Дизайн",
+  tasks: "Задачи",
+  review: "Ревью",
+  agents: "Агенты",
+  busy: "в работе",
+  total: "всего",
+  completed: "готово",
+  starting: "запуск",
+  mainName: "Главная сессия",
+  mainType: "этот чат",
+  mainTask: "Работа в этом чате",
+  dismiss: "Закрыть",
+  brief: "Задача",
+  history: "История работы",
+  context: "память",
+  limit: "5ч",
+  limitTile: "доля 5ч",
+  current: "Сейчас",
+  thinking: "Думает",
+  lastStep: "Последний шаг",
+  doing: { read: "Читает", edit: "Правит", run: "Выполняет команду", agent: "Работает с агентом", other: "Использует инструмент" },
+  files: "Затронутые файлы",
+  moreFiles: (n) => `ещё файлов: ${n}`,
+  showAll: "Показать целиком",
+  showLess: "Свернуть",
+  ago: (span) => `${span} назад`,
+  kinds: { read: "чтение", edit: "правка", run: "команда", agent: "агент", other: "другое" },
+  efforts: { low: "лёгкое обдумывание", medium: "среднее обдумывание", high: "глубокое обдумывание", xhigh: "очень глубокое обдумывание", max: "самое глубокое обдумывание" },
+  cheerFailed: "(×_×) не вышло",
+  show: "Показать",
+  hide: "Скрыть",
+  details: "Подробнее",
+  timeline: "Хронология",
+  now: "сейчас",
+  look: "Открыть",
+  failedNow: "упал с ошибкой",
+  newTask: "Новая задача",
+  agentLabel: "Агент",
+  taskLabel: "Задача",
+  taskHint: "Опиши работу, Enter запустит",
+  start: "запустить",
+  cancel: "Отмена",
+  noTypes: "Типы агентов пока не известны.",
+  noDescription: "Без описания.",
+  spawnFailed: "Не удалось запустить агента",
+  builtins: { "general-purpose": "Исследование, поиск и многошаговая работа", Explore: "Быстрый поиск по коду, только чтение", Plan: "Составляет план реализации" },
+  sources: { "built-in": "встроенный", plugin: "плагин", project: "проект", user: "пользователь" },
+  shareOf: (share) => `≈${share}% лимита 5ч`,
+  earlier: (n) => `скрыто ранних шагов: ${n}`,
+  logOpen: (n) => `Показать все шаги (${n})`,
+  logClose: "Закрыть журнал",
+  log: "Пошаговый журнал",
+  because: "Зачем",
+  after: (list) => `после ${list}`,
+  tools: (n) => `шагов: ${n}`,
+  errors: (n) => `ошибок: ${n}`,
+  crew: (n) => `агентов: ${n}`,
+  stripCost: "стоимость",
+  stripTokens: "токены",
+  stripTime: "время агентов",
+  stripLast: (cost) => `последний ход ${cost}`,
+  stripTurns: (n) => `ходов: ${n}`,
+  stripPerTurn: (span) => `${span} за ход`,
+  stripDoing: { read: "читает", edit: "пишет", run: "команда", agent: "ведёт агентов", other: "думает" },
+  rowDoing: { read: "читает", search: "ищет", edit: "пишет", run: "выполняет команду", test: "проверяет", save: "сохраняет версию", web: "в интернете", message: "передаёт сообщение", agent: "ведёт агентов", wait: "ждёт", other: "думает" },
+  rowStep: (done, total) => `шаг ${done}/${total}`,
+  rowPlan: (at, of, subject) => `шаг плана ${at}/${of}: ${subject}`,
+  rowEnded: { done: "закончил", failed: "не закончил" },
+  stripPlan: "план",
+  stripPlanDone: "готов",
+  stripWeek: "неделя",
+  stripFive: "5 часов",
+  stripRunsOut: (when) => `кончится ${when}`,
+  stripFull: "исчерпан",
+  stripDays: ["вс", "пн", "вт", "ср", "чт", "пт", "сб"],
+  stripResting: { sleeping: "спит", working: "работает", happy: "доволен", worried: "встревожен" },
+  stripStep: (n, subject) => `Шаг ${n}: ${subject}`,
+  stripTeam: {
+    fresh: (n) => `новых: ${n}`,
+    away: (name) => `${name} сейчас не работает`,
+    working: "работает сейчас",
+    isWorking: (name) => `${name} работает сейчас`,
+    worked: (name, ago) => `${name} работал(а) ${ago}`,
+    on: (branch) => `ветка работы ${branch}`,
+    more: (n) => `и ещё ${n} в этом проекте`,
+    wrote: (name) => `${name} написал(а)`,
+    aiWrote: (name) => `ИИ пользователя ${name} написал`
+  },
+  hubCrew: (n) => `агентов: ${n}`,
+  minutes: (n) => `${n} мин`,
+  seconds: (n) => `${n} с`,
+  hours: (n) => `${n} ч`,
+  quiet: (span) => `молчит ${span}`,
+  longTool: (_tool, span) => `один шаг идёт ${span}`,
+  stopWho: (name) => `Остановить ${name}`,
+  messageTo: (name) => `Написать ${name}, Enter отправит`,
+  you: "Вы",
+  answering: (name) => `${name} отвечает…`,
+  followUp: (name) => `Задать ${name} ещё вопрос, Enter отправит`,
+  launched: (name) => `${name} взялся за дело`,
+  denied: (reason) => `Отклонено: ${reason}`,
+  decimal: ",",
+  message: "Сообщение",
+  send: "отправить",
+  stop: "Остановить",
+  delivered: "Сообщение доставлено",
+  stopAsked: "Остановка запрошена",
+  stopRefused: "Остановка отклонена",
+  stopFailed: "Не удалось остановить агента",
+  allDone: "Всё готово",
+  liveCount: (n) => `работают: ${n}`,
+  endedCount: (n) => `завершено: ${n}`,
+  plannedCount: (n) => `в плане: ${n}`,
+  notDelivered: (reason) => `Не доставлено: ${reason}`,
+  chats: {
+    title: "Другие чаты",
+    waitingTitle: "Ждут тебя",
+    waiting: (span) => span ? `ждёт ${span}` : "ждёт",
+    states: { working: "работает", idle: "свободен" },
+    untitled: "Новый чат",
+    more: (n) => `+${n} ещё`,
+    agentsTitle: "Агенты в других чатах",
+    emptyHere: "В этом чате агентов нет",
+    hubWaits: (n) => `чатов ждёт: ${n}`,
+    hubWorks: (n) => `чатов в работе: ${n}`
+  },
+  crab: {
+    moods: { sleeping: "спит", working: "работает", happy: "доволен", worried: "волнуется" },
+    level: (n) => `Ур ${n}`
+  }
+};
+
+const VOWELS = "aeıioöuü";
+const HARMONY = { a: "ı", ı: "ı", e: "i", i: "i", o: "u", u: "u", ö: "ü", ü: "ü" };
+const BACK = "aıou";
+const lastVowel = (lower) => [...lower].reverse().find((ch) => VOWELS.includes(ch)) ?? "i";
+const suffixed = (name, pick) => {
+  const lower = name.toLocaleLowerCase("tr");
+  const buffer = VOWELS.includes(lower.at(-1) ?? "") ? "y" : "";
+  return `${name}'${buffer}${pick(lastVowel(lower))}`;
+};
+const accusative = (name) => suffixed(name, (vowel) => HARMONY[vowel] ?? "i");
+const dative = (name) => suffixed(name, (vowel) => BACK.includes(vowel) ? "a" : "e");
+const tr = {
+  pane: "Ajanlar",
+  command: "Ajanlar panelini aç/kapat: çalışan, biten ve planlı yardımcı ajanlar; ilerleme, maliyet, zaman çizelgesi, sessiz ajan uyarısı; mesaj, durdur ve yeni görev",
+  cost: "Maliyet",
+  tokens: "Token",
+  time: "Süre",
+  collapse: "Daralt",
+  expand: "Genişlet",
+  running: "Çalışıyor",
+  finished: "Bitti",
+  planned: "Planlı",
+  emptyTitle: "Henüz ajan yok",
+  paneFailed: "Panel çizilemedi, düz liste gösteriliyor.",
+  moreAgents: (n) => `+${n} ajan daha`,
+  empty: "Bir görev ver, bir yengeç işe koyulsun: durumu, ilerlemesi ve maliyeti burada canlı görünür.",
+  round: "tur",
+  failed: "hata",
+  aborted: "durduruldu",
+  tokensWord: "token",
+  agentsCount: "ajan",
+  isRunning: "çalışıyor",
+  isFinished: "bitti",
+  isPlanned: "planlı",
+  opened: "Ajanlar paneli açıldı.",
+  closed: "Ajanlar paneli kapandı.",
+  done: "Bitti",
+  plan: "Plan",
+  design: "Tasarım",
+  tasks: "Görevler",
+  review: "Gözden geçirme",
+  agents: "Ajanlar",
+  busy: "çalışıyor",
+  total: "toplam",
+  completed: "tamamlandı",
+  starting: "başlıyor",
+  mainName: "Ana oturum",
+  mainType: "bu sohbet",
+  mainTask: "Bu sohbetteki iş",
+  dismiss: "Kapat",
+  brief: "Görev",
+  history: "İş geçmişi",
+  context: "hafıza",
+  limit: "5 saatlik hak",
+  limitTile: "5 saatlik haktan",
+  kinds: { read: "okuma", edit: "düzenleme", run: "komut", agent: "ajan", other: "diğer" },
+  efforts: { low: "az düşünme", medium: "orta düşünme", high: "derin düşünme", xhigh: "çok derin düşünme", max: "en derin düşünme" },
+  cheerFailed: "(×_×) olmadı",
+  show: "Göster",
+  hide: "Gizle",
+  details: "Detay",
+  current: "Şu an",
+  thinking: "Düşünüyor",
+  lastStep: "Son adım",
+  doing: { read: "Okuyor", edit: "Düzenliyor", run: "Komut çalıştırıyor", agent: "Ajanla çalışıyor", other: "Araç kullanıyor" },
+  files: "Dokunduğu dosyalar",
+  moreFiles: (n) => `+${n} dosya daha`,
+  showAll: "Tamamını göster",
+  showLess: "Kısalt",
+  ago: (span) => `${span} önce`,
+  timeline: "Zaman çizelgesi",
+  now: "şimdi",
+  look: "Bak",
+  failedNow: "hata verdi",
+  newTask: "Yeni görev",
+  agentLabel: "Ajan",
+  taskLabel: "Görev",
+  taskHint: "İşi anlat, Enter başlatır",
+  start: "başlat",
+  cancel: "Vazgeç",
+  noTypes: "Henüz bilinen ajan türü yok.",
+  noDescription: "Açıklama yok.",
+  spawnFailed: "Ajan başlatılamadı",
+  builtins: { "general-purpose": "Araştırma, arama ve çok adımlı iş", Explore: "Kodu hızlıca tarar, hiçbir şeyi değiştirmez", Plan: "İşin nasıl yapılacağını planlar" },
+  sources: { "built-in": "yerleşik", plugin: "eklenti", project: "proje", user: "kullanıcı" },
+  shareOf: (share) => `5 saatlik kullanım hakkının ≈%${share} kadarı`,
+  earlier: (n) => `${n} önceki adım gizli`,
+  logOpen: (n) => `Tüm adımları göster (${n})`,
+  logClose: "Kaydı kapat",
+  log: "Adım adım kayıt",
+  because: "Neden",
+  after: (list) => `${list} sonrası`,
+  tools: (n) => `${n} adım`,
+  errors: (n) => `${n} hata`,
+  crew: (n) => `${n} ajan`,
+  stripCost: "maliyet",
+  stripTokens: "token",
+  stripTime: "ajan süresi",
+  stripLast: (cost) => `son tur ${cost}`,
+  stripTurns: (n) => `${n} tur`,
+  stripPerTurn: (span) => `tur başına ${span}`,
+  stripDoing: { read: "okuyor", edit: "yazıyor", run: "komut", agent: "ajan yönetiyor", other: "düşünüyor" },
+  rowDoing: { read: "okuyor", search: "arıyor", edit: "yazıyor", run: "komut çalıştırıyor", test: "kontrol ediyor", save: "sürüm kaydediyor", web: "internette", message: "haber gönderiyor", agent: "ajan yönetiyor", wait: "bekliyor", other: "düşünüyor" },
+  rowStep: (done, total) => `adım ${done}/${total}`,
+  rowPlan: (at, of, subject) => `planın ${at}/${of}. adımı: ${subject}`,
+  rowEnded: { done: "işini bitirdi", failed: "işi yarıda kaldı" },
+  stripPlan: "plan",
+  stripPlanDone: "tamam",
+  stripWeek: "hafta",
+  stripFive: "5 saat",
+  stripRunsOut: (when) => `${when} biter`,
+  stripFull: "doldu",
+  stripDays: ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"],
+  stripResting: { sleeping: "uyuyor", working: "çalışıyor", happy: "keyifli", worried: "tedirgin" },
+  stripStep: (n, subject) => `${n}. adım: ${subject}`,
+  stripTeam: {
+    fresh: (n) => `${n} yeni`,
+    away: (name) => `${name} şu an çalışmıyor`,
+    working: "şimdi çalışıyor",
+    isWorking: (name) => `${name} şimdi çalışıyor`,
+    worked: (name, ago) => `${name} ${ago} çalıştı`,
+    on: (branch) => `çalışma dalı ${branch}`,
+    more: (n) => `bu projede ${n} kişi daha`,
+    wrote: (name) => `${name} yazdı`,
+    aiWrote: (name) => `${name} adlı kişinin yapay zekâsı yazdı`
+  },
+  hubCrew: (n) => `${n} ajan`,
+  pct: (n) => `%${n}`,
+  minutes: (n) => `${n} dk`,
+  seconds: (n) => `${n} sn`,
+  hours: (n) => `${n} sa`,
+  quiet: (span) => `sessiz ${span}`,
+  longTool: (_tool, span) => `tek adım ${span} sürüyor`,
+  stopWho: (name) => `${accusative(name)} durdur`,
+  messageTo: (name) => `${dative(name)} yaz, Enter gönderir`,
+  you: "Sen",
+  answering: (name) => `${name} yanıtlıyor…`,
+  followUp: (name) => `${dative(name)} devam sorusu sor, Enter gönderir`,
+  launched: (name) => `${name} işe koyuldu`,
+  denied: (reason) => `Reddedildi: ${reason}`,
+  decimal: ",",
+  message: "Mesaj",
+  send: "gönder",
+  stop: "Durdur",
+  delivered: "Mesaj iletildi",
+  stopAsked: "Durdurma istendi",
+  stopRefused: "Durdurma reddedildi",
+  stopFailed: "Bu ajan durdurulamadı",
+  allDone: "Hepsi bitti",
+  liveCount: (n) => `${n} çalışıyor`,
+  endedCount: (n) => `${n} bitti`,
+  plannedCount: (n) => `${n} planlı`,
+  notDelivered: (reason) => `İletilemedi: ${reason}`,
+  chats: {
+    title: "Diğer sohbetler",
+    waitingTitle: "Seni bekliyor",
+    waiting: (span) => span ? `${span} bekliyor` : "bekliyor",
+    states: { working: "çalışıyor", idle: "boşta" },
+    untitled: "Yeni sohbet",
+    more: (n) => `+${n} daha`,
+    agentsTitle: "Diğer sohbetlerdeki ajanlar",
+    emptyHere: "Bu sohbette ajan yok",
+    hubWaits: (n) => `${n} sohbet bekliyor`,
+    hubWorks: (n) => `${n} sohbet çalışıyor`
+  },
+  crab: {
+    moods: { sleeping: "uyuyor", working: "çalışıyor", happy: "mutlu", worried: "endişeli" },
+    level: (n) => `Sv ${n}`
+  }
+};
+
+const STRINGS = { tr, en, ru };
+let lang = "en";
+const t = () => STRINGS[lang];
+const setLang = (next) => {
+  lang = next;
+  setLang$1(next);
+};
+const langOf = (value) => {
+  if (typeof value !== "string" || !value.trim())
+    return null;
+  if (/^(tr|turk|türk)/i.test(value.trim()))
+    return "tr";
+  if (/^(ru|russian|рус)/i.test(value.trim()))
+    return "ru";
+  return "en";
+};
+
+const KILO = 1000;
+const MEGA = 1e6;
+const COST_WIDE = 10;
+const SECOND$4 = 1000;
+const MINUTE_S = 60;
+const HOUR_S = 3600;
+const EM_NARROW = 0.3;
+const EM_WIDE = 0.72;
+const EM_BODY = 0.56;
+const EM_FULL = 1;
+const WIDE$1 = /[\u1100-\u115F\u2E80-\u303E\u3041-\u33FF\u3400-\u4DBF\u4E00-\u9FFF\uA960-\uA97F\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE4F\uFF01-\uFF60\uFFE0-\uFFE6\u{1F300}-\u{1FAFF}\u{20000}-\u{3FFFD}]/u;
+const xml = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c);
+const clip$2 = (s, max) => s.length > max ? s.slice(0, Math.max(1, max - 1)) + "…" : s;
+const charEm = (ch) => {
+  if (WIDE$1.test(ch))
+    return EM_FULL;
+  if (/[\s.,:;'|!il1ıİ()[\]]/.test(ch))
+    return EM_NARROW;
+  if (/[A-ZÇĞÖŞÜА-ЯЁmwшщжюМШЩЖЮ@%]/.test(ch))
+    return EM_WIDE;
+  return EM_BODY;
+};
+const textWidth = (s, size) => [...s].reduce((w, ch) => w + charEm(ch) * size, 0);
+const fitText = (s, size, maxW) => {
+  if (textWidth(s, size) <= maxW)
+    return s;
+  let out = "";
+  for (const ch of s) {
+    if (textWidth(out + ch + "…", size) > maxW)
+      break;
+    out += ch;
+  }
+  return out + "…";
+};
+const fitStart = (s, size, maxW) => {
+  if (textWidth(s, size) <= maxW)
+    return s;
+  const chars = [...s];
+  while (chars.length && textWidth("…" + chars.join(""), size) > maxW)
+    chars.shift();
+  return chars.length ? "…" + chars.join("") : "";
+};
+const MONO_EM$2 = 0.62;
+const monoWidth = (s, size) => [...s].length * MONO_EM$2 * size;
+const fitMono = (s, opts) => {
+  const room = Math.floor(opts.maxW / (MONO_EM$2 * opts.size));
+  const chars = [...s];
+  if (chars.length <= room)
+    return s;
+  if (room < 2)
+    return "";
+  return opts.isFromStart ? "…" + chars.slice(-(room - 1)).join("") : chars.slice(0, room - 1).join("") + "…";
+};
+const fixed = (n, digits) => n.toFixed(digits).replace(".", t().decimal);
+const fmtTokens = (n) => {
+  if (n >= MEGA)
+    return `${fixed(n / MEGA, 1)}M`;
+  if (n >= KILO)
+    return `${Math.round(n / KILO)}k`;
+  return `${Math.round(n)}`;
+};
+const fmtCost = (usd) => `$${usd < COST_WIDE ? fixed(usd, 2) : fixed(usd, 1)}`;
+const fmtTime = (ms) => {
+  const s = Math.max(0, Math.round(ms / SECOND$4));
+  const h = Math.floor(s / HOUR_S);
+  const m = Math.floor(s % HOUR_S / MINUTE_S);
+  const ss = String(s % MINUTE_S).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+};
+const modelName = (id) => {
+  const m = /(fable|mythos|opus|sonnet|haiku)-(\d+)(?:-(\d{1,2})(?!\d))?/i.exec(id);
+  const [, family = "", major = "", minor] = m ?? [];
+  if (!family)
+    return id.replace(/^claude-/, "").replace(/\[.*\]$/, "") || "—";
+  return `${family.charAt(0).toUpperCase()}${family.slice(1).toLowerCase()} ${major}${minor ? "." + minor : ""}`;
+};
+const norm = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+const PATH_DEPTH = 3;
+const shortPath = (path, depth = PATH_DEPTH) => {
+  const parts = path.split("/").filter(Boolean);
+  const tail = parts.slice(-depth).join("/");
+  return parts.length > depth ? `…/${tail}` : path;
+};
+
+const DEFAULT_TYPE = "general-purpose";
+const BUILTIN_TYPES = [
+  { name: DEFAULT_TYPE, description: "Research, search and multi-step work", source: "built-in" },
+  { name: "Explore", description: "Fast, read-only code search", source: "built-in" },
+  { name: "Plan", description: "Drafts an implementation plan", source: "built-in" }
+];
+const chosenOf = (types, draft) => types.find((type) => type.name === draft?.type) ?? types[0];
+const describe = (type) => t().builtins[type.name] ?? (type.description || t().noDescription);
+const sourceWord = (source) => t().sources[source] ?? source;
+
+const LEVELS = [10, 50, 200, 1000];
+const restingCrab = (turns) => ({ mood: "sleeping", turns, endedAt: 0 });
+const levelOf = (turns) => 1 + LEVELS.filter((threshold) => turns >= threshold).length;
+
+const BARE = ["onCompact", "onDone", "onTimeline", "onChats", "onNewTask", "onCancelTask"];
+const ONE = ["onToggle", "onLook", "onBrief", "onStop", "onLog", "onPickType", "onStartTask"];
+const SEND = "onSend";
+function pageHandlers(act) {
+  const bare = Object.fromEntries(BARE.map((name) => [name, () => act(name)]));
+  const one = Object.fromEntries(ONE.map((name) => [name, (arg) => act(name, arg)]));
+  return { ...bare, ...one, onSend: (id, text) => act(SEND, JSON.stringify([id, text])) };
+}
+
+const SHELLS = ["#D97757", "#4FA3C7", "#6BB26F", "#B07CC6", "#E07A9A", "#7C93B8", "#4DB6A0", "#B8977A"];
+const EYES = ["dot", "tall", "wide", "wink"];
+const NAMES = ["Pip", "Mako", "Nori", "Kiko", "Sol", "Fenn", "Coral", "Rio", "Zuzu", "Moss", "Dune", "Juno", "Otto", "Lumi", "Skip", "Nemo"];
+const CLAY = SHELLS[0] ?? "#D97757";
+const hashOf = (id) => [...id].reduce((sum, ch) => sum * 31 + ch.charCodeAt(0) >>> 0, 7);
+const lookAt = (slot) => ({
+  shell: SHELLS[slot % SHELLS.length] ?? CLAY,
+  eyes: EYES[Math.floor(slot / SHELLS.length) % EYES.length] ?? "dot",
+  name: NAMES[slot % NAMES.length] ?? "Pip"
+});
+const lookOf$1 = (a) => {
+  const look = lookAt(a.look ?? hashOf(a.id));
+  return a.isMain === true ? { ...look, name: t().mainName } : look;
+};
+
+const PRICES_5 = {
+  "fable-5-2": [8, 40, 0.2, 16],
+  "mythos-5-2": [8, 40, 0.2, 16],
+  "fable-5-1": [10, 50, 0.25, 20],
+  "mythos-5-1": [10, 50, 0.25, 20],
+  "fable-5": [10, 50, 1, 20],
+  "mythos-5": [10, 50, 1, 20],
+  "opus-5-5": [4, 20, 0.2, 8],
+  "opus-5": [5, 25, 0.5, 10],
+  "sonnet-5-5": [2, 10, 0.1, 4],
+  "sonnet-5": [2, 10, 0.2, 4],
+  "haiku-5-5": [0.1, 0.5, 0.01, 0.2]
+};
+const GEN_5 = /(fable|mythos|opus|sonnet|haiku)-((?:[5-9]|[1-9]\d)(?:-\d{1,2})?)(?!\d)/;
+const EARLIER = [
+  [/opus-4(?:-[01])?(?:$|[^-\d]|-20\d{6})/, [15, 75, 1.5, 30]],
+  ["opus-4", [5, 25, 0.5, 10]],
+  ["sonnet", [3, 15, 0.3, 6]],
+  ["3-5-haiku", [0.8, 4, 0.08, 1.6]],
+  ["haiku-3-5", [0.8, 4, 0.08, 1.6]],
+  ["haiku", [1, 5, 0.1, 2]]
+];
+const LONG_PROMPT = 1e5;
+const LONG_PRICES = { "haiku-5-5": [0.5, 2.5, 0.05, 1] };
+const priceOf = (model, prompt) => {
+  const id = model.toLowerCase().replace(/[\s.]+/g, "-");
+  const gen5 = GEN_5.exec(id);
+  if (gen5) {
+    const key = `${gen5[1]}-${gen5[2]}`;
+    return (prompt > LONG_PROMPT ? LONG_PRICES[key] : undefined) ?? PRICES_5[key] ?? null;
+  }
+  return EARLIER.find(([family]) => typeof family === "string" ? id.includes(family) : family.test(id))?.[1] ?? null;
+};
+const isPriced = (model) => priceOf(model, 0) !== null;
+const costText = (a) => isPriced(a.model) ? `≈${fmtCost(a.costUsd)}` : "";
+
+const countTasks = (list) => ({
+  done: list.filter((task) => task.status === "completed").length,
+  active: list.filter((task) => task.status === "in_progress").length,
+  total: list.length
+});
+
+const isRunning = (a) => a.status === "running";
+const elapsed = (a, at) => (a.endedAt ?? Math.max(at, a.startedAt)) - a.startedAt;
+const ctxOf = (a) => a.contextMax ? Math.min(100, Math.round(a.contextTokens / a.contextMax * 100)) : 0;
+const totals = (list, at) => {
+  if (!list.length)
+    return { cost: 0, tokens: 0, time: 0 };
+  const start = Math.min(...list.map((a) => a.startedAt));
+  const end = Math.max(...list.map((a) => a.endedAt ?? Math.max(at, a.startedAt)));
+  return {
+    cost: list.reduce((sum, a) => sum + a.costUsd, 0),
+    tokens: list.reduce((sum, a) => sum + a.tokens, 0),
+    time: end - start
+  };
+};
+
+const plannedOf = (f, list) => {
+  if (!f || f.isFinished)
+    return [];
+  const started = new Set(list.map((a) => norm(a.description)));
+  return (f.tasks ?? []).map((task, i) => ({ ...task, n: i + 1 })).filter((task) => !started.has(norm(task.title)));
+};
+
+const SECOND$3 = 1000;
+const MINUTE$2 = 60 * SECOND$3;
+const HOUR$1 = 60 * MINUTE$2;
+const QUIET_MS = 2 * MINUTE$2;
+const LONG_TOOL_MS = 15 * MINUTE$2;
+const FAILURE_FRESH_MS = 10 * MINUTE$2;
+const roughSpan = (ms) => {
+  const s = t();
+  if (ms < MINUTE$2)
+    return s.seconds(Math.floor(ms / SECOND$3));
+  if (ms < HOUR$1)
+    return s.minutes(Math.floor(ms / MINUTE$2));
+  return s.hours(Math.floor(ms / HOUR$1));
+};
+function stuckOf(a, at) {
+  if (a.status !== "running" || a.isMain === true)
+    return null;
+  const open = (a.history ?? []).find((e) => e.endAt === undefined);
+  if (open)
+    return at - open.at >= LONG_TOOL_MS ? { reason: t().longTool(open.tool, roughSpan(at - open.at)), since: open.at } : null;
+  if (a.stepAt !== undefined)
+    return at - a.stepAt >= LONG_TOOL_MS ? { reason: t().quiet(roughSpan(at - a.stepAt)), since: a.stepAt } : null;
+  const heard = Math.max(a.heardAt ?? 0, a.startedAt);
+  return at - heard >= QUIET_MS ? { reason: t().quiet(roughSpan(at - heard)), since: heard } : null;
+}
+const attention = (a, reason, role) => ({
+  agentId: a.id,
+  name: lookOf$1(a).name,
+  title: a.description || a.type,
+  reason,
+  role
+});
+const isFreshFailure = (a, at) => a.status === "failed" && a.endReason !== "aborted" && a.endedAt !== undefined && at - a.endedAt < FAILURE_FRESH_MS;
+function attentionOf(list, at) {
+  const stuck = list.map((a) => ({ a, why: stuckOf(a, at) })).filter((x) => x.why !== null).sort((x, y) => x.why.since - y.why.since)[0];
+  if (stuck)
+    return attention(stuck.a, stuck.why.reason, "warn");
+  const failed = list.filter((a) => isFreshFailure(a, at)).sort((x, y) => (y.endedAt ?? 0) - (x.endedAt ?? 0))[0];
+  return failed ? attention(failed, t().failedNow, "danger") : null;
+}
+
+const NEAR_DONE = 0.99;
+const PERCENT$3 = 100;
+const partialOf = (a) => {
+  if (a.status !== "running")
+    return null;
+  if (a.stepTotal)
+    return Math.min(1, (a.stepDone ?? 0) / a.stepTotal);
+  const own = countTasks(a.todos ?? []);
+  return own.total ? own.done / own.total : null;
+};
+const creditOf$1 = (list) => {
+  const parts = list.map(partialOf).filter((p) => p !== null && p > 0);
+  return { sum: parts.reduce((sum, p) => sum + p, 0), isEstimate: parts.length > 0 };
+};
+const NO_CREDIT = { sum: 0, isEstimate: false };
+const ratioOf = ({ done, credit, total, isFinished }) => {
+  if (isFinished)
+    return 1;
+  if (!total)
+    return null;
+  const ratio = Math.min(NEAR_DONE, (done + credit.sum) / total);
+  return ratio > 0 ? ratio : null;
+};
+const jobAgents = (input) => {
+  const { job } = input;
+  if (!job || job.isHidden)
+    return [];
+  return input.agents.filter((a) => job.agentIds.includes(a.id));
+};
+const agentsTitle = (list) => {
+  const first = list[0];
+  const name = first ? first.description || first.type : t().agents;
+  return list.length > 1 ? `${name} +${list.length - 1}` : name;
+};
+const reportLabel = (f, running) => {
+  const s = t();
+  if (f.isFinished)
+    return s.done;
+  if (f.phase === "plan")
+    return s.plan;
+  if (f.phase === "design")
+    return s.design;
+  const word = f.phase === "review" ? s.review : s.tasks;
+  if (f.total)
+    return `${word} ${f.done}/${f.total}`;
+  return running ? `${word} · ${running} ${s.busy}` : word;
+};
+function reportView(f, list, input) {
+  const running = list.filter((a) => a.status === "running");
+  const credit = f.total ? creditOf$1(running) : NO_CREDIT;
+  const handed = new Set(list.map((a) => norm(a.description))).size;
+  const launched = f.total ? Math.min(f.total, Math.max(f.done + running.length, handed)) / f.total : 0;
+  const done = f.isFinished ? f.total : Math.min(f.done, f.total);
+  return {
+    source: "report",
+    title: f.title,
+    label: reportLabel(f, running.length),
+    ratio: ratioOf({ done: f.done, credit, total: f.total, isFinished: f.isFinished }),
+    isEstimate: credit.isEstimate && !f.isFinished,
+    launched: f.isFinished ? 1 : launched,
+    units: f.total,
+    done,
+    active: f.isFinished ? 0 : Math.max(0, Math.round(launched * f.total) - done),
+    isFinished: f.isFinished,
+    isWorking: running.length > 0,
+    crew: input.agents.length + plannedOf(f, input.agents).length,
+    failed: 0
+  };
+}
+function tasksView(tasks, list) {
+  const count = countTasks(tasks);
+  const running = list.filter((a) => a.status === "running").length;
+  const isFinished = count.done === count.total && running === 0;
+  return {
+    source: "tasks",
+    title: agentsTitle(list),
+    label: isFinished ? t().done : `${t().tasks} ${count.done}/${count.total}`,
+    ratio: ratioOf({ done: count.done, credit: NO_CREDIT, total: count.total, isFinished }),
+    isEstimate: false,
+    launched: isFinished ? 1 : (count.done + count.active) / count.total,
+    units: count.total,
+    done: count.done,
+    active: isFinished ? 0 : count.active,
+    isFinished,
+    isWorking: running > 0,
+    crew: list.length,
+    failed: 0
+  };
+}
+function agentsView(list) {
+  const s = t();
+  const running = list.filter((a) => a.status === "running");
+  const ended = list.length - running.length;
+  const failed = list.filter((a) => a.status === "failed").length;
+  const isFinished = running.length === 0;
+  const credit = creditOf$1(running);
+  const done = failed ? `${s.done} · ${s.errors(failed)}` : s.done;
+  return {
+    source: "agents",
+    title: agentsTitle(list),
+    label: isFinished ? done : `${s.agents} ${ended}/${list.length}`,
+    ratio: ratioOf({ done: ended, credit, total: list.length, isFinished }),
+    isEstimate: credit.isEstimate && !isFinished,
+    launched: 1,
+    units: list.length,
+    done: ended,
+    active: running.length,
+    isFinished,
+    isWorking: !isFinished,
+    crew: list.length,
+    failed
+  };
+}
+function deriveJob(input) {
+  const list = jobAgents(input);
+  if (input.flow)
+    return reportView(input.flow, list, input);
+  if (!list.length)
+    return null;
+  return input.tasks.length ? tasksView(input.tasks, list) : agentsView(list);
+}
+const percentText = (view) => {
+  if (view.ratio === null)
+    return "—";
+  const n = Math.max(1, Math.round(view.ratio * PERCENT$3));
+  return `${view.isEstimate ? "~" : ""}${t().pct(n)}`;
+};
+
+const MIN_POINTS = 0.5;
+const MIN_USD = 0.05;
+const TENTH = 0.1;
+const ONE_DECIMAL_BELOW = 10;
+const rateBetween = (track) => {
+  const points = track.percent - track.basePercent;
+  const usd = track.usd - track.baseUsd;
+  return points >= MIN_POINTS && usd >= MIN_USD ? points / usd : null;
+};
+const rateOf = (track) => track ? rateBetween(track) ?? track.carriedRate ?? null : null;
+const shareOf = (costUsd, track) => {
+  const rate = rateOf(track);
+  return rate === null ? null : costUsd * rate;
+};
+const shareNumber = (points) => {
+  if (points < TENTH)
+    return `<${fixed(TENTH, 1)}`;
+  return points < ONE_DECIMAL_BELOW ? fixed(points, 1) : String(Math.round(points));
+};
+
+const isMain = (a) => a.isMain === true;
+
+const crewView = (list) => deriveJob({ flow: null, agents: list, job: { agentIds: list.map((a) => a.id), startedAt: 0, isSealed: true, isHidden: false }, tasks: [] });
+const homeOf = (crab, running) => ({
+  mood: crab.mood,
+  level: t().crab.level(levelOf(crab.turns)),
+  isMoving: running.length === 0
+});
+const DRAWN_STEP_MS = 1e4;
+const lastEventOf = (a) => Math.max(a.startedAt, a.endedAt ?? 0, ...(a.history ?? []).map((e) => Math.max(e.at, e.endAt ?? 0)));
+const drawnClockOf = (list, at) => Math.max(Math.floor(at / DRAWN_STEP_MS) * DRAWN_STEP_MS, ...list.map(lastEventOf));
+function paneDataOf(state) {
+  const { list } = state;
+  const at = Math.max(state.now, ...list.map((a) => a.startedAt), 0);
+  const view = deriveJob({ flow: state.flow, agents: list, job: state.job, tasks: state.tasks }) ?? crewView(list);
+  const ended = (a) => a.endedAt ?? a.startedAt;
+  const live = list.filter(isRunning).reverse();
+  const running = [...live.filter(isMain), ...live.filter((a) => !isMain(a))];
+  return {
+    list,
+    running,
+    finished: list.filter((a) => !isRunning(a)).sort((a, b) => ended(b) - ended(a)),
+    planned: plannedOf(state.flow, list),
+    sum: totals(list, at),
+    view,
+    at,
+    drawnAt: drawnClockOf(list, at),
+    panel: state.panel,
+    limit: state.limit,
+    attention: attentionOf(list, at),
+    types: state.types,
+    home: homeOf(state.crab, running),
+    chats: state.chats
+  };
+}
+const summaryOf = (sum) => `≈${fmtCost(sum.cost)} · ${fmtTokens(sum.tokens)} ${t().tokensWord} · ${fmtTime(sum.time)}`;
+const toneOf = (d) => {
+  if (d.running.length)
+    return "run";
+  if (!d.list.length)
+    return "idle";
+  return d.view && d.view.failed > 0 ? "warn" : "ok";
+};
+const countsOf$1 = (d) => {
+  const s = t();
+  const ended = d.list.length - d.running.length;
+  return [d.running.length && s.liveCount(d.running.length), ended && s.endedCount(ended), d.planned.length && s.plannedCount(d.planned.length)].filter(Boolean).join(" · ");
+};
+function headerOf(d) {
+  const s = t();
+  const share = shareOf(d.sum.cost, d.limit);
+  const view = d.view;
+  return {
+    eyebrow: s.pane,
+    counts: countsOf$1(d),
+    headline: view?.title || s.crew(d.list.length),
+    percent: view ? percentText(view) : "—",
+    tone: toneOf(d),
+    meter: view,
+    stats: [
+      { label: s.cost, value: `≈${fmtCost(d.sum.cost)}` },
+      { label: s.tokens, value: fmtTokens(d.sum.tokens) },
+      { label: s.time, value: fmtTime(d.sum.time) },
+      ...share === null ? [] : [{ label: s.limitTile, value: `≈${s.pct(shareNumber(share))}` }]
+    ],
+    home: d.home
+  };
+}
+const drawnHeaderOf = (d) => headerOf({ ...d, sum: totals(d.list, d.drawnAt) });
+const totalsLineOf = (data) => data.stats.map((stat) => `${stat.label} ${stat.value}`).join(" · ");
+
+const waitingOf = (chats) => chats.filter((chat) => chat.state === "waiting");
+const crewedOf = (chats) => chats.filter((chat) => (chat.agents?.length ?? 0) > 0);
+const quietOf = (chats) => chats.filter((chat) => chat.state !== "waiting");
+const CHATS_MAX = 8;
+const CHAT_AGENTS_MAX = 6;
+function listedChats(chats) {
+  const listed = chats.slice(0, CHATS_MAX).map((chat) => chat.agents && chat.agents.length > CHAT_AGENTS_MAX ? { ...chat, agents: chat.agents.slice(0, CHAT_AGENTS_MAX) } : chat);
+  return { chats: listed, more: chats.length - listed.length };
+}
+
+const TIER_COLOR = {
+  fable: "#7F77DD",
+  heavy: "#D85A30",
+  careful: "#BA7517",
+  medium: "#378ADD",
+  light: "#1D9E75",
+  other: "#888780"
+};
+const TIER_MODEL = {
+  fable: "Fable · high",
+  heavy: "Opus · xhigh",
+  careful: "Opus · high",
+  medium: "Opus · medium",
+  light: "Opus · low"
+};
+const EFFORT_TIER = {
+  max: "heavy",
+  xhigh: "heavy",
+  high: "careful",
+  medium: "medium",
+  low: "light"
+};
+const colorOf = (tier) => TIER_COLOR[tier] ?? "#888780";
+const savvyTierOf = (type) => {
+  const bare = type.replace(/^[^:]*:/, "");
+  const tier = bare.replace(/^savvy-/, "").toLowerCase();
+  return bare.startsWith("savvy-") && Object.hasOwn(TIER_MODEL, tier) ? tier : null;
+};
+const effortTierOf = (effort = "") => Object.hasOwn(EFFORT_TIER, effort) ? EFFORT_TIER[effort] ?? null : null;
+const tierOf = (a) => savvyTierOf(a.type) ?? effortTierOf(a.effort) ?? "other";
+const costumeOf = (a) => savvyTierOf(a.type) ?? (a.type === "Explore" ? "explore" : tierOf(a));
+const effortWord = (effort = "") => t().efforts[effort] ?? effort;
+const tierWordOf = (a) => savvyTierOf(a.type) ?? (effortTierOf(a.effort) ? effortWord(a.effort) : a.type);
+const plannedTierOf = (tier) => Object.hasOwn(TIER_MODEL, tier) ? tier : "other";
+
+const INK = "#1F1E1D";
+const stamp = (f, { x, y, rows, map, cls }) => rows.forEach((row, dy) => [...row].forEach((ch, dx) => map[ch] && f([x + dx, y + dy, 1, 1], map[ch] ?? "", cls)));
+const eyesOf = (f, kind) => {
+  const isWide = kind === "wide";
+  const isTall = kind === "tall";
+  const y = isTall ? 11 : 12;
+  const h = isTall ? 3 : 2;
+  f([isWide ? 8 : 9, y, 2, h], INK);
+  if (kind === "wink")
+    f([19, 13, 3, 1], INK);
+  else
+    f([isWide ? 20 : 19, y, 2, h], INK);
+};
+const crabBody = (f, arm, look) => {
+  const c = look.shell;
+  f([7, 10, 16, 12], c);
+  f([3, 14, 4, 4], c);
+  f([23, 14 + (arm.front ?? 0), 4, 4], c, arm.cls);
+  if (arm.face)
+    arm.face.forEach((box) => f(box, INK));
+  else
+    eyesOf(f, look.eyes);
+  f([7, 22, 2, 4], c, "la");
+  f([17, 22, 2, 4], c, "la");
+  f([11, 22, 2, 4], c, "lb");
+  f([21, 22, 2, 4], c, "lb");
+};
+const CRAB_CSS = `<style>
+.run .la{animation:st .5s steps(1) infinite}.run .lb{animation:st .5s steps(1) infinite -.25s}
+.run .bd{animation:bob .5s steps(1) infinite -.125s}
+.run g{transform-box:fill-box}
+@keyframes st{50%{transform:translateY(-1px)}}@keyframes bob{50%{transform:translateY(1px)}}
+.c-fable.run{animation:float 1s ease-in-out infinite}
+.c-fable.run .la,.c-fable.run .lb,.c-fable.run .bd{animation:none}
+.c-fable.run .ant{animation:blink 1s steps(1) infinite}
+.c-fable.run .star{animation:blink .5s steps(1) infinite -.25s}
+@keyframes float{50%{transform:translateY(-2px)}}@keyframes blink{50%{opacity:.15}}
+.c-heavy.run .it{animation:scan 1s steps(1) infinite}
+.c-heavy.run .gl{animation:blink 1s steps(1) infinite -.5s}
+@keyframes scan{25%{transform:translate(-1px,1px)}50%{transform:translate(-2px,2px)}75%{transform:translate(-1px,1px)}}
+.c-careful.run .it{transform-origin:100% 100%;animation:twist .5s ease-in-out infinite}
+@keyframes twist{50%{transform:rotate(-35deg)}}
+.c-medium.run .pan{transform-origin:0 50%;animation:tilt 1s ease-in-out infinite}
+.c-medium.run .egg{animation:flip 1s ease-in-out infinite}
+@keyframes tilt{20%,40%{transform:rotate(-12deg)}}@keyframes flip{30%{transform:translateY(-5px) scaleY(-1)}60%{transform:translateY(0)}}
+.c-light.run .la{animation-duration:.25s}.c-light.run .lb{animation-duration:.25s;animation-delay:-.125s}
+.c-light.run .flag{transform-origin:0 50%;animation:wave .25s steps(1) infinite}
+@keyframes wave{50%{transform:skewY(-12deg) scaleX(.85)}}
+.c-explore.run .it{transform-origin:50% 100%;animation:fence .5s ease-in-out infinite}
+@keyframes fence{50%{transform:rotate(25deg)}}
+@media (prefers-reduced-motion: reduce){.run,.run g{animation:none!important}}
+</style>`;
+const COSTUMES = {
+  fable: (f, t, look) => {
+    crabBody(f, {}, look);
+    f([6, 7, 18, 1], "#E6E8EE");
+    f([5, 8, 1, 14], "#E6E8EE");
+    f([24, 8, 1, 14], "#E6E8EE");
+    f([6, 22, 18, 1], "#C9CCD2");
+    f([6, 8, 18, 14], "rgba(169,214,245,.32)");
+    f([8, 9, 2, 1], "#fff");
+    f([8, 10, 1, 2], "#fff");
+    f([14, 4, 2, 3], "#C9CCD2");
+    f([14, 2, 2, 2], t, "ant");
+    f([13, 18, 4, 2], t);
+    f([27, 3, 1, 3], "#F5C542", "star");
+    f([26, 4, 3, 1], "#F5C542", "star");
+  },
+  heavy: (f, t, look) => {
+    crabBody(f, { front: -4, cls: "it" }, look);
+    stamp(f, { x: 6, y: 3, rows: ["......bbbbbb......", "....bbcbbcbbbb....", "...bbbbbbbbbbbb...", "..bcbbcbbcbbcbbb..", ".bbbbbbbbbbbbbbbb.", "dddddddddddddddddd"], map: { b: "#7A4A26", c: "#A0703F", d: "#5A3519" } });
+    f([6, 9, 18, 1], t);
+    stamp(f, { x: 23, y: 1, rows: [".kkk.", "k...k", "k...k", "k...k", ".kkk."], map: { k: "#3A3A3C" }, cls: "it" });
+    f([24, 2, 3, 3], "rgba(169,214,245,.7)", "it");
+    f([25, 6, 1, 4], "#7A4A26", "it");
+    f([24, 2, 1, 1], "#fff", "gl");
+  },
+  careful: (f, t, look) => {
+    crabBody(f, {}, look);
+    stamp(f, { x: 6, y: 4, rows: [".....yyyyyyyy.....", "...yyyyyhhyyyyy...", "..yyyyyyhhyyyyyy..", "..yyyyyyhhyyyyyy..", ".yyyyyyyhhyyyyyyy.", "dddddddddddddddddd"], map: { y: "#F5C542", h: "#FBE08A", d: "#C99A1E" } });
+    f([13, 5, 4, 2], t);
+    stamp(f, { x: 0, y: 10, rows: [".s.s", "sss.", ".s..", ".s.."], map: { s: "#8E929A" }, cls: "it" });
+  },
+  medium: (f, t, look) => {
+    crabBody(f, { front: -4, cls: "pan" }, look);
+    stamp(f, { x: 6, y: 0, rows: ["........lll.......", ".......lllll......", ".wwwwgwwwwwwgwwwww", "wwwwwwwwwwwwwwwwww", "wwwwwwwwwwwwwwwwww", "wwwwwgwwwwwggwwwww", ".wwwwgwwwwwggwwwww", ".dddbbbbbbbbbbbbb.", ".dddbbbbbbbbbbbbb.", ".dddbbbbbbbbbbbbb."], map: { w: "#F4F3EE", l: "#F7F6F2", g: "#D2D1C8", b: t, d: "#B45F43" } });
+    f([22, 8, 7, 2], "#4A4A48", "pan");
+    f([26, 10, 1, 1], "#4A4A48", "pan");
+    f([24, 7, 3, 1], "#F5B731", "egg");
+  },
+  light: (f, t, look) => {
+    crabBody(f, { front: -4 }, look);
+    stamp(f, { x: 6, y: 5, rows: ["....rrrrrrrrrr....", "..rrrrrrwwrrrrrr..", ".rrrrrrrwwrrrrrrr.", ".rrrrrrrwwrrrrrrr.", ".rrrrrrrwwrrrrrrr.", ".kkkkkkkkkkkkkkkkr"], map: { r: t, w: "#F8F6F1", k: INK } });
+    f([25, 1, 1, 9], "#8E929A");
+    stamp(f, { x: 26, y: 1, rows: ["wkwk", "kwkw", "wkwk"], map: { w: "#F8F6F1", k: INK }, cls: "flag" });
+  },
+  explore: (f, _t, look) => {
+    crabBody(f, {}, look);
+    stamp(f, { x: 5, y: 3, rows: [".kk..............kk.", ".kkk....kkkk....kkk.", "..kkkkkkkwwkkkkkkk..", "..kkkkkkkkkkkkkkkk..", ".gggggggggggggggggg."], map: { k: "#55514C", w: "#F8F6F1", g: "#F5C542" } });
+    f([7, 11, 11, 1], INK);
+    f([18, 11, 4, 3], INK);
+    f([27, 6, 1, 9], "#C9CCD2", "it");
+    f([26, 15, 3, 1], "#7A4A26", "it");
+  },
+  other: (f, _t, look) => crabBody(f, {}, look),
+  mate: (f, _t, look) => {
+    crabBody(f, {}, look);
+    stamp(f, { x: 7, y: 3, rows: [".......ww.......", "......wwww......", "....bbbbbbbb....", "..bbbbbbbbbbbb..", ".bbbbbbbbbbbbbb.", ".bbbbbbbbbbbbbb.", "rrrrrrrrrrrrrrrr"], map: { w: "#F4F3EE", b: "#3E8E7E", r: "#2E6B5F" } });
+  }
+};
+const FACES$1 = {
+  sleeping: [[9, 13, 2, 1], [19, 13, 2, 1]],
+  working: undefined,
+  happy: [[9, 12, 2, 1], [8, 13, 1, 1], [11, 13, 1, 1], [19, 12, 2, 1], [18, 13, 1, 1], [21, 13, 1, 1]],
+  worried: [[9, 13, 2, 2], [19, 13, 2, 2]]
+};
+const SWEAT = "#7FB6E8";
+const HAPPY_CLAW = -4;
+const moodBody = (f, look, mood) => {
+  crabBody(f, { front: mood === "happy" ? HAPPY_CLAW : undefined, face: FACES$1[mood] }, look);
+  if (mood !== "worried")
+    return;
+  f([4, 8, 1, 1], SWEAT);
+  f([3, 9, 3, 2], SWEAT);
+};
+const CRAB_SCALE = 1.1;
+const crab = (x, y, opts) => {
+  const groups = new Map([["bd", []]]);
+  const f = ([cx, cy, w, h], c, cls = "bd") => {
+    if (!groups.has(cls))
+      groups.set(cls, []);
+    groups.get(cls)?.push(`<rect x="${cx}" y="${cy}" width="${w}" height="${h}" fill="${c}"/>`);
+  };
+  const look = opts.look ?? lookAt(0);
+  const draw = COSTUMES[opts.costume] ?? ((g, _t, l) => crabBody(g, {}, l));
+  const mood = opts.mood;
+  if (mood)
+    moodBody(f, look, mood);
+  else
+    draw(f, colorOf(opts.costume), look);
+  const group = (cls) => `<g class="${cls}">${(groups.get(cls) ?? []).join("")}</g>`;
+  const props = [...groups.keys()].filter((k) => k !== "bd" && k !== "la" && k !== "lb");
+  const body = `<g class="bd">${(groups.get("bd") ?? []).join("")}${props.map(group).join("")}</g>`;
+  const walk = opts.isWalking ? " run" : "";
+  return `<g transform="translate(${x},${y}) scale(${opts.scale ?? CRAB_SCALE})" opacity="${opts.isDim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${opts.costume}${walk}">${body}${group("la")}${group("lb")}</g></g>`;
+};
+
+const FONT$2 = "-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,system-ui,sans-serif";
+const MONO$1 = "ui-monospace,'SF Mono',Menlo,monospace";
+const NEUTRALS = {
+  t: ["#1C1B19", "#F0EEE8"],
+  s: ["#4F4B44", "#C2BEB4"],
+  m: ["#706B63", "#8E8A80"],
+  k: ["#ECE8DF", "#34332F"],
+  card: ["#FFFFFF", "#1F1F1C"],
+  chip: ["#F6F4EF", "#171715"]
+};
+const STROKES = {
+  ln: ["#E4E0D6", "#2E2E2A"],
+  "i-m": ["#706B63", "#8E8A80"],
+  "i-s": ["#4F4B44", "#C2BEB4"],
+  rk: ["#ECE8DF", "#34332F"]
+};
+const ROLES$2 = {
+  read: { fg: ["#2464A0", "#7FB6E8"], tint: ["#E7F0F9", "#1E2B37"], line: ["#B9D3EC", "#2F4A63"] },
+  edit: { fg: ["#A94A26", "#E58A5F"], tint: ["#FBEDE6", "#38251D"], line: ["#EFC6B4", "#6A3E2D"] },
+  plan: { fg: ["#A8337F", "#E07BC0"], tint: ["#FBE9F4", "#351F2E"], line: ["#EDBFDC", "#6B3A5C"] },
+  run: { fg: ["#6243C4", "#B19CF3"], tint: ["#F0ECFC", "#29243D"], line: ["#CFC3F3", "#4A3F75"] },
+  ok: { fg: ["#1F6E43", "#6FC593"], tint: ["#E4F4EA", "#1B2F25"], line: ["#B5DEC4", "#2F5A42"] },
+  warn: { fg: ["#8A6000", "#E9B949"], tint: ["#FBF2D9", "#332D19"], line: ["#EBD48F", "#66552A"] },
+  danger: { fg: ["#C0263A", "#F2727F"], tint: ["#FCE8EA", "#3B2023"], line: ["#F1B9C0", "#74343C"] }
+};
+const rulesOf = (side) => {
+  const fills = Object.entries(NEUTRALS).map(([cls, pair]) => `.${cls}{fill:${pair[side]}}`);
+  const strokes = Object.entries(STROKES).map(([cls, pair]) => `.${cls}{stroke:${pair[side]}}`);
+  const roles = Object.entries(ROLES$2).map(([role, c]) => `.f-${role}{fill:${c.fg[side]}}.b-${role}{fill:${c.tint[side]}}.l-${role}{stroke:${c.line[side]}}.i-${role}{stroke:${c.fg[side]}}`);
+  return [...fills, ...strokes, ...roles].join("");
+};
+const TIDEMARK_CSS = `<style>
+${rulesOf(0)}
+@media (prefers-color-scheme: dark){${rulesOf(1)}}
+.live{animation:p 1.8s ease-in-out infinite}@keyframes p{50%{opacity:.35}}
+.chev{transition:transform .16s cubic-bezier(.2,.8,.2,1)}svg:hover .chev{transform:translateX(2px)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>`;
+const paneSvg = (W, H, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${TIDEMARK_CSS}${CRAB_CSS}${body}</svg>`;
+
+const CARD = { padX: 14, rx: 10, labelY: 24, firstRowY: 48, rowH: 22, bottom: 14 };
+const LABEL$4 = { size: 12, weight: 600 };
+const ROW$2 = { size: 13, waitSize: 12, gap: 10 };
+const BOLD$4 = 1.06;
+const rowSvg$1 = (row, y, W) => {
+  const right = W - CARD.padX;
+  const waitW = Math.ceil(textWidth(row.wait, ROW$2.waitSize) * BOLD$4);
+  const room = right - waitW - ROW$2.gap - CARD.padX;
+  const project = fitText(row.project, ROW$2.size * BOLD$4, room);
+  const titleRoom = room - textWidth(project, ROW$2.size) * BOLD$4;
+  const title = row.title ? fitText(` · ${row.title}`, ROW$2.size, titleRoom) : "";
+  const titleSpan = title && title !== "…" ? `<tspan class="s" font-weight="400">${xml(title)}</tspan>` : "";
+  return [
+    `<text x="${CARD.padX}" y="${y}" font-family="${FONT$2}" font-size="${ROW$2.size}" font-weight="560"><tspan class="t">${xml(project)}</tspan>${titleSpan}</text>`,
+    `<text class="f-warn" x="${right}" y="${y}" text-anchor="end" font-family="${FONT$2}" font-size="${ROW$2.waitSize}" font-weight="600">${xml(row.wait)}</text>`
+  ].join("");
+};
+const chatsCardSvg = (W, card) => {
+  const lines = card.rows.length + (card.more ? 1 : 0);
+  const height = CARD.firstRowY + (lines - 1) * CARD.rowH + CARD.bottom;
+  const rows = card.rows.map((row, i) => rowSvg$1(row, CARD.firstRowY + i * CARD.rowH, W));
+  const moreY = CARD.firstRowY + card.rows.length * CARD.rowH;
+  const more = card.more ? `<text class="m" x="${CARD.padX}" y="${moreY}" font-family="${FONT$2}" font-size="${ROW$2.waitSize}">${xml(card.more)}</text>` : "";
+  const body = [
+    `<rect class="card ln" x="0.5" y="0.5" width="${W - 1}" height="${height - 1}" rx="${CARD.rx}" stroke-width="1"/>`,
+    `<text class="m" x="${CARD.padX}" y="${CARD.labelY}" font-family="${FONT$2}" font-size="${LABEL$4.size}" font-weight="${LABEL$4.weight}">${xml(fitText(card.title, LABEL$4.size * BOLD$4, W - CARD.padX * 2))}</text>`,
+    ...rows,
+    more
+  ];
+  const alt = [card.title, ...card.rows.map((row) => [row.project, row.title, row.wait].filter(Boolean).join(" · ")), card.more].filter(Boolean).join(", ");
+  return { source: paneSvg(W, height, body.join("")), height, alt };
+};
+const LIST = { rowH: 24, size: 13, sizeSmall: 12, dot: 3, indent: 13, chipGap: 10 };
+const lineSvg = (line, y, W) => {
+  const base = y + LIST.rowH / 2 + LIST.size * 0.35;
+  const x = line.kind === "agent" ? LIST.indent : LIST.dot * 2 + 7;
+  const size = line.kind === "agent" ? LIST.sizeSmall : LIST.size;
+  const endW = line.end ? Math.ceil(textWidth(line.end, LIST.sizeSmall)) + LIST.chipGap : 0;
+  const room = W - x - endW;
+  const lead = fitText(line.lead, size * BOLD$4, room);
+  const rest = fitText(` · ${line.text}`, size, room - textWidth(lead, size) * BOLD$4);
+  const dot = line.kind === "chat" ? `<circle class="${line.isLive ? "f-edit live" : "m"}" cx="${LIST.dot}" cy="${y + LIST.rowH / 2}" r="${LIST.dot}"/>` : "";
+  const end = line.end ? `<text class="m" x="${W}" y="${base}" text-anchor="end" font-family="${FONT$2}" font-size="${LIST.sizeSmall}" font-variant-numeric="tabular-nums">${xml(line.end)}</text>` : "";
+  const restSpan = line.text && rest !== "…" ? `<tspan class="m">${xml(rest)}</tspan>` : "";
+  return `${dot}<text x="${x}" y="${base}" font-family="${FONT$2}" font-size="${size}"><tspan class="${line.kind === "chat" ? "t" : "s"}" font-weight="560">${xml(lead)}</tspan>${restSpan}</text>${end}`;
+};
+const chatLinesSvg = (W, lines) => {
+  const height = lines.length * LIST.rowH;
+  const alt = lines.map((line) => [line.lead, line.text, line.end].filter(Boolean).join(" · ")).join(", ");
+  return { source: paneSvg(W, height, lines.map((line, i) => lineSvg(line, i * LIST.rowH, W)).join("")), height, alt };
+};
+
+const FILL$2 = /<rect\b[^>]*\bdata-m-fill\b[^>]*>/g;
+const DONE$1 = /<path\b[^>]*\bdata-m-done\b[^>]*>/g;
+const HAS_DONE$1 = /\bdata-m-done\b/;
+const WIDTH$1 = /\swidth="([\d.]+)"/;
+const CLASS$1 = /\sclass="([^"]*)"/;
+const STYLE$1 = /\sstyle="([^"]*)"/;
+const MIN_RATIO_STEP$1 = 0.02;
+const RATIO_DIGITS$1 = 3;
+const widthOf$1 = (tag) => Number(WIDTH$1.exec(tag)?.[1] ?? 0);
+function withClass$1(tag, name, extra = "") {
+  const tagged = CLASS$1.test(tag) ? tag.replace(CLASS$1, (_, classes) => ` class="${classes} ${name}"`) : tag.replace(/\s*\/?>$/, ` class="${name}"$&`);
+  return tagged.replace(/\s*\/?>$/, `${extra}$&`);
+}
+function slideFills$1(before, now) {
+  const old = before.match(FILL$2) ?? [];
+  if (old.length !== (now.match(FILL$2) ?? []).length)
+    return now;
+  let index = 0;
+  return now.replace(FILL$2, (tag) => {
+    const was = old[index++];
+    const from = was === undefined ? 0 : widthOf$1(was);
+    const to = widthOf$1(tag);
+    if (from <= 0 || to <= 0 || Math.abs(from - to) / to < MIN_RATIO_STEP$1)
+      return tag;
+    const slide = `--m-from:${(from / to).toFixed(RATIO_DIGITS$1)}`;
+    const styled = STYLE$1.test(tag) ? tag.replace(STYLE$1, (_, rules) => ` style="${slide};${rules}"`) : tag.replace(/\s*\/?>$/, ` style="${slide}"$&`);
+    return withClass$1(styled, "m-from");
+  });
+}
+function drawDone$1(before, now) {
+  if (HAS_DONE$1.test(before))
+    return now;
+  return now.replace(DONE$1, (tag) => withClass$1(tag, "m-draw", ' pathLength="1"'));
+}
+function markChanges$1(before, now) {
+  return drawDone$1(before, slideFills$1(before, now));
+}
+
+const STAGGER_MS$1 = 45;
+const EASE$1 = "cubic-bezier(.2,.8,.2,1)";
+const SHEEN$1 = "#A39E93";
+const RULES$1 = {
+  "m-in": `.m-in{animation:m-in .42s ${EASE$1} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
+  "m-fade": `.m-fade{animation:m-fade .5s ${EASE$1} both}@keyframes m-fade{from{opacity:0}}`,
+  "m-grow": `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE$1} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
+  "m-px": `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE$1} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
+  "m-flash": ".m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}",
+  "m-from": `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE$1} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
+  "m-draw": `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE$1} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
+  "m-breathe": ".m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}",
+  "m-ring": ".m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}",
+  "m-wash": `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE$1}}svg:hover .m-wash{opacity:.12}`,
+  "m-tile": `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE$1}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`
+};
+const REDUCED$2 = "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}";
+function motionCss$1(body) {
+  const used = Object.keys(RULES$1).filter((name) => new RegExp(`\\b${name}\\b`).test(body));
+  return used.length === 0 ? "" : `${used.map((name) => RULES$1[name]).join("")}${REDUCED$2}`;
+}
+Object.values(RULES$1).join("");
+const isEntering$1 = (cue) => cue.phase === "enter";
+function entering$1(body, cue, kind = "in") {
+  if (!isEntering$1(cue))
+    return body;
+  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS$1}ms">${body}</g>`;
+}
+const FLASH$1 = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN$1}" fill-opacity=".22" class="m-flash"/>`;
+const WASH$1 = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>';
+
+function stableDrawings$1() {
+  const kept = new Map;
+  return {
+    reset: () => kept.clear(),
+    draw: (key, what, build) => {
+      const signature = typeof what === "string" ? what : JSON.stringify(what);
+      const before = kept.get(key);
+      if (before !== undefined && before.what === signature)
+        return before.drawing;
+      const drawing = build(before === undefined ? "enter" : "change");
+      kept.set(key, { what: signature, drawing });
+      return drawing;
+    }
+  };
+}
+
+const TAG_WIDTH$1 = /^[\s\S]*?<svg\b[^>]*?\swidth="([\d.]+)"/;
+const SVG$1 = /^([\s\S]*?<svg\b[^>]*>)([\s\S]*)(<\/svg>\s*)$/;
+const SCHEME$2 = "<style>:root{color-scheme:light dark}</style>";
+const SAYS_SCHEME$1 = /(^|[^-\w])color-scheme\s*:/;
+const PASS_MS$1 = 120;
+const MAX_ORDER$1 = 12;
+const LIVE_MS$1 = 30000;
+function animate$1(source, spec) {
+  const moved = spec.cue.phase === "change" && spec.before !== undefined ? markChanges$1(spec.before, source) : source;
+  const parts = SVG$1.exec(moved);
+  if (parts === null)
+    return source;
+  const [, open, inner = "", close] = parts;
+  const scheme = SAYS_SCHEME$1.test(inner) ? "" : SCHEME$2;
+  const lit = `${spec.isRow === true ? WASH$1 : ""}${spec.cue.phase === "change" && spec.isLive !== true ? FLASH$1 : ""}${inner}`;
+  const body = entering$1(lit, spec.cue);
+  const css = motionCss$1(body);
+  return `${open}${scheme}${css === "" ? "" : `<style>${css}</style>`}${body}${close}`;
+}
+function paneMotion$1() {
+  const drawings = stableDrawings$1();
+  const shown = new Map;
+  const pass = { at: Number.NEGATIVE_INFINITY, entered: 0 };
+  const begin = () => {
+    const now = Date.now();
+    if (now - pass.at > PASS_MS$1)
+      pass.entered = 0;
+    pass.at = now;
+  };
+  return {
+    reset: () => {
+      drawings.reset();
+      shown.clear();
+    },
+    pic: (key, pic, opts = {}) => {
+      begin();
+      const what = `${opts.isRow === true ? "row:" : ""}${pic.source}`;
+      const now = { shows: opts.shows === undefined ? what : JSON.stringify(opts.shows), width: String(pic.width ?? TAG_WIDTH$1.exec(pic.source)?.[1]), source: pic.source };
+      const source = drawings.draw(key, what, (built) => {
+        const order = built === "enter" ? Math.min(MAX_ORDER$1, pass.entered++) : 0;
+        const before = shown.get(key);
+        const isQuiet = before !== undefined && (before.shows === now.shows || before.width !== now.width);
+        const phase = built === "change" && isQuiet ? "still" : built;
+        const lastChange = before?.changedAt ?? Number.NEGATIVE_INFINITY;
+        const isLive = phase === "change" && pass.at - lastChange < LIVE_MS$1;
+        shown.set(key, { ...now, changedAt: phase === "change" ? pass.at : lastChange });
+        return animate$1(pic.source, { cue: { phase, order }, isRow: opts.isRow, before: before?.source, isLive });
+      });
+      return { ...pic, source, isInteractive: true };
+    }
+  };
+}
+
+const motion$1 = paneMotion$1();
+function picture(ui, placed) {
+  const { Svg } = ui;
+  return h(Svg, {
+    key: placed.key,
+    ...motion$1.pic(placed.at, placed.pic, placed.opts)
+  });
+}
+
+const PILL = { h: 20, padX: 9, size: 11, dot: 3, dotGap: 6 };
+const BOLD$3 = 1.06;
+const LABEL$3 = { size: 12, weight: 600 };
+const HEAD = { h: 28, size: 13.5, gap: 10, nameGap: 7 };
+const CHEVRON_ROOM = 22;
+const CHEVRON = 4.5;
+const STROKE$1 = 1.5;
+const SECTION_H = 18;
+const HEAD_H$1 = HEAD.h;
+const PILL_INK = {
+  run: { dot: "f-edit live", text: "f-edit" },
+  ok: { dot: "m", text: "s" },
+  warn: { dot: "f-warn", text: "f-warn" },
+  danger: { dot: "f-danger", text: "f-danger" }
+};
+const pillPart = (pill, x, y) => {
+  const width = Math.ceil(textWidth(pill.text, PILL.size) * BOLD$3 + PILL.padX * 2 + PILL.dot * 2 + PILL.dotGap);
+  const mid = y + PILL.h / 2;
+  const ink = PILL_INK[pill.role];
+  const body = [
+    `<rect class="k" x="${x}" y="${y}" width="${width}" height="${PILL.h}" rx="${PILL.h / 2}"/>`,
+    `<circle class="${ink.dot}" cx="${x + PILL.padX + PILL.dot}" cy="${mid}" r="${PILL.dot}"/>`,
+    `<text class="${ink.text}" x="${x + PILL.padX + PILL.dot * 2 + PILL.dotGap}" y="${mid + PILL.size * 0.35}" font-family="${FONT$2}" font-size="${PILL.size}" font-weight="600">${xml(pill.text)}</text>`
+  ];
+  return { body: body.join(""), width };
+};
+const chevronSvg = (x, y) => `<g class="chev"><path d="M${x} ${y - CHEVRON}l${CHEVRON} ${CHEVRON}-${CHEVRON} ${CHEVRON}" fill="none" stroke-width="${STROKE$1}" stroke-linecap="round" stroke-linejoin="round" class="i-m"/></g>`;
+const cardHeadSvg = (W, head, inset = 0) => {
+  const right = W - CHEVRON_ROOM;
+  const probe = pillPart(head.pill, 0, 0);
+  const pill = pillPart(head.pill, right - probe.width, (HEAD.h - PILL.h) / 2);
+  const nameW = textWidth(head.name, HEAD.size) * BOLD$3;
+  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap - inset);
+  const titleSpan = title === "…" ? "" : `<tspan class="s" dx="${HEAD.nameGap}">${xml(title)}</tspan>`;
+  const y = HEAD.h / 2 + HEAD.size * 0.35;
+  const body = [
+    `<text x="${inset}" y="${y}" font-family="${FONT$2}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
+    pill.body,
+    chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, HEAD.h / 2)
+  ];
+  return paneSvg(W, HEAD.h, body.join(""));
+};
+const sectionSvg = (W, section) => {
+  const label = `<text class="m" x="0" y="${SECTION_H / 2 + LABEL$3.size * 0.36}" font-family="${FONT$2}" font-size="${LABEL$3.size}" font-weight="${LABEL$3.weight}">${xml(fitText(section.label, LABEL$3.size * BOLD$3, W))}</text>`;
+  return paneSvg(W, SECTION_H, label);
+};
+const SECTION_SVG_H = SECTION_H;
+const NOTICE = { h: 32, padX: 8, dot: 3, gap: 9, size: 13 };
+const noticeSvg = (W, notice) => {
+  const mid = NOTICE.h / 2;
+  const x = NOTICE.padX + NOTICE.dot * 2 + NOTICE.gap;
+  const lead = `${notice.name} `;
+  const reason = notice.reason;
+  const used = textWidth(lead, NOTICE.size) * BOLD$3 + textWidth(reason, NOTICE.size) * BOLD$3;
+  const title = fitText(` · ${notice.title}`, NOTICE.size, Math.max(0, W - x - CHEVRON_ROOM - used));
+  const body = [
+    `<circle class="f-${notice.role}" cx="${NOTICE.padX + NOTICE.dot}" cy="${mid}" r="${NOTICE.dot}"/>`,
+    `<text x="${x}" y="${mid + NOTICE.size * 0.35}" font-family="${FONT$2}" font-size="${NOTICE.size}" font-weight="560"><tspan class="t">${xml(lead)}</tspan><tspan class="f-${notice.role}">${xml(reason)}</tspan><tspan class="s" font-weight="400">${xml(title === "…" ? "" : title)}</tspan></text>`,
+    chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, mid)
+  ];
+  return paneSvg(W, NOTICE.h, body.join(""));
+};
+const NOTICE_H = NOTICE.h;
+
+const GAP$2 = 3;
+const MIN_SEG = 6;
+const classOf = (view, i) => {
+  const ok = view.done - view.failed;
+  if (i < ok)
+    return "m";
+  if (i < view.done)
+    return "f-danger";
+  return i < view.done + view.active ? "f-edit" : "k";
+};
+const RUN_SHARE = 0.34;
+const rect = (track, { x, w, cls }) => `<rect class="${cls}" x="${x.toFixed(1)}" y="${track.y}" width="${Math.max(0, w).toFixed(1)}" height="${track.h}" rx="${track.h / 2}"/>`;
+const solid = (view, track) => {
+  const unit = track.w / Math.max(1, view.units);
+  const ok = view.done - view.failed;
+  const parts = [rect(track, { x: track.x, w: track.w, cls: "k" })];
+  const spans = [[0, ok, "m"], [ok, view.done, "f-danger"], [view.done, view.done + view.active, "f-edit"]];
+  for (const [from, to, cls] of spans)
+    if (to > from)
+      parts.push(rect(track, { x: track.x + from * unit, w: (to - from) * unit, cls }));
+  return parts.join("");
+};
+const running = (track, x, w) => rect(track, { x, w, cls: "k" }) + rect(track, { x, w: w * RUN_SHARE, cls: "f-edit live" });
+const meterSvg = (view, track) => {
+  const units = view.units;
+  if (units < 1)
+    return rect(track, { x: track.x, w: track.w, cls: "k" });
+  const seg = (track.w - GAP$2 * (units - 1)) / units;
+  if (seg < MIN_SEG)
+    return solid(view, track);
+  return Array.from({ length: units }, (_, i) => {
+    const x = track.x + i * (seg + GAP$2);
+    const cls = classOf(view, i);
+    return cls === "f-edit" ? running(track, x, seg) : rect(track, { x, w: seg, cls });
+  }).join("");
+};
+
+const HOME_LOOK = lookAt(0);
+const SNOOZE = { x1: 27, y1: 6, x2: 30, y2: 2.6, size1: 4.8, size2: 3.5, min1: 9, min2: 7 };
+const snoozeSvg = (x, y, scale) => {
+  const big = Math.max(SNOOZE.min1, SNOOZE.size1 * scale);
+  const small = Math.max(SNOOZE.min2, SNOOZE.size2 * scale);
+  const z = (zx, zy, size) => `<text class="m" x="${x + zx * scale}" y="${y + zy * scale}" font-family="${FONT$2}" font-size="${size}" font-weight="700">z</text>`;
+  return z(SNOOZE.x1, SNOOZE.y1, big) + z(SNOOZE.x2, SNOOZE.y2, small);
+};
+const homeCrab = (x, y, opts) => {
+  const { mood, isMoving } = opts.home;
+  const body = crab(x, y, { costume: "other", look: HOME_LOOK, mood, isWalking: isMoving && mood === "working", scale: opts.scale });
+  return mood === "sleeping" ? body + snoozeSvg(x, y, opts.scale) : body;
+};
+const LEVEL_PILL = { h: 16, padX: 7, size: 10 };
+const BOLD$2 = 1.06;
+const levelWidth = (text) => Math.ceil(textWidth(text, LEVEL_PILL.size) * BOLD$2 + LEVEL_PILL.padX * 2);
+const levelPill = (text, x, y) => {
+  const w = levelWidth(text);
+  const r = (LEVEL_PILL.h - 1) / 2;
+  return `<rect class="chip ln" x="${x + 0.5}" y="${y + 0.5}" width="${w - 1}" height="${LEVEL_PILL.h - 1}" rx="${r}" stroke-width="1"/><text class="s" x="${x + w / 2}" y="${y + LEVEL_PILL.h / 2 + LEVEL_PILL.size * 0.35}" text-anchor="middle" font-family="${FONT$2}" font-size="${LEVEL_PILL.size}" font-weight="600" font-variant-numeric="tabular-nums">${xml(text)}</text>`;
+};
+const FACES = { sleeping: "(-_-) zz", working: "(•_•)", happy: "(^_^)", worried: "(°_°;)" };
+
+const PAD$1 = 16;
+const RADIUS = 10;
+const LABEL$2 = { size: 12, weight: 600, y: 27 };
+const HEADLINE = { size: 17, y: 56 };
+const PERCENT$2 = { size: 26, y: 58 };
+const MONO_EM$1 = 0.6;
+const METER = { y: 70, h: 6 };
+const DIVIDER_Y = 92;
+const STATS = { top: 104, label: 11, value: 31, valueSize: 15, labelSize: 12, rule: 34, pitch: 46 };
+const BOLD$1 = 1.06;
+const DOT_R$2 = 3;
+const GAP$1 = 12;
+const HOME = { y: 11, scale: 1.5, room: 58 };
+const PILL_GAP = 8;
+const PILL_DROP = 4;
+const PERCENT_CLASS = { run: "t", ok: "t", warn: "f-warn", idle: "m" };
+const UNKNOWN = "—";
+const needOf = (stat) => Math.max(textWidth(stat.label, STATS.labelSize), textWidth(stat.value, STATS.valueSize) * BOLD$1) + GAP$1 * 2;
+const columnsOf = (inner, stats) => {
+  const need = Math.max(0, ...stats.map(needOf));
+  const fits = (cols) => inner / cols >= need;
+  if (fits(stats.length))
+    return stats.length;
+  return fits(2) ? 2 : 1;
+};
+const statSvg = (stat, { x, y, w }) => `<text class="m" x="${x}" y="${y + STATS.label}" font-family="${FONT$2}" font-size="${STATS.labelSize}">${xml(fitText(stat.label, STATS.labelSize, w))}</text>
+<text class="t" x="${x}" y="${y + STATS.value}" font-family="${FONT$2}" font-size="${STATS.valueSize}" font-weight="650" font-variant-numeric="tabular-nums">${xml(fitText(stat.value, STATS.valueSize, w))}</text>`;
+const statsSvg = (stats, inner) => {
+  const cols = columnsOf(inner, stats);
+  const rows = Math.ceil(stats.length / cols);
+  const colW = inner / cols;
+  const parts = stats.map((stat, i) => {
+    const col = i % cols;
+    const y = STATS.top + Math.floor(i / cols) * STATS.pitch;
+    const x = PAD$1 + col * colW;
+    return statSvg(stat, { x, y, w: colW - GAP$1 });
+  });
+  return { body: parts.join(`
+`), height: STATS.top + (rows - 1) * STATS.pitch + STATS.rule + PAD$1 };
+};
+const homeParts = (data, eyebrowEnd) => {
+  if (!data.home)
+    return { body: "", room: 0 };
+  const crab = homeCrab(PAD$1, HOME.y, { home: data.home, scale: HOME.scale });
+  const pill = levelPill(data.home.level, eyebrowEnd + PILL_GAP, LABEL$2.y - LEVEL_PILL.h + PILL_DROP);
+  return { body: crab + pill, room: PILL_GAP + levelWidth(data.home.level) };
+};
+const headerSvg = (W, data) => {
+  const inner = W - PAD$1 * 2;
+  const left = PAD$1 + (data.home ? HOME.room : 0);
+  const isLive = data.tone === "run";
+  const eyebrowX = left + (isLive ? DOT_R$2 * 2 + 7 : 0);
+  const eyebrowEnd = eyebrowX + textWidth(data.eyebrow, LABEL$2.size) * BOLD$1;
+  const home = homeParts(data, eyebrowEnd);
+  const isKnown = data.percent !== UNKNOWN;
+  const percentW = isKnown ? Math.ceil(data.percent.length * PERCENT$2.size * MONO_EM$1) : 0;
+  const isCountShown = textWidth(data.counts, LABEL$2.size) <= W - PAD$1 - eyebrowEnd - home.room - GAP$1;
+  const headline = fitText(data.headline, HEADLINE.size * 1.06, W - PAD$1 - left - percentW - (isKnown ? GAP$1 : 0));
+  const stats = statsSvg(data.stats, inner);
+  const dot = isLive ? `<circle class="f-edit live" cx="${left + DOT_R$2}" cy="${LABEL$2.y - 4}" r="${DOT_R$2}"/>` : "";
+  const body = [
+    `<rect class="card ln" x="0.5" y="0.5" width="${W - 1}" height="${stats.height - 1}" rx="${RADIUS}" stroke-width="1"/>`,
+    home.body,
+    dot,
+    `<text class="m" x="${eyebrowX}" y="${LABEL$2.y}" font-family="${FONT$2}" font-size="${LABEL$2.size}" font-weight="${LABEL$2.weight}">${xml(data.eyebrow)}</text>`,
+    isCountShown ? `<text class="m" x="${W - PAD$1}" y="${LABEL$2.y}" text-anchor="end" font-family="${FONT$2}" font-size="${LABEL$2.size}" font-variant-numeric="tabular-nums">${xml(data.counts)}</text>` : "",
+    `<text class="t" x="${left}" y="${HEADLINE.y}" font-family="${FONT$2}" font-size="${HEADLINE.size}" font-weight="620">${xml(headline)}</text>`,
+    isKnown ? `<text class="${PERCENT_CLASS[data.tone]}" x="${W - PAD$1}" y="${PERCENT$2.y}" text-anchor="end" font-family="${MONO$1}" font-size="${PERCENT$2.size}" font-weight="650">${xml(data.percent)}</text>` : "",
+    meterSvg(data.meter ?? { units: 0, done: 0, failed: 0, active: 0 }, { x: PAD$1, y: METER.y, w: inner, h: METER.h }),
+    `<line class="ln" x1="${PAD$1}" x2="${W - PAD$1}" y1="${DIVIDER_Y}" y2="${DIVIDER_Y}" stroke-width="1"/>`,
+    stats.body
+  ];
+  return { source: paneSvg(W, stats.height, body.join(`
+`)), height: stats.height };
+};
+
+const BLANK = "ㅤ";
+const CELL_PX = 11.9;
+const BUTTON_PX$1 = 28;
+const RUN_SPAN = 2;
+const LINE_SPAN = "400%";
+function PressCover(ui, o) {
+  const { Box, Button } = ui;
+  const lines = Math.max(1, Math.floor(o.height / (BUTTON_PX$1 * 2)));
+  const label = BLANK.repeat(Math.ceil(o.width * RUN_SPAN / CELL_PX));
+  const hotkey = o.hotkey === undefined ? {} : { hotkey: o.hotkey };
+  return h(Box, {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "column",
+    justifyContent: "center",
+    overflow: "hidden"
+  }, Array.from({ length: lines }, (_, i) => h(Box, {
+    key: `${o.key}~line${i}`,
+    flexDirection: "row",
+    width: LINE_SPAN,
+    marginLeft: -1,
+    flexShrink: 0
+  }, h(Button, {
+    key: i === 0 ? o.key : `${o.key}~${i}`,
+    label,
+    plain: true,
+    ...i === 0 ? hotkey : {},
+    onPress: o.onPress
+  }))));
+}
+const STILL = "<style>*{animation:none!important;transition:none!important}</style>";
+const stillSource = (source) => source.replace(/<\/svg>\s*$/, `${STILL}</svg>`);
+function stillSvg(ui, drawing) {
+  if (drawing.type !== "Svg")
+    return drawing;
+  const { Svg } = ui;
+  const { key, source, alt, width, height } = drawing.props;
+  return h(Svg, {
+    key,
+    source: stillSource(source),
+    alt,
+    width,
+    height
+  });
+}
+const FALLBACK_PX = 52;
+const FALLBACK_WIDTH_PX = 360;
+function PressRow(ui, o) {
+  const { Box } = ui;
+  const props = o.drawing.type === "Svg" ? o.drawing.props : {};
+  const width = props.width ?? FALLBACK_WIDTH_PX;
+  const height = props.height ?? FALLBACK_PX;
+  return h(Box, {
+    key: o.box,
+    alignSelf: "flex-start"
+  }, stillSvg(ui, o.drawing), PressCover(ui, { key: o.key, width, height, hotkey: o.hotkey, onPress: o.onPress }));
+}
+
+const COMPACT_H = 32;
+const CRAB_PITCH = 36;
+const MORE_ROOM = 40;
+const LIVE_DOT = { x: 32, y: 4, r: 3 };
+const CRAB$1 = { w: 36, h: 32 };
+const PULSE = 12;
+const PULSE_CORE = 3;
+const stepsOf$1 = (a) => {
+  if (a.stepTotal)
+    return `${a.stepDone ?? 0}/${a.stepTotal}${a.stepNote ? " · " + a.stepNote : ""}`;
+  const own = countTasks(a.todos ?? []);
+  if (!own.total)
+    return "";
+  const active = (a.todos ?? []).find((task) => task.status === "in_progress");
+  return `${own.done}/${own.total}${active && a.status === "running" ? " · " + active.title : ""}`;
+};
+const activityOf = (a) => {
+  const s = t();
+  const steps = stepsOf$1(a);
+  if (a.status === "failed")
+    return [steps, a.endReason === "aborted" ? s.aborted : s.failed].filter(Boolean).join(" · ");
+  if (a.status === "done")
+    return steps || s.completed;
+  const tool = a.lastTool ? `› ${a.lastPlain ?? `${a.lastTool}${a.lastTarget ? " " + a.lastTarget : ""}`}` : s.starting;
+  return steps ? `${steps}  ${tool}` : tool;
+};
+const UNNAMED = ["", "inherit"];
+const modelLine = (a) => {
+  const round = a.round > 1 ? `${t().round} ${a.round}` : "";
+  const model = UNNAMED.includes(a.model) ? "" : modelName(a.model);
+  return [model, effortWord(a.effort), round].filter(Boolean).join(" · ");
+};
+const clockOf = (a, at) => {
+  const time = fmtTime(elapsed(a, at));
+  return a.status === "running" ? time : `${t().total} ${time}`;
+};
+const crabSvg = (opts) => paneSvg(CRAB$1.w, CRAB$1.h, crab(1, 0, opts));
+const CARD_CRAB = { w: 30, h: 28, scale: 0.92 };
+const cardCrabSvg = (opts) => paneSvg(CARD_CRAB.w, CARD_CRAB.h, crab(1, 0, { ...opts, scale: CARD_CRAB.scale }));
+const HERO_CRAB = { w: 76, h: 88, scale: 2.3, crabH: 66, pillGap: 4 };
+const GRID_MID = 15;
+const heroCrabSvg = (home) => {
+  const pillX = Math.max(0, Math.round(GRID_MID * HERO_CRAB.scale - levelWidth(home.level) / 2));
+  const pill = levelPill(home.level, pillX, HERO_CRAB.crabH + HERO_CRAB.pillGap);
+  return paneSvg(HERO_CRAB.w, HERO_CRAB.h, homeCrab(0, 2, { home, scale: HERO_CRAB.scale }) + pill);
+};
+const pulseSvg = () => {
+  const c = PULSE / 2;
+  return paneSvg(PULSE, PULSE, `<circle class="f-edit live" cx="${c}" cy="${c}" r="${PULSE_CORE}"/>`);
+};
+const plannedLine = (p) => {
+  const tier = plannedTierOf(p.tier);
+  const parts = [TIER_MODEL[tier] ?? ""];
+  if (p.after.length)
+    parts.push(t().after(p.after.join(", ")));
+  return parts.filter(Boolean).join(" · ");
+};
+const compactSvg = (W, icons) => {
+  const fit = Math.max(1, Math.floor((W - MORE_ROOM) / CRAB_PITCH));
+  const shown = icons.slice(0, fit);
+  const more = icons.length - shown.length;
+  const body = shown.map((ic, i) => crab(i * CRAB_PITCH, 0, { costume: ic.costume, look: ic.look, isDim: ic.isDim, isWalking: ic.isRunning }) + (ic.isRunning ? `<circle class="f-edit live" cx="${i * CRAB_PITCH + LIVE_DOT.x}" cy="${LIVE_DOT.y}" r="${LIVE_DOT.r}"/>` : "")).join("");
+  const plus = more ? `<text class="s" x="${shown.length * CRAB_PITCH + 4}" y="21" font-family="${FONT$2}" font-size="12">+${more}</text>` : "";
+  return paneSvg(W, COMPACT_H, body + plus);
+};
+
+const READ$1 = ["Read", "Grep", "Glob", "LS", "WebFetch", "WebSearch", "NotebookRead"];
+const EDIT$1 = ["Edit", "Write", "MultiEdit", "NotebookEdit"];
+const RUN = ["Bash", "BashOutput", "KillShell", "Monitor"];
+const AGENT = ["Agent", "Task", "SendMessage"];
+const kindOf$1 = (tool) => {
+  if (READ$1.includes(tool))
+    return "read";
+  if (EDIT$1.includes(tool))
+    return "edit";
+  if (RUN.includes(tool))
+    return "run";
+  return AGENT.includes(tool) ? "agent" : "other";
+};
+const KIND_GLYPH = { read: "◇", edit: "✎", run: "❯", agent: "◆", other: "•" };
+
+const LANES_MAX = 8;
+const MIN_SPAN_MS = 30000;
+const laneOf = (a, at) => {
+  const isLive = a.status === "running";
+  const end = isLive ? at : a.endedAt ?? a.startedAt;
+  const look = lookOf$1(a);
+  return {
+    id: a.id,
+    name: look.name,
+    shell: look.shell,
+    title: a.description || a.type,
+    status: a.status,
+    isStuck: stuckOf(a, at) !== null,
+    start: a.startedAt,
+    end: Math.max(end, a.startedAt),
+    segments: (a.history ?? []).map((e) => ({ from: e.at, to: e.endAt ?? (isLive ? at : e.at), kind: kindOf$1(e.tool) }))
+  };
+};
+function timelineOf(list, at) {
+  const lanes = [...list].sort((a, b) => a.startedAt - b.startedAt).slice(-LANES_MAX).map((a) => laneOf(a, at));
+  if (lanes.length === 0)
+    return null;
+  const t0 = Math.min(...lanes.map((lane) => lane.start));
+  const t1 = Math.max(...lanes.map((lane) => lane.end));
+  return { lanes, t0, t1, span: Math.max(MIN_SPAN_MS, t1 - t0), isLive: lanes.some((lane) => lane.status === "running") };
+}
+const cellOf = (lane, from, to) => {
+  if (to <= lane.start || from > lane.end)
+    return { kind: "none" };
+  let best = null;
+  let most = 0;
+  for (const seg of lane.segments) {
+    const overlap = Math.min(to, Math.max(seg.to, seg.from + 1)) - Math.max(from, seg.from);
+    if (overlap > most)
+      [best, most] = [seg.kind, overlap];
+  }
+  return { kind: best ?? "idle" };
+};
+const laneCells = (lane, tl, width) => {
+  const slice = tl.span / Math.max(1, width);
+  return Array.from({ length: width }, (_, i) => cellOf(lane, tl.t0 + i * slice, tl.t0 + (i + 1) * slice));
+};
+const runsOf = (cells) => {
+  const runs = [];
+  for (const cell of cells) {
+    const last = runs.at(-1);
+    if (last && last.kind === cell.kind)
+      last.length += 1;
+    else
+      runs.push({ kind: cell.kind, length: 1 });
+  }
+  return runs;
+};
+
+const TOP = 6;
+const LANE_H = 24;
+const AXIS_H = 20;
+const LABEL_W = 74;
+const RIGHT_PAD = 10;
+const NOW_ROOM = 44;
+const SEG_H = 10;
+const SEG_MIN = 3;
+const TRACK_H$1 = 2;
+const DOT_R$1 = 4;
+const CAP_R = 3.5;
+const NAME_SIZE$1 = 12;
+const MICRO = 10.5;
+const TICKS_MAX = 4;
+const SECOND$2 = 1000;
+const MINUTE$1 = 60 * SECOND$2;
+const STEPS_MS = [10 * SECOND$2, 30 * SECOND$2, MINUTE$1, 2 * MINUTE$1, 5 * MINUTE$1, 10 * MINUTE$1, 15 * MINUTE$1, 30 * MINUTE$1, 60 * MINUTE$1];
+const CAP = { running: "f-edit", done: "m", failed: "f-danger" };
+const ENDED_OPACITY = 0.6;
+const xOf = (scale, ms) => scale.x0 + (ms - scale.t0) / scale.span * (scale.x1 - scale.x0);
+const n1 = (v) => v.toFixed(1);
+function laneSvg(lane, y, scale) {
+  const cy = y + LANE_H / 2;
+  const isLive = lane.status === "running";
+  const start = xOf(scale, lane.start);
+  const end = Math.max(start + SEG_MIN, xOf(scale, lane.end));
+  const label = `<circle cx="${DOT_R$1 + 1}" cy="${cy}" r="${DOT_R$1}" fill="${lane.shell}"/><text class="${isLive ? "t" : "s"}" x="${DOT_R$1 * 2 + 8}" y="${cy + 4}" font-family="${FONT$2}" font-size="${NAME_SIZE$1}" font-weight="600">${xml(fitText(lane.name, NAME_SIZE$1, LABEL_W - DOT_R$1 * 2 - 12))}</text>`;
+  const track = `<rect class="k" x="${n1(start)}" y="${cy - TRACK_H$1 / 2}" width="${n1(end - start)}" height="${TRACK_H$1}" rx="1"/>`;
+  const segs = lane.segments.map((seg) => {
+    const x = xOf(scale, seg.from);
+    const w = Math.max(SEG_MIN, xOf(scale, seg.to) - x);
+    return `<rect class="s" x="${n1(x)}" y="${cy - SEG_H / 2}" width="${n1(w)}" height="${SEG_H}" rx="2.5"/>`;
+  }).join("");
+  const cap = `<circle class="${lane.isStuck ? "f-warn" : CAP[lane.status] ?? "f-edit"}" cx="${n1(end)}" cy="${cy}" r="${CAP_R}"/>`;
+  const notch = lane.isStuck ? `<rect class="f-warn" x="${n1(end + CAP_R + 3)}" y="${cy - SEG_H / 2 - 2}" width="3" height="${SEG_H + 4}" rx="1.5"/>` : "";
+  return `<g>${label}<g opacity="${isLive ? 1 : ENDED_OPACITY}">${track}${segs}</g>${cap}${notch}</g>`;
+}
+function axisSvg(scale, top, nowX) {
+  const step = STEPS_MS.find((ms) => scale.span / ms <= TICKS_MAX) ?? STEPS_MS.at(-1) ?? MINUTE$1;
+  const ticks = [];
+  for (let ms = 0;ms <= scale.span; ms += step) {
+    const x = xOf(scale, scale.t0 + ms);
+    if (nowX !== null && Math.abs(x - nowX) < NOW_ROOM && ms > 0)
+      continue;
+    const anchor = ms === 0 ? "start" : "middle";
+    ticks.push(`<rect class="k" x="${n1(x)}" y="${top}" width="1" height="4"/><text class="m" x="${n1(x)}" y="${top + 16}" text-anchor="${anchor}" font-family="${MONO$1}" font-size="${MICRO}">${fmtTime(ms)}</text>`);
+  }
+  return `<rect class="k" x="${scale.x0}" y="${top}" width="${n1(scale.x1 - scale.x0)}" height="1"/>${ticks.join("")}`;
+}
+const nowSvg$1 = (scale, at, rows) => {
+  const x = xOf(scale, at);
+  const anchor = x > scale.x1 - NOW_ROOM / 2 ? "end" : "middle";
+  return `<rect class="s" x="${n1(x)}" y="${rows.top - 4}" width="1" height="${rows.bottom - rows.top + 8}" opacity=".55"/>` + `<text class="s" x="${n1(anchor === "end" ? scale.x1 : x)}" y="${rows.bottom + 18}" text-anchor="${anchor}" font-family="${FONT$2}" font-size="${MICRO}" font-weight="600">${xml(t().now)}</text>`;
+};
+const altOf$1 = (tl) => {
+  const s = t();
+  const words = { running: s.isRunning, done: s.isFinished, failed: s.failed };
+  return `${s.timeline}: ${tl.lanes.map((lane) => `${lane.name} ${fmtTime(lane.end - lane.start)} ${words[lane.status] ?? ""}`.trim()).join(", ")}`;
+};
+function timelineSvg(W, tl) {
+  const scale = { x0: LABEL_W, x1: W - RIGHT_PAD, t0: tl.t0, span: tl.span };
+  const bottom = TOP + tl.lanes.length * LANE_H;
+  const height = bottom + AXIS_H + 4;
+  const lanes = tl.lanes.map((lane, i) => laneSvg(lane, TOP + i * LANE_H, scale)).join("");
+  const nowX = tl.isLive ? xOf(scale, tl.t1) : null;
+  const body = lanes + axisSvg(scale, bottom + 2, nowX) + (tl.isLive ? nowSvg$1(scale, tl.t1, { top: TOP, bottom }) : "");
+  return { source: paneSvg(W, height, body), height, alt: altOf$1(tl) };
+}
+
+const BUTTON_PX = 76;
+const TERM_NAME = 6;
+const TERM_CLOCK = 2;
+const TIMELINE_MIN_AGENTS = 2;
+const homeAlt = (home) => `${HOME_LOOK.name}, ${t().crab.moods[home.mood]}, ${home.level}`;
+function deskHead$1(ui, d, layout) {
+  const data = drawnHeaderOf(d);
+  const { stats, ...shows } = data;
+  const head = headerSvg(layout.W, data);
+  const alt = [data.headline, data.percent, data.counts, totalsLineOf(data), homeAlt(d.home)].filter(Boolean).join(", ");
+  return picture(ui, { key: "head", at: "head", pic: { source: head.source, alt, width: layout.W, height: head.height }, opts: { shows: { ...shows, labels: stats.map((stat) => stat.label) } } });
+}
+function headTree(ui, d, layout) {
+  const { Box, Text } = ui;
+  if (layout.isDesktop)
+    return deskHead$1(ui, d, layout);
+  const data = headerOf(d);
+  const line = totalsLineOf(data);
+  return h(Box, {
+    flexDirection: "column"
+  }, h(Text, {
+    wrap: "truncate-end"
+  }, h(Text, {
+    dimColor: true
+  }, `${FACES[d.home.mood]} `), h(Text, {
+    bold: true
+  }, data.headline), h(Text, {
+    bold: true,
+    dimColor: data.tone === "idle"
+  }, `  ${data.percent}`)), h(Text, {
+    dimColor: true
+  }, [d.home.level, data.counts].filter(Boolean).join(" · ")), h(Text, {
+    dimColor: true
+  }, line));
+}
+function toolbarTree(ui, d, on) {
+  const { Box, Button } = ui;
+  const s = t();
+  const isDrafting = d.panel.draft?.isOpen === true;
+  return h(Box, {
+    key: "toolbar",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center"
+  }, h(Button, {
+    key: "new-task",
+    plain: true,
+    dimColor: isDrafting,
+    label: `＋ ${s.newTask}`,
+    onPress: on.onNewTask
+  }), h(Button, {
+    key: "compact",
+    label: d.panel.isCompact ? s.expand : s.collapse,
+    plain: true,
+    dimColor: true,
+    onPress: on.onCompact
+  }));
+}
+function attentionTree(ui, view) {
+  const { Box, Button, Text } = ui;
+  const { layout, on } = view;
+  const att = view.d.attention;
+  if (!att)
+    return null;
+  const onPress = () => on.onLook(att.agentId);
+  if (!layout.isDesktop) {
+    return h(Box, {
+      key: "attention",
+      flexDirection: "row",
+      columnGap: 1
+    }, h(Text, {
+      color: att.role === "warn" ? "warning" : "error",
+      wrap: "truncate-end"
+    }, `! ${att.name} ${att.reason}`, h(Text, {
+      dimColor: true
+    }, ` · ${att.title}`)), h(Button, {
+      key: "look",
+      plain: true,
+      label: t().look,
+      onPress
+    }));
+  }
+  const pic = { source: noticeSvg(layout.W, att), alt: `${att.name} ${att.reason}: ${att.title} (${t().look})`, width: layout.W, height: NOTICE_H };
+  const drawing = picture(ui, { key: "notice", at: "attention", pic, opts: { isRow: true } });
+  return PressRow(ui, { box: "attention", key: "look", drawing, onPress });
+}
+function sectionHead(ui, layout, head) {
+  const { Box, Button, Text } = ui;
+  const s = t();
+  const toggle = head.toggle;
+  if (!layout.isDesktop) {
+    if (!toggle)
+      return h(Text, {
+        key: `h-${head.label}`,
+        bold: true
+      }, head.label);
+    return h(Box, {
+      key: `h-${toggle.key}`,
+      flexDirection: "row"
+    }, h(Button, {
+      key: toggle.key,
+      plain: true,
+      label: `${toggle.isOpen ? "▾" : "▸"} ${head.label}`,
+      onPress: toggle.onPress
+    }));
+  }
+  const width = toggle ? layout.W - BUTTON_PX : layout.W;
+  const svg = picture(ui, { key: "eyebrow", at: `eyebrow-${head.id}`, pic: { source: sectionSvg(width, head), alt: head.label, width, height: SECTION_SVG_H } });
+  if (!toggle)
+    return h(Box, {
+      key: `h-${head.label}`,
+      flexDirection: "row"
+    }, svg);
+  return h(Box, {
+    key: `h-${toggle.key}`,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    columnGap: 1
+  }, svg, h(Button, {
+    key: toggle.key,
+    plain: true,
+    dimColor: true,
+    label: toggle.isOpen ? s.hide : s.show,
+    onPress: toggle.onPress
+  }));
+}
+const RUN_GLYPH = { none: " ", idle: "─" };
+function termLane(ui, runs, label) {
+  const { Text } = ui;
+  return h(Text, {
+    key: `lane-${label.name}`,
+    wrap: "truncate-end"
+  }, h(Text, {
+    bold: true
+  }, label.name.padEnd(TERM_NAME)), runs.map((run, i) => h(Text, {
+    key: `r${i}`,
+    dimColor: run.kind === "idle"
+  }, (RUN_GLYPH[run.kind] ?? "━").repeat(run.length))), h(Text, {
+    color: label.key
+  }, ` ${label.end}`));
+}
+const END_GLYPH = { running: "●", done: "✓", failed: "✗", stuck: "!" };
+const END_KEY = { running: "claude", done: "subtle", failed: "error", stuck: "warning" };
+function termTimeline(ui, tl, layout) {
+  const { Box } = ui;
+  const width = Math.max(TERM_NAME, layout.cols - TERM_NAME - TERM_CLOCK - 1);
+  return h(Box, {
+    key: "timeline",
+    flexDirection: "column"
+  }, tl.lanes.map((lane) => {
+    const end = lane.isStuck ? "stuck" : lane.status;
+    return termLane(ui, runsOf(laneCells(lane, tl, width)), { name: lane.name, end: END_GLYPH[end] ?? "●", key: END_KEY[end] ?? "subtle" });
+  }));
+}
+function deskTimeline(ui, tl, layout) {
+  const drawing = timelineSvg(layout.W, tl);
+  const shows = { lanes: tl.lanes.map((lane) => [lane.id, lane.status, lane.isStuck]), isLive: tl.isLive };
+  return picture(ui, { key: "timeline", at: "timeline", pic: { ...drawing, width: layout.W }, opts: { shows } });
+}
+function timelineTree(ui, view) {
+  const { Box } = ui;
+  const { d, layout, on } = view;
+  const tl = d.list.length >= TIMELINE_MIN_AGENTS ? timelineOf(d.list, layout.isDesktop ? d.drawnAt : d.at) : null;
+  if (!tl)
+    return null;
+  const isOpen = d.panel.isTimelineHidden !== true;
+  const head = sectionHead(ui, layout, { id: "timeline", label: t().timeline, toggle: { key: "timeline", isOpen, onPress: on.onTimeline } });
+  return h(Box, {
+    key: "timeline-section",
+    flexDirection: "column",
+    rowGap: layout.isDesktop ? 1 : 0
+  }, head, isOpen && layout.isDesktop && deskTimeline(ui, tl, layout), isOpen && !layout.isDesktop && termTimeline(ui, tl, layout));
+}
+const glyphKeyOf = (a) => {
+  if (a.status === "failed")
+    return "error";
+  return a.status === "done" ? "subtle" : "claude";
+};
+const iconsOf = (d) => [
+  ...[...d.running, ...d.finished].map((a) => ({ costume: costumeOf(a), look: lookOf$1(a), isRunning: a.status === "running" && !stuckOf(a, d.at), isDim: false })),
+  ...d.planned.map((p, i) => ({ costume: plannedTierOf(p.tier), look: lookAt(i), isRunning: false, isDim: true }))
+];
+function compactTree(ui, d, layout) {
+  const { Text } = ui;
+  if (layout.isDesktop) {
+    return picture(ui, { key: "compact-icons", at: "compact", pic: { source: compactSvg(layout.W, iconsOf(d)), alt: `${d.list.length} ${t().agentsCount}, ${summaryOf(d.sum)}`, width: layout.W, height: COMPACT_H } });
+  }
+  const glyphs = [...d.running, ...d.finished].map((a) => h(Text, {
+    key: a.id,
+    color: glyphKeyOf(a)
+  }, `${a.status === "done" ? "✓" : "●"} `));
+  return h(Text, {
+    wrap: "truncate-end"
+  }, glyphs, d.planned.length ? h(Text, {
+    dimColor: true
+  }, "○ ".repeat(d.planned.length)) : null);
+}
+function emptyTree(ui, view) {
+  const { Box, Button, Text } = ui;
+  const { layout, on } = view;
+  const home = view.d.home;
+  const s = t();
+  const crab = layout.isDesktop && picture(ui, { key: "crab", at: "hero-crab", pic: { source: heroCrabSvg(home), alt: homeAlt(home), width: HERO_CRAB.w, height: HERO_CRAB.h } });
+  return h(Box, {
+    key: "empty",
+    flexDirection: "row",
+    columnGap: 2,
+    alignItems: "center"
+  }, crab, h(Box, {
+    flexDirection: "column",
+    rowGap: 1,
+    flexShrink: 1
+  }, !layout.isDesktop && h(Text, {
+    dimColor: true
+  }, `${FACES[home.mood]} · ${home.level}`), h(Text, {
+    bold: true
+  }, crewedOf(view.d.chats).length > 0 ? s.chats.emptyHere : s.emptyTitle), h(Text, {
+    dimColor: true
+  }, s.empty), h(Box, {
+    flexDirection: "row"
+  }, h(Button, {
+    key: "new-task",
+    variant: "primary",
+    label: `＋ ${s.newTask}`,
+    onPress: on.onNewTask
+  }))));
+}
+
+const MAX_WAITING_ROWS = 3;
+const MINUTES_PER_HOUR = 60;
+const spanOf = (minutes) => {
+  const s = t();
+  if (minutes >= MINUTES_PER_HOUR)
+    return s.hours(Math.floor(minutes / MINUTES_PER_HOUR));
+  return minutes >= 1 ? s.minutes(minutes) : "";
+};
+const rowOf = (chat) => ({
+  project: chat.project,
+  title: chat.title || t().chats.untitled,
+  wait: t().chats.waiting(spanOf(chat.minutes))
+});
+function waitingTree(ui, chats, layout) {
+  const { Box, Text } = ui;
+  const s = t().chats;
+  const waiting = waitingOf(chats);
+  if (!waiting.length)
+    return null;
+  const rows = waiting.slice(0, MAX_WAITING_ROWS).map(rowOf);
+  const rest = waiting.length - rows.length;
+  const more = rest > 0 ? s.more(rest) : "";
+  if (layout.isDesktop) {
+    const card = chatsCardSvg(layout.W, { title: s.waitingTitle, rows, more });
+    return picture(ui, { key: "chats-waiting", at: "chats-waiting", pic: { ...card, width: layout.W } });
+  }
+  return h(Box, {
+    key: "chats-waiting",
+    flexDirection: "column"
+  }, h(Text, {
+    bold: true,
+    dimColor: true
+  }, s.waitingTitle), rows.map((row, i) => h(Text, {
+    key: `wait-${i}`,
+    wrap: "truncate-end"
+  }, h(Text, {
+    bold: true
+  }, row.project), h(Text, {
+    dimColor: true
+  }, ` · ${row.title}  `), h(Text, {
+    color: "warning"
+  }, row.wait))), more !== "" && h(Text, {
+    dimColor: true
+  }, more));
+}
+const linesPicture = (ui, at, lines, W) => {
+  const drawn = chatLinesSvg(W, lines);
+  return picture(ui, { key: at, at, pic: { source: drawn.source, alt: drawn.alt, width: W, height: drawn.height } });
+};
+const chatLine = (chat) => ({
+  kind: "chat",
+  lead: chat.project,
+  text: chat.title || t().chats.untitled,
+  end: chat.state === "working" ? spanOf(chat.minutes) : t().chats.states.idle,
+  isLive: chat.state === "working"
+});
+const agentChatLine = (agent) => ({
+  kind: "agent",
+  lead: agent.name,
+  text: agent.title,
+  end: [spanOf(agent.minutes), agent.costUsd > 0 ? `≈${fmtCost(agent.costUsd)}` : ""].filter(Boolean).join(" · "),
+  isLive: true
+});
+const agentLine = (agent) => [agent.name, agent.title, spanOf(agent.minutes), agent.costUsd > 0 ? `≈${fmtCost(agent.costUsd)}` : ""].filter(Boolean).join(" · ");
+function crewTree(ui, chats, layout) {
+  const { Box, Text } = ui;
+  const s = t().chats;
+  const crewed = crewedOf(chats);
+  if (!crewed.length)
+    return null;
+  const count = crewed.reduce((sum, chat) => sum + (chat.agents?.length ?? 0), 0);
+  return h(Box, {
+    key: "chats-crew",
+    flexDirection: "column",
+    rowGap: 0
+  }, sectionHead(ui, layout, { id: "chats-crew", label: `${s.agentsTitle} · ${count}` }), layout.isDesktop && linesPicture(ui, "chats-crew-lines", crewed.flatMap((chat) => [chatLine(chat), ...(chat.agents ?? []).map(agentChatLine)]), layout.W), !layout.isDesktop && crewed.map((chat) => h(Box, {
+    key: `crew-${chat.id}`,
+    flexDirection: "column"
+  }, h(Text, {
+    wrap: "truncate-end"
+  }, h(Text, {
+    bold: true
+  }, chat.project), h(Text, {
+    dimColor: true
+  }, ` · ${chat.title || s.untitled}`)), chat.agents?.map((agent) => h(Text, {
+    key: `crew-${chat.id}-${agent.id}`,
+    dimColor: true,
+    wrap: "truncate-end"
+  }, `  ${agentLine(agent)}`)))));
+}
+function quietTree(ui, view) {
+  const { Box, Text } = ui;
+  const s = t().chats;
+  const quiet = quietOf(view.chats).filter((chat) => !chat.agents?.length);
+  if (!quiet.length)
+    return null;
+  const shown = view.isOpen ? quiet : quiet.filter((chat) => chat.state === "working");
+  const head = sectionHead(ui, view.layout, { id: "chats", label: `${s.title} · ${quiet.length}`, toggle: { key: "chats", isOpen: view.isOpen, onPress: view.onToggle } });
+  return h(Box, {
+    key: "chats-quiet",
+    flexDirection: "column",
+    rowGap: 0
+  }, head, view.layout.isDesktop && shown.length > 0 && linesPicture(ui, "chats-quiet-lines", shown.map(chatLine), view.layout.W), !view.layout.isDesktop && shown.map((chat) => h(Text, {
+    key: `chat-${chat.id}`,
+    wrap: "truncate-end"
+  }, h(Text, {
+    bold: true
+  }, chat.project), h(Text, {
+    dimColor: true
+  }, ` · ${chat.title || s.untitled} · ${s.states[chat.state === "working" ? "working" : "idle"]}`))));
+}
+
+function draftHead(ui, layout) {
+  const { Text } = ui;
+  const label = t().newTask;
+  if (!layout.isDesktop)
+    return h(Text, {
+      bold: true,
+      dimColor: true
+    }, label);
+  return picture(ui, { key: "draft-head", at: "draft-head", pic: { source: sectionSvg(layout.inner, { label }), alt: label, width: layout.inner, height: SECTION_SVG_H } });
+}
+function draftTree(ui, view, on) {
+  const { Box, Button, Input, Select, Text } = ui;
+  const s = t();
+  const chosen = chosenOf(view.types, view.draft);
+  const frame = view.layout.isDesktop ? { borderStyle: "round", paddingX: 2, paddingY: 1 } : {};
+  return h(Box, {
+    key: "draft",
+    flexDirection: "column",
+    rowGap: 1,
+    ...frame
+  }, draftHead(ui, view.layout), !chosen && h(Text, {
+    dimColor: true
+  }, s.noTypes), chosen && Select && h(Select, {
+    key: "dispatch-type",
+    label: s.agentLabel,
+    options: view.types.map((type) => ({ value: type.name, label: type.name })),
+    value: chosen.name,
+    onSelect: on.onPickType
+  }), chosen && h(Text, {
+    dimColor: true,
+    wrap: "truncate-end"
+  }, `${sourceWord(chosen.source)} · ${describe(chosen)}`), chosen && Input && h(Input, {
+    key: "dispatch-task",
+    label: s.taskLabel,
+    placeholder: s.taskHint,
+    value: "",
+    submitLabel: s.start,
+    autoFocus: true,
+    onSubmit: on.onStartTask
+  }), view.draft?.notice && h(Text, {
+    color: "warning"
+  }, view.draft.notice), h(Box, {
+    flexDirection: "row"
+  }, h(Button, {
+    key: "dispatch-cancel",
+    plain: true,
+    dimColor: true,
+    label: s.cancel,
+    onPress: on.onCancelTask
+  })));
+}
+
+const BRIEF_SHOWN = 280;
+const ANSWER_SHOWN = 900;
+function saidTree(ui, said) {
+  const { Box, Text } = ui;
+  return h(Box, {
+    key: said.key,
+    flexDirection: "column"
+  }, h(Text, {
+    bold: true
+  }, said.who), h(Box, {
+    flexDirection: "column",
+    borderStyle: "round",
+    borderDimColor: true,
+    paddingX: 1
+  }, h(Text, null, said.text)));
+}
+function briefTree(ui, a, ctx) {
+  const { Box, Button } = ui;
+  if (!a.brief)
+    return null;
+  const s = t();
+  const isLong = a.brief.length > BRIEF_SHOWN;
+  const isWhole = !isLong || ctx.briefOpen === a.id;
+  const text = isWhole ? a.brief : clip$2(a.brief, BRIEF_SHOWN);
+  return h(Box, {
+    key: `brief-box-${a.id}`,
+    flexDirection: "column"
+  }, saidTree(ui, { key: "asked", who: a.isAsked ? s.you : s.brief, text }), isLong && h(Box, {
+    flexDirection: "row",
+    justifyContent: "flex-end"
+  }, h(Button, {
+    key: `brief-${a.id}`,
+    plain: true,
+    dimColor: true,
+    label: isWhole ? s.showLess : s.showAll,
+    onPress: () => ctx.onBrief(a.id)
+  })));
+}
+const turnsOf = (a) => a.thread ?? (a.answer && a.status === "done" ? [{ from: "agent", text: a.answer, at: a.endedAt ?? a.startedAt }] : []);
+const turnTree = (ui, a, turn, i) => turn.from === "you" ? saidTree(ui, { key: `turn-${i}`, who: t().you, text: turn.text }) : saidTree(ui, { key: `turn-${i}`, who: lookOf$1(a).name, text: clip$2(turn.text, ANSWER_SHOWN) });
+const isAwaited = (a, turns) => a.status === "running" || a.status === "done" && turns.at(-1)?.from === "you";
+function tailTree(ui, a, turns) {
+  const { Text } = ui;
+  const s = t();
+  if (isAwaited(a, turns))
+    return h(Text, {
+      color: "claude"
+    }, `● ${s.answering(lookOf$1(a).name)}`);
+  if (a.status !== "failed")
+    return null;
+  return h(Text, {
+    color: "error"
+  }, `${s.cheerFailed} · ${a.endReason === "aborted" ? s.aborted : s.failedNow}`);
+}
+function conversationTree(ui, a, ctx) {
+  const { Box } = ui;
+  const turns = turnsOf(a);
+  return h(Box, {
+    key: `talk-${a.id}`,
+    flexDirection: "column",
+    rowGap: 1
+  }, briefTree(ui, a, ctx), turns.map((turn, i) => turnTree(ui, a, turn, i)), tailTree(ui, a, turns));
+}
+
+const filesShown = (files) => {
+  const latest = [...files].sort((x, y) => y.at - x.at);
+  return [...latest.filter((f) => f.edits > 0), ...latest.filter((f) => f.edits === 0)];
+};
+const EXT = /\.([a-z0-9]{1,5})$/i;
+const extOf = (path) => (EXT.exec(path)?.[1] ?? "").toUpperCase();
+
+const ICON$1 = {
+  read: '<circle cx="7" cy="7" r="4.5"/><path d="M10.4 10.4L14 14"/>',
+  edit: '<path d="M3 13l.8-3.2L10.6 3l2.4 2.4-6.8 6.8z"/><path d="M9.2 4.4l2.4 2.4"/>',
+  run: '<path d="M3 4.5L6.5 8 3 11.5"/><path d="M8.5 12h5"/>',
+  agent: '<path d="M8 2.5L13.5 8 8 13.5 2.5 8z"/>',
+  other: '<circle cx="8" cy="8" r="5"/>',
+  thinking: '<circle cx="3.5" cy="8" r=".9"/><circle cx="8" cy="8" r=".9"/><circle cx="12.5" cy="8" r=".9"/>',
+  done: '<path d="M3 8.5l3.2 3.2L13 4.8"/>',
+  failed: '<path d="M4 4l8 8M12 4l-8 8"/>'
+};
+const ICON_SIZE = 16;
+const STROKE = 1.5;
+const iconAt = (icon, opts) => `<g class="${opts.cls}" transform="translate(${opts.x} ${opts.y}) scale(${opts.scale ?? 1})" fill="none" stroke-width="${STROKE}" stroke-linecap="round" stroke-linejoin="round">${ICON$1[icon]}</g>`;
+const NOW = { h: 42, textX: 26, iconY: 3, label: 12, labelY: 15, lineY: 34, line2: 13.5, mono: 12.5 };
+const BOLD = 1.06;
+const MID_BASELINE = 0.36;
+const lookOfNow = (now) => {
+  if (now.state === "done")
+    return { ink: "m", icon: "done" };
+  if (now.state === "failed")
+    return { ink: "f-danger", icon: "failed" };
+  if (now.state === "call")
+    return { ink: "f-edit", icon: now.kind };
+  return { ink: "f-edit", icon: "thinking" };
+};
+const capital$1 = (s) => upper$1(s.charAt(0)) + s.slice(1);
+const callLine = (now, x, room) => {
+  const tool = now.tool ? `${fitText(now.tool, NOW.line2 * BOLD, room)} ` : "";
+  const used = textWidth(tool, NOW.line2) * BOLD;
+  const shown = fitMono(now.target, { size: NOW.mono, maxW: Math.max(0, room - used), isFromStart: now.isPath });
+  return `<text x="${x}" y="${NOW.lineY}" font-family="${FONT$2}" font-size="${NOW.line2}" font-weight="620"><tspan class="t">${xml(tool)}</tspan><tspan class="s" font-family="${MONO$1}" font-size="${NOW.mono}" font-weight="450">${xml(shown)}</tspan></text>`;
+};
+const nowSvg = (W, now) => {
+  const look = lookOfNow(now);
+  const x = NOW.textX;
+  const verb = fitText(capital$1(now.verb), NOW.label * BOLD, W - x);
+  const body = [
+    iconAt(look.icon, { x: 0, y: NOW.iconY, cls: "i-s" }),
+    `<text class="${look.ink}" x="${x}" y="${NOW.labelY}" font-family="${FONT$2}" font-size="${NOW.label}" font-weight="600">${xml(verb)}</text>`,
+    now.tool ? callLine(now, x, W - x) : ""
+  ];
+  return paneSvg(W, NOW.h, body.join(""));
+};
+const NOW_H = NOW.h;
+const ROW$1 = { h: 26, badgeW: 34, badgeH: 17, badgeRx: 4, badge: 9, gap: 10, path: 12.5, count: 11.5, icon: 0.72, iconGap: 3, countGap: 10 };
+const BADGE_MAX = 4;
+const badgeOf = (path, y) => {
+  const ext = extOf(path).slice(0, BADGE_MAX);
+  const mid = y + ROW$1.h / 2;
+  return `<rect class="k" x="0" y="${mid - ROW$1.badgeH / 2}" width="${ROW$1.badgeW}" height="${ROW$1.badgeH}" rx="${ROW$1.badgeRx}"/>` + `<text class="m" x="${ROW$1.badgeW / 2}" y="${mid + ROW$1.badge * MID_BASELINE}" text-anchor="middle" font-family="${MONO$1}" font-size="${ROW$1.badge}" font-weight="600">${xml(ext || "·")}</text>`;
+};
+const countsOf = (f) => [{ n: f.edits, icon: "edit", ink: "s" }, { n: f.reads, icon: "read", ink: "m" }].filter((c) => c.n > 0);
+const countW = (c) => ICON_SIZE * ROW$1.icon + ROW$1.iconGap + monoWidth(String(c.n), ROW$1.count);
+const countsSvg = (counts, opts) => {
+  let x = opts.right;
+  const mid = opts.y + ROW$1.h / 2;
+  const parts = [...counts].reverse().map((c) => {
+    x -= countW(c);
+    const part = iconAt(c.icon, { x, y: mid - ICON_SIZE * ROW$1.icon / 2, cls: `i-${c.ink}`, scale: ROW$1.icon }) + `<text class="${c.ink}" x="${x + ICON_SIZE * ROW$1.icon + ROW$1.iconGap}" y="${mid + ROW$1.count * MID_BASELINE}" font-family="${MONO$1}" font-size="${ROW$1.count}" font-weight="600">${c.n}</text>`;
+    x -= ROW$1.countGap;
+    return part;
+  });
+  return { body: parts.join(""), width: opts.right - x };
+};
+const pathSvg = (path, opts) => {
+  const short = shortPath(path);
+  const cut = short.lastIndexOf("/") + 1;
+  const name = fitText(short.slice(cut), ROW$1.path * BOLD, opts.room);
+  const dir = fitStart(short.slice(0, cut), ROW$1.path, opts.room - textWidth(name, ROW$1.path) * BOLD);
+  const y = opts.y + ROW$1.h / 2 + ROW$1.path * MID_BASELINE;
+  return `<text x="${ROW$1.badgeW + ROW$1.gap}" y="${y}" font-family="${FONT$2}" font-size="${ROW$1.path}"><tspan class="m">${xml(dir)}</tspan><tspan class="t" font-weight="560">${xml(name)}</tspan></text>`;
+};
+const filesSvg = (W, files) => {
+  const rows = files.map((f, i) => {
+    const y = i * ROW$1.h;
+    const counts = countsSvg(countsOf(f), { right: W, y });
+    const room = W - ROW$1.badgeW - ROW$1.gap - counts.width - ROW$1.gap;
+    return badgeOf(f.path, y) + pathSvg(f.path, { y, room }) + counts.body;
+  });
+  const height = Math.max(ROW$1.h, files.length * ROW$1.h);
+  return { source: paneSvg(W, height, rows.join("")), height };
+};
+
+const pad = (n) => String(n).padStart(2, "0");
+const timeOf = (at) => {
+  const date = new Date(at);
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+const nameOf$1 = (path) => path.split("/").filter(Boolean).at(-1) ?? path;
+const hrefOf$1 = (path) => `file://${encodeURI(path)}`;
+const linkOf = (path) => `[${nameOf$1(path).replace(/([\\`*_[\]<>])/g, "\\$1")}](<${hrefOf$1(path)}>)`;
+const filesMarkdown = (paths) => paths.filter((path) => path.startsWith("/")).map(linkOf).join(" · ");
+function fileLink(ui, e, key) {
+  const { Markdown } = ui;
+  if (!e.path || !Markdown)
+    return null;
+  return h(Markdown, {
+    key,
+    text: linkOf(e.path)
+  });
+}
+const endOf$1 = (e, isLive) => {
+  if (e.endAt !== undefined)
+    return e.isError ? `✗ ${t().failedNow}` : "✓";
+  return isLive ? "…" : "—";
+};
+function stepTree(ui, e, ctx) {
+  const { Box, Text } = ui;
+  const said = e.why ?? e.plain ?? e.tool;
+  const because = e.because && e.because !== ctx.prev?.because ? e.because : undefined;
+  const isFailed = e.endAt !== undefined && e.isError === true;
+  return h(Box, {
+    key: `log-${ctx.index}`,
+    flexDirection: "column"
+  }, because ? h(Text, {
+    wrap: "wrap"
+  }, h(Text, {
+    bold: true
+  }, `${t().because}: `), h(Text, null, because)) : null, h(Box, {
+    flexDirection: "row",
+    columnGap: 1
+  }, h(Box, {
+    flexShrink: 0
+  }, h(Text, {
+    dimColor: true
+  }, timeOf(e.at))), h(Box, {
+    flexShrink: 0
+  }, h(Text, {
+    dimColor: true
+  }, KIND_GLYPH[kindOf$1(e.tool)])), h(Box, {
+    flexDirection: "column",
+    flexGrow: 1,
+    flexShrink: 1
+  }, h(Text, {
+    wrap: "wrap"
+  }, said), h(Text, {
+    dimColor: true,
+    wrap: "wrap"
+  }, [e.why && e.plain ? e.plain : "", `${e.tool}${e.path ? "" : ` ${e.target}`}`.trim()].filter(Boolean).join(" · ")), fileLink(ui, e, `log-file-${ctx.index}`)), h(Box, {
+    flexShrink: 0
+  }, h(Text, {
+    color: isFailed ? "error" : "subtle"
+  }, endOf$1(e, ctx.isLive)))));
+}
+function logTree(ui, a) {
+  const { Box } = ui;
+  const list = a.history ?? [];
+  const isLive = a.status === "running";
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, list.map((e, index) => stepTree(ui, e, { isLive, index, prev: list[index - 1] })));
+}
+function logButton(ui, a, ctx) {
+  const { Box, Button } = ui;
+  const s = t();
+  const label = ctx.logOpen === a.id ? s.logClose : s.logOpen(a.history?.length ?? 0);
+  return h(Box, {
+    flexDirection: "row"
+  }, h(Button, {
+    key: `log-${a.id}`,
+    variant: "secondary",
+    label,
+    onPress: () => ctx.onLog(a.id)
+  }));
+}
+
+const BAR_H$1 = 18;
+const CHIPS_H = 22;
+const MIX_H = 8;
+const TRACK_H = 8;
+const PCT_GAP = 8;
+const PCT_W = 46;
+const PCT_SIZE = 12.5;
+const STRIPE = 8;
+const CHIP_GAP = 6;
+const CHIP_PAD = 9;
+const CHIP_TEXT = 11.5;
+const RING_R$1 = 5.5;
+const RING_W = 2.2;
+const RING_SLOT = 17;
+const MIX_GAP = 2;
+const stripesOf = (filled, y, uid) => `<defs><pattern id="st${uid}" width="${STRIPE}" height="${STRIPE}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${STRIPE / 2}" height="${STRIPE}" fill="#fff" opacity=".28"/></pattern></defs><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" fill="url(#st${uid})"/>`;
+const FILL$1 = { running: "f-edit", done: "m", failed: "f-danger" };
+const LABEL$1 = { running: "s", done: "m", failed: "f-danger" };
+const progressBarSvg = (W, a, opts) => {
+  const y = (BAR_H$1 - TRACK_H) / 2;
+  const barW = Math.max(TRACK_H, W - PCT_W - PCT_GAP);
+  const filled = Math.max(TRACK_H, Math.round(barW * opts.progress.value));
+  const uid = a.id.replace(/\W/g, "");
+  const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`;
+  const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`;
+  const bar = `<rect data-m-fill="" class="${FILL$1[a.status] ?? "f-edit"}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
+  const isRunning = a.status === "running";
+  const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : "";
+  const label = `<text class="${LABEL$1[a.status] ?? "s"}" x="${barW + PCT_GAP}" y="${BAR_H$1 / 2 + PCT_SIZE * 0.34}" font-family="${MONO$1}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`;
+  return paneSvg(W, BAR_H$1, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`);
+};
+const ringOf = (x, ring) => {
+  const c = 2 * Math.PI * RING_R$1;
+  const dash = Math.max(0.6, Math.min(1, ring.ratio) * c);
+  const cx = x + CHIP_PAD + RING_R$1 - 1;
+  const cy = CHIPS_H / 2;
+  return `<circle cx="${cx}" cy="${cy}" r="${RING_R$1}" fill="none" class="rk" stroke-width="${RING_W}"/>` + `<circle cx="${cx}" cy="${cy}" r="${RING_R$1}" fill="none" class="i-s" stroke-width="${RING_W}" stroke-linecap="round" stroke-dasharray="${dash.toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 ${cx} ${cy})"/>`;
+};
+const chipWidth = (chip) => Math.ceil(textWidth(chip.text, CHIP_TEXT)) + CHIP_PAD * 2 + (chip.ring ? RING_SLOT : 0);
+const chipsSvg = (W, chips) => {
+  let x = 0;
+  let y = 0;
+  const parts = [];
+  for (const chip of chips) {
+    const w = Math.min(W, chipWidth(chip));
+    if (x > 0 && x + w > W) {
+      x = 0;
+      y += CHIPS_H + CHIP_GAP;
+    }
+    const tx = x + CHIP_PAD + (chip.ring ? RING_SLOT : 0);
+    parts.push(`<rect class="chip" x="${x}" y="${y}" width="${w}" height="${CHIPS_H}" rx="${CHIPS_H / 2}"/>`);
+    if (chip.ring)
+      parts.push(`<g transform="translate(0,${y})">${ringOf(x, chip.ring)}</g>`);
+    parts.push(`<text class="s" x="${tx}" y="${y + CHIPS_H / 2 + 4}" font-family="${FONT$2}" font-size="${CHIP_TEXT}" font-weight="500" font-variant-numeric="tabular-nums">${xml(chip.text)}</text>`);
+    x += w + CHIP_GAP;
+  }
+  const height = y + CHIPS_H;
+  return { source: paneSvg(W, height, parts.join("")), height };
+};
+const mixSvg = (W, parts) => {
+  const total = parts.reduce((sum, p) => sum + p.count, 0);
+  if (!total)
+    return paneSvg(W, MIX_H, `<rect class="k" width="${W}" height="${MIX_H}" rx="${MIX_H / 2}"/>`);
+  const room = W - MIX_GAP * (parts.length - 1);
+  let x = 0;
+  const segs = parts.map((p) => {
+    const w = Math.max(MIX_H, room * p.count / total);
+    const seg = `<rect class="m" x="${x.toFixed(1)}" width="${w.toFixed(1)}" height="${MIX_H}" rx="${MIX_H / 2}"/>`;
+    x += w + MIX_GAP;
+    return seg;
+  });
+  return paneSvg(W, MIX_H, segs.join(""));
+};
+
+const SECOND$1 = 1000;
+const PATH = /^[~.]?\//;
+const agoOf = (ms) => ms < SECOND$1 ? t().now : t().ago(roughSpan(ms));
+const stateOf$1 = (a, last) => {
+  if (a.status !== "running")
+    return a.status;
+  if (!last)
+    return "starting";
+  return last.endAt === undefined ? "call" : "thinking";
+};
+const verbOf = (a, state, kind) => {
+  const s = t();
+  const last = a.history?.at(-1);
+  if (state === "call")
+    return last?.why ?? last?.plain ?? s.doing[kind];
+  if (state === "thinking")
+    return s.thinking;
+  if (state === "starting")
+    return s.starting;
+  if (state === "done")
+    return s.completed;
+  return a.endReason === "aborted" ? s.aborted : s.failedNow;
+};
+function nowOf(a, at) {
+  const last = a.history?.at(-1);
+  const state = stateOf$1(a, last);
+  const kind = last ? kindOf$1(last.tool) : "other";
+  const isLatest = last !== undefined && last.tool === a.lastTool;
+  const target = (isLatest ? a.lastDetail : undefined) ?? last?.target ?? "";
+  const verb = verbOf(a, state, kind);
+  if (!last)
+    return { state, kind, verb, tool: "", target: "", isPath: false, span: "" };
+  const span = state === "call" ? roughSpan(at - last.at) : agoOf(at - last.at);
+  const said = state === "call" ? undefined : last.why ?? last.plain;
+  if (said)
+    return { state, kind, verb, tool: said, target: "", isPath: false, span };
+  return { state, kind, verb, tool: last.tool, target, isPath: PATH.test(target), span };
+}
+
+const RECENT_SHOWN = 8;
+const FILES_SHOWN$3 = 6;
+const KIND_ORDER = ["read", "edit", "run", "agent", "other"];
+const NOW_KEY = { call: "claude", thinking: "claude", starting: "claude", done: "subtle", failed: "error" };
+const capital = (s) => upper$1(s.charAt(0)) + s.slice(1);
+function nowText(ui, now) {
+  const { Box, Text } = ui;
+  const key = NOW_KEY[now.state];
+  const glyph = now.state === "call" ? KIND_GLYPH[now.kind] : "●";
+  return h(Box, {
+    flexDirection: "column"
+  }, h(Text, {
+    wrap: "truncate-end"
+  }, h(Text, {
+    color: key
+  }, `${glyph} `), h(Text, {
+    bold: true,
+    color: key
+  }, capital(now.verb)), now.span ? h(Text, {
+    dimColor: true
+  }, ` · ${now.span}`) : null), now.tool ? h(Box, {
+    flexDirection: "row",
+    columnGap: 1,
+    paddingLeft: 2
+  }, h(Text, {
+    bold: true
+  }, now.tool), h(Box, {
+    flexShrink: 1
+  }, h(Text, {
+    dimColor: true,
+    wrap: now.isPath ? "truncate-start" : "truncate-end"
+  }, now.target))) : null);
+}
+function deskNow(ui, a, now, ctx) {
+  const alt = [now.verb, now.span, now.tool, now.target].filter(Boolean).join(" · ");
+  return picture(ui, { key: "now", at: `now-${a.id}`, pic: { source: nowSvg(ctx.inner, now), alt, width: ctx.inner, height: NOW_H } });
+}
+function nowTree(ui, a, ctx) {
+  const { Box, Text } = ui;
+  const s = t();
+  const now = nowOf(a, ctx.at);
+  const steps = stepsOf$1(a);
+  const heading = h(Text, {
+    bold: true
+  }, a.status === "running" ? s.current : s.lastStep);
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: ctx.isDesktop ? 1 : 0
+  }, ctx.isDesktop && now.span ? h(Box, {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    columnGap: 1
+  }, heading, h(Text, {
+    dimColor: true
+  }, now.span)) : heading, ctx.isDesktop ? deskNow(ui, a, now, ctx) : nowText(ui, now), steps ? h(Text, {
+    dimColor: true,
+    wrap: "truncate-end"
+  }, `${s.tasks} ${steps}`) : null);
+}
+const outcomeOf = (e, isLive) => {
+  if (e.endAt !== undefined)
+    return e.isError ? { glyph: "✗", key: "error" } : { glyph: "✓", key: "subtle" };
+  return { glyph: isLive ? "…" : "—", key: "subtle" };
+};
+function eventTree(ui, e, ctx) {
+  const { Box, Text } = ui;
+  const kind = kindOf$1(e.tool);
+  const outcome = outcomeOf(e, ctx.isLive);
+  const said = e.why ?? e.plain;
+  const fine = e.why && e.plain ? ` · ${e.plain}` : `${said ? ` · ${e.tool}` : ""}${e.target ? ` ${e.target}` : ""}`;
+  const pulse = { source: pulseSvg(), alt: t().isRunning, width: PULSE, height: PULSE };
+  const end = e.endAt === undefined && ctx.isLive && ctx.isDesktop ? picture(ui, { key: "live", at: `live-${ctx.id}-${ctx.index}`, pic: pulse }) : h(Text, {
+    color: outcome.key
+  }, outcome.glyph);
+  return h(Box, {
+    key: `ev-${ctx.index}`,
+    flexDirection: "row",
+    alignItems: "center",
+    columnGap: 1
+  }, h(Text, {
+    dimColor: true
+  }, KIND_GLYPH[kind]), h(Box, {
+    flexGrow: 1,
+    flexShrink: 1
+  }, h(Text, {
+    wrap: "truncate-end"
+  }, said ? h(Text, null, said) : h(Text, {
+    bold: true
+  }, e.tool), fine ? h(Text, {
+    dimColor: true
+  }, fine) : null)), h(Box, {
+    flexShrink: 0,
+    flexDirection: "row",
+    columnGap: 1,
+    alignItems: "center"
+  }, h(Text, {
+    dimColor: true
+  }, agoOf(ctx.at - e.at)), end));
+}
+const mixOf = (history) => KIND_ORDER.map((kind) => ({ kind, count: history.filter((e) => kindOf$1(e.tool) === kind).length })).filter((p) => p.count > 0);
+function mixTree(ui, parts, ctx) {
+  const { Box, Text } = ui;
+  if (!parts.length)
+    return null;
+  const s = t();
+  const words = parts.map((p) => `${s.kinds[p.kind]} ${p.count}`).join(" · ");
+  const legend = parts.map((p, i) => h(Text, {
+    key: `k-${p.kind}`
+  }, h(Text, {
+    dimColor: true
+  }, `${KIND_GLYPH[p.kind]} `), h(Text, {
+    dimColor: true
+  }, `${s.kinds[p.kind]} ${p.count}${i < parts.length - 1 ? "   " : ""}`)));
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: ctx.isDesktop ? 1 : 0
+  }, ctx.isDesktop && picture(ui, { key: "mix", at: `mix-${ctx.id}`, pic: { source: mixSvg(ctx.inner, parts), alt: words, width: ctx.inner, height: MIX_H } }), h(Text, {
+    wrap: "truncate-end"
+  }, legend));
+}
+function historyTree(ui, a, ctx) {
+  const { Box, Text } = ui;
+  const s = t();
+  const list = a.history ?? [];
+  const shown = list.slice(-RECENT_SHOWN);
+  const hidden = list.length - shown.length;
+  const isLive = a.status === "running";
+  const isLog = ctx.logOpen === a.id;
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, h(Text, {
+    bold: true
+  }, `${isLog ? s.log : s.history} · ${s.tools(list.length)}`), mixTree(ui, mixOf(list), { ...ctx, id: a.id }), isLog ? logTree(ui, a) : h(Box, {
+    flexDirection: "column"
+  }, hidden > 0 && h(Text, {
+    dimColor: true
+  }, s.earlier(hidden)), shown.map((e, i) => eventTree(ui, e, { ...ctx, id: a.id, isLive, index: hidden + i }))), logButton(ui, a, ctx));
+}
+const fileWords = (f) => {
+  const s = t();
+  return [f.edits ? `${s.kinds.edit} ${f.edits}` : "", f.reads ? `${s.kinds.read} ${f.reads}` : ""].filter(Boolean).join(" · ");
+};
+function fileText(ui, f) {
+  const { Text } = ui;
+  const kind = f.edits ? "edit" : "read";
+  const counts = [f.edits ? `${KIND_GLYPH.edit}${f.edits}` : "", f.reads ? `${KIND_GLYPH.read}${f.reads}` : ""].filter(Boolean).join(" ");
+  return h(Text, {
+    key: `file-${f.path}`,
+    wrap: "truncate-middle"
+  }, h(Text, {
+    dimColor: true
+  }, `${KIND_GLYPH[kind]} `), h(Text, null, shortPath(f.path)), h(Text, {
+    dimColor: true
+  }, `  ${counts}`));
+}
+function filesTree(ui, a, ctx) {
+  const { Box, Text } = ui;
+  const all = filesShown(a.files ?? []);
+  if (!all.length)
+    return null;
+  const s = t();
+  const shown = all.slice(0, FILES_SHOWN$3);
+  const more = all.length - shown.length;
+  const drawn = ctx.isDesktop ? filesSvg(ctx.inner, shown) : null;
+  const alt = shown.map((f) => `${f.path} (${fileWords(f)})`).join(", ");
+  const links = filesMarkdown(shown.map((f) => f.path));
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: ctx.isDesktop ? 1 : 0
+  }, h(Text, {
+    bold: true
+  }, `${s.files} · ${all.length}`), drawn ? picture(ui, { key: "files", at: `files-${a.id}`, pic: { source: drawn.source, alt, width: ctx.inner, height: drawn.height } }) : shown.map((f) => fileText(ui, f)), ui.Markdown && links ? h(ui.Markdown, {
+    key: `file-links-${a.id}`,
+    dimColor: true,
+    text: links
+  }) : null, more > 0 && h(Text, {
+    dimColor: true
+  }, s.moreFiles(more)));
+}
+
+const PERCENT$1 = 100;
+const limitShareOf = (a, limit) => shareOf(a.costUsd, limit);
+const usageChipsOf = (a, limit) => {
+  const s = t();
+  const ctx = ctxOf(a);
+  const cost = costText(a);
+  const share = cost === "" ? null : limitShareOf(a, limit);
+  const chips = [
+    { text: `${s.context} ${s.pct(ctx)}`, ring: { ratio: ctx / PERCENT$1 } },
+    { text: `${fmtTokens(a.tokens)} ${s.tokensWord}` },
+    ...cost === "" ? [] : [{ text: cost }]
+  ];
+  if (share !== null)
+    chips.push({ text: `${s.limit} ≈${s.pct(shareNumber(share))}`, ring: { ratio: share / PERCENT$1 } });
+  return chips;
+};
+const chipsOf = (a, facts) => [{ text: `${t().time} ${fmtTime(elapsed(a, facts.at))}` }, ...usageChipsOf(a, facts.limit)];
+const metricsLine = (a, facts) => chipsOf(a, facts).map((chip) => chip.text).join(" · ");
+const progressLabel = (p) => `${p.isEstimate ? "~" : ""}${t().pct(Math.round(p.value * PERCENT$1))}`;
+
+const SIDE_BY_SIDE_PX = 480;
+function metricsTree(ui, a, ctx) {
+  const { Text } = ui;
+  const facts = { limit: ctx.limit, at: ctx.at };
+  const line = metricsLine(a, facts);
+  if (!ctx.isDesktop)
+    return h(Text, {
+      dimColor: true,
+      wrap: "truncate-end"
+    }, line);
+  const width = ctx.inner;
+  const chips = chipsSvg(width, a.status === "running" ? usageChipsOf(a, ctx.limit) : chipsOf(a, facts));
+  return picture(ui, { key: "chips", at: `chips-${a.id}`, pic: { source: chips.source, alt: line, width, height: chips.height } });
+}
+function actionsTree(ui, a, ctx) {
+  const { Box, Button, Input } = ui;
+  if (a.isMain === true)
+    return null;
+  const s = t();
+  const name = lookOf$1(a).name;
+  const isRunning = a.status === "running";
+  const field = Input && h(Input, {
+    key: `send-${a.id}`,
+    label: s.message,
+    placeholder: isRunning ? s.messageTo(name) : s.followUp(name),
+    value: "",
+    submitLabel: s.send,
+    onSubmit: (text) => ctx.onSend(a.id, text)
+  });
+  if (!isRunning)
+    return field ? h(Box, {
+      key: `actions-${a.id}`,
+      flexDirection: "column"
+    }, field) : null;
+  const stop = h(Button, {
+    key: `stop-${a.id}`,
+    variant: "secondary",
+    label: s.stopWho(name),
+    onPress: () => ctx.onStop(a.id)
+  });
+  if (!ctx.isDesktop || ctx.inner < SIDE_BY_SIDE_PX) {
+    return h(Box, {
+      key: `actions-${a.id}`,
+      flexDirection: "column",
+      rowGap: ctx.isDesktop ? 1 : 0
+    }, field, h(Box, {
+      flexDirection: "row",
+      justifyContent: ctx.isDesktop ? "flex-end" : "flex-start"
+    }, stop));
+  }
+  return h(Box, {
+    key: `actions-${a.id}`,
+    flexDirection: "row",
+    alignItems: "center",
+    columnGap: 1
+  }, field && h(Box, {
+    flexDirection: "column",
+    flexGrow: 1,
+    flexShrink: 1
+  }, field), stop);
+}
+function detailTree(ui, a, ctx) {
+  const { Box } = ui;
+  const hasWork = (a.history?.length ?? 0) > 0;
+  return h(Box, {
+    key: `detail-${a.id}`,
+    flexDirection: "column",
+    rowGap: 1,
+    marginTop: 1
+  }, conversationTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), metricsTree(ui, a, ctx));
+}
+
+const CURVE_CAP = 0.9;
+const CURVE_CALLS = 8;
+const EDIT_FLOOR = 0.45;
+const TEST_FLOOR = 0.7;
+const START = 0.04;
+const TEST_WORDS = /\b(test|vitest|jest|pytest|lint|tsc|validate|check)\b/i;
+const floorOf = (a) => {
+  const history = a.history ?? [];
+  const hasTest = history.some((e) => kindOf$1(e.tool) === "run" && TEST_WORDS.test(e.target));
+  if (hasTest)
+    return TEST_FLOOR;
+  return history.some((e) => kindOf$1(e.tool) === "edit") ? EDIT_FLOOR : 0;
+};
+const estimateOf = (a) => {
+  const calls = Math.max(a.toolCount || 0, a.history?.length ?? 0);
+  const curve = CURVE_CAP * (1 - Math.exp(-calls / CURVE_CALLS));
+  return Math.min(CURVE_CAP, Math.max(START, floorOf(a), curve));
+};
+const agentProgress = (a) => {
+  if (a.status !== "running")
+    return { value: 1, isEstimate: false };
+  const measured = partialOf(a);
+  return measured === null ? { value: estimateOf(a), isEstimate: true } : { value: measured, isEstimate: false };
+};
+
+const FRAME_PX = 34;
+const FRAME_COLS = 4;
+const GAP_PX = 8;
+const TERM_BAR_MAX = 24;
+const PCT_COLS = 6;
+const COST_COLS = 8;
+const ANSWER_LINE = 120;
+const BODY_PX = 14;
+const GLYPH = { running: "●", done: "✓", failed: "✗" };
+const STATUS_KEY = { running: "claude", done: "subtle", failed: "error" };
+const whoLine = (a) => {
+  const tier = tierWordOf(a);
+  return [tier, ...modelLine(a).split(" · ").filter((part) => part !== tier)].join(" · ");
+};
+const statusWord = (a) => {
+  const s = t();
+  if (a.status === "running")
+    return s.isRunning;
+  if (a.status === "done")
+    return s.isFinished;
+  return a.endReason === "aborted" ? s.aborted : s.failed;
+};
+const pillOf = (a, stuck) => {
+  if (stuck)
+    return { text: stuck.reason, role: "warn" };
+  if (a.status === "running")
+    return { text: statusWord(a), role: "run" };
+  if (a.status === "done")
+    return { text: statusWord(a), role: "ok" };
+  return { text: statusWord(a), role: a.endReason === "aborted" ? "warn" : "danger" };
+};
+const headOf = (a, stuck) => ({
+  name: lookOf$1(a).name,
+  title: a.description || a.type,
+  pill: pillOf(a, stuck)
+});
+const nowLine = (a, isOpen) => {
+  const answer = a.status === "done" && !isOpen ? a.answer?.split(`
+`).find((line) => line.trim()) : undefined;
+  if (answer)
+    return clip$2(answer.trim(), ANSWER_LINE);
+  if (a.status === "failed" && a.lastTool)
+    return `› ${a.lastPlain ?? `${a.lastTool}${a.lastTarget ? " " + a.lastTarget : ""}`}`;
+  return activityOf(a);
+};
+const barLabel = (a, progress) => {
+  if (a.status === "failed")
+    return "✗";
+  return progress.isEstimate && !a.toolCount ? "" : progressLabel(progress);
+};
+const termBar = (p, width) => {
+  const filled = Math.round(width * p.value);
+  return (p.isEstimate ? "╍" : "━").repeat(filled) + "─".repeat(Math.max(0, width - filled));
+};
+function termBarTree(ui, a, ctx) {
+  const { Box, Text } = ui;
+  const progress = agentProgress(a);
+  const width = Math.max(6, Math.min(TERM_BAR_MAX, ctx.inner - PCT_COLS - COST_COLS));
+  const key = STATUS_KEY[a.status] ?? "claude";
+  return h(Box, {
+    flexDirection: "row",
+    columnGap: 1
+  }, h(Text, {
+    color: key,
+    dimColor: progress.isEstimate
+  }, termBar(progress, width)), h(Text, {
+    bold: true,
+    color: key
+  }, barLabel(a, progress)), h(Text, null, costText(a)));
+}
+function termStatus(ui, a, stuck) {
+  const { Text } = ui;
+  if (stuck)
+    return h(Text, {
+      color: "warning"
+    }, `! ${stuck.reason}`);
+  return h(Text, {
+    color: STATUS_KEY[a.status] ?? "subtle"
+  }, `${GLYPH[a.status] ?? "●"} ${statusWord(a)}`);
+}
+function termSummary(ui, a, ctx) {
+  const { Box, Text, Button } = ui;
+  const isOpen = ctx.selected === a.id;
+  return h(Box, {
+    flexDirection: "column",
+    flexGrow: 1,
+    flexShrink: 1
+  }, h(Box, {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    columnGap: 1
+  }, h(Button, {
+    key: `open-${a.id}`,
+    plain: true,
+    label: `${isOpen ? "▾" : "▸"} ${a.description || a.type}`,
+    hover: { color: "claude" },
+    onPress: () => ctx.onToggle(a.id)
+  }), termStatus(ui, a, stuckOf(a, ctx.at))), termBarTree(ui, a, ctx), h(Box, {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    columnGap: 1
+  }, h(Text, {
+    wrap: "truncate-end"
+  }, h(Text, {
+    bold: true
+  }, lookOf$1(a).name), h(Text, {
+    dimColor: true
+  }, ` · ${[whoLine(a), t().tools(a.toolCount || 0)].filter(Boolean).join(" · ")}`)), h(Text, {
+    dimColor: true
+  }, clockOf(a, ctx.at))), a.status !== "done" && h(Text, {
+    wrap: "truncate-end",
+    dimColor: a.status !== "running"
+  }, activityOf(a)));
+}
+function termCard(ui, a, ctx) {
+  const { Box } = ui;
+  const isOpen = ctx.selected === a.id;
+  const frame = isOpen ? { borderStyle: "round", paddingX: 1 } : {};
+  return h(Box, {
+    key: a.id,
+    flexDirection: "column",
+    ...frame
+  }, termSummary(ui, a, isOpen ? { ...ctx, inner: ctx.inner - FRAME_COLS } : ctx), isOpen && detailTree(ui, a, { ...ctx, inner: ctx.inner - FRAME_COLS }));
+}
+function deskHead(ui, a, ctx) {
+  const { Box } = ui;
+  const look = lookOf$1(a);
+  const stuck = stuckOf(a, ctx.at);
+  const isOpen = ctx.selected === a.id;
+  const head = headOf(a, stuck);
+  const headW = ctx.inner - CARD_CRAB.w;
+  const crab = cardCrabSvg({ costume: costumeOf(a), look, isWalking: a.status === "running" && !stuck });
+  const alt = `${head.title}: ${head.name} · ${whoLine(a)} · ${head.pill.text} (${isOpen ? t().hide : t().details})`;
+  return h(Box, {
+    flexDirection: "row",
+    alignItems: "center"
+  }, picture(ui, { key: "crab", at: `crab-${a.id}`, pic: { source: crab, alt: `${look.name}, ${tierWordOf(a)}`, width: CARD_CRAB.w, height: CARD_CRAB.h } }), picture(ui, { key: "head", at: `head-${a.id}`, pic: { source: cardHeadSvg(headW, head, GAP_PX), alt, width: headW, height: HEAD_H$1 } }));
+}
+function deskFoot(ui, a, ctx) {
+  const { Box, Text } = ui;
+  const isOpen = ctx.selected === a.id;
+  const meta = [t().tools(a.toolCount || 0), clockOf(a, ctx.at), costText(a), whoLine(a)].filter(Boolean).join(" · ");
+  return h(Box, {
+    key: "foot",
+    flexDirection: "column"
+  }, h(Text, {
+    wrap: "truncate-end",
+    dimColor: a.status !== "running"
+  }, fitText(nowLine(a, isOpen), BODY_PX, ctx.inner)), h(Text, {
+    wrap: "truncate-end",
+    dimColor: true
+  }, fitText(meta, BODY_PX, ctx.inner)));
+}
+function deskBar(ui, a, ctx) {
+  const progress = agentProgress(a);
+  const label = barLabel(a, progress);
+  const pic = { source: progressBarSvg(ctx.inner, a, { progress, label }), alt: label || t().starting, width: ctx.inner, height: BAR_H$1 };
+  return picture(ui, { key: "bar", at: `bar-${a.id}`, pic, opts: { shows: { status: a.status, isEstimate: progress.isEstimate } } });
+}
+function deskCard(ui, a, ctx) {
+  const { Box } = ui;
+  const isOpen = ctx.selected === a.id;
+  return h(Box, {
+    key: a.id,
+    flexDirection: "column"
+  }, h(Box, {
+    key: "row",
+    flexDirection: "column",
+    alignSelf: "flex-start"
+  }, h(Box, {
+    key: "head-row",
+    alignSelf: "flex-start"
+  }, deskHead(ui, a, ctx), PressCover(ui, { key: `open-${a.id}`, width: ctx.inner, height: HEAD_H$1, onPress: () => ctx.onToggle(a.id) })), deskBar(ui, a, ctx), deskFoot(ui, a, ctx)), isOpen && detailTree(ui, a, ctx));
+}
+const agentRow = (ui, a, ctx) => ctx.isDesktop ? deskCard(ui, a, ctx) : termCard(ui, a, ctx);
+function plannedRow(ui, p, ctx) {
+  const { Box, Text } = ui;
+  const tier = plannedTierOf(p.tier);
+  const crab = { source: crabSvg({ costume: tier, isDim: true }), alt: tier, width: CRAB$1.w, height: CRAB$1.h };
+  return h(Box, {
+    key: `plan-${p.n}`,
+    flexDirection: "row",
+    columnGap: 1,
+    alignItems: "center"
+  }, ctx.isDesktop ? picture(ui, { key: "crab", at: `plan-crab-${p.n}`, pic: crab }) : h(Text, {
+    dimColor: true
+  }, "○"), h(Box, {
+    flexDirection: "column",
+    flexGrow: 1
+  }, h(Text, {
+    dimColor: true,
+    wrap: "truncate-end"
+  }, `${p.n}. ${p.title}`), h(Text, {
+    wrap: "truncate-end"
+  }, h(Text, {
+    dimColor: true
+  }, [tier, plannedLine(p)].filter(Boolean).join(" · ")))));
+}
+
+const MIN_W = 240;
+const MAX_W = 900;
+const PX_PER_COL = 9;
+const ROWS_MAX = 12;
+const isDoneOpenIn = (shown, d) => shown.isDoneOpen ?? d.running.length === 0;
+function listTree(ui, view) {
+  const { Box, Text } = ui;
+  const { d, layout, on } = view;
+  const s = t();
+  const ctx = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.isDesktop ? layout.W : layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen, logOpen: d.panel.logOpen };
+  const isDoneOpen = isDoneOpenIn(d.panel, d);
+  const running = d.running.slice(0, ROWS_MAX);
+  const finished = isDoneOpen ? d.finished.slice(0, ROWS_MAX - running.length) : [];
+  const planned = d.planned.slice(0, ROWS_MAX - running.length - finished.length);
+  const more = d.running.length + (isDoneOpen ? d.finished.length : 0) + d.planned.length - running.length - finished.length - planned.length;
+  return h(Box, {
+    key: "list",
+    flexDirection: "column",
+    rowGap: 1
+  }, d.running.length > 0 && sectionHead(ui, layout, { id: "running", label: `${s.running} · ${d.running.length}` }), running.map((a) => agentRow(ui, a, ctx)), d.finished.length > 0 && sectionHead(ui, layout, { id: "finished", label: `${s.finished} · ${d.finished.length}`, toggle: { key: "done", isOpen: isDoneOpen, onPress: on.onDone } }), finished.map((a) => agentRow(ui, a, ctx)), d.planned.length > 0 && sectionHead(ui, layout, { id: "planned", label: `${s.planned} · ${d.planned.length}` }), planned.map((p) => plannedRow(ui, p, ctx)), more > 0 && h(Text, {
+    key: "more",
+    dimColor: true
+  }, s.moreAgents(more)));
+}
+function paneTree(ui, view) {
+  const { Box } = ui;
+  const { d, layout, on } = view;
+  const isDrafting = d.panel.draft?.isOpen === true;
+  const form = isDrafting && draftTree(ui, { draft: d.panel.draft, types: d.types, layout }, on);
+  if (d.list.length === 0 && d.planned.length === 0) {
+    return h(Box, {
+      flexDirection: "column",
+      rowGap: 2
+    }, isDrafting ? form : emptyTree(ui, view));
+  }
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, headTree(ui, d, layout), toolbarTree(ui, d, on), attentionTree(ui, view), form, d.panel.isCompact ? compactTree(ui, d, layout) : timelineTree(ui, view), !d.panel.isCompact && listTree(ui, view));
+}
+function agentsTree(ui, view) {
+  const { Box, Text } = ui;
+  const { d, layout, on } = view;
+  const listed = listedChats(d.chats);
+  const quiet = quietTree(ui, { chats: listed.chats, layout, isOpen: d.panel.isChatsOpen === true, onToggle: on.onChats });
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, waitingTree(ui, d.chats, layout), paneTree(ui, view), crewTree(ui, listed.chats, layout), quiet, listed.more > 0 && h(Text, {
+    key: "chats-more",
+    dimColor: true
+  }, t().chats.more(listed.more)));
+}
+const layoutOf = (isDesktop, columns) => {
+  if (!isDesktop)
+    return { isDesktop, W: 0, inner: columns, cols: columns };
+  const W = Math.max(MIN_W, Math.min(MAX_W, columns * PX_PER_COL));
+  return { isDesktop, W, inner: W - FRAME_PX, cols: columns - FRAME_COLS };
+};
+
+const AGENTS = { plugin: "savvy-progress", key: "agents" };
+const FLOW = { plugin: "savvy-progress", key: "flow" };
+const JOB = { plugin: "savvy-progress", key: "job" };
+const TASKS$1 = { plugin: "savvy-progress", key: "tasks" };
+const PANEL = { plugin: "savvy-progress", key: "panel" };
+const LIMIT = { plugin: "savvy-progress", key: "limit" };
+const TYPES$1 = { plugin: "savvy-progress", key: "types" };
+const CRAB = { plugin: "savvy-progress", key: "crab" };
+const CHATS = { plugin: "savvy-progress", key: "chats" };
+async function speakHubLang($) {
+  setLang(langOf(await $.env.get("MODZ_LANG").catch(() => {
+    return;
+  })) ?? "en");
+}
+async function agentsPage($, ui, site, act) {
+  await speakHubLang($);
+  const kept = {
+    list: (await $.state.get(AGENTS)).value ?? [],
+    flow: (await $.state.get(FLOW)).value ?? null,
+    job: (await $.state.get(JOB)).value ?? null,
+    tasks: (await $.state.get(TASKS$1)).value ?? [],
+    now: await $.clock.now(),
+    panel: (await $.state.get(PANEL)).value ?? { isCompact: false },
+    limit: (await $.state.get(LIMIT)).value ?? null,
+    types: (await $.state.get(TYPES$1)).value ?? BUILTIN_TYPES,
+    crab: (await $.state.get(CRAB)).value ?? restingCrab(0),
+    chats: (await $.state.get(CHATS)).value ?? []
+  };
+  const isDesktop = site.surface === "desktop" && "Svg" in ui;
+  return agentsTree(ui, { d: paneDataOf(kept), layout: layoutOf(isDesktop, site.columns), on: pageHandlers(act) });
 }
 
 let current = "en";
@@ -4150,11 +7342,13 @@ async function planPage($, ui, site) {
   return planPane(ui, view, site);
 }
 
-const HUB_DRAWN = ["plan"];
+const HUB_DRAWN = ["plan", "agents"];
 async function pageOf($, o) {
   switch (o.page) {
     case "plan":
       return planPage($, o.ui, o.site);
+    case "agents":
+      return agentsPage($, o.ui, o.site, o.act);
     default:
       return null;
   }
@@ -5026,7 +8220,7 @@ const CAP_EM = 0.7;
 const DECIMALS = 100;
 const num = (value) => String(Math.round(value * DECIMALS) / DECIMALS);
 const escapeXml = (text) => text.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char] ?? char);
-const sans = (size, weight) => (text) => textWidth(text, size, weight);
+const sans = (size, weight) => (text) => textWidth$1(text, size, weight);
 const baseline = (top, height, size) => Math.round(top + height / 2 + size * CAP_EM / 2);
 const SCHEME = ":root{color-scheme:light dark}";
 function toPic(part) {
@@ -5062,11 +8256,11 @@ const CELLS = { cell: 1.8, pitch: 2.2 };
 const glyphAt = (kind, state, x, y) => pixelGlyph(KIND_ICON[kind], { x, y, box: ICON, ...CELLS, className: `f-${PAINT[state]}` });
 function kindPic(kind, state) {
   const body = glyphAt(kind, state, 0, 0);
-  return toPic({ body, width: ICON, height: ICON, alt: kindWord(kind, lang()) });
+  return toPic({ body, width: ICON, height: ICON, alt: kindWord(kind, lang$1()) });
 }
 function stopAt(stop, x) {
   const icon = glyphAt(stop.kind, stop.state, x, (HEIGHT - ICON) / 2);
-  const word = kindWord(stop.kind, lang());
+  const word = kindWord(stop.kind, lang$1());
   const wordX = x + ICON + LABEL_GAP;
   const label = textEl({ x: wordX, y: baseline(0, HEIGHT, LABEL.size), text: word, paint: "mid", ...LABEL });
   const end = wordX + sans(LABEL.size, LABEL.weight)(word);
@@ -5080,7 +8274,7 @@ const joinAt = (x) => ({
   body: rectEl({ x: x + GAP, y: HEIGHT / 2 - 0.5, width: JOIN, height: 1, paint: "line-strong" }),
   x: x + GAP + JOIN + GAP
 });
-const altOf = (flow) => flow.map((stop) => stop.count > 1 ? `${kindWord(stop.kind, lang())} ×${stop.count}` : kindWord(stop.kind, lang())).join(" → ");
+const altOf = (flow) => flow.map((stop) => stop.count > 1 ? `${kindWord(stop.kind, lang$1())} ×${stop.count}` : kindWord(stop.kind, lang$1())).join(" → ");
 function flowPic(flow) {
   if (flow.length < 2)
     return null;
@@ -5196,14 +8390,14 @@ function endOf(state) {
 }
 function stepOfCall(call) {
   const file = fileOf(call.input);
-  return { kind: kindOf(call.tool, call.input), text: plainCall(call.tool, call.input, lang()), note: "", count: 1, state: stateOf(call), files: file === undefined ? [] : [file] };
+  return { kind: kindOf(call.tool, call.input), text: plainCall(call.tool, call.input, lang$1()), note: "", count: 1, state: stateOf(call), files: file === undefined ? [] : [file] };
 }
 function iconOf(draw, step) {
   const { Svg, Text } = draw.ui;
   if (draw.isText)
     return h(Text, {
       dimColor: true
-    }, GLYPH[KIND_ICON[step.kind]]);
+    }, GLYPH$1[KIND_ICON[step.kind]]);
   const pic = kindPic(step.kind, step.state);
   return h(Svg, {
     source: pic.source,
@@ -5294,7 +8488,7 @@ function callTrail(draw, call) {
   const why = purposeOf(call.input);
   const files = step.files.length > 0 ? step.files : commandFiles(call.input);
   const told = stepRow(draw, { ...step, text: why === "" ? step.text : why, note: "", files }, "plain-0", hasEnd);
-  const result = resultLine(call, lang());
+  const result = resultLine(call, lang$1());
   return [told, ...result === "" ? [] : [h(Text, {
     key: "plain-result",
     dimColor: true
@@ -5302,7 +8496,7 @@ function callTrail(draw, call) {
 }
 function groupTrail(draw, calls) {
   const { Svg, Text } = draw.ui;
-  const trail = trailOf(calls, lang());
+  const trail = trailOf(calls, lang$1());
   const flow = draw.isText ? null : flowPic(trail.flow);
   return [
     flow === null ? null : h(Svg, {
@@ -5412,7 +8606,7 @@ function viewOf(parts, frame) {
   const presence = withHosted(presenceOf(parts.market), parts.isUsageHosting);
   const rows = withUnanswered(rowsOf(parts.cards, presence, parts.layout), parts.unanswered, hubWords().noAnswer);
   const hidden = hiddenRowsOf(parts.cards, presence, parts.layout);
-  return { rows, hidden, focus: focusOf(rows), now: nowOf(rows, parts.now), meta: metaOf(parts.market, parts.hasUpdate === true), isEditing: parts.isEditing, ...frame };
+  return { rows, hidden, focus: focusOf(rows), now: nowOf$1(rows, parts.now), meta: metaOf(parts.market, parts.hasUpdate === true), isEditing: parts.isEditing, ...frame };
 }
 function plainViewOf(parts, frame) {
   const rows = rowsOf(parts.cards, withHosted(presenceOf(parts.market), parts.isUsageHosting));
@@ -5491,11 +8685,11 @@ async function partsOf($) {
 }
 function startHooks(on, options) {
   on("session.start", async ($, e, next) => {
-    setLang(await $.env.get("MODZ_LANG").catch(() => {
+    setLang$2(await $.env.get("MODZ_LANG").catch(() => {
       return;
     }));
     const started = await next(e);
-    const saved = layoutOf(await $.store.get(LAYOUT_KEY).catch(() => {
+    const saved = layoutOf$1(await $.store.get(LAYOUT_KEY).catch(() => {
       return;
     }));
     await update($, layoutAtom, () => saved);

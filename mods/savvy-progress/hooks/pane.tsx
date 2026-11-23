@@ -4,9 +4,6 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Draft, Panel } from '../types'
 import { BUILTIN_TYPES, DEFAULT_TYPE, TASK_TITLE_MAX, blankDraft, chosenOf } from './agent-types'
 import { addRun, askedAgain } from './agents'
-import { listedChats } from './chats'
-import { crewTree, quietTree, waitingTree } from './chats-tree'
-import { draftTree } from './dispatch'
 import { HomeButton } from './home'
 import type { DraftView } from './dispatch'
 import { clip } from './format'
@@ -15,10 +12,10 @@ import { lookOf } from './identity'
 import { restingCrab } from './mood'
 import { paneDataOf } from './pane-data'
 import type { PaneData } from './pane-data'
-import { FRAME_COLS, FRAME_PX, agentRow, plannedRow } from './rows'
-import type { RowContext, Ui } from './rows'
-import { attentionTree, compactTree, emptyTree, headTree, sectionHead, timelineTree, toolbarTree } from './sections'
-import type { Layout, PaneHandlers, PaneView } from './sections'
+import { agentsTree, isDoneOpenIn, layoutOf } from './pane-tree'
+import { pageActOf, runPageAct } from './page-act'
+import type { Ui } from './rows'
+import type { PaneHandlers } from './sections'
 import { pinned } from './pin'
 import { HUB_PANE, PANE } from './state'
 import { shownOf } from './stage'
@@ -44,10 +41,6 @@ const chats = atom({ plugin: 'savvy-progress', key: 'chats' } as const, [])
 
 type On = Parameters<Register>[0]
 
-const MIN_W = 240
-const MAX_W = 900
-// A desktop pane reports about 9 px a column (kit `PANE_PX_PER_CELL`).
-const PX_PER_COL = 9
 const MIN_COLS = 24
 const DEFAULT_COLS = 40
 
@@ -154,73 +147,6 @@ function handlersOf($: EngineInterface, d: PaneData): PaneHandlers {
   }
 }
 
-// The rows drawn at most: a long crew costs a line saying how many more, never a pane too heavy to draw.
-const ROWS_MAX = 12
-
-// Finished agents fold away while others run and open once all are done; the person's own press wins either way.
-const isDoneOpenIn = (shown: Panel, d: PaneData): boolean => shown.isDoneOpen ?? d.running.length === 0
-
-function listTree(ui: Ui, view: PaneView) {
-  const { Box, Text } = ui
-  const { d, layout, on } = view
-  const s = t()
-  // The desktop's rows have no frame: they take the pane's whole width.
-  const ctx: RowContext = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.isDesktop ? layout.W : layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen, logOpen: d.panel.logOpen }
-  const isDoneOpen = isDoneOpenIn(d.panel, d)
-  const running = d.running.slice(0, ROWS_MAX)
-  const finished = isDoneOpen ? d.finished.slice(0, ROWS_MAX - running.length) : []
-  const planned = d.planned.slice(0, ROWS_MAX - running.length - finished.length)
-  const more = d.running.length + (isDoneOpen ? d.finished.length : 0) + d.planned.length - running.length - finished.length - planned.length
-  return (
-    <Box key="list" flexDirection="column" rowGap={1}>
-      {d.running.length > 0 && sectionHead(ui, layout, { id: 'running', label: `${s.running} · ${d.running.length}` })}
-      {running.map(a => agentRow(ui, a, ctx))}
-      {d.finished.length > 0 && sectionHead(ui, layout, { id: 'finished', label: `${s.finished} · ${d.finished.length}`, toggle: { key: 'done', isOpen: isDoneOpen, onPress: on.onDone } })}
-      {finished.map(a => agentRow(ui, a, ctx))}
-      {d.planned.length > 0 && sectionHead(ui, layout, { id: 'planned', label: `${s.planned} · ${d.planned.length}` })}
-      {planned.map(p => plannedRow(ui, p, ctx))}
-      {more > 0 && <Text key="more" dimColor>{s.moreAgents(more)}</Text>}
-    </Box>
-  )
-}
-
-// Who else on this machine waits on the person comes first; the quiet rest folds at the foot.
-function withChats(ui: Ui, view: PaneView) {
-  const { Box, Text } = ui
-  const { d, layout, on } = view
-  const listed = listedChats(d.chats)
-  const quiet = quietTree(ui, { chats: listed.chats, layout, isOpen: d.panel.isChatsOpen === true, onToggle: on.onChats })
-  return (
-    <Box flexDirection="column" rowGap={1}>
-      {waitingTree(ui, d.chats, layout)}
-      {paneTree(ui, view)}
-      {crewTree(ui, listed.chats, layout)}
-      {quiet}
-      {listed.more > 0 && <Text key="chats-more" dimColor>{t().chats.more(listed.more)}</Text>}
-    </Box>
-  )
-}
-
-function paneTree(ui: Ui, view: PaneView) {
-  const { Box } = ui
-  const { d, layout, on } = view
-  const isDrafting = d.panel.draft?.isOpen === true
-  const form = isDrafting && draftTree(ui, { draft: d.panel.draft, types: d.types, layout }, on)
-  if (d.list.length === 0 && d.planned.length === 0) {
-    return <Box flexDirection="column" rowGap={2}>{isDrafting ? form : emptyTree(ui, view)}</Box>
-  }
-  return (
-    <Box flexDirection="column" rowGap={1}>
-      {headTree(ui, d, layout)}
-      {toolbarTree(ui, d, on)}
-      {attentionTree(ui, view)}
-      {form}
-      {d.panel.isCompact ? compactTree(ui, d, layout) : timelineTree(ui, view)}
-      {!d.panel.isCompact && listTree(ui, view)}
-    </Box>
-  )
-}
-
 // Asks the hub to come forward; the hub hears this mod's own `home` value. A failure only shows in the debug log.
 async function goHome($: EngineInterface): Promise<void> {
   try {
@@ -228,13 +154,6 @@ async function goHome($: EngineInterface): Promise<void> {
   } catch (error) {
     $.ui.log(`savvy-progress: home failed (${String(error)})`, { to: 'debug' })
   }
-}
-
-/** The pane's room: the desktop in px (a card's inside less its frame), the terminal in cells. */
-export const layoutOf = (isDesktop: boolean, columns: number): Layout => {
-  if (!isDesktop) return { isDesktop, W: 0, inner: columns, cols: columns }
-  const W = Math.max(MIN_W, Math.min(MAX_W, columns * PX_PER_COL))
-  return { isDesktop, W, inner: W - FRAME_PX, cols: columns - FRAME_COLS }
 }
 
 type Room = { isDesktop: boolean; columns: number }
@@ -245,7 +164,7 @@ async function drawnPane($: EngineInterface, ui: Ui, room: Room) {
   const { Box } = ui
   const home = (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true && HomeButton(ui, () => void goHome($))
   const d = await paneData($)
-  const body = withChats(ui, { d, layout: layoutOf(room.isDesktop, room.columns), on: handlersOf($, d) })
+  const body = agentsTree(ui, { d, layout: layoutOf(room.isDesktop, room.columns), on: handlersOf($, d) })
   return <Box flexDirection="column" rowGap={1}>{home}{body}</Box>
 }
 
@@ -266,6 +185,10 @@ async function reopenPane($: EngineInterface): Promise<void> {
   await $.state.set({ plugin: 'savvy-progress', key: 'shown' }, shownOf(HUB_PANE, await $.clock.now()))
 }
 
+async function handOn($: EngineInterface, press: { action: string; arg?: string }): Promise<void> {
+  if (!runPageAct(handlersOf($, await paneData($)), press.action, press.arg)) $.ui.log(`savvy-progress: unknown hub press ${press.action}`, { to: 'debug' })
+}
+
 export function onPane(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const ui = $.ui.resolve(e) as Ui
@@ -283,4 +206,14 @@ export function onPane(on: On): void {
     paneHeld.needsDraw = true
     return pinned(e, await plainOf($, $.ui.resolve(e) as Ui))
   })
+  // A press on the Agents page the MODZ hub draws (modz/hooks/pages/agents.tsx): it does what this pane's button does.
+  // Run once the hub's write has settled, so the writes it makes are heard as if pressed here.
+  on('state.set', { plugin: 'modz', key: 'act' }, async ($, e, next) => {
+    const done = await next(e)
+    const press = pageActOf(e.value)
+    if (press !== null) {
+      $.clock.after(0, () => void handOn($, press).catch(cause => $.ui.log(`savvy-progress: the hub's ${press.action} press failed: ${String(cause)}`, { to: 'debug' })))
+    }
+    return done
+  }).catch(($, e, next) => next(e))
 }

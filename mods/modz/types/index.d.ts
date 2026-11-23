@@ -68,7 +68,8 @@ declare module 'claude-code' {
     // names the pane of a row whose mod did not put it up when asked.
     modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean; unanswered: string | null; beat: number; drawn: readonly string[]; act: ModzAct; links: Links | null; weights: Weights | null; updates: Updates | null }
     // Each listed mod's own hub line (hooks/hub.ts BASES), which the hub listens for and keeps.
-    'savvy-progress': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    // The agents page the hub draws itself (hooks/pages/agents.tsx) reads what savvy-progress keeps.
+    'savvy-progress': { hub: HubCard; home: ModzHome; shown: ModzStage; agents: unknown; flow: unknown; job: unknown; tasks: unknown; panel: unknown; limit: unknown; types: unknown; crab: unknown; chats: unknown }
     filetree: { hub: HubCard; home: ModzHome; shown: ModzStage }
     // The plan page the hub draws itself (hooks/pages.tsx) reads what plan-steps keeps.
     'plan-steps': { hub: HubCard; home: ModzHome; shown: ModzStage; tasks: unknown; doc: unknown; tracks: unknown }

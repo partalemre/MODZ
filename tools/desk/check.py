@@ -145,7 +145,7 @@ def check_home(desk, engine, inst):
 
 
 # Rows whose page the hub draws in its own pane (mods/modz/hooks/pages.tsx): the panel stays the hub's.
-HUB_PAGES = ('open-plan',)
+HUB_PAGES = ('open-plan', 'open-agents')
 
 
 def shows_rows(desk):

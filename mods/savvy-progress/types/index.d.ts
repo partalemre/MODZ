@@ -133,6 +133,8 @@ export type Job = {
   startedAt: number
   isSealed: boolean
   isHidden: boolean
+  // What the person asked when the job began: the band is named after the request, not after one helper.
+  asked?: string
 }
 
 /** The 5h window and the session's dollars: where this session started and where it is now. */

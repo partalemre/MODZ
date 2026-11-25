@@ -85,3 +85,11 @@ test('a sealed job starts over; a busy one keeps going', () => {
   expect(sealJob(job(['a']), [run('a')])?.isSealed).toBe(false)
   expect(sealJob(job(['a']), [run('a', { status: 'done' })])).toEqual({ ...job(['a']), isSealed: true })
 })
+
+test('a job is named after the request it serves; without one, after its first helper', () => {
+  const two = [run('a', { description: 'Read the tests' }), run('b', { description: 'Read the hooks' })]
+  const asked = { agentIds: ['a', 'b'], startedAt: 0, isSealed: false, isHidden: false, asked: 'Compare the two mods' }
+  expect(deriveJob({ flow: null, agents: two, job: asked, tasks: [] })?.title).toBe('Compare the two mods')
+  expect(deriveJob({ flow: null, agents: two, job: { ...asked, asked: undefined }, tasks: [] })?.title).toBe('Read the tests +1')
+  expect(joinJob(null, 'a', 1, 'Compare the two mods').asked).toBe('Compare the two mods')
+})

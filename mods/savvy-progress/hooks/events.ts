@@ -13,7 +13,7 @@ import type { ProgressInput } from './flow'
 import { deriveJob, joinJob, sealJob } from './job'
 import { MAIN_ID, mainAwake, titleOf } from './main-run'
 import { STEP_TOOL, TOOL } from './state'
-import { currentLang } from './i18n'
+import { currentLang, t } from './i18n'
 import type { Lang } from './i18n'
 import { TASK_TOOLS, applyTaskTool, openTasks } from './tasks'
 import { isSame } from './same'
@@ -119,7 +119,12 @@ function onLaunches(on: On): void {
     const plan = e.parentAgentId ? undefined : await planOf($).catch(() => undefined)
     await update($, agents, list => addRun(list, { ...spawn, ...who, planStep: planStepOf(plan) }))
     // Only the main loop's launches make up the request's job; nested ones show in the panel.
-    if (!e.parentAgentId) await update($, job, prev => joinJob(prev, id, at))
+    if (!e.parentAgentId) {
+      // The main row's own title, unless it only has the stand-in name (a slash command, an empty prompt).
+      const main = (await read($, agents)).find(a => a.isMain === true && a.status === 'running')?.description
+      const asked = main === t().mainTask ? undefined : main
+      await update($, job, prev => joinJob(prev, id, at, asked))
+    }
     return started
   })
 

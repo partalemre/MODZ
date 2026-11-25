@@ -2042,7 +2042,9 @@ const jobAgents = (input) => {
     return [];
   return input.agents.filter((a) => job.agentIds.includes(a.id));
 };
-const agentsTitle = (list) => {
+const agentsTitle = (list, asked) => {
+  if (asked)
+    return asked;
   const first = list[0];
   const name = first ? first.description || first.type : t().agents;
   return list.length > 1 ? `${name} +${list.length - 1}` : name;
@@ -2082,13 +2084,13 @@ function reportView(f, list, input) {
     failed: 0
   };
 }
-function tasksView(tasks, list) {
+function tasksView(tasks, list, asked) {
   const count = countTasks(tasks);
   const running = list.filter((a) => a.status === "running").length;
   const isFinished = count.done === count.total && running === 0;
   return {
     source: "tasks",
-    title: agentsTitle(list),
+    title: agentsTitle(list, asked),
     label: isFinished ? t().done : `${t().tasks} ${count.done}/${count.total}`,
     ratio: ratioOf({ done: count.done, credit: NO_CREDIT, total: count.total, isFinished }),
     isEstimate: false,
@@ -2102,7 +2104,7 @@ function tasksView(tasks, list) {
     failed: 0
   };
 }
-function agentsView(list) {
+function agentsView(list, asked) {
   const s = t();
   const running = list.filter((a) => a.status === "running");
   const ended = list.length - running.length;
@@ -2112,7 +2114,7 @@ function agentsView(list) {
   const done = failed ? `${s.done} · ${s.errors(failed)}` : s.done;
   return {
     source: "agents",
-    title: agentsTitle(list),
+    title: agentsTitle(list, asked),
     label: isFinished ? done : s.agentsEnded(ended, list.length),
     ratio: ratioOf({ done: ended, credit, total: list.length, isFinished }),
     isEstimate: credit.isEstimate && !isFinished,
@@ -2132,7 +2134,8 @@ function deriveJob(input) {
     return reportView(input.flow, list, input);
   if (!list.length)
     return null;
-  return input.tasks.length ? tasksView(input.tasks, list) : agentsView(list);
+  const asked = input.job?.asked;
+  return input.tasks.length ? tasksView(input.tasks, list, asked) : agentsView(list, asked);
 }
 const percentText = (view) => {
   if (view.ratio === null)
@@ -2140,9 +2143,9 @@ const percentText = (view) => {
   const n = Math.max(1, Math.round(view.ratio * PERCENT$2));
   return `${view.isEstimate ? "~" : ""}${t().pct(n)}`;
 };
-const joinJob = (prev, id, at) => {
+const joinJob = (prev, id, at, asked) => {
   if (!prev || prev.isSealed)
-    return { agentIds: [id], startedAt: at, isSealed: false, isHidden: false };
+    return { agentIds: [id], startedAt: at, isSealed: false, isHidden: false, ...asked ? { asked } : {} };
   return { ...prev, agentIds: [...prev.agentIds.filter((other) => other !== id), id] };
 };
 const sealJob = (prev, list) => {
@@ -2175,7 +2178,7 @@ const pillSvg = ({ label, role, x, w }) => `<rect class="k" x="${x}" y="${PILL$1
 <text class="${PILL_INK$1[role]}" x="${x + w / 2}" y="${BASELINE$2 - 0.5}" text-anchor="middle" font-family="${FONT}" font-size="${PILL$1.size}" font-weight="600">${xml(label)}</text>`;
 const planOf$1 = (view, maxW) => {
   const pillW = Math.ceil(textWidth(view.label, PILL$1.size) * BOLD$7 + PILL$1.padX * 2);
-  const pctW = percentText(view) === UNKNOWN$1 ? 0 : Math.ceil(percentText(view).length * PERCENT_SIZE * MONO_EM$1);
+  const pctW = percentText(view) === UNKNOWN$1 || view.isFinished ? 0 : Math.ceil(percentText(view).length * PERCENT_SIZE * MONO_EM$1);
   const avail = maxW - TITLE_X - pillW - pctW - CRAB$2.w - GAP$3 * 4;
   const natural = Math.ceil(textWidth(view.title, TITLE_SIZE) * BOLD$7);
   if (avail - natural >= METER$2.min)
@@ -4244,8 +4247,11 @@ function onLaunches(on) {
       return;
     });
     await update($, agents$4, (list) => addRun(list, { ...spawn, ...who, planStep: planStepOf(plan) }));
-    if (!e.parentAgentId)
-      await update($, job$3, (prev) => joinJob(prev, id, at));
+    if (!e.parentAgentId) {
+      const main = (await read($, agents$4)).find((a) => a.isMain === true && a.status === "running")?.description;
+      const asked = main === t().mainTask ? undefined : main;
+      await update($, job$3, (prev) => joinJob(prev, id, at, asked));
+    }
     return started;
   });
   on("state.set", { plugin: "plan-steps", key: "tasks" }, async ($, e, next) => {

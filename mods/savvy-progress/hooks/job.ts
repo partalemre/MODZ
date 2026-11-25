@@ -71,7 +71,9 @@ export const jobAgents = (input: JobInput): AgentRun[] => {
   return input.agents.filter(a => job.agentIds.includes(a.id))
 }
 
-const agentsTitle = (list: AgentRun[]): string => {
+// The request the job serves, when it is known; else its first helper and how many more.
+const agentsTitle = (list: AgentRun[], asked?: string): string => {
+  if (asked) return asked
   const first = list[0]
   const name = first ? first.description || first.type : t().agents
   return list.length > 1 ? `${name} +${list.length - 1}` : name
@@ -110,13 +112,13 @@ function reportView(f: Flow, list: AgentRun[], input: JobInput): JobView {
   }
 }
 
-function tasksView(tasks: TrackedTask[], list: AgentRun[]): JobView {
+function tasksView(tasks: TrackedTask[], list: AgentRun[], asked?: string): JobView {
   const count = countTasks(tasks)
   const running = list.filter(a => a.status === 'running').length
   const isFinished = count.done === count.total && running === 0
   return {
     source: 'tasks',
-    title: agentsTitle(list),
+    title: agentsTitle(list, asked),
     label: isFinished ? t().done : `${t().tasks} ${count.done}/${count.total}`,
     ratio: ratioOf({ done: count.done, credit: NO_CREDIT, total: count.total, isFinished }),
     isEstimate: false,
@@ -131,7 +133,7 @@ function tasksView(tasks: TrackedTask[], list: AgentRun[]): JobView {
   }
 }
 
-function agentsView(list: AgentRun[]): JobView {
+function agentsView(list: AgentRun[], asked?: string): JobView {
   const s = t()
   const running = list.filter(a => a.status === 'running')
   const ended = list.length - running.length
@@ -141,7 +143,7 @@ function agentsView(list: AgentRun[]): JobView {
   const done = failed ? `${s.done} · ${s.errors(failed)}` : s.done
   return {
     source: 'agents',
-    title: agentsTitle(list),
+    title: agentsTitle(list, asked),
     label: isFinished ? done : s.agentsEnded(ended, list.length),
     ratio: ratioOf({ done: ended, credit, total: list.length, isFinished }),
     isEstimate: credit.isEstimate && !isFinished,
@@ -160,7 +162,8 @@ export function deriveJob(input: JobInput): JobView | null {
   const list = jobAgents(input)
   if (input.flow) return reportView(input.flow, list, input)
   if (!list.length) return null
-  return input.tasks.length ? tasksView(input.tasks, list) : agentsView(list)
+  const asked = input.job?.asked
+  return input.tasks.length ? tasksView(input.tasks, list, asked) : agentsView(list, asked)
 }
 
 /** "%50", "~%40" while it leans on self-reports, "—" while nothing is measurable. */
@@ -170,9 +173,9 @@ export const percentText = (view: JobView): string => {
   return `${view.isEstimate ? '~' : ''}${t().pct(n)}`
 }
 
-// A launch from the main loop joins the request's job, or opens a new one after a new request.
-export const joinJob = (prev: Job | null, id: string, at: number): Job => {
-  if (!prev || prev.isSealed) return { agentIds: [id], startedAt: at, isSealed: false, isHidden: false }
+// A launch from the main loop joins the request's job, or opens a new one after a new request, named after it.
+export const joinJob = (prev: Job | null, id: string, at: number, asked?: string): Job => {
+  if (!prev || prev.isSealed) return { agentIds: [id], startedAt: at, isSealed: false, isHidden: false, ...(asked ? { asked } : {}) }
   return { ...prev, agentIds: [...prev.agentIds.filter(other => other !== id), id] }
 }
 

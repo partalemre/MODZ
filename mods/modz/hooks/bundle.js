@@ -5672,9 +5672,11 @@ const en = {
   tools: (n) => plural$4(n, "step", "steps"),
   errors: (n) => `${n} failed`,
   crew: (n) => plural$4(n, "agent", "agents"),
+  crewAtWork: (n) => `${n} at work`,
+  agentsEnded: (ended, total) => `${ended}/${total} agents done`,
   stripCost: "cost",
   stripTokens: "tokens",
-  stripTime: "agent time",
+  stripTime: "working time",
   stripLast: (cost) => `last turn ${cost}`,
   stripTurns: (n) => plural$4(n, "turn", "turns"),
   stripPerTurn: (span) => `${span} per turn`,
@@ -5682,6 +5684,12 @@ const en = {
   rowDoing: { read: "reading", search: "searching", edit: "writing", run: "running a command", test: "checking", save: "saving a version", web: "on the internet", message: "sending word", agent: "leading agents", wait: "waiting", other: "thinking" },
   rowStep: (done, total) => `step ${done}/${total}`,
   rowPlan: (at, of, subject) => `plan step ${at}/${of}: ${subject}`,
+  aboutWhy: "Why it runs",
+  aboutForRequest: "for the task you gave in this chat",
+  aboutLog: "Where its record is",
+  aboutLogText: "everything it read, wrote and said stays on your computer, in the file below",
+  aboutLearns: "Does it learn",
+  aboutLearnsText: (written) => `only within this chat: write to it below and it picks up where it left off. Nothing reaches other chats or later helpers by itself; only the files it wrote last${written > 0 ? ` (this one wrote ${written})` : ""}. This record is not read back either: a lesson stays only once written into a rule or memory.`,
   rowEnded: { done: "finished", failed: "did not finish" },
   stripPlan: "plan",
   stripPlanDone: "done",
@@ -5833,9 +5841,11 @@ const ru = {
   tools: (n) => `шагов: ${n}`,
   errors: (n) => `ошибок: ${n}`,
   crew: (n) => `агентов: ${n}`,
+  crewAtWork: (n) => `работают: ${n}`,
+  agentsEnded: (ended, total) => `готово агентов: ${ended}/${total}`,
   stripCost: "стоимость",
   stripTokens: "токены",
-  stripTime: "время агентов",
+  stripTime: "время работы",
   stripLast: (cost) => `последний ход ${cost}`,
   stripTurns: (n) => `ходов: ${n}`,
   stripPerTurn: (span) => `${span} за ход`,
@@ -5843,6 +5853,12 @@ const ru = {
   rowDoing: { read: "читает", search: "ищет", edit: "пишет", run: "выполняет команду", test: "проверяет", save: "сохраняет версию", web: "в интернете", message: "передаёт сообщение", agent: "ведёт агентов", wait: "ждёт", other: "думает" },
   rowStep: (done, total) => `шаг ${done}/${total}`,
   rowPlan: (at, of, subject) => `шаг плана ${at}/${of}: ${subject}`,
+  aboutWhy: "Зачем он работает",
+  aboutForRequest: "для задачи из этого чата",
+  aboutLog: "Где его запись",
+  aboutLogText: "всё, что он прочёл, написал и сказал, хранится на вашем компьютере, в файле ниже",
+  aboutLearns: "Учится ли он",
+  aboutLearnsText: (written) => `только в этом чате: напишите ему ниже, и он продолжит с того же места. В другие чаты и к следующим помощникам само ничего не переходит; остаются только его файлы${written > 0 ? ` (этот написал ${written})` : ""}. Эта запись тоже не перечитывается: урок сохранится, только если записать его в правило или память.`,
   rowEnded: { done: "закончил", failed: "не закончил" },
   stripPlan: "план",
   stripPlanDone: "готов",
@@ -6003,9 +6019,11 @@ const tr = {
   tools: (n) => `${n} adım`,
   errors: (n) => `${n} hata`,
   crew: (n) => `${n} ajan`,
+  crewAtWork: (n) => `${n} ajan çalışıyor`,
+  agentsEnded: (ended, total) => `${ended}/${total} ajan bitti`,
   stripCost: "maliyet",
   stripTokens: "token",
-  stripTime: "ajan süresi",
+  stripTime: "çalışma süresi",
   stripLast: (cost) => `son tur ${cost}`,
   stripTurns: (n) => `${n} tur`,
   stripPerTurn: (span) => `tur başına ${span}`,
@@ -6013,6 +6031,12 @@ const tr = {
   rowDoing: { read: "okuyor", search: "arıyor", edit: "yazıyor", run: "komut çalıştırıyor", test: "kontrol ediyor", save: "sürüm kaydediyor", web: "internette", message: "haber gönderiyor", agent: "ajan yönetiyor", wait: "bekliyor", other: "düşünüyor" },
   rowStep: (done, total) => `adım ${done}/${total}`,
   rowPlan: (at, of, subject) => `planın ${at}/${of}. adımı: ${subject}`,
+  aboutWhy: "Neden çalışıyor",
+  aboutForRequest: "bu sohbette verdiğin iş için",
+  aboutLog: "Kaydı nerede",
+  aboutLogText: "okuduğu, yazdığı ve söylediği her şey bilgisayarında, aşağıdaki dosyada durur",
+  aboutLearns: "Öğreniyor mu",
+  aboutLearnsText: (written) => `yalnızca bu sohbet içinde: aşağıdan ona yeniden yazabilirsin, kaldığı yerden sürer. Başka sohbetlere ve sonraki ajanlara hiçbir şey kendiliğinden geçmez; kalıcı olan yalnızca yazdığı dosyalardır${written > 0 ? ` (bu ajan ${written} dosya yazdı)` : ""}. Bu kayıt da sonradan okunmaz: bir dersin kalması için kurala ya da hafızaya yazılması gerekir.`,
   rowEnded: { done: "işini bitirdi", failed: "işi yarıda kaldı" },
   stripPlan: "plan",
   stripPlanDone: "tamam",
@@ -6423,7 +6447,7 @@ function agentsView(list) {
   return {
     source: "agents",
     title: agentsTitle(list),
-    label: isFinished ? done : `${s.agents} ${ended}/${list.length}`,
+    label: isFinished ? done : s.agentsEnded(ended, list.length),
     ratio: ratioOf({ done: ended, credit, total: list.length, isFinished }),
     isEstimate: credit.isEstimate && !isFinished,
     launched: 1,
@@ -7632,6 +7656,35 @@ function draftTree(ui, view, on) {
   })));
 }
 
+let mainTranscript = "";
+const agentLogPath = (transcript, agentId) => transcript.endsWith(".jsonl") && agentId ? `${transcript.slice(0, -".jsonl".length)}/subagents/agent-${agentId}.jsonl` : "";
+const linkOf$1 = (path) => `[${path.split("/").at(-1) ?? path}](<file://${encodeURI(path)}>)`;
+const writtenOf = (a) => (a.files ?? []).filter((file) => file.edits > 0).length;
+function aboutTree(ui, a, ctx) {
+  const { Box, Text, Markdown } = ui;
+  if (a.isMain === true)
+    return null;
+  const s = t();
+  const step = a.planStep;
+  const why = step === undefined ? s.aboutForRequest : s.rowPlan(step.at, step.of, step.subject);
+  const path = agentLogPath(mainTranscript, a.agentId);
+  const line = (label, text) => h(Text, {
+    wrap: "wrap"
+  }, h(Text, {
+    bold: true
+  }, `${label}: `), h(Text, null, text));
+  return h(Box, {
+    key: `about-${a.id}`,
+    flexDirection: "column",
+    rowGap: ctx.isDesktop ? 1 : 0
+  }, line(s.aboutWhy, why), h(Box, {
+    flexDirection: "column"
+  }, line(s.aboutLog, s.aboutLogText), path !== "" && Markdown ? h(Markdown, {
+    key: `about-log-${a.id}`,
+    text: linkOf$1(path)
+  }) : null), line(s.aboutLearns, s.aboutLearnsText(writtenOf(a))));
+}
+
 const BRIEF_SHOWN = 280;
 const ANSWER_SHOWN = 900;
 function saidTree(ui, said) {
@@ -7895,8 +7948,9 @@ const progressBarSvg = (W, a, opts) => {
   const uid = a.id.replace(/\W/g, "");
   const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`;
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`;
-  const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? "f-edit"}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
   const isRunning = a.status === "running";
+  const faint = isRunning && opts.progress.isEstimate ? ' opacity=".45"' : "";
+  const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? "f-edit"}"${faint} x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
   const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : "";
   const label = `<text class="${LABEL$2[a.status] ?? "s"}" x="${barW + PCT_GAP}" y="${BAR_H$1 / 2 + PCT_SIZE * 0.34}" font-family="${MONO$4}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`;
   return paneSvg(W, BAR_H$1, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`);
@@ -8253,32 +8307,15 @@ function detailTree(ui, a, ctx) {
     flexDirection: "column",
     rowGap: 1,
     marginTop: 1
-  }, conversationTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), metricsTree(ui, a, ctx));
+  }, conversationTree(ui, a, ctx), aboutTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), metricsTree(ui, a, ctx));
 }
 
-const CURVE_CAP = 0.9;
-const CURVE_CALLS = 8;
-const EDIT_FLOOR = 0.45;
-const TEST_FLOOR = 0.7;
-const START = 0.04;
-const TEST_WORDS = /\b(test|vitest|jest|pytest|lint|tsc|validate|check)\b/i;
-const floorOf = (a) => {
-  const history = a.history ?? [];
-  const hasTest = history.some((e) => kindOf(e.tool) === "run" && TEST_WORDS.test(e.target));
-  if (hasTest)
-    return TEST_FLOOR;
-  return history.some((e) => kindOf(e.tool) === "edit") ? EDIT_FLOOR : 0;
-};
-const estimateOf$1 = (a) => {
-  const calls = Math.max(a.toolCount || 0, a.history?.length ?? 0);
-  const curve = CURVE_CAP * (1 - Math.exp(-calls / CURVE_CALLS));
-  return Math.min(CURVE_CAP, Math.max(START, floorOf(a), curve));
-};
+const AT_WORK = { value: 1, isEstimate: true };
 const agentProgress = (a) => {
   if (a.status !== "running")
     return { value: 1, isEstimate: false };
   const measured = partialOf(a);
-  return measured === null ? { value: estimateOf$1(a), isEstimate: true } : { value: measured, isEstimate: false };
+  return measured === null ? AT_WORK : { value: measured, isEstimate: false };
 };
 
 const FRAME_PX = 34;
@@ -8329,7 +8366,7 @@ const nowLine = (a, isOpen) => {
 const barLabel = (a, progress) => {
   if (a.status === "failed")
     return "✗";
-  return progress.isEstimate && !a.toolCount ? "" : progressLabel(progress);
+  return progress.isEstimate ? "" : progressLabel(progress);
 };
 const termBar = (p, width) => {
   const filled = Math.round(width * p.value);
@@ -8437,7 +8474,7 @@ function deskFoot(ui, a, ctx) {
 function deskBar(ui, a, ctx) {
   const progress = agentProgress(a);
   const label = barLabel(a, progress);
-  const pic = { source: progressBarSvg(ctx.inner, a, { progress, label }), alt: label || t().starting, width: ctx.inner, height: BAR_H$1 };
+  const pic = { source: progressBarSvg(ctx.inner, a, { progress, label }), alt: label || (a.toolCount ? t().isRunning : t().starting), width: ctx.inner, height: BAR_H$1 };
   return picture$2(ui, { key: "bar", at: `bar-${a.id}`, pic, opts: { shows: { status: a.status, isEstimate: progress.isEstimate } } });
 }
 function deskCard(ui, a, ctx) {
@@ -9322,6 +9359,7 @@ const EN$3 = {
   moreFiles: (n) => `+${plural$2(n, "more file", "more files")}`,
   notStarted: "not started",
   waitingSince: (duration) => `waiting · ${duration} ago`,
+  waiting: "waiting",
   allDone: "done",
   now: "now",
   running: "running",
@@ -9359,6 +9397,7 @@ const TR$3 = {
   moreFiles: (n) => `+${n} dosya daha`,
   notStarted: "başlamadı",
   waitingSince: (duration) => `bekliyor · ${duration} önce`,
+  waiting: "bekliyor",
   allDone: "tamam",
   now: "şimdi",
   running: "çalışıyor",
@@ -9566,13 +9605,16 @@ function planState(plan, at) {
     return "done";
   if (plan.steps.every((step) => step.status === "pending"))
     return "unstarted";
+  if (at.isBusy === true)
+    return "live";
   return at.now - at.touchedAt >= STALE_MS ? "stale" : "live";
 }
+const hasRunningAgent = (tracks) => Object.values(tracks).some((track) => track.agents.some((agent) => agent.isRunning));
 function stateNote(state, at) {
   if (state === "unstarted")
     return words$2().notStarted;
   if (state === "stale")
-    return words$2().waitingSince(formatDuration(at.now - at.touchedAt));
+    return at.touchedAt < 0 ? words$2().waiting : words$2().waitingSince(formatDuration(at.now - at.touchedAt));
   return "";
 }
 
@@ -10185,7 +10227,7 @@ function desktopPane(ui, view, layout) {
   const details = current === undefined ? { meta: "", files: [], running: [] } : deskDetails(current, view.tracks[current.key]);
   const drawing = planSvg({ plan, tracks: view.tracks, now: view.now, theme: view.theme, width, note: noteOf$1(view) }, details);
   const alt = `${headline(plan)}${current === undefined ? "" : ` · ${words$2().now}: ${current.title}`}`;
-  const shows = { plan, tracks: view.tracks, theme: view.theme, width, state: planState(plan, { now: view.now, touchedAt: view.touchedAt }), details };
+  const shows = { plan, tracks: view.tracks, theme: view.theme, width, state: planState(plan, { now: view.now, touchedAt: view.touchedAt, isBusy: hasRunningAgent(view.tracks) }), details };
   return h(Box, {
     flexDirection: "column",
     paddingX: 1,
@@ -10196,7 +10238,7 @@ function desktopPane(ui, view, layout) {
   }));
 }
 function noteOf$1(view) {
-  const at = { now: view.now, touchedAt: view.touchedAt };
+  const at = { now: view.now, touchedAt: view.touchedAt, isBusy: hasRunningAgent(view.tracks) };
   return stateNote(planState(view.plan, at), at);
 }
 function planPane(ui, view, layout) {

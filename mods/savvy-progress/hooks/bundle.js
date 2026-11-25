@@ -98,7 +98,7 @@ const en = {
   agentsEnded: (ended, total) => `${ended}/${total} agents done`,
   stripCost: "cost",
   stripTokens: "tokens",
-  stripTime: "agent time",
+  stripTime: "working time",
   stripLast: (cost) => `last turn ${cost}`,
   stripTurns: (n) => plural(n, "turn", "turns"),
   stripPerTurn: (span) => `${span} per turn`,
@@ -111,7 +111,7 @@ const en = {
   aboutLog: "Where its record is",
   aboutLogText: "everything it read, wrote and said stays on your computer, in the file below",
   aboutLearns: "Does it learn",
-  aboutLearnsText: (written) => `no. Every helper starts from nothing and forgets it all when done. Only the files it wrote carry over${written > 0 ? ` (this one wrote ${written})` : ""}; a lasting lesson has to be written into a rule or memory.`,
+  aboutLearnsText: (written) => `only within this chat: write to it below and it picks up where it left off. Nothing reaches other chats or later helpers by itself; only the files it wrote last${written > 0 ? ` (this one wrote ${written})` : ""}. This record is not read back either: a lesson stays only once written into a rule or memory.`,
   rowEnded: { done: "finished", failed: "did not finish" },
   stripPlan: "plan",
   stripPlanDone: "done",
@@ -267,7 +267,7 @@ const ru = {
   agentsEnded: (ended, total) => `готово агентов: ${ended}/${total}`,
   stripCost: "стоимость",
   stripTokens: "токены",
-  stripTime: "время агентов",
+  stripTime: "время работы",
   stripLast: (cost) => `последний ход ${cost}`,
   stripTurns: (n) => `ходов: ${n}`,
   stripPerTurn: (span) => `${span} за ход`,
@@ -280,7 +280,7 @@ const ru = {
   aboutLog: "Где его запись",
   aboutLogText: "всё, что он прочёл, написал и сказал, хранится на вашем компьютере, в файле ниже",
   aboutLearns: "Учится ли он",
-  aboutLearnsText: (written) => `нет. Каждый помощник начинает с нуля и всё забывает после работы. Остаются только его файлы${written > 0 ? ` (этот написал ${written})` : ""}; прочный урок нужно записать в правило или память.`,
+  aboutLearnsText: (written) => `только в этом чате: напишите ему ниже, и он продолжит с того же места. В другие чаты и к следующим помощникам само ничего не переходит; остаются только его файлы${written > 0 ? ` (этот написал ${written})` : ""}. Эта запись тоже не перечитывается: урок сохранится, только если записать его в правило или память.`,
   rowEnded: { done: "закончил", failed: "не закончил" },
   stripPlan: "план",
   stripPlanDone: "готов",
@@ -445,7 +445,7 @@ const tr = {
   agentsEnded: (ended, total) => `${ended}/${total} ajan bitti`,
   stripCost: "maliyet",
   stripTokens: "token",
-  stripTime: "ajan süresi",
+  stripTime: "çalışma süresi",
   stripLast: (cost) => `son tur ${cost}`,
   stripTurns: (n) => `${n} tur`,
   stripPerTurn: (span) => `tur başına ${span}`,
@@ -458,7 +458,7 @@ const tr = {
   aboutLog: "Kaydı nerede",
   aboutLogText: "okuduğu, yazdığı ve söylediği her şey bilgisayarında, aşağıdaki dosyada durur",
   aboutLearns: "Öğreniyor mu",
-  aboutLearnsText: (written) => `hayır. Her ajan sıfırdan başlar ve iş bitince aklındakiler silinir. Sonraki işlere yalnızca yazdığı dosyalar kalır${written > 0 ? ` (bu ajan ${written} dosya yazdı)` : ""}; kalıcı ders için kurala ya da hafızaya yazılması gerekir.`,
+  aboutLearnsText: (written) => `yalnızca bu sohbet içinde: aşağıdan ona yeniden yazabilirsin, kaldığı yerden sürer. Başka sohbetlere ve sonraki ajanlara hiçbir şey kendiliğinden geçmez; kalıcı olan yalnızca yazdığı dosyalardır${written > 0 ? ` (bu ajan ${written} dosya yazdı)` : ""}. Bu kayıt da sonradan okunmaz: bir dersin kalması için kurala ya da hafızaya yazılması gerekir.`,
   rowEnded: { done: "işini bitirdi", failed: "işi yarıda kaldı" },
   stripPlan: "plan",
   stripPlanDone: "tamam",
@@ -1507,11 +1507,13 @@ function planStepOf(plan) {
   const subject = steps[at]?.subject;
   return typeof subject === "string" ? { subject, at: at + 1, of: steps.length } : undefined;
 }
-function movedOn(list, plan) {
+const MOVE_GRACE_MS = 2 * 60000;
+function movedOn(list, plan, now) {
   const current = planStepOf(plan);
   const steps = Array.isArray(plan) ? plan : [];
   const isDone = (step) => steps.some((one) => one?.subject === step.subject && one?.status === "completed");
-  const isStale = (run) => run.status === "running" && run.planStep !== undefined && isDone(run.planStep);
+  const isEarly = (run) => run.status === "running" && now - run.startedAt <= MOVE_GRACE_MS;
+  const isStale = (run) => isEarly(run) && run.planStep !== undefined && isDone(run.planStep);
   if (current === undefined || !list.some(isStale))
     return list;
   return list.map((run) => isStale(run) ? { ...run, planStep: current } : run);
@@ -3554,12 +3556,15 @@ async function factsOf(io) {
     }))
   };
 }
+const busyOf = (tally, now) => tally.busyMs + (tally.turnAt ? Math.max(0, now - tally.turnAt) : 0);
 function planSlot(facts, presses) {
   if (facts.steps.length === 0)
     return [];
-  const done = facts.steps.filter((step) => step.status === "completed").length;
-  const current = facts.steps.find((step) => step.status === "in_progress") ?? facts.steps.find((step) => step.status !== "completed");
-  const base = { id: "plan", label: t().stripPlan, value: `${done}/${facts.steps.length}`, widest: `${facts.steps.length}/${facts.steps.length}` };
+  const total = facts.steps.length;
+  const at = facts.steps.findIndex((step) => step.status === "in_progress");
+  const index = at === -1 ? facts.steps.findIndex((step) => step.status !== "completed") : at;
+  const current = facts.steps[index];
+  const base = { id: "plan", label: t().stripPlan, value: `${current === undefined ? total : index + 1}/${total}`, widest: `${total}/${total}` };
   const chip = current === undefined ? { ...base, note: t().stripPlanDone, tone: "ok" } : { ...base, note: current.subject };
   return [{ chip, rank: 0, isNoteKept: true, press: presses.open(PLAN_PANE) }];
 }
@@ -3585,7 +3590,7 @@ function slotsOf(facts, presses) {
     ...planSlot(facts, presses),
     { chip: { id: "cost", label: t().stripCost, value: fmtCost(facts.cost), widest: room.cost }, rank: 1, press: usage },
     { chip: { id: "tokens", label: t().stripTokens, value: fmtTokens(counted.tokens), widest: room.tokens }, rank: 3, press: usage },
-    { chip: { id: "time", label: t().stripTime, value: spanText(counted.busyMs), widest: room.time, ...helpers > 0 ? { note: t().crewAtWork(helpers) } : {} }, rank: 4, press: presses.onAgents },
+    { chip: { id: "time", label: t().stripTime, value: spanText(busyOf(counted, facts.now)), widest: room.time, ...helpers > 0 ? { note: t().crewAtWork(helpers) } : {} }, rank: 4, press: presses.onAgents },
     ...windows.map((run) => limitSlot(run, facts, presses)),
     ...facts.team === null ? [] : [{ chip: { id: "team", label: "", value: "" }, rank: TEAM_RANK, press: presses.open(TEAM_PANE), art: teamArt(facts.team, facts.now) }],
     ...presses.onHub === null ? [] : [{ chip: { id: HUB_CHIP, label: "", value: "modz", isWordmark: true }, rank: 0, press: presses.onHub }]
@@ -3632,7 +3637,7 @@ function stripText(facts) {
     facts.steps.length === 0 ? "" : `${t().stripPlan} ${done}/${facts.steps.length}`,
     `${t().stripCost} ${fmtCost(facts.cost)}`,
     `${t().stripTokens} ${fmtTokens(facts.tally.tokens)}`,
-    `${t().stripTime} ${spanText(facts.tally.busyMs)}`,
+    `${t().stripTime} ${spanText(busyOf(facts.tally, facts.now))}`,
     week === undefined ? "" : `${t().stripWeek} ${t().pct(Math.round(week.percent))}`
   ].filter(Boolean).join(" · ");
 }
@@ -4175,10 +4180,10 @@ const NOTES_IN = {
   en: "",
   tr: `
 
-Write your task-list items and progress notes in Turkish, in plain words: the person follows them on screen.`,
+Write your task-list items, progress notes and the description of every tool call in Turkish, in plain words: the person follows them on screen.`,
   ru: `
 
-Write your task-list items and progress notes in Russian, in plain words: the person follows them on screen.`
+Write your task-list items, progress notes and the description of every tool call in Russian, in plain words: the person follows them on screen.`
 };
 async function stamp($) {
   const at = await $.clock.now();
@@ -4240,9 +4245,10 @@ function onLaunches(on) {
   });
   on("state.set", { plugin: "plan-steps", key: "tasks" }, async ($, e, next) => {
     const result = await next(e);
+    const at = await $.clock.now();
     const list = await read($, agents$4);
-    if (movedOn(list, e.value) !== list)
-      await update($, agents$4, (now) => movedOn(now, e.value));
+    if (movedOn(list, e.value, at) !== list)
+      await update($, agents$4, (runs) => movedOn(runs, e.value, at));
     return result;
   });
   on("prompt.submit", async ($, e, next) => {
@@ -4293,7 +4299,6 @@ function onActivity(on) {
   }).catch(($, e, next) => next(e));
 }
 async function countTurn$1($, e) {
-  const used = e.usage === undefined ? 0 : tokensOf(e.usage);
   const isMain = e.agentId === undefined;
   const cost = isMain ? (await $.session.usage().catch(() => {
     return;
@@ -4301,8 +4306,8 @@ async function countTurn$1($, e) {
   await update($, tally, (x) => {
     const was = { ...NO_TALLY, ...x };
     if (!isMain)
-      return { ...was, tokens: was.tokens + used };
-    return { tokens: was.tokens + used, busyMs: was.busyMs + (e.durationMs ?? 0), turns: was.turns + 1, lastCost: was.costBefore > 0 ? Math.max(0, cost - was.costBefore) : 0, costBefore: cost };
+      return was;
+    return { ...was, busyMs: was.busyMs + (e.durationMs ?? 0), turns: was.turns + 1, lastCost: was.costBefore > 0 ? Math.max(0, cost - was.costBefore) : 0, costBefore: cost, turnAt: 0 };
   });
 }
 function onSteps(on) {
@@ -4313,12 +4318,15 @@ function onSteps(on) {
       const title = asked;
       asked = undefined;
       await update($, agents$4, (list) => mainAwake(list, { title, at: sent }));
+      await update($, tally, (x) => ({ ...NO_TALLY, ...x, turnAt: sent }));
     }
     await update($, agents$4, (list) => patchRun(list, agentId, (a) => ({ ...heard(a, sent), stepAt: sent })));
     const result = yield* next(e);
     const usage = result.usage;
     const facts = usage && { model: usage.model || e.model, effort: e.effort, usage };
     const at = await $.clock.now();
+    if (usage)
+      await update($, tally, (x) => ({ ...NO_TALLY, ...x, tokens: (x?.tokens ?? 0) + tokensOf(usage) }));
     const step = { answer: result.answer, calls: result.toolUses.length, sentAt: sent };
     const wrote = e.agentId ? "" : textKey(result.answer);
     if (wrote !== "" && (await read($, agents$4)).some((a) => a.isMain !== true && isRunning(a)))
@@ -6799,6 +6807,7 @@ function onTranscript(on) {
   });
 }
 
+const transcriptAtom = atom({ plugin: "savvy-progress", key: "transcript" }, "");
 const agents = atom({ plugin: "savvy-progress", key: "agents" }, []);
 const now = atom({ plugin: "savvy-progress", key: "now" }, 0);
 const limit = atom({ plugin: "savvy-progress", key: "limit" }, null);
@@ -6973,11 +6982,14 @@ function onHubSources(on) {
 }
 const register = (on, options) => {
   on("classic.SessionStart", async ($, e, next) => {
-    setMainTranscript(typeof e.transcript_path === "string" ? e.transcript_path : "");
+    const path = typeof e.transcript_path === "string" ? e.transcript_path : "";
+    setMainTranscript(path);
+    await update($, transcriptAtom, () => path);
     return next(e);
   }).catch(($, e, next) => next(e));
   on("session.start", async ($, e, next) => {
     setLang(await detectLang($, options.language));
+    setMainTranscript(await read($, transcriptAtom));
     const started = await next(e);
     await $.tool.register(PROGRESS_SPEC);
     await $.tool.register(STEP_SPEC);

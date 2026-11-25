@@ -90,7 +90,7 @@ export const en: Strings = {
   agentsEnded: (ended, total) => `${ended}/${total} agents done`,
   stripCost: 'cost',
   stripTokens: 'tokens',
-  stripTime: 'agent time',
+  stripTime: 'working time',
   stripLast: cost => `last turn ${cost}`,
   stripTurns: n => plural(n, 'turn', 'turns'),
   stripPerTurn: span => `${span} per turn`,
@@ -104,7 +104,7 @@ export const en: Strings = {
   aboutLogText: 'everything it read, wrote and said stays on your computer, in the file below',
   aboutLearns: 'Does it learn',
   aboutLearnsText: written =>
-    `no. Every helper starts from nothing and forgets it all when done. Only the files it wrote carry over${written > 0 ? ` (this one wrote ${written})` : ''}; a lasting lesson has to be written into a rule or memory.`,
+    `only within this chat: write to it below and it picks up where it left off. Nothing reaches other chats or later helpers by itself; only the files it wrote last${written > 0 ? ` (this one wrote ${written})` : ''}. This record is not read back either: a lesson stays only once written into a rule or memory.`,
   rowEnded: { done: 'finished', failed: 'did not finish' },
   stripPlan: 'plan',
   stripPlanDone: 'done',

@@ -50,11 +50,11 @@ const STEP_BRIEF = `
 
 Progress reporting: before any other work, call \`${STEP_TOOL}\` with \`total\` (your plan in 3-8 steps) and \`done: 0\`; call it again with \`done\` and a few-word \`note\` as each step finishes. It only draws a progress bar.`
 
-// A helper's task list and notes are what its row shows; written in English they leave a Turkish reader out.
+// A helper's task list, notes and tool-call descriptions are what its row shows; written in English they leave a Turkish reader out.
 const NOTES_IN: Record<Lang, string> = {
   en: '',
-  tr: '\n\nWrite your task-list items and progress notes in Turkish, in plain words: the person follows them on screen.',
-  ru: '\n\nWrite your task-list items and progress notes in Russian, in plain words: the person follows them on screen.',
+  tr: '\n\nWrite your task-list items, progress notes and the description of every tool call in Turkish, in plain words: the person follows them on screen.',
+  ru: '\n\nWrite your task-list items, progress notes and the description of every tool call in Russian, in plain words: the person follows them on screen.',
 }
 
 async function stamp($: EngineInterface): Promise<number> {
@@ -123,11 +123,12 @@ function onLaunches(on: On): void {
     return started
   })
 
-  // The plan moved on: helpers still at work on a step just ticked off now serve the one under way.
+  // The plan moved on: helpers sent out just before, still on the step ticked off, serve the one under way.
   on('state.set', { plugin: 'plan-steps', key: 'tasks' }, async ($, e, next) => {
     const result = await next(e)
+    const at = await $.clock.now()
     const list = await read($, agents)
-    if (movedOn(list, e.value) !== list) await update($, agents, now => movedOn(now, e.value))
+    if (movedOn(list, e.value, at) !== list) await update($, agents, runs => movedOn(runs, e.value, at))
     return result
   })
 
@@ -183,13 +184,13 @@ function onActivity(on: On): void {
 // Every turn's tokens count, a subagent's too; the main loop's turns also count the time and the turn's cost.
 // Called from the one turn.complete hook below: the engine allows one per event without a matcher.
 async function countTurn($: EngineInterface, e: { agentId?: string; usage?: Parameters<typeof tokensOf>[0]; durationMs?: number }): Promise<void> {
-  const used = e.usage === undefined ? 0 : tokensOf(e.usage)
   const isMain = e.agentId === undefined
   const cost = isMain ? ((await $.session.usage().catch(() => undefined))?.cost?.usd ?? 0) : 0
   await update($, tally, x => {
     const was = { ...NO_TALLY, ...x }
-    if (!isMain) return { ...was, tokens: was.tokens + used }
-    return { tokens: was.tokens + used, busyMs: was.busyMs + (e.durationMs ?? 0), turns: was.turns + 1, lastCost: was.costBefore > 0 ? Math.max(0, cost - was.costBefore) : 0, costBefore: cost }
+    // Tokens are counted as each step comes back (onSteps), so the strip moves during a long turn, not only after it.
+    if (!isMain) return was
+    return { ...was, busyMs: was.busyMs + (e.durationMs ?? 0), turns: was.turns + 1, lastCost: was.costBefore > 0 ? Math.max(0, cost - was.costBefore) : 0, costBefore: cost, turnAt: 0 }
   })
 }
 
@@ -203,6 +204,7 @@ function onSteps(on: On): void {
       const title = asked
       asked = undefined
       await update($, agents, list => mainAwake(list, { title, at: sent }))
+      await update($, tally, x => ({ ...NO_TALLY, ...x, turnAt: sent }))
     }
     // A request in flight is heard from as it goes out: a long stream is not a quiet agent.
     await update($, agents, list => patchRun(list, agentId, a => ({ ...heard(a, sent), stepAt: sent })))
@@ -210,6 +212,7 @@ function onSteps(on: On): void {
     const usage = result.usage
     const facts = usage && { model: usage.model || e.model, effort: e.effort, usage }
     const at = await $.clock.now()
+    if (usage) await update($, tally, x => ({ ...NO_TALLY, ...x, tokens: (x?.tokens ?? 0) + tokensOf(usage) }))
     // What it wrote before this step's calls is their reason, in its own words.
     const step = { answer: result.answer, calls: result.toolUses.length, sentAt: sent }
     // The main loop wrote: while helpers work, its newest words are where they stand, until its next call.

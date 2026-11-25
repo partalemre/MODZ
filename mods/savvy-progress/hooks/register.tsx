@@ -22,6 +22,7 @@ import { onTranscript } from './transcript'
 import { setMainTranscript } from './about'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
+const transcriptAtom = atom({ plugin: 'savvy-progress', key: 'transcript' } as const, '')
 const agents = atom({ plugin: 'savvy-progress', key: 'agents' } as const, [])
 const now = atom({ plugin: 'savvy-progress', key: 'now' } as const, 0)
 const limit = atom({ plugin: 'savvy-progress', key: 'limit' } as const, null)
@@ -224,12 +225,16 @@ function onHubSources(on: On): void {
 
 export const register: Register = (on, options) => {
   // The transcript's path comes with the classic start, and again after /clear, a resume or a fork.
+  // Kept in state as well, since a reload runs session.start again but not the classic start.
   on('classic.SessionStart', async ($, e, next) => {
-    setMainTranscript(typeof e.transcript_path === 'string' ? e.transcript_path : '')
+    const path = typeof e.transcript_path === 'string' ? e.transcript_path : ''
+    setMainTranscript(path)
+    await update($, transcriptAtom, () => path)
     return next(e)
   }).catch(($, e, next) => next(e))
   on('session.start', async ($, e, next) => {
     setLang(await detectLang($, options.language))
+    setMainTranscript(await read($, transcriptAtom))
     const started = await next(e)
     await $.tool.register(PROGRESS_SPEC)
     await $.tool.register(STEP_SPEC)

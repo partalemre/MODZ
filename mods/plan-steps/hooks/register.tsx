@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Register } from 'claude-code'
 
-import { isShown, planState, STALE_MS } from './freshness'
+import { hasRunningAgent, isShown, planState, STALE_MS } from './freshness'
 import { withoutRestored } from './carry'
 import { wireCarry } from './carry-hooks'
 import { wireFinish } from './finish-hooks'
@@ -9,6 +9,7 @@ import { HUB_PANE, hubOf, isShowing } from './hub'
 import type { CurrentStep, HubShown } from './hub'
 import { resolvePlan } from './match'
 import type { Plan } from './match'
+import { resetNudge, wireNudge } from './nudge'
 import { wirePane } from './pane-hook'
 import { baseName } from './parse'
 import { addAgent, addFile, currentIndex, observe, progressOf, settleAgents } from './progress'
@@ -79,7 +80,7 @@ async function sync($: EngineInterface): Promise<void> {
   const now = await $.clock.now()
   const tracks = await update($, tracksAtom, before => (plan === null ? before : observe(before, plan.steps, now)))
   const progress = plan === null ? null : progressOf(plan)
-  const state = planState(plan, { now, touchedAt: flags.touchedAt })
+  const state = planState(plan, { now, touchedAt: flags.touchedAt, isBusy: hasRunningAgent(tracks) })
   if (progress === null || progress.done < progress.total) flags.isSettled = false
   // The session strip already shows the plan; the footer line repeats it only when asked.
   showStatus($, !flags.isStatusLine || flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks))
@@ -95,6 +96,7 @@ async function touch($: EngineInterface): Promise<void> {
 
 async function setTasks($: EngineInterface, change: (tasks: PlanTask[]) => PlanTask[]): Promise<void> {
   await update($, tasksAtom, change)
+  resetNudge()
   await touch($)
   await sync($)
 }
@@ -277,4 +279,5 @@ export const register: Register = (on, options) => {
   wireCarry(on)
   wireFinish(on, { touchedAt: () => flags.touchedAt, isStrict: options.holdFinish === true })
   wirePane(on, { touchedAt: () => flags.touchedAt })
+  wireNudge(on)
 }

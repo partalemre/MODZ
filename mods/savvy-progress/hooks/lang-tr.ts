@@ -107,7 +107,7 @@ export const tr: Strings = {
   agentsEnded: (ended, total) => `${ended}/${total} ajan bitti`,
   stripCost: 'maliyet',
   stripTokens: 'token',
-  stripTime: 'ajan süresi',
+  stripTime: 'çalışma süresi',
   stripLast: cost => `son tur ${cost}`,
   stripTurns: n => `${n} tur`,
   stripPerTurn: span => `tur başına ${span}`,
@@ -121,7 +121,7 @@ export const tr: Strings = {
   aboutLogText: 'okuduğu, yazdığı ve söylediği her şey bilgisayarında, aşağıdaki dosyada durur',
   aboutLearns: 'Öğreniyor mu',
   aboutLearnsText: written =>
-    `hayır. Her ajan sıfırdan başlar ve iş bitince aklındakiler silinir. Sonraki işlere yalnızca yazdığı dosyalar kalır${written > 0 ? ` (bu ajan ${written} dosya yazdı)` : ''}; kalıcı ders için kurala ya da hafızaya yazılması gerekir.`,
+    `yalnızca bu sohbet içinde: aşağıdan ona yeniden yazabilirsin, kaldığı yerden sürer. Başka sohbetlere ve sonraki ajanlara hiçbir şey kendiliğinden geçmez; kalıcı olan yalnızca yazdığı dosyalardır${written > 0 ? ` (bu ajan ${written} dosya yazdı)` : ''}. Bu kayıt da sonradan okunmaz: bir dersin kalması için kurala ya da hafızaya yazılması gerekir.`,
   rowEnded: { done: 'işini bitirdi', failed: 'işi yarıda kaldı' },
   stripPlan: 'plan',
   stripPlanDone: 'tamam',

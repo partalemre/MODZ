@@ -35,9 +35,9 @@ When Claude calls Bash with one of the commands below, the call stops and a card
 | `git worktree remove --force` | Uncommitted and untracked files in that worktree. |
 | `> file`, `cp`/`mv` onto a file, `truncate`, `dd of=`, `shred`, `tee` | Existing files whose contents git can't bring back. A missing file, one git has unchanged, a temp file or an ignored log runs with no card; `dd` to a disk is always held. |
 | `docker volume rm`, `docker volume prune`, `docker system prune`, `docker compose down -v` | The volumes, or the space per kind, it would remove. |
-| `terraform destroy`, `kubectl delete`, `rsync --delete` | The resources (`terraform state list`), objects (`kubectl get`) or files (`rsync --dry-run`) it would remove. |
+| `terraform destroy`, `kubectl delete`, `rsync --delete` | The resources (`terraform state list`), objects (`kubectl get`) or files (`rsync --dry-run`) it would remove. An rsync that names its own remote shell, another machine or an option outside the plain copy flags, and a kubectl that names its own `--kubeconfig`, are held without being tried first. |
 | `psql`/`mysql`/`sqlite3` with `DROP`, `TRUNCATE` or `DELETE` without `WHERE`; `supabase db reset`, `prisma migrate reset`, `db:drop`, `manage.py flush` | The statement, named: a database can't be measured from here, so it is always held. |
-| `manage.py migrate`, `db:migrate`, `alembic upgrade`, `prisma migrate` | The pending migrations, from the tool's own status command. `prisma migrate status` and `migrate --plan` run. |
+| `manage.py migrate`, `db:migrate`, `alembic upgrade`, `prisma migrate` | Held with the command named. Pending migrations are not listed: every status command loads the project's code. `prisma migrate status` and `migrate --plan` run. |
 | any other `migrate` | A note that pending migrations can't be listed for that tool. |
 
 A command that would lose nothing runs with no card. Every other command runs as normal. Blast Radius reads the command inside `bash -c`, `sh -c`, `eval` and `xargs`, and through `sudo`, `env`, `timeout`, `nice`, `ionice`, `nohup` and `VAR=value`; text inside quotes or a heredoc is never read as a command. The card follows `cd dir &&`, `pushd`/`popd` and `git -C dir` on the same line and measures in that folder; on a line with several risky parts, the first that would lose something is the card.
@@ -89,7 +89,7 @@ The notes live in the plugin's own store under `~/.claude`, one entry per chat, 
 - The edit guard sees chats on this machine only, and only edits made through Claude's file tools; a file another chat changed with a shell command is not noted.
 - Counts are approximate. Sizes come from `du -k` and `wc -c`; a very large tree can take a few seconds to measure.
 - The force-push list uses your last fetch of the remote branch; without one it says it can't list the dropped commits.
-- Migration status commands (for example `python3 manage.py showmigrations`) load your project's code before you answer.
+- Measuring never runs your project's code or a program the command names: migrations, and rsync or kubectl commands that would do so, are held unmeasured.
 - Needs `bash`, `git`, `find` and `du` on your `PATH`.
 - This is a safety net, not a permission system. Use [permission rules](https://code.claude.com/docs/en/settings) for a hard block.
 

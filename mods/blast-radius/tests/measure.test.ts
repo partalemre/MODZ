@@ -170,3 +170,54 @@ test('a held command is told to the MODZ panel while it waits, and the line goes
   await pending
   expect(await hub()).toMatchObject({ detail: '', tone: 'idle' })
 })
+
+// Measuring happens before anyone answers, so it must not start a program the command names
+// or load the project's own code: those commands are held unmeasured.
+
+const started = (w: any, program: string) => w.runs.filter((key: string) => key.startsWith(program))
+
+test('a migration is held without running the project to list it, with a screen or without one', async ($, on) => {
+  const w = world({ ...EN })
+  stub(on, w)
+  await start($, w)
+  for (const command of ['python3 manage.py migrate', 'alembic upgrade head', 'bin/rails db:migrate', 'npx prisma migrate deploy']) {
+    const { drawn, deny } = await heldCard($, w, command)
+    expect([command, drawn.includes('listing them would run')]).toEqual([command, true])
+    expect([command, typeof deny]).toEqual([command, 'string'])
+  }
+  w.surfaces = []
+  expect(typeof ((await call($, 'cd api && python3 manage.py migrate')) as any).deny).toBe('string')
+
+  expect(w.runs.filter((key: string) => /manage\.py|alembic|rails|prisma/.test(key))).toEqual([])
+  expect(w.ran).toHaveLength(0)
+})
+
+test('rsync --delete is dry-run first only when the dry run can start nothing and reach no other machine', async ($, on) => {
+  const w = world({ ...EN, answers: { 'rsync --dry-run --itemize-changes -a --delete --exclude .git a/ b/': '*deleting   old.txt\n' } })
+  stub(on, w)
+  await start($, w)
+  expect((await heldCard($, w, 'rsync -a --delete --exclude .git a/ b/')).drawn).toContain('old.txt')
+  expect(started(w, 'rsync')).toHaveLength(1)
+
+  for (const command of ['rsync -a --delete -e ./tool a/ host:b/', 'rsync -ae ./tool --delete a/ host:b/', 'rsync -a --delete --rsh=./tool a/ host:b/', 'rsync -a --delete a/ host:b/', 'rsync -a --delete rsync://host/mod/ b/', 'rsync -a --delete --log-file=x a/ b/']) {
+    const { drawn, deny } = await heldCard($, w, command)
+    expect([command, drawn.includes('tried first to list')]).toEqual([command, true])
+    expect([command, typeof deny]).toEqual([command, 'string'])
+  }
+  expect(started(w, 'rsync')).toHaveLength(1)
+})
+
+test('kubectl delete is listed first unless it names its own kubeconfig', async ($, on) => {
+  const w = world({ ...EN, answers: { 'kubectl get pod web -n prod -o name': 'pod/web\n' } })
+  stub(on, w)
+  await start($, w)
+  expect((await heldCard($, w, 'kubectl delete pod web -n prod')).drawn).toContain('pod/web')
+  expect(started(w, 'kubectl')).toHaveLength(1)
+
+  for (const command of ['kubectl --kubeconfig ./kc delete pod web', 'kubectl delete pod web --kubeconfig=./kc']) {
+    const { drawn, deny } = await heldCard($, w, command)
+    expect([command, drawn.includes('tried first to list')]).toEqual([command, true])
+    expect([command, typeof deny]).toEqual([command, 'string'])
+  }
+  expect(started(w, 'kubectl')).toHaveLength(1)
+})

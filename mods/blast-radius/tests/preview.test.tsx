@@ -56,13 +56,12 @@ const PUSH_ANSWERS = {
   'git rev-parse --abbrev-ref HEAD': 'main',
   'git log --oneline --no-decorate HEAD..origin/main': 'a1b2c3d fix: retry the token refresh once\n9e8f7a6 feat: dark mode for the settings page\n4d5e6f7 chore: bump vite to 6.2\n',
 }
-const MIGRATE_ANSWERS = { 'python3 manage.py showmigrations --plan': '[X]  auth.0001_initial\n[ ]  billing.0007_invoice_due_date\n[ ]  billing.0008_backfill_due_dates\n' }
 
 for (const theme of ['dark', 'light']) {
   const suffix = theme === 'light' ? '-light' : ''
 
   test(`preview: push, migrate, unmeasured and the open list (${theme})`, async ($, on) => {
-    const w = world({ ...EN, theme, answers: { files: BUILD_SCAN, ...PUSH_ANSWERS, ...MIGRATE_ANSWERS } })
+    const w = world({ ...EN, theme, answers: { files: BUILD_SCAN, ...PUSH_ANSWERS } })
     stub(on, w)
     await ($ as any).session.start({ surface: 'desktop', isInteractive: true, cwd: w.cwd })
     const cases: [string, string, number?][] = [['br-push', 'git push --force'], ['br-migrate', 'python3 manage.py migrate'], ['br-unset', 'rm -rf $OUT_DIR', NARROW_PANE]]

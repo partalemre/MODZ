@@ -1,6 +1,8 @@
 // Measuring the tools that drop data outside the working tree, each by asking the tool itself
 // read-only: docker (volumes, prune), terraform (state list), kubectl (get), rsync (a dry run).
 // A database statement can't be measured from here: it is held with the statement named.
+// Measuring happens before anyone answers, so a listing that would start a program the command
+// names, or reach another machine, is not tried: the command is held unmeasured.
 
 import { emptyReport, lines, nothingReport, plural, LIST_MAX } from './report'
 import type { Item, Report, Run } from './report'
@@ -13,7 +15,7 @@ type Lister = (risk: ToolRisk) => { argv: string[]; pick: (stdout: string) => st
 const TIMEOUT_MS = 20000
 
 // Values kubectl get takes from a delete; every other delete flag is dropped from the get.
-const KUBE_KEPT = new Set(['-n', '--namespace', '-l', '--selector', '-f', '--filename', '--context', '--kubeconfig', '--field-selector'])
+const KUBE_KEPT = new Set(['-n', '--namespace', '-l', '--selector', '-f', '--filename', '--context', '--field-selector'])
 const KUBE_KEPT_BARE = new Set(['-A', '--all-namespaces', '-R', '--recursive'])
 
 function kubeGet(args: string[]): string[] {
@@ -26,6 +28,40 @@ function kubeGet(args: string[]): string[] {
   }
 
   return ['kubectl', 'get', ...kept, '-o', 'name']
+}
+
+// A kubeconfig can name a program kubectl runs to get credentials.
+const namesKubeconfig = (args: string[]): boolean => args.some(a => a.split('=')[0] === '--kubeconfig')
+
+// rsync options a dry run can take without starting a program (-e, --rsh) or writing a file (--log-file):
+// anything else, and any operand on another machine (host:path, rsync://), is not tried.
+const RSYNC_SHORT = /^-[avrzhPuclptgoDHAXSxqimOJWkKLd]+$/
+const RSYNC_BARE = new Set(['--archive', '--recursive', '--verbose', '--compress', '--checksum', '--update', '--human-readable', '--progress', '--partial', '--stats', '--force', '--links', '--perms', '--times', '--existing', '--ignore-existing', '--delete', '--delete-before', '--delete-during', '--delete-after', '--delete-delay', '--delete-excluded'])
+const RSYNC_VALUED = new Set(['--exclude', '--include', '--exclude-from', '--include-from', '--max-delete', '--max-size', '--min-size'])
+const REMOTE_OPERAND = /^[^/]*:/
+
+function isSafeRsyncWord(word: string): boolean {
+  if (word.startsWith('--')) return RSYNC_BARE.has(word)
+  if (word.startsWith('-')) return RSYNC_SHORT.test(word)
+
+  return !REMOTE_OPERAND.test(word)
+}
+
+function isLocalRsync(args: string[]): boolean {
+  for (let i = 0; i < args.length; i += 1) {
+    const word = args[i] ?? ''
+    const isValued = RSYNC_VALUED.has(word.split('=')[0] ?? word)
+    if (isValued && !word.includes('=')) i += 1
+    if (!isValued && !isSafeRsyncWord(word)) return false
+  }
+
+  return true
+}
+
+function isTriedFirst(risk: ToolRisk): boolean {
+  if (risk.tool === 'rsync') return isLocalRsync(risk.args)
+
+  return risk.tool !== 'kubectl' || !namesKubeconfig(risk.args)
 }
 
 /** Reclaimable space per kind from `docker system df`; volumes only when the prune takes them. */
@@ -52,6 +88,7 @@ const LISTERS: Record<Exclude<ToolKind, 'database'>, Lister> = {
 
 export async function measureTool(run: Run, risk: ToolRisk, cwd: string): Promise<Report> {
   if (risk.tool === 'database') return emptyReport('unknown', `run ${risk.label} on the database`, words().notes.database(risk.label))
+  if (!isTriedFirst(risk)) return emptyReport('removals', `${risk.label} (not tried first)`, words().notes.toolNotTried)
   const { argv, pick } = LISTERS[risk.tool](risk)
   let ran
   try {

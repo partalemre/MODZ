@@ -27,7 +27,7 @@ const GIT: Record<GitKind, GitMeasure> = {
 
 function measureKind(run: Run, risk: Risk, cwd: string): Promise<Report> {
   if (risk.kind === 'rm') return measureRm(run, risk, cwd)
-  if (risk.kind === 'migrate') return measureMigrations(run, risk, cwd)
+  if (risk.kind === 'migrate') return measureMigrations(risk)
   if (risk.kind === 'find') return measureFind(run, risk, cwd)
   if (risk.kind === 'overwrite') return measureWrite(run, risk, cwd)
   if (risk.kind === 'tool') return measureTool(run, risk, cwd)

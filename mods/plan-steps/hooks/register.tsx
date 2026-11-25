@@ -9,7 +9,7 @@ import { HUB_PANE, hubOf, isShowing } from './hub'
 import type { CurrentStep, HubShown } from './hub'
 import { resolvePlan } from './match'
 import type { Plan } from './match'
-import { resetNudge, wireNudge } from './nudge'
+import { noteCall, resetNudge, wireNudge } from './nudge'
 import { wirePane } from './pane-hook'
 import { baseName } from './parse'
 import { addAgent, addFile, currentIndex, observe, progressOf, settleAgents } from './progress'
@@ -189,6 +189,7 @@ async function endAgent($: EngineInterface, call: Call, ran: Ran): Promise<void>
 
 async function onToolCall<R extends Ran>($: EngineInterface, call: Call, run: () => Promise<R>): Promise<R> {
   if (call.tool === 'Agent') await startAgent($, call)
+  await noteCall($, call)
   const ran = await run()
   if (call.tool === 'Agent') await endAgent($, call, ran)
   if (!isOk(ran)) return ran

@@ -1681,12 +1681,22 @@ const DESK_PLAN$1 = "mcp__ccd_turn__update_plan";
 const docAtom$2 = atom({ plugin: "plan-steps", key: "doc" }, null);
 const tasksAtom$2 = atom({ plugin: "plan-steps", key: "tasks" }, []);
 let calls = 0;
+let dueId = null;
 async function currentPlan$1($) {
   return resolvePlan(await read($, tasksAtom$2), await read($, docAtom$2));
 }
 const resetNudge = () => {
   calls = 0;
+  dueId = null;
 };
+async function noteCall($, call) {
+  if (call.tool === DESK_PLAN$1 || typeof call.tool_use_id !== "string")
+    return;
+  const plan = await currentPlan$1($).catch(() => null);
+  const isOpen = plan !== null && plan.steps.some((step) => step.status !== "completed");
+  if (countCall(call.agentId === undefined, isOpen))
+    dueId = call.tool_use_id;
+}
 const NUDGE_TEXT = `Plan check: ${NUDGE_CALLS} tool calls since your task list last moved. If a step is finished, tick it now ` + "(update_plan with advance, or done/start), one step at a time, so the person sees the plan as it really stands.";
 function countCall(isMainLoop, isOpenPlan) {
   if (!isMainLoop || !isOpenPlan)
@@ -1697,13 +1707,9 @@ function countCall(isMainLoop, isOpenPlan) {
 function wireNudge(on) {
   on("classic.PostToolUse", async ($, e, next) => {
     const result = await next(e);
-    const fields = e;
-    if (fields.tool_name === DESK_PLAN$1)
+    if (dueId === null || e.tool_use_id !== dueId)
       return result;
-    const plan = await currentPlan$1($).catch(() => null);
-    const isOpen = plan !== null && plan.steps.some((step) => step.status !== "completed");
-    if (!countCall(fields.agent_id === undefined, isOpen))
-      return result;
+    dueId = null;
     return { ...result, additionalContext: [...result.additionalContext ?? [], NUDGE_TEXT] };
   }).catch(($, e, next) => next(e));
 }
@@ -3102,6 +3108,7 @@ async function endAgent($, call, ran) {
 async function onToolCall($, call, run) {
   if (call.tool === "Agent")
     await startAgent($, call);
+  await noteCall($, call);
   const ran = await run();
   if (call.tool === "Agent")
     await endAgent($, call, ran);

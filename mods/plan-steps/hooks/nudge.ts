@@ -16,6 +16,9 @@ const docAtom = atom({ plugin: 'plan-steps', key: 'doc' } as const, null)
 const tasksAtom = atom({ plugin: 'plan-steps', key: 'tasks' } as const, [])
 
 let calls = 0
+// The main-loop call that crossed the line: its result, and only its, carries the reminder. The classic event names
+// a helper's call unreliably, so counting happens on tool.call (register.tsx), where `agentId` is sure.
+let dueId: string | null = null
 
 async function currentPlan($: EngineInterface): Promise<Plan | null> {
   return resolvePlan(await read($, tasksAtom), await read($, docAtom))
@@ -23,6 +26,15 @@ async function currentPlan($: EngineInterface): Promise<Plan | null> {
 
 export const resetNudge = (): void => {
   calls = 0
+  dueId = null
+}
+
+/** Counts a call the main loop made while a plan is open; the one that crosses the line is due a reminder. */
+export async function noteCall($: EngineInterface, call: { tool: string; agentId?: string; tool_use_id?: unknown }): Promise<void> {
+  if (call.tool === DESK_PLAN || typeof call.tool_use_id !== 'string') return
+  const plan = await currentPlan($).catch(() => null)
+  const isOpen = plan !== null && plan.steps.some(step => step.status !== 'completed')
+  if (countCall(call.agentId === undefined, isOpen)) dueId = call.tool_use_id
 }
 
 export const NUDGE_TEXT =
@@ -40,11 +52,8 @@ export function countCall(isMainLoop: boolean, isOpenPlan: boolean): boolean {
 export function wireNudge(on: On): void {
   on('classic.PostToolUse', async ($, e, next) => {
     const result = await next(e)
-    const fields = e as unknown as { tool_name?: unknown; agent_id?: unknown }
-    if (fields.tool_name === DESK_PLAN) return result
-    const plan = await currentPlan($).catch(() => null)
-    const isOpen = plan !== null && plan.steps.some(step => step.status !== 'completed')
-    if (!countCall(fields.agent_id === undefined, isOpen)) return result
+    if (dueId === null || (e as unknown as { tool_use_id?: unknown }).tool_use_id !== dueId) return result
+    dueId = null
 
     return { ...result, additionalContext: [...(result.additionalContext ?? []), NUDGE_TEXT] }
   }).catch(($, e, next) => next(e))

@@ -86,7 +86,7 @@ test('desktop: a narrow card sets the now line above the meta instead of cutting
   expect(texts).toContain('başlıyor')
 })
 
-test('desktop: no percent is guessed before the first tool call', async ($, on) => {
+test('desktop: no percent is guessed, before or after the first tool call', async ($, on) => {
   await setup($, on)
   await spawn($, 'Answer a question')
   const ui = await $.ui.mount({ ...PANE, surface: 'desktop' })
@@ -94,7 +94,8 @@ test('desktop: no percent is guessed before the first tool call', async ($, on) 
   expect(await alts()).toContain('başlıyor')
   expect((await alts()).some(alt => /~%\d+/.test(alt))).toBe(false)
   await tool($, { tool: 'Read', file_path: '/w/README.md', agentId: 'a1' })
-  expect((await alts()).some(alt => /^~%\d+$/.test(alt))).toBe(true)
+  expect((await alts()).some(alt => /~%\d+/.test(alt))).toBe(false)
+  expect(await alts()).toContain('çalışıyor')
 })
 
 test('a model the spawn did not name is left out, never drawn as "—"', () => {

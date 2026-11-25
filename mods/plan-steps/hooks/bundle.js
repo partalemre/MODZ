@@ -29,6 +29,7 @@ const EN = {
   moreFiles: (n) => `+${plural(n, "more file", "more files")}`,
   notStarted: "not started",
   waitingSince: (duration) => `waiting · ${duration} ago`,
+  waiting: "waiting",
   allDone: "done",
   now: "now",
   running: "running",
@@ -66,6 +67,7 @@ const TR = {
   moreFiles: (n) => `+${n} dosya daha`,
   notStarted: "başlamadı",
   waitingSince: (duration) => `bekliyor · ${duration} önce`,
+  waiting: "bekliyor",
   allDone: "tamam",
   now: "şimdi",
   running: "çalışıyor",
@@ -207,14 +209,17 @@ function planState(plan, at) {
     return "done";
   if (plan.steps.every((step) => step.status === "pending"))
     return "unstarted";
+  if (at.isBusy === true)
+    return "live";
   return at.now - at.touchedAt >= STALE_MS ? "stale" : "live";
 }
+const hasRunningAgent = (tracks) => Object.values(tracks).some((track) => track.agents.some((agent) => agent.isRunning));
 const isShown = (state) => state === "live" || state === "done";
 function stateNote(state, at) {
   if (state === "unstarted")
     return words().notStarted;
   if (state === "stale")
-    return words().waitingSince(formatDuration(at.now - at.touchedAt));
+    return at.touchedAt < 0 ? words().waiting : words().waitingSince(formatDuration(at.now - at.touchedAt));
   return "";
 }
 
@@ -2644,7 +2649,7 @@ function desktopPane(ui, view, layout) {
   const details = current === undefined ? { meta: "", files: [], running: [] } : deskDetails(current, view.tracks[current.key]);
   const drawing = planSvg({ plan, tracks: view.tracks, now: view.now, theme: view.theme, width, note: noteOf(view) }, details);
   const alt = `${headline(plan)}${current === undefined ? "" : ` · ${words().now}: ${current.title}`}`;
-  const shows = { plan, tracks: view.tracks, theme: view.theme, width, state: planState(plan, { now: view.now, touchedAt: view.touchedAt }), details };
+  const shows = { plan, tracks: view.tracks, theme: view.theme, width, state: planState(plan, { now: view.now, touchedAt: view.touchedAt, isBusy: hasRunningAgent(view.tracks) }), details };
   return h(Box, {
     flexDirection: "column",
     paddingX: 1,
@@ -2655,7 +2660,7 @@ function desktopPane(ui, view, layout) {
   }));
 }
 function noteOf(view) {
-  const at = { now: view.now, touchedAt: view.touchedAt };
+  const at = { now: view.now, touchedAt: view.touchedAt, isBusy: hasRunningAgent(view.tracks) };
   return stateNote(planState(view.plan, at), at);
 }
 function planPane(ui, view, layout) {
@@ -2920,6 +2925,9 @@ function fromDeskPlan(tasks, plan) {
 function finished(tasks) {
   return tasks.map((task) => ({ ...task, status: "completed" }));
 }
+function replayDesk(calls) {
+  return calls.reduce((tasks, call) => call.isWrapUp ? finished(tasks) : fromDeskPlan(tasks, call.plan), []);
+}
 
 const docAtom = atom({ plugin: "plan-steps", key: "doc" }, null);
 const tasksAtom = atom({ plugin: "plan-steps", key: "tasks" }, []);
@@ -2930,7 +2938,7 @@ const LIVE_AGENT = ["async_launched", "teammate_spawned"];
 const DESK_PLAN = "mcp__ccd_turn__update_plan";
 const DESK_WRAP_UP = "mcp__ccd_turn__wrap_up";
 const hubRef = { plugin: "plan-steps", key: "hub" };
-const flags = { cwd: "", isStatusLine: false, isSettled: false, touchedAt: 0, quiet: null, status: null };
+const flags = { cwd: "", isStatusLine: false, isSettled: false, touchedAt: -1, quiet: null, status: null };
 function showStatus($, text) {
   if (text === flags.status)
     return;
@@ -3020,12 +3028,24 @@ async function afterFile($, call) {
     $.ui.log(`plan-steps: could not read ${baseName(path)} (${error instanceof Error ? error.message : "unknown"})`, { to: "debug" });
   }
 }
+async function deskTasks($, skipId) {
+  try {
+    const uses = (await $.session.messages()).flatMap((message) => message.role === "assistant" ? message.toolUses ?? [] : []);
+    const calls = uses.filter((use) => (use.tool === DESK_PLAN || use.tool === DESK_WRAP_UP) && use.tool_use_id !== skipId && use.isError !== true);
+    return replayDesk(calls.map((use) => ({ isWrapUp: use.tool === DESK_WRAP_UP, plan: use.input })));
+  } catch (error) {
+    $.ui.log(`plan-steps: transcript not readable (${error instanceof Error ? error.message : "unknown"})`, { to: "debug" });
+    return [];
+  }
+}
 async function afterTasks($, call, ran) {
   const isMainLoop = call.agentId === undefined;
   if (call.tool === "TodoWrite" && isMainLoop)
     await setTasks($, () => fromTodos(call.todos));
-  if (call.tool === DESK_PLAN && isMainLoop)
-    await setTasks($, (tasks) => fromDeskPlan(tasks, call));
+  if (call.tool === DESK_PLAN && isMainLoop) {
+    const before = await deskTasks($, call.tool_use_id);
+    await setTasks($, (tasks) => fromDeskPlan(before.length > 0 ? before : tasks, call));
+  }
   if (call.tool === DESK_WRAP_UP && isMainLoop && (await read($, tasksAtom)).length > 0)
     await setTasks($, finished);
   if (call.tool === "TaskCreate") {
@@ -3079,6 +3099,13 @@ function lifecycle(on) {
     }));
     flags.cwd = e.cwd.replace(/\/$/, "");
     flags.status = null;
+    if ((await read($, tasksAtom)).length === 0 && await $.session.turns().catch(() => 0) > 0) {
+      const rebuilt = await deskTasks($);
+      if (rebuilt.length > 0) {
+        await update($, tasksAtom, () => rebuilt);
+        await touch($);
+      }
+    }
     const plan = await currentPlan($);
     const state = planState(plan, { now: await $.clock.now(), touchedAt: flags.touchedAt });
     await writeHub($, hubOf(plan === null ? null : progressOf(plan), state, plan === null ? null : currentStep(plan, await read($, tracksAtom))));

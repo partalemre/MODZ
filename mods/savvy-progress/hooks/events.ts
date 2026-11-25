@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { StepInput } from './agents'
-import { addRun, endRun, heard, isRunning, ownTasks, patchRun, planStepOf, stepReport, stepUsage, textKey, toolActivity } from './agents'
+import { addRun, endRun, heard, isRunning, movedOn, ownTasks, patchRun, planStepOf, stepReport, stepUsage, textKey, toolActivity } from './agents'
 import { isNewFlow, mergeFlow } from './flow'
 import { tokensOf } from './pricing'
 import { NO_TALLY } from './strip-svg'
@@ -111,6 +111,14 @@ function onLaunches(on: On): void {
     // Only the main loop's launches make up the request's job; nested ones show in the panel.
     if (!e.parentAgentId) await update($, job, prev => joinJob(prev, id, at))
     return started
+  })
+
+  // The plan moved on: helpers still at work on a step just ticked off now serve the one under way.
+  on('state.set', { plugin: 'plan-steps', key: 'tasks' }, async ($, e, next) => {
+    const result = await next(e)
+    const list = await read($, agents)
+    if (movedOn(list, e.value) !== list) await update($, agents, now => movedOn(now, e.value))
+    return result
   })
 
   // A new request (anything but a background task's notice) closes a job with nothing running.

@@ -81,3 +81,11 @@ export function fromDeskPlan(tasks: PlanTask[], plan: DeskPlan): PlanTask[] {
 export function finished(tasks: PlanTask[]): PlanTask[] {
   return tasks.map(task => ({ ...task, status: 'completed' }))
 }
+
+export type DeskCall = { isWrapUp: boolean; plan: DeskPlan }
+
+// The desktop list as the conversation built it, oldest call first: the list lives in the transcript,
+// so a restart that empties the store can rebuild it instead of turning `advance` into an empty plan.
+export function replayDesk(calls: DeskCall[]): PlanTask[] {
+  return calls.reduce<PlanTask[]>((tasks, call) => (call.isWrapUp ? finished(tasks) : fromDeskPlan(tasks, call.plan)), [])
+}

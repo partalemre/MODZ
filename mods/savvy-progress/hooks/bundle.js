@@ -1482,6 +1482,15 @@ function planStepOf(plan) {
   const subject = steps[at]?.subject;
   return typeof subject === "string" ? { subject, at: at + 1, of: steps.length } : undefined;
 }
+function movedOn(list, plan) {
+  const current = planStepOf(plan);
+  const steps = Array.isArray(plan) ? plan : [];
+  const isDone = (step) => steps.some((one) => one?.subject === step.subject && one?.status === "completed");
+  const isStale = (run) => run.status === "running" && run.planStep !== undefined && isDone(run.planStep);
+  if (current === undefined || !list.some(isStale))
+    return list;
+  return list.map((run) => isStale(run) ? { ...run, planStep: current } : run);
+}
 function addRun(list, spawn) {
   const same = list.filter((a) => spawn.description && norm(a.description) === norm(spawn.description));
   const run = {
@@ -4194,6 +4203,13 @@ function onLaunches(on) {
       await update($, job$3, (prev) => joinJob(prev, id, at));
     return started;
   });
+  on("state.set", { plugin: "plan-steps", key: "tasks" }, async ($, e, next) => {
+    const result = await next(e);
+    const list = await read($, agents$4);
+    if (movedOn(list, e.value) !== list)
+      await update($, agents$4, (now) => movedOn(now, e.value));
+    return result;
+  });
   on("prompt.submit", async ($, e, next) => {
     const result = await next(e);
     if (e.origin.kind === "task-notification")
@@ -5479,8 +5495,9 @@ const progressBarSvg = (W, a, opts) => {
   const uid = a.id.replace(/\W/g, "");
   const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`;
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`;
-  const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? "f-edit"}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
   const isRunning = a.status === "running";
+  const faint = isRunning && opts.progress.isEstimate ? ' opacity=".45"' : "";
+  const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? "f-edit"}"${faint} x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
   const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : "";
   const label = `<text class="${LABEL[a.status] ?? "s"}" x="${barW + PCT_GAP}" y="${BAR_H / 2 + PCT_SIZE * 0.34}" font-family="${MONO}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`;
   return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`);
@@ -5840,29 +5857,12 @@ function detailTree(ui, a, ctx) {
   }, conversationTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), metricsTree(ui, a, ctx));
 }
 
-const CURVE_CAP = 0.9;
-const CURVE_CALLS = 8;
-const EDIT_FLOOR = 0.45;
-const TEST_FLOOR = 0.7;
-const START = 0.04;
-const TEST_WORDS = /\b(test|vitest|jest|pytest|lint|tsc|validate|check)\b/i;
-const floorOf = (a) => {
-  const history = a.history ?? [];
-  const hasTest = history.some((e) => kindOf(e.tool) === "run" && TEST_WORDS.test(e.target));
-  if (hasTest)
-    return TEST_FLOOR;
-  return history.some((e) => kindOf(e.tool) === "edit") ? EDIT_FLOOR : 0;
-};
-const estimateOf = (a) => {
-  const calls = Math.max(a.toolCount || 0, a.history?.length ?? 0);
-  const curve = CURVE_CAP * (1 - Math.exp(-calls / CURVE_CALLS));
-  return Math.min(CURVE_CAP, Math.max(START, floorOf(a), curve));
-};
+const AT_WORK = { value: 1, isEstimate: true };
 const agentProgress = (a) => {
   if (a.status !== "running")
     return { value: 1, isEstimate: false };
   const measured = partialOf(a);
-  return measured === null ? { value: estimateOf(a), isEstimate: true } : { value: measured, isEstimate: false };
+  return measured === null ? AT_WORK : { value: measured, isEstimate: false };
 };
 
 const FRAME_PX = 34;
@@ -5913,7 +5913,7 @@ const nowLine = (a, isOpen) => {
 const barLabel = (a, progress) => {
   if (a.status === "failed")
     return "✗";
-  return progress.isEstimate && !a.toolCount ? "" : progressLabel(progress);
+  return progress.isEstimate ? "" : progressLabel(progress);
 };
 const termBar = (p, width) => {
   const filled = Math.round(width * p.value);
@@ -6021,7 +6021,7 @@ function deskFoot(ui, a, ctx) {
 function deskBar(ui, a, ctx) {
   const progress = agentProgress(a);
   const label = barLabel(a, progress);
-  const pic = { source: progressBarSvg(ctx.inner, a, { progress, label }), alt: label || t().starting, width: ctx.inner, height: BAR_H };
+  const pic = { source: progressBarSvg(ctx.inner, a, { progress, label }), alt: label || (a.toolCount ? t().isRunning : t().starting), width: ctx.inner, height: BAR_H };
   return picture(ui, { key: "bar", at: `bar-${a.id}`, pic, opts: { shows: { status: a.status, isEstimate: progress.isEstimate } } });
 }
 function deskCard(ui, a, ctx) {

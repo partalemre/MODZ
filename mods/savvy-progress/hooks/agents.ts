@@ -40,6 +40,18 @@ export function planStepOf(plan: unknown): PlanStep | undefined {
   return typeof subject === 'string' ? { subject, at: at + 1, of: steps.length } : undefined
 }
 
+// A helper still working when its step is ticked off works for the step under way now: the main loop
+// often sends helpers out first and moves the plan on in its next message. The same list when nothing moves.
+export function movedOn(list: AgentRun[], plan: unknown): AgentRun[] {
+  const current = planStepOf(plan)
+  const steps = Array.isArray(plan) ? (plan as { subject?: unknown; status?: unknown }[]) : []
+  const isDone = (step: PlanStep): boolean => steps.some(one => one?.subject === step.subject && one?.status === 'completed')
+  const isStale = (run: AgentRun): boolean => run.status === 'running' && run.planStep !== undefined && isDone(run.planStep)
+  if (current === undefined || !list.some(isStale)) return list
+
+  return list.map(run => (isStale(run) ? { ...run, planStep: current } : run))
+}
+
 export function addRun(list: AgentRun[], spawn: Spawn): AgentRun[] {
   const same = list.filter(a => spawn.description && norm(a.description) === norm(spawn.description))
   const run: AgentRun = {

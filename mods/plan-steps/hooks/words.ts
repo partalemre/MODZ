@@ -25,6 +25,7 @@ export type Words = {
   moreFiles: Count
   notStarted: string
   waitingSince: (duration: string) => string
+  waiting: string
   allDone: string
   now: string
   running: string
@@ -66,6 +67,7 @@ const EN: Words = {
   moreFiles: n => `+${plural(n, 'more file', 'more files')}`,
   notStarted: 'not started',
   waitingSince: duration => `waiting · ${duration} ago`,
+  waiting: 'waiting',
   allDone: 'done',
   now: 'now',
   running: 'running',
@@ -104,6 +106,7 @@ const TR: Words = {
   moreFiles: n => `+${n} dosya daha`,
   notStarted: 'başlamadı',
   waitingSince: duration => `bekliyor · ${duration} önce`,
+  waiting: 'bekliyor',
   allDone: 'tamam',
   now: 'şimdi',
   running: 'çalışıyor',

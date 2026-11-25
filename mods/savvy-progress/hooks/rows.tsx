@@ -99,11 +99,11 @@ const nowLine = (a: AgentRun, isOpen: boolean): string => {
   return activityOf(a)
 }
 
-// A failed run's bar ends in a cross, not in a percent that would read as "done"; a guess made
-// before its first tool call would be no more than the starting sliver, so it says nothing yet.
+// A failed run's bar ends in a cross, not in a percent that would read as "done"; a run that reports
+// no steps has no percent to give, so its bar says nothing and only shows it is at work.
 const barLabel = (a: AgentRun, progress: Progress): string => {
   if (a.status === 'failed') return '✗'
-  return progress.isEstimate && !a.toolCount ? '' : progressLabel(progress)
+  return progress.isEstimate ? '' : progressLabel(progress)
 }
 
 // An estimate fills with a lighter rule, so it never reads as a measured one.
@@ -207,7 +207,7 @@ function deskFoot(ui: Ui, a: AgentRun, ctx: RowContext) {
 function deskBar(ui: Ui, a: AgentRun, ctx: RowContext) {
   const progress = agentProgress(a)
   const label = barLabel(a, progress)
-  const pic = { source: progressBarSvg(ctx.inner, a, { progress, label }), alt: label || t().starting, width: ctx.inner, height: BAR_H }
+  const pic = { source: progressBarSvg(ctx.inner, a, { progress, label }), alt: label || (a.toolCount ? t().isRunning : t().starting), width: ctx.inner, height: BAR_H }
   return picture(ui, { key: 'bar', at: `bar-${a.id}`, pic, opts: { shows: { status: a.status, isEstimate: progress.isEstimate } } })
 }
 

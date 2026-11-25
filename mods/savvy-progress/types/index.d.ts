@@ -133,6 +133,8 @@ export type Job = {
   startedAt: number
   isSealed: boolean
   isHidden: boolean
+  // What the person asked when the job began: the band is named after the request, not after one helper.
+  asked?: string
 }
 
 /** The 5h window and the session's dollars: where this session started and where it is now. */
@@ -238,6 +240,8 @@ declare module 'claude-code' {
     'savvy-progress': {
       flow: Flow | null
       agents: AgentRun[]
+      // The main conversation's transcript path, from the classic start: helpers' records sit beside it (hooks/about.tsx).
+      transcript: string
       // The conversation's newest row of the main loop's work: where the helpers at work stand (hooks/transcript.tsx).
       crewRow: string
       panel: Panel
@@ -256,13 +260,15 @@ declare module 'claude-code' {
       chats: OtherChat[]
       crab: HomeCrab
       // The session strip's own count (hooks/strip-svg.ts): tokens, agent time, turns, the last turn's cost.
-      tally: { tokens: number; busyMs: number; turns: number; lastCost: number; costBefore: number }
+      // `turnAt`: when the main loop's turn under way began, 0 between turns, so the time shown runs with it.
+      tally: { tokens: number; busyMs: number; turns: number; lastCost: number; costBefore: number; turnAt?: number }
       // The project room whose teammate chip the strip draws now, or null; transceiver reads it so its own notice
       // above the prompt does not say the same line twice.
       teamShown: { roomId: string } | null
     }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
-    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
+    // `drawn` lists the pages the hub draws in its own pane; `act` is a press on one of them (hooks/page-act.ts).
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number }; drawn: readonly string[]; act: { page: string; action: string; arg?: string; at: number } }
     // The plan's steps as plan-steps keeps them; the session strip draws them as its path.
     // The Usage mod's forecast for the plan window it watches: when it runs out at its recent pace, if before the reset.
     'hud-pro': { pace: { window: string; fullAt: number | null } | null }

@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { gitBinary, list, locate, parseNameStatus, parseNumstat, prune, snapshot } from '../hooks/git'
+import { dropStale, gitBinary, list, locate, parseNameStatus, parseNumstat, prune, snapshot } from '../hooks/git'
 import { keyOf } from '../hooks/key'
 import { markUndone, pendingOf } from '../hooks/meta'
 import { setLang } from '../hooks/lang'
@@ -41,6 +41,21 @@ test('a folder that is not a repo gets a shadow repo, but never the home folder'
   expect(lines(fake).some(line => line.startsWith('git init -q --bare'))).toBe(true)
 
   expect(await locate(run, { cwd: '/Users/x', home: '/Users/x', bin: 'git' })).toBeNull()
+  for (const broad of ['Downloads', 'Desktop', 'Documents']) expect(await locate(run, { cwd: `/Users/x/${broad}`, home: '/Users/x', bin: 'git' })).toBeNull()
+  // A project inside one of them is still a project.
+  expect(await locate(run, { cwd: '/Users/x/Desktop/site', home: '/Users/x', bin: 'git' })).not.toBeNull()
+})
+
+test('shadow stores no session wrote for 30 days are dropped at session start, and nothing else', async ($: any, on: any) => {
+  const fake = newFake({ isRepo: false })
+  stub(on, fake)
+  await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/w' })
+  const sweeps = lines(fake).filter(line => line.startsWith('find /Users/x/.cache/claude-checkpoint '))
+
+  expect(sweeps).toEqual(['find /Users/x/.cache/claude-checkpoint -mindepth 1 -maxdepth 1 -type d -name *.git -mtime +30 -exec rm -rf {} +'])
+  const none = newFake()
+  await dropStale(runOf(none), '')
+  expect(none.calls).toEqual([])
 })
 
 test('only the newest 30 checkpoint refs are kept; a shadow repo is also asked to gc', async () => {

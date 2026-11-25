@@ -10,6 +10,7 @@ import { hubCardOf } from './hub'
 import { setLang } from './lang'
 import { DEBOUNCE_MS, DISMISS_AFTER_MS, EMPTY, PRIORITY, REFRESH_MS, TIMEOUT_MS, TIMEOUT_SLACK_MS, WRITE_TOOLS } from './limits'
 import type { Overrides } from './options'
+import { pagePressOf } from './page-act'
 import { badgeText, isFailing, parseLint, parseTests } from './parse'
 import { focusedDart, rootInfo, scopeOf } from './scope'
 import type { Fs } from './scope'
@@ -244,6 +245,14 @@ export function hookRuns(on: On, overrides: Overrides): void {
   on('state.set', { plugin: 'test-badge', key: 'rerun' }, async ($, e, next) => {
     const done = await next(e)
     void runAll($, overrides, { edited: flags.lastEdited, isAuto: false }).catch(error => debug($, `test-badge: run failed (${String(error)})`))
+
+    return done
+  }).catch(($, e, next) => next(e))
+
+  // The rerun on the Tests page the MODZ hub draws (register.tsx takes its other presses): run after the hub's write.
+  on('state.set', { plugin: 'modz', key: 'act' }, async ($, e, next) => {
+    const done = await next(e)
+    if (pagePressOf(e.value)?.kind === 'rerun') $.clock.after(0, () => void runAll($, overrides, { edited: flags.lastEdited, isAuto: false }).catch(error => debug($, `test-badge: run failed (${String(error)})`)))
 
     return done
   }).catch(($, e, next) => next(e))

@@ -11,6 +11,12 @@
       "title": "Hold the finish",
       "description": "When an answer leaves plan steps open, ask Claude to go on by itself (at most twice in a row without a finished step) before showing the card",
       "default": false
+    },
+    "statusLine": {
+      "type": "boolean",
+      "title": "Plan in the footer line",
+      "description": "Also write the plan's progress in the line under the prompt. Off by default: the session strip already shows it",
+      "default": false
     }
   }
 }

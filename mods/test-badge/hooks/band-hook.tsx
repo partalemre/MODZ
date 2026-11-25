@@ -64,9 +64,16 @@ async function askFix($: EngineInterface, card: CiCard): Promise<void> {
   await $.prompt.submit({ text: fixPrompt(card) }).catch(error => $.ui.log(`test-badge: could not send the CI prompt (${String(error)})`, { to: 'debug' }))
 }
 
-// Ayrıntı opens the details pane as register.tsx's openPane does, and with the hub on tells it the pane took
+// Ayrıntı opens the details pane as register.tsx's askForPage does, and with the hub on tells it the pane took
 // its panel (kit/stage.ts); `$` is not handed across modules, so the open is spelled out here.
 async function openDetails($: EngineInterface): Promise<void> {
+  // A hub that draws the Tests page in its own pane is asked for it instead (register.tsx askForPage).
+  const drawn = (await $.state.get({ plugin: 'modz', key: 'drawn' })).value
+  if (Array.isArray(drawn) && drawn.includes(HUB_PANE)) {
+    await $.state.set({ plugin: 'test-badge', key: 'home' }, { pane: HUB_PANE, at: await $.clock.now() })
+
+    return
+  }
   motion.reset()
   const opened = await $.ui.open({ id: PANE, title: words().paneTitle, focus: true })
   try {
@@ -97,7 +104,7 @@ export function hookBand(on: On): void {
     return pinned(e, bandTree(ui, {
       ...view, badge, now,
       hasDetails: !badge.isRunning && isFailing(badge),
-      onDetails: () => void openDetails($),
+      onDetails: () => void openDetails($).catch(error => $.ui.log(`test-badge: the details could not open (${String(error)})`, { to: 'debug' })),
       onDismiss: badge.isRunning || !isNotice ? undefined : () => void update($, noticeAtom, () => null),
     }, theirs))
   })

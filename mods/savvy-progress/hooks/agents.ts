@@ -40,6 +40,22 @@ export function planStepOf(plan: unknown): PlanStep | undefined {
   return typeof subject === 'string' ? { subject, at: at + 1, of: steps.length } : undefined
 }
 
+// Helpers the main loop sends out just before it moves the plan on (it often moves it in its next message) serve the
+// step it moved to. Only a move within MOVE_GRACE_MS of the launch counts: a step ticked off later was the helper's own.
+// The same list when nothing moves.
+export const MOVE_GRACE_MS = 2 * 60_000
+
+export function movedOn(list: AgentRun[], plan: unknown, now: number): AgentRun[] {
+  const current = planStepOf(plan)
+  const steps = Array.isArray(plan) ? (plan as { subject?: unknown; status?: unknown }[]) : []
+  const isDone = (step: PlanStep): boolean => steps.some(one => one?.subject === step.subject && one?.status === 'completed')
+  const isEarly = (run: AgentRun): boolean => run.status === 'running' && now - run.startedAt <= MOVE_GRACE_MS
+  const isStale = (run: AgentRun): boolean => isEarly(run) && run.planStep !== undefined && isDone(run.planStep)
+  if (current === undefined || !list.some(isStale)) return list
+
+  return list.map(run => (isStale(run) ? { ...run, planStep: current } : run))
+}
+
 export function addRun(list: AgentRun[], spawn: Spawn): AgentRun[] {
   const same = list.filter(a => spawn.description && norm(a.description) === norm(spawn.description))
   const run: AgentRun = {

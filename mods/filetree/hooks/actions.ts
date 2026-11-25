@@ -3,10 +3,10 @@ import { detectRepo, refreshGit } from './gitread'
 import { type Host, patch } from './host'
 import { loadDirs } from './listing'
 import { cwdOf, reset } from './pane'
-import { dropIndex, search } from './search'
+import { dropIndex, jump, search } from './search'
 import { mem } from './session'
-import { staleSizes } from './sizes'
-import type { ToolKey } from './toolbar'
+import { staleSizes, wantSizes } from './sizes'
+import type { FilesActs, ToolKey } from './toolbar'
 import { dirname, dropBelow } from './tree'
 
 async function refresh(h: Host): Promise<void> {
@@ -29,16 +29,27 @@ async function home(h: Host): Promise<void> {
   await reset(h, await cwdOf(h))
 }
 
-// The toolbar's actions, shared by both surfaces and the tree's single-key shortcuts.
-export function actionsOf(h: Host, t: FileTree) {
+// The toolbar's work, awaited where a press on the hub's page waits for it before asking for sizes (hubact.ts).
+export function toolWork(h: Host, t: FileTree): Record<ToolKey, () => Promise<void>> {
   return {
-    refresh: () => void refresh(h),
-    collapse: () => void patch(h, cur => ({ expanded: [], nodes: dropBelow(cur.nodes, cur.nodes.filter(x => x.parent === cur.root && x.kind === 'dir').map(x => x.id)) })),
-    size: () => void patch(h, cur => ({ showSize: !cur.showSize })),
-    up: () => void up(h, t),
-    cwd: () => void home(h),
-    hidden: () => void patch(h, cur => ({ showHidden: !cur.showHidden })),
-    unselect: () => void patch(h, () => ({ selected: '' })),
-    more: () => void patch(h, cur => ({ showTools: !cur.showTools })),
-  } satisfies Record<ToolKey, () => void>
+    refresh: () => refresh(h),
+    collapse: () => patch(h, cur => ({ expanded: [], nodes: dropBelow(cur.nodes, cur.nodes.filter(x => x.parent === cur.root && x.kind === 'dir').map(x => x.id)) })),
+    size: () => patch(h, cur => ({ showSize: !cur.showSize })),
+    up: () => up(h, t),
+    cwd: () => home(h),
+    hidden: () => patch(h, cur => ({ showHidden: !cur.showHidden })),
+    unselect: () => patch(h, () => ({ selected: '' })),
+    more: () => patch(h, cur => ({ showTools: !cur.showTools })),
+  }
+}
+
+// The toolbar's actions, shared by both surfaces and the tree's single-key shortcuts.
+export function actionsOf(h: Host, t: FileTree): Record<ToolKey, () => void> {
+  const work = toolWork(h, t)
+  return Object.fromEntries(Object.entries(work).map(([key, run]) => [key, () => void run()])) as Record<ToolKey, () => void>
+}
+
+// What this mod's own pane hands its drawing (FilesActs, toolbar.tsx).
+export function filesActs(h: Host, t: FileTree): FilesActs {
+  return { tool: actionsOf(h, t), find: v => void search(h, v), jump: v => void jump(h, v), sizes: dirs => wantSizes(h, dirs) }
 }

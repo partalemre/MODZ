@@ -6,7 +6,7 @@ import { bandSvg, BAND_H } from './band-svg'
 import { isOwnOpen } from './hub'
 import { HEARTBEAT_MS, SCAN_MS } from './chats'
 import { NOTE_PREFIX, noteKey, restorePane, staleNotes, watchPane } from './kit/pane-keep'
-import { isOffStage, shownOf } from './stage'
+import { isOffStage, paneOf, shownOf } from './stage'
 import { t } from './i18n'
 import type { JobView } from './job'
 import { deriveJob, percentText } from './job'
@@ -130,8 +130,24 @@ function startWatch($: EngineInterface): void {
 }
 
 
-// /agents-info and the crew button: open the pane, or close it when it is up; true when it ends up open.
+// Whether the MODZ hub draws the Agents page in its own pane (modz/hooks/pages/agents.tsx): then it is asked for it.
+async function isHubDrawn($: EngineInterface): Promise<boolean> {
+  const drawn = (await $.state.get({ plugin: 'modz', key: 'drawn' })).value
+  return Array.isArray(drawn) && drawn.includes(HUB_PANE)
+}
+
+// The hub hears this mod's `home` naming the page and shows it; this mod's own pane stays shut.
+async function askHub($: EngineInterface): Promise<void> {
+  await $.state.set(HOME, { pane: HUB_PANE, at: await $.clock.now() })
+}
+
+// /agents-info and the crew button: open the pane, or close it when it is up; true when it ends up open. With the hub
+// drawing the page, the hub is asked for it instead.
 async function togglePane($: EngineInterface): Promise<boolean> {
+  if (await isHubDrawn($)) {
+    await askHub($)
+    return true
+  }
   const isOpen = (await $.ui.panes()).some(p => p.id === PANE)
   if (isOpen) {
     paneHeld.isHeld = true
@@ -250,14 +266,18 @@ function onOpen(on: On): void {
 
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
     const done = await next(e)
-    if (isOwnOpen(e.value)) await openPane($)
+    if (!isOwnOpen(e.value)) return done
+    // Inside the hub's own write its `home` hook would not hear this one: asked once that write has settled.
+    if (await isHubDrawn($)) $.clock.after(0, () => void askHub($).catch(cause => $.ui.log(`savvy-progress: could not ask MODZ for the page: ${String(cause)}`, { to: 'debug' })))
+    else await openPane($)
     return done
   }).catch(($, e, next) => next(e))
 
   // Another pane took the MODZ panel: this one steps aside rather than wait as a tab.
   on('state.set', { plugin: 'modz', key: 'stage' }, async ($, e, next) => {
     const done = await next(e)
-    if (isOffStage(e.value, HUB_PANE)) {
+    // The hub drawing this mod's page in its own pane holds the panel too: this pane would be a second tab.
+    if (isOffStage(e.value, HUB_PANE) || (paneOf(e.value) === HUB_PANE && (await isHubDrawn($)))) {
       paneHeld.isHeld = true
       await $.ui.close({ id: PANE })
     }

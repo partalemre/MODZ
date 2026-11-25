@@ -23,6 +23,10 @@ function moved(track: StepTrack, status: StepStatus, now: number): StepTrack {
   return { ...track, status, startedAt: null, finishedAt: null }
 }
 
+/** Ticked off without ever being seen under way: a batch `done` or the wrap-up, not work this session watched. */
+export const isTickedUnseen = (track: StepTrack | undefined): boolean =>
+  track !== undefined && track.status === 'completed' && track.startedAt === null && track.finishedAt !== null
+
 // Times come from status changes the session showed; a step first seen already done has no duration.
 export function observe(tracks: Tracks, steps: Step[], now: number): Tracks {
   const next: Tracks = { ...tracks }

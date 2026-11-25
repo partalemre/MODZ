@@ -94,9 +94,11 @@ const en = {
   tools: (n) => plural(n, "step", "steps"),
   errors: (n) => `${n} failed`,
   crew: (n) => plural(n, "agent", "agents"),
+  crewAtWork: (n) => `${n} at work`,
+  agentsEnded: (ended, total) => `${ended}/${total} agents done`,
   stripCost: "cost",
   stripTokens: "tokens",
-  stripTime: "agent time",
+  stripTime: "working time",
   stripLast: (cost) => `last turn ${cost}`,
   stripTurns: (n) => plural(n, "turn", "turns"),
   stripPerTurn: (span) => `${span} per turn`,
@@ -104,6 +106,13 @@ const en = {
   rowDoing: { read: "reading", search: "searching", edit: "writing", run: "running a command", test: "checking", save: "saving a version", web: "on the internet", message: "sending word", agent: "leading agents", wait: "waiting", other: "thinking" },
   rowStep: (done, total) => `step ${done}/${total}`,
   rowPlan: (at, of, subject) => `plan step ${at}/${of}: ${subject}`,
+  aboutWhy: "Why",
+  headerWhy: (at, of, subject) => `Working on plan step ${at}/${of}: ${subject}`,
+  aboutForRequest: "for the task you gave in this chat",
+  aboutLog: "Its record",
+  aboutLogText: "on your computer, in this file",
+  aboutLearns: "Does it learn",
+  aboutLearnsText: (written) => `it remembers within this chat; nothing reaches other chats by itself. What stays is the files it wrote${written > 0 ? ` (${written})` : ""}.`,
   rowEnded: { done: "finished", failed: "did not finish" },
   stripPlan: "plan",
   stripPlanDone: "done",
@@ -255,9 +264,11 @@ const ru = {
   tools: (n) => `шагов: ${n}`,
   errors: (n) => `ошибок: ${n}`,
   crew: (n) => `агентов: ${n}`,
+  crewAtWork: (n) => `работают: ${n}`,
+  agentsEnded: (ended, total) => `готово агентов: ${ended}/${total}`,
   stripCost: "стоимость",
   stripTokens: "токены",
-  stripTime: "время агентов",
+  stripTime: "время работы",
   stripLast: (cost) => `последний ход ${cost}`,
   stripTurns: (n) => `ходов: ${n}`,
   stripPerTurn: (span) => `${span} за ход`,
@@ -265,6 +276,13 @@ const ru = {
   rowDoing: { read: "читает", search: "ищет", edit: "пишет", run: "выполняет команду", test: "проверяет", save: "сохраняет версию", web: "в интернете", message: "передаёт сообщение", agent: "ведёт агентов", wait: "ждёт", other: "думает" },
   rowStep: (done, total) => `шаг ${done}/${total}`,
   rowPlan: (at, of, subject) => `шаг плана ${at}/${of}: ${subject}`,
+  aboutWhy: "Зачем",
+  headerWhy: (at, of, subject) => `Работают над шагом плана ${at}/${of}: ${subject}`,
+  aboutForRequest: "для задачи из этого чата",
+  aboutLog: "Запись",
+  aboutLogText: "на вашем компьютере, в этом файле",
+  aboutLearns: "Учится ли он",
+  aboutLearnsText: (written) => `помнит в этом чате; в другие чаты само ничего не переходит. Остаются его файлы${written > 0 ? ` (${written})` : ""}.`,
   rowEnded: { done: "закончил", failed: "не закончил" },
   stripPlan: "план",
   stripPlanDone: "готов",
@@ -425,9 +443,11 @@ const tr = {
   tools: (n) => `${n} adım`,
   errors: (n) => `${n} hata`,
   crew: (n) => `${n} ajan`,
+  crewAtWork: (n) => `${n} ajan çalışıyor`,
+  agentsEnded: (ended, total) => `${ended}/${total} ajan bitti`,
   stripCost: "maliyet",
   stripTokens: "token",
-  stripTime: "ajan süresi",
+  stripTime: "çalışma süresi",
   stripLast: (cost) => `son tur ${cost}`,
   stripTurns: (n) => `${n} tur`,
   stripPerTurn: (span) => `tur başına ${span}`,
@@ -435,6 +455,13 @@ const tr = {
   rowDoing: { read: "okuyor", search: "arıyor", edit: "yazıyor", run: "komut çalıştırıyor", test: "kontrol ediyor", save: "sürüm kaydediyor", web: "internette", message: "haber gönderiyor", agent: "ajan yönetiyor", wait: "bekliyor", other: "düşünüyor" },
   rowStep: (done, total) => `adım ${done}/${total}`,
   rowPlan: (at, of, subject) => `planın ${at}/${of}. adımı: ${subject}`,
+  aboutWhy: "Neden",
+  headerWhy: (at, of, subject) => `Planın ${at}/${of}. adımı için çalışıyorlar: ${subject}`,
+  aboutForRequest: "bu sohbette verdiğin iş için",
+  aboutLog: "Kaydı",
+  aboutLogText: "bilgisayarında, bu dosyada",
+  aboutLearns: "Öğreniyor mu",
+  aboutLearnsText: (written) => `bu sohbette hatırlar; başka sohbete kendiliğinden geçmez. Kalan, yazdığı dosyalardır${written > 0 ? ` (${written} dosya)` : ""}.`,
   rowEnded: { done: "işini bitirdi", failed: "işi yarıda kaldı" },
   stripPlan: "plan",
   stripPlanDone: "tamam",
@@ -504,6 +531,7 @@ const tr = {
 const STRINGS = { tr, en, ru };
 let lang = "en";
 const t = () => STRINGS[lang];
+const currentLang = () => lang;
 const setLang = (next) => {
   lang = next;
   setLang$1(next);
@@ -1032,9 +1060,12 @@ function splitRedirects(words) {
   }
   return { kept, out };
 }
+const GLUE = new Set(["", "!", "if", "then", "else", "elif", "do", "while", "until", "time"]);
 function callOf(command) {
   const { kept, out } = splitRedirects(wordsOf$1(command));
-  const words = [...kept];
+  const words = kept.map((word) => word.replace(/^[({]+/, ""));
+  while (words.length > 0 && GLUE.has(words[0] ?? ""))
+    words.shift();
   while (words.length > 0 && (WRAPPERS.has(words[0] ?? "") || /^\w+\+?=/.test(words[0] ?? "")))
     words.shift();
   const [first, ...args] = words;
@@ -1479,6 +1510,17 @@ function planStepOf(plan) {
   const subject = steps[at]?.subject;
   return typeof subject === "string" ? { subject, at: at + 1, of: steps.length } : undefined;
 }
+const MOVE_GRACE_MS = 2 * 60000;
+function movedOn(list, plan, now) {
+  const current = planStepOf(plan);
+  const steps = Array.isArray(plan) ? plan : [];
+  const isDone = (step) => steps.some((one) => one?.subject === step.subject && one?.status === "completed");
+  const isEarly = (run) => run.status === "running" && now - run.startedAt <= MOVE_GRACE_MS;
+  const isStale = (run) => isEarly(run) && run.planStep !== undefined && isDone(run.planStep);
+  if (current === undefined || !list.some(isStale))
+    return list;
+  return list.map((run) => isStale(run) ? { ...run, planStep: current } : run);
+}
 function addRun(list, spawn) {
   const same = list.filter((a) => spawn.description && norm(a.description) === norm(spawn.description));
   const run = {
@@ -1628,9 +1670,11 @@ const MAIN_ID = "main";
 const TITLE_MAX$1 = 80;
 const isMain = (a) => a.isMain === true;
 const crewOf$1 = (list) => list.filter((a) => !isMain(a));
+const TAG_LINE = /^<\/?[\w-]+(\s[^>]*)?>$/;
 const titleOf$1 = (prompt) => {
-  const line = prompt.split(`
-`).find((text) => text.trim())?.trim() ?? "";
+  const unwrapped = prompt.replace(/^\s*<[\w-]+(\s[^>]*)?>/, "").replace(/<\/[\w-]+>\s*$/, "");
+  const line = unwrapped.split(`
+`).map((text) => text.trim()).find((text) => text !== "" && !TAG_LINE.test(text)) ?? "";
   return line.startsWith("/") ? "" : clip$2(line, TITLE_MAX$1);
 };
 function mainAwake(list, start) {
@@ -1998,7 +2042,9 @@ const jobAgents = (input) => {
     return [];
   return input.agents.filter((a) => job.agentIds.includes(a.id));
 };
-const agentsTitle = (list) => {
+const agentsTitle = (list, asked) => {
+  if (asked)
+    return asked;
   const first = list[0];
   const name = first ? first.description || first.type : t().agents;
   return list.length > 1 ? `${name} +${list.length - 1}` : name;
@@ -2038,13 +2084,13 @@ function reportView(f, list, input) {
     failed: 0
   };
 }
-function tasksView(tasks, list) {
+function tasksView(tasks, list, asked) {
   const count = countTasks(tasks);
   const running = list.filter((a) => a.status === "running").length;
   const isFinished = count.done === count.total && running === 0;
   return {
     source: "tasks",
-    title: agentsTitle(list),
+    title: agentsTitle(list, asked),
     label: isFinished ? t().done : `${t().tasks} ${count.done}/${count.total}`,
     ratio: ratioOf({ done: count.done, credit: NO_CREDIT, total: count.total, isFinished }),
     isEstimate: false,
@@ -2058,7 +2104,7 @@ function tasksView(tasks, list) {
     failed: 0
   };
 }
-function agentsView(list) {
+function agentsView(list, asked) {
   const s = t();
   const running = list.filter((a) => a.status === "running");
   const ended = list.length - running.length;
@@ -2068,8 +2114,8 @@ function agentsView(list) {
   const done = failed ? `${s.done} · ${s.errors(failed)}` : s.done;
   return {
     source: "agents",
-    title: agentsTitle(list),
-    label: isFinished ? done : `${s.agents} ${ended}/${list.length}`,
+    title: agentsTitle(list, asked),
+    label: isFinished ? done : s.agentsEnded(ended, list.length),
     ratio: ratioOf({ done: ended, credit, total: list.length, isFinished }),
     isEstimate: credit.isEstimate && !isFinished,
     launched: 1,
@@ -2088,7 +2134,8 @@ function deriveJob(input) {
     return reportView(input.flow, list, input);
   if (!list.length)
     return null;
-  return input.tasks.length ? tasksView(input.tasks, list) : agentsView(list);
+  const asked = input.job?.asked;
+  return input.tasks.length ? tasksView(input.tasks, list, asked) : agentsView(list, asked);
 }
 const percentText = (view) => {
   if (view.ratio === null)
@@ -2096,9 +2143,9 @@ const percentText = (view) => {
   const n = Math.max(1, Math.round(view.ratio * PERCENT$2));
   return `${view.isEstimate ? "~" : ""}${t().pct(n)}`;
 };
-const joinJob = (prev, id, at) => {
+const joinJob = (prev, id, at, asked) => {
   if (!prev || prev.isSealed)
-    return { agentIds: [id], startedAt: at, isSealed: false, isHidden: false };
+    return { agentIds: [id], startedAt: at, isSealed: false, isHidden: false, ...asked ? { asked } : {} };
   return { ...prev, agentIds: [...prev.agentIds.filter((other) => other !== id), id] };
 };
 const sealJob = (prev, list) => {
@@ -2131,7 +2178,7 @@ const pillSvg = ({ label, role, x, w }) => `<rect class="k" x="${x}" y="${PILL$1
 <text class="${PILL_INK$1[role]}" x="${x + w / 2}" y="${BASELINE$2 - 0.5}" text-anchor="middle" font-family="${FONT}" font-size="${PILL$1.size}" font-weight="600">${xml(label)}</text>`;
 const planOf$1 = (view, maxW) => {
   const pillW = Math.ceil(textWidth(view.label, PILL$1.size) * BOLD$7 + PILL$1.padX * 2);
-  const pctW = percentText(view) === UNKNOWN$1 ? 0 : Math.ceil(percentText(view).length * PERCENT_SIZE * MONO_EM$1);
+  const pctW = percentText(view) === UNKNOWN$1 || view.isFinished ? 0 : Math.ceil(percentText(view).length * PERCENT_SIZE * MONO_EM$1);
   const avail = maxW - TITLE_X - pillW - pctW - CRAB$2.w - GAP$3 * 4;
   const natural = Math.ceil(textWidth(view.title, TITLE_SIZE) * BOLD$7);
   if (avail - natural >= METER$2.min)
@@ -2297,14 +2344,14 @@ const hubDetailOf = (view, running, others = {}) => {
   return `${lead}${SEP}${waits}`;
 };
 const LIVE_LINES = 3;
-const LABEL_MAX = 48;
+const LABEL_MAX$1 = 48;
 const COST_MIN = 0.005;
 const hubLiveOf = (agents) => {
   const running = [...agents.filter((a) => isRunning(a) && isMain(a)), ...crewOf$1(agents).filter(isRunning)];
   if (running.length === 0)
     return;
   const lines = running.slice(0, LIVE_LINES).map((a) => ({
-    label: clip$2(isMain(a) && a.lastPlain || a.description || a.type, LABEL_MAX),
+    label: clip$2(isMain(a) && a.lastPlain || a.description || a.type, LABEL_MAX$1),
     since: a.startedAt,
     ...a.costUsd >= COST_MIN ? { value: fmtCost(a.costUsd) } : {}
   }));
@@ -3517,12 +3564,15 @@ async function factsOf(io) {
     }))
   };
 }
+const busyOf = (tally, now) => tally.busyMs + (tally.turnAt ? Math.max(0, now - tally.turnAt) : 0);
 function planSlot(facts, presses) {
   if (facts.steps.length === 0)
     return [];
-  const done = facts.steps.filter((step) => step.status === "completed").length;
-  const current = facts.steps.find((step) => step.status === "in_progress") ?? facts.steps.find((step) => step.status !== "completed");
-  const base = { id: "plan", label: t().stripPlan, value: `${done}/${facts.steps.length}`, widest: `${facts.steps.length}/${facts.steps.length}` };
+  const total = facts.steps.length;
+  const at = facts.steps.findIndex((step) => step.status === "in_progress");
+  const index = at === -1 ? facts.steps.findIndex((step) => step.status !== "completed") : at;
+  const current = facts.steps[index];
+  const base = { id: "plan", label: t().stripPlan, value: `${current === undefined ? total : index + 1}/${total}`, widest: `${total}/${total}` };
   const chip = current === undefined ? { ...base, note: t().stripPlanDone, tone: "ok" } : { ...base, note: current.subject };
   return [{ chip, rank: 0, isNoteKept: true, press: presses.open(PLAN_PANE) }];
 }
@@ -3548,7 +3598,7 @@ function slotsOf(facts, presses) {
     ...planSlot(facts, presses),
     { chip: { id: "cost", label: t().stripCost, value: fmtCost(facts.cost), widest: room.cost }, rank: 1, press: usage },
     { chip: { id: "tokens", label: t().stripTokens, value: fmtTokens(counted.tokens), widest: room.tokens }, rank: 3, press: usage },
-    { chip: { id: "time", label: t().stripTime, value: spanText(counted.busyMs), widest: room.time, ...helpers > 0 ? { note: t().crew(helpers) } : {} }, rank: 4, press: presses.onAgents },
+    { chip: { id: "time", label: t().stripTime, value: spanText(busyOf(counted, facts.now)), widest: room.time, ...helpers > 0 ? { note: t().crewAtWork(helpers) } : {} }, rank: 4, press: presses.onAgents },
     ...windows.map((run) => limitSlot(run, facts, presses)),
     ...facts.team === null ? [] : [{ chip: { id: "team", label: "", value: "" }, rank: TEAM_RANK, press: presses.open(TEAM_PANE), art: teamArt(facts.team, facts.now) }],
     ...presses.onHub === null ? [] : [{ chip: { id: HUB_CHIP, label: "", value: "modz", isWordmark: true }, rank: 0, press: presses.onHub }]
@@ -3595,7 +3645,7 @@ function stripText(facts) {
     facts.steps.length === 0 ? "" : `${t().stripPlan} ${done}/${facts.steps.length}`,
     `${t().stripCost} ${fmtCost(facts.cost)}`,
     `${t().stripTokens} ${fmtTokens(facts.tally.tokens)}`,
-    `${t().stripTime} ${spanText(facts.tally.busyMs)}`,
+    `${t().stripTime} ${spanText(busyOf(facts.tally, facts.now))}`,
     week === undefined ? "" : `${t().stripWeek} ${t().pct(Math.round(week.percent))}`
   ].filter(Boolean).join(" · ");
 }
@@ -3812,7 +3862,18 @@ function startWatch($) {
   let looks = 0;
   $.clock.every(SCAN_MS, () => void watchPane(paneHeld, keepNouns($), ++looks % BEAT_LOOKS === 0));
 }
+async function isHubDrawn($) {
+  const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+  return Array.isArray(drawn) && drawn.includes(HUB_PANE);
+}
+async function askHub($) {
+  await $.state.set(HOME$1, { pane: HUB_PANE, at: await $.clock.now() });
+}
 async function togglePane($) {
+  if (await isHubDrawn($)) {
+    await askHub($);
+    return true;
+  }
   const isOpen = (await $.ui.panes()).some((p) => p.id === PANE);
   if (isOpen) {
     paneHeld.isHeld = true;
@@ -3943,13 +4004,17 @@ function onOpen(on) {
   }).catch(($, e, next) => next(e));
   on("state.set", { plugin: "modz", key: "open" }, async ($, e, next) => {
     const done = await next(e);
-    if (isOwnOpen(e.value))
+    if (!isOwnOpen(e.value))
+      return done;
+    if (await isHubDrawn($))
+      $.clock.after(0, () => void askHub($).catch((cause) => $.ui.log(`savvy-progress: could not ask MODZ for the page: ${String(cause)}`, { to: "debug" })));
+    else
       await openPane($);
     return done;
   }).catch(($, e, next) => next(e));
   on("state.set", { plugin: "modz", key: "stage" }, async ($, e, next) => {
     const done = await next(e);
-    if (isOffStage(e.value, HUB_PANE)) {
+    if (isOffStage(e.value, HUB_PANE) || paneOf(e.value) === HUB_PANE && await isHubDrawn($)) {
       paneHeld.isHeld = true;
       await $.ui.close({ id: PANE });
     }
@@ -4028,122 +4093,7 @@ function onBand(on, opts) {
   });
 }
 
-const PILL = { h: 20, padX: 9, size: 11, dot: 3, dotGap: 6 };
-const BOLD$3 = 1.06;
-const LABEL$3 = { size: 12, weight: 600 };
-const HEAD = { h: 28, size: 13.5, gap: 10, nameGap: 7 };
-const CHEVRON_ROOM = 22;
-const CHEVRON = 4.5;
-const STROKE$1 = 1.5;
-const SECTION_H = 18;
-const HEAD_H = HEAD.h;
-const PILL_INK = {
-  run: { dot: "f-edit live", text: "f-edit" },
-  ok: { dot: "m", text: "s" },
-  warn: { dot: "f-warn", text: "f-warn" },
-  danger: { dot: "f-danger", text: "f-danger" }
-};
-const pillPart = (pill, x, y) => {
-  const width = Math.ceil(textWidth(pill.text, PILL.size) * BOLD$3 + PILL.padX * 2 + PILL.dot * 2 + PILL.dotGap);
-  const mid = y + PILL.h / 2;
-  const ink = PILL_INK[pill.role];
-  const body = [
-    `<rect class="k" x="${x}" y="${y}" width="${width}" height="${PILL.h}" rx="${PILL.h / 2}"/>`,
-    `<circle class="${ink.dot}" cx="${x + PILL.padX + PILL.dot}" cy="${mid}" r="${PILL.dot}"/>`,
-    `<text class="${ink.text}" x="${x + PILL.padX + PILL.dot * 2 + PILL.dotGap}" y="${mid + PILL.size * 0.35}" font-family="${FONT}" font-size="${PILL.size}" font-weight="600">${xml(pill.text)}</text>`
-  ];
-  return { body: body.join(""), width };
-};
-const chevronSvg = (x, y) => `<g class="chev"><path d="M${x} ${y - CHEVRON}l${CHEVRON} ${CHEVRON}-${CHEVRON} ${CHEVRON}" fill="none" stroke-width="${STROKE$1}" stroke-linecap="round" stroke-linejoin="round" class="i-m"/></g>`;
-const cardHeadSvg = (W, head, inset = 0) => {
-  const right = W - CHEVRON_ROOM;
-  const probe = pillPart(head.pill, 0, 0);
-  const pill = pillPart(head.pill, right - probe.width, (HEAD.h - PILL.h) / 2);
-  const nameW = textWidth(head.name, HEAD.size) * BOLD$3;
-  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap - inset);
-  const titleSpan = title === "…" ? "" : `<tspan class="s" dx="${HEAD.nameGap}">${xml(title)}</tspan>`;
-  const y = HEAD.h / 2 + HEAD.size * 0.35;
-  const body = [
-    `<text x="${inset}" y="${y}" font-family="${FONT}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
-    pill.body,
-    chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, HEAD.h / 2)
-  ];
-  return paneSvg(W, HEAD.h, body.join(""));
-};
-const sectionSvg = (W, section) => {
-  const label = `<text class="m" x="0" y="${SECTION_H / 2 + LABEL$3.size * 0.36}" font-family="${FONT}" font-size="${LABEL$3.size}" font-weight="${LABEL$3.weight}">${xml(fitText(section.label, LABEL$3.size * BOLD$3, W))}</text>`;
-  return paneSvg(W, SECTION_H, label);
-};
-const SECTION_SVG_H = SECTION_H;
-const NOTICE = { h: 32, padX: 8, dot: 3, gap: 9, size: 13 };
-const noticeSvg = (W, notice) => {
-  const mid = NOTICE.h / 2;
-  const x = NOTICE.padX + NOTICE.dot * 2 + NOTICE.gap;
-  const lead = `${notice.name} `;
-  const reason = notice.reason;
-  const used = textWidth(lead, NOTICE.size) * BOLD$3 + textWidth(reason, NOTICE.size) * BOLD$3;
-  const title = fitText(` · ${notice.title}`, NOTICE.size, Math.max(0, W - x - CHEVRON_ROOM - used));
-  const body = [
-    `<circle class="f-${notice.role}" cx="${NOTICE.padX + NOTICE.dot}" cy="${mid}" r="${NOTICE.dot}"/>`,
-    `<text x="${x}" y="${mid + NOTICE.size * 0.35}" font-family="${FONT}" font-size="${NOTICE.size}" font-weight="560"><tspan class="t">${xml(lead)}</tspan><tspan class="f-${notice.role}">${xml(reason)}</tspan><tspan class="s" font-weight="400">${xml(title === "…" ? "" : title)}</tspan></text>`,
-    chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, mid)
-  ];
-  return paneSvg(W, NOTICE.h, body.join(""));
-};
-const NOTICE_H = NOTICE.h;
-
 const types$2 = atom({ plugin: "savvy-progress", key: "types" }, BUILTIN_TYPES);
-function draftHead(ui, layout) {
-  const { Text } = ui;
-  const label = t().newTask;
-  if (!layout.isDesktop)
-    return h(Text, {
-      bold: true,
-      dimColor: true
-    }, label);
-  return picture(ui, { key: "draft-head", at: "draft-head", pic: { source: sectionSvg(layout.inner, { label }), alt: label, width: layout.inner, height: SECTION_SVG_H } });
-}
-function draftTree(ui, view, on) {
-  const { Box, Button, Input, Select, Text } = ui;
-  const s = t();
-  const chosen = chosenOf(view.types, view.draft);
-  const frame = view.layout.isDesktop ? { borderStyle: "round", paddingX: 2, paddingY: 1 } : {};
-  return h(Box, {
-    key: "draft",
-    flexDirection: "column",
-    rowGap: 1,
-    ...frame
-  }, draftHead(ui, view.layout), !chosen && h(Text, {
-    dimColor: true
-  }, s.noTypes), chosen && Select && h(Select, {
-    key: "dispatch-type",
-    label: s.agentLabel,
-    options: view.types.map((type) => ({ value: type.name, label: type.name })),
-    value: chosen.name,
-    onSelect: on.onPickType
-  }), chosen && h(Text, {
-    dimColor: true,
-    wrap: "truncate-end"
-  }, `${sourceWord(chosen.source)} · ${describe(chosen)}`), chosen && Input && h(Input, {
-    key: "dispatch-task",
-    label: s.taskLabel,
-    placeholder: s.taskHint,
-    value: "",
-    submitLabel: s.start,
-    autoFocus: true,
-    onSubmit: on.onStartTask
-  }), view.draft?.notice && h(Text, {
-    color: "warning"
-  }, view.draft.notice), h(Box, {
-    flexDirection: "row"
-  }, h(Button, {
-    key: "dispatch-cancel",
-    plain: true,
-    dimColor: true,
-    label: s.cancel,
-    onPress: on.onCancelTask
-  })));
-}
 function onDispatch(on) {
   on("agent.offer", async ($, e, next) => {
     const answer = await next(e);
@@ -4234,6 +4184,15 @@ let asked;
 const STEP_BRIEF = `
 
 Progress reporting: before any other work, call \`${STEP_TOOL}\` with \`total\` (your plan in 3-8 steps) and \`done: 0\`; call it again with \`done\` and a few-word \`note\` as each step finishes. It only draws a progress bar.`;
+const NOTES_IN = {
+  en: "",
+  tr: `
+
+Write your task-list items, progress notes and the description of every tool call in Turkish, in plain words: the person follows them on screen.`,
+  ru: `
+
+Write your task-list items, progress notes and the description of every tool call in Russian, in plain words: the person follows them on screen.`
+};
 async function stamp($) {
   const at = await $.clock.now();
   await update($, now$2, () => at);
@@ -4274,7 +4233,8 @@ function onLaunches(on) {
   });
   on("agent.spawn", async ($, e, next) => {
     const isUnbriefed = savvyTierOf(e.subagentType) !== null && !e.prompt.includes(STEP_TOOL);
-    const started = await next(isUnbriefed ? { ...e, prompt: e.prompt + STEP_BRIEF } : e);
+    const brief = (isUnbriefed ? STEP_BRIEF : "") + NOTES_IN[currentLang()];
+    const started = await next(brief === "" ? e : { ...e, prompt: e.prompt + brief });
     if (started.deny !== undefined)
       return started;
     const at = await stamp($);
@@ -4287,9 +4247,20 @@ function onLaunches(on) {
       return;
     });
     await update($, agents$4, (list) => addRun(list, { ...spawn, ...who, planStep: planStepOf(plan) }));
-    if (!e.parentAgentId)
-      await update($, job$3, (prev) => joinJob(prev, id, at));
+    if (!e.parentAgentId) {
+      const main = (await read($, agents$4)).find((a) => a.isMain === true && a.status === "running")?.description;
+      const asked = main === t().mainTask ? undefined : main;
+      await update($, job$3, (prev) => joinJob(prev, id, at, asked));
+    }
     return started;
+  });
+  on("state.set", { plugin: "plan-steps", key: "tasks" }, async ($, e, next) => {
+    const result = await next(e);
+    const at = await $.clock.now();
+    const list = await read($, agents$4);
+    if (movedOn(list, e.value, at) !== list)
+      await update($, agents$4, (runs) => movedOn(runs, e.value, at));
+    return result;
   });
   on("prompt.submit", async ($, e, next) => {
     const result = await next(e);
@@ -4339,7 +4310,6 @@ function onActivity(on) {
   }).catch(($, e, next) => next(e));
 }
 async function countTurn$1($, e) {
-  const used = e.usage === undefined ? 0 : tokensOf(e.usage);
   const isMain = e.agentId === undefined;
   const cost = isMain ? (await $.session.usage().catch(() => {
     return;
@@ -4347,8 +4317,8 @@ async function countTurn$1($, e) {
   await update($, tally, (x) => {
     const was = { ...NO_TALLY, ...x };
     if (!isMain)
-      return { ...was, tokens: was.tokens + used };
-    return { tokens: was.tokens + used, busyMs: was.busyMs + (e.durationMs ?? 0), turns: was.turns + 1, lastCost: was.costBefore > 0 ? Math.max(0, cost - was.costBefore) : 0, costBefore: cost };
+      return was;
+    return { ...was, busyMs: was.busyMs + (e.durationMs ?? 0), turns: was.turns + 1, lastCost: was.costBefore > 0 ? Math.max(0, cost - was.costBefore) : 0, costBefore: cost, turnAt: 0 };
   });
 }
 function onSteps(on) {
@@ -4359,12 +4329,15 @@ function onSteps(on) {
       const title = asked;
       asked = undefined;
       await update($, agents$4, (list) => mainAwake(list, { title, at: sent }));
+      await update($, tally, (x) => ({ ...NO_TALLY, ...x, turnAt: sent }));
     }
     await update($, agents$4, (list) => patchRun(list, agentId, (a) => ({ ...heard(a, sent), stepAt: sent })));
     const result = yield* next(e);
     const usage = result.usage;
     const facts = usage && { model: usage.model || e.model, effort: e.effort, usage };
     const at = await $.clock.now();
+    if (usage)
+      await update($, tally, (x) => ({ ...NO_TALLY, ...x, tokens: (x?.tokens ?? 0) + tokensOf(usage) }));
     const step = { answer: result.answer, calls: result.toolUses.length, sentAt: sent };
     const wrote = e.agentId ? "" : textKey(result.answer);
     if (wrote !== "" && (await read($, agents$4)).some((a) => a.isMain !== true && isRunning(a)))
@@ -4401,16 +4374,106 @@ function onEvents(on) {
   onSteps(on);
 }
 
+const HOME_LABEL = "← modz";
+function HomeButton(ui, onPress) {
+  const { Box, Button } = ui;
+  return h(Box, {
+    key: "modz-home-row",
+    flexDirection: "row"
+  }, h(Button, {
+    key: "modz-home",
+    label: HOME_LABEL,
+    plain: true,
+    dimColor: true,
+    onPress
+  }));
+}
+
+const crewView = (list) => deriveJob({ flow: null, agents: list, job: { agentIds: list.map((a) => a.id), startedAt: 0, isSealed: true, isHidden: false }, tasks: [] });
+const homeOf = (crab, running) => ({
+  mood: crab.mood,
+  level: t().crab.level(levelOf(crab.turns)),
+  isMoving: running.length === 0
+});
+const DRAWN_STEP_MS = 1e4;
+const lastEventOf = (a) => Math.max(a.startedAt, a.endedAt ?? 0, ...(a.history ?? []).map((e) => Math.max(e.at, e.endAt ?? 0)));
+const drawnClockOf = (list, at) => Math.max(Math.floor(at / DRAWN_STEP_MS) * DRAWN_STEP_MS, ...list.map(lastEventOf));
+function paneDataOf(state) {
+  const { list } = state;
+  const at = Math.max(state.now, ...list.map((a) => a.startedAt), 0);
+  const view = deriveJob({ flow: state.flow, agents: list, job: state.job, tasks: state.tasks }) ?? crewView(list);
+  const ended = (a) => a.endedAt ?? a.startedAt;
+  const live = list.filter(isRunning).reverse();
+  const running = [...live.filter(isMain), ...live.filter((a) => !isMain(a))];
+  return {
+    list,
+    running,
+    finished: list.filter((a) => !isRunning(a)).sort((a, b) => ended(b) - ended(a)),
+    planned: plannedOf(state.flow, list),
+    sum: totals(list, at),
+    view,
+    at,
+    drawnAt: drawnClockOf(list, at),
+    panel: state.panel,
+    limit: state.limit,
+    attention: attentionOf(list, at),
+    types: state.types,
+    home: homeOf(state.crab, running),
+    chats: state.chats
+  };
+}
+const summaryOf = (sum) => `≈${fmtCost(sum.cost)} · ${fmtTokens(sum.tokens)} ${t().tokensWord} · ${fmtTime(sum.time)}`;
+const toneOf = (d) => {
+  if (d.running.length)
+    return "run";
+  if (!d.list.length)
+    return "idle";
+  return d.view && d.view.failed > 0 ? "warn" : "ok";
+};
+const countsOf$1 = (d) => {
+  const s = t();
+  const ended = d.list.length - d.running.length;
+  return [d.running.length && s.liveCount(d.running.length), ended && s.endedCount(ended), d.planned.length && s.plannedCount(d.planned.length)].filter(Boolean).join(" · ");
+};
+function headerOf(d) {
+  const s = t();
+  const share = shareOf(d.sum.cost, d.limit);
+  const view = d.view;
+  return {
+    eyebrow: s.pane,
+    counts: countsOf$1(d),
+    headline: view?.title || s.crew(d.list.length),
+    percent: view ? percentText(view) : "—",
+    tone: toneOf(d),
+    meter: view,
+    stats: [
+      { label: s.cost, value: `≈${fmtCost(d.sum.cost)}` },
+      { label: s.tokens, value: fmtTokens(d.sum.tokens) },
+      { label: s.time, value: fmtTime(d.sum.time) },
+      ...share === null ? [] : [{ label: s.limitTile, value: `≈${s.pct(shareNumber(share))}` }]
+    ],
+    home: d.home,
+    ...whyOf$1(d)
+  };
+}
+const whyOf$1 = (d) => {
+  const steps = new Set(d.running.filter((a) => a.isMain !== true).map((a) => a.planStep?.subject));
+  const step = d.running.find((a) => a.isMain !== true && a.planStep !== undefined)?.planStep;
+  return step !== undefined && steps.size === 1 ? { why: t().headerWhy(step.at, step.of, step.subject) } : {};
+};
+const drawnHeaderOf = (d) => headerOf({ ...d, sum: totals(d.list, d.drawnAt) });
+const totalsLineOf = (data) => data.stats.map((stat) => `${stat.label} ${stat.value}`).join(" · ");
+
 const CARD = { padX: 14, rx: 10, labelY: 24, firstRowY: 48, rowH: 22, bottom: 14 };
-const LABEL$2 = { size: 12, weight: 600 };
+const LABEL$3 = { size: 12, weight: 600 };
 const ROW$1 = { size: 13, waitSize: 12, gap: 10 };
-const BOLD$2 = 1.06;
+const BOLD$3 = 1.06;
 const rowSvg = (row, y, W) => {
   const right = W - CARD.padX;
-  const waitW = Math.ceil(textWidth(row.wait, ROW$1.waitSize) * BOLD$2);
+  const waitW = Math.ceil(textWidth(row.wait, ROW$1.waitSize) * BOLD$3);
   const room = right - waitW - ROW$1.gap - CARD.padX;
-  const project = fitText(row.project, ROW$1.size * BOLD$2, room);
-  const titleRoom = room - textWidth(project, ROW$1.size) * BOLD$2;
+  const project = fitText(row.project, ROW$1.size * BOLD$3, room);
+  const titleRoom = room - textWidth(project, ROW$1.size) * BOLD$3;
   const title = row.title ? fitText(` · ${row.title}`, ROW$1.size, titleRoom) : "";
   const titleSpan = title && title !== "…" ? `<tspan class="s" font-weight="400">${xml(title)}</tspan>` : "";
   return [
@@ -4426,7 +4489,7 @@ const chatsCardSvg = (W, card) => {
   const more = card.more ? `<text class="m" x="${CARD.padX}" y="${moreY}" font-family="${FONT}" font-size="${ROW$1.waitSize}">${xml(card.more)}</text>` : "";
   const body = [
     `<rect class="card ln" x="0.5" y="0.5" width="${W - 1}" height="${height - 1}" rx="${CARD.rx}" stroke-width="1"/>`,
-    `<text class="m" x="${CARD.padX}" y="${CARD.labelY}" font-family="${FONT}" font-size="${LABEL$2.size}" font-weight="${LABEL$2.weight}">${xml(fitText(card.title, LABEL$2.size * BOLD$2, W - CARD.padX * 2))}</text>`,
+    `<text class="m" x="${CARD.padX}" y="${CARD.labelY}" font-family="${FONT}" font-size="${LABEL$3.size}" font-weight="${LABEL$3.weight}">${xml(fitText(card.title, LABEL$3.size * BOLD$3, W - CARD.padX * 2))}</text>`,
     ...rows,
     more
   ];
@@ -4440,8 +4503,8 @@ const lineSvg = (line, y, W) => {
   const size = line.kind === "agent" ? LIST.sizeSmall : LIST.size;
   const endW = line.end ? Math.ceil(textWidth(line.end, LIST.sizeSmall)) + LIST.chipGap : 0;
   const room = W - x - endW;
-  const lead = fitText(line.lead, size * BOLD$2, room);
-  const rest = fitText(` · ${line.text}`, size, room - textWidth(lead, size) * BOLD$2);
+  const lead = fitText(line.lead, size * BOLD$3, room);
+  const rest = fitText(` · ${line.text}`, size, room - textWidth(lead, size) * BOLD$3);
   const dot = line.kind === "chat" ? `<circle class="${line.isLive ? "f-edit live" : "m"}" cx="${LIST.dot}" cy="${y + LIST.rowH / 2}" r="${LIST.dot}"/>` : "";
   const end = line.end ? `<text class="m" x="${W}" y="${base}" text-anchor="end" font-family="${FONT}" font-size="${LIST.sizeSmall}" font-variant-numeric="tabular-nums">${xml(line.end)}</text>` : "";
   const restSpan = line.text && rest !== "…" ? `<tspan class="m">${xml(rest)}</tspan>` : "";
@@ -4453,6 +4516,70 @@ const chatLinesSvg = (W, lines) => {
   return { source: paneSvg(W, height, lines.map((line, i) => lineSvg(line, i * LIST.rowH, W)).join("")), height, alt };
 };
 
+const PILL = { h: 20, padX: 9, size: 11, dot: 3, dotGap: 6 };
+const BOLD$2 = 1.06;
+const LABEL$2 = { size: 12, weight: 600 };
+const HEAD = { h: 28, size: 13.5, gap: 10, nameGap: 7 };
+const CHEVRON_ROOM = 22;
+const CHEVRON = 4.5;
+const STROKE$1 = 1.5;
+const SECTION_H = 18;
+const HEAD_H = HEAD.h;
+const PILL_INK = {
+  run: { dot: "f-edit live", text: "f-edit" },
+  ok: { dot: "m", text: "s" },
+  warn: { dot: "f-warn", text: "f-warn" },
+  danger: { dot: "f-danger", text: "f-danger" }
+};
+const pillPart = (pill, x, y) => {
+  const width = Math.ceil(textWidth(pill.text, PILL.size) * BOLD$2 + PILL.padX * 2 + PILL.dot * 2 + PILL.dotGap);
+  const mid = y + PILL.h / 2;
+  const ink = PILL_INK[pill.role];
+  const body = [
+    `<rect class="k" x="${x}" y="${y}" width="${width}" height="${PILL.h}" rx="${PILL.h / 2}"/>`,
+    `<circle class="${ink.dot}" cx="${x + PILL.padX + PILL.dot}" cy="${mid}" r="${PILL.dot}"/>`,
+    `<text class="${ink.text}" x="${x + PILL.padX + PILL.dot * 2 + PILL.dotGap}" y="${mid + PILL.size * 0.35}" font-family="${FONT}" font-size="${PILL.size}" font-weight="600">${xml(pill.text)}</text>`
+  ];
+  return { body: body.join(""), width };
+};
+const chevronSvg = (x, y) => `<g class="chev"><path d="M${x} ${y - CHEVRON}l${CHEVRON} ${CHEVRON}-${CHEVRON} ${CHEVRON}" fill="none" stroke-width="${STROKE$1}" stroke-linecap="round" stroke-linejoin="round" class="i-m"/></g>`;
+const cardHeadSvg = (W, head, inset = 0) => {
+  const right = W - CHEVRON_ROOM;
+  const probe = pillPart(head.pill, 0, 0);
+  const pill = pillPart(head.pill, right - probe.width, (HEAD.h - PILL.h) / 2);
+  const nameW = textWidth(head.name, HEAD.size) * BOLD$2;
+  const title = fitText(head.title, HEAD.size, right - probe.width - HEAD.gap - nameW - HEAD.nameGap - inset);
+  const titleSpan = title === "…" ? "" : `<tspan class="s" dx="${HEAD.nameGap}">${xml(title)}</tspan>`;
+  const y = HEAD.h / 2 + HEAD.size * 0.35;
+  const body = [
+    `<text x="${inset}" y="${y}" font-family="${FONT}" font-size="${HEAD.size}"><tspan class="t" font-weight="620">${xml(head.name)}</tspan>${titleSpan}</text>`,
+    pill.body,
+    chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, HEAD.h / 2)
+  ];
+  return paneSvg(W, HEAD.h, body.join(""));
+};
+const sectionSvg = (W, section) => {
+  const label = `<text class="m" x="0" y="${SECTION_H / 2 + LABEL$2.size * 0.36}" font-family="${FONT}" font-size="${LABEL$2.size}" font-weight="${LABEL$2.weight}">${xml(fitText(section.label, LABEL$2.size * BOLD$2, W))}</text>`;
+  return paneSvg(W, SECTION_H, label);
+};
+const SECTION_SVG_H = SECTION_H;
+const NOTICE = { h: 32, padX: 8, dot: 3, gap: 9, size: 13 };
+const noticeSvg = (W, notice) => {
+  const mid = NOTICE.h / 2;
+  const x = NOTICE.padX + NOTICE.dot * 2 + NOTICE.gap;
+  const lead = `${notice.name} `;
+  const reason = notice.reason;
+  const used = textWidth(lead, NOTICE.size) * BOLD$2 + textWidth(reason, NOTICE.size) * BOLD$2;
+  const title = fitText(` · ${notice.title}`, NOTICE.size, Math.max(0, W - x - CHEVRON_ROOM - used));
+  const body = [
+    `<circle class="f-${notice.role}" cx="${NOTICE.padX + NOTICE.dot}" cy="${mid}" r="${NOTICE.dot}"/>`,
+    `<text x="${x}" y="${mid + NOTICE.size * 0.35}" font-family="${FONT}" font-size="${NOTICE.size}" font-weight="560"><tspan class="t">${xml(lead)}</tspan><tspan class="f-${notice.role}">${xml(reason)}</tspan><tspan class="s" font-weight="400">${xml(title === "…" ? "" : title)}</tspan></text>`,
+    chevronSvg(W - CHEVRON_ROOM / 2 - CHEVRON / 2, mid)
+  ];
+  return paneSvg(W, NOTICE.h, body.join(""));
+};
+const NOTICE_H = NOTICE.h;
+
 const PAD = 16;
 const RADIUS = 10;
 const LABEL$1 = { size: 12, weight: 600, y: 27 };
@@ -4461,6 +4588,16 @@ const PERCENT$1 = { size: 26, y: 58 };
 const MONO_EM = 0.6;
 const METER = { y: 70, h: 6 };
 const DIVIDER_Y = 92;
+const WHY = { size: 12.5, y: 93, room: 22, line: 17 };
+const whyLines = (text, width) => {
+  if (textWidth(text, WHY.size) <= width)
+    return [text];
+  const words = text.split(" ");
+  let cut = words.length - 1;
+  while (cut > 1 && textWidth(words.slice(0, cut).join(" "), WHY.size) > width)
+    cut -= 1;
+  return [words.slice(0, cut).join(" "), fitText(words.slice(cut).join(" "), WHY.size, width)];
+};
 const STATS = { top: 104, label: 11, value: 31, valueSize: 15, labelSize: 12, rule: 34, pitch: 46 };
 const BOLD$1 = 1.06;
 const DOT_R$1 = 3;
@@ -4480,18 +4617,18 @@ const columnsOf = (inner, stats) => {
 };
 const statSvg = (stat, { x, y, w }) => `<text class="m" x="${x}" y="${y + STATS.label}" font-family="${FONT}" font-size="${STATS.labelSize}">${xml(fitText(stat.label, STATS.labelSize, w))}</text>
 <text class="t" x="${x}" y="${y + STATS.value}" font-family="${FONT}" font-size="${STATS.valueSize}" font-weight="650" font-variant-numeric="tabular-nums">${xml(fitText(stat.value, STATS.valueSize, w))}</text>`;
-const statsSvg = (stats, inner) => {
+const statsSvg = (stats, inner, dy) => {
   const cols = columnsOf(inner, stats);
   const rows = Math.ceil(stats.length / cols);
   const colW = inner / cols;
   const parts = stats.map((stat, i) => {
     const col = i % cols;
-    const y = STATS.top + Math.floor(i / cols) * STATS.pitch;
+    const y = dy + STATS.top + Math.floor(i / cols) * STATS.pitch;
     const x = PAD + col * colW;
     return statSvg(stat, { x, y, w: colW - GAP });
   });
   return { body: parts.join(`
-`), height: STATS.top + (rows - 1) * STATS.pitch + STATS.rule + PAD };
+`), height: dy + STATS.top + (rows - 1) * STATS.pitch + STATS.rule + PAD };
 };
 const homeParts = (data, eyebrowEnd) => {
   if (!data.home)
@@ -4511,7 +4648,10 @@ const headerSvg = (W, data) => {
   const percentW = isKnown ? Math.ceil(data.percent.length * PERCENT$1.size * MONO_EM) : 0;
   const isCountShown = textWidth(data.counts, LABEL$1.size) <= W - PAD - eyebrowEnd - home.room - GAP;
   const headline = fitText(data.headline, HEADLINE.size * 1.06, W - PAD - left - percentW - (isKnown ? GAP : 0));
-  const stats = statsSvg(data.stats, inner);
+  const lines = data.why ? whyLines(data.why, inner) : [];
+  const dy = lines.length === 0 ? 0 : WHY.room + (lines.length - 1) * WHY.line;
+  const stats = statsSvg(data.stats, inner, dy);
+  const why = lines.map((line, i) => `<text class="s" x="${PAD}" y="${WHY.y + i * WHY.line}" font-family="${FONT}" font-size="${WHY.size}">${xml(line)}</text>`).join("");
   const dot = isLive ? `<circle class="f-edit live" cx="${left + DOT_R$1}" cy="${LABEL$1.y - 4}" r="${DOT_R$1}"/>` : "";
   const body = [
     `<rect class="card ln" x="0.5" y="0.5" width="${W - 1}" height="${stats.height - 1}" rx="${RADIUS}" stroke-width="1"/>`,
@@ -4522,7 +4662,8 @@ const headerSvg = (W, data) => {
     `<text class="t" x="${left}" y="${HEADLINE.y}" font-family="${FONT}" font-size="${HEADLINE.size}" font-weight="620">${xml(headline)}</text>`,
     isKnown ? `<text class="${PERCENT_CLASS[data.tone]}" x="${W - PAD}" y="${PERCENT$1.y}" text-anchor="end" font-family="${MONO}" font-size="${PERCENT$1.size}" font-weight="650">${xml(data.percent)}</text>` : "",
     meterSvg(data.meter ?? { units: 0, done: 0, failed: 0, active: 0 }, { x: PAD, y: METER.y, w: inner, h: METER.h }),
-    `<line class="ln" x1="${PAD}" x2="${W - PAD}" y1="${DIVIDER_Y}" y2="${DIVIDER_Y}" stroke-width="1"/>`,
+    why,
+    `<line class="ln" x1="${PAD}" x2="${W - PAD}" y1="${DIVIDER_Y + dy}" y2="${DIVIDER_Y + dy}" stroke-width="1"/>`,
     stats.body
   ];
   return { source: paneSvg(W, stats.height, body.join(`
@@ -4656,75 +4797,6 @@ const compactSvg = (W, icons) => {
   return paneSvg(W, COMPACT_H, body + plus);
 };
 
-const crewView = (list) => deriveJob({ flow: null, agents: list, job: { agentIds: list.map((a) => a.id), startedAt: 0, isSealed: true, isHidden: false }, tasks: [] });
-const homeOf = (crab, running) => ({
-  mood: crab.mood,
-  level: t().crab.level(levelOf(crab.turns)),
-  isMoving: running.length === 0
-});
-const DRAWN_STEP_MS = 1e4;
-const lastEventOf = (a) => Math.max(a.startedAt, a.endedAt ?? 0, ...(a.history ?? []).map((e) => Math.max(e.at, e.endAt ?? 0)));
-const drawnClockOf = (list, at) => Math.max(Math.floor(at / DRAWN_STEP_MS) * DRAWN_STEP_MS, ...list.map(lastEventOf));
-function paneDataOf(state) {
-  const { list } = state;
-  const at = Math.max(state.now, ...list.map((a) => a.startedAt), 0);
-  const view = deriveJob({ flow: state.flow, agents: list, job: state.job, tasks: state.tasks }) ?? crewView(list);
-  const ended = (a) => a.endedAt ?? a.startedAt;
-  const live = list.filter(isRunning).reverse();
-  const running = [...live.filter(isMain), ...live.filter((a) => !isMain(a))];
-  return {
-    list,
-    running,
-    finished: list.filter((a) => !isRunning(a)).sort((a, b) => ended(b) - ended(a)),
-    planned: plannedOf(state.flow, list),
-    sum: totals(list, at),
-    view,
-    at,
-    drawnAt: drawnClockOf(list, at),
-    panel: state.panel,
-    limit: state.limit,
-    attention: attentionOf(list, at),
-    types: state.types,
-    home: homeOf(state.crab, running),
-    chats: state.chats
-  };
-}
-const summaryOf = (sum) => `≈${fmtCost(sum.cost)} · ${fmtTokens(sum.tokens)} ${t().tokensWord} · ${fmtTime(sum.time)}`;
-const toneOf = (d) => {
-  if (d.running.length)
-    return "run";
-  if (!d.list.length)
-    return "idle";
-  return d.view && d.view.failed > 0 ? "warn" : "ok";
-};
-const countsOf$1 = (d) => {
-  const s = t();
-  const ended = d.list.length - d.running.length;
-  return [d.running.length && s.liveCount(d.running.length), ended && s.endedCount(ended), d.planned.length && s.plannedCount(d.planned.length)].filter(Boolean).join(" · ");
-};
-function headerOf(d) {
-  const s = t();
-  const share = shareOf(d.sum.cost, d.limit);
-  const view = d.view;
-  return {
-    eyebrow: s.pane,
-    counts: countsOf$1(d),
-    headline: view?.title || s.crew(d.list.length),
-    percent: view ? percentText(view) : "—",
-    tone: toneOf(d),
-    meter: view,
-    stats: [
-      { label: s.cost, value: `≈${fmtCost(d.sum.cost)}` },
-      { label: s.tokens, value: fmtTokens(d.sum.tokens) },
-      { label: s.time, value: fmtTime(d.sum.time) },
-      ...share === null ? [] : [{ label: s.limitTile, value: `≈${s.pct(shareNumber(share))}` }]
-    ],
-    home: d.home
-  };
-}
-const drawnHeaderOf = (d) => headerOf({ ...d, sum: totals(d.list, d.drawnAt) });
-const totalsLineOf = (data) => data.stats.map((stat) => `${stat.label} ${stat.value}`).join(" · ");
-
 const LANES_MAX = 8;
 const MIN_SPAN_MS = 30000;
 const laneOf = (a, at) => {
@@ -4782,7 +4854,8 @@ const runsOf = (cells) => {
 const TOP = 6;
 const LANE_H = 24;
 const AXIS_H = 20;
-const LABEL_W = 74;
+const LABEL_MIN = 74;
+const LABEL_MAX = 116;
 const RIGHT_PAD = 10;
 const NOW_ROOM = 44;
 const SEG_H = 10;
@@ -4801,11 +4874,12 @@ const ENDED_OPACITY = 0.6;
 const xOf = (scale, ms) => scale.x0 + (ms - scale.t0) / scale.span * (scale.x1 - scale.x0);
 const n1 = (v) => v.toFixed(1);
 function laneSvg(lane, y, scale) {
+  const labelW = scale.x0;
   const cy = y + LANE_H / 2;
   const isLive = lane.status === "running";
   const start = xOf(scale, lane.start);
   const end = Math.max(start + SEG_MIN, xOf(scale, lane.end));
-  const label = `<circle cx="${DOT_R + 1}" cy="${cy}" r="${DOT_R}" fill="${lane.shell}"/><text class="${isLive ? "t" : "s"}" x="${DOT_R * 2 + 8}" y="${cy + 4}" font-family="${FONT}" font-size="${NAME_SIZE}" font-weight="600">${xml(fitText(lane.name, NAME_SIZE, LABEL_W - DOT_R * 2 - 12))}</text>`;
+  const label = `<circle cx="${DOT_R + 1}" cy="${cy}" r="${DOT_R}" fill="${lane.shell}"/><text class="${isLive ? "t" : "s"}" x="${DOT_R * 2 + 8}" y="${cy + 4}" font-family="${FONT}" font-size="${NAME_SIZE}" font-weight="600">${xml(fitText(lane.name, NAME_SIZE, labelW - DOT_R * 2 - 12))}</text>`;
   const track = `<rect class="k" x="${n1(start)}" y="${cy - TRACK_H$1 / 2}" width="${n1(end - start)}" height="${TRACK_H$1}" rx="1"/>`;
   const segs = lane.segments.map((seg) => {
     const x = xOf(scale, seg.from);
@@ -4839,7 +4913,8 @@ const altOf = (tl) => {
   return `${s.timeline}: ${tl.lanes.map((lane) => `${lane.name} ${fmtTime(lane.end - lane.start)} ${words[lane.status] ?? ""}`.trim()).join(", ")}`;
 };
 function timelineSvg(W, tl) {
-  const scale = { x0: LABEL_W, x1: W - RIGHT_PAD, t0: tl.t0, span: tl.span };
+  const named = Math.max(0, ...tl.lanes.map((lane) => textWidth(lane.name, NAME_SIZE))) + DOT_R * 2 + 14;
+  const scale = { x0: Math.round(Math.min(LABEL_MAX, Math.max(LABEL_MIN, named))), x1: W - RIGHT_PAD, t0: tl.t0, span: tl.span };
   const bottom = TOP + tl.lanes.length * LANE_H;
   const height = bottom + AXIS_H + 4;
   const lanes = tl.lanes.map((lane, i) => laneSvg(lane, TOP + i * LANE_H, scale)).join("");
@@ -5189,19 +5264,86 @@ function quietTree(ui, view) {
   }, ` · ${chat.title || s.untitled} · ${s.states[chat.state === "working" ? "working" : "idle"]}`))));
 }
 
-const HOME_LABEL = "← modz";
-function HomeButton(ui, onPress) {
-  const { Box, Button } = ui;
+function draftHead(ui, layout) {
+  const { Text } = ui;
+  const label = t().newTask;
+  if (!layout.isDesktop)
+    return h(Text, {
+      bold: true,
+      dimColor: true
+    }, label);
+  return picture(ui, { key: "draft-head", at: "draft-head", pic: { source: sectionSvg(layout.inner, { label }), alt: label, width: layout.inner, height: SECTION_SVG_H } });
+}
+function draftTree(ui, view, on) {
+  const { Box, Button, Input, Select, Text } = ui;
+  const s = t();
+  const chosen = chosenOf(view.types, view.draft);
+  const frame = view.layout.isDesktop ? { borderStyle: "round", paddingX: 2, paddingY: 1 } : {};
   return h(Box, {
-    key: "modz-home-row",
+    key: "draft",
+    flexDirection: "column",
+    rowGap: 1,
+    ...frame
+  }, draftHead(ui, view.layout), !chosen && h(Text, {
+    dimColor: true
+  }, s.noTypes), chosen && Select && h(Select, {
+    key: "dispatch-type",
+    label: s.agentLabel,
+    options: view.types.map((type) => ({ value: type.name, label: type.name })),
+    value: chosen.name,
+    onSelect: on.onPickType
+  }), chosen && h(Text, {
+    dimColor: true,
+    wrap: "truncate-end"
+  }, `${sourceWord(chosen.source)} · ${describe(chosen)}`), chosen && Input && h(Input, {
+    key: "dispatch-task",
+    label: s.taskLabel,
+    placeholder: s.taskHint,
+    value: "",
+    submitLabel: s.start,
+    autoFocus: true,
+    onSubmit: on.onStartTask
+  }), view.draft?.notice && h(Text, {
+    color: "warning"
+  }, view.draft.notice), h(Box, {
     flexDirection: "row"
   }, h(Button, {
-    key: "modz-home",
-    label: HOME_LABEL,
+    key: "dispatch-cancel",
     plain: true,
     dimColor: true,
-    onPress
-  }));
+    label: s.cancel,
+    onPress: on.onCancelTask
+  })));
+}
+
+let mainTranscript = "";
+const setMainTranscript = (path) => {
+  mainTranscript = path;
+};
+const agentLogPath = (transcript, agentId) => transcript.endsWith(".jsonl") && agentId ? `${transcript.slice(0, -".jsonl".length)}/subagents/agent-${agentId}.jsonl` : "";
+const linkOf$1 = (path) => `[${path.split("/").at(-1) ?? path}](<file://${encodeURI(path)}>)`;
+const writtenOf = (a) => (a.files ?? []).filter((file) => file.edits > 0).length;
+function aboutTree(ui, a) {
+  const { Box, Text, Markdown } = ui;
+  if (a.isMain === true)
+    return null;
+  const s = t();
+  const step = a.planStep;
+  const why = step === undefined ? s.aboutForRequest : s.rowPlan(step.at, step.of, step.subject);
+  const path = agentLogPath(mainTranscript, a.agentId);
+  const line = (label, text) => h(Text, {
+    wrap: "wrap"
+  }, h(Text, {
+    bold: true
+  }, `${label}: `), h(Text, null, text));
+  return h(Box, {
+    key: `about-${a.id}`,
+    flexDirection: "column",
+    rowGap: 0
+  }, line(s.aboutWhy, why), path !== "" && Markdown ? h(Markdown, {
+    key: `about-log-${a.id}`,
+    text: `**${s.aboutLog}:** ${s.aboutLogText}: ${linkOf$1(path)}`
+  }) : null, line(s.aboutLearns, s.aboutLearnsText(writtenOf(a))));
 }
 
 const BRIEF_SHOWN = 280;
@@ -5442,7 +5584,6 @@ const TRACK_H = 8;
 const PCT_GAP = 8;
 const PCT_W = 46;
 const PCT_SIZE = 12.5;
-const STRIPE = 8;
 const CHIP_GAP = 6;
 const CHIP_PAD = 9;
 const CHIP_TEXT = 11.5;
@@ -5450,21 +5591,19 @@ const RING_R = 5.5;
 const RING_W = 2.2;
 const RING_SLOT = 17;
 const MIX_GAP = 2;
-const stripesOf = (filled, y, uid) => `<defs><pattern id="st${uid}" width="${STRIPE}" height="${STRIPE}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${STRIPE / 2}" height="${STRIPE}" fill="#fff" opacity=".28"/></pattern></defs><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" fill="url(#st${uid})"/>`;
 const FILL = { running: "f-edit", done: "m", failed: "f-danger" };
 const LABEL = { running: "s", done: "m", failed: "f-danger" };
 const progressBarSvg = (W, a, opts) => {
   const y = (BAR_H - TRACK_H) / 2;
   const barW = Math.max(TRACK_H, W - PCT_W - PCT_GAP);
-  const filled = Math.max(TRACK_H, Math.round(barW * opts.progress.value));
+  const isUnmeasured = a.status === "running" && opts.progress.isEstimate;
+  const filled = isUnmeasured ? 0 : Math.max(TRACK_H, Math.round(barW * opts.progress.value));
   const uid = a.id.replace(/\W/g, "");
   const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`;
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`;
   const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? "f-edit"}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
-  const isRunning = a.status === "running";
-  const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : "";
   const label = `<text class="${LABEL[a.status] ?? "s"}" x="${barW + PCT_GAP}" y="${BAR_H / 2 + PCT_SIZE * 0.34}" font-family="${MONO}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`;
-  return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`);
+  return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}</g>${label}`);
 };
 const ringOf = (x, ring) => {
   const c = 2 * Math.PI * RING_R;
@@ -5818,32 +5957,15 @@ function detailTree(ui, a, ctx) {
     flexDirection: "column",
     rowGap: 1,
     marginTop: 1
-  }, conversationTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), metricsTree(ui, a, ctx));
+  }, conversationTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), aboutTree(ui, a), metricsTree(ui, a, ctx));
 }
 
-const CURVE_CAP = 0.9;
-const CURVE_CALLS = 8;
-const EDIT_FLOOR = 0.45;
-const TEST_FLOOR = 0.7;
-const START = 0.04;
-const TEST_WORDS = /\b(test|vitest|jest|pytest|lint|tsc|validate|check)\b/i;
-const floorOf = (a) => {
-  const history = a.history ?? [];
-  const hasTest = history.some((e) => kindOf(e.tool) === "run" && TEST_WORDS.test(e.target));
-  if (hasTest)
-    return TEST_FLOOR;
-  return history.some((e) => kindOf(e.tool) === "edit") ? EDIT_FLOOR : 0;
-};
-const estimateOf = (a) => {
-  const calls = Math.max(a.toolCount || 0, a.history?.length ?? 0);
-  const curve = CURVE_CAP * (1 - Math.exp(-calls / CURVE_CALLS));
-  return Math.min(CURVE_CAP, Math.max(START, floorOf(a), curve));
-};
+const AT_WORK = { value: 0, isEstimate: true };
 const agentProgress = (a) => {
   if (a.status !== "running")
     return { value: 1, isEstimate: false };
   const measured = partialOf(a);
-  return measured === null ? { value: estimateOf(a), isEstimate: true } : { value: measured, isEstimate: false };
+  return measured === null ? AT_WORK : { value: measured, isEstimate: false };
 };
 
 const FRAME_PX = 34;
@@ -5894,7 +6016,7 @@ const nowLine = (a, isOpen) => {
 const barLabel = (a, progress) => {
   if (a.status === "failed")
     return "✗";
-  return progress.isEstimate && !a.toolCount ? "" : progressLabel(progress);
+  return progress.isEstimate ? "" : progressLabel(progress);
 };
 const termBar = (p, width) => {
   const filled = Math.round(width * p.value);
@@ -6002,7 +6124,7 @@ function deskFoot(ui, a, ctx) {
 function deskBar(ui, a, ctx) {
   const progress = agentProgress(a);
   const label = barLabel(a, progress);
-  const pic = { source: progressBarSvg(ctx.inner, a, { progress, label }), alt: label || t().starting, width: ctx.inner, height: BAR_H };
+  const pic = { source: progressBarSvg(ctx.inner, a, { progress, label }), alt: label || (a.toolCount ? t().isRunning : t().starting), width: ctx.inner, height: BAR_H };
   return picture(ui, { key: "bar", at: `bar-${a.id}`, pic, opts: { shows: { status: a.status, isEstimate: progress.isEstimate } } });
 }
 function deskCard(ui, a, ctx) {
@@ -6045,6 +6167,103 @@ function plannedRow(ui, p, ctx) {
   }, [tier, plannedLine(p)].filter(Boolean).join(" · ")))));
 }
 
+const MIN_W = 240;
+const MAX_W = 900;
+const PX_PER_COL = 9;
+const ROWS_MAX = 12;
+const isDoneOpenIn = (shown, d) => shown.isDoneOpen ?? d.running.length === 0;
+function listTree(ui, view) {
+  const { Box, Text } = ui;
+  const { d, layout, on } = view;
+  const s = t();
+  const ctx = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.isDesktop ? layout.W : layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen, logOpen: d.panel.logOpen };
+  const isDoneOpen = isDoneOpenIn(d.panel, d);
+  const running = d.running.slice(0, ROWS_MAX);
+  const finished = isDoneOpen ? d.finished.slice(0, ROWS_MAX - running.length) : [];
+  const planned = d.planned.slice(0, ROWS_MAX - running.length - finished.length);
+  const more = d.running.length + (isDoneOpen ? d.finished.length : 0) + d.planned.length - running.length - finished.length - planned.length;
+  return h(Box, {
+    key: "list",
+    flexDirection: "column",
+    rowGap: 1
+  }, d.running.length > 0 && sectionHead(ui, layout, { id: "running", label: `${s.running} · ${d.running.length}` }), running.map((a) => agentRow(ui, a, ctx)), d.finished.length > 0 && sectionHead(ui, layout, { id: "finished", label: `${s.finished} · ${d.finished.length}`, toggle: { key: "done", isOpen: isDoneOpen, onPress: on.onDone } }), finished.map((a) => agentRow(ui, a, ctx)), d.planned.length > 0 && sectionHead(ui, layout, { id: "planned", label: `${s.planned} · ${d.planned.length}` }), planned.map((p) => plannedRow(ui, p, ctx)), more > 0 && h(Text, {
+    key: "more",
+    dimColor: true
+  }, s.moreAgents(more)));
+}
+function paneTree(ui, view) {
+  const { Box } = ui;
+  const { d, layout, on } = view;
+  const isDrafting = d.panel.draft?.isOpen === true;
+  const form = isDrafting && draftTree(ui, { draft: d.panel.draft, types: d.types, layout }, on);
+  if (d.list.length === 0 && d.planned.length === 0) {
+    return h(Box, {
+      flexDirection: "column",
+      rowGap: 2
+    }, isDrafting ? form : emptyTree(ui, view));
+  }
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, headTree(ui, d, layout), toolbarTree(ui, d, on), attentionTree(ui, view), form, d.panel.isCompact ? compactTree(ui, d, layout) : timelineTree(ui, view), !d.panel.isCompact && listTree(ui, view));
+}
+function agentsTree(ui, view) {
+  const { Box, Text } = ui;
+  const { d, layout, on } = view;
+  const listed = listedChats(d.chats);
+  const quiet = quietTree(ui, { chats: listed.chats, layout, isOpen: d.panel.isChatsOpen === true, onToggle: on.onChats });
+  return h(Box, {
+    flexDirection: "column",
+    rowGap: 1
+  }, waitingTree(ui, d.chats, layout), paneTree(ui, view), crewTree(ui, listed.chats, layout), quiet, listed.more > 0 && h(Text, {
+    key: "chats-more",
+    dimColor: true
+  }, t().chats.more(listed.more)));
+}
+const layoutOf = (isDesktop, columns) => {
+  if (!isDesktop)
+    return { isDesktop, W: 0, inner: columns, cols: columns };
+  const W = Math.max(MIN_W, Math.min(MAX_W, columns * PX_PER_COL));
+  return { isDesktop, W, inner: W - FRAME_PX, cols: columns - FRAME_COLS };
+};
+
+const PAGE = "agents";
+const BARE = ["onCompact", "onDone", "onTimeline", "onChats", "onNewTask", "onCancelTask"];
+const ONE = ["onToggle", "onLook", "onBrief", "onStop", "onLog", "onPickType", "onStartTask"];
+const SEND = "onSend";
+const isOf = (list, action) => list.includes(action);
+const sendOf = (arg) => {
+  try {
+    const pair = JSON.parse(arg ?? "");
+    if (!Array.isArray(pair) || pair.length !== 2)
+      return null;
+    const [id, text] = pair;
+    return typeof id === "string" && typeof text === "string" ? [id, text] : null;
+  } catch {
+    return null;
+  }
+};
+function runPageAct(on, action, arg) {
+  const pair = action === SEND ? sendOf(arg) : null;
+  if (isOf(BARE, action))
+    on[action]();
+  else if (isOf(ONE, action) && typeof arg === "string")
+    on[action](arg);
+  else if (pair !== null)
+    on.onSend(...pair);
+  else
+    return false;
+  return true;
+}
+function pageActOf(value) {
+  if (typeof value !== "object" || value === null)
+    return null;
+  const { page, action, arg } = value;
+  if (page !== PAGE || typeof action !== "string")
+    return null;
+  return typeof arg === "string" ? { action, arg } : { action };
+}
+
 const deliveryText = (result) => result.isDelivered ? t().delivered : t().notDelivered(result.reason ?? "");
 
 const agents$3 = atom({ plugin: "savvy-progress", key: "agents" }, []);
@@ -6057,9 +6276,6 @@ const limit$1 = atom({ plugin: "savvy-progress", key: "limit" }, null);
 const types$1 = atom({ plugin: "savvy-progress", key: "types" }, BUILTIN_TYPES);
 const crab$1 = atom({ plugin: "savvy-progress", key: "crab" }, restingCrab(0));
 const chats$2 = atom({ plugin: "savvy-progress", key: "chats" }, []);
-const MIN_W = 240;
-const MAX_W = 900;
-const PX_PER_COL = 9;
 const MIN_COLS = 24;
 const DEFAULT_COLS = 40;
 async function sendTo($, id, text) {
@@ -6151,56 +6367,6 @@ function handlersOf($, d) {
     ...draftHandlers($, { draft: d.panel.draft, types: d.types })
   };
 }
-const ROWS_MAX = 12;
-const isDoneOpenIn = (shown, d) => shown.isDoneOpen ?? d.running.length === 0;
-function listTree(ui, view) {
-  const { Box, Text } = ui;
-  const { d, layout, on } = view;
-  const s = t();
-  const ctx = { ...on, at: d.at, isDesktop: layout.isDesktop, inner: layout.isDesktop ? layout.W : layout.inner, limit: d.limit, selected: d.panel.selected, briefOpen: d.panel.briefOpen, logOpen: d.panel.logOpen };
-  const isDoneOpen = isDoneOpenIn(d.panel, d);
-  const running = d.running.slice(0, ROWS_MAX);
-  const finished = isDoneOpen ? d.finished.slice(0, ROWS_MAX - running.length) : [];
-  const planned = d.planned.slice(0, ROWS_MAX - running.length - finished.length);
-  const more = d.running.length + (isDoneOpen ? d.finished.length : 0) + d.planned.length - running.length - finished.length - planned.length;
-  return h(Box, {
-    key: "list",
-    flexDirection: "column",
-    rowGap: 1
-  }, d.running.length > 0 && sectionHead(ui, layout, { id: "running", label: `${s.running} · ${d.running.length}` }), running.map((a) => agentRow(ui, a, ctx)), d.finished.length > 0 && sectionHead(ui, layout, { id: "finished", label: `${s.finished} · ${d.finished.length}`, toggle: { key: "done", isOpen: isDoneOpen, onPress: on.onDone } }), finished.map((a) => agentRow(ui, a, ctx)), d.planned.length > 0 && sectionHead(ui, layout, { id: "planned", label: `${s.planned} · ${d.planned.length}` }), planned.map((p) => plannedRow(ui, p, ctx)), more > 0 && h(Text, {
-    key: "more",
-    dimColor: true
-  }, s.moreAgents(more)));
-}
-function withChats(ui, view) {
-  const { Box, Text } = ui;
-  const { d, layout, on } = view;
-  const listed = listedChats(d.chats);
-  const quiet = quietTree(ui, { chats: listed.chats, layout, isOpen: d.panel.isChatsOpen === true, onToggle: on.onChats });
-  return h(Box, {
-    flexDirection: "column",
-    rowGap: 1
-  }, waitingTree(ui, d.chats, layout), paneTree(ui, view), crewTree(ui, listed.chats, layout), quiet, listed.more > 0 && h(Text, {
-    key: "chats-more",
-    dimColor: true
-  }, t().chats.more(listed.more)));
-}
-function paneTree(ui, view) {
-  const { Box } = ui;
-  const { d, layout, on } = view;
-  const isDrafting = d.panel.draft?.isOpen === true;
-  const form = isDrafting && draftTree(ui, { draft: d.panel.draft, types: d.types, layout }, on);
-  if (d.list.length === 0 && d.planned.length === 0) {
-    return h(Box, {
-      flexDirection: "column",
-      rowGap: 2
-    }, isDrafting ? form : emptyTree(ui, view));
-  }
-  return h(Box, {
-    flexDirection: "column",
-    rowGap: 1
-  }, headTree(ui, d, layout), toolbarTree(ui, d, on), attentionTree(ui, view), form, d.panel.isCompact ? compactTree(ui, d, layout) : timelineTree(ui, view), !d.panel.isCompact && listTree(ui, view));
-}
 async function goHome($) {
   try {
     await $.state.set({ plugin: "savvy-progress", key: "home" }, { at: await $.clock.now() });
@@ -6208,17 +6374,11 @@ async function goHome($) {
     $.ui.log(`savvy-progress: home failed (${String(error)})`, { to: "debug" });
   }
 }
-const layoutOf = (isDesktop, columns) => {
-  if (!isDesktop)
-    return { isDesktop, W: 0, inner: columns, cols: columns };
-  const W = Math.max(MIN_W, Math.min(MAX_W, columns * PX_PER_COL));
-  return { isDesktop, W, inner: W - FRAME_PX, cols: columns - FRAME_COLS };
-};
 async function drawnPane($, ui, room) {
   const { Box } = ui;
   const home = (await $.state.get({ plugin: "modz", key: "isOn" })).value === true && HomeButton(ui, () => void goHome($));
   const d = await paneData($);
-  const body = withChats(ui, { d, layout: layoutOf(room.isDesktop, room.columns), on: handlersOf($, d) });
+  const body = agentsTree(ui, { d, layout: layoutOf(room.isDesktop, room.columns), on: handlersOf($, d) });
   return h(Box, {
     flexDirection: "column",
     rowGap: 1
@@ -6235,6 +6395,10 @@ async function reopenPane($) {
   if (!opened.isPlaced || (await $.state.get({ plugin: "modz", key: "isOn" })).value !== true)
     return;
   await $.state.set({ plugin: "savvy-progress", key: "shown" }, shownOf(HUB_PANE, await $.clock.now()));
+}
+async function handOn($, press) {
+  if (!runPageAct(handlersOf($, await paneData($)), press.action, press.arg))
+    $.ui.log(`savvy-progress: unknown hub press ${press.action}`, { to: "debug" });
 }
 function onPane(on) {
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
@@ -6253,6 +6417,14 @@ function onPane(on) {
     paneHeld.needsDraw = true;
     return pinned(e, await plainOf($, $.ui.resolve(e)));
   });
+  on("state.set", { plugin: "modz", key: "act" }, async ($, e, next) => {
+    const done = await next(e);
+    const press = pageActOf(e.value);
+    if (press !== null) {
+      $.clock.after(0, () => void handOn($, press).catch((cause) => $.ui.log(`savvy-progress: the hub's ${press.action} press failed: ${String(cause)}`, { to: "debug" })));
+    }
+    return done;
+  }).catch(($, e, next) => next(e));
 }
 
 const self = atom({ plugin: "savvy-progress", key: "self" }, null);
@@ -6539,12 +6711,12 @@ function liveLine(said, y, kind) {
   const fitted = fitText(said, SIZE.line, TEXT_W - MARK_GAP - ACT_ROOM);
   return `<g class="fresh"><circle class="f-run live" cx="${LANE.textX + 4}" cy="${y - 4}" r="3"/>${text("t", { x, y }, SIZE.line, fitted)}${lineAct(kind, { x, y, width: textWidth(fitted, SIZE.line) })}</g>`;
 }
-function whyOf(run, event) {
+function whyOf(run, event, isPlanSaid) {
   if (event?.because)
     return event.because;
   if (run.stepNote)
     return run.stepTotal ? `${t().rowStep(run.stepDone ?? 0, run.stepTotal)}: ${run.stepNote}` : run.stepNote;
-  return run.planStep === undefined ? "" : t().rowPlan(run.planStep.at, run.planStep.of, run.planStep.subject);
+  return run.planStep === undefined || isPlanSaid ? "" : t().rowPlan(run.planStep.at, run.planStep.of, run.planStep.subject);
 }
 function crabAt(run, stand) {
   const isWalking = stand.kind === "edit" || stand.kind === "run" || stand.kind === "test" || stand.kind === "save";
@@ -6555,7 +6727,7 @@ function crabAt(run, stand) {
   return `<g transform="translate(${stand.x},${stand.feetY}) scale(${stand.scale})"><g class="${stand.arrival}">${moving}</g></g>`;
 }
 const card = (height, body) => paneSvg(CARD_W, height, SCENE_CSS + ROW_CSS + `<g class="who"><rect width="${CARD_W}" height="${height}" fill="transparent"/>${body}</g>`);
-function rowCrab(run) {
+function rowCrab(run, isPlanSaid = false) {
   const kind = run.lastKind ?? "other";
   const name = lookOf(run).name;
   const history = run.history ?? [];
@@ -6563,7 +6735,7 @@ function rowCrab(run) {
   const before = history.at(-2);
   const nowY = TITLE_Y + (before === undefined ? 1 : 2) * LINE_H;
   const doing = now === undefined ? run.lastPlain || t().rowDoing[kind] : wordsOf(now);
-  const why = whyOf(run, now);
+  const why = whyOf(run, now, isPlanSaid);
   const whyY = nowY + LINE_H - 3;
   const lines = (before === undefined ? "" : pastLine(before, TITLE_Y + LINE_H)) + liveLine(doing, nowY, kind) + (why === "" ? "" : text("m", { x: LANE.textX + MARK_GAP, y: whyY }, SIZE.why, fitText(`↳ ${why}`, SIZE.why, TEXT_W - MARK_GAP)));
   const height = Math.max(why === "" ? nowY : whyY, nowY + 4) + PAD_BOTTOM;
@@ -6589,6 +6761,8 @@ function benchCard(runs) {
 const OWN = new Set([TOOL, STEP_TOOL]);
 const agents$1 = atom({ plugin: "savvy-progress", key: "agents" }, []);
 const crewRow = atom({ plugin: "savvy-progress", key: "crewRow" }, "");
+const saysPlan = (run) => run.planStep !== undefined && !run.stepNote && !run.history?.at(-1)?.because;
+const isSameStep = (run, above) => above !== undefined && saysPlan(above) && above.planStep?.subject === run.planStep?.subject;
 function crewAt(list, rows, newest) {
   const helpers = list.filter((run) => run.isMain !== true);
   const isHere = (run) => run.toolUseId !== undefined && rows.includes(run.toolUseId);
@@ -6611,7 +6785,7 @@ const framed = (ui, key, pic) => {
 };
 const crewOf = (ui, workers) => {
   const ended = workers.filter((worker) => !isRunning(worker));
-  return [...workers.filter(isRunning).map((worker) => framed(ui, `crab-${worker.id}`, rowCrab(worker))), ...ended.length === 0 ? [] : [framed(ui, "crabs-ended", benchCard(ended))]];
+  return [...workers.filter(isRunning).map((worker, i, all) => framed(ui, `crab-${worker.id}`, rowCrab(worker, isSameStep(worker, all[i - 1])))), ...ended.length === 0 ? [] : [framed(ui, "crabs-ended", benchCard(ended))]];
 };
 const nothing = (ui) => {
   const { Box } = ui;
@@ -6663,6 +6837,7 @@ function onTranscript(on) {
   });
 }
 
+const transcriptAtom = atom({ plugin: "savvy-progress", key: "transcript" }, "");
 const agents = atom({ plugin: "savvy-progress", key: "agents" }, []);
 const now = atom({ plugin: "savvy-progress", key: "now" }, 0);
 const limit = atom({ plugin: "savvy-progress", key: "limit" }, null);
@@ -6836,8 +7011,15 @@ function onHubSources(on) {
   }).catch(($, e, next) => next(e));
 }
 const register = (on, options) => {
+  on("classic.SessionStart", async ($, e, next) => {
+    const path = typeof e.transcript_path === "string" ? e.transcript_path : "";
+    setMainTranscript(path);
+    await update($, transcriptAtom, () => path);
+    return next(e);
+  }).catch(($, e, next) => next(e));
   on("session.start", async ($, e, next) => {
     setLang(await detectLang($, options.language));
+    setMainTranscript(await read($, transcriptAtom));
     const started = await next(e);
     await $.tool.register(PROGRESS_SPEC);
     await $.tool.register(STEP_SPEC);

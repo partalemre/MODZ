@@ -4,9 +4,9 @@ import type { EngineInterface } from 'claude-code'
 
 import type { Drawing } from './draw'
 import { MODS_PANE, SIDE_PANES } from './hub'
-import { HUB_PANE } from './kit/stage'
+import { HUB_PANE, paneOf } from './kit/stage'
 import { stableDrawings } from './kit/stable'
-import { catalogWords, paneWords } from './words'
+import { catalogWords } from './words'
 
 const TITLE = 'modz'
 // State refs live in each file that reads them: the engine follows literals, not imports.
@@ -24,19 +24,22 @@ export const hubKept = { isHeld: false }
 export const closeQuietly = ($: EngineInterface, id: string) =>
   $.ui.close({ id }).catch(cause => $.ui.log(`modz: ${id} could not be closed: ${String(cause)}`, { to: 'debug' }))
 
-// Puts one of the hub's own panes in the panel and closes its others; every mod's open pane closes too.
+// Puts one of the hub's own pages (the hub, its catalog, a side page) in the one pane: the stage names it first, so
+// the pane's first draw is already the right page, then the pane comes up. Nothing else opens, so the panel never
+// lists two panes; a separate pane of the hub's own still up (a tab kept from an older engine) closes.
 // The footer toggle opens it without the keyboard (footer.tsx): the composer keeps it.
 export async function show($: EngineInterface, pane: string, isFocused = true): Promise<void> {
-  const title = pane === HUB_PANE ? TITLE : paneWords(pane).title
   hubKept.isHeld = true
   if (pane === HUB_PANE) hubDrawings.reset()
   if (pane === MODS_PANE) catalogDrawings.reset()
-  await $.ui.open(isFocused ? { id: pane, title, focus: true } : { id: pane, title })
-  await $.state.set(STAGE, { pane, at: Date.now() })
-  for (const other of [HUB_PANE, MODS_PANE]) if (other !== pane) await closeQuietly($, other)
-  // A side pane is closed only when it is up: it rarely is. A panel that cannot be listed has none to close.
+  // Written only when it moves: a kept tab is reopened from a timer a draw started, where a write is denied, and
+  // there the stage already says the hub (or nothing, which draws the hub).
+  const staged = paneOf((await $.state.get(STAGE)).value)
+  if (staged !== pane && !(pane === HUB_PANE && staged === null)) await $.state.set(STAGE, { pane, at: Date.now() })
+  await $.ui.open(isFocused ? { id: HUB_PANE, title: TITLE, focus: true } : { id: HUB_PANE, title: TITLE })
+  // A pane that cannot be listed has none to close.
   const up = new Set((await $.ui.panes().catch(() => [])).map(each => each.id))
-  for (const side of SIDE_PANES) if (side !== pane && up.has(side)) await closeQuietly($, side)
+  for (const own of [MODS_PANE, ...SIDE_PANES]) if (up.has(own)) await closeQuietly($, own)
 }
 
 export const openHub = ($: EngineInterface) => show($, HUB_PANE)

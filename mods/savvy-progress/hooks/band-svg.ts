@@ -48,7 +48,8 @@ type Plan = { title: string; titleW: number; meterW: number; pillW: number; pctW
 // The meter shrinks to its minimum before the title gives up a pixel; below that the meter goes.
 const planOf = (view: JobView, maxW: number): Plan => {
   const pillW = Math.ceil(textWidth(view.label, PILL.size) * BOLD + PILL.padX * 2)
-  const pctW = percentText(view) === UNKNOWN ? 0 : Math.ceil(percentText(view).length * PERCENT_SIZE * MONO_EM)
+  // A finished job's pill already says so: "Bitti" and "%100" side by side say it twice.
+  const pctW = percentText(view) === UNKNOWN || view.isFinished ? 0 : Math.ceil(percentText(view).length * PERCENT_SIZE * MONO_EM)
   const avail = maxW - TITLE_X - pillW - pctW - CRAB.w - GAP * 4
   const natural = Math.ceil(textWidth(view.title, TITLE_SIZE) * BOLD)
   if (avail - natural >= METER.min) return { title: view.title, titleW: natural, meterW: Math.min(METER.max, avail - natural), pillW, pctW }

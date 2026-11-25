@@ -162,14 +162,6 @@ function usageHooks(on: On): void {
     return done
   }).catch(($, e, next) => next(e))
 
-  // A louder notice that clears hands the shared line back to the lowered row.
-  on('state.set', { key: 'notice' } as any, async ($: EngineInterface, e: any, next: any) => {
-    const done = await next(e)
-    if (session.lowered !== null && e.plugin !== 'effort-router') $.ui.invalidate('ui.render')
-
-    return done
-  }).catch(($: EngineInterface, e: any, next: any) => next(e))
-
   // The hub's open request: opens only, so a pane already open comes forward instead of closing.
   on('state.set', { plugin: 'modz', key: 'open' }, async ($, e, next) => {
     const done = await next(e)

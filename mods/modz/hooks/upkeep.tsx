@@ -148,25 +148,40 @@ export function fillSideRows($: EngineInterface): void {
   void fill($).catch(log($, 'filling the side rows'))
 }
 
+async function linksPage($: EngineInterface, e: any) {
+  const onHome = () => void openHub($).catch(log($, 'opening the hub'))
+  const onCheck = () => void refreshLinks($, true).catch(log($, 'reading the connections'))
+
+  return pinned(e, linksTree($.ui.resolve(e), { links: await read($, linksAtom), onHome, onCheck }))
+}
+
+async function weightPage($: EngineInterface, e: any) {
+  const onHome = () => void openHub($).catch(log($, 'opening the hub'))
+
+  return pinned(e, weightTree($.ui.resolve(e), { weights: await read($, weightsAtom), now: await $.clock.now().catch(() => Date.now()), onHome, onCopy: (text, press) => copy($, text, press) }))
+}
+
+async function updatesPage($: EngineInterface, e: any) {
+  const onHome = () => void openHub($).catch(log($, 'opening the hub'))
+  const onCheck = () => void refreshUpdates($, true).catch(log($, 'reading the updates'))
+  const onAuto = (isOn: boolean) => void setAuto($, isOn).catch(log($, 'setting auto-update'))
+  const view = { updates: await read($, updatesAtom), isFailed: isAutoFailed, onHome, onCheck, onAuto, onCopy: (text: string, press: unknown) => copy($, text, press) }
+
+  return pinned(e, updatesTree($.ui.resolve(e), view))
+}
+
+/** A side page in the hub's one pane (register.tsx), by the pane id the stage names; null for any other. */
+export async function sidePage($: EngineInterface, e: any, page: string) {
+  if (page === LINKS_PANE) return linksPage($, e)
+  if (page === WEIGHT_PANE) return weightPage($, e)
+  if (page === UPDATES_PANE) return updatesPage($, e)
+
+  return null
+}
+
+// A side page's own pane is opened no more (own-panes.ts: show); a tab an older engine left still draws.
 export function wireUpkeep(on: On): void {
-  on('ui.render', { component: 'Pane', requestId: LINKS_PANE }, async ($, e) => {
-    const onHome = () => void openHub($).catch(log($, 'opening the hub'))
-    const onCheck = () => void refreshLinks($, true).catch(log($, 'reading the connections'))
-
-    return pinned(e, linksTree($.ui.resolve(e), { links: await read($, linksAtom), onHome, onCheck }))
-  })
-
-  on('ui.render', { component: 'Pane', requestId: WEIGHT_PANE }, async ($, e) => {
-    const onHome = () => void openHub($).catch(log($, 'opening the hub'))
-    return pinned(e, weightTree($.ui.resolve(e), { weights: await read($, weightsAtom), now: await $.clock.now().catch(() => Date.now()), onHome, onCopy: (text, press) => copy($, text, press) }))
-  })
-
-  on('ui.render', { component: 'Pane', requestId: UPDATES_PANE }, async ($, e) => {
-    const onHome = () => void openHub($).catch(log($, 'opening the hub'))
-    const onCheck = () => void refreshUpdates($, true).catch(log($, 'reading the updates'))
-    const onAuto = (isOn: boolean) => void setAuto($, isOn).catch(log($, 'setting auto-update'))
-    const view = { updates: await read($, updatesAtom), isFailed: isAutoFailed, onHome, onCheck, onAuto, onCopy: (text: string, press: unknown) => copy($, text, press) }
-
-    return pinned(e, updatesTree($.ui.resolve(e), view))
-  })
+  on('ui.render', { component: 'Pane', requestId: LINKS_PANE }, ($, e) => linksPage($, e))
+  on('ui.render', { component: 'Pane', requestId: WEIGHT_PANE }, ($, e) => weightPage($, e))
+  on('ui.render', { component: 'Pane', requestId: UPDATES_PANE }, ($, e) => updatesPage($, e))
 }

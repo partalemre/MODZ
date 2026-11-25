@@ -42,11 +42,15 @@ export function keepLast(nowMs: number): ContextView | null {
   return cached.view
 }
 
-export type ForecastInput = { history: readonly HudSample[]; turns: readonly number[]; usage: HudUsage | null }
+// Where auto-compaction runs, as the last breakdown said; null until one has.
+export const compactPoint = (): number | null => compactAt
+
+// `compactAt`: the point as kept in state, for a drawing that runs outside this module (the MODZ hub's Usage page).
+export type ForecastInput = { history: readonly HudSample[]; turns: readonly number[]; usage: HudUsage | null; compactAt?: number | null }
 
 // The turns forecast counts up to the compaction point once known, else to the whole window.
 export function forecastsFrom(input: ForecastInput): Forecasts {
-  const limit = compactAt ?? input.usage?.context?.window ?? null
+  const limit = (input.compactAt === undefined ? compactAt : input.compactAt) ?? input.usage?.context?.window ?? null
 
   return { history: input.history, turnsLeft: limit === null ? null : turnsLeftOf(input.turns, limit) }
 }

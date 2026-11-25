@@ -1211,6 +1211,7 @@ function wireBand(on, c) {
     const theirs = await next(e);
     if (!s.hasBand || e.props.hasSurvey)
       return theirs;
+    await $.state.get({ plugin: "cache-tax", key: "drawn" });
     const band = { s, prefs: c.prefs, actions: actions($, s), columns: e.props.bodyColumns, now: await $.clock.now() };
     if (e.surface === "desktop")
       return pinned(e, composeBand({ surface: "desktop", ui: $.ui.resolve(e) }, theirs, band));
@@ -1486,7 +1487,7 @@ function tick($, c, now) {
   if (key === c.drawn)
     return;
   c.drawn = key;
-  $.ui.invalidate("ui.render");
+  $.state.set({ plugin: "cache-tax", key: "drawn" }, key).catch(() => $.ui.log("cache-tax: the band could not be redrawn"));
 }
 async function readPrefs($, prefs) {
   const theme = (await $.config.list()).find((row) => row.key === "theme")?.value;

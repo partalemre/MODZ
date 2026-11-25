@@ -1,5 +1,6 @@
 // What a single call's trail adds so a person can follow it: the files a command touches, and what came back.
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { commandFiles, folderOf, resultLine } from '../hooks/plain-detail'
 

@@ -424,35 +424,6 @@ function paneMotion() {
 
 const motion = paneMotion();
 
-const NOTICE_MS = 30000;
-const LOUDER = ["reflect", "you-should-know", "cache-tax", "session-budget", "effort-router"];
-const shownAt = new Map;
-function isLive(notice, nowMs) {
-  if (notice === undefined || notice === null)
-    return false;
-  const expiresAt = notice.expiresAt;
-  return typeof expiresAt !== "number" || expiresAt <= 0 || expiresAt > nowMs;
-}
-function headToDraw(queue, nowMs) {
-  const head = queue[0];
-  if (head === undefined)
-    return null;
-  if (!shownAt.has(head.id))
-    shownAt.set(head.id, nowMs);
-  return head;
-}
-function expired(queue, nowMs) {
-  const head = queue[0];
-  const since = head === undefined ? undefined : shownAt.get(head.id);
-  if (head === undefined || since === undefined || nowMs - since < NOTICE_MS)
-    return queue;
-  shownAt.delete(head.id);
-  return queue.slice(1);
-}
-function resetSlot() {
-  shownAt.clear();
-}
-
 const paneOf = (value) => {
   if (typeof value !== "object" || value === null)
     return null;
@@ -468,6 +439,8 @@ const shownOf = (pane, at) => ({ pane, at });
 const PANE$1 = "hud-pro";
 const HIDDEN_KEY = "hud-pro.hidden";
 const hiddenAtom$2 = atom({ plugin: "hud-pro", key: "isHidden" }, false);
+const focusAtom$2 = atom({ plugin: "hud-pro", key: "focus" }, null);
+const homeRef = { plugin: "hud-pro", key: "home" };
 async function toggle($) {
   await update($, hiddenAtom$2, (isHidden) => !isHidden);
   const isHidden = await read($, hiddenAtom$2);
@@ -483,11 +456,16 @@ async function reportShown($) {
     $.ui.log("hud-pro: could not tell the hub the pane is shown", { to: "debug" });
   }
 }
-const focus = { section: null };
 const SECTION_OF = { "session-budget": "budget", "cache-tax": "cache", "effort-router": "effort" };
 const EFFORT_PANE = "effort";
 async function openPane($, section = null) {
-  focus.section = section;
+  await update($, focusAtom$2, () => section);
+  const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+  if (Array.isArray(drawn) && drawn.includes(HUB_PANE)) {
+    const at = await $.clock.now();
+    $.clock.after(0, () => void $.state.set(homeRef, { pane: HUB_PANE, at }).catch(() => $.ui.log("hud-pro: could not ask the hub for the Usage page", { to: "debug" })));
+    return;
+  }
   motion.reset();
   const opened = await $.ui.open({ id: PANE$1, title: words().paneTitle, focus: true, closeOnEscape: true });
   if (opened.isPlaced)
@@ -542,18 +520,6 @@ function onUsageAsks(on) {
     const section = SECTION_OF[e.plugin];
     if (section !== undefined)
       await openPane($, section);
-    return done;
-  }).catch(($, e, next) => next(e));
-  on("state.set", { key: "section" }, async ($, e, next) => {
-    const done = await next(e);
-    if (SECTION_OF[e.plugin] !== undefined)
-      $.ui.invalidate("ui.render");
-    return done;
-  }).catch(($, e, next) => next(e));
-  on("state.set", { key: "notice" }, async ($, e, next) => {
-    const done = await next(e);
-    if (LOUDER.includes(e.plugin))
-      $.ui.invalidate("ui.render");
     return done;
   }).catch(($, e, next) => next(e));
 }
@@ -671,8 +637,9 @@ function keepLast(nowMs) {
   cached = { at: nowMs, view: cached?.view ?? null };
   return cached.view;
 }
+const compactPoint = () => compactAt;
 function forecastsFrom(input) {
-  const limit = compactAt ?? input.usage?.context?.window ?? null;
+  const limit = (input.compactAt === undefined ? compactAt : input.compactAt) ?? input.usage?.context?.window ?? null;
   return { history: input.history, turnsLeft: limit === null ? null : turnsLeftOf(input.turns, limit) };
 }
 function compactedOf(result, at) {
@@ -1505,6 +1472,11 @@ function isLog(value) {
 }
 
 const RANGES = [7, 30];
+function pastViewOf(pasts, spec) {
+  if (pasts === null)
+    return null;
+  return { past: spec.range === 30 ? pasts.month : pasts.week, choose: spec.choose };
+}
 const LEVELS = 4;
 const MODEL = /^claude-([a-z]+)-(\d+(?:-\d{1,2})*)(?:-\d{8})?$/;
 function modelName(id) {
@@ -1946,6 +1918,242 @@ function withHome(ui, spec) {
   }, HomeButton(ui, spec.goHome), spec.tree);
 }
 
+const FIRST_PINNED = 1e9;
+const pins = new Map;
+function handleFor(id) {
+  let handle = pins.get(id);
+  if (handle === undefined) {
+    handle = FIRST_PINNED + pins.size;
+    pins.set(id, handle);
+  }
+  return handle;
+}
+const UNDRAWABLE = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\ud800-\udfff\u{10eeee}]/gu;
+const drawable = (text) => text.replace(UNDRAWABLE, "");
+function drawableProps(el) {
+  const props = el.props;
+  if (typeof props !== "object" || props === null)
+    return el;
+  const cleaned = Object.entries(props).filter(([name, value]) => name !== "key" && typeof value === "string" && drawable(value) !== value);
+  if (cleaned.length === 0)
+    return el;
+  return { ...el, props: { ...props, ...Object.fromEntries(cleaned.map(([name, value]) => [name, drawable(value)])) } };
+}
+function pinNode(node, ctx) {
+  if (typeof node === "string")
+    return drawable(node);
+  if (typeof node !== "object" || node === null)
+    return node;
+  const el = drawableProps(node);
+  const children = el.children?.map((child) => pinNode(child, ctx));
+  const withKids = children === undefined ? el : { ...el, children };
+  if (el.press?.plugin !== "" || typeof el.props?.key !== "string")
+    return withKids;
+  const base = `${ctx.site}\x00${el.type}\x00${el.props.key}`;
+  const nth = ctx.seen.get(base) ?? 0;
+  ctx.seen.set(base, nth + 1);
+  return { ...withKids, press: { plugin: "", handle: handleFor(`${base}\x00${nth}`) } };
+}
+function pinned(site, tree) {
+  if (tree === null || tree === undefined)
+    return tree;
+  const ctx = { site: `${site.surface}\x00${site.component ?? ""}\x00${site.requestId ?? ""}`, seen: new Map };
+  return pinNode(tree, ctx);
+}
+
+const NOTICE_MS = 30000;
+const shownAt = new Map;
+function isLive(notice, nowMs) {
+  if (notice === undefined || notice === null)
+    return false;
+  const expiresAt = notice.expiresAt;
+  return typeof expiresAt !== "number" || expiresAt <= 0 || expiresAt > nowMs;
+}
+function headToDraw(queue, nowMs) {
+  const head = queue[0];
+  if (head === undefined)
+    return null;
+  if (!shownAt.has(head.id))
+    shownAt.set(head.id, nowMs);
+  return head;
+}
+function expired(queue, nowMs) {
+  const head = queue[0];
+  const since = head === undefined ? undefined : shownAt.get(head.id);
+  if (head === undefined || since === undefined || nowMs - since < NOTICE_MS)
+    return queue;
+  shownAt.delete(head.id);
+  return queue.slice(1);
+}
+function resetSlot() {
+  shownAt.clear();
+}
+
+const usageAtom$2 = atom({ plugin: "hud-pro", key: "usage" }, null);
+const turnAtom$1 = atom({ plugin: "hud-pro", key: "turn" }, { requests: 0, input: 0, output: 0, cacheRead: 0 });
+const lastTurnAtom$1 = atom({ plugin: "hud-pro", key: "lastTurn" }, null);
+const hiddenAtom$1 = atom({ plugin: "hud-pro", key: "isHidden" }, false);
+const historyAtom$1 = atom({ plugin: "hud-pro", key: "history" }, []);
+const compactingAtom = atom({ plugin: "hud-pro", key: "isCompacting" }, false);
+const contextTurnsAtom$2 = atom({ plugin: "hud-pro", key: "contextTurns" }, []);
+const lastCompactAtom = atom({ plugin: "hud-pro", key: "lastCompact" }, null);
+const liveAtom$1 = atom({ plugin: "hud-pro", key: "isLive" }, false);
+const pastAtom$1 = atom({ plugin: "hud-pro", key: "past" }, null);
+const rangeAtom$1 = atom({ plugin: "hud-pro", key: "pastRange" }, 7);
+const sharesAtom$1 = atom({ plugin: "hud-pro", key: "shares" }, []);
+const noticesAtom$1 = atom({ plugin: "hud-pro", key: "notices" }, []);
+const focusAtom$1 = atom({ plugin: "hud-pro", key: "focus" }, null);
+async function forecastsOf$1($, usage) {
+  return forecastsFrom({ history: await read($, historyAtom$1), turns: await read($, contextTurnsAtom$2), usage });
+}
+async function breakdownView($) {
+  const nowMs = await $.clock.now();
+  const fresh = freshBreakdown(nowMs);
+  if (fresh !== undefined)
+    return fresh;
+  try {
+    return keepBreakdown(nowMs, (await $.session.usage({ breakdown: "summary" })).context.breakdown);
+  } catch {
+    $.ui.log("hud-pro: context breakdown failed", { to: "debug" });
+    return keepLast(nowMs);
+  }
+}
+function compactNow($, then) {
+  update($, compactingAtom, () => true);
+  $.clock.after(1, () => $.session.compact().then(async (result) => {
+    forgetBreakdown();
+    const done = compactedOf(result, await $.clock.now());
+    if (done !== null)
+      await update($, lastCompactAtom, () => done);
+    await then?.();
+  }).catch((error) => $.ui.toast(words().compactFailed(reasonOf(error)))).finally(() => update($, compactingAtom, () => false)));
+}
+async function goHome($) {
+  try {
+    await $.state.set({ plugin: "hud-pro", key: "home" }, { at: await $.clock.now() });
+  } catch {
+    $.ui.log("hud-pro: could not go back to the hub", { to: "debug" });
+  }
+}
+async function cardData($) {
+  return {
+    view: await breakdownView($),
+    turns: await read($, contextTurnsAtom$2),
+    lastCompact: await read($, lastCompactAtom),
+    isCompacting: await read($, compactingAtom),
+    compact: () => compactNow($)
+  };
+}
+async function sectionsOf($, usage) {
+  const nowMs = await $.clock.now();
+  const published = [
+    (await $.state.get({ plugin: "session-budget", key: "section" })).value,
+    (await $.state.get({ plugin: "cache-tax", key: "section" })).value,
+    (await $.state.get({ plugin: "effort-router", key: "section" })).value
+  ];
+  const pace = paceOf({ usage, history: await read($, historyAtom$1), nowMs });
+  const own = usage === null ? [] : [paceSection({ pace, shares: await read($, sharesAtom$1), nowMs })];
+  return [...own, ...published.filter(isSection)];
+}
+async function pressSection($, section, action) {
+  try {
+    await $.state.set({ plugin: "hud-pro", key: "press" }, { section, action, at: await $.clock.now() });
+    $.ui.invalidate("ui.render");
+  } catch {
+    $.ui.log("hud-pro: a section press failed", { to: "debug" });
+  }
+}
+function onPane(on) {
+  on("ui.render", { component: "Pane", requestId: PANE$1 }, async ($, e) => {
+    await $.state.get({ plugin: "hud-pro", key: "beat" });
+    const turn = await read($, turnAtom$1);
+    const ui = $.ui.resolve(e);
+    const isHubOn = (await $.state.get({ plugin: "modz", key: "isOn" })).value === true;
+    const usage = await read($, usageAtom$2);
+    const tree = paneTree(ui, {
+      usage,
+      history: await read($, historyAtom$1),
+      turn: turn.requests > 0 ? turn : await read($, lastTurnAtom$1),
+      columns: e.props.bodyColumns,
+      nowMs: await $.clock.now(),
+      card: await cardData($),
+      isLive: await read($, liveAtom$1),
+      forecasts: await forecastsOf$1($, usage),
+      past: pastViewOf(await read($, pastAtom$1), { range: await read($, rangeAtom$1), choose: (range) => void update($, rangeAtom$1, () => range) }),
+      sections: { sections: await sectionsOf($, usage), press: (section, action) => void pressSection($, section, action) },
+      focus: await read($, focusAtom$1),
+      ...e.surface !== "terminal" && "Svg" in ui ? { svg: ui.Svg } : {}
+    });
+    return pinned(e, isHubOn ? withHome(ui, { tree, goHome: () => void goHome($) }) : tree);
+  });
+}
+async function isOutranked($) {
+  const nowMs = await $.clock.now();
+  const values = [
+    (await $.state.get({ plugin: "reflect", key: "notice" })).value,
+    (await $.state.get({ plugin: "you-should-know", key: "notice" })).value,
+    (await $.state.get({ plugin: "cache-tax", key: "notice" })).value,
+    (await $.state.get({ plugin: "session-budget", key: "notice" })).value,
+    (await $.state.get({ plugin: "effort-router", key: "notice" })).value
+  ];
+  return values.some((value) => isLive(value, nowMs));
+}
+async function noticeRow($, ui) {
+  const queue = await read($, noticesAtom$1);
+  if (queue.length === 0 || await isOutranked($))
+    return null;
+  const head = headToDraw(queue, await $.clock.now());
+  const { Box, Text } = ui;
+  return head === null ? null : h(Box, {
+    key: "hud-pro-notice"
+  }, h(Text, {
+    dimColor: true,
+    wrap: "wrap"
+  }, head.text));
+}
+async function hudRow($, site) {
+  const usage = await read($, usageAtom$2);
+  if (usage === null || await read($, hiddenAtom$1))
+    return null;
+  const isDesktop = site.surface !== "terminal" && "Svg" in site.ui;
+  return bandRow(site.ui, {
+    usage,
+    columns: site.columns,
+    nowMs: await $.clock.now(),
+    forecasts: await forecastsOf$1($, usage),
+    isDesktop,
+    canCompact: !site.isWorking && !await read($, compactingAtom),
+    compact: () => compactNow($),
+    isAlertsOnly: isAlertsOnly(band.chosen ?? band.setting, isDesktop)
+  });
+}
+function onBand(on) {
+  on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
+    const theirs = await next(e);
+    try {
+      if (e.props.hasSurvey)
+        return theirs;
+      await $.state.get({ plugin: "hud-pro", key: "beat" });
+      const ui = $.ui.resolve(e);
+      const notice = await noticeRow($, ui);
+      const row = await hudRow($, { ui, surface: e.surface, columns: e.props.bodyColumns, isWorking: e.props.isWorking });
+      if (notice === null && row === null)
+        return theirs;
+      const { Box } = ui;
+      return h(Box, {
+        flexDirection: "column"
+      }, notice, theirs, row === null ? null : pinned(e, row));
+    } catch {
+      $.ui.log("hud-pro: band render failed", { to: "debug" });
+      return theirs;
+    }
+  });
+}
+function onDraw(on) {
+  onPane(on);
+  onBand(on);
+}
+
 const JSONL = ".jsonl";
 const BATCH = 200;
 const AWK = [
@@ -2021,7 +2229,7 @@ async function scanLog(io, spec) {
 const PANE = "hud-pro";
 const LOG_KEY = "hud-pro.past";
 const PAST_REFRESH_MS = 300000;
-const pastAtom$1 = atom({ plugin: "hud-pro", key: "past" }, null);
+const pastAtom = atom({ plugin: "hud-pro", key: "past" }, null);
 const rootAtom = atom({ plugin: "hud-pro", key: "pastRoot" }, "");
 const kept = { log: null, isLoaded: false, isReading: false, isTicking: false, triedAt: Number.NEGATIVE_INFINITY };
 const folderOf = (path) => path.slice(0, Math.max(0, Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"))));
@@ -2041,14 +2249,14 @@ async function loadLog($) {
     return;
   kept.log = saved;
   const nowMs = await $.clock.now();
-  await update($, pastAtom$1, () => pastsOf(saved.days, nowMs));
+  await update($, pastAtom, () => pastsOf(saved.days, nowMs));
 }
 async function readTranscripts($, root) {
   try {
     const nowMs = await $.clock.now();
     const log = await scanLog(scanIo($), { root, log: kept.log ?? EMPTY_LOG, nowMs });
     kept.log = log;
-    await update($, pastAtom$1, () => pastsOf(log.days, nowMs));
+    await update($, pastAtom, () => pastsOf(log.days, nowMs));
     await $.store.set(LOG_KEY, log).catch((error) => $.ui.log(`hud-pro: history not kept (${why(error)})`, { to: "debug" }));
   } catch (error) {
     $.ui.log(`hud-pro: transcripts not readable (${why(error)})`, { to: "debug" });
@@ -2069,16 +2277,24 @@ async function readIfOld($) {
 }
 async function tick($) {
   try {
-    if ((await $.ui.panes()).some((pane) => pane.id === PANE))
+    const stage = (await $.state.get({ plugin: "modz", key: "stage" })).value;
+    const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+    const isPage = stage?.pane === HUB_PANE && Array.isArray(drawn) && drawn.includes(HUB_PANE);
+    if (isPage || (await $.ui.panes()).some((pane) => pane.id === PANE))
       await readIfOld($);
   } catch (error) {
     $.ui.log(`hud-pro: history tick failed (${why(error)})`, { to: "debug" });
   }
 }
-function pastViewOf(pasts, spec) {
-  if (pasts === null)
-    return null;
-  return { past: spec.range === 30 ? pasts.month : pasts.week, choose: spec.choose };
+async function startReading($) {
+  try {
+    await readIfOld($);
+    if (!kept.isTicking)
+      $.clock.every(PAST_REFRESH_MS, () => void tick($));
+    kept.isTicking = true;
+  } catch (error) {
+    $.ui.log(`hud-pro: history read not started (${why(error)})`, { to: "debug" });
+  }
 }
 function onPast(on) {
   on("classic.SessionStart", async ($, e, next) => {
@@ -2089,222 +2305,86 @@ function onPast(on) {
   }).catch(($, e, next) => next(e));
   on("ui.open", async ($, e, next) => {
     const opened = await next(e);
-    if (e.id !== PANE)
-      return opened;
-    try {
-      await readIfOld($);
-      if (!kept.isTicking)
-        $.clock.every(PAST_REFRESH_MS, () => void tick($));
-      kept.isTicking = true;
-    } catch (error) {
-      $.ui.log(`hud-pro: history read not started (${why(error)})`, { to: "debug" });
-    }
+    if (e.id === PANE)
+      await startReading($);
     return opened;
   }).catch(($, e, next) => next(e));
 }
 
-const FIRST_PINNED = 1e9;
-const pins = new Map;
-function handleFor(id) {
-  let handle = pins.get(id);
-  if (handle === undefined) {
-    handle = FIRST_PINNED + pins.size;
-    pins.set(id, handle);
+function sectionPress(arg) {
+  try {
+    const pair = JSON.parse(String(arg));
+    if (!Array.isArray(pair) || pair.length !== 2)
+      return null;
+    const [section, action] = pair;
+    return typeof section === "string" && typeof action === "string" ? { kind: "press", section, action } : null;
+  } catch {
+    return null;
   }
-  return handle;
 }
-const UNDRAWABLE = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f\ud800-\udfff\u{10eeee}]/gu;
-const drawable = (text) => text.replace(UNDRAWABLE, "");
-function drawableProps(el) {
-  const props = el.props;
-  if (typeof props !== "object" || props === null)
-    return el;
-  const cleaned = Object.entries(props).filter(([name, value]) => name !== "key" && typeof value === "string" && drawable(value) !== value);
-  if (cleaned.length === 0)
-    return el;
-  return { ...el, props: { ...props, ...Object.fromEntries(cleaned.map(([name, value]) => [name, drawable(value)])) } };
-}
-function pinNode(node, ctx) {
-  if (typeof node === "string")
-    return drawable(node);
-  if (typeof node !== "object" || node === null)
-    return node;
-  const el = drawableProps(node);
-  const children = el.children?.map((child) => pinNode(child, ctx));
-  const withKids = children === undefined ? el : { ...el, children };
-  if (el.press?.plugin !== "" || typeof el.props?.key !== "string")
-    return withKids;
-  const base = `${ctx.site}\x00${el.type}\x00${el.props.key}`;
-  const nth = ctx.seen.get(base) ?? 0;
-  ctx.seen.set(base, nth + 1);
-  return { ...withKids, press: { plugin: "", handle: handleFor(`${base}\x00${nth}`) } };
-}
-function pinned(site, tree) {
-  if (tree === null || tree === undefined)
-    return tree;
-  const ctx = { site: `${site.surface}\x00${site.component ?? ""}\x00${site.requestId ?? ""}`, seen: new Map };
-  return pinNode(tree, ctx);
+function pagePressOf(value) {
+  if (typeof value !== "object" || value === null)
+    return null;
+  const { page, action, arg } = value;
+  if (page !== HUB_PANE)
+    return null;
+  if (action === "compact")
+    return { kind: "compact" };
+  if (action === "range") {
+    const range = RANGES.find((each) => String(each) === arg);
+    return range === undefined ? null : { kind: "range", range };
+  }
+  return action === "press" ? sectionPress(arg) : null;
 }
 
-const usageAtom$2 = atom({ plugin: "hud-pro", key: "usage" }, null);
-const turnAtom$1 = atom({ plugin: "hud-pro", key: "turn" }, { requests: 0, input: 0, output: 0, cacheRead: 0 });
-const lastTurnAtom$1 = atom({ plugin: "hud-pro", key: "lastTurn" }, null);
-const hiddenAtom$1 = atom({ plugin: "hud-pro", key: "isHidden" }, false);
-const historyAtom$1 = atom({ plugin: "hud-pro", key: "history" }, []);
-const compactingAtom = atom({ plugin: "hud-pro", key: "isCompacting" }, false);
-const contextTurnsAtom$2 = atom({ plugin: "hud-pro", key: "contextTurns" }, []);
-const lastCompactAtom = atom({ plugin: "hud-pro", key: "lastCompact" }, null);
-const liveAtom$1 = atom({ plugin: "hud-pro", key: "isLive" }, false);
-const pastAtom = atom({ plugin: "hud-pro", key: "past" }, null);
+const breakdownAtom = atom({ plugin: "hud-pro", key: "breakdown" }, null);
+const focusAtom = atom({ plugin: "hud-pro", key: "focus" }, null);
 const rangeAtom = atom({ plugin: "hud-pro", key: "pastRange" }, 7);
-const sharesAtom$1 = atom({ plugin: "hud-pro", key: "shares" }, []);
-const noticesAtom$1 = atom({ plugin: "hud-pro", key: "notices" }, []);
-async function forecastsOf$1($, usage) {
-  return forecastsFrom({ history: await read($, historyAtom$1), turns: await read($, contextTurnsAtom$2), usage });
+async function isPageShown($) {
+  const stage = (await $.state.get({ plugin: "modz", key: "stage" })).value;
+  const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+  return stage?.pane === HUB_PANE && Array.isArray(drawn) && drawn.includes(HUB_PANE);
 }
-async function breakdownView($) {
+async function keepPageBreakdown($, isForced = false) {
   const nowMs = await $.clock.now();
-  const fresh = freshBreakdown(nowMs);
-  if (fresh !== undefined)
-    return fresh;
+  if (!isForced && freshBreakdown(nowMs) !== undefined && await read($, breakdownAtom) !== null)
+    return;
+  let view;
   try {
-    return keepBreakdown(nowMs, (await $.session.usage({ breakdown: "summary" })).context.breakdown);
+    view = keepBreakdown(nowMs, (await $.session.usage({ breakdown: "summary" })).context.breakdown);
   } catch {
     $.ui.log("hud-pro: context breakdown failed", { to: "debug" });
-    return keepLast(nowMs);
+    view = keepLast(nowMs);
   }
+  await update($, breakdownAtom, () => ({ at: nowMs, view, compactAt: compactPoint() }));
 }
-function compactNow($) {
-  update($, compactingAtom, () => true);
-  $.clock.after(1, () => $.session.compact().then(async (result) => {
-    forgetBreakdown();
-    const done = compactedOf(result, await $.clock.now());
-    if (done !== null)
-      await update($, lastCompactAtom, () => done);
-  }).catch((error) => $.ui.toast(words().compactFailed(reasonOf(error)))).finally(() => update($, compactingAtom, () => false)));
+async function onAct($, value) {
+  const press = pagePressOf(value);
+  if (press === null)
+    return;
+  if (press.kind === "compact")
+    return compactNow($, () => keepPageBreakdown($, true));
+  if (press.kind === "range")
+    return void await update($, rangeAtom, () => press.range);
+  await pressSection($, press.section, press.action);
 }
-async function goHome($) {
-  try {
-    await $.state.set({ plugin: "hud-pro", key: "home" }, { at: await $.clock.now() });
-  } catch {
-    $.ui.log("hud-pro: could not go back to the hub", { to: "debug" });
-  }
-}
-async function cardData($) {
-  return {
-    view: await breakdownView($),
-    turns: await read($, contextTurnsAtom$2),
-    lastCompact: await read($, lastCompactAtom),
-    isCompacting: await read($, compactingAtom),
-    compact: () => compactNow($)
-  };
-}
-async function sectionsOf($, usage) {
-  const nowMs = await $.clock.now();
-  const published = [
-    (await $.state.get({ plugin: "session-budget", key: "section" })).value,
-    (await $.state.get({ plugin: "cache-tax", key: "section" })).value,
-    (await $.state.get({ plugin: "effort-router", key: "section" })).value
-  ];
-  const pace = paceOf({ usage, history: await read($, historyAtom$1), nowMs });
-  const own = usage === null ? [] : [paceSection({ pace, shares: await read($, sharesAtom$1), nowMs })];
-  return [...own, ...published.filter(isSection)];
-}
-async function pressSection($, section, action) {
-  try {
-    await $.state.set({ plugin: "hud-pro", key: "press" }, { section, action, at: await $.clock.now() });
-    $.ui.invalidate("ui.render");
-  } catch {
-    $.ui.log("hud-pro: a section press failed", { to: "debug" });
-  }
-}
-function onPane(on) {
-  on("ui.render", { component: "Pane", requestId: PANE$1 }, async ($, e) => {
-    const turn = await read($, turnAtom$1);
-    const ui = $.ui.resolve(e);
-    const isHubOn = (await $.state.get({ plugin: "modz", key: "isOn" })).value === true;
-    const usage = await read($, usageAtom$2);
-    const tree = paneTree(ui, {
-      usage,
-      history: await read($, historyAtom$1),
-      turn: turn.requests > 0 ? turn : await read($, lastTurnAtom$1),
-      columns: e.props.bodyColumns,
-      nowMs: await $.clock.now(),
-      card: await cardData($),
-      isLive: await read($, liveAtom$1),
-      forecasts: await forecastsOf$1($, usage),
-      past: pastViewOf(await read($, pastAtom), { range: await read($, rangeAtom), choose: (range) => void update($, rangeAtom, () => range) }),
-      sections: { sections: await sectionsOf($, usage), press: (section, action) => void pressSection($, section, action) },
-      focus: focus.section,
-      ...e.surface !== "terminal" && "Svg" in ui ? { svg: ui.Svg } : {}
-    });
-    return pinned(e, isHubOn ? withHome(ui, { tree, goHome: () => void goHome($) }) : tree);
-  });
-}
-async function isOutranked($) {
-  const nowMs = await $.clock.now();
-  const values = [
-    (await $.state.get({ plugin: "reflect", key: "notice" })).value,
-    (await $.state.get({ plugin: "you-should-know", key: "notice" })).value,
-    (await $.state.get({ plugin: "cache-tax", key: "notice" })).value,
-    (await $.state.get({ plugin: "session-budget", key: "notice" })).value,
-    (await $.state.get({ plugin: "effort-router", key: "notice" })).value
-  ];
-  return values.some((value) => isLive(value, nowMs));
-}
-async function noticeRow($, ui) {
-  const queue = await read($, noticesAtom$1);
-  if (queue.length === 0 || await isOutranked($))
-    return null;
-  const head = headToDraw(queue, await $.clock.now());
-  const { Box, Text } = ui;
-  return head === null ? null : h(Box, {
-    key: "hud-pro-notice"
-  }, h(Text, {
-    dimColor: true,
-    wrap: "wrap"
-  }, head.text));
-}
-async function hudRow($, site) {
-  const usage = await read($, usageAtom$2);
-  if (usage === null || await read($, hiddenAtom$1))
-    return null;
-  const isDesktop = site.surface !== "terminal" && "Svg" in site.ui;
-  return bandRow(site.ui, {
-    usage,
-    columns: site.columns,
-    nowMs: await $.clock.now(),
-    forecasts: await forecastsOf$1($, usage),
-    isDesktop,
-    canCompact: !site.isWorking && !await read($, compactingAtom),
-    compact: () => compactNow($),
-    isAlertsOnly: isAlertsOnly(band.chosen ?? band.setting, isDesktop)
-  });
-}
-function onBand(on) {
-  on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
-    const theirs = await next(e);
-    try {
-      if (e.props.hasSurvey)
-        return theirs;
-      const ui = $.ui.resolve(e);
-      const notice = await noticeRow($, ui);
-      const row = await hudRow($, { ui, surface: e.surface, columns: e.props.bodyColumns, isWorking: e.props.isWorking });
-      if (notice === null && row === null)
-        return theirs;
-      const { Box } = ui;
-      return h(Box, {
-        flexDirection: "column"
-      }, notice, theirs, row === null ? null : pinned(e, row));
-    } catch {
-      $.ui.log("hud-pro: band render failed", { to: "debug" });
-      return theirs;
-    }
-  });
-}
-function onDraw(on) {
-  onPane(on);
-  onBand(on);
+function onPage(on) {
+  on("state.set", { plugin: "modz", key: "stage" }, async ($, e, next) => {
+    const done = await next(e);
+    if (await isPageShown($)) {
+      await $.ui.close({ id: PANE$1 });
+      await keepPageBreakdown($);
+      await startReading($);
+    } else if (e.value?.pane !== HUB_PANE && await read($, focusAtom) !== null)
+      await update($, focusAtom, () => null);
+    return done;
+  }).catch(($, e, next) => next(e));
+  on("state.set", { plugin: "modz", key: "act" }, async ($, e, next) => {
+    const done = await next(e);
+    const value = e.value;
+    $.clock.after(0, () => void onAct($, value).catch(() => $.ui.log("hud-pro: a press on the hub's Usage page failed", { to: "debug" })));
+    return done;
+  }).catch(($, e, next) => next(e));
 }
 
 function isSame(a, b) {
@@ -2463,7 +2543,7 @@ async function redrawIfMoved($) {
   if (isSame(gauges, shownGauges) && left === queue)
     return;
   shownGauges = gauges;
-  $.ui.invalidate("ui.render");
+  await $.state.set({ plugin: "hud-pro", key: "beat" }, nowMs);
 }
 async function setup($) {
   await $.state.set({ plugin: "hud-pro", key: "host" }, true);
@@ -2493,8 +2573,11 @@ function onUsage(on) {
   });
   on("session.compact", async ($, e, next) => {
     const result = await next(e);
-    if (e.agentId === undefined && e.trigger !== "precompute")
+    if (e.agentId === undefined && e.trigger !== "precompute") {
       forgetBreakdown();
+      if (await isPageShown($))
+        await keepPageBreakdown($, true);
+    }
     return result;
   });
   on("session.measure", async ($, e, next) => {
@@ -2506,6 +2589,8 @@ function onUsage(on) {
       await noticeHigh($, fresh);
       await record($, fresh);
       await noticeFill($, fresh);
+      if (await isPageShown($))
+        await keepPageBreakdown($);
     } catch {
       $.ui.log("hud-pro: measure failed", { to: "debug" });
     }
@@ -2519,6 +2604,7 @@ const register = (on, options) => {
   onCommand(on);
   band.setting = isBandMode(options?.band) ? options.band : "auto";
   onDraw(on);
+  onPage(on);
 };
 
 export { register };

@@ -12,14 +12,14 @@ for (const surface of SURFACES) {
   const shows = async (ui: any, text: string) =>
     surface === 'desktop' ? expect(await svgOf(ui)).toContain(text) : expect(await ui.find({ type: 'Text', text })).toBeDefined()
 
-  test(`${surface}: three running agents read "Ajanlar 0/3 · —", not 0%`, async ($, on) => {
+  test(`${surface}: three running agents read "0/3 ajan bitti · —", not 0%`, async ($, on) => {
     last = undefined
     await setup($, on)
     await threeRunning($)
     const ui = await mount($)
-    await shows(ui, 'Ajanlar 0/3')
+    await shows(ui, '0/3 ajan bitti')
     await shows(ui, '—')
-    if (surface === 'desktop') expect((await ui.find({ type: 'Svg' }))?.props?.alt).toBe('Research competitors +2: Ajanlar 0/3, —')
+    if (surface === 'desktop') expect((await ui.find({ type: 'Svg' }))?.props?.alt).toBe('Research competitors +2: 0/3 ajan bitti, —')
     else expect(await ui.find({ type: 'Text', text: /%0\b/ })).toBeUndefined()
     expect((await ui.find({ key: 'savvy-agents' }))?.props?.label).toBe('3 ajan')
   })
@@ -29,7 +29,7 @@ for (const surface of SURFACES) {
     await setup($, on)
     await threeRunning($)
     await finish($, 'a1')
-    await shows(await mount($), 'Ajanlar 1/3')
+    await shows(await mount($), '1/3 ajan bitti')
     await finish($, 'a2')
     await finish($, 'a3', 'error')
     const ui = await mount($)
@@ -95,7 +95,7 @@ for (const surface of SURFACES) {
     await shows(await mount($), 'Bitti')
     await spawn($, 'Two')
     const ui = await mount($)
-    await shows(ui, 'Ajanlar 0/1')
+    await shows(ui, '0/1 ajan bitti')
     await ui.press({ key: 'savvy-dismiss' })
     // ✕ takes the job's row away; the session strip stays above theirs.
     const after = (await (await mount($)).drawn()) as any

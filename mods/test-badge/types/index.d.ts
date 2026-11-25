@@ -92,11 +92,11 @@ export type HubCard = { pane: string; detail: string; tone: HubTone; at: number 
 
 declare module 'claude-code' {
   interface PluginState {
-    'test-badge': { badge: TestBadge; notice: BadgeNotice | null; isEnabled: boolean; filter: SuiteFilter; theme: BadgeTheme; hub: HubCard; home: { at: number }; shown: { pane: string; at: number }
+    'test-badge': { badge: TestBadge; notice: BadgeNotice | null; isEnabled: boolean; filter: SuiteFilter; theme: BadgeTheme; hub: HubCard; home: { at: number; pane?: string }; shown: { pane: string; at: number }
       ci: CiWatch | null; ciCard: CiCard | null; commands: { test: string[] | null; lint: string[] | null } | null
       // A count a press bumps to ask for a run.
       rerun: number }
     // The MODZ main panel's open request this mod listens for (DESIGN.md §9); modz owns and writes it.
-    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number }; drawn: readonly string[]; act: { page: string; action: string; arg?: string; at: number } }
   }
 }

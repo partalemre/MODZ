@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { headOf, installedCommit, installedFrom, isNewer, remoteOf, updateCommands, updatesCard } from '../hooks/updates'
 

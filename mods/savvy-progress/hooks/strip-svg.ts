@@ -3,7 +3,7 @@ import { t } from './i18n'
 // What the session strip counts on its own (events.ts fills it at each turn's end) and how a span of time reads.
 // The strip itself is drawn in strip.tsx: its scene (strip-scene.ts) and its chips (strip-chips.ts).
 
-export type Tally = { tokens: number; busyMs: number; turns: number; lastCost: number; costBefore: number }
+export type Tally = { tokens: number; busyMs: number; turns: number; lastCost: number; costBefore: number; turnAt?: number }
 export const NO_TALLY: Tally = { tokens: 0, busyMs: 0, turns: 0, lastCost: 0, costBefore: 0 }
 
 const SECOND = 1000

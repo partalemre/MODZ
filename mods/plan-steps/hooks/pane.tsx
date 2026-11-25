@@ -1,10 +1,10 @@
 import { paneMotion } from './kit/moving'
 import type { Plan, Step } from './match'
 import { baseName } from './parse'
-import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, progressOf, windowOf } from './progress'
+import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, isTickedUnseen, progressOf, windowOf } from './progress'
 import type { Tracks } from './progress'
 import type { StepTrack } from '../types'
-import { planState, stateNote } from './freshness'
+import { hasRunningAgent, planState, stateNote } from './freshness'
 import { deskDetails } from './plan-detail'
 import { emptySvg } from './plan-empty'
 import { planSvg } from './plan-svg'
@@ -68,7 +68,7 @@ function checksText(step: Step): string {
 function lookOf(step: Step, context: { track: StepTrack | undefined; now: number; isCurrent: boolean }): RowLook {
   const elapsed = durationOf(context.track, context.now)
   const time = elapsed === null ? '' : formatDuration(elapsed)
-  if (step.status === 'completed') return { glyph: '✓', isDim: true, isBold: false, right: time }
+  if (step.status === 'completed') return { glyph: '✓', isDim: true, isBold: false, right: isTickedUnseen(context.track) ? words().tickedAtOnce : time }
   if (step.status === 'in_progress') {
     const right = context.isCurrent ? time : [checksText(step), time].filter(Boolean).join(' · ')
 
@@ -213,7 +213,7 @@ function desktopPane(ui: Ui, view: PaneView, layout: Layout) {
   const drawing = planSvg({ plan, tracks: view.tracks, now: view.now, theme: view.theme, width, note: noteOf(view) }, details)
   const alt = `${headline(plan)}${current === undefined ? '' : ` · ${words().now}: ${current.title}`}`
   // The tick moves the times alone: what the plan shows leaves the clock out, so a new minute is no change to sweep.
-  const shows = { plan, tracks: view.tracks, theme: view.theme, width, state: planState(plan, { now: view.now, touchedAt: view.touchedAt }), details }
+  const shows = { plan, tracks: view.tracks, theme: view.theme, width, state: planState(plan, { now: view.now, touchedAt: view.touchedAt, isBusy: hasRunningAgent(view.tracks) }), details }
 
   return (
     <Box flexDirection="column" paddingX={1} paddingY={1}>
@@ -224,7 +224,7 @@ function desktopPane(ui: Ui, view: PaneView, layout: Layout) {
 
 // "not started" or "waiting · 45m ago" for a plan that is not under way, else nothing.
 function noteOf(view: PaneView): string {
-  const at = { now: view.now, touchedAt: view.touchedAt }
+  const at = { now: view.now, touchedAt: view.touchedAt, isBusy: hasRunningAgent(view.tracks) }
 
   return stateNote(planState(view.plan, at), at)
 }

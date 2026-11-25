@@ -10,13 +10,27 @@ const JSX = { jsx: 'react', jsxFactory: 'h', jsxFragmentFactory: 'Fragment' }
 const transpilers = Object.fromEntries(['ts', 'tsx'].map(loader => [loader, new Bun.Transpiler({ loader, target: 'node', tsconfig: { compilerOptions: JSX } })]))
 const isFile = path => existsSync(path) && statSync(path).isFile()
 
+// Every mod carries its own copy of kit/ (bin/kit-sync keeps them byte-identical to the repo's kit/). A mod that
+// draws another mod's page (modz's hooks/pages/) would pull that mod's copy in beside its own: the same code several
+// times, each with its own memory (language, motion). So every kit file is taken from the repo's kit/.
+const KIT = '/hooks/kit/'
+const ROOT_KIT = resolve(import.meta.dirname, '../../kit') + '/'
+const oneKit = path => {
+  const at = path.indexOf(KIT)
+  if (at < 0) return path
+  const root = ROOT_KIT + path.slice(at + KIT.length)
+
+  return isFile(root) ? root : path
+}
+
 const typescript = {
   name: 'modz-typescript',
   resolveId(source, importer) {
     if (importer === undefined || !source.startsWith('.')) return null
     const base = join(dirname(importer), source)
+    const found = SUFFIXES.map(suffix => base + suffix).find(isFile)
 
-    return SUFFIXES.map(suffix => base + suffix).find(isFile) ?? null
+    return found === undefined ? null : oneKit(found)
   },
   transform: (code, id) => transpilers[id.endsWith('x') ? 'tsx' : 'ts'].transformSync(code),
 }

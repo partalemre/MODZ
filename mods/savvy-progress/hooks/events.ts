@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { StepInput } from './agents'
-import { addRun, endRun, heard, isRunning, ownTasks, patchRun, planStepOf, stepReport, stepUsage, textKey, toolActivity } from './agents'
+import { addRun, endRun, heard, isRunning, movedOn, ownTasks, patchRun, planStepOf, stepReport, stepUsage, textKey, toolActivity } from './agents'
 import { isNewFlow, mergeFlow } from './flow'
 import { tokensOf } from './pricing'
 import { NO_TALLY } from './strip-svg'
@@ -13,6 +13,8 @@ import type { ProgressInput } from './flow'
 import { deriveJob, joinJob, sealJob } from './job'
 import { MAIN_ID, mainAwake, titleOf } from './main-run'
 import { STEP_TOOL, TOOL } from './state'
+import { currentLang, t } from './i18n'
+import type { Lang } from './i18n'
 import { TASK_TOOLS, applyTaskTool, openTasks } from './tasks'
 import { isSame } from './same'
 import { reopen } from './roster'
@@ -47,6 +49,13 @@ let asked: string | undefined
 const STEP_BRIEF = `
 
 Progress reporting: before any other work, call \`${STEP_TOOL}\` with \`total\` (your plan in 3-8 steps) and \`done: 0\`; call it again with \`done\` and a few-word \`note\` as each step finishes. It only draws a progress bar.`
+
+// A helper's task list, notes and tool-call descriptions are what its row shows; written in English they leave a Turkish reader out.
+const NOTES_IN: Record<Lang, string> = {
+  en: '',
+  tr: '\n\nWrite your task-list items, progress notes and the description of every tool call in Turkish, in plain words: the person follows them on screen.',
+  ru: '\n\nWrite your task-list items, progress notes and the description of every tool call in Russian, in plain words: the person follows them on screen.',
+}
 
 async function stamp($: EngineInterface): Promise<number> {
   const at = await $.clock.now()
@@ -97,7 +106,8 @@ function onLaunches(on: On): void {
 
   on('agent.spawn', async ($, e, next) => {
     const isUnbriefed = savvyTierOf(e.subagentType) !== null && !e.prompt.includes(STEP_TOOL)
-    const started = await next(isUnbriefed ? { ...e, prompt: e.prompt + STEP_BRIEF } : e)
+    const brief = (isUnbriefed ? STEP_BRIEF : '') + NOTES_IN[currentLang()]
+    const started = await next(brief === '' ? e : { ...e, prompt: e.prompt + brief })
     if (started.deny !== undefined) return started
     const at = await stamp($)
     const id = started.agentId ?? e.tool_use_id
@@ -109,8 +119,22 @@ function onLaunches(on: On): void {
     const plan = e.parentAgentId ? undefined : await planOf($).catch(() => undefined)
     await update($, agents, list => addRun(list, { ...spawn, ...who, planStep: planStepOf(plan) }))
     // Only the main loop's launches make up the request's job; nested ones show in the panel.
-    if (!e.parentAgentId) await update($, job, prev => joinJob(prev, id, at))
+    if (!e.parentAgentId) {
+      // The main row's own title, unless it only has the stand-in name (a slash command, an empty prompt).
+      const main = (await read($, agents)).find(a => a.isMain === true && a.status === 'running')?.description
+      const asked = main === t().mainTask ? undefined : main
+      await update($, job, prev => joinJob(prev, id, at, asked))
+    }
     return started
+  })
+
+  // The plan moved on: helpers sent out just before, still on the step ticked off, serve the one under way.
+  on('state.set', { plugin: 'plan-steps', key: 'tasks' }, async ($, e, next) => {
+    const result = await next(e)
+    const at = await $.clock.now()
+    const list = await read($, agents)
+    if (movedOn(list, e.value, at) !== list) await update($, agents, runs => movedOn(runs, e.value, at))
+    return result
   })
 
   // A new request (anything but a background task's notice) closes a job with nothing running.
@@ -165,13 +189,13 @@ function onActivity(on: On): void {
 // Every turn's tokens count, a subagent's too; the main loop's turns also count the time and the turn's cost.
 // Called from the one turn.complete hook below: the engine allows one per event without a matcher.
 async function countTurn($: EngineInterface, e: { agentId?: string; usage?: Parameters<typeof tokensOf>[0]; durationMs?: number }): Promise<void> {
-  const used = e.usage === undefined ? 0 : tokensOf(e.usage)
   const isMain = e.agentId === undefined
   const cost = isMain ? ((await $.session.usage().catch(() => undefined))?.cost?.usd ?? 0) : 0
   await update($, tally, x => {
     const was = { ...NO_TALLY, ...x }
-    if (!isMain) return { ...was, tokens: was.tokens + used }
-    return { tokens: was.tokens + used, busyMs: was.busyMs + (e.durationMs ?? 0), turns: was.turns + 1, lastCost: was.costBefore > 0 ? Math.max(0, cost - was.costBefore) : 0, costBefore: cost }
+    // Tokens are counted as each step comes back (onSteps), so the strip moves during a long turn, not only after it.
+    if (!isMain) return was
+    return { ...was, busyMs: was.busyMs + (e.durationMs ?? 0), turns: was.turns + 1, lastCost: was.costBefore > 0 ? Math.max(0, cost - was.costBefore) : 0, costBefore: cost, turnAt: 0 }
   })
 }
 
@@ -185,6 +209,7 @@ function onSteps(on: On): void {
       const title = asked
       asked = undefined
       await update($, agents, list => mainAwake(list, { title, at: sent }))
+      await update($, tally, x => ({ ...NO_TALLY, ...x, turnAt: sent }))
     }
     // A request in flight is heard from as it goes out: a long stream is not a quiet agent.
     await update($, agents, list => patchRun(list, agentId, a => ({ ...heard(a, sent), stepAt: sent })))
@@ -192,6 +217,7 @@ function onSteps(on: On): void {
     const usage = result.usage
     const facts = usage && { model: usage.model || e.model, effort: e.effort, usage }
     const at = await $.clock.now()
+    if (usage) await update($, tally, x => ({ ...NO_TALLY, ...x, tokens: (x?.tokens ?? 0) + tokensOf(usage) }))
     // What it wrote before this step's calls is their reason, in its own words.
     const step = { answer: result.answer, calls: result.toolUses.length, sentAt: sent }
     // The main loop wrote: while helpers work, its newest words are where they stand, until its next call.

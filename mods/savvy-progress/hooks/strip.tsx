@@ -109,11 +109,17 @@ async function factsOf(io: StripIo): Promise<Facts> {
 
 type Presses = { open: (pane: string) => () => unknown; onAgents: () => unknown; onHub: (() => unknown) | null }
 
+// Finished turns' time plus the turn under way, so the time moves while Claude works, not only after.
+const busyOf = (tally: Tally, now: number): number => tally.busyMs + (tally.turnAt ? Math.max(0, now - tally.turnAt) : 0)
+
 function planSlot(facts: Facts, presses: Presses): Slot[] {
   if (facts.steps.length === 0) return []
-  const done = facts.steps.filter(step => step.status === 'completed').length
-  const current = facts.steps.find(step => step.status === 'in_progress') ?? facts.steps.find(step => step.status !== 'completed')
-  const base = { id: 'plan', label: t().stripPlan, value: `${done}/${facts.steps.length}`, widest: `${facts.steps.length}/${facts.steps.length}` }
+  const total = facts.steps.length
+  const at = facts.steps.findIndex(step => step.status === 'in_progress')
+  const index = at === -1 ? facts.steps.findIndex(step => step.status !== 'completed') : at
+  const current = facts.steps[index]
+  // The number is the step shown beside it ("2/6" next to step 2's title), as the agents' rows count it; done, all of them.
+  const base = { id: 'plan', label: t().stripPlan, value: `${current === undefined ? total : index + 1}/${total}`, widest: `${total}/${total}` }
   const chip: Chip = current === undefined ? { ...base, note: t().stripPlanDone, tone: 'ok' } : { ...base, note: current.subject }
 
   return [{ chip, rank: 0, isNoteKept: true, press: presses.open(PLAN_PANE) }]
@@ -144,7 +150,7 @@ function slotsOf(facts: Facts, presses: Presses): Slot[] {
     ...planSlot(facts, presses),
     { chip: { id: 'cost', label: t().stripCost, value: fmtCost(facts.cost), widest: room.cost }, rank: 1, press: usage },
     { chip: { id: 'tokens', label: t().stripTokens, value: fmtTokens(counted.tokens), widest: room.tokens }, rank: 3, press: usage },
-    { chip: { id: 'time', label: t().stripTime, value: spanText(counted.busyMs), widest: room.time, ...(helpers > 0 ? { note: t().crew(helpers) } : {}) }, rank: 4, press: presses.onAgents },
+    { chip: { id: 'time', label: t().stripTime, value: spanText(busyOf(counted, facts.now)), widest: room.time, ...(helpers > 0 ? { note: t().crewAtWork(helpers) } : {}) }, rank: 4, press: presses.onAgents },
     ...windows.map(run => limitSlot(run, facts, presses)),
     ...(facts.team === null ? [] : [{ chip: { id: 'team', label: '', value: '' }, rank: TEAM_RANK, press: presses.open(TEAM_PANE), art: teamArt(facts.team, facts.now) }]),
     ...(presses.onHub === null ? [] : [{ chip: { id: HUB_CHIP, label: '', value: 'modz', isWordmark: true }, rank: 0, press: presses.onHub }]),
@@ -203,7 +209,7 @@ function stripText(facts: Facts): string {
     facts.steps.length === 0 ? '' : `${t().stripPlan} ${done}/${facts.steps.length}`,
     `${t().stripCost} ${fmtCost(facts.cost)}`,
     `${t().stripTokens} ${fmtTokens(facts.tally.tokens)}`,
-    `${t().stripTime} ${spanText(facts.tally.busyMs)}`,
+    `${t().stripTime} ${spanText(busyOf(facts.tally, facts.now))}`,
     week === undefined ? '' : `${t().stripWeek} ${t().pct(Math.round(week.percent))}`,
   ]
     .filter(Boolean)

@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, Register } from 'claude-code'
 
-import { isShown, planState, STALE_MS } from './freshness'
+import { hasRunningAgent, isShown, planState, STALE_MS } from './freshness'
 import { withoutRestored } from './carry'
 import { wireCarry } from './carry-hooks'
 import { wireFinish } from './finish-hooks'
@@ -9,11 +9,12 @@ import { HUB_PANE, hubOf, isShowing } from './hub'
 import type { CurrentStep, HubShown } from './hub'
 import { resolvePlan } from './match'
 import type { Plan } from './match'
+import { noteCall, resetNudge, wireNudge } from './nudge'
 import { wirePane } from './pane-hook'
 import { baseName } from './parse'
 import { addAgent, addFile, currentIndex, observe, progressOf, settleAgents } from './progress'
 import { approvedDoc, fileDoc, isReplacing, mayHoldPlan, statusText } from './plan'
-import { createdId, createTask, finished, fromDeskPlan, fromTodos, updateTask } from './tasks'
+import { createdId, createTask, finished, fromDeskPlan, fromTodos, replayDesk, updateTask } from './tasks'
 import type { HubCard, PlanDoc, PlanTask, StepTrack } from '../types'
 import { setLang } from './kit/lang'
 import { words } from './words'
@@ -34,7 +35,7 @@ type Timer = { cancel: () => void }
 
 // Session-local facts. `isSettled`: a finished plan's status line was cleared. `touchedAt`: the last
 // time the plan or the step under way moved; `quiet` re-checks the status line once that goes stale.
-const flags = { cwd: '', isSettled: false, touchedAt: 0, quiet: null as Timer | null, status: null as string | undefined | null }
+const flags = { cwd: '', isStatusLine: false, isSettled: false, touchedAt: -1, quiet: null as Timer | null, status: null as string | undefined | null }
 
 // Every sync recomputes the status line; it is sent only when its words change.
 function showStatus($: EngineInterface, text: string | undefined): void {
@@ -79,9 +80,10 @@ async function sync($: EngineInterface): Promise<void> {
   const now = await $.clock.now()
   const tracks = await update($, tracksAtom, before => (plan === null ? before : observe(before, plan.steps, now)))
   const progress = plan === null ? null : progressOf(plan)
-  const state = planState(plan, { now, touchedAt: flags.touchedAt })
+  const state = planState(plan, { now, touchedAt: flags.touchedAt, isBusy: hasRunningAgent(tracks) })
   if (progress === null || progress.done < progress.total) flags.isSettled = false
-  showStatus($, flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks))
+  // The session strip already shows the plan; the footer line repeats it only when asked.
+  showStatus($, !flags.isStatusLine || flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks))
   await writeHub($, hubOf(progress, state, plan === null ? null : currentStep(plan, tracks)))
 }
 
@@ -94,6 +96,7 @@ async function touch($: EngineInterface): Promise<void> {
 
 async function setTasks($: EngineInterface, change: (tasks: PlanTask[]) => PlanTask[]): Promise<void> {
   await update($, tasksAtom, change)
+  resetNudge()
   await touch($)
   await sync($)
 }
@@ -140,11 +143,28 @@ async function afterFile($: EngineInterface, call: Call): Promise<void> {
   }
 }
 
+// The desktop list as the main conversation's earlier update_plan and wrap_up calls built it; [] if unreadable.
+async function deskTasks($: EngineInterface, skipId?: unknown): Promise<PlanTask[]> {
+  try {
+    const uses = (await $.session.messages()).flatMap(message => (message.role === 'assistant' ? (message.toolUses ?? []) : []))
+    const calls = uses.filter(use => (use.tool === DESK_PLAN || use.tool === DESK_WRAP_UP) && use.tool_use_id !== skipId && use.isError !== true)
+
+    return replayDesk(calls.map(use => ({ isWrapUp: use.tool === DESK_WRAP_UP, plan: use.input })))
+  } catch (error) {
+    $.ui.log(`plan-steps: transcript not readable (${error instanceof Error ? error.message : 'unknown'})`, { to: 'debug' })
+
+    return []
+  }
+}
+
 // The task list is the main loop's own (TodoWrite); TaskCreate/TaskUpdate share one list across loops.
 async function afterTasks($: EngineInterface, call: Call, ran: Ran): Promise<void> {
   const isMainLoop = call.agentId === undefined
   if (call.tool === 'TodoWrite' && isMainLoop) await setTasks($, () => fromTodos(call.todos))
-  if (call.tool === DESK_PLAN && isMainLoop) await setTasks($, tasks => fromDeskPlan(tasks, call))
+  if (call.tool === DESK_PLAN && isMainLoop) {
+    const before = await deskTasks($, call.tool_use_id)
+    await setTasks($, tasks => fromDeskPlan(before.length > 0 ? before : tasks, call))
+  }
   if (call.tool === DESK_WRAP_UP && isMainLoop && (await read($, tasksAtom)).length > 0) await setTasks($, finished)
   if (call.tool === 'TaskCreate') {
     const subject = String(call.subject ?? '')
@@ -169,6 +189,7 @@ async function endAgent($: EngineInterface, call: Call, ran: Ran): Promise<void>
 
 async function onToolCall<R extends Ran>($: EngineInterface, call: Call, run: () => Promise<R>): Promise<R> {
   if (call.tool === 'Agent') await startAgent($, call)
+  await noteCall($, call)
   const ran = await run()
   if (call.tool === 'Agent') await endAgent($, call, ran)
   if (!isOk(ran)) return ran
@@ -196,6 +217,14 @@ function lifecycle(on: On): void {
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     flags.cwd = e.cwd.replace(/\/$/, '')
     flags.status = null
+    // A resumed or restarted session holds its desktop list only in the transcript.
+    if ((await read($, tasksAtom)).length === 0 && (await $.session.turns().catch(() => 0)) > 0) {
+      const rebuilt = await deskTasks($)
+      if (rebuilt.length > 0) {
+        await update($, tasksAtom, () => rebuilt)
+        await touch($)
+      }
+    }
     const plan = await currentPlan($)
     const state = planState(plan, { now: await $.clock.now(), touchedAt: flags.touchedAt })
     await writeHub($, hubOf(plan === null ? null : progressOf(plan), state, plan === null ? null : currentStep(plan, await read($, tracksAtom))))
@@ -245,9 +274,11 @@ function tracking(on: On): void {
 }
 
 export const register: Register = (on, options) => {
+  flags.isStatusLine = options.statusLine === true
   lifecycle(on)
   tracking(on)
   wireCarry(on)
   wireFinish(on, { touchedAt: () => flags.touchedAt, isStrict: options.holdFinish === true })
   wirePane(on, { touchedAt: () => flags.touchedAt })
+  wireNudge(on)
 }

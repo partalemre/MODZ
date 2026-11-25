@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { headline, linkCheck, loadCatalog } from '../hooks/catalog'
 import type { ModInfo } from '../hooks/catalog'

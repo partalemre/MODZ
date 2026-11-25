@@ -1,6 +1,7 @@
 // The person arranges the hub (move a row up, hide it, show it again, reset), kept across sessions; a mod the
 // hub does not know gets a row from its own card; Transceiver wears its Beta badge; any mod's "← modz" brings the hub back.
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
+import { test } from './budget'
 
 import { cardOf, rowsOf } from '../hooks/hub'
 import { ICON_NAMES } from '../hooks/kit/icons'

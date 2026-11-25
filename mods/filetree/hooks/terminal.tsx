@@ -1,23 +1,20 @@
 import type { ElementTable } from 'claude-code'
 
 import type { FileTree, Theme } from '../types'
-import { actionsOf } from './actions'
 import { activityChip, footer } from './chrome'
 import { costText, turnCost } from './costtext'
 import { BRANCH_ROW } from './flash'
 import { BRANCH_ICON, TONES } from './git'
-import type { Host } from './host'
 import { heroOf, heroText, subText } from './now'
 import type { RowsProps } from './rows'
 import { countSegs, terminalRow } from './rowspec'
 import { heroInput, type Room, rowCtx, type Scene, treeWindow } from './scene'
-import { jump, search } from './search'
-import { mem } from './session'
-import { unsized, wantSizes } from './sizes'
+import type { FilesActs } from './toolbar'
+import { unsized } from './tree'
 import { words } from './words'
 
 type Ui = ElementTable<'terminal'>
-type Act = ReturnType<typeof actionsOf>
+type Act = FilesActs['tool']
 
 // The terminal keeps upstream's hues, keyed so a read is blue (Tide) and an edit orange (Kiln).
 const TERMINAL_TONE: Record<string, string> = { purple: 'blue', iris: 'purple' }
@@ -89,20 +86,20 @@ function terminalBranch(ui: Ui, s: Scene, unicode: boolean) {
   )
 }
 
-function searchRow(host: Host, ui: Ui, at: { t: FileTree; label?: string; clear: string }) {
+function searchRow(ui: Ui, at: { t: FileTree; act: FilesActs; label?: string; clear: string }) {
   const { Box, Button, Input } = ui
   const { t } = at
   return (
     <Box flexDirection="row" gap={1}>
       <Box flexGrow={1}>
-        <Input key="q" {...(at.label ? { label: at.label } : {})} placeholder={words().find} submitLabel={words().findGo} autoFocus value={t.query} onInput={(v: string) => void search(host, v)} onSubmit={(v: string) => void jump(host, v)} />
+        <Input key="q" {...(at.label ? { label: at.label } : {})} placeholder={words().find} submitLabel={words().findGo} autoFocus value={t.query} onInput={at.act.find} onSubmit={at.act.jump} />
       </Box>
-      {t.query ? <Button key="clear" plain dimColor label={at.clear} onPress={() => void search(host, '')} /> : null}
+      {t.query ? <Button key="clear" plain dimColor label={at.clear} onPress={() => at.act.find('')} /> : null}
     </Box>
   )
 }
 
-function headRow(ui: Ui, at: { t: FileTree; theme: Theme; unicode: boolean; act: Act }) {
+function headRow(ui: Ui, at: { t: FileTree; theme: Theme; unicode: boolean; isFollowing: boolean; act: Act }) {
   const { Box, Text, Button } = ui
   const { t, theme, unicode, act } = at
   const header = t.top ? [t.top.split('/').pop() ?? t.top, t.prefix.replace(/\/$/, '')].filter(Boolean).join('/') : t.root.split('/').pop() || t.root
@@ -113,7 +110,7 @@ function headRow(ui: Ui, at: { t: FileTree; theme: Theme; unicode: boolean; act:
       <Box flexGrow={1} />
       <Box flexDirection="row" gap={2}>
         {icon('up', { plain: '↑', nerd: '\u{f005d}' })}
-        {icon('cwd', { plain: '⌂', nerd: '\u{f02dc}' }, !mem.follow)}
+        {icon('cwd', { plain: '⌂', nerd: '\u{f02dc}' }, !at.isFollowing)}
         {icon('refresh', { plain: '↻', nerd: '\u{f0450}' })}
         {icon('hidden', t.showHidden ? { plain: '◉', nerd: '\u{f0208}' } : { plain: '○', nerd: '\u{f0209}' }, !t.showHidden)}
         {icon('size', { plain: 'Σ', nerd: '\u{f02ca}' }, !t.showSize)}
@@ -160,24 +157,25 @@ function fixedRows(s: Scene): number {
   return HEAD_ROWS + Number(!t.top || Boolean(t.branch)) + Number(Boolean(t.selected || s.latest)) + Number(s.turn.hasRun)
 }
 
-export function drawTerminal(host: Host, ui: Ui, frame: { s: Scene; room: Room; home: JSX.Element | null }) {
+export function drawTerminal(ui: Ui, frame: { s: Scene; room: Room; home: JSX.Element | null }, act: FilesActs) {
   const { Box, Text, Client } = ui
   const { s, room, home } = frame
   const { t, theme } = s
-  const unicode = mem.glyphSetting === 'plain' || (mem.glyphSetting === 'auto' && mem.noNerd)
+  const { glyphs, noNerd } = s.feel
+  const unicode = glyphs === 'plain' || (glyphs === 'auto' && noNerd)
   const ctx = rowCtx(s, room.width, unicode)
   const win = treeWindow(s, Math.max(MIN_BODY, room.bodyRows - fixedRows(s)), { toSpec: r => terminalRow(ctx, r), colors: { thumb: theme.accent, track: theme.muted, note: theme.muted } })
-  if (t.showSize) wantSizes(host, unsized(t, win.rows))
+  if (t.showSize) act.sizes(unsized(t, win.rows))
   const chip = s.latest ? activityChip(ui, s.latest, { unicode, colorOf: tone => TONES[tone]?.solid ?? theme.accent }) : null
-  const rows = { rows: win.specs, active: t.cursor, activeBg: theme.selection, hoverBg: faint(theme.selection), tones: SHIMMER, pointer: mem.pointer, ...(win.bar ? { bar: win.bar } : {}) } satisfies RowsProps
+  const rows = { rows: win.specs, active: t.cursor, activeBg: theme.selection, hoverBg: faint(theme.selection), tones: SHIMMER, pointer: s.feel.pointer, ...(win.bar ? { bar: win.bar } : {}) } satisfies RowsProps
   return (
     <Box flexDirection="column" minHeight={Math.max(1, room.bodyRows)} backgroundColor={theme.bg || undefined}>
       {home}
-      {headRow(ui, { t, theme, unicode, act: actionsOf(host, t) })}
+      {headRow(ui, { t, theme, unicode, isFollowing: s.feel.follow, act: act.tool })}
       {terminalBranch(ui, s, unicode)}
       {!t.top && <Text color={theme.muted}>{unicode ? '± ' : '\u{e702} '}{words().noRepo}</Text>}
       {s.turn.hasRun && nowLine(ui, s, room.width)}
-      {searchRow(host, ui, { t, label: '/ ', clear: unicode ? '×' : '\u{f0156}' })}
+      {searchRow(ui, { t, act, label: '/ ', clear: unicode ? '×' : '\u{f0156}' })}
       <Client key="rows" module="./rows.tsx" props={rows} />
       <Box flexGrow={1} />
       {footer(ui, s, chip)}

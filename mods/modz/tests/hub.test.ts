@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { cardOf, focusOf, presenceOf, rowsOf } from '../hooks/hub'
 import type { Presence } from '../hooks/hub'
@@ -74,11 +75,12 @@ const transceiverReporter = {
 
 // A mod's answer to the hub's open request, as every MODZ mod gives it once its pane is open: `/shown <pane>`.
 // A stand-in loads beneath the hub and so never hears the hub's own write; the test says when it answers.
-const agentsMod = {
-  name: 'savvy-progress',
+// replay-theater's pane is its own (the Agents, Plan, Tests and other pages are drawn in the hub's pane, hooks/pages/).
+const replayMod = {
+  name: 'replay-theater',
   register(on: any) {
     on('command.run', { command: 'shown' }, async ($: any, e: any, next: any) => {
-      await $.state.set({ plugin: 'savvy-progress', key: 'shown' }, { pane: e.args, at: 1 })
+      await $.state.set({ plugin: 'replay-theater', key: 'shown' }, { pane: e.args, at: 1 })
 
       return next(e)
     })
@@ -109,11 +111,11 @@ test('by default nothing opens until /modz', async ($: any, on: any) => {
   expect(w.opened).toEqual([])
   await $.command.run({ command: 'modz', args: '' })
 
-  expect(w.opened).toEqual(['modz', 'close:modz-mods'])
+  expect(w.opened).toEqual(['modz'])
 })
 
 for (const surface of ['terminal', 'desktop'] as const) {
-  test(`pressing a row swaps the panel to that mod and the catalog swaps with the hub (${surface})`, { options: { openOnStart: true }, plugins: [agentsMod] }, async ($: any, on: any) => {
+  test(`pressing a row swaps the panel to that mod and the catalog swaps with the hub (${surface})`, { options: { openOnStart: true }, plugins: [replayMod] }, async ($: any, on: any) => {
     const w = stubWorld(on)
     const asked: unknown[] = []
     on('state.set', { plugin: 'modz', key: 'open' }, (_: unknown, e: any, next: any) => {
@@ -130,22 +132,22 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await $.session.start({ surface, isInteractive: true, cwd: '/work' })
     const ui = await $.ui.mount({ ...PANE, surface })
     w.opened.length = 0
-    await ui.press({ key: 'open-agents' })
-    expect(asked).toEqual(['agents'])
+    await ui.press({ key: 'open-replay' })
+    expect(asked).toEqual(['replay'])
     expect(w.opened).toEqual([])
-    await $.command.run({ command: 'shown', args: 'agents' })
+    await $.command.run({ command: 'shown', args: 'replay' })
     expect(w.opened).toEqual(['close:modz', 'close:modz-mods'])
     // The hub stands alone before it asks, then the mod's pane takes the stage.
-    expect(staged).toEqual(['modz', 'agents'])
+    expect(staged).toEqual(['modz', 'replay'])
 
     await $.command.run({ command: 'modz', args: '' })
-    expect(staged).toEqual(['modz', 'agents', 'modz'])
+    expect(staged).toEqual(['modz', 'replay', 'modz'])
     w.opened.length = 0
     await ui.press({ key: 'open-modz-mods' })
-    expect(w.opened).toEqual(['modz-mods', 'close:modz'])
-    expect(staged).toEqual(['modz', 'agents', 'modz', 'modz-mods'])
-    const catalog = await $.ui.mount({ ...PANE, requestId: 'modz-mods', surface })
-    expect(await catalog.find({ key: 'mod-savvy-progress' })).toBeDefined()
+    // The catalog is a page of the hub's one pane: the pane comes forward, nothing else opens.
+    expect(w.opened).toEqual(['modz'])
+    expect(staged).toEqual(['modz', 'replay', 'modz', 'modz-mods'])
+    expect(await ui.find({ key: 'mod-savvy-progress' })).toBeDefined()
   })
 
   test(`a mod that does not answer leaves the hub in the panel (${surface})`, { options: { openOnStart: true } }, async ($: any, on: any) => {
@@ -153,9 +155,9 @@ for (const surface of ['terminal', 'desktop'] as const) {
     await $.session.start({ surface, isInteractive: true, cwd: '/work' })
     const ui = await $.ui.mount({ ...PANE, surface })
     w.opened.length = 0
-    await ui.press({ key: 'open-agents' })
+    await ui.press({ key: 'open-replay' })
     expect(w.opened).toEqual([])
-    expect(await ui.find({ key: 'open-agents' })).toBeDefined()
+    expect(await ui.find({ key: 'open-replay' })).toBeDefined()
   })
 }
 

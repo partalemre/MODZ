@@ -29,6 +29,8 @@ const EN = {
   moreFiles: (n) => `+${plural(n, "more file", "more files")}`,
   notStarted: "not started",
   waitingSince: (duration) => `waiting · ${duration} ago`,
+  waiting: "waiting",
+  tickedAtOnce: "ticked at once",
   allDone: "done",
   now: "now",
   running: "running",
@@ -66,6 +68,8 @@ const TR = {
   moreFiles: (n) => `+${n} dosya daha`,
   notStarted: "başlamadı",
   waitingSince: (duration) => `bekliyor · ${duration} önce`,
+  waiting: "bekliyor",
+  tickedAtOnce: "toplu işaretlendi",
   allDone: "tamam",
   now: "şimdi",
   running: "çalışıyor",
@@ -105,6 +109,7 @@ function moved(track, status, now) {
     return { ...track, status, finishedAt: now };
   return { ...track, status, startedAt: null, finishedAt: null };
 }
+const isTickedUnseen = (track) => track !== undefined && track.status === "completed" && track.startedAt === null && track.finishedAt !== null;
 function observe(tracks, steps, now) {
   const next = { ...tracks };
   for (const step of steps) {
@@ -207,14 +212,17 @@ function planState(plan, at) {
     return "done";
   if (plan.steps.every((step) => step.status === "pending"))
     return "unstarted";
+  if (at.isBusy === true)
+    return "live";
   return at.now - at.touchedAt >= STALE_MS ? "stale" : "live";
 }
+const hasRunningAgent = (tracks) => Object.values(tracks).some((track) => track.agents.some((agent) => agent.isRunning));
 const isShown = (state) => state === "live" || state === "done";
 function stateNote(state, at) {
   if (state === "unstarted")
     return words().notStarted;
   if (state === "stale")
-    return words().waitingSince(formatDuration(at.now - at.touchedAt));
+    return at.touchedAt < 0 ? words().waiting : words().waitingSince(formatDuration(at.now - at.touchedAt));
   return "";
 }
 
@@ -428,12 +436,12 @@ function resolvePlan(tasks, doc) {
 
 const carriedAtom$1 = atom({ plugin: "plan-steps", key: "carried" }, null);
 const dismissedAtom$1 = atom({ plugin: "plan-steps", key: "dismissed" }, null);
-const docAtom$3 = atom({ plugin: "plan-steps", key: "doc" }, null);
-const tasksAtom$3 = atom({ plugin: "plan-steps", key: "tasks" }, []);
+const docAtom$4 = atom({ plugin: "plan-steps", key: "doc" }, null);
+const tasksAtom$4 = atom({ plugin: "plan-steps", key: "tasks" }, []);
 const reason$1 = (error) => error instanceof Error ? error.message : "unknown";
 const isOpenPlan = (plan) => plan !== null && plan.steps.some((step) => step.status !== "completed");
-async function currentPlan$2($) {
-  return resolvePlan(await read($, tasksAtom$3), await read($, docAtom$3));
+async function currentPlan$3($) {
+  return resolvePlan(await read($, tasksAtom$4), await read($, docAtom$4));
 }
 async function rootOf($) {
   try {
@@ -452,7 +460,7 @@ async function keepPlan($, written) {
     return;
   try {
     const before = await readPlans($);
-    const plan = resolvePlan(written.tasks ?? await read($, tasksAtom$3), written.doc === undefined ? await read($, docAtom$3) : written.doc);
+    const plan = resolvePlan(written.tasks ?? await read($, tasksAtom$4), written.doc === undefined ? await read($, docAtom$4) : written.doc);
     const next = keptPlans(before, { root, plan, dismissed: await read($, dismissedAtom$1), now: await $.clock.now() });
     if (!isSame(before, next))
       await $.store.set(STORE_KEY, next);
@@ -475,7 +483,7 @@ async function restore($, cause) {
     const kept = freshPlan(await readPlans($), { root, now: await $.clock.now() });
     if (kept === null || await read($, dismissedAtom$1) === signatureOf(kept.steps))
       return;
-    await update($, tasksAtom$3, () => restoredTasks(kept));
+    await update($, tasksAtom$4, () => restoredTasks(kept));
     await arm($, kept, cause);
   } catch (error) {
     $.ui.log(`plan-steps: could not bring the plan back (${reason$1(error)})`, { to: "debug" });
@@ -483,7 +491,7 @@ async function restore($, cause) {
 }
 async function isEmptyConversation($) {
   try {
-    return await $.session.turns() === 0 && await currentPlan$2($) === null;
+    return await $.session.turns() === 0 && await currentPlan$3($) === null;
   } catch (error) {
     $.ui.log(`plan-steps: turns not readable (${reason$1(error)})`, { to: "debug" });
     return false;
@@ -517,7 +525,7 @@ function bringingBack(on) {
     const result = await next(e);
     if (e.agentId !== undefined || e.trigger === "precompute" || result.messages === undefined)
       return result;
-    const plan = await currentPlan$2($);
+    const plan = await currentPlan$3($);
     if (isOpenPlan(plan))
       await arm($, { title: plan.source, steps: plan.steps }, "compact");
     return result;
@@ -531,7 +539,7 @@ function wireCarry(on) {
     const carried = await read($, carriedAtom$1);
     if (carried === null)
       return composed;
-    const plan = await currentPlan$2($);
+    const plan = await currentPlan$3($);
     if (!isOpenPlan(plan) || signatureOf(plan.steps) !== carried.signature)
       return composed;
     if (await read($, dismissedAtom$1) === carried.signature)
@@ -1501,10 +1509,10 @@ function pinned(site, tree) {
 
 const carriedAtom = atom({ plugin: "plan-steps", key: "carried" }, null);
 const dismissedAtom = atom({ plugin: "plan-steps", key: "dismissed" }, null);
-const docAtom$2 = atom({ plugin: "plan-steps", key: "doc" }, null);
+const docAtom$3 = atom({ plugin: "plan-steps", key: "doc" }, null);
 const heldAtom = atom({ plugin: "plan-steps", key: "held" }, null);
 const noticeAtom = atom({ plugin: "plan-steps", key: "notice" }, null);
-const tasksAtom$2 = atom({ plugin: "plan-steps", key: "tasks" }, []);
+const tasksAtom$3 = atom({ plugin: "plan-steps", key: "tasks" }, []);
 const cacheTaxNotice = { plugin: "cache-tax", key: "notice" };
 const knowNotice = { plugin: "you-should-know", key: "notice" };
 const reflectNotice = { plugin: "reflect", key: "notice" };
@@ -1513,8 +1521,8 @@ const testBadgeNotice = { plugin: "test-badge", key: "notice" };
 const handoffNotice = { plugin: "handoff", key: "notice" };
 const turn = { startedAt: 0, isLight: false };
 const reason = (error) => error instanceof Error ? error.message : "unknown";
-async function currentPlan$1($) {
-  return resolvePlan(await read($, tasksAtom$2), await read($, docAtom$2));
+async function currentPlan$2($) {
+  return resolvePlan(await read($, tasksAtom$3), await read($, docAtom$3));
 }
 async function hasLouderNotice($) {
   const others = [
@@ -1560,7 +1568,7 @@ async function hasBackgroundWork($) {
 async function guard($, ctx) {
   if (await hasBackgroundWork($))
     return;
-  const plan = await currentPlan$1($);
+  const plan = await currentPlan$2($);
   const facts = { plan, isTouched: ctx.touchedAt() >= turn.startedAt, dismissed: await read($, dismissedAtom), held: await read($, heldAtom), isStrict: ctx.isStrict };
   const call = finishCall(facts);
   if (call === "none" || plan === null)
@@ -1669,6 +1677,44 @@ function hubOf(progress, state, current = null) {
 const isShowing = (card, shown) => card !== undefined && card.detail === shown.detail && card.tone === shown.tone && JSON.stringify(card.live) === JSON.stringify(shown.live);
 function isOpenFor(value, pane) {
   return typeof value === "object" && value !== null && value.pane === pane;
+}
+
+const NUDGE_CALLS = 15;
+const DESK_PLAN$1 = "mcp__ccd_turn__update_plan";
+const docAtom$2 = atom({ plugin: "plan-steps", key: "doc" }, null);
+const tasksAtom$2 = atom({ plugin: "plan-steps", key: "tasks" }, []);
+let calls = 0;
+let dueId = null;
+async function currentPlan$1($) {
+  return resolvePlan(await read($, tasksAtom$2), await read($, docAtom$2));
+}
+const resetNudge = () => {
+  calls = 0;
+  dueId = null;
+};
+async function noteCall($, call) {
+  if (call.tool === DESK_PLAN$1 || typeof call.tool_use_id !== "string")
+    return;
+  const plan = await currentPlan$1($).catch(() => null);
+  const isOpen = plan !== null && plan.steps.some((step) => step.status !== "completed");
+  if (countCall(call.agentId === undefined, isOpen))
+    dueId = call.tool_use_id;
+}
+const NUDGE_TEXT = `Plan check: ${NUDGE_CALLS} tool calls since your task list last moved. If a step is finished, tick it now ` + "(update_plan with advance, or done/start), one step at a time, so the person sees the plan as it really stands.";
+function countCall(isMainLoop, isOpenPlan) {
+  if (!isMainLoop || !isOpenPlan)
+    return false;
+  calls += 1;
+  return calls % NUDGE_CALLS === 0;
+}
+function wireNudge(on) {
+  on("classic.PostToolUse", async ($, e, next) => {
+    const result = await next(e);
+    if (dueId === null || e.tool_use_id !== dueId)
+      return result;
+    dueId = null;
+    return { ...result, additionalContext: [...result.additionalContext ?? [], NUDGE_TEXT] };
+  }).catch(($, e, next) => next(e));
 }
 
 const HOME_LABEL = "← modz";
@@ -2370,7 +2416,7 @@ function rightText(model, step, isCurrent) {
   const elapsed = durationOf(model.tracks[step.key], model.now);
   const time = elapsed === null ? "" : formatDuration(elapsed);
   if (step.status === "completed")
-    return { text: time, cls: "lo" };
+    return { text: isTickedUnseen(model.tracks[step.key]) ? words().tickedAtOnce : time, cls: "lo" };
   if (isCurrent)
     return { text: time, cls: model.note === "" ? "mid" : "lo" };
   const checks = step.checksTotal > 0 ? `${step.checksDone}/${step.checksTotal}` : "";
@@ -2496,7 +2542,7 @@ function lookOf(step, context) {
   const elapsed = durationOf(context.track, context.now);
   const time = elapsed === null ? "" : formatDuration(elapsed);
   if (step.status === "completed")
-    return { glyph: "✓", isDim: true, isBold: false, right: time };
+    return { glyph: "✓", isDim: true, isBold: false, right: isTickedUnseen(context.track) ? words().tickedAtOnce : time };
   if (step.status === "in_progress") {
     const right = context.isCurrent ? time : [checksText(step), time].filter(Boolean).join(" · ");
     return { glyph: "◐", glyphColor: "claude", isDim: !context.isCurrent, isBold: context.isCurrent, right, rightColor: context.isCurrent ? "claude" : undefined };
@@ -2644,7 +2690,7 @@ function desktopPane(ui, view, layout) {
   const details = current === undefined ? { meta: "", files: [], running: [] } : deskDetails(current, view.tracks[current.key]);
   const drawing = planSvg({ plan, tracks: view.tracks, now: view.now, theme: view.theme, width, note: noteOf(view) }, details);
   const alt = `${headline(plan)}${current === undefined ? "" : ` · ${words().now}: ${current.title}`}`;
-  const shows = { plan, tracks: view.tracks, theme: view.theme, width, state: planState(plan, { now: view.now, touchedAt: view.touchedAt }), details };
+  const shows = { plan, tracks: view.tracks, theme: view.theme, width, state: planState(plan, { now: view.now, touchedAt: view.touchedAt, isBusy: hasRunningAgent(view.tracks) }), details };
   return h(Box, {
     flexDirection: "column",
     paddingX: 1,
@@ -2655,7 +2701,7 @@ function desktopPane(ui, view, layout) {
   }));
 }
 function noteOf(view) {
-  const at = { now: view.now, touchedAt: view.touchedAt };
+  const at = { now: view.now, touchedAt: view.touchedAt, isBusy: hasRunningAgent(view.tracks) };
   return stateNote(planState(view.plan, at), at);
 }
 function planPane(ui, view, layout) {
@@ -2720,6 +2766,12 @@ async function openPane($, focus = true) {
     await reportShown($);
   pane.ticker ??= $.clock.every(TICK_MS, () => void update($, tickAtom, (tick) => tick + 1));
 }
+async function askForPage($) {
+  const drawn = (await $.state.get({ plugin: "modz", key: "drawn" })).value;
+  if (!Array.isArray(drawn) || !drawn.includes(HUB_PANE))
+    return openPane($);
+  await $.state.set({ plugin: "plan-steps", key: "home" }, { pane: HUB_PANE, at: await $.clock.now() });
+}
 const keepNouns = ($) => ({
   isListed: async () => (await $.ui.panes()).some((up) => up.id === PANE),
   reopen: () => openPane($, false),
@@ -2754,7 +2806,7 @@ async function startWatch($) {
 }
 function opening(on) {
   on("command.run", { command: "steps" }, async ($) => {
-    await openPane($);
+    await askForPage($);
     return {};
   });
   on("session.attach", async ($, e, next) => {
@@ -2914,6 +2966,9 @@ function fromDeskPlan(tasks, plan) {
 function finished(tasks) {
   return tasks.map((task) => ({ ...task, status: "completed" }));
 }
+function replayDesk(calls) {
+  return calls.reduce((tasks, call) => call.isWrapUp ? finished(tasks) : fromDeskPlan(tasks, call.plan), []);
+}
 
 const docAtom = atom({ plugin: "plan-steps", key: "doc" }, null);
 const tasksAtom = atom({ plugin: "plan-steps", key: "tasks" }, []);
@@ -2924,7 +2979,7 @@ const LIVE_AGENT = ["async_launched", "teammate_spawned"];
 const DESK_PLAN = "mcp__ccd_turn__update_plan";
 const DESK_WRAP_UP = "mcp__ccd_turn__wrap_up";
 const hubRef = { plugin: "plan-steps", key: "hub" };
-const flags = { cwd: "", isSettled: false, touchedAt: 0, quiet: null, status: null };
+const flags = { cwd: "", isStatusLine: false, isSettled: false, touchedAt: -1, quiet: null, status: null };
 function showStatus($, text) {
   if (text === flags.status)
     return;
@@ -2955,10 +3010,10 @@ async function sync($) {
   const now = await $.clock.now();
   const tracks = await update($, tracksAtom, (before) => plan === null ? before : observe(before, plan.steps, now));
   const progress = plan === null ? null : progressOf(plan);
-  const state = planState(plan, { now, touchedAt: flags.touchedAt });
+  const state = planState(plan, { now, touchedAt: flags.touchedAt, isBusy: hasRunningAgent(tracks) });
   if (progress === null || progress.done < progress.total)
     flags.isSettled = false;
-  showStatus($, flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks));
+  showStatus($, !flags.isStatusLine || flags.isSettled || !isShown(state) ? undefined : statusText(plan, tracks));
   await writeHub($, hubOf(progress, state, plan === null ? null : currentStep(plan, tracks)));
 }
 async function touch($) {
@@ -2968,6 +3023,7 @@ async function touch($) {
 }
 async function setTasks($, change) {
   await update($, tasksAtom, change);
+  resetNudge();
   await touch($);
   await sync($);
 }
@@ -3014,12 +3070,24 @@ async function afterFile($, call) {
     $.ui.log(`plan-steps: could not read ${baseName(path)} (${error instanceof Error ? error.message : "unknown"})`, { to: "debug" });
   }
 }
+async function deskTasks($, skipId) {
+  try {
+    const uses = (await $.session.messages()).flatMap((message) => message.role === "assistant" ? message.toolUses ?? [] : []);
+    const calls = uses.filter((use) => (use.tool === DESK_PLAN || use.tool === DESK_WRAP_UP) && use.tool_use_id !== skipId && use.isError !== true);
+    return replayDesk(calls.map((use) => ({ isWrapUp: use.tool === DESK_WRAP_UP, plan: use.input })));
+  } catch (error) {
+    $.ui.log(`plan-steps: transcript not readable (${error instanceof Error ? error.message : "unknown"})`, { to: "debug" });
+    return [];
+  }
+}
 async function afterTasks($, call, ran) {
   const isMainLoop = call.agentId === undefined;
   if (call.tool === "TodoWrite" && isMainLoop)
     await setTasks($, () => fromTodos(call.todos));
-  if (call.tool === DESK_PLAN && isMainLoop)
-    await setTasks($, (tasks) => fromDeskPlan(tasks, call));
+  if (call.tool === DESK_PLAN && isMainLoop) {
+    const before = await deskTasks($, call.tool_use_id);
+    await setTasks($, (tasks) => fromDeskPlan(before.length > 0 ? before : tasks, call));
+  }
   if (call.tool === DESK_WRAP_UP && isMainLoop && (await read($, tasksAtom)).length > 0)
     await setTasks($, finished);
   if (call.tool === "TaskCreate") {
@@ -3043,6 +3111,7 @@ async function endAgent($, call, ran) {
 async function onToolCall($, call, run) {
   if (call.tool === "Agent")
     await startAgent($, call);
+  await noteCall($, call);
   const ran = await run();
   if (call.tool === "Agent")
     await endAgent($, call, ran);
@@ -3073,6 +3142,13 @@ function lifecycle(on) {
     }));
     flags.cwd = e.cwd.replace(/\/$/, "");
     flags.status = null;
+    if ((await read($, tasksAtom)).length === 0 && await $.session.turns().catch(() => 0) > 0) {
+      const rebuilt = await deskTasks($);
+      if (rebuilt.length > 0) {
+        await update($, tasksAtom, () => rebuilt);
+        await touch($);
+      }
+    }
     const plan = await currentPlan($);
     const state = planState(plan, { now: await $.clock.now(), touchedAt: flags.touchedAt });
     await writeHub($, hubOf(plan === null ? null : progressOf(plan), state, plan === null ? null : currentStep(plan, await read($, tracksAtom))));
@@ -3112,11 +3188,13 @@ function tracking(on) {
   }).catch(($, e, next) => next(e));
 }
 const register = (on, options) => {
+  flags.isStatusLine = options.statusLine === true;
   lifecycle(on);
   tracking(on);
   wireCarry(on);
   wireFinish(on, { touchedAt: () => flags.touchedAt, isStrict: options.holdFinish === true });
   wirePane(on, { touchedAt: () => flags.touchedAt });
+  wireNudge(on);
 };
 
 export { register };

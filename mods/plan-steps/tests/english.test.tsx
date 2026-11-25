@@ -1,4 +1,9 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock, test as baseTest } from 'claude-code/testing'
+
+// The footer line is off by default (the session strip shows the plan); these tests read it, so it is asked for.
+const ASKED = { statusLine: true }
+const test = (name: string, a: any, b?: any) =>
+  b === undefined ? baseTest(name, { options: ASKED }, a) : baseTest(name, { ...a, options: { ...a.options, ...ASKED } }, b)
 
 // The default interface: no MODZ_LANG, so every surface reads English.
 

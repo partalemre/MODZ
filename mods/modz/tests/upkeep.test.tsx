@@ -1,4 +1,5 @@
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { setLang } from '../hooks/kit/lang'
 import { linkName, linksCard, linksOf } from '../hooks/links'
@@ -119,9 +120,10 @@ test('the hub fills both rows as the session starts, and asks the engine about f
   await hub.press({ key: 'open-modz-links' })
   await settle($)
 
-  expect(world.up).toEqual(['modz-links'])
+  // Connections is a page of the hub's one pane.
+  expect(world.up).toEqual(['modz'])
   expect(asked).toEqual(['ToolSearch'])
-  const links = await texts(await $.ui.mount({ ...PANE, requestId: 'modz-links' }))
+  const links = await texts(hub)
   expect(links).toContain('Bozuk · 1')
   expect(links).toContain('definite (data): adres bulunamadı')
   expect(links).toContain('slack (engineering)')

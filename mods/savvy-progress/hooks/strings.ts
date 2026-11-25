@@ -144,6 +144,8 @@ export type Strings = {
   tools: (n: number) => string
   errors: (n: number) => string
   crew: (n: number) => string
+  crewAtWork: (n: number) => string
+  agentsEnded: (ended: number, total: number) => string
   /** The session strip above the prompt: its three measures and what sits under each. */
   stripCost: string
   stripTokens: string
@@ -157,6 +159,13 @@ export type Strings = {
   rowDoing: Record<WorkKind, string>
   rowStep: (done: number, total: number) => string
   rowPlan: (at: number, of: number, subject: string) => string
+  aboutWhy: string
+  headerWhy: (at: number, of: number, subject: string) => string
+  aboutForRequest: string
+  aboutLog: string
+  aboutLogText: string
+  aboutLearns: string
+  aboutLearnsText: (written: number) => string
   rowEnded: { done: string; failed: string }
   /** The strip's plan and plan-window chips, and what the resting crab is said to do. */
   stripPlan: string

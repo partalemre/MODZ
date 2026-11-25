@@ -87,6 +87,16 @@ export type Look = {
   isAuto: boolean
 }
 
+// What the drawing reads beyond the tree, kept in state so the MODZ hub can draw the page too (its own copy of
+// this mod's module memory never learns them): the glyph option and font check, the pointer, and what it follows.
+export type Feel = {
+  glyphs: string
+  noNerd: boolean
+  pointer: boolean
+  followClaude: boolean
+  follow: boolean
+}
+
 export type Theme = {
   fg: string
   accent: string
@@ -110,13 +120,16 @@ declare module 'claude-code' {
       // Every read's tokens this session.
       reads: ReadCost
       look: Look
+      feel: Feel
       hub: HubCard
-      // The person pressed "← MODZ" in the Files pane; the hub hears it and comes forward.
-      home: { at: number }
+      // The person pressed "← MODZ" in the Files pane; the hub hears it and comes forward. With `pane`, this mod asks
+      // the hub for its page (a hub that draws it in its own pane, modz.drawn).
+      home: { at: number; pane?: string }
       // The Files pane is open: the MODZ hub puts it in its one panel and closes the rest (kit/stage.ts).
       shown: { pane: string; at: number }
     }
-    // The MODZ main panel's open request this mod listens for (DESIGN.md §9), whether the hub runs, and which pane holds its panel; modz owns and writes all three.
-    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number } }
+    // The MODZ main panel's open request this mod listens for (DESIGN.md §9), whether the hub runs, and which pane holds its panel; modz owns and writes them all.
+    // `drawn`: the pages the hub draws in its own pane; `act`: a press on one of them, for its mod to act on.
+    modz: { open: { pane: string; at: number }; isOn: boolean; stage: { pane: string; at: number }; drawn: readonly string[]; act: { page: string; action: string; arg?: string; at: number } }
   }
 }

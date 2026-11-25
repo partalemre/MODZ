@@ -17,6 +17,17 @@ const PERCENT = { size: 26, y: 58 } as const
 const MONO_EM = 0.6
 const METER = { y: 70, h: 6 } as const
 const DIVIDER_Y = 92
+// The why line's room under the meter, when there is one.
+const WHY = { size: 12.5, y: 93, room: 22, line: 17 } as const
+
+// The why line in at most two lines, broken between words; only a second line too long is cut.
+const whyLines = (text: string, width: number): string[] => {
+  if (textWidth(text, WHY.size) <= width) return [text]
+  const words = text.split(' ')
+  let cut = words.length - 1
+  while (cut > 1 && textWidth(words.slice(0, cut).join(' '), WHY.size) > width) cut -= 1
+  return [words.slice(0, cut).join(' '), fitText(words.slice(cut).join(' '), WHY.size, width)]
+}
 const STATS = { top: 104, label: 11, value: 31, valueSize: 15, labelSize: 12, rule: 34, pitch: 46 } as const
 const BOLD = 1.06
 const DOT_R = 3
@@ -40,6 +51,8 @@ export type HeaderData = {
   meter: Units | null
   stats: readonly Stat[]
   home?: HomeMark
+  /** What the helpers at work are for, in one plain line under the meter: the plan step they serve. */
+  why?: string
 }
 
 export type Drawing = { source: string; height: number }
@@ -67,17 +80,17 @@ const statSvg = (stat: Stat, { x, y, w }: Slot): string =>
 <text class="t" x="${x}" y="${y + STATS.value}" font-family="${FONT}" font-size="${STATS.valueSize}" font-weight="650" font-variant-numeric="tabular-nums">${xml(fitText(stat.value, STATS.valueSize, w))}</text>`
 
 // Four figures in one row, or two by two; the columns' spacing keeps them apart.
-const statsSvg = (stats: readonly Stat[], inner: number): { body: string; height: number } => {
+const statsSvg = (stats: readonly Stat[], inner: number, dy: number): { body: string; height: number } => {
   const cols = columnsOf(inner, stats)
   const rows = Math.ceil(stats.length / cols)
   const colW = inner / cols
   const parts = stats.map((stat, i) => {
     const col = i % cols
-    const y = STATS.top + Math.floor(i / cols) * STATS.pitch
+    const y = dy + STATS.top + Math.floor(i / cols) * STATS.pitch
     const x = PAD + col * colW
     return statSvg(stat, { x, y, w: colW - GAP })
   })
-  return { body: parts.join('\n'), height: STATS.top + (rows - 1) * STATS.pitch + STATS.rule + PAD }
+  return { body: parts.join('\n'), height: dy + STATS.top + (rows - 1) * STATS.pitch + STATS.rule + PAD }
 }
 
 // The crab and its level beside the label: the drawing, the label's end, and the room both take.
@@ -100,7 +113,10 @@ export const headerSvg = (W: number, data: HeaderData): Drawing => {
   // A cut count ("1 çalı…") says less than none: the rows under the card count them anyway.
   const isCountShown = textWidth(data.counts, LABEL.size) <= W - PAD - eyebrowEnd - home.room - GAP
   const headline = fitText(data.headline, HEADLINE.size * 1.06, W - PAD - left - percentW - (isKnown ? GAP : 0))
-  const stats = statsSvg(data.stats, inner)
+  const lines = data.why ? whyLines(data.why, inner) : []
+  const dy = lines.length === 0 ? 0 : WHY.room + (lines.length - 1) * WHY.line
+  const stats = statsSvg(data.stats, inner, dy)
+  const why = lines.map((line, i) => `<text class="s" x="${PAD}" y="${WHY.y + i * WHY.line}" font-family="${FONT}" font-size="${WHY.size}">${xml(line)}</text>`).join('')
   // Only while the crew runs does a dot stand before the label, breathing.
   const dot = isLive ? `<circle class="f-edit live" cx="${left + DOT_R}" cy="${LABEL.y - 4}" r="${DOT_R}"/>` : ''
   const body = [
@@ -112,7 +128,8 @@ export const headerSvg = (W: number, data: HeaderData): Drawing => {
     `<text class="t" x="${left}" y="${HEADLINE.y}" font-family="${FONT}" font-size="${HEADLINE.size}" font-weight="620">${xml(headline)}</text>`,
     isKnown ? `<text class="${PERCENT_CLASS[data.tone]}" x="${W - PAD}" y="${PERCENT.y}" text-anchor="end" font-family="${MONO}" font-size="${PERCENT.size}" font-weight="650">${xml(data.percent)}</text>` : '',
     meterSvg(data.meter ?? { units: 0, done: 0, failed: 0, active: 0 }, { x: PAD, y: METER.y, w: inner, h: METER.h }),
-    `<line class="ln" x1="${PAD}" x2="${W - PAD}" y1="${DIVIDER_Y}" y2="${DIVIDER_Y}" stroke-width="1"/>`,
+    why,
+    `<line class="ln" x1="${PAD}" x2="${W - PAD}" y1="${DIVIDER_Y + dy}" y2="${DIVIDER_Y + dy}" stroke-width="1"/>`,
     stats.body,
   ]
   return { source: paneSvg(W, stats.height, body.join('\n')), height: stats.height }

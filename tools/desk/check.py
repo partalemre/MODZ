@@ -140,13 +140,26 @@ def check_home(desk, engine, inst):
         return f'Pane {inst}: no ← MODZ button'
     if not desk.press('modz-home', tree=tree).get('handled'):
         return f'Pane {inst}: the ← MODZ press was dropped'
-    return None if wait(lambda: ids(engine) == [HUB], OPEN_WAIT_S) else f'Pane {inst}: ← MODZ left {ids(engine)} (want the hub alone)'
+    back = wait(lambda: ids(engine) == [HUB] and shows_rows(desk), OPEN_WAIT_S)
+    return None if back else f'Pane {inst}: ← MODZ left {ids(engine)} (want the hub alone, drawing its rows)'
+
+
+# Rows whose page the hub draws in its own pane (mods/modz/hooks/pages/): the panel stays the hub's.
+HUB_PAGES = ('open-plan', 'open-agents', 'open-checkpoints', 'open-files', 'open-tests', 'open-usage', 'open-modz-mods', 'open-modz-links', 'open-modz-weight', 'open-modz-updates')
+
+
+def shows_rows(desk):
+    """Whether the hub's pane draws the hub (its rows), not one of the pages it draws."""
+    return any(key.startswith('open-') for key, _ in walk(desk.render(HUB), 'Button'))
 
 
 def bring_hub(desk, engine):
-    """The hub alone in the panel, by /modz when a check left something else there."""
+    """The hub alone in the panel, by "← modz" on a page it draws or /modz when a check left something else there."""
     if ids(engine) == [HUB]:
-        return True
+        if shows_rows(desk):
+            return True
+        desk.press('modz-home', tree=desk.render(HUB))
+        return wait(lambda: shows_rows(desk), OPEN_WAIT_S)
     engine.say('/modz')
     return wait(lambda: HUB in ids(engine), OPEN_WAIT_S * 2)
 
@@ -159,6 +172,9 @@ def press_row(desk, engine, row):
     desk.render(HUB, props={'isFocused': False, 'bodyColumns': 80})
     if not desk.press(row, tree=stale).get('handled'):
         return f'hub {row}: a press on the earlier tree was dropped'
+    if row in HUB_PAGES:
+        paged = wait(lambda: ids(engine) == [HUB] and not shows_rows(desk), OPEN_WAIT_S)
+        return None if paged else f'hub {row}: the hub\'s pane did not turn to the page (panel {ids(engine)})'
     swapped = wait(lambda: len(ids(engine)) == 1 and ids(engine) != [HUB], OPEN_WAIT_S)
     return None if swapped else f'hub {row}: the panel holds {ids(engine)}, want only the row\'s pane'
 
@@ -209,7 +225,7 @@ def check_guide(desk, engine):
     problem = press_row(desk, engine, f'open-{CATALOG}')
     if problem:
         return f'guide: {problem}'
-    rows = [alt for alt, _, _ in svgs(desk.render(CATALOG)) if GUIDE_ROW.match(str(alt))]
+    rows = [alt for alt, _, _ in svgs(desk.render(HUB)) if GUIDE_ROW.match(str(alt))]
     return None if rows else 'guide: the catalog lists no other mod\'s slash command'
 
 
@@ -274,7 +290,9 @@ def is_linked_here(repo):
     return os.path.realpath(link) == os.path.realpath(os.path.join(repo, 'mods', 'modz'))
 
 
-RELOAD_ROW = 'open-checkpoints'
+# A row whose mod opens a pane of its own (the hub draws the Tests, Usage, Restore points and Plan pages itself).
+RELOAD_ROW = 'open-handoff'
+RELOAD_PANE = 'handoff'
 RELOADED = 'modz@skills-dir reloaded in'
 
 
@@ -293,8 +311,8 @@ def swap_then_reload(engine, desk, home, log):
         return 'reload: the hub could not be brought up'
     stale = desk.render(HUB)
     desk.hold(HUB)
-    if not desk.press(RELOAD_ROW, tree=stale).get('handled') or not wait(lambda: ids(engine) == ['checkpoints'], OPEN_WAIT_S):
-        return f'reload: {RELOAD_ROW} left {ids(engine)}, want the checkpoints pane alone'
+    if not desk.press(RELOAD_ROW, tree=stale).get('handled') or not wait(lambda: ids(engine) == [RELOAD_PANE], OPEN_WAIT_S):
+        return f'reload: {RELOAD_ROW} left {ids(engine)}, want the {RELOAD_PANE} pane alone'
     before = reloads(log)
     with open(os.path.join(home, 'skills', HUB, 'hooks', 'bundle.js'), 'a') as bundle:
         bundle.write(f'\n// rebuilt {time.time()}\n')
@@ -303,7 +321,7 @@ def swap_then_reload(engine, desk, home, log):
     time.sleep(SETTLE_S)
     desk.render(HUB)
     time.sleep(SETTLE_S)
-    return None if ids(engine) == ['checkpoints'] else f'reload: a draw of the reloaded hub left {ids(engine)}, want the checkpoints pane alone'
+    return None if ids(engine) == [RELOAD_PANE] else f'reload: a draw of the reloaded hub left {ids(engine)}, want the {RELOAD_PANE} pane alone'
 
 
 def check_hub_reload(repo):

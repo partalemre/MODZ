@@ -84,6 +84,13 @@ async function openPane($: EngineInterface, focus = true): Promise<void> {
   pane.ticker ??= $.clock.every(TICK_MS, () => void update($, tickAtom, tick => tick + 1))
 }
 
+// /steps: a hub that draws the plan in its own pane is asked for it (it hears this mod's `home`); else the pane opens.
+async function askForPage($: EngineInterface): Promise<void> {
+  const drawn = (await $.state.get({ plugin: 'modz', key: 'drawn' })).value
+  if (!Array.isArray(drawn) || !drawn.includes(HUB_PANE)) return openPane($)
+  await $.state.set({ plugin: 'plan-steps', key: 'home' }, { pane: HUB_PANE, at: await $.clock.now() })
+}
+
 // What the kit asks of the engine for this pane; built here, where `$` is.
 const keepNouns = ($: EngineInterface) => ({
   isListed: async () => (await $.ui.panes()).some(up => up.id === PANE),
@@ -119,7 +126,7 @@ async function startWatch($: EngineInterface): Promise<void> {
 
 function opening(on: On): void {
   on('command.run', { command: 'steps' }, async $ => {
-    await openPane($)
+    await askForPage($)
 
     return {}
   })

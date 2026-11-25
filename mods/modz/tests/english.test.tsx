@@ -1,5 +1,6 @@
 // With no MODZ_LANG the hub and the catalog speak English, in the film's words; MODZ_LANG=tr keeps Turkish.
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { stubWorld } from './world'
 
@@ -97,7 +98,9 @@ test('/modz answers in English and the catalog tab opens as Mods', async ($: any
 
   expect(answer?.text).toBe('Opened the modz panel.')
   expect(w.titles['modz']).toBe('modz')
-  expect(w.titles['modz-mods']).toBe('Mods')
+  // The catalog is a page of the hub's one pane, not a tab of its own.
+  expect(w.up).toEqual(['modz'])
+  expect(await ui.find({ key: 'mod-savvy-progress' })).toBeDefined()
 })
 
 test('MODZ_LANG=tr keeps the Turkish tab title and answer', async ($: any, on: any) => {
@@ -108,6 +111,6 @@ test('MODZ_LANG=tr keeps the Turkish tab title and answer', async ($: any, on: a
   await ui.press({ key: 'open-modz-mods' })
 
   expect(answer?.text).toBe('modz paneli açıldı.')
-  expect(w.titles['modz-mods']).toBe('Modlar')
-  expect(await drawnText(ui)).toMatch(/17 mod açık/)
+  expect(w.up).toEqual(['modz'])
+  expect(await drawnText(ui)).toMatch(/17 mod · hepsi açık/)
 })

@@ -1,4 +1,5 @@
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
+import { test } from './budget'
 
 import { headline, installedMarketRoot, marketRoot } from '../hooks/catalog'
 import type { ModInfo } from '../hooks/catalog'

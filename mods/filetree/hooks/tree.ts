@@ -218,3 +218,6 @@ export function formatSize(bytes: number): string {
   }
   return `${v < 100 ? v.toFixed(1).replace('.', words().decimal) : Math.round(v)} ${units[i]}`
 }
+
+// The listed folders in view whose size is not known yet.
+export const unsized = (t: FileTree, rows: Row[]): string[] => rows.filter(r => r.node.kind === 'dir' && !(r.node.id in t.dirSizes)).map(r => r.node.id)

@@ -8,6 +8,14 @@ import type { FileTree } from '../types'
 import { words } from './words'
 
 export type ToolKey = 'refresh' | 'collapse' | 'size' | 'up' | 'cwd' | 'hidden' | 'unselect' | 'more'
+// What the pane's controls do, handed to its drawing: this mod's own pane binds them to the work, the MODZ hub's
+// page (mods/modz/hooks/pages/files.tsx) to its press bridge. `sizes` asks for the folders in view.
+export type FilesActs = {
+  tool: Record<ToolKey, () => void>
+  find: (v: string) => void
+  jump: (v: string) => void
+  sizes: (dirs: string[]) => void
+}
 export type Toolbar = {
   t: FileTree
   act: Record<ToolKey, () => void>

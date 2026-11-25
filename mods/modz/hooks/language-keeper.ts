@@ -32,7 +32,8 @@ const unasked = new Set<string>()
 // what each next step is for.
 export function wireLanguageKeeper(on: On, options: Options): void {
   const keepsLanguage = options.keepReplyLanguage !== false
-  const asksWhy = options.sayWhy !== false
+  // Off unless asked: the sentence it asks for was shown three times (prose, tool row, Agents log) and cost output each step.
+  const asksWhy = options.sayWhy === true
   if (!keepsLanguage && !asksWhy) return
 
   // Read each turn, so a changed `language` setting holds from the next prompt. A subagent's loop is not the reply

@@ -1,22 +1,14 @@
-import { atom, read, update } from 'claude-code'
-import type { Register } from 'claude-code'
-
 import type { AgentType, Draft } from '../types'
-import { BUILTIN_TYPES, chosenOf, describe, mergeTypes, offered, sourceWord } from './agent-types'
+import { chosenOf, describe, sourceWord } from './agent-types'
 import { sectionSvg, SECTION_SVG_H } from './card-svg'
 import { t } from './i18n'
 import { picture } from './pane-motion'
 import type { Ui } from './rows'
 import type { Layout, PaneHandlers } from './sections'
 
-// "Yeni görev": pick an agent type, describe the task, start it. This file draws the form and keeps
-// the catalogue's live source; the start (`$.agent.spawn`) is in pane.tsx and the agent files are
-// read in register.tsx, since the engine follows `$` only into functions of the hook's own file.
-
-// State refs live in each file that reads them: the scan follows literals, not imports.
-const types = atom({ plugin: 'savvy-progress', key: 'types' } as const, BUILTIN_TYPES)
-
-type On = Parameters<Register>[0]
+// "Yeni görev": pick an agent type, describe the task, start it. This file draws the form, with no state ref, as the
+// MODZ hub draws it too; the catalogue's live source is in offer.ts, the start (`$.agent.spawn`) in pane.tsx and the
+// agent files are read in register.tsx, since the engine follows `$` only into functions of the hook's own file.
 
 export type DraftView = { draft: Draft | undefined; types: AgentType[]; layout: Layout }
 
@@ -44,14 +36,4 @@ export function draftTree(ui: Ui, view: DraftView, on: PaneHandlers) {
       <Box flexDirection="row"><Button key="dispatch-cancel" plain dimColor label={s.cancel} onPress={on.onCancelTask} /></Box>
     </Box>
   )
-}
-
-// The catalogue's live source: every type the engine offers the model.
-export function onDispatch(on: On): void {
-  on('agent.offer', async ($, e, next) => {
-    const answer = await next(e)
-    const type = offered(e)
-    if (!(await read($, types)).some(known => known.name === type.name)) await update($, types, current => mergeTypes(current, [type]))
-    return answer
-  }).catch(($, e, next) => next(e))
 }

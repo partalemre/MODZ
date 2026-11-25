@@ -1,9 +1,11 @@
 import { type EngineInterface, type On, type Register, update } from 'claude-code'
 
+import { filesActs } from './actions'
 import { drawDesktop, opening } from './desktop'
 import { HomeButton } from './home'
 import { gitDir, hubAfterTurn, quickStatus } from './gitread'
 import type { Host, IoHost, StateHost, UiHost } from './host'
+import { actOf, onHubAct } from './hubact'
 import { HUB_PANE, isOpenFor } from './hub'
 import { setLang } from './lang'
 import { onRows, type RowsMessage, scrollBy } from './keys'
@@ -13,10 +15,10 @@ import { promptContext } from './prompt'
 import { loopDone, noteRead, stepDone, takeReads } from './readstep'
 import { readTouched, settleBackground } from './scan'
 import { sceneOf } from './scene'
-import { isOffStage, shownOf } from './stage'
+import { isAskedFor, isOffStage, shownOf } from './stage'
 import { mem } from './session'
 import { pinned } from './pin'
-import { openByCommand, openForHub, resumePane, startPane } from './start'
+import { openByCommand, openForHub, resumePane, showInHub, startPane } from './start'
 import { drawTerminal } from './terminal'
 import { afterCall, beforeCall, callFailed, isWatched } from './toolcall'
 import { emptyTree, join, posix, useDrives } from './tree'
@@ -30,6 +32,7 @@ const TURN = { plugin: 'filetree', key: 'turn' } as const
 const READS = { plugin: 'filetree', key: 'reads' } as const
 const LOOK = { plugin: 'filetree', key: 'look' } as const
 const HUB = { plugin: 'filetree', key: 'hub' } as const
+const FEEL = { plugin: 'filetree', key: 'feel' } as const
 const PANE = 'filetree'
 const ACTIVITY_KEEP = 6
 // Git writes its index and HEAD in steps; the tree reads them once the burst settles.
@@ -42,41 +45,28 @@ const HOME_ROWS = 2
 function stateOf($: EngineInterface): StateHost {
   return {
     tree: async () => ({ ...emptyTree(''), ...(await $.state.get(TREE)).value }),
-    putTree: async fn => {
-      await update($, TREE, cur => fn({ ...emptyTree(''), ...cur }))
-    },
+    putTree: async fn => { await update($, TREE, cur => fn({ ...emptyTree(''), ...cur })) },
     activities: async () => (await $.state.get(ACTIVITY)).value ?? [],
-    setActivities: async fn => {
-      await update($, ACTIVITY, cur => fn(cur ?? []).slice(-ACTIVITY_KEEP))
-    },
+    setActivities: async fn => { await update($, ACTIVITY, cur => fn(cur ?? []).slice(-ACTIVITY_KEEP)) },
     turn: async () => ({ ...NO_TURN, ...(await $.state.get(TURN)).value }),
-    setTurn: async fn => {
-      await update($, TURN, cur => fn({ ...NO_TURN, ...cur }))
-    },
+    setTurn: async fn => { await update($, TURN, cur => fn({ ...NO_TURN, ...cur })) },
     readTotal: async () => (await $.state.get(READS)).value,
-    setReadTotal: async fn => {
-      await update($, READS, cur => fn(cur))
-    },
+    setReadTotal: async fn => { await update($, READS, cur => fn(cur)) },
     hubCard: async () => (await $.state.get(HUB)).value,
-    setHubCard: async card => {
-      await $.state.set(HUB, card)
-    },
+    setHubCard: async card => { await $.state.set(HUB, card) },
     look: async () => (await $.state.get(LOOK)).value,
-    setLook: async look => {
-      await update($, LOOK, () => look)
-    },
+    setLook: async look => { await update($, LOOK, () => look) },
     theme: async () => (await $.state.get(THEME)).value,
-    setTheme: async theme => {
-      await $.state.set(THEME, theme)
-    },
+    setTheme: async theme => { await $.state.set(THEME, theme) },
+    feel: async () => (await $.state.get(FEEL)).value,
+    setFeel: async feel => { await $.state.set(FEEL, feel) },
     isHubOn: async () => (await $.state.get({ plugin: 'modz', key: 'isOn' })).value === true,
-    goHome: async () => {
-      try {
-        await $.state.set({ plugin: 'filetree', key: 'home' }, { at: await $.clock.now() })
-      } catch (error) {
-        $.ui.log(`filetree: home failed (${String(error)})`, { to: 'debug' })
-      }
-    },
+    isHubDrawing: async () => [(await $.state.get({ plugin: 'modz', key: 'drawn' })).value].flat().includes(HUB_PANE),
+    goHome: pane =>
+      $.clock.now().then(at => $.state.set({ plugin: 'filetree', key: 'home' }, { at, ...(pane ? { pane } : {}) })).then(
+        () => undefined,
+        error => $.ui.log(`filetree: home failed (${String(error)})`, { to: 'debug' }),
+      ),
     reportShown: async () => {
       try {
         if ((await $.state.get({ plugin: 'modz', key: 'isOn' })).value !== true) return
@@ -141,10 +131,21 @@ function onStart(on: On): void {
 
     return done
   }).catch(($, e, next) => next(e))
-  // Another pane took the MODZ panel: this one steps aside rather than wait as a tab.
+  // Another pane took the MODZ panel: this one steps aside rather than wait as a tab. The hub turning to this mod's
+  // page in its own pane closes it too; the tree is then loaded once the write has settled.
   on('state.set', { plugin: 'modz', key: 'stage' } as any, async ($: EngineInterface, e: any, next: any) => {
     const done = await next(e)
-    if (isOffStage(e.value, HUB_PANE)) await $.ui.close({ id: PANE })
+    const isInHub = isAskedFor(e.value, HUB_PANE) && (await hostOf($).isHubDrawing())
+    if (isOffStage(e.value, HUB_PANE) || isInHub) await $.ui.close({ id: PANE })
+    if (isInHub) $.clock.after(0, () => void showInHub(hostOf($)))
+
+    return done
+  }).catch(($, e, next) => next(e))
+  // A press on the Files page the hub draws: what the same control does here, once the hub's write has settled.
+  on('state.set', { plugin: 'modz', key: 'act' } as any, async ($: EngineInterface, e: any, next: any) => {
+    const done = await next(e)
+    const act = actOf(e.value)
+    if (act !== null) $.clock.after(0, () => void onHubAct(hostOf($), act).catch(cause => $.ui.log(`filetree: the hub's ${act.action} failed (${String(cause)})`, { to: 'debug' })))
 
     return done
   }).catch(($, e, next) => next(e))
@@ -273,14 +274,13 @@ function onRender(on: On): void {
     const s = await sceneOf(host, e.surface === 'desktop')
     const isHubOn = await host.isHubOn()
     const room = { width: Math.max(MIN_WIDTH, e.props.bodyColumns), bodyRows: (e.props.scroll?.bodyRows ?? DEFAULT_ROWS) - (isHubOn ? HOME_ROWS : 0) }
+    const act = filesActs(host, s.t)
     if (e.surface === 'desktop') {
       const desk = $.ui.resolve(e)
-      const home = isHubOn ? HomeButton(desk, () => void host.goHome()) : null
-      return pinned(e, drawDesktop(host, desk, { s, room, home }))
+      return pinned(e, drawDesktop(desk, { s, room, home: isHubOn ? HomeButton(desk, () => void host.goHome()) : null }, act))
     }
     const ui = $.ui.resolve(e)
-    const home = isHubOn ? HomeButton(ui, () => void host.goHome()) : null
-    return pinned(e, drawTerminal(host, ui, { s, room, home }))
+    return pinned(e, drawTerminal(ui, { s, room, home: isHubOn ? HomeButton(ui, () => void host.goHome()) : null }, act))
   })
 }
 

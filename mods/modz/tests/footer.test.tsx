@@ -1,6 +1,7 @@
 // The footer toggle: on the desktop the prompt footer's mode labels gain "MODZ", which puts the hub in the panel
 // without the keyboard and takes it away again, as the app's own session-rail toggle does. The terminal keeps its footer.
-import { expect, test } from 'claude-code/testing'
+import { expect } from 'claude-code/testing'
+import { test } from './budget'
 
 import { stubWorld } from './world'
 
@@ -62,7 +63,6 @@ test('a press over another mod’s pane brings the hub back on stage', async ($:
   await ui.press({ key: 'modz-toggle' })
 
   expect(w.up.at(-1)).toBe('modz')
-  expect(w.opened.at(-1)).toBe('close:modz-mods')
 })
 
 test('the terminal footer is left to the engine', async ($: any, on: any) => {

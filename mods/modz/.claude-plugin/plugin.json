@@ -27,8 +27,8 @@
     "sayWhy": {
       "type": "boolean",
       "title": "Have Claude say why it does each step",
-      "description": "Once a turn, ask Claude to write one short sentence before each step saying what it is about to do and why, in your language. The sentence shows above the step and in the Agents pane's log. Costs a few words of output per step; turn it off to spend none.",
-      "default": true
+      "description": "Once a turn, ask Claude to write one short sentence before each step saying what it is about to do and why, in your language. The sentence shows above the step and in the Agents pane's log. Costs a few words of output per step; off by default.",
+      "default": false
     },
     "plainWords": {
       "type": "boolean",

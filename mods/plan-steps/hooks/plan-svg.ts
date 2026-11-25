@@ -1,5 +1,5 @@
 import type { Plan, Step } from './match'
-import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, progressOf, windowOf } from './progress'
+import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, isTickedUnseen, progressOf, windowOf } from './progress'
 import type { Tracks, Window } from './progress'
 import { DETAIL_CSS, detailBlock, hasDetails } from './plan-detail'
 import type { Block, DeskDetails } from './plan-detail'
@@ -103,7 +103,7 @@ function header(model: PlanSvgModel): Block {
 function rightText(model: PlanSvgModel, step: Step, isCurrent: boolean): { text: string; cls: string } {
   const elapsed = durationOf(model.tracks[step.key], model.now)
   const time = elapsed === null ? '' : formatDuration(elapsed)
-  if (step.status === 'completed') return { text: time, cls: 'lo' }
+  if (step.status === 'completed') return { text: isTickedUnseen(model.tracks[step.key]) ? words().tickedAtOnce : time, cls: 'lo' }
   if (isCurrent) return { text: time, cls: model.note === '' ? 'mid' : 'lo' }
   const checks = step.checksTotal > 0 ? `${step.checksDone}/${step.checksTotal}` : ''
 

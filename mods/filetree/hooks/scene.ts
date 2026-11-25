@@ -1,4 +1,4 @@
-import type { Activity, FileTree, Look, ReadCost, Theme, TurnLog } from '../types'
+import type { Activity, Feel, FileTree, Look, ReadCost, Theme, TurnLog } from '../types'
 import { rowCost } from './costtext'
 import { BRANCH_ROW } from './flash'
 import { ACTIVITY_TTL_MS } from './gitjobs'
@@ -23,7 +23,10 @@ export type Scene = {
   readTotal: ReadCost | undefined
   look: Look
   isCommitting: boolean
+  feel: Feel
 }
+// What a scene is made of, as this mod keeps it: read by its own pane through the host, by the hub from state.
+export type SceneParts = { t: FileTree; theme: Theme | undefined; now: number; activities: Activity[]; readTotal: ReadCost | undefined; turn: TurnLog; look: Look | undefined; feel: Feel }
 export type Room = { width: number; bodyRows: number }
 export type TreeWindow = { rows: Row[]; specs: RowSpec[]; bar?: RowsProps['bar'] }
 export type Draw = { toSpec: (r: Row) => RowSpec; colors: { thumb: string; track: string; note: string } }
@@ -34,25 +37,31 @@ const LIVE_SPREAD_MS = 1_500
 const PIN_SHARE = 3
 const MIN_REST = 3
 
-export async function sceneOf(h: Host, isDesktop: boolean): Promise<Scene> {
-  const t = await h.tree()
-  const now = await h.now()
-  const live = (await h.activities()).filter(a => now - a.at < (a.state === 'running' ? RUNNING_MAX_MS : ACTIVITY_TTL_MS))
-  const readTotal = await h.readTotal()
-  const stored = isDesktop ? await h.look() : undefined
-  if (isDesktop && !stored) void refreshLook(h)
+export const feelNow = (): Feel => ({ glyphs: mem.glyphSetting, noNerd: mem.noNerd, pointer: mem.pointer, followClaude: mem.followClaude, follow: mem.follow })
+
+export function sceneFrom(p: SceneParts): Scene {
+  const { t, now } = p
+  const live = p.activities.filter(a => now - a.at < (a.state === 'running' ? RUNNING_MAX_MS : ACTIVITY_TTL_MS))
   return {
     t,
-    theme: (await h.theme()) ?? DEFAULT_THEME,
+    theme: p.theme ?? DEFAULT_THEME,
     now,
     latest: [...live].reverse().find(a => a.state === 'running') ?? live[live.length - 1],
     bright: new Set(t.flashOn ? t.flash : []),
     dimmed: new Set(t.flashOn ? t.flashDim : []),
-    turn: await h.turn(),
-    readTotal,
-    look: stored ?? { isLight: false, isAuto: true },
+    turn: p.turn,
+    readTotal: p.readTotal,
+    look: p.look ?? { isLight: false, isAuto: true },
     isCommitting: live.some(a => a.kind === 'git commit' && a.state === 'running'),
+    feel: p.feel,
   }
+}
+
+export async function sceneOf(h: Host, isDesktop: boolean): Promise<Scene> {
+  const parts = { t: await h.tree(), now: await h.now(), activities: await h.activities(), readTotal: await h.readTotal() }
+  const stored = isDesktop ? await h.look() : undefined
+  if (isDesktop && !stored) void refreshLook(h)
+  return sceneFrom({ ...parts, theme: await h.theme(), turn: await h.turn(), look: stored, feel: feelNow() })
 }
 
 // Live: shimmering now and part of Claude's latest step (a read is over once it edits).
@@ -85,7 +94,7 @@ export function rowCtx(s: Scene, width: number, unicode: boolean): RowCtx {
 function spanOf(s: Scene, rows: Row[], room: number): { from: number; pinned: Row[] } {
   const { t } = s
   if (t.scroll !== null) return { from: Math.max(0, Math.min(t.scroll, Math.max(0, rows.length - room))), pinned: [] }
-  const isFollowing = mem.followClaude && t.flashOn
+  const isFollowing = s.feel.followClaude && t.flashOn
   const isLit = (id: string) => s.bright.has(id) || s.dimmed.has(id)
   const focus = isFollowing ? ([...t.flash].reverse().find(id => id !== BRANCH_ROW) ?? t.cursor) : t.cursor
   const at = Math.max(0, rows.findIndex(r => r.node.id === focus))

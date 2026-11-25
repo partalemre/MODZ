@@ -18,7 +18,7 @@ const view = (agents: AgentRun[], over: Record<string, unknown> = {}) =>
 
 test('three running agents with no report read 0/3 and "—", never 0%', () => {
   const v = view([run('a'), run('b'), run('c')])
-  expect(v?.label).toBe('Ajanlar 0/3')
+  expect(v?.label).toBe('0/3 ajan bitti')
   expect(v?.ratio).toBeNull()
   expect(percentText(v!)).toBe('—')
   expect(v?.launched).toBe(1)
@@ -27,7 +27,7 @@ test('three running agents with no report read 0/3 and "—", never 0%', () => {
 
 test('finished agents count exactly', () => {
   const v = view([run('a', { status: 'done' }), run('b'), run('c')])
-  expect(v?.label).toBe('Ajanlar 1/3')
+  expect(v?.label).toBe('1/3 ajan bitti')
   expect(percentText(v!)).toBe('%33')
 })
 
@@ -84,4 +84,12 @@ test('a sealed job starts over; a busy one keeps going', () => {
   expect(joinJob(job(['a']), 'b', 5).agentIds).toEqual(['a', 'b'])
   expect(sealJob(job(['a']), [run('a')])?.isSealed).toBe(false)
   expect(sealJob(job(['a']), [run('a', { status: 'done' })])).toEqual({ ...job(['a']), isSealed: true })
+})
+
+test('a job is named after the request it serves; without one, after its first helper', () => {
+  const two = [run('a', { description: 'Read the tests' }), run('b', { description: 'Read the hooks' })]
+  const asked = { agentIds: ['a', 'b'], startedAt: 0, isSealed: false, isHidden: false, asked: 'Compare the two mods' }
+  expect(deriveJob({ flow: null, agents: two, job: asked, tasks: [] })?.title).toBe('Compare the two mods')
+  expect(deriveJob({ flow: null, agents: two, job: { ...asked, asked: undefined }, tasks: [] })?.title).toBe('Read the tests +1')
+  expect(joinJob(null, 'a', 1, 'Compare the two mods').asked).toBe('Compare the two mods')
 })

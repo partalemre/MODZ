@@ -1,6 +1,7 @@
 // The hub with the world as it really is: a removed mod's card still around, a catalog that cannot be
 // read, a mod in the marketplace whose folder is gone and one the catalog has no notes for.
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
+import { test } from './budget'
 
 import { MARKET_FILES } from './market-fixture'
 import { posix } from './world'
@@ -72,9 +73,10 @@ function troubledMarket(): Files {
 for (const surface of ['terminal', 'desktop'] as const) {
   test(`a removed mod's card never leads; the head offers the real one (${surface})`, { plugins: reporters }, async ($: any, on: any) => {
     stubWorld(on, MARKET_FILES)
-    const asked: unknown[] = []
-    on('state.set', { plugin: 'modz', key: 'open' }, (_: unknown, e: any, next: any) => {
-      asked.push(e.value?.pane)
+    // The Tests page is drawn in the hub's own pane (hooks/pages/tests.tsx): the press stages it.
+    const staged: unknown[] = []
+    on('state.set', { plugin: 'modz', key: 'stage' }, (_: unknown, e: any, next: any) => {
+      staged.push(e.value?.pane)
 
       return next(e)
     })
@@ -86,7 +88,7 @@ for (const surface of ['terminal', 'desktop'] as const) {
     // The terminal leads with the real card; the desktop has no head, and the row is there to press.
     if (surface === 'terminal') expect((await ui.find({ key: 'open-focus' }))?.props).toMatchObject({ label: 'Testler panelini aç', variant: 'primary' })
     await ui.press({ key: surface === 'terminal' ? 'open-focus' : 'open-tests' })
-    expect(asked).toEqual(['tests'])
+    expect(staged.at(-1)).toBe('tests')
   })
 
   test(`with no readable catalog the hub keeps reporting mods and says why (${surface})`, { plugins: reporters }, async ($: any, on: any) => {

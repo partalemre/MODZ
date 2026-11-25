@@ -56,6 +56,9 @@ export type UsageAction = { id: string; label: string; isOn?: boolean }
 export type UsageSection = { id: string; title: string; lines: string[]; tone: UsageTone; isEmpty?: boolean; actions?: UsageAction[]; at: number }
 // A press on a section's button, for the mod that published it; and a mod's ask to open the pane at its section.
 export type UsagePress = { section: string; action: string; at: number }
+// The breakdown as last read: its view (null when the engine had none), and where auto-compaction runs once known.
+export type HudBreakdownView = { segments: { label: string; tokens: number; kind: 'used' | 'other' | 'free' | 'reserve' }[]; total: number; usedTokens: number; compactAt: number | null }
+export type HudBreakdown = { at: number; view: HudBreakdownView | null; compactAt: number | null }
 export type UsageOpen = { section: string; at: number }
 // One main-loop turn's share of the limit window that exists (5-hour, else weekly), in percent points.
 export type TurnShare = { window: string; share: number; percent: number }
@@ -65,6 +68,8 @@ export type SlotNotice = { id: number; text: string; expiresAt: number }
 declare module 'claude-code' {
   interface PluginState {
     'hud-pro': {
+      // Moved when the gauges' drawing would differ; read by the band and the pane so only they redraw.
+      beat: number
       usage: HudUsage | null
       turn: HudTurn
       lastTurn: HudTurn | null
@@ -77,7 +82,7 @@ declare module 'claude-code' {
       contextTurns: number[]
       lastCompact: HudCompacted | null
       hub: HubCard
-      home: { at: number }
+      home: { at: number; pane?: string }
       // The Usage pane is open: the MODZ hub puts it in its one panel and closes the rest (kit/stage.ts).
       shown: { pane: string; at: number }
       // The Usage pane's history: both ranges summed at the last transcript read, the range shown, and the
@@ -94,6 +99,10 @@ declare module 'claude-code' {
       // The newest turns' shares of the window, newest last; the notices waiting for the line, oldest first.
       shares: TurnShare[]
       notices: SlotNotice[]
+      // The section the Usage view leads with (a meter mod's command asked for it), or null: Limits first.
+      focus: string | null
+      // The window by category for the Usage page the MODZ hub draws, read outside its drawing (page.ts).
+      breakdown: HudBreakdown | null
     }
     // The other meter mods' sections and asks, and the notices that outrank this mod's line (DESIGN.md §6).
     'session-budget': { section: UsageSection; openUsage: UsageOpen; notice: unknown }
@@ -103,6 +112,6 @@ declare module 'claude-code' {
     'you-should-know': { notice: unknown }
     // Written by the MODZ hub, which owns both: true while the hub runs, so this pane draws its way back; and
     // which pane holds the hub's one panel.
-    modz: { isOn: boolean; stage: { pane: string; at: number } }
+    modz: { isOn: boolean; stage: { pane: string; at: number }; drawn: readonly string[]; act: { page: string; action: string; arg?: string; at: number } }
   }
 }

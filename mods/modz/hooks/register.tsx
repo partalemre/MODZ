@@ -22,12 +22,14 @@ import { HUB_PANE, paneOf } from './kit/stage'
 import { pinned } from './kit/pin'
 import { catalogDrawings, closeQuietly, copy, hubDrawings, hubKept, openHub, show } from './own-panes'
 import { modzTree } from './pane'
+import { wireFilesPage } from './pages/files'
+import { HUB_DRAWN, pageTree } from './pages/index'
 import { wirePlainRows } from './plain-rows'
 import { noteAnswer, openPane, stepAside, toggleHub } from './swap'
 import type { Swap } from './swap'
 import { themeOf } from './theme'
 import { diskOf } from './disk'
-import { fillSideRows, refreshSide, wireUpkeep } from './upkeep'
+import { fillSideRows, refreshSide, sidePage, wireUpkeep } from './upkeep'
 import type { Theme } from './theme'
 import { plainViewOf, viewOf } from './view'
 import type { Frame, Parts } from './view'
@@ -43,10 +45,12 @@ const cardsAtom = atom({ plugin: 'modz', key: 'cards' } as const, {} as Record<s
 // The person's arrangement, mirrored from `$.store` (kept across sessions) so a change redraws the hub.
 const layoutAtom = atom({ plugin: 'modz', key: 'layout' } as const, EMPTY_LAYOUT)
 const editingAtom = atom({ plugin: 'modz', key: 'isEditing' } as const, false)
+const beatAtom = atom({ plugin: 'modz', key: 'beat' } as const, 0)
 // The pane of a row whose mod did not put it up when asked (openPane's watchdog); the row says so until pressed again.
 const updatesAtom = atom({ plugin: 'modz', key: 'updates' } as const, null as Updates | null)
 const unansweredAtom = atom({ plugin: 'modz', key: 'unanswered' } as const, null as string | null)
 const ON = { plugin: 'modz', key: 'isOn' } as const
+const DRAWN = { plugin: 'modz', key: 'drawn' } as const
 const LAYOUT_KEY = 'layout'
 const DEFAULT_COLUMNS = 80
 
@@ -78,9 +82,20 @@ async function saveLayout($: EngineInterface, change: (layout: HubLayout) => Hub
   await $.store.set(LAYOUT_KEY, next)
 }
 
+// A page the hub draws itself (pages.tsx): the stage names it and the one pane comes up; the hub's other panes go,
+// and a mod pane still open closes on the stage write (kit/stage.ts), so the panel never holds two.
+async function showPage($: EngineInterface, page: string): Promise<void> {
+  hubKept.isHeld = true
+  await $.state.set(STAGE, { pane: page, at: Date.now() })
+  await $.ui.open({ id: PANE, title: TITLE, focus: true })
+  const up = new Set((await $.ui.panes().catch(() => [])).map(each => each.id))
+  for (const own of OWN_PANES) if (own !== PANE && up.has(own)) await closeQuietly($, own)
+}
+
 // A mod with no pane answers on its card above the prompt: the press says where, and nothing is asked to open.
 async function openOrPoint($: EngineInterface, pane: string): Promise<void> {
   const [mod, card] = Object.entries(await read($, cardsAtom)).find(([, each]) => each.pane === pane && each.isBandOnly === true) ?? []
+  if (HUB_DRAWN.includes(pane)) return showPage($, pane)
   if (card === undefined) return openPane(swapOf($), pane)
   $.ui.toast(hubWords().inBand(card.title ?? String(mod)))
 }
@@ -107,6 +122,8 @@ const frameOf = async ($: EngineInterface, site: Site): Promise<Frame> => ({ ...
 // What the hub is drawn from (view.ts), read where `$` is. A clock that cannot be read costs the running times
 // their exactness, never the hub.
 async function partsOf($: EngineInterface): Promise<Parts> {
+  // Read so the cards' beat (cards.ts) redraws the hub alone.
+  await read($, beatAtom)
   const [cards, layout, isEditing] = [await read($, cardsAtom), await read($, layoutAtom), await read($, editingAtom)]
 
   // hud-pro says when its Usage pane hosts the other meter mods; nobody saying so means nobody hosts.
@@ -127,6 +144,8 @@ function startHooks(on: On, options: Options): void {
     const saved = layoutOf(await $.store.get(LAYOUT_KEY).catch(() => undefined))
     await update($, layoutAtom, () => saved)
     await $.state.set(ON, true)
+    // The pages this hub draws in its own pane: their mods then ask for them here rather than open a pane.
+    await $.state.set(DRAWN, HUB_DRAWN)
     await $.command.register({ name: 'modz', description: hubWords().command })
     fillSideRows($)
     if (options.openOnStart === true) {
@@ -169,7 +188,7 @@ function stageHooks(on: On): void {
     if (from !== 'modz') {
       // A value that names a pane asks for that mod's pane, as a press on its row here would.
       const pane = paneOf(e.value)
-      const go = () => (pane === null ? openHub($) : openPane(swapOf($), pane))
+      const go = () => (pane === null ? openHub($) : openOrPoint($, pane))
       $.clock.after(0, () => void go().catch(cause => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: 'debug' })))
     }
 
@@ -219,6 +238,15 @@ async function reopenKept($: EngineInterface): Promise<void> {
 
 function paneHooks(on: On): void {
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    const staged = paneOf((await $.state.get(STAGE)).value)
+    if (staged === MODS_PANE) return catalogPage($, e)
+    const side = staged !== null && SIDE_PANES.includes(staged) ? await sidePage($, e, staged) : null
+    if (side !== null) return side
+    if (staged !== null && HUB_DRAWN.includes(staged)) {
+      const onHome = () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not come back: ${String(cause)}`, { to: 'debug' }))
+
+      return pinned(e, await pageTree($, e, { page: staged, ui: $.ui.resolve(e), columns: e.props.bodyColumns || DEFAULT_COLUMNS, surface: e.surface, onHome }))
+    }
     if (!hubKept.isHeld) {
       hubKept.isHeld = true
       $.clock.after(0, () => void reopenKept($).catch(cause => $.ui.log(`modz: the kept hub tab could not be opened: ${String(cause)}`, { to: 'debug' })))
@@ -242,18 +270,19 @@ function paneHooks(on: On): void {
     return <Box />
   })
 
-  on('ui.render', { component: 'Pane', requestId: MODS_PANE }, async ($, e) => {
-    const ui = $.ui.resolve(e)
-    const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS
+  // The catalog is drawn in the hub's pane now (show); a tab an older engine left still draws.
+  on('ui.render', { component: 'Pane', requestId: MODS_PANE }, ($, e) => catalogPage($, e))
+}
 
-    const onHome = () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not be opened: ${String(cause)}`, { to: 'debug' }))
+async function catalogPage($: EngineInterface, e: any) {
+  const ui = $.ui.resolve(e)
+  const columns = e.props.bodyColumns || e.viewport?.columns || DEFAULT_COLUMNS
+  const onHome = () => void openHub($).catch(cause => $.ui.log(`modz: the hub could not be opened: ${String(cause)}`, { to: 'debug' }))
+  const market = await marketOf(diskOf($))
+  keepMarket(market)
+  const commands = await $.command.list().catch(() => [])
 
-    const market = await marketOf(diskOf($))
-    keepMarket(market)
-    const commands = await $.command.list().catch(() => [])
-
-    return pinned(e, modzTree(ui, { market, commands, surface: e.surface, columns, theme: await themeNow($), onHome, onCopy: (text, press) => copy($, text, press), stable: catalogDrawings }))
-  })
+  return pinned(e, modzTree(ui, { market, commands, surface: e.surface, columns, theme: await themeNow($), onHome, onCopy: (text, press) => copy($, text, press), stable: catalogDrawings }))
 }
 
 // The desktop only: the terminal keeps its footer as the engine draws it, and /modz.
@@ -272,6 +301,7 @@ export const register: Register = (on, options) => {
   wireCards(on)
   wireUpkeep(on)
   paneHooks(on)
+  wireFilesPage(on)
   footerHooks(on)
   wireLanguageKeeper(on, options)
   wirePlainRows(on, options)

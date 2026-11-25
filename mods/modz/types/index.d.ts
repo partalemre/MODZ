@@ -30,6 +30,9 @@ export type HubCard = {
   isBandOnly?: true
 }
 
+// A press on a page the hub draws (hooks/pages/site.ts): the page's mod hears it and acts.
+export type ModzAct = { page: string; action: string; arg?: string; at: number }
+
 // Written when a hub row is pressed; the mod that owns `pane` opens its own pane.
 export type ModzOpen = { pane: string; at: number }
 
@@ -63,19 +66,28 @@ declare module 'claude-code' {
   interface PluginState {
     // `isOn` is true while the hub runs: a mod's pane then draws its "← MODZ" button (kit/home.tsx). `unanswered`
     // names the pane of a row whose mod did not put it up when asked.
-    modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean; unanswered: string | null; links: Links | null; weights: Weights | null; updates: Updates | null }
+    modz: { open: ModzOpen; stage: ModzStage; cards: Record<string, HubCard>; layout: HubLayout; isEditing: boolean; isOn: boolean; unanswered: string | null; beat: number; drawn: readonly string[]; act: ModzAct; links: Links | null; weights: Weights | null; updates: Updates | null }
     // Each listed mod's own hub line (hooks/hub.ts BASES), which the hub listens for and keeps.
-    'savvy-progress': { hub: HubCard; home: ModzHome; shown: ModzStage }
-    filetree: { hub: HubCard; home: ModzHome; shown: ModzStage }
-    'plan-steps': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    // The agents page the hub draws itself (hooks/pages/agents.tsx) reads what savvy-progress keeps.
+    'savvy-progress': { hub: HubCard; home: ModzHome; shown: ModzStage; agents: unknown; flow: unknown; job: unknown; tasks: unknown; panel: unknown; limit: unknown; types: unknown; crab: unknown; chats: unknown }
+    // The Files page the hub draws itself (hooks/pages/files.tsx) reads what filetree keeps.
+    filetree: { hub: HubCard; home: ModzHome; shown: ModzStage; tree: unknown; theme: unknown; activity: unknown; turn: unknown; reads: unknown; look: unknown; feel: unknown }
+    // The plan page the hub draws itself (hooks/pages.tsx) reads what plan-steps keeps.
+    'plan-steps': { hub: HubCard; home: ModzHome; shown: ModzStage; tasks: unknown; doc: unknown; tracks: unknown }
     transceiver: { hub: HubCard; home: ModzHome; shown: ModzStage }
-    'test-badge': { hub: HubCard; home: ModzHome; shown: ModzStage }
-    checkpoint: { hub: HubCard; home: ModzHome; shown: ModzStage }
+    // The Tests page the hub draws itself (hooks/pages/tests.tsx) reads what test-badge keeps.
+    'test-badge': { hub: HubCard; home: ModzHome; shown: ModzStage; badge: unknown; filter: unknown; theme: unknown; ci: unknown; commands: unknown }
+    // The Restore points page the hub draws itself (hooks/pages/checkpoints.tsx) reads what checkpoint keeps.
+    checkpoint: { hub: HubCard; home: ModzHome; shown: ModzStage; view: unknown; meta: unknown; theme: unknown }
     'replay-theater': { hub: HubCard; home: ModzHome; shown: ModzStage }
     // `host`: true while hud-pro's Usage pane hosts session-budget, cache-tax and effort-router, which then have no hub row.
-    'hud-pro': { hub: HubCard; home: ModzHome; shown: ModzStage; host: boolean }
+    // The Usage page the hub draws itself (hooks/pages/usage.tsx) reads what hud-pro keeps, and the sections it hosts.
+    'hud-pro': { hub: HubCard; home: ModzHome; shown: ModzStage; host: boolean; beat: unknown; usage: unknown; turn: unknown; lastTurn: unknown; history: unknown; isCompacting: unknown; contextTurns: unknown; lastCompact: unknown; isLive: unknown; past: unknown; pastRange: unknown; shares: unknown; focus: unknown; breakdown: unknown }
     skins: { hub: HubCard; home: ModzHome; shown: ModzStage }
-    'effort-router': { hub: HubCard; home: ModzHome; shown: ModzStage }
+    'effort-router': { hub: HubCard; home: ModzHome; shown: ModzStage; section: unknown }
+    // Sections the Usage page shows for the meter mods hud-pro hosts.
+    'session-budget': { section: unknown }
+    'cache-tax': { section: unknown }
     handoff: { hub: HubCard; home: ModzHome; shown: ModzStage }
   }
 }

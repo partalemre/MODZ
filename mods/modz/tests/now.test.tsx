@@ -1,5 +1,6 @@
 // The hub's "Now" area: what fails, waits or runs is read on the hub itself, without opening a mod's pane.
-import { expect, mock, test } from 'claude-code/testing'
+import { expect, mock } from 'claude-code/testing'
+import { test } from './budget'
 
 import { cardOf, rowsOf, withHosted } from '../hooks/hub'
 import { elapsedText, nowOf } from '../hooks/now'
@@ -186,17 +187,26 @@ test('a meter mod hosted in the Usage pane has no row of its own, card or no car
 
 test('desktop: a press on a live line opens its mod\'s pane for the detail', { timeoutMs: 20_000, plugins: reporters }, async ($: any, on: any) => {
   const asked: unknown[] = []
+  const staged: unknown[] = []
   on('state.set', { plugin: 'modz', key: 'open' }, (_: unknown, e: any, next: any) => {
     asked.push(e.value?.pane)
+
+    return next(e)
+  })
+  on('state.set', { plugin: 'modz', key: 'stage' }, (_: unknown, e: any, next: any) => {
+    staged.push(e.value?.pane)
 
     return next(e)
   })
   const { ui } = await busyHub($, on, 'desktop')
 
   await ui.press({ key: 'now-open-agents-1' })
+  await ui.press({ key: 'modz-home' })
   await ui.press({ key: 'open-plan' })
 
-  expect(asked).toEqual(['agents', 'plan'])
+  // The Agents and Plan pages are drawn by the hub in its own pane (hooks/pages/): their mods are not asked for a pane.
+  expect(asked).toEqual([])
+  expect(staged.slice(-3)).toEqual(['agents', 'modz', 'plan'])
 })
 
 test('terminal: the same lines are read as text under "Şu an"', { timeoutMs: 20_000, plugins: reporters }, async ($: any, on: any) => {
@@ -206,7 +216,10 @@ test('terminal: the same lines are read as text under "Şu an"', { timeoutMs: 20
   expect(await ui.findAll({ type: 'Text', text: /41\/42 geçti/ })).toHaveLength(1)
 })
 
-test('a running time moves on the hub\'s own beat without one state write; with none running nothing is drawn again', { timeoutMs: 20_000, options: { openOnStart: true }, plugins: reporters }, async ($: any, on: any) => {
+// The hub's beat (hooks/cards.ts).
+const BEAT_MS = 10_000
+
+test('a running time moves on the hub\'s own beat, one write of its own per beat; with none running nothing is drawn again', { timeoutMs: 20_000, options: { openOnStart: true }, plugins: reporters }, async ($: any, on: any) => {
   const { seen } = stubWorld(on, { hasOwnClock: true })
   const clock = mock.clock(on, { now: START })
   let writes = 0
@@ -229,7 +242,8 @@ test('a running time moves on the hub\'s own beat without one state write; with 
 
   expect(seen.draws).toBeGreaterThan(busyDraws)
   expect(await alts(ui)).toContain('testleri yaz: 3 dk')
-  expect(writes).toBe(busyWrites)
+  // The beat writes the hub's own value, so only the hub redraws; no other state moves.
+  expect(writes - busyWrites).toBe((3 * MINUTE) / BEAT_MS)
 
   // Behind a mod's pane the hub tells nothing, so the beat draws nothing.
   await ui.press({ key: 'open-modz-mods' })
@@ -259,5 +273,5 @@ test('with only the hub installed it says so and leads to the install lines', { 
   expect(press.props.label).toMatch(/^\u3164+$/)
   expect(await alts(ui)).toContain('Mod ekle')
   await ui.press({ key: 'add-mods' })
-  expect(world.up).toEqual(['modz-mods'])
+  expect(world.up).toEqual(['modz'])
 })

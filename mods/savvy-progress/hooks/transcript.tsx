@@ -28,6 +28,12 @@ const crewRow = atom({ plugin: 'savvy-progress', key: 'crewRow' } as const, '')
  * row that set it to work (the call that started it, or a message that woke it). One that ended stays where it
  * was set to work.
  */
+// The plan step a helper serves is said under the first of a run of helpers on it, not repeated under each: the row
+// above said it when it serves the same step and had no words of its own (a reason or a step note) to show instead.
+const saysPlan = (run: AgentRun): boolean => run.planStep !== undefined && !run.stepNote && !run.history?.at(-1)?.because
+const isSameStep = (run: AgentRun, above: AgentRun | undefined): boolean =>
+  above !== undefined && saysPlan(above) && above.planStep?.subject === run.planStep?.subject
+
 export function crewAt(list: readonly AgentRun[], rows: readonly string[], newest: string): AgentRun[] {
   const helpers = list.filter(run => run.isMain !== true)
   const isHere = (run: AgentRun): boolean => run.toolUseId !== undefined && rows.includes(run.toolUseId)
@@ -54,7 +60,7 @@ const framed = (ui: Ui, key: string, pic: RowCrab) => {
 const crewOf = (ui: Ui, workers: readonly AgentRun[]) => {
   const ended = workers.filter(worker => !isRunning(worker))
 
-  return [...workers.filter(isRunning).map(worker => framed(ui, `crab-${worker.id}`, rowCrab(worker))), ...(ended.length === 0 ? [] : [framed(ui, 'crabs-ended', benchCard(ended))])]
+  return [...workers.filter(isRunning).map((worker, i, all) => framed(ui, `crab-${worker.id}`, rowCrab(worker, isSameStep(worker, all[i - 1])))), ...(ended.length === 0 ? [] : [framed(ui, 'crabs-ended', benchCard(ended))])]
 }
 
 const nothing = (ui: Ui) => {

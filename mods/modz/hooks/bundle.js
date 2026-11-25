@@ -6379,7 +6379,9 @@ const jobAgents = (input) => {
     return [];
   return input.agents.filter((a) => job.agentIds.includes(a.id));
 };
-const agentsTitle = (list) => {
+const agentsTitle = (list, asked) => {
+  if (asked)
+    return asked;
   const first = list[0];
   const name = first ? first.description || first.type : t().agents;
   return list.length > 1 ? `${name} +${list.length - 1}` : name;
@@ -6419,13 +6421,13 @@ function reportView(f, list, input) {
     failed: 0
   };
 }
-function tasksView(tasks, list) {
+function tasksView(tasks, list, asked) {
   const count = countTasks(tasks);
   const running = list.filter((a) => a.status === "running").length;
   const isFinished = count.done === count.total && running === 0;
   return {
     source: "tasks",
-    title: agentsTitle(list),
+    title: agentsTitle(list, asked),
     label: isFinished ? t().done : `${t().tasks} ${count.done}/${count.total}`,
     ratio: ratioOf({ done: count.done, credit: NO_CREDIT, total: count.total, isFinished }),
     isEstimate: false,
@@ -6439,7 +6441,7 @@ function tasksView(tasks, list) {
     failed: 0
   };
 }
-function agentsView(list) {
+function agentsView(list, asked) {
   const s = t();
   const running = list.filter((a) => a.status === "running");
   const ended = list.length - running.length;
@@ -6449,7 +6451,7 @@ function agentsView(list) {
   const done = failed ? `${s.done} · ${s.errors(failed)}` : s.done;
   return {
     source: "agents",
-    title: agentsTitle(list),
+    title: agentsTitle(list, asked),
     label: isFinished ? done : s.agentsEnded(ended, list.length),
     ratio: ratioOf({ done: ended, credit, total: list.length, isFinished }),
     isEstimate: credit.isEstimate && !isFinished,
@@ -6469,7 +6471,8 @@ function deriveJob(input) {
     return reportView(input.flow, list, input);
   if (!list.length)
     return null;
-  return input.tasks.length ? tasksView(input.tasks, list) : agentsView(list);
+  const asked = input.job?.asked;
+  return input.tasks.length ? tasksView(input.tasks, list, asked) : agentsView(list, asked);
 }
 const percentText$1 = (view) => {
   if (view.ratio === null)

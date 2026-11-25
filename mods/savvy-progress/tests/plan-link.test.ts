@@ -4,6 +4,7 @@ import { test } from './fixtures'
 import type { AgentRun } from '../types'
 import { movedOn } from '../hooks/agents'
 import { agentLogPath } from '../hooks/about'
+import { titleOf } from '../hooks/main-run'
 
 const plan = (statuses: string[]) => statuses.map((status, i) => ({ subject: `step ${i + 1}`, status }))
 const run = (patch: Partial<AgentRun>): AgentRun => ({
@@ -33,4 +34,11 @@ test("a helper's record is found beside the session's own transcript", () => {
   expect(agentLogPath('/h/.claude/projects/-p/abc.jsonl', 'a1')).toBe('/h/.claude/projects/-p/abc/subagents/agent-a1.jsonl')
   expect(agentLogPath('', 'a1')).toBe('')
   expect(agentLogPath('/h/abc.jsonl', undefined)).toBe('')
+})
+
+test("a message from another session is titled by its words, not by the tag it arrives in", () => {
+  expect(titleOf('<cross-session-message from="x">\nBir deneme işi, yalnızca okuma\n</cross-session-message>')).toBe('Bir deneme işi, yalnızca okuma')
+  expect(titleOf('<cross-session-message from="x">Kısa iş</cross-session-message>')).toBe('Kısa iş')
+  expect(titleOf('Plain request')).toBe('Plain request')
+  expect(titleOf('/agents-info')).toBe('')
 })

@@ -16,9 +16,13 @@ export const isMain = (a: Pick<AgentRun, 'isMain'>): boolean => a.isMain === tru
 /** The subagents alone: what a count of the crew, the job and the other chats' view are made of. */
 export const crewOf = <T extends Pick<AgentRun, 'isMain'>>(list: readonly T[]): T[] => list.filter(a => !isMain(a))
 
+// A message another session sent arrives wrapped in tags (`<cross-session-message from=…>`): the title is its words.
+const TAG_LINE = /^<\/?[\w-]+(\s[^>]*)?>$/
+
 /** What the row is named after: the request's first line, cut short; a slash command names nothing. */
 export const titleOf = (prompt: string): string => {
-  const line = prompt.split('\n').find(text => text.trim())?.trim() ?? ''
+  const unwrapped = prompt.replace(/^\s*<[\w-]+(\s[^>]*)?>/, '').replace(/<\/[\w-]+>\s*$/, '')
+  const line = unwrapped.split('\n').map(text => text.trim()).find(text => text !== '' && !TAG_LINE.test(text)) ?? ''
 
   return line.startsWith('/') ? '' : clip(line, TITLE_MAX)
 }

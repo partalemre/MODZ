@@ -1670,9 +1670,11 @@ const MAIN_ID = "main";
 const TITLE_MAX$1 = 80;
 const isMain = (a) => a.isMain === true;
 const crewOf$1 = (list) => list.filter((a) => !isMain(a));
+const TAG_LINE = /^<\/?[\w-]+(\s[^>]*)?>$/;
 const titleOf$1 = (prompt) => {
-  const line = prompt.split(`
-`).find((text) => text.trim())?.trim() ?? "";
+  const unwrapped = prompt.replace(/^\s*<[\w-]+(\s[^>]*)?>/, "").replace(/<\/[\w-]+>\s*$/, "");
+  const line = unwrapped.split(`
+`).map((text) => text.trim()).find((text) => text !== "" && !TAG_LINE.test(text)) ?? "";
   return line.startsWith("/") ? "" : clip$2(line, TITLE_MAX$1);
 };
 function mainAwake(list, start) {

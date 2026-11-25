@@ -2,6 +2,7 @@ import { expect, test } from 'claude-code/testing'
 
 import { planState, stateNote } from '../hooks/freshness'
 import { replayDesk } from '../hooks/tasks'
+import { isTickedUnseen, observe } from '../hooks/progress'
 
 const items = (statuses: string[]) => statuses.map((status, i) => ({ content: `step ${i + 1}`, status }))
 const call = (plan: Record<string, unknown>) => ({ isWrapUp: false, plan })
@@ -23,4 +24,16 @@ test('a plan with a helper at work is not "waiting", and an unknown wait has no 
   expect(planState(plan, { now: hour * 5, touchedAt: hour })).toBe('stale')
   // A restart leaves the last move unknown: it waits, but no age since 1970 is printed.
   expect(stateNote('stale', { now: hour * 5, touchedAt: -1 })).toBe('waiting')
+})
+
+test('a step ticked off without being seen under way is told apart from one that was worked', () => {
+  const steps = (statuses: string[]) => statuses.map((status, i) => ({ key: `s${i}`, status })) as never
+  let tracks = observe({}, steps(['in_progress', 'pending', 'pending']), 0)
+  tracks = observe(tracks, steps(['completed', 'in_progress', 'pending']), 60_000)
+  tracks = observe(tracks, steps(['completed', 'completed', 'completed']), 120_000)
+  expect(isTickedUnseen(tracks.s0)).toBe(false)
+  expect(isTickedUnseen(tracks.s1)).toBe(false)
+  expect(isTickedUnseen(tracks.s2)).toBe(true)
+  // A plan first seen already done says nothing either way.
+  expect(isTickedUnseen(observe({}, steps(['completed']), 0).s0)).toBe(false)
 })

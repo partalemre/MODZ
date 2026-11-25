@@ -9,9 +9,9 @@ import { chipsSvg } from './metrics-svg'
 import { picture } from './pane-motion'
 import type { RowContext, Ui } from './rows'
 
-// The open card reads from the top as a conversation (the task, its answers, the follow-ups), why it runs,
-// where its record is and whether it learns, the field to ask it more and its stop while it runs, then its
-// work: what it does this moment, its latest calls, the files it touched, and what it used (time, tokens, ≈$).
+// The open card reads from the top as a conversation (the task, its answers, the follow-ups), the field to ask it
+// more and its stop while it runs, then its work: what it does this moment, its latest calls, the files it touched;
+// then three short lines (why it runs, where its record is, whether it learns) and what it used (time, tokens, ≈$).
 
 // The room a card needs to set the message field and the stop button side by side.
 const SIDE_BY_SIDE_PX = 480
@@ -67,11 +67,11 @@ export function detailTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   return (
     <Box key={`detail-${a.id}`} flexDirection="column" rowGap={1} marginTop={1}>
       {conversationTree(ui, a, ctx)}
-      {aboutTree(ui, a, ctx)}
       {actionsTree(ui, a, ctx)}
       {hasWork && nowTree(ui, a, ctx)}
       {hasWork && historyTree(ui, a, ctx)}
       {filesTree(ui, a, ctx)}
+      {aboutTree(ui, a)}
       {metricsTree(ui, a, ctx)}
     </Box>
   )

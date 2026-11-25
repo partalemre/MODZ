@@ -14,7 +14,6 @@ const TRACK_H = 8
 const PCT_GAP = 8
 const PCT_W = 46
 const PCT_SIZE = 12.5
-const STRIPE = 8
 const CHIP_GAP = 6
 const CHIP_PAD = 9
 const CHIP_TEXT = 11.5
@@ -22,11 +21,6 @@ const RING_R = 5.5
 const RING_W = 2.2
 const RING_SLOT = 17
 const MIX_GAP = 2
-
-
-// An estimate wears soft still stripes, so it never reads as a measured fill.
-const stripesOf = (filled: number, y: number, uid: string): string =>
-  `<defs><pattern id="st${uid}" width="${STRIPE}" height="${STRIPE}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${STRIPE / 2}" height="${STRIPE}" fill="#fff" opacity=".28"/></pattern></defs><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" fill="url(#st${uid})"/>`
 
 const FILL: Record<string, string> = { running: 'f-edit', done: 'm', failed: 'f-danger' }
 const LABEL: Record<string, string> = { running: 's', done: 'm', failed: 'f-danger' }
@@ -38,18 +32,15 @@ const LABEL: Record<string, string> = { running: 's', done: 'm', failed: 'f-dang
 export const progressBarSvg = (W: number, a: AgentRun, opts: { progress: Progress; label: string }): string => {
   const y = (BAR_H - TRACK_H) / 2
   const barW = Math.max(TRACK_H, W - PCT_W - PCT_GAP)
-  const filled = Math.max(TRACK_H, Math.round(barW * opts.progress.value))
+  const isUnmeasured = a.status === 'running' && opts.progress.isEstimate
+  const filled = isUnmeasured ? 0 : Math.max(TRACK_H, Math.round(barW * opts.progress.value))
   // Ids are per agent: drawings that share a page must not share defs.
   const uid = a.id.replace(/\W/g, '')
   const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`
-  const isRunning = a.status === 'running'
-  // A run with no measure is at work, not "almost done": its full bar stays faint so it never reads as a finish.
-  const faint = isRunning && opts.progress.isEstimate ? ' opacity=".45"' : ''
-  const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? 'f-edit'}"${faint} x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`
-  const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : ''
+  const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? 'f-edit'}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`
   const label = `<text class="${LABEL[a.status] ?? 's'}" x="${barW + PCT_GAP}" y="${BAR_H / 2 + PCT_SIZE * 0.34}" font-family="${MONO}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`
-  return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`)
+  return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}</g>${label}`)
 }
 
 export type Chip = { text: string; ring?: { ratio: number } }

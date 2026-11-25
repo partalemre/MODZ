@@ -20,9 +20,9 @@ test("a worker's own steps are measured, not estimated", () => {
   expect(agentProgress(run({ stepDone: 2, stepTotal: 5 }))).toEqual({ value: 0.4, isEstimate: false })
 })
 
-test('an unreported agent has no made-up percent: it shows at work, however many calls it made', () => {
+test('an unreported agent has no made-up percent: its bar stays empty, however many calls it made', () => {
   const start = agentProgress(run())
   const many = agentProgress(run({ toolCount: 200, history: [...calls('Edit', 30), ...calls('Bash', 1, 'npm test')] }))
-  expect(start).toEqual({ value: 1, isEstimate: true })
+  expect(start).toEqual({ value: 0, isEstimate: true })
   expect(many).toEqual(start)
 })

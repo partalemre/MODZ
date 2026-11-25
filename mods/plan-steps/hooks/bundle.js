@@ -30,6 +30,7 @@ const EN = {
   notStarted: "not started",
   waitingSince: (duration) => `waiting · ${duration} ago`,
   waiting: "waiting",
+  tickedAtOnce: "ticked at once",
   allDone: "done",
   now: "now",
   running: "running",
@@ -68,6 +69,7 @@ const TR = {
   notStarted: "başlamadı",
   waitingSince: (duration) => `bekliyor · ${duration} önce`,
   waiting: "bekliyor",
+  tickedAtOnce: "toplu işaretlendi",
   allDone: "tamam",
   now: "şimdi",
   running: "çalışıyor",
@@ -107,6 +109,7 @@ function moved(track, status, now) {
     return { ...track, status, finishedAt: now };
   return { ...track, status, startedAt: null, finishedAt: null };
 }
+const isTickedUnseen = (track) => track !== undefined && track.status === "completed" && track.startedAt === null && track.finishedAt !== null;
 function observe(tracks, steps, now) {
   const next = { ...tracks };
   for (const step of steps) {
@@ -1702,7 +1705,7 @@ function countCall(isMainLoop, isOpenPlan) {
   if (!isMainLoop || !isOpenPlan)
     return false;
   calls += 1;
-  return calls === NUDGE_CALLS;
+  return calls % NUDGE_CALLS === 0;
 }
 function wireNudge(on) {
   on("classic.PostToolUse", async ($, e, next) => {
@@ -2413,7 +2416,7 @@ function rightText(model, step, isCurrent) {
   const elapsed = durationOf(model.tracks[step.key], model.now);
   const time = elapsed === null ? "" : formatDuration(elapsed);
   if (step.status === "completed")
-    return { text: time, cls: "lo" };
+    return { text: isTickedUnseen(model.tracks[step.key]) ? words().tickedAtOnce : time, cls: "lo" };
   if (isCurrent)
     return { text: time, cls: model.note === "" ? "mid" : "lo" };
   const checks = step.checksTotal > 0 ? `${step.checksDone}/${step.checksTotal}` : "";
@@ -2539,7 +2542,7 @@ function lookOf(step, context) {
   const elapsed = durationOf(context.track, context.now);
   const time = elapsed === null ? "" : formatDuration(elapsed);
   if (step.status === "completed")
-    return { glyph: "✓", isDim: true, isBold: false, right: time };
+    return { glyph: "✓", isDim: true, isBold: false, right: isTickedUnseen(context.track) ? words().tickedAtOnce : time };
   if (step.status === "in_progress") {
     const right = context.isCurrent ? time : [checksText(step), time].filter(Boolean).join(" · ");
     return { glyph: "◐", glyphColor: "claude", isDim: !context.isCurrent, isBold: context.isCurrent, right, rightColor: context.isCurrent ? "claude" : undefined };

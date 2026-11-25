@@ -6,7 +6,7 @@ import type { Plan } from './match'
 
 // The plan is only as true as the main loop keeps it: in a week of sessions it often sat on step 1 while the work
 // went on, then jumped several steps at once or was ticked off whole by the wrap-up. After a run of tool calls with
-// no move, the next tool result carries one short reminder; any move of the plan resets the count.
+// no move, the next tool result carries one short reminder, again after each further run; a move resets the count.
 
 export const NUDGE_CALLS = 15
 const DESK_PLAN = 'mcp__ccd_turn__update_plan'
@@ -46,7 +46,8 @@ export function countCall(isMainLoop: boolean, isOpenPlan: boolean): boolean {
   if (!isMainLoop || !isOpenPlan) return false
   calls += 1
 
-  return calls === NUDGE_CALLS
+  // Again every NUDGE_CALLS calls, so a reminder lost with a failed call comes back.
+  return calls % NUDGE_CALLS === 0
 }
 
 export function wireNudge(on: On): void {

@@ -1,6 +1,6 @@
 import type { AgentRun } from '../types'
 import { t } from './i18n'
-import type { RowContext, Ui } from './rows'
+import type { Ui } from './rows'
 
 // The open card's plain answer to three questions a person asks of a helper: what is it for, where is
 // its record kept, and does it learn. Said the same for every helper, with this one's own facts.
@@ -21,7 +21,7 @@ const linkOf = (path: string): string => `[${path.split('/').at(-1) ?? path}](<f
 /** How many files the helper wrote or changed: what outlives it. */
 const writtenOf = (a: AgentRun): number => (a.files ?? []).filter(file => file.edits > 0).length
 
-export function aboutTree(ui: Ui, a: AgentRun, ctx: RowContext) {
+export function aboutTree(ui: Ui, a: AgentRun) {
   const { Box, Text, Markdown } = ui
   if (a.isMain === true) return null
   const s = t()
@@ -32,12 +32,9 @@ export function aboutTree(ui: Ui, a: AgentRun, ctx: RowContext) {
     <Text wrap="wrap"><Text bold>{`${label}: `}</Text><Text>{text}</Text></Text>
   )
   return (
-    <Box key={`about-${a.id}`} flexDirection="column" rowGap={ctx.isDesktop ? 1 : 0}>
+    <Box key={`about-${a.id}`} flexDirection="column" rowGap={0}>
       {line(s.aboutWhy, why)}
-      <Box flexDirection="column">
-        {line(s.aboutLog, s.aboutLogText)}
-        {path !== '' && Markdown ? <Markdown key={`about-log-${a.id}`} text={linkOf(path)} /> : null}
-      </Box>
+      {path !== '' && Markdown ? <Markdown key={`about-log-${a.id}`} text={`**${s.aboutLog}:** ${s.aboutLogText}: ${linkOf(path)}`} /> : null}
       {line(s.aboutLearns, s.aboutLearnsText(writtenOf(a)))}
     </Box>
   )

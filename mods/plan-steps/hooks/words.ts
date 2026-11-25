@@ -26,6 +26,7 @@ export type Words = {
   notStarted: string
   waitingSince: (duration: string) => string
   waiting: string
+  tickedAtOnce: string
   allDone: string
   now: string
   running: string
@@ -68,6 +69,7 @@ const EN: Words = {
   notStarted: 'not started',
   waitingSince: duration => `waiting · ${duration} ago`,
   waiting: 'waiting',
+  tickedAtOnce: 'ticked at once',
   allDone: 'done',
   now: 'now',
   running: 'running',
@@ -107,6 +109,7 @@ const TR: Words = {
   notStarted: 'başlamadı',
   waitingSince: duration => `bekliyor · ${duration} önce`,
   waiting: 'bekliyor',
+  tickedAtOnce: 'toplu işaretlendi',
   allDone: 'tamam',
   now: 'şimdi',
   running: 'çalışıyor',

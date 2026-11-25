@@ -1,7 +1,7 @@
 import { paneMotion } from './kit/moving'
 import type { Plan, Step } from './match'
 import { baseName } from './parse'
-import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, progressOf, windowOf } from './progress'
+import { anchorIndex, currentIndex, durationOf, etaOf, formatDuration, isTickedUnseen, progressOf, windowOf } from './progress'
 import type { Tracks } from './progress'
 import type { StepTrack } from '../types'
 import { hasRunningAgent, planState, stateNote } from './freshness'
@@ -68,7 +68,7 @@ function checksText(step: Step): string {
 function lookOf(step: Step, context: { track: StepTrack | undefined; now: number; isCurrent: boolean }): RowLook {
   const elapsed = durationOf(context.track, context.now)
   const time = elapsed === null ? '' : formatDuration(elapsed)
-  if (step.status === 'completed') return { glyph: '✓', isDim: true, isBold: false, right: time }
+  if (step.status === 'completed') return { glyph: '✓', isDim: true, isBold: false, right: isTickedUnseen(context.track) ? words().tickedAtOnce : time }
   if (step.status === 'in_progress') {
     const right = context.isCurrent ? time : [checksText(step), time].filter(Boolean).join(' · ')
 

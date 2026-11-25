@@ -106,13 +106,13 @@ const en = {
   rowDoing: { read: "reading", search: "searching", edit: "writing", run: "running a command", test: "checking", save: "saving a version", web: "on the internet", message: "sending word", agent: "leading agents", wait: "waiting", other: "thinking" },
   rowStep: (done, total) => `step ${done}/${total}`,
   rowPlan: (at, of, subject) => `plan step ${at}/${of}: ${subject}`,
-  aboutWhy: "Why it runs",
+  aboutWhy: "Why",
   headerWhy: (at, of, subject) => `Working on plan step ${at}/${of}: ${subject}`,
   aboutForRequest: "for the task you gave in this chat",
-  aboutLog: "Where its record is",
-  aboutLogText: "everything it read, wrote and said stays on your computer, in the file below",
+  aboutLog: "Its record",
+  aboutLogText: "on your computer, in this file",
   aboutLearns: "Does it learn",
-  aboutLearnsText: (written) => `only within this chat: write to it below and it picks up where it left off. Nothing reaches other chats or later helpers by itself; only the files it wrote last${written > 0 ? ` (this one wrote ${written})` : ""}. This record is not read back either: a lesson stays only once written into a rule or memory.`,
+  aboutLearnsText: (written) => `it remembers within this chat; nothing reaches other chats by itself. What stays is the files it wrote${written > 0 ? ` (${written})` : ""}.`,
   rowEnded: { done: "finished", failed: "did not finish" },
   stripPlan: "plan",
   stripPlanDone: "done",
@@ -276,13 +276,13 @@ const ru = {
   rowDoing: { read: "читает", search: "ищет", edit: "пишет", run: "выполняет команду", test: "проверяет", save: "сохраняет версию", web: "в интернете", message: "передаёт сообщение", agent: "ведёт агентов", wait: "ждёт", other: "думает" },
   rowStep: (done, total) => `шаг ${done}/${total}`,
   rowPlan: (at, of, subject) => `шаг плана ${at}/${of}: ${subject}`,
-  aboutWhy: "Зачем он работает",
+  aboutWhy: "Зачем",
   headerWhy: (at, of, subject) => `Работают над шагом плана ${at}/${of}: ${subject}`,
   aboutForRequest: "для задачи из этого чата",
-  aboutLog: "Где его запись",
-  aboutLogText: "всё, что он прочёл, написал и сказал, хранится на вашем компьютере, в файле ниже",
+  aboutLog: "Запись",
+  aboutLogText: "на вашем компьютере, в этом файле",
   aboutLearns: "Учится ли он",
-  aboutLearnsText: (written) => `только в этом чате: напишите ему ниже, и он продолжит с того же места. В другие чаты и к следующим помощникам само ничего не переходит; остаются только его файлы${written > 0 ? ` (этот написал ${written})` : ""}. Эта запись тоже не перечитывается: урок сохранится, только если записать его в правило или память.`,
+  aboutLearnsText: (written) => `помнит в этом чате; в другие чаты само ничего не переходит. Остаются его файлы${written > 0 ? ` (${written})` : ""}.`,
   rowEnded: { done: "закончил", failed: "не закончил" },
   stripPlan: "план",
   stripPlanDone: "готов",
@@ -455,13 +455,13 @@ const tr = {
   rowDoing: { read: "okuyor", search: "arıyor", edit: "yazıyor", run: "komut çalıştırıyor", test: "kontrol ediyor", save: "sürüm kaydediyor", web: "internette", message: "haber gönderiyor", agent: "ajan yönetiyor", wait: "bekliyor", other: "düşünüyor" },
   rowStep: (done, total) => `adım ${done}/${total}`,
   rowPlan: (at, of, subject) => `planın ${at}/${of}. adımı: ${subject}`,
-  aboutWhy: "Neden çalışıyor",
+  aboutWhy: "Neden",
   headerWhy: (at, of, subject) => `Planın ${at}/${of}. adımı için çalışıyorlar: ${subject}`,
   aboutForRequest: "bu sohbette verdiğin iş için",
-  aboutLog: "Kaydı nerede",
-  aboutLogText: "okuduğu, yazdığı ve söylediği her şey bilgisayarında, aşağıdaki dosyada durur",
+  aboutLog: "Kaydı",
+  aboutLogText: "bilgisayarında, bu dosyada",
   aboutLearns: "Öğreniyor mu",
-  aboutLearnsText: (written) => `yalnızca bu sohbet içinde: aşağıdan ona yeniden yazabilirsin, kaldığı yerden sürer. Başka sohbetlere ve sonraki ajanlara hiçbir şey kendiliğinden geçmez; kalıcı olan yalnızca yazdığı dosyalardır${written > 0 ? ` (bu ajan ${written} dosya yazdı)` : ""}. Bu kayıt da sonradan okunmaz: bir dersin kalması için kurala ya da hafızaya yazılması gerekir.`,
+  aboutLearnsText: (written) => `bu sohbette hatırlar; başka sohbete kendiliğinden geçmez. Kalan, yazdığı dosyalardır${written > 0 ? ` (${written} dosya)` : ""}.`,
   rowEnded: { done: "işini bitirdi", failed: "işi yarıda kaldı" },
   stripPlan: "plan",
   stripPlanDone: "tamam",
@@ -5315,7 +5315,7 @@ const setMainTranscript = (path) => {
 const agentLogPath = (transcript, agentId) => transcript.endsWith(".jsonl") && agentId ? `${transcript.slice(0, -".jsonl".length)}/subagents/agent-${agentId}.jsonl` : "";
 const linkOf$1 = (path) => `[${path.split("/").at(-1) ?? path}](<file://${encodeURI(path)}>)`;
 const writtenOf = (a) => (a.files ?? []).filter((file) => file.edits > 0).length;
-function aboutTree(ui, a, ctx) {
+function aboutTree(ui, a) {
   const { Box, Text, Markdown } = ui;
   if (a.isMain === true)
     return null;
@@ -5331,13 +5331,11 @@ function aboutTree(ui, a, ctx) {
   return h(Box, {
     key: `about-${a.id}`,
     flexDirection: "column",
-    rowGap: ctx.isDesktop ? 1 : 0
-  }, line(s.aboutWhy, why), h(Box, {
-    flexDirection: "column"
-  }, line(s.aboutLog, s.aboutLogText), path !== "" && Markdown ? h(Markdown, {
+    rowGap: 0
+  }, line(s.aboutWhy, why), path !== "" && Markdown ? h(Markdown, {
     key: `about-log-${a.id}`,
-    text: linkOf$1(path)
-  }) : null), line(s.aboutLearns, s.aboutLearnsText(writtenOf(a))));
+    text: `**${s.aboutLog}:** ${s.aboutLogText}: ${linkOf$1(path)}`
+  }) : null, line(s.aboutLearns, s.aboutLearnsText(writtenOf(a))));
 }
 
 const BRIEF_SHOWN = 280;
@@ -5578,7 +5576,6 @@ const TRACK_H = 8;
 const PCT_GAP = 8;
 const PCT_W = 46;
 const PCT_SIZE = 12.5;
-const STRIPE = 8;
 const CHIP_GAP = 6;
 const CHIP_PAD = 9;
 const CHIP_TEXT = 11.5;
@@ -5586,22 +5583,19 @@ const RING_R = 5.5;
 const RING_W = 2.2;
 const RING_SLOT = 17;
 const MIX_GAP = 2;
-const stripesOf = (filled, y, uid) => `<defs><pattern id="st${uid}" width="${STRIPE}" height="${STRIPE}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${STRIPE / 2}" height="${STRIPE}" fill="#fff" opacity=".28"/></pattern></defs><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" fill="url(#st${uid})"/>`;
 const FILL = { running: "f-edit", done: "m", failed: "f-danger" };
 const LABEL = { running: "s", done: "m", failed: "f-danger" };
 const progressBarSvg = (W, a, opts) => {
   const y = (BAR_H - TRACK_H) / 2;
   const barW = Math.max(TRACK_H, W - PCT_W - PCT_GAP);
-  const filled = Math.max(TRACK_H, Math.round(barW * opts.progress.value));
+  const isUnmeasured = a.status === "running" && opts.progress.isEstimate;
+  const filled = isUnmeasured ? 0 : Math.max(TRACK_H, Math.round(barW * opts.progress.value));
   const uid = a.id.replace(/\W/g, "");
   const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`;
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`;
-  const isRunning = a.status === "running";
-  const faint = isRunning && opts.progress.isEstimate ? ' opacity=".45"' : "";
-  const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? "f-edit"}"${faint} x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
-  const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : "";
+  const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? "f-edit"}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
   const label = `<text class="${LABEL[a.status] ?? "s"}" x="${barW + PCT_GAP}" y="${BAR_H / 2 + PCT_SIZE * 0.34}" font-family="${MONO}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`;
-  return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`);
+  return paneSvg(W, BAR_H, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}</g>${label}`);
 };
 const ringOf = (x, ring) => {
   const c = 2 * Math.PI * RING_R;
@@ -5955,10 +5949,10 @@ function detailTree(ui, a, ctx) {
     flexDirection: "column",
     rowGap: 1,
     marginTop: 1
-  }, conversationTree(ui, a, ctx), aboutTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), metricsTree(ui, a, ctx));
+  }, conversationTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), aboutTree(ui, a), metricsTree(ui, a, ctx));
 }
 
-const AT_WORK = { value: 1, isEstimate: true };
+const AT_WORK = { value: 0, isEstimate: true };
 const agentProgress = (a) => {
   if (a.status !== "running")
     return { value: 1, isEstimate: false };

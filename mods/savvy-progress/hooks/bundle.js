@@ -94,6 +94,8 @@ const en = {
   tools: (n) => plural(n, "step", "steps"),
   errors: (n) => `${n} failed`,
   crew: (n) => plural(n, "agent", "agents"),
+  crewAtWork: (n) => `${n} at work`,
+  agentsEnded: (ended, total) => `${ended}/${total} agents done`,
   stripCost: "cost",
   stripTokens: "tokens",
   stripTime: "agent time",
@@ -255,6 +257,8 @@ const ru = {
   tools: (n) => `шагов: ${n}`,
   errors: (n) => `ошибок: ${n}`,
   crew: (n) => `агентов: ${n}`,
+  crewAtWork: (n) => `работают: ${n}`,
+  agentsEnded: (ended, total) => `готово агентов: ${ended}/${total}`,
   stripCost: "стоимость",
   stripTokens: "токены",
   stripTime: "время агентов",
@@ -425,6 +429,8 @@ const tr = {
   tools: (n) => `${n} adım`,
   errors: (n) => `${n} hata`,
   crew: (n) => `${n} ajan`,
+  crewAtWork: (n) => `${n} ajan çalışıyor`,
+  agentsEnded: (ended, total) => `${ended}/${total} ajan bitti`,
   stripCost: "maliyet",
   stripTokens: "token",
   stripTime: "ajan süresi",
@@ -504,6 +510,7 @@ const tr = {
 const STRINGS = { tr, en, ru };
 let lang = "en";
 const t = () => STRINGS[lang];
+const currentLang = () => lang;
 const setLang = (next) => {
   lang = next;
   setLang$1(next);
@@ -2081,7 +2088,7 @@ function agentsView(list) {
   return {
     source: "agents",
     title: agentsTitle(list),
-    label: isFinished ? done : `${s.agents} ${ended}/${list.length}`,
+    label: isFinished ? done : s.agentsEnded(ended, list.length),
     ratio: ratioOf({ done: ended, credit, total: list.length, isFinished }),
     isEstimate: credit.isEstimate && !isFinished,
     launched: 1,
@@ -3560,7 +3567,7 @@ function slotsOf(facts, presses) {
     ...planSlot(facts, presses),
     { chip: { id: "cost", label: t().stripCost, value: fmtCost(facts.cost), widest: room.cost }, rank: 1, press: usage },
     { chip: { id: "tokens", label: t().stripTokens, value: fmtTokens(counted.tokens), widest: room.tokens }, rank: 3, press: usage },
-    { chip: { id: "time", label: t().stripTime, value: spanText(counted.busyMs), widest: room.time, ...helpers > 0 ? { note: t().crew(helpers) } : {} }, rank: 4, press: presses.onAgents },
+    { chip: { id: "time", label: t().stripTime, value: spanText(counted.busyMs), widest: room.time, ...helpers > 0 ? { note: t().crewAtWork(helpers) } : {} }, rank: 4, press: presses.onAgents },
     ...windows.map((run) => limitSlot(run, facts, presses)),
     ...facts.team === null ? [] : [{ chip: { id: "team", label: "", value: "" }, rank: TEAM_RANK, press: presses.open(TEAM_PANE), art: teamArt(facts.team, facts.now) }],
     ...presses.onHub === null ? [] : [{ chip: { id: HUB_CHIP, label: "", value: "modz", isWordmark: true }, rank: 0, press: presses.onHub }]
@@ -4146,6 +4153,15 @@ let asked;
 const STEP_BRIEF = `
 
 Progress reporting: before any other work, call \`${STEP_TOOL}\` with \`total\` (your plan in 3-8 steps) and \`done: 0\`; call it again with \`done\` and a few-word \`note\` as each step finishes. It only draws a progress bar.`;
+const NOTES_IN = {
+  en: "",
+  tr: `
+
+Write your task-list items and progress notes in Turkish, in plain words: the person follows them on screen.`,
+  ru: `
+
+Write your task-list items and progress notes in Russian, in plain words: the person follows them on screen.`
+};
 async function stamp($) {
   const at = await $.clock.now();
   await update($, now$2, () => at);
@@ -4186,7 +4202,8 @@ function onLaunches(on) {
   });
   on("agent.spawn", async ($, e, next) => {
     const isUnbriefed = savvyTierOf(e.subagentType) !== null && !e.prompt.includes(STEP_TOOL);
-    const started = await next(isUnbriefed ? { ...e, prompt: e.prompt + STEP_BRIEF } : e);
+    const brief = (isUnbriefed ? STEP_BRIEF : "") + NOTES_IN[currentLang()];
+    const started = await next(brief === "" ? e : { ...e, prompt: e.prompt + brief });
     if (started.deny !== undefined)
       return started;
     const at = await stamp($);

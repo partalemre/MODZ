@@ -86,6 +86,8 @@ export const en: Strings = {
   tools: n => plural(n, 'step', 'steps'),
   errors: n => `${n} failed`,
   crew: n => plural(n, 'agent', 'agents'),
+  crewAtWork: n => `${n} at work`,
+  agentsEnded: (ended, total) => `${ended}/${total} agents done`,
   stripCost: 'cost',
   stripTokens: 'tokens',
   stripTime: 'agent time',

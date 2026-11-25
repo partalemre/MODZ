@@ -142,7 +142,7 @@ function agentsView(list: AgentRun[]): JobView {
   return {
     source: 'agents',
     title: agentsTitle(list),
-    label: isFinished ? done : `${s.agents} ${ended}/${list.length}`,
+    label: isFinished ? done : s.agentsEnded(ended, list.length),
     ratio: ratioOf({ done: ended, credit, total: list.length, isFinished }),
     isEstimate: credit.isEstimate && !isFinished,
     launched: 1,

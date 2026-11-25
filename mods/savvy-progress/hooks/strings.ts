@@ -144,6 +144,8 @@ export type Strings = {
   tools: (n: number) => string
   errors: (n: number) => string
   crew: (n: number) => string
+  crewAtWork: (n: number) => string
+  agentsEnded: (ended: number, total: number) => string
   /** The session strip above the prompt: its three measures and what sits under each. */
   stripCost: string
   stripTokens: string

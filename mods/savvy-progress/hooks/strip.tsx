@@ -144,7 +144,7 @@ function slotsOf(facts: Facts, presses: Presses): Slot[] {
     ...planSlot(facts, presses),
     { chip: { id: 'cost', label: t().stripCost, value: fmtCost(facts.cost), widest: room.cost }, rank: 1, press: usage },
     { chip: { id: 'tokens', label: t().stripTokens, value: fmtTokens(counted.tokens), widest: room.tokens }, rank: 3, press: usage },
-    { chip: { id: 'time', label: t().stripTime, value: spanText(counted.busyMs), widest: room.time, ...(helpers > 0 ? { note: t().crew(helpers) } : {}) }, rank: 4, press: presses.onAgents },
+    { chip: { id: 'time', label: t().stripTime, value: spanText(counted.busyMs), widest: room.time, ...(helpers > 0 ? { note: t().crewAtWork(helpers) } : {}) }, rank: 4, press: presses.onAgents },
     ...windows.map(run => limitSlot(run, facts, presses)),
     ...(facts.team === null ? [] : [{ chip: { id: 'team', label: '', value: '' }, rank: TEAM_RANK, press: presses.open(TEAM_PANE), art: teamArt(facts.team, facts.now) }]),
     ...(presses.onHub === null ? [] : [{ chip: { id: HUB_CHIP, label: '', value: 'modz', isWordmark: true }, rank: 0, press: presses.onHub }]),

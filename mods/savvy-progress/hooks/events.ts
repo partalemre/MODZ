@@ -13,6 +13,8 @@ import type { ProgressInput } from './flow'
 import { deriveJob, joinJob, sealJob } from './job'
 import { MAIN_ID, mainAwake, titleOf } from './main-run'
 import { STEP_TOOL, TOOL } from './state'
+import { currentLang } from './i18n'
+import type { Lang } from './i18n'
 import { TASK_TOOLS, applyTaskTool, openTasks } from './tasks'
 import { isSame } from './same'
 import { reopen } from './roster'
@@ -47,6 +49,13 @@ let asked: string | undefined
 const STEP_BRIEF = `
 
 Progress reporting: before any other work, call \`${STEP_TOOL}\` with \`total\` (your plan in 3-8 steps) and \`done: 0\`; call it again with \`done\` and a few-word \`note\` as each step finishes. It only draws a progress bar.`
+
+// A helper's task list and notes are what its row shows; written in English they leave a Turkish reader out.
+const NOTES_IN: Record<Lang, string> = {
+  en: '',
+  tr: '\n\nWrite your task-list items and progress notes in Turkish, in plain words: the person follows them on screen.',
+  ru: '\n\nWrite your task-list items and progress notes in Russian, in plain words: the person follows them on screen.',
+}
 
 async function stamp($: EngineInterface): Promise<number> {
   const at = await $.clock.now()
@@ -97,7 +106,8 @@ function onLaunches(on: On): void {
 
   on('agent.spawn', async ($, e, next) => {
     const isUnbriefed = savvyTierOf(e.subagentType) !== null && !e.prompt.includes(STEP_TOOL)
-    const started = await next(isUnbriefed ? { ...e, prompt: e.prompt + STEP_BRIEF } : e)
+    const brief = (isUnbriefed ? STEP_BRIEF : '') + NOTES_IN[currentLang()]
+    const started = await next(brief === '' ? e : { ...e, prompt: e.prompt + brief })
     if (started.deny !== undefined) return started
     const at = await stamp($)
     const id = started.agentId ?? e.tool_use_id

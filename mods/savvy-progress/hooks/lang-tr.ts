@@ -103,6 +103,8 @@ export const tr: Strings = {
   tools: n => `${n} adım`,
   errors: n => `${n} hata`,
   crew: n => `${n} ajan`,
+  crewAtWork: n => `${n} ajan çalışıyor`,
+  agentsEnded: (ended, total) => `${ended}/${total} ajan bitti`,
   stripCost: 'maliyet',
   stripTokens: 'token',
   stripTime: 'ajan süresi',

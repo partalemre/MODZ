@@ -15,6 +15,8 @@ let lang: Lang = 'en'
 
 export const t = (): Strings => STRINGS[lang]
 
+export const currentLang = (): Lang => lang
+
 // The kit's language follows, so its `upper` capitalises the way the words are written.
 export const setLang = (next: Lang): void => {
   lang = next

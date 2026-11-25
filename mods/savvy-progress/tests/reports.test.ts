@@ -26,8 +26,10 @@ test('a savvy worker gets the step request at the end of its brief, once', async
   await spawn($, 'Careful', 'savvy-flow:savvy-careful')
   await $.agent.spawn({ prompt: `already asks for ${STEP}`, description: 'Briefed', subagentType: 'savvy-light' } as any)
   const prompts = world.spawns.map(s => String(s.prompt))
-  expect(prompts[0]).toBe('do it')
+  // Every helper is asked to keep its notes in the reader's language (Turkish here); only savvy workers report steps.
+  expect(prompts[0]).toBe('do it\n\nWrite your task-list items and progress notes in Turkish, in plain words: the person follows them on screen.')
   expect(prompts[1]).toContain(`call \`${STEP}\``)
   expect(prompts[1]?.startsWith('do it')).toBe(true)
-  expect(prompts[2]).toBe(`already asks for ${STEP}`)
+  expect(prompts[2]?.startsWith(`already asks for ${STEP}`)).toBe(true)
+  expect(prompts[2]).not.toContain('call `')
 })

@@ -87,6 +87,8 @@ export const ru: Strings = {
   tools: n => `шагов: ${n}`,
   errors: n => `ошибок: ${n}`,
   crew: n => `агентов: ${n}`,
+  crewAtWork: n => `работают: ${n}`,
+  agentsEnded: (ended, total) => `готово агентов: ${ended}/${total}`,
   stripCost: 'стоимость',
   stripTokens: 'токены',
   stripTime: 'время агентов',

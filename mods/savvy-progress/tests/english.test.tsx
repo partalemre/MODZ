@@ -69,7 +69,7 @@ for (const surface of SURFACES) {
     expect(world.toasts.some(text => text.endsWith(' got to work'))).toBe(true)
   })
 
-  test(`${surface}: the band reads Agents 0/3, then Done with its failures`, async ($, on) => {
+  test(`${surface}: the band reads 0/3 agents done, then Done with its failures`, async ($, on) => {
     await setup($, on, EN)
     await threeRunning($)
     const band = async () => {
@@ -78,7 +78,7 @@ for (const surface of SURFACES) {
       await ui.unmount()
       return seen
     }
-    expectAll(await band(), ['Agents 0/3'])
+    expectAll(await band(), ['0/3 agents done'])
     await finish($, 'a1')
     await finish($, 'a2')
     await finish($, 'a3', 'error')
@@ -99,5 +99,5 @@ test('the hub card reads the job and how many agents run', { plugins: [HUB_STAND
   await threeRunning($)
   const out = await $.command.run({ command: 'hub-card', args: '' } as never)
   const card = JSON.parse(out.text ?? '')
-  expect(card.value.detail).toBe('Agents 0/3 · 3 running')
+  expect(card.value.detail).toBe('0/3 agents done · 3 running')
 })

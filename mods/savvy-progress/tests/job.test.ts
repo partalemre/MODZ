@@ -18,7 +18,7 @@ const view = (agents: AgentRun[], over: Record<string, unknown> = {}) =>
 
 test('three running agents with no report read 0/3 and "—", never 0%', () => {
   const v = view([run('a'), run('b'), run('c')])
-  expect(v?.label).toBe('Ajanlar 0/3')
+  expect(v?.label).toBe('0/3 ajan bitti')
   expect(v?.ratio).toBeNull()
   expect(percentText(v!)).toBe('—')
   expect(v?.launched).toBe(1)
@@ -27,7 +27,7 @@ test('three running agents with no report read 0/3 and "—", never 0%', () => {
 
 test('finished agents count exactly', () => {
   const v = view([run('a', { status: 'done' }), run('b'), run('c')])
-  expect(v?.label).toBe('Ajanlar 1/3')
+  expect(v?.label).toBe('1/3 ajan bitti')
   expect(percentText(v!)).toBe('%33')
 })
 

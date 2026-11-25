@@ -98,6 +98,13 @@ export const en: Strings = {
   rowDoing: { read: 'reading', search: 'searching', edit: 'writing', run: 'running a command', test: 'checking', save: 'saving a version', web: 'on the internet', message: 'sending word', agent: 'leading agents', wait: 'waiting', other: 'thinking' },
   rowStep: (done, total) => `step ${done}/${total}`,
   rowPlan: (at, of, subject) => `plan step ${at}/${of}: ${subject}`,
+  aboutWhy: 'Why it runs',
+  aboutForRequest: 'for the task you gave in this chat',
+  aboutLog: 'Where its record is',
+  aboutLogText: 'everything it read, wrote and said stays on your computer, in the file below',
+  aboutLearns: 'Does it learn',
+  aboutLearnsText: written =>
+    `no. Every helper starts from nothing and forgets it all when done. Only the files it wrote carry over${written > 0 ? ` (this one wrote ${written})` : ''}; a lasting lesson has to be written into a rule or memory.`,
   rowEnded: { done: 'finished', failed: 'did not finish' },
   stripPlan: 'plan',
   stripPlanDone: 'done',

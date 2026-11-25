@@ -115,6 +115,13 @@ export const tr: Strings = {
   rowDoing: { read: 'okuyor', search: 'arıyor', edit: 'yazıyor', run: 'komut çalıştırıyor', test: 'kontrol ediyor', save: 'sürüm kaydediyor', web: 'internette', message: 'haber gönderiyor', agent: 'ajan yönetiyor', wait: 'bekliyor', other: 'düşünüyor' },
   rowStep: (done, total) => `adım ${done}/${total}`,
   rowPlan: (at, of, subject) => `planın ${at}/${of}. adımı: ${subject}`,
+  aboutWhy: 'Neden çalışıyor',
+  aboutForRequest: 'bu sohbette verdiğin iş için',
+  aboutLog: 'Kaydı nerede',
+  aboutLogText: 'okuduğu, yazdığı ve söylediği her şey bilgisayarında, aşağıdaki dosyada durur',
+  aboutLearns: 'Öğreniyor mu',
+  aboutLearnsText: written =>
+    `hayır. Her ajan sıfırdan başlar ve iş bitince aklındakiler silinir. Sonraki işlere yalnızca yazdığı dosyalar kalır${written > 0 ? ` (bu ajan ${written} dosya yazdı)` : ''}; kalıcı ders için kurala ya da hafızaya yazılması gerekir.`,
   rowEnded: { done: 'işini bitirdi', failed: 'işi yarıda kaldı' },
   stripPlan: 'plan',
   stripPlanDone: 'tamam',

@@ -19,6 +19,7 @@ import { reconcile } from './roster'
 import { isSame } from './same'
 import { HUB_PANE } from './state'
 import { onTranscript } from './transcript'
+import { setMainTranscript } from './about'
 
 // State refs live in each file that reads them: the scan follows literals, not imports.
 const agents = atom({ plugin: 'savvy-progress', key: 'agents' } as const, [])
@@ -222,6 +223,11 @@ function onHubSources(on: On): void {
 }
 
 export const register: Register = (on, options) => {
+  // The transcript's path comes with the classic start, and again after /clear, a resume or a fork.
+  on('classic.SessionStart', async ($, e, next) => {
+    setMainTranscript(typeof e.transcript_path === 'string' ? e.transcript_path : '')
+    return next(e)
+  }).catch(($, e, next) => next(e))
   on('session.start', async ($, e, next) => {
     setLang(await detectLang($, options.language))
     const started = await next(e)

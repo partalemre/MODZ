@@ -106,6 +106,12 @@ const en = {
   rowDoing: { read: "reading", search: "searching", edit: "writing", run: "running a command", test: "checking", save: "saving a version", web: "on the internet", message: "sending word", agent: "leading agents", wait: "waiting", other: "thinking" },
   rowStep: (done, total) => `step ${done}/${total}`,
   rowPlan: (at, of, subject) => `plan step ${at}/${of}: ${subject}`,
+  aboutWhy: "Why it runs",
+  aboutForRequest: "for the task you gave in this chat",
+  aboutLog: "Where its record is",
+  aboutLogText: "everything it read, wrote and said stays on your computer, in the file below",
+  aboutLearns: "Does it learn",
+  aboutLearnsText: (written) => `no. Every helper starts from nothing and forgets it all when done. Only the files it wrote carry over${written > 0 ? ` (this one wrote ${written})` : ""}; a lasting lesson has to be written into a rule or memory.`,
   rowEnded: { done: "finished", failed: "did not finish" },
   stripPlan: "plan",
   stripPlanDone: "done",
@@ -269,6 +275,12 @@ const ru = {
   rowDoing: { read: "читает", search: "ищет", edit: "пишет", run: "выполняет команду", test: "проверяет", save: "сохраняет версию", web: "в интернете", message: "передаёт сообщение", agent: "ведёт агентов", wait: "ждёт", other: "думает" },
   rowStep: (done, total) => `шаг ${done}/${total}`,
   rowPlan: (at, of, subject) => `шаг плана ${at}/${of}: ${subject}`,
+  aboutWhy: "Зачем он работает",
+  aboutForRequest: "для задачи из этого чата",
+  aboutLog: "Где его запись",
+  aboutLogText: "всё, что он прочёл, написал и сказал, хранится на вашем компьютере, в файле ниже",
+  aboutLearns: "Учится ли он",
+  aboutLearnsText: (written) => `нет. Каждый помощник начинает с нуля и всё забывает после работы. Остаются только его файлы${written > 0 ? ` (этот написал ${written})` : ""}; прочный урок нужно записать в правило или память.`,
   rowEnded: { done: "закончил", failed: "не закончил" },
   stripPlan: "план",
   stripPlanDone: "готов",
@@ -441,6 +453,12 @@ const tr = {
   rowDoing: { read: "okuyor", search: "arıyor", edit: "yazıyor", run: "komut çalıştırıyor", test: "kontrol ediyor", save: "sürüm kaydediyor", web: "internette", message: "haber gönderiyor", agent: "ajan yönetiyor", wait: "bekliyor", other: "düşünüyor" },
   rowStep: (done, total) => `adım ${done}/${total}`,
   rowPlan: (at, of, subject) => `planın ${at}/${of}. adımı: ${subject}`,
+  aboutWhy: "Neden çalışıyor",
+  aboutForRequest: "bu sohbette verdiğin iş için",
+  aboutLog: "Kaydı nerede",
+  aboutLogText: "okuduğu, yazdığı ve söylediği her şey bilgisayarında, aşağıdaki dosyada durur",
+  aboutLearns: "Öğreniyor mu",
+  aboutLearnsText: (written) => `hayır. Her ajan sıfırdan başlar ve iş bitince aklındakiler silinir. Sonraki işlere yalnızca yazdığı dosyalar kalır${written > 0 ? ` (bu ajan ${written} dosya yazdı)` : ""}; kalıcı ders için kurala ya da hafızaya yazılması gerekir.`,
   rowEnded: { done: "işini bitirdi", failed: "işi yarıda kaldı" },
   stripPlan: "plan",
   stripPlanDone: "tamam",
@@ -5256,6 +5274,38 @@ function draftTree(ui, view, on) {
   })));
 }
 
+let mainTranscript = "";
+const setMainTranscript = (path) => {
+  mainTranscript = path;
+};
+const agentLogPath = (transcript, agentId) => transcript.endsWith(".jsonl") && agentId ? `${transcript.slice(0, -".jsonl".length)}/subagents/agent-${agentId}.jsonl` : "";
+const linkOf$1 = (path) => `[${path.split("/").at(-1) ?? path}](<file://${encodeURI(path)}>)`;
+const writtenOf = (a) => (a.files ?? []).filter((file) => file.edits > 0).length;
+function aboutTree(ui, a, ctx) {
+  const { Box, Text, Markdown } = ui;
+  if (a.isMain === true)
+    return null;
+  const s = t();
+  const step = a.planStep;
+  const why = step === undefined ? s.aboutForRequest : s.rowPlan(step.at, step.of, step.subject);
+  const path = agentLogPath(mainTranscript, a.agentId);
+  const line = (label, text) => h(Text, {
+    wrap: "wrap"
+  }, h(Text, {
+    bold: true
+  }, `${label}: `), h(Text, null, text));
+  return h(Box, {
+    key: `about-${a.id}`,
+    flexDirection: "column",
+    rowGap: ctx.isDesktop ? 1 : 0
+  }, line(s.aboutWhy, why), h(Box, {
+    flexDirection: "column"
+  }, line(s.aboutLog, s.aboutLogText), path !== "" && Markdown ? h(Markdown, {
+    key: `about-log-${a.id}`,
+    text: linkOf$1(path)
+  }) : null), line(s.aboutLearns, s.aboutLearnsText(writtenOf(a))));
+}
+
 const BRIEF_SHOWN = 280;
 const ANSWER_SHOWN = 900;
 function saidTree(ui, said) {
@@ -5871,7 +5921,7 @@ function detailTree(ui, a, ctx) {
     flexDirection: "column",
     rowGap: 1,
     marginTop: 1
-  }, conversationTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), metricsTree(ui, a, ctx));
+  }, conversationTree(ui, a, ctx), aboutTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), metricsTree(ui, a, ctx));
 }
 
 const AT_WORK = { value: 1, isEstimate: true };
@@ -6922,6 +6972,10 @@ function onHubSources(on) {
   }).catch(($, e, next) => next(e));
 }
 const register = (on, options) => {
+  on("classic.SessionStart", async ($, e, next) => {
+    setMainTranscript(typeof e.transcript_path === "string" ? e.transcript_path : "");
+    return next(e);
+  }).catch(($, e, next) => next(e));
   on("session.start", async ($, e, next) => {
     setLang(await detectLang($, options.language));
     const started = await next(e);

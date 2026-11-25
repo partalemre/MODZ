@@ -99,6 +99,13 @@ export const ru: Strings = {
   rowDoing: { read: 'читает', search: 'ищет', edit: 'пишет', run: 'выполняет команду', test: 'проверяет', save: 'сохраняет версию', web: 'в интернете', message: 'передаёт сообщение', agent: 'ведёт агентов', wait: 'ждёт', other: 'думает' },
   rowStep: (done, total) => `шаг ${done}/${total}`,
   rowPlan: (at, of, subject) => `шаг плана ${at}/${of}: ${subject}`,
+  aboutWhy: 'Зачем он работает',
+  aboutForRequest: 'для задачи из этого чата',
+  aboutLog: 'Где его запись',
+  aboutLogText: 'всё, что он прочёл, написал и сказал, хранится на вашем компьютере, в файле ниже',
+  aboutLearns: 'Учится ли он',
+  aboutLearnsText: written =>
+    `нет. Каждый помощник начинает с нуля и всё забывает после работы. Остаются только его файлы${written > 0 ? ` (этот написал ${written})` : ''}; прочный урок нужно записать в правило или память.`,
   rowEnded: { done: 'закончил', failed: 'не закончил' },
   stripPlan: 'план',
   stripPlanDone: 'готов',

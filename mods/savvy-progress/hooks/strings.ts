@@ -159,6 +159,12 @@ export type Strings = {
   rowDoing: Record<WorkKind, string>
   rowStep: (done: number, total: number) => string
   rowPlan: (at: number, of: number, subject: string) => string
+  aboutWhy: string
+  aboutForRequest: string
+  aboutLog: string
+  aboutLogText: string
+  aboutLearns: string
+  aboutLearnsText: (written: number) => string
   rowEnded: { done: string; failed: string }
   /** The strip's plan and plan-window chips, and what the resting crab is said to do. */
   stripPlan: string

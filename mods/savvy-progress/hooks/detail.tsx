@@ -1,4 +1,5 @@
 import type { AgentRun } from '../types'
+import { aboutTree } from './about'
 import { conversationTree } from './conversation'
 import { filesTree, historyTree, nowTree } from './detail-work'
 import { t } from './i18n'
@@ -8,9 +9,9 @@ import { chipsSvg } from './metrics-svg'
 import { picture } from './pane-motion'
 import type { RowContext, Ui } from './rows'
 
-// The open card reads from the top as a conversation (the task, its answers, the follow-ups), the
-// field to ask it more and its stop while it runs, then its work: what it does this moment, its
-// latest calls, the files it touched, and what it used (time, tokens, ≈$, its 5h share).
+// The open card reads from the top as a conversation (the task, its answers, the follow-ups), why it runs,
+// where its record is and whether it learns, the field to ask it more and its stop while it runs, then its
+// work: what it does this moment, its latest calls, the files it touched, and what it used (time, tokens, ≈$).
 
 // The room a card needs to set the message field and the stop button side by side.
 const SIDE_BY_SIDE_PX = 480
@@ -66,6 +67,7 @@ export function detailTree(ui: Ui, a: AgentRun, ctx: RowContext) {
   return (
     <Box key={`detail-${a.id}`} flexDirection="column" rowGap={1} marginTop={1}>
       {conversationTree(ui, a, ctx)}
+      {aboutTree(ui, a, ctx)}
       {actionsTree(ui, a, ctx)}
       {hasWork && nowTree(ui, a, ctx)}
       {hasWork && historyTree(ui, a, ctx)}

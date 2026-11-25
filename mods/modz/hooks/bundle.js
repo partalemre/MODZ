@@ -5684,12 +5684,13 @@ const en = {
   rowDoing: { read: "reading", search: "searching", edit: "writing", run: "running a command", test: "checking", save: "saving a version", web: "on the internet", message: "sending word", agent: "leading agents", wait: "waiting", other: "thinking" },
   rowStep: (done, total) => `step ${done}/${total}`,
   rowPlan: (at, of, subject) => `plan step ${at}/${of}: ${subject}`,
-  aboutWhy: "Why it runs",
+  aboutWhy: "Why",
+  headerWhy: (at, of, subject) => `Working on plan step ${at}/${of}: ${subject}`,
   aboutForRequest: "for the task you gave in this chat",
-  aboutLog: "Where its record is",
-  aboutLogText: "everything it read, wrote and said stays on your computer, in the file below",
+  aboutLog: "Its record",
+  aboutLogText: "on your computer, in this file",
   aboutLearns: "Does it learn",
-  aboutLearnsText: (written) => `only within this chat: write to it below and it picks up where it left off. Nothing reaches other chats or later helpers by itself; only the files it wrote last${written > 0 ? ` (this one wrote ${written})` : ""}. This record is not read back either: a lesson stays only once written into a rule or memory.`,
+  aboutLearnsText: (written) => `it remembers within this chat; nothing reaches other chats by itself. What stays is the files it wrote${written > 0 ? ` (${written})` : ""}.`,
   rowEnded: { done: "finished", failed: "did not finish" },
   stripPlan: "plan",
   stripPlanDone: "done",
@@ -5853,12 +5854,13 @@ const ru = {
   rowDoing: { read: "читает", search: "ищет", edit: "пишет", run: "выполняет команду", test: "проверяет", save: "сохраняет версию", web: "в интернете", message: "передаёт сообщение", agent: "ведёт агентов", wait: "ждёт", other: "думает" },
   rowStep: (done, total) => `шаг ${done}/${total}`,
   rowPlan: (at, of, subject) => `шаг плана ${at}/${of}: ${subject}`,
-  aboutWhy: "Зачем он работает",
+  aboutWhy: "Зачем",
+  headerWhy: (at, of, subject) => `Работают над шагом плана ${at}/${of}: ${subject}`,
   aboutForRequest: "для задачи из этого чата",
-  aboutLog: "Где его запись",
-  aboutLogText: "всё, что он прочёл, написал и сказал, хранится на вашем компьютере, в файле ниже",
+  aboutLog: "Запись",
+  aboutLogText: "на вашем компьютере, в этом файле",
   aboutLearns: "Учится ли он",
-  aboutLearnsText: (written) => `только в этом чате: напишите ему ниже, и он продолжит с того же места. В другие чаты и к следующим помощникам само ничего не переходит; остаются только его файлы${written > 0 ? ` (этот написал ${written})` : ""}. Эта запись тоже не перечитывается: урок сохранится, только если записать его в правило или память.`,
+  aboutLearnsText: (written) => `помнит в этом чате; в другие чаты само ничего не переходит. Остаются его файлы${written > 0 ? ` (${written})` : ""}.`,
   rowEnded: { done: "закончил", failed: "не закончил" },
   stripPlan: "план",
   stripPlanDone: "готов",
@@ -6031,12 +6033,13 @@ const tr = {
   rowDoing: { read: "okuyor", search: "arıyor", edit: "yazıyor", run: "komut çalıştırıyor", test: "kontrol ediyor", save: "sürüm kaydediyor", web: "internette", message: "haber gönderiyor", agent: "ajan yönetiyor", wait: "bekliyor", other: "düşünüyor" },
   rowStep: (done, total) => `adım ${done}/${total}`,
   rowPlan: (at, of, subject) => `planın ${at}/${of}. adımı: ${subject}`,
-  aboutWhy: "Neden çalışıyor",
+  aboutWhy: "Neden",
+  headerWhy: (at, of, subject) => `Planın ${at}/${of}. adımı için çalışıyorlar: ${subject}`,
   aboutForRequest: "bu sohbette verdiğin iş için",
-  aboutLog: "Kaydı nerede",
-  aboutLogText: "okuduğu, yazdığı ve söylediği her şey bilgisayarında, aşağıdaki dosyada durur",
+  aboutLog: "Kaydı",
+  aboutLogText: "bilgisayarında, bu dosyada",
   aboutLearns: "Öğreniyor mu",
-  aboutLearnsText: (written) => `yalnızca bu sohbet içinde: aşağıdan ona yeniden yazabilirsin, kaldığı yerden sürer. Başka sohbetlere ve sonraki ajanlara hiçbir şey kendiliğinden geçmez; kalıcı olan yalnızca yazdığı dosyalardır${written > 0 ? ` (bu ajan ${written} dosya yazdı)` : ""}. Bu kayıt da sonradan okunmaz: bir dersin kalması için kurala ya da hafızaya yazılması gerekir.`,
+  aboutLearnsText: (written) => `bu sohbette hatırlar; başka sohbete kendiliğinden geçmez. Kalan, yazdığı dosyalardır${written > 0 ? ` (${written} dosya)` : ""}.`,
   rowEnded: { done: "işini bitirdi", failed: "işi yarıda kaldı" },
   stripPlan: "plan",
   stripPlanDone: "tamam",
@@ -6560,9 +6563,15 @@ function headerOf(d) {
       { label: s.time, value: fmtTime(d.sum.time) },
       ...share === null ? [] : [{ label: s.limitTile, value: `≈${s.pct(shareNumber(share))}` }]
     ],
-    home: d.home
+    home: d.home,
+    ...whyOf(d)
   };
 }
+const whyOf = (d) => {
+  const steps = new Set(d.running.filter((a) => a.isMain !== true).map((a) => a.planStep?.subject));
+  const step = d.running.find((a) => a.isMain !== true && a.planStep !== undefined)?.planStep;
+  return step !== undefined && steps.size === 1 ? { why: t().headerWhy(step.at, step.of, step.subject) } : {};
+};
 const drawnHeaderOf = (d) => headerOf({ ...d, sum: totals(d.list, d.drawnAt) });
 const totalsLineOf = (data) => data.stats.map((stat) => `${stat.label} ${stat.value}`).join(" · ");
 
@@ -6991,6 +7000,16 @@ const PERCENT$4 = { size: 26, y: 58 };
 const MONO_EM$3 = 0.6;
 const METER = { y: 70, h: 6 };
 const DIVIDER_Y = 92;
+const WHY = { size: 12.5, y: 93, room: 22, line: 17 };
+const whyLines = (text, width) => {
+  if (textWidth(text, WHY.size) <= width)
+    return [text];
+  const words = text.split(" ");
+  let cut = words.length - 1;
+  while (cut > 1 && textWidth(words.slice(0, cut).join(" "), WHY.size) > width)
+    cut -= 1;
+  return [words.slice(0, cut).join(" "), fitText(words.slice(cut).join(" "), WHY.size, width)];
+};
 const STATS = { top: 104, label: 11, value: 31, valueSize: 15, labelSize: 12, rule: 34, pitch: 46 };
 const BOLD$1 = 1.06;
 const DOT_R$3 = 3;
@@ -7010,18 +7029,18 @@ const columnsOf = (inner, stats) => {
 };
 const statSvg = (stat, { x, y, w }) => `<text class="m" x="${x}" y="${y + STATS.label}" font-family="${FONT$3}" font-size="${STATS.labelSize}">${xml(fitText(stat.label, STATS.labelSize, w))}</text>
 <text class="t" x="${x}" y="${y + STATS.value}" font-family="${FONT$3}" font-size="${STATS.valueSize}" font-weight="650" font-variant-numeric="tabular-nums">${xml(fitText(stat.value, STATS.valueSize, w))}</text>`;
-const statsSvg$1 = (stats, inner) => {
+const statsSvg$1 = (stats, inner, dy) => {
   const cols = columnsOf(inner, stats);
   const rows = Math.ceil(stats.length / cols);
   const colW = inner / cols;
   const parts = stats.map((stat, i) => {
     const col = i % cols;
-    const y = STATS.top + Math.floor(i / cols) * STATS.pitch;
+    const y = dy + STATS.top + Math.floor(i / cols) * STATS.pitch;
     const x = PAD$3 + col * colW;
     return statSvg(stat, { x, y, w: colW - GAP$1 });
   });
   return { body: parts.join(`
-`), height: STATS.top + (rows - 1) * STATS.pitch + STATS.rule + PAD$3 };
+`), height: dy + STATS.top + (rows - 1) * STATS.pitch + STATS.rule + PAD$3 };
 };
 const homeParts = (data, eyebrowEnd) => {
   if (!data.home)
@@ -7041,7 +7060,10 @@ const headerSvg$1 = (W, data) => {
   const percentW = isKnown ? Math.ceil(data.percent.length * PERCENT$4.size * MONO_EM$3) : 0;
   const isCountShown = textWidth(data.counts, LABEL$3.size) <= W - PAD$3 - eyebrowEnd - home.room - GAP$1;
   const headline = fitText(data.headline, HEADLINE.size * 1.06, W - PAD$3 - left - percentW - (isKnown ? GAP$1 : 0));
-  const stats = statsSvg$1(data.stats, inner);
+  const lines = data.why ? whyLines(data.why, inner) : [];
+  const dy = lines.length === 0 ? 0 : WHY.room + (lines.length - 1) * WHY.line;
+  const stats = statsSvg$1(data.stats, inner, dy);
+  const why = lines.map((line, i) => `<text class="s" x="${PAD$3}" y="${WHY.y + i * WHY.line}" font-family="${FONT$3}" font-size="${WHY.size}">${xml(line)}</text>`).join("");
   const dot = isLive ? `<circle class="f-edit live" cx="${left + DOT_R$3}" cy="${LABEL$3.y - 4}" r="${DOT_R$3}"/>` : "";
   const body = [
     `<rect class="card ln" x="0.5" y="0.5" width="${W - 1}" height="${stats.height - 1}" rx="${RADIUS}" stroke-width="1"/>`,
@@ -7052,7 +7074,8 @@ const headerSvg$1 = (W, data) => {
     `<text class="t" x="${left}" y="${HEADLINE.y}" font-family="${FONT$3}" font-size="${HEADLINE.size}" font-weight="620">${xml(headline)}</text>`,
     isKnown ? `<text class="${PERCENT_CLASS[data.tone]}" x="${W - PAD$3}" y="${PERCENT$4.y}" text-anchor="end" font-family="${MONO$4}" font-size="${PERCENT$4.size}" font-weight="650">${xml(data.percent)}</text>` : "",
     meterSvg(data.meter ?? { units: 0, done: 0, failed: 0, active: 0 }, { x: PAD$3, y: METER.y, w: inner, h: METER.h }),
-    `<line class="ln" x1="${PAD$3}" x2="${W - PAD$3}" y1="${DIVIDER_Y}" y2="${DIVIDER_Y}" stroke-width="1"/>`,
+    why,
+    `<line class="ln" x1="${PAD$3}" x2="${W - PAD$3}" y1="${DIVIDER_Y + dy}" y2="${DIVIDER_Y + dy}" stroke-width="1"/>`,
     stats.body
   ];
   return { source: paneSvg(W, stats.height, body.join(`
@@ -7197,7 +7220,8 @@ const runsOf = (cells) => {
 const TOP$1 = 6;
 const LANE_H = 24;
 const AXIS_H = 20;
-const LABEL_W = 74;
+const LABEL_MIN = 74;
+const LABEL_MAX$1 = 116;
 const RIGHT_PAD = 10;
 const NOW_ROOM = 44;
 const SEG_H = 10;
@@ -7216,11 +7240,12 @@ const ENDED_OPACITY = 0.6;
 const xOf = (scale, ms) => scale.x0 + (ms - scale.t0) / scale.span * (scale.x1 - scale.x0);
 const n1 = (v) => v.toFixed(1);
 function laneSvg(lane, y, scale) {
+  const labelW = scale.x0;
   const cy = y + LANE_H / 2;
   const isLive = lane.status === "running";
   const start = xOf(scale, lane.start);
   const end = Math.max(start + SEG_MIN, xOf(scale, lane.end));
-  const label = `<circle cx="${DOT_R$2 + 1}" cy="${cy}" r="${DOT_R$2}" fill="${lane.shell}"/><text class="${isLive ? "t" : "s"}" x="${DOT_R$2 * 2 + 8}" y="${cy + 4}" font-family="${FONT$3}" font-size="${NAME_SIZE$1}" font-weight="600">${xml(fitText(lane.name, NAME_SIZE$1, LABEL_W - DOT_R$2 * 2 - 12))}</text>`;
+  const label = `<circle cx="${DOT_R$2 + 1}" cy="${cy}" r="${DOT_R$2}" fill="${lane.shell}"/><text class="${isLive ? "t" : "s"}" x="${DOT_R$2 * 2 + 8}" y="${cy + 4}" font-family="${FONT$3}" font-size="${NAME_SIZE$1}" font-weight="600">${xml(fitText(lane.name, NAME_SIZE$1, labelW - DOT_R$2 * 2 - 12))}</text>`;
   const track = `<rect class="k" x="${n1(start)}" y="${cy - TRACK_H$1 / 2}" width="${n1(end - start)}" height="${TRACK_H$1}" rx="1"/>`;
   const segs = lane.segments.map((seg) => {
     const x = xOf(scale, seg.from);
@@ -7254,7 +7279,8 @@ const altOf$1 = (tl) => {
   return `${s.timeline}: ${tl.lanes.map((lane) => `${lane.name} ${fmtTime(lane.end - lane.start)} ${words[lane.status] ?? ""}`.trim()).join(", ")}`;
 };
 function timelineSvg(W, tl) {
-  const scale = { x0: LABEL_W, x1: W - RIGHT_PAD, t0: tl.t0, span: tl.span };
+  const named = Math.max(0, ...tl.lanes.map((lane) => textWidth(lane.name, NAME_SIZE$1))) + DOT_R$2 * 2 + 14;
+  const scale = { x0: Math.round(Math.min(LABEL_MAX$1, Math.max(LABEL_MIN, named))), x1: W - RIGHT_PAD, t0: tl.t0, span: tl.span };
   const bottom = TOP$1 + tl.lanes.length * LANE_H;
   const height = bottom + AXIS_H + 4;
   const lanes = tl.lanes.map((lane, i) => laneSvg(lane, TOP$1 + i * LANE_H, scale)).join("");
@@ -7660,7 +7686,7 @@ let mainTranscript = "";
 const agentLogPath = (transcript, agentId) => transcript.endsWith(".jsonl") && agentId ? `${transcript.slice(0, -".jsonl".length)}/subagents/agent-${agentId}.jsonl` : "";
 const linkOf$1 = (path) => `[${path.split("/").at(-1) ?? path}](<file://${encodeURI(path)}>)`;
 const writtenOf = (a) => (a.files ?? []).filter((file) => file.edits > 0).length;
-function aboutTree(ui, a, ctx) {
+function aboutTree(ui, a) {
   const { Box, Text, Markdown } = ui;
   if (a.isMain === true)
     return null;
@@ -7676,13 +7702,11 @@ function aboutTree(ui, a, ctx) {
   return h(Box, {
     key: `about-${a.id}`,
     flexDirection: "column",
-    rowGap: ctx.isDesktop ? 1 : 0
-  }, line(s.aboutWhy, why), h(Box, {
-    flexDirection: "column"
-  }, line(s.aboutLog, s.aboutLogText), path !== "" && Markdown ? h(Markdown, {
+    rowGap: 0
+  }, line(s.aboutWhy, why), path !== "" && Markdown ? h(Markdown, {
     key: `about-log-${a.id}`,
-    text: linkOf$1(path)
-  }) : null), line(s.aboutLearns, s.aboutLearnsText(writtenOf(a))));
+    text: `**${s.aboutLog}:** ${s.aboutLogText}: ${linkOf$1(path)}`
+  }) : null, line(s.aboutLearns, s.aboutLearnsText(writtenOf(a))));
 }
 
 const BRIEF_SHOWN = 280;
@@ -7930,7 +7954,6 @@ const TRACK_H = 8;
 const PCT_GAP = 8;
 const PCT_W = 46;
 const PCT_SIZE = 12.5;
-const STRIPE = 8;
 const CHIP_GAP$1 = 6;
 const CHIP_PAD = 9;
 const CHIP_TEXT = 11.5;
@@ -7938,22 +7961,19 @@ const RING_R$1 = 5.5;
 const RING_W = 2.2;
 const RING_SLOT = 17;
 const MIX_GAP = 2;
-const stripesOf = (filled, y, uid) => `<defs><pattern id="st${uid}" width="${STRIPE}" height="${STRIPE}" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="${STRIPE / 2}" height="${STRIPE}" fill="#fff" opacity=".28"/></pattern></defs><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" fill="url(#st${uid})"/>`;
 const FILL = { running: "f-edit", done: "m", failed: "f-danger" };
 const LABEL$2 = { running: "s", done: "m", failed: "f-danger" };
 const progressBarSvg = (W, a, opts) => {
   const y = (BAR_H$1 - TRACK_H) / 2;
   const barW = Math.max(TRACK_H, W - PCT_W - PCT_GAP);
-  const filled = Math.max(TRACK_H, Math.round(barW * opts.progress.value));
+  const isUnmeasured = a.status === "running" && opts.progress.isEstimate;
+  const filled = isUnmeasured ? 0 : Math.max(TRACK_H, Math.round(barW * opts.progress.value));
   const uid = a.id.replace(/\W/g, "");
   const track = `<rect class="k" x="0" y="${y}" width="${barW}" height="${TRACK_H}" rx="${TRACK_H / 2}"/>`;
   const clip = `<clipPath id="cl${uid}"><rect x="0" y="${y}" width="${filled}" height="${TRACK_H}" rx="${TRACK_H / 2}"/></clipPath>`;
-  const isRunning = a.status === "running";
-  const faint = isRunning && opts.progress.isEstimate ? ' opacity=".45"' : "";
-  const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? "f-edit"}"${faint} x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
-  const stripes = isRunning && opts.progress.isEstimate ? stripesOf(filled, y, uid) : "";
+  const bar = `<rect data-m-fill="" class="${FILL[a.status] ?? "f-edit"}" x="0" y="${y}" width="${filled}" height="${TRACK_H}"/>`;
   const label = `<text class="${LABEL$2[a.status] ?? "s"}" x="${barW + PCT_GAP}" y="${BAR_H$1 / 2 + PCT_SIZE * 0.34}" font-family="${MONO$4}" font-size="${PCT_SIZE}" font-weight="650">${xml(opts.label)}</text>`;
-  return paneSvg(W, BAR_H$1, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}${stripes}</g>${label}`);
+  return paneSvg(W, BAR_H$1, `${track}<defs>${clip}</defs><g clip-path="url(#cl${uid})">${bar}</g>${label}`);
 };
 const ringOf = (x, ring) => {
   const c = 2 * Math.PI * RING_R$1;
@@ -8307,10 +8327,10 @@ function detailTree(ui, a, ctx) {
     flexDirection: "column",
     rowGap: 1,
     marginTop: 1
-  }, conversationTree(ui, a, ctx), aboutTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), metricsTree(ui, a, ctx));
+  }, conversationTree(ui, a, ctx), actionsTree(ui, a, ctx), hasWork && nowTree(ui, a, ctx), hasWork && historyTree(ui, a, ctx), filesTree(ui, a, ctx), aboutTree(ui, a), metricsTree(ui, a, ctx));
 }
 
-const AT_WORK = { value: 1, isEstimate: true };
+const AT_WORK = { value: 0, isEstimate: true };
 const agentProgress = (a) => {
   if (a.status !== "running")
     return { value: 1, isEstimate: false };
@@ -9360,6 +9380,7 @@ const EN$3 = {
   notStarted: "not started",
   waitingSince: (duration) => `waiting · ${duration} ago`,
   waiting: "waiting",
+  tickedAtOnce: "ticked at once",
   allDone: "done",
   now: "now",
   running: "running",
@@ -9398,6 +9419,7 @@ const TR$3 = {
   notStarted: "başlamadı",
   waitingSince: (duration) => `bekliyor · ${duration} önce`,
   waiting: "bekliyor",
+  tickedAtOnce: "toplu işaretlendi",
   allDone: "tamam",
   now: "şimdi",
   running: "çalışıyor",
@@ -9537,6 +9559,7 @@ const MINUTE$1 = 60 * SECOND$2;
 const HOUR$1 = 60 * MINUTE$1;
 const PERCENT$2 = 100;
 const ETA_MIN_DONE = 3;
+const isTickedUnseen = (track) => track !== undefined && track.status === "completed" && track.startedAt === null && track.finishedAt !== null;
 function currentIndex(steps, tracks) {
   let best = -1;
   let bestStart = -1 / 0;
@@ -9953,7 +9976,7 @@ function rightText(model, step, isCurrent) {
   const elapsed = durationOf(model.tracks[step.key], model.now);
   const time = elapsed === null ? "" : formatDuration(elapsed);
   if (step.status === "completed")
-    return { text: time, cls: "lo" };
+    return { text: isTickedUnseen(model.tracks[step.key]) ? words$2().tickedAtOnce : time, cls: "lo" };
   if (isCurrent)
     return { text: time, cls: model.note === "" ? "mid" : "lo" };
   const checks = step.checksTotal > 0 ? `${step.checksDone}/${step.checksTotal}` : "";
@@ -10079,7 +10102,7 @@ function lookOf(step, context) {
   const elapsed = durationOf(context.track, context.now);
   const time = elapsed === null ? "" : formatDuration(elapsed);
   if (step.status === "completed")
-    return { glyph: "✓", isDim: true, isBold: false, right: time };
+    return { glyph: "✓", isDim: true, isBold: false, right: isTickedUnseen(context.track) ? words$2().tickedAtOnce : time };
   if (step.status === "in_progress") {
     const right = context.isCurrent ? time : [checksText(step), time].filter(Boolean).join(" · ");
     return { glyph: "◐", glyphColor: "claude", isDim: !context.isCurrent, isBold: context.isCurrent, right, rightColor: context.isCurrent ? "claude" : undefined };

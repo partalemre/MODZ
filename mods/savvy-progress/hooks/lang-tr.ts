@@ -116,6 +116,7 @@ export const tr: Strings = {
   rowStep: (done, total) => `adım ${done}/${total}`,
   rowPlan: (at, of, subject) => `planın ${at}/${of}. adımı: ${subject}`,
   aboutWhy: 'Neden çalışıyor',
+  headerWhy: (at, of, subject) => `Planın ${at}/${of}. adımı için çalışıyorlar: ${subject}`,
   aboutForRequest: 'bu sohbette verdiğin iş için',
   aboutLog: 'Kaydı nerede',
   aboutLogText: 'okuduğu, yazdığı ve söylediği her şey bilgisayarında, aşağıdaki dosyada durur',

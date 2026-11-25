@@ -107,6 +107,7 @@ const en = {
   rowStep: (done, total) => `step ${done}/${total}`,
   rowPlan: (at, of, subject) => `plan step ${at}/${of}: ${subject}`,
   aboutWhy: "Why it runs",
+  headerWhy: (at, of, subject) => `Working on plan step ${at}/${of}: ${subject}`,
   aboutForRequest: "for the task you gave in this chat",
   aboutLog: "Where its record is",
   aboutLogText: "everything it read, wrote and said stays on your computer, in the file below",
@@ -276,6 +277,7 @@ const ru = {
   rowStep: (done, total) => `шаг ${done}/${total}`,
   rowPlan: (at, of, subject) => `шаг плана ${at}/${of}: ${subject}`,
   aboutWhy: "Зачем он работает",
+  headerWhy: (at, of, subject) => `Работают над шагом плана ${at}/${of}: ${subject}`,
   aboutForRequest: "для задачи из этого чата",
   aboutLog: "Где его запись",
   aboutLogText: "всё, что он прочёл, написал и сказал, хранится на вашем компьютере, в файле ниже",
@@ -454,6 +456,7 @@ const tr = {
   rowStep: (done, total) => `adım ${done}/${total}`,
   rowPlan: (at, of, subject) => `planın ${at}/${of}. adımı: ${subject}`,
   aboutWhy: "Neden çalışıyor",
+  headerWhy: (at, of, subject) => `Planın ${at}/${of}. adımı için çalışıyorlar: ${subject}`,
   aboutForRequest: "bu sohbette verdiğin iş için",
   aboutLog: "Kaydı nerede",
   aboutLogText: "okuduğu, yazdığı ve söylediği her şey bilgisayarında, aşağıdaki dosyada durur",
@@ -2336,14 +2339,14 @@ const hubDetailOf = (view, running, others = {}) => {
   return `${lead}${SEP}${waits}`;
 };
 const LIVE_LINES = 3;
-const LABEL_MAX = 48;
+const LABEL_MAX$1 = 48;
 const COST_MIN = 0.005;
 const hubLiveOf = (agents) => {
   const running = [...agents.filter((a) => isRunning(a) && isMain(a)), ...crewOf$1(agents).filter(isRunning)];
   if (running.length === 0)
     return;
   const lines = running.slice(0, LIVE_LINES).map((a) => ({
-    label: clip$2(isMain(a) && a.lastPlain || a.description || a.type, LABEL_MAX),
+    label: clip$2(isMain(a) && a.lastPlain || a.description || a.type, LABEL_MAX$1),
     since: a.startedAt,
     ...a.costUsd >= COST_MIN ? { value: fmtCost(a.costUsd) } : {}
   }));
@@ -4441,9 +4444,15 @@ function headerOf(d) {
       { label: s.time, value: fmtTime(d.sum.time) },
       ...share === null ? [] : [{ label: s.limitTile, value: `≈${s.pct(shareNumber(share))}` }]
     ],
-    home: d.home
+    home: d.home,
+    ...whyOf$1(d)
   };
 }
+const whyOf$1 = (d) => {
+  const steps = new Set(d.running.filter((a) => a.isMain !== true).map((a) => a.planStep?.subject));
+  const step = d.running.find((a) => a.isMain !== true && a.planStep !== undefined)?.planStep;
+  return step !== undefined && steps.size === 1 ? { why: t().headerWhy(step.at, step.of, step.subject) } : {};
+};
 const drawnHeaderOf = (d) => headerOf({ ...d, sum: totals(d.list, d.drawnAt) });
 const totalsLineOf = (data) => data.stats.map((stat) => `${stat.label} ${stat.value}`).join(" · ");
 
@@ -4571,6 +4580,16 @@ const PERCENT$1 = { size: 26, y: 58 };
 const MONO_EM = 0.6;
 const METER = { y: 70, h: 6 };
 const DIVIDER_Y = 92;
+const WHY = { size: 12.5, y: 93, room: 22, line: 17 };
+const whyLines = (text, width) => {
+  if (textWidth(text, WHY.size) <= width)
+    return [text];
+  const words = text.split(" ");
+  let cut = words.length - 1;
+  while (cut > 1 && textWidth(words.slice(0, cut).join(" "), WHY.size) > width)
+    cut -= 1;
+  return [words.slice(0, cut).join(" "), fitText(words.slice(cut).join(" "), WHY.size, width)];
+};
 const STATS = { top: 104, label: 11, value: 31, valueSize: 15, labelSize: 12, rule: 34, pitch: 46 };
 const BOLD$1 = 1.06;
 const DOT_R$1 = 3;
@@ -4590,18 +4609,18 @@ const columnsOf = (inner, stats) => {
 };
 const statSvg = (stat, { x, y, w }) => `<text class="m" x="${x}" y="${y + STATS.label}" font-family="${FONT}" font-size="${STATS.labelSize}">${xml(fitText(stat.label, STATS.labelSize, w))}</text>
 <text class="t" x="${x}" y="${y + STATS.value}" font-family="${FONT}" font-size="${STATS.valueSize}" font-weight="650" font-variant-numeric="tabular-nums">${xml(fitText(stat.value, STATS.valueSize, w))}</text>`;
-const statsSvg = (stats, inner) => {
+const statsSvg = (stats, inner, dy) => {
   const cols = columnsOf(inner, stats);
   const rows = Math.ceil(stats.length / cols);
   const colW = inner / cols;
   const parts = stats.map((stat, i) => {
     const col = i % cols;
-    const y = STATS.top + Math.floor(i / cols) * STATS.pitch;
+    const y = dy + STATS.top + Math.floor(i / cols) * STATS.pitch;
     const x = PAD + col * colW;
     return statSvg(stat, { x, y, w: colW - GAP });
   });
   return { body: parts.join(`
-`), height: STATS.top + (rows - 1) * STATS.pitch + STATS.rule + PAD };
+`), height: dy + STATS.top + (rows - 1) * STATS.pitch + STATS.rule + PAD };
 };
 const homeParts = (data, eyebrowEnd) => {
   if (!data.home)
@@ -4621,7 +4640,10 @@ const headerSvg = (W, data) => {
   const percentW = isKnown ? Math.ceil(data.percent.length * PERCENT$1.size * MONO_EM) : 0;
   const isCountShown = textWidth(data.counts, LABEL$1.size) <= W - PAD - eyebrowEnd - home.room - GAP;
   const headline = fitText(data.headline, HEADLINE.size * 1.06, W - PAD - left - percentW - (isKnown ? GAP : 0));
-  const stats = statsSvg(data.stats, inner);
+  const lines = data.why ? whyLines(data.why, inner) : [];
+  const dy = lines.length === 0 ? 0 : WHY.room + (lines.length - 1) * WHY.line;
+  const stats = statsSvg(data.stats, inner, dy);
+  const why = lines.map((line, i) => `<text class="s" x="${PAD}" y="${WHY.y + i * WHY.line}" font-family="${FONT}" font-size="${WHY.size}">${xml(line)}</text>`).join("");
   const dot = isLive ? `<circle class="f-edit live" cx="${left + DOT_R$1}" cy="${LABEL$1.y - 4}" r="${DOT_R$1}"/>` : "";
   const body = [
     `<rect class="card ln" x="0.5" y="0.5" width="${W - 1}" height="${stats.height - 1}" rx="${RADIUS}" stroke-width="1"/>`,
@@ -4632,7 +4654,8 @@ const headerSvg = (W, data) => {
     `<text class="t" x="${left}" y="${HEADLINE.y}" font-family="${FONT}" font-size="${HEADLINE.size}" font-weight="620">${xml(headline)}</text>`,
     isKnown ? `<text class="${PERCENT_CLASS[data.tone]}" x="${W - PAD}" y="${PERCENT$1.y}" text-anchor="end" font-family="${MONO}" font-size="${PERCENT$1.size}" font-weight="650">${xml(data.percent)}</text>` : "",
     meterSvg(data.meter ?? { units: 0, done: 0, failed: 0, active: 0 }, { x: PAD, y: METER.y, w: inner, h: METER.h }),
-    `<line class="ln" x1="${PAD}" x2="${W - PAD}" y1="${DIVIDER_Y}" y2="${DIVIDER_Y}" stroke-width="1"/>`,
+    why,
+    `<line class="ln" x1="${PAD}" x2="${W - PAD}" y1="${DIVIDER_Y + dy}" y2="${DIVIDER_Y + dy}" stroke-width="1"/>`,
     stats.body
   ];
   return { source: paneSvg(W, stats.height, body.join(`
@@ -4823,7 +4846,8 @@ const runsOf = (cells) => {
 const TOP = 6;
 const LANE_H = 24;
 const AXIS_H = 20;
-const LABEL_W = 74;
+const LABEL_MIN = 74;
+const LABEL_MAX = 116;
 const RIGHT_PAD = 10;
 const NOW_ROOM = 44;
 const SEG_H = 10;
@@ -4842,11 +4866,12 @@ const ENDED_OPACITY = 0.6;
 const xOf = (scale, ms) => scale.x0 + (ms - scale.t0) / scale.span * (scale.x1 - scale.x0);
 const n1 = (v) => v.toFixed(1);
 function laneSvg(lane, y, scale) {
+  const labelW = scale.x0;
   const cy = y + LANE_H / 2;
   const isLive = lane.status === "running";
   const start = xOf(scale, lane.start);
   const end = Math.max(start + SEG_MIN, xOf(scale, lane.end));
-  const label = `<circle cx="${DOT_R + 1}" cy="${cy}" r="${DOT_R}" fill="${lane.shell}"/><text class="${isLive ? "t" : "s"}" x="${DOT_R * 2 + 8}" y="${cy + 4}" font-family="${FONT}" font-size="${NAME_SIZE}" font-weight="600">${xml(fitText(lane.name, NAME_SIZE, LABEL_W - DOT_R * 2 - 12))}</text>`;
+  const label = `<circle cx="${DOT_R + 1}" cy="${cy}" r="${DOT_R}" fill="${lane.shell}"/><text class="${isLive ? "t" : "s"}" x="${DOT_R * 2 + 8}" y="${cy + 4}" font-family="${FONT}" font-size="${NAME_SIZE}" font-weight="600">${xml(fitText(lane.name, NAME_SIZE, labelW - DOT_R * 2 - 12))}</text>`;
   const track = `<rect class="k" x="${n1(start)}" y="${cy - TRACK_H$1 / 2}" width="${n1(end - start)}" height="${TRACK_H$1}" rx="1"/>`;
   const segs = lane.segments.map((seg) => {
     const x = xOf(scale, seg.from);
@@ -4880,7 +4905,8 @@ const altOf = (tl) => {
   return `${s.timeline}: ${tl.lanes.map((lane) => `${lane.name} ${fmtTime(lane.end - lane.start)} ${words[lane.status] ?? ""}`.trim()).join(", ")}`;
 };
 function timelineSvg(W, tl) {
-  const scale = { x0: LABEL_W, x1: W - RIGHT_PAD, t0: tl.t0, span: tl.span };
+  const named = Math.max(0, ...tl.lanes.map((lane) => textWidth(lane.name, NAME_SIZE))) + DOT_R * 2 + 14;
+  const scale = { x0: Math.round(Math.min(LABEL_MAX, Math.max(LABEL_MIN, named))), x1: W - RIGHT_PAD, t0: tl.t0, span: tl.span };
   const bottom = TOP + tl.lanes.length * LANE_H;
   const height = bottom + AXIS_H + 4;
   const lanes = tl.lanes.map((lane, i) => laneSvg(lane, TOP + i * LANE_H, scale)).join("");
@@ -6683,12 +6709,12 @@ function liveLine(said, y, kind) {
   const fitted = fitText(said, SIZE.line, TEXT_W - MARK_GAP - ACT_ROOM);
   return `<g class="fresh"><circle class="f-run live" cx="${LANE.textX + 4}" cy="${y - 4}" r="3"/>${text("t", { x, y }, SIZE.line, fitted)}${lineAct(kind, { x, y, width: textWidth(fitted, SIZE.line) })}</g>`;
 }
-function whyOf(run, event) {
+function whyOf(run, event, isPlanSaid) {
   if (event?.because)
     return event.because;
   if (run.stepNote)
     return run.stepTotal ? `${t().rowStep(run.stepDone ?? 0, run.stepTotal)}: ${run.stepNote}` : run.stepNote;
-  return run.planStep === undefined ? "" : t().rowPlan(run.planStep.at, run.planStep.of, run.planStep.subject);
+  return run.planStep === undefined || isPlanSaid ? "" : t().rowPlan(run.planStep.at, run.planStep.of, run.planStep.subject);
 }
 function crabAt(run, stand) {
   const isWalking = stand.kind === "edit" || stand.kind === "run" || stand.kind === "test" || stand.kind === "save";
@@ -6699,7 +6725,7 @@ function crabAt(run, stand) {
   return `<g transform="translate(${stand.x},${stand.feetY}) scale(${stand.scale})"><g class="${stand.arrival}">${moving}</g></g>`;
 }
 const card = (height, body) => paneSvg(CARD_W, height, SCENE_CSS + ROW_CSS + `<g class="who"><rect width="${CARD_W}" height="${height}" fill="transparent"/>${body}</g>`);
-function rowCrab(run) {
+function rowCrab(run, isPlanSaid = false) {
   const kind = run.lastKind ?? "other";
   const name = lookOf(run).name;
   const history = run.history ?? [];
@@ -6707,7 +6733,7 @@ function rowCrab(run) {
   const before = history.at(-2);
   const nowY = TITLE_Y + (before === undefined ? 1 : 2) * LINE_H;
   const doing = now === undefined ? run.lastPlain || t().rowDoing[kind] : wordsOf(now);
-  const why = whyOf(run, now);
+  const why = whyOf(run, now, isPlanSaid);
   const whyY = nowY + LINE_H - 3;
   const lines = (before === undefined ? "" : pastLine(before, TITLE_Y + LINE_H)) + liveLine(doing, nowY, kind) + (why === "" ? "" : text("m", { x: LANE.textX + MARK_GAP, y: whyY }, SIZE.why, fitText(`↳ ${why}`, SIZE.why, TEXT_W - MARK_GAP)));
   const height = Math.max(why === "" ? nowY : whyY, nowY + 4) + PAD_BOTTOM;
@@ -6733,6 +6759,8 @@ function benchCard(runs) {
 const OWN = new Set([TOOL, STEP_TOOL]);
 const agents$1 = atom({ plugin: "savvy-progress", key: "agents" }, []);
 const crewRow = atom({ plugin: "savvy-progress", key: "crewRow" }, "");
+const saysPlan = (run) => run.planStep !== undefined && !run.stepNote && !run.history?.at(-1)?.because;
+const isSameStep = (run, above) => above !== undefined && saysPlan(above) && above.planStep?.subject === run.planStep?.subject;
 function crewAt(list, rows, newest) {
   const helpers = list.filter((run) => run.isMain !== true);
   const isHere = (run) => run.toolUseId !== undefined && rows.includes(run.toolUseId);
@@ -6755,7 +6783,7 @@ const framed = (ui, key, pic) => {
 };
 const crewOf = (ui, workers) => {
   const ended = workers.filter((worker) => !isRunning(worker));
-  return [...workers.filter(isRunning).map((worker) => framed(ui, `crab-${worker.id}`, rowCrab(worker))), ...ended.length === 0 ? [] : [framed(ui, "crabs-ended", benchCard(ended))]];
+  return [...workers.filter(isRunning).map((worker, i, all) => framed(ui, `crab-${worker.id}`, rowCrab(worker, isSameStep(worker, all[i - 1])))), ...ended.length === 0 ? [] : [framed(ui, "crabs-ended", benchCard(ended))]];
 };
 const nothing = (ui) => {
   const { Box } = ui;

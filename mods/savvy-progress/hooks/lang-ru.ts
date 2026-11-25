@@ -100,6 +100,7 @@ export const ru: Strings = {
   rowStep: (done, total) => `шаг ${done}/${total}`,
   rowPlan: (at, of, subject) => `шаг плана ${at}/${of}: ${subject}`,
   aboutWhy: 'Зачем он работает',
+  headerWhy: (at, of, subject) => `Работают над шагом плана ${at}/${of}: ${subject}`,
   aboutForRequest: 'для задачи из этого чата',
   aboutLog: 'Где его запись',
   aboutLogText: 'всё, что он прочёл, написал и сказал, хранится на вашем компьютере, в файле ниже',

@@ -50,12 +50,13 @@ function liveLine(said: string, y: number, kind: WorkKind): string {
   return `<g class="fresh"><circle class="f-run live" cx="${LANE.textX + 4}" cy="${y - 4}" r="3"/>${text('t', { x, y }, SIZE.line, fitted)}${lineAct(kind, { x, y, width: textWidth(fitted, SIZE.line) })}</g>`
 }
 
-// Why it is doing this: the sentence it wrote before the call, else its own note on its step, else its part of the plan.
-function whyOf(run: AgentRun, event: ToolEvent | undefined): string {
+// Why it is doing this: the sentence it wrote before the call, else its own note on its step, else its part of the
+// plan, said once for a run of helpers on the same step (`isPlanSaid`: the row above already said it).
+function whyOf(run: AgentRun, event: ToolEvent | undefined, isPlanSaid: boolean): string {
   if (event?.because) return event.because
   if (run.stepNote) return run.stepTotal ? `${t().rowStep(run.stepDone ?? 0, run.stepTotal)}: ${run.stepNote}` : run.stepNote
 
-  return run.planStep === undefined ? '' : t().rowPlan(run.planStep.at, run.planStep.of, run.planStep.subject)
+  return run.planStep === undefined || isPlanSaid ? '' : t().rowPlan(run.planStep.at, run.planStep.of, run.planStep.subject)
 }
 
 // `thought` empty: no bubble, for a crab at rest.
@@ -78,7 +79,7 @@ export type RowCrab = { source: string; alt: string; width: number; height: numb
 const card = (height: number, body: string): string => paneSvg(CARD_W, height, SCENE_CSS + ROW_CSS + `<g class="who"><rect width="${CARD_W}" height="${height}" fill="transparent"/>${body}</g>`)
 
 /** An agent at work: its crab at the line of what it is doing now, the work before it, and why. */
-export function rowCrab(run: AgentRun): RowCrab {
+export function rowCrab(run: AgentRun, isPlanSaid = false): RowCrab {
   const kind = run.lastKind ?? 'other'
   const name = lookOf(run).name
   const history = run.history ?? []
@@ -86,7 +87,7 @@ export function rowCrab(run: AgentRun): RowCrab {
   const before = history.at(-2)
   const nowY = TITLE_Y + (before === undefined ? 1 : 2) * LINE_H
   const doing = now === undefined ? run.lastPlain || t().rowDoing[kind] : wordsOf(now)
-  const why = whyOf(run, now)
+  const why = whyOf(run, now, isPlanSaid)
   const whyY = nowY + LINE_H - 3
   const lines = (before === undefined ? '' : pastLine(before, TITLE_Y + LINE_H)) + liveLine(doing, nowY, kind) + (why === '' ? '' : text('m', { x: LANE.textX + MARK_GAP, y: whyY }, SIZE.why, fitText(`↳ ${why}`, SIZE.why, TEXT_W - MARK_GAP)))
   const height = Math.max(why === '' ? nowY : whyY, nowY + 4) + PAD_BOTTOM

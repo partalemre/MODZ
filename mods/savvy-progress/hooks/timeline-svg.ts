@@ -1,4 +1,4 @@
-import { fitText, fmtTime, xml } from './format'
+import { fitText, fmtTime, textWidth, xml } from './format'
 import { t } from './i18n'
 import type { Lane, Timeline } from './timeline'
 import { FONT, MONO, paneSvg } from './theme'
@@ -11,7 +11,9 @@ import { FONT, MONO, paneSvg } from './theme'
 const TOP = 6
 const LANE_H = 24
 const AXIS_H = 20
-const LABEL_W = 74
+// The name column fits the longest name ("Ana oturum" whole, not "Ana otu…"), between these widths.
+const LABEL_MIN = 74
+const LABEL_MAX = 116
 const RIGHT_PAD = 10
 // Room the "şimdi" label takes left of the hairline: no tick label is drawn under it.
 const NOW_ROOM = 44
@@ -38,11 +40,12 @@ const xOf = (scale: Scale, ms: number): number => scale.x0 + ((ms - scale.t0) / 
 const n1 = (v: number): string => v.toFixed(1)
 
 function laneSvg(lane: Lane, y: number, scale: Scale): string {
+  const labelW = scale.x0
   const cy = y + LANE_H / 2
   const isLive = lane.status === 'running'
   const start = xOf(scale, lane.start)
   const end = Math.max(start + SEG_MIN, xOf(scale, lane.end))
-  const label = `<circle cx="${DOT_R + 1}" cy="${cy}" r="${DOT_R}" fill="${lane.shell}"/><text class="${isLive ? 't' : 's'}" x="${DOT_R * 2 + 8}" y="${cy + 4}" font-family="${FONT}" font-size="${NAME_SIZE}" font-weight="600">${xml(fitText(lane.name, NAME_SIZE, LABEL_W - DOT_R * 2 - 12))}</text>`
+  const label = `<circle cx="${DOT_R + 1}" cy="${cy}" r="${DOT_R}" fill="${lane.shell}"/><text class="${isLive ? 't' : 's'}" x="${DOT_R * 2 + 8}" y="${cy + 4}" font-family="${FONT}" font-size="${NAME_SIZE}" font-weight="600">${xml(fitText(lane.name, NAME_SIZE, labelW - DOT_R * 2 - 12))}</text>`
   const track = `<rect class="k" x="${n1(start)}" y="${cy - TRACK_H / 2}" width="${n1(end - start)}" height="${TRACK_H}" rx="1"/>`
   const segs = lane.segments.map(seg => {
     const x = xOf(scale, seg.from)
@@ -82,7 +85,8 @@ const altOf = (tl: Timeline): string => {
 }
 
 export function timelineSvg(W: number, tl: Timeline): TimelineDrawing {
-  const scale: Scale = { x0: LABEL_W, x1: W - RIGHT_PAD, t0: tl.t0, span: tl.span }
+  const named = Math.max(0, ...tl.lanes.map(lane => textWidth(lane.name, NAME_SIZE))) + DOT_R * 2 + 14
+  const scale: Scale = { x0: Math.round(Math.min(LABEL_MAX, Math.max(LABEL_MIN, named))), x1: W - RIGHT_PAD, t0: tl.t0, span: tl.span }
   const bottom = TOP + tl.lanes.length * LANE_H
   const height = bottom + AXIS_H + 4
   const lanes = tl.lanes.map((lane, i) => laneSvg(lane, TOP + i * LANE_H, scale)).join('')

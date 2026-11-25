@@ -133,7 +133,15 @@ export function headerOf(d: PaneData): HeaderData {
       ...(share === null ? [] : [{ label: s.limitTile, value: `≈${s.pct(shareNumber(share))}` }]),
     ],
     home: d.home,
+    ...whyOf(d),
   }
+}
+
+// The plan step the helpers at work serve, said once for them all; none when they serve no step or several.
+const whyOf = (d: PaneData): { why?: string } => {
+  const steps = new Set(d.running.filter(a => a.isMain !== true).map(a => a.planStep?.subject))
+  const step = d.running.find(a => a.isMain !== true && a.planStep !== undefined)?.planStep
+  return step !== undefined && steps.size === 1 ? { why: t().headerWhy(step.at, step.of, step.subject) } : {}
 }
 
 /** The header as the desktop draws it: its time on the drawn clock. */

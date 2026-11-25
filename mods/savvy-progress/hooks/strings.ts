@@ -160,6 +160,7 @@ export type Strings = {
   rowStep: (done: number, total: number) => string
   rowPlan: (at: number, of: number, subject: string) => string
   aboutWhy: string
+  headerWhy: (at: number, of: number, subject: string) => string
   aboutForRequest: string
   aboutLog: string
   aboutLogText: string

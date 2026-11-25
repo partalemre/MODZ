@@ -99,6 +99,7 @@ export const en: Strings = {
   rowStep: (done, total) => `step ${done}/${total}`,
   rowPlan: (at, of, subject) => `plan step ${at}/${of}: ${subject}`,
   aboutWhy: 'Why it runs',
+  headerWhy: (at, of, subject) => `Working on plan step ${at}/${of}: ${subject}`,
   aboutForRequest: 'for the task you gave in this chat',
   aboutLog: 'Where its record is',
   aboutLogText: 'everything it read, wrote and said stays on your computer, in the file below',

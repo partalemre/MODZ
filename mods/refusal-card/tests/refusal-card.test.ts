@@ -34,7 +34,7 @@ function stub(on: any, w: World): void {
 }
 
 const fresh = (over: Partial<World> = {}): World => ({ draft: '', filled: [], submitted: [], toasts: [], env: {}, ...over })
-const ended = (over: Record<string, unknown> = {}) => ({ answer: '', durationMs: 900, isAborted: false, turnId: 't1', reason: 'refusal', refusal: { category: 'cyber', explanation: null }, ...over })
+const ended = (over: Record<string, unknown> = {}): any => ({ answer: '', durationMs: 900, isAborted: false, turnId: 't1', reason: 'refusal', refusal: { category: 'cyber', explanation: null }, ...over })
 const band = ($: any, surface = 'terminal') =>
   $.ui.mount({
     plugin: 'refusal-card', component: 'AbovePrompt', requestId: 'band', surface, viewport: { columns: 120, rows: 40 },

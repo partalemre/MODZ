@@ -72,8 +72,7 @@ const notes: Notes = {
   statusFailed: error => `Kaydedilmemiş değişikliklere bakılamadı (git status çalışmadı: ${error})`,
   refMissing: ref => `${ref} bu bilgisayarda yok; hangi kayıtların silineceği bilinemiyor. Önce ortak kopyadan al (git fetch).`,
   noDroppedCommits: ref => `${ref} üzerinde silinecek kayıt yok (ortak kopyaya son bakışa göre).`,
-  cannotListMigrations: 'Bu araç için sırada bekleyen veritabanı değişiklikleri (migration) listelenemiyor.',
-  migrationsFailed: argv => `Sırada bekleyen veritabanı değişiklikleri listelenemedi (${argv} başarısız).`,
+  cannotListMigrations: 'Sırada bekleyen veritabanı değişiklikleri (migration) burada gösterilmiyor: listelemek, sen yanıt vermeden projenin kodunu çalıştırırdı.',
   unmeasured: reason => `Ölçülemedi: ${reason}`,
   missingFolder: dir => `${dir} klasörü bulunamadı, bu yüzden ne değişeceği ölçülemedi.`,
   fromInput: label => `${label} girdisindeki yollara uygulanıyor; neyi değiştireceği önceden ölçülemiyor.`,
@@ -81,6 +80,7 @@ const notes: Notes = {
   device: path => `Bu komut doğrudan ${path} aygıtına yazıyor; bütün bir diski silebilir.`,
   database: statement => `Bu komut veritabanında ${statement} çalıştırıyor. Neyin gideceği buradan ölçülemiyor ve buradan geri alınamaz.`,
   toolFailed: argv => `Neyin kaldırılacağı listelenemedi (${argv} başarısız).`,
+  toolNotTried: 'Neyi kaldıracağını görmek için önceden denenmedi: deneme, sen yanıt vermeden komutun adını verdiği bir programı başlatır ya da başka bir makineye bağlanırdı.',
   alsoDrops: (count, branch) => `Ayrıca ${branch} çalışma dalı ${count} kayıt geriye gider.`,
 }
 

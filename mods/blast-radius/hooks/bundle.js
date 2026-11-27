@@ -415,8 +415,7 @@ const notes$1 = {
   statusFailed: (error) => `Couldn't check for unsaved changes (git status failed: ${error})`,
   refMissing: (ref) => `This computer has no copy of ${ref}, so it's unknown which saved versions would be erased. Bring in the shared copy first (git fetch).`,
   noDroppedCommits: (ref) => `No saved versions on ${ref} would be erased (as of the last look at the shared copy).`,
-  cannotListMigrations: "The database changes waiting to run (migrations) can't be listed for this tool.",
-  migrationsFailed: (argv) => `The database changes waiting to run couldn't be listed (${argv} failed).`,
+  cannotListMigrations: "The database changes waiting to run (migrations) aren't shown here: listing them would run your project's code before you answer.",
   unmeasured: (reason) => `Couldn't measure it: ${reason}`,
   missingFolder: (dir) => `The folder ${dir} wasn't found, so what would change couldn't be measured.`,
   fromInput: (label) => `${label} acts on what its input lists, so what it would change can't be measured beforehand.`,
@@ -424,6 +423,7 @@ const notes$1 = {
   device: (path) => `This writes straight to the device ${path}, which can wipe a whole disk.`,
   database: (statement) => `This runs ${statement} on a database. What it would remove can't be measured from here, and it can't be undone from here.`,
   toolFailed: (argv) => `What it would remove couldn't be listed (${argv} failed).`,
+  toolNotTried: "This wasn't tried first to list what it removes: the trial would start a program the command names, or reach another machine, before you answer.",
   alsoDrops: (count, branch) => `It also takes the line of work ${branch} back by ${plural(count, "saved version", "saved versions")}.`
 };
 const edit$1 = {
@@ -537,8 +537,7 @@ const notes = {
   statusFailed: (error) => `Kaydedilmemiş değişikliklere bakılamadı (git status çalışmadı: ${error})`,
   refMissing: (ref) => `${ref} bu bilgisayarda yok; hangi kayıtların silineceği bilinemiyor. Önce ortak kopyadan al (git fetch).`,
   noDroppedCommits: (ref) => `${ref} üzerinde silinecek kayıt yok (ortak kopyaya son bakışa göre).`,
-  cannotListMigrations: "Bu araç için sırada bekleyen veritabanı değişiklikleri (migration) listelenemiyor.",
-  migrationsFailed: (argv) => `Sırada bekleyen veritabanı değişiklikleri listelenemedi (${argv} başarısız).`,
+  cannotListMigrations: "Sırada bekleyen veritabanı değişiklikleri (migration) burada gösterilmiyor: listelemek, sen yanıt vermeden projenin kodunu çalıştırırdı.",
   unmeasured: (reason) => `Ölçülemedi: ${reason}`,
   missingFolder: (dir) => `${dir} klasörü bulunamadı, bu yüzden ne değişeceği ölçülemedi.`,
   fromInput: (label) => `${label} girdisindeki yollara uygulanıyor; neyi değiştireceği önceden ölçülemiyor.`,
@@ -546,6 +545,7 @@ const notes = {
   device: (path) => `Bu komut doğrudan ${path} aygıtına yazıyor; bütün bir diski silebilir.`,
   database: (statement) => `Bu komut veritabanında ${statement} çalıştırıyor. Neyin gideceği buradan ölçülemiyor ve buradan geri alınamaz.`,
   toolFailed: (argv) => `Neyin kaldırılacağı listelenemedi (${argv} başarısız).`,
+  toolNotTried: "Neyi kaldıracağını görmek için önceden denenmedi: deneme, sen yanıt vermeden komutun adını verdiği bir programı başlatır ya da başka bir makineye bağlanırdı.",
   alsoDrops: (count, branch) => `Ayrıca ${branch} çalışma dalı ${count} kayıt geriye gider.`
 };
 const edit = {
@@ -1517,7 +1517,6 @@ async function dropStaleTab(tab) {
 
 const TIMEOUT_MS$4 = 15000;
 const SHORT_TIMEOUT_MS = 1e4;
-const MIGRATE_TIMEOUT_MS = 20000;
 function parseNumstat(stdout) {
   const stats = new Map;
   for (const line of lines(stdout)) {
@@ -1608,33 +1607,9 @@ async function measurePush(run, risk, cwd) {
   const note = dropped.length === 0 ? words().notes.noDroppedCommits(ref) : null;
   return { ...emptyReport("commits", summary, note), count: dropped.length, items, more: Math.max(0, dropped.length - LIST_MAX), where: ref };
 }
-const MIGRATION_LISTERS = {
-  django: { argv: ["python3", "manage.py", "showmigrations", "--plan"], isPending: (l) => l.startsWith("[ ]"), strip: (l) => l.slice(4) },
-  alembic: { argv: ["alembic", "history", "-r", "current:head"], isPending: (l) => l.includes("->"), strip: (l) => l },
-  rails: { argv: ["bin/rails", "db:migrate:status"], isPending: (l) => /^\s*down\b/.test(l), strip: (l) => l.trim() },
-  prisma: { argv: ["npx", "--no-install", "prisma", "migrate", "status"], isPending: (l) => /^\s{2}\S/.test(l), strip: (l) => l.trim() }
-};
-async function measureMigrations(run, risk, cwd) {
-  const lister = MIGRATION_LISTERS[risk.tool];
-  if (lister === undefined) {
-    return emptyReport("migrations", "run migrations", words().notes.cannotListMigrations);
-  }
-  let ran;
-  try {
-    ran = await run(lister.argv, { cwd, timeoutMs: MIGRATE_TIMEOUT_MS });
-  } catch (error) {
-    ran = { exitCode: -1, stdout: "", stderr: String(error) };
-  }
-  if (ran.exitCode !== 0) {
-    return emptyReport("migrations", `run ${risk.label}`, words().notes.migrationsFailed(lister.argv.join(" ")));
-  }
-  const pending = ran.stdout.split(`
-`).filter(lister.isPending).map(lister.strip);
-  const items = pending.slice(0, LIST_MAX).map((name) => ({ name, tag: "", meta: "", weight: 0 }));
-  if (pending.length === 0)
-    return nothingReport("migrations", `run ${risk.label}: nothing pending`);
-  const summary = `apply ${plural(pending.length, "pending migration", "pending migrations")}`;
-  return { ...emptyReport("migrations", summary, null), count: pending.length, items, more: Math.max(0, pending.length - LIST_MAX) };
+async function measureMigrations(risk) {
+  const summary = risk.tool === "unknown" ? "run migrations" : `run ${risk.label}`;
+  return emptyReport("migrations", summary, words().notes.cannotListMigrations);
 }
 
 const EDIT_TOOLS = /^(Write|Edit|MultiEdit|NotebookEdit)$/;
@@ -2191,7 +2166,7 @@ async function measureWorktree(run, risk, cwd) {
 }
 
 const TIMEOUT_MS$1 = 20000;
-const KUBE_KEPT = new Set(["-n", "--namespace", "-l", "--selector", "-f", "--filename", "--context", "--kubeconfig", "--field-selector"]);
+const KUBE_KEPT = new Set(["-n", "--namespace", "-l", "--selector", "-f", "--filename", "--context", "--field-selector"]);
 const KUBE_KEPT_BARE = new Set(["-A", "--all-namespaces", "-R", "--recursive"]);
 function kubeGet(args) {
   const kept = [];
@@ -2204,6 +2179,34 @@ function kubeGet(args) {
       kept.push(a);
   }
   return ["kubectl", "get", ...kept, "-o", "name"];
+}
+const namesKubeconfig = (args) => args.some((a) => a.split("=")[0] === "--kubeconfig");
+const RSYNC_SHORT = /^-[avrzhPuclptgoDHAXSxqimOJWkKLd]+$/;
+const RSYNC_BARE = new Set(["--archive", "--recursive", "--verbose", "--compress", "--checksum", "--update", "--human-readable", "--progress", "--partial", "--stats", "--force", "--links", "--perms", "--times", "--existing", "--ignore-existing", "--delete", "--delete-before", "--delete-during", "--delete-after", "--delete-delay", "--delete-excluded"]);
+const RSYNC_VALUED = new Set(["--exclude", "--include", "--exclude-from", "--include-from", "--max-delete", "--max-size", "--min-size"]);
+const REMOTE_OPERAND = /^[^/]*:/;
+function isSafeRsyncWord(word) {
+  if (word.startsWith("--"))
+    return RSYNC_BARE.has(word);
+  if (word.startsWith("-"))
+    return RSYNC_SHORT.test(word);
+  return !REMOTE_OPERAND.test(word);
+}
+function isLocalRsync(args) {
+  for (let i = 0;i < args.length; i += 1) {
+    const word = args[i] ?? "";
+    const isValued = RSYNC_VALUED.has(word.split("=")[0] ?? word);
+    if (isValued && !word.includes("="))
+      i += 1;
+    if (!isValued && !isSafeRsyncWord(word))
+      return false;
+  }
+  return true;
+}
+function isTriedFirst(risk) {
+  if (risk.tool === "rsync")
+    return isLocalRsync(risk.args);
+  return risk.tool !== "kubectl" || !namesKubeconfig(risk.args);
 }
 function dockerPrune(risk) {
   const isVolumes = risk.args[0] === "volume";
@@ -2227,6 +2230,8 @@ const LISTERS = {
 async function measureTool(run, risk, cwd) {
   if (risk.tool === "database")
     return emptyReport("unknown", `run ${risk.label} on the database`, words().notes.database(risk.label));
+  if (!isTriedFirst(risk))
+    return emptyReport("removals", `${risk.label} (not tried first)`, words().notes.toolNotTried);
   const { argv, pick } = LISTERS[risk.tool](risk);
   let ran;
   try {
@@ -2300,7 +2305,7 @@ function measureKind(run, risk, cwd) {
   if (risk.kind === "rm")
     return measureRm(run, risk, cwd);
   if (risk.kind === "migrate")
-    return measureMigrations(run, risk, cwd);
+    return measureMigrations(risk);
   if (risk.kind === "find")
     return measureFind(run, risk, cwd);
   if (risk.kind === "overwrite")

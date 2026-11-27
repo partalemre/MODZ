@@ -20,6 +20,8 @@ export type World = {
   // The panes the engine lists, as `$.ui.panes` answers.
   panes: string[]
   ran: unknown[]
+  // Every process the mod started itself (its measuring), by key.
+  runs: string[]
   toasts: string[]
   clock: MockClock | null
   // This chat's id and project, and the surfaces drawing it (none in a -p run).
@@ -47,7 +49,7 @@ export type World = {
 export const SURFACES = ['terminal', 'desktop'] as const
 
 export function world(over: Partial<World> = {}): World {
-  return { cwd: '/work/demo-app', beneath: { type: 'Text', children: [''] }, hasNoSleep: false, failing: [], isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], panes: [], ran: [], toasts: [], clock: null, sessionId: 'chat-a', root: '/work/demo-app', surfaces: ['desktop'], store: {}, links: {}, isToolError: false, logs: [], files: {}, reply: 'allow', asked: [], choice: null, questions: [], ...over }
+  return { cwd: '/work/demo-app', beneath: { type: 'Text', children: [''] }, hasNoSleep: false, failing: [], isPlaced: true, theme: 'dark', env: { MODZ_LANG: 'tr' }, answers: {}, opened: [], closed: [], panes: [], ran: [], runs: [], toasts: [], clock: null, sessionId: 'chat-a', root: '/work/demo-app', surfaces: ['desktop'], store: {}, links: {}, isToolError: false, logs: [], files: {}, reply: 'allow', asked: [], choice: null, questions: [], ...over }
 }
 
 const SECOND = 1000
@@ -167,6 +169,7 @@ export function stub(on: any, w: World): void {
   stubUi(on, w)
   on('ui.render', () => w.beneath)
   on('process.run', async (_: any, e: any) => {
+    w.runs.push(keyOf(e.argv))
     if (e.argv[0] === 'sleep' && w.hasNoSleep) throw new Error('sleep: not found')
     if (e.argv[0] === 'sleep' || e.argv[0] === 'ping') {
       await w.clock?.sleep((e.argv[0] === 'ping' ? 1 : Number(e.argv[1])) * SECOND)

@@ -71,7 +71,6 @@ export type Notes = {
   refMissing: (ref: string) => string
   noDroppedCommits: (ref: string) => string
   cannotListMigrations: string
-  migrationsFailed: (argv: string) => string
   unmeasured: (reason: string) => string
   missingFolder: (dir: string) => string
   // `… | xargs rm`: what it acts on comes from its input.
@@ -82,6 +81,8 @@ export type Notes = {
   // The statement or reset a database would run.
   database: (statement: string) => string
   toolFailed: (argv: string) => string
+  // Listing first would start a program the command names, or reach another machine.
+  toolNotTried: string
   // reset --hard to an older ref drops commits as well as the changes.
   alsoDrops: (count: number, branch: string) => string
 }

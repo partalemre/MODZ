@@ -64,8 +64,7 @@ const notes: Notes = {
   statusFailed: error => `Couldn't check for unsaved changes (git status failed: ${error})`,
   refMissing: ref => `This computer has no copy of ${ref}, so it's unknown which saved versions would be erased. Bring in the shared copy first (git fetch).`,
   noDroppedCommits: ref => `No saved versions on ${ref} would be erased (as of the last look at the shared copy).`,
-  cannotListMigrations: 'The database changes waiting to run (migrations) can\'t be listed for this tool.',
-  migrationsFailed: argv => `The database changes waiting to run couldn't be listed (${argv} failed).`,
+  cannotListMigrations: 'The database changes waiting to run (migrations) aren\'t shown here: listing them would run your project\'s code before you answer.',
   unmeasured: reason => `Couldn't measure it: ${reason}`,
   missingFolder: dir => `The folder ${dir} wasn't found, so what would change couldn't be measured.`,
   fromInput: label => `${label} acts on what its input lists, so what it would change can't be measured beforehand.`,
@@ -73,6 +72,7 @@ const notes: Notes = {
   device: path => `This writes straight to the device ${path}, which can wipe a whole disk.`,
   database: statement => `This runs ${statement} on a database. What it would remove can't be measured from here, and it can't be undone from here.`,
   toolFailed: argv => `What it would remove couldn't be listed (${argv} failed).`,
+  toolNotTried: 'This wasn\'t tried first to list what it removes: the trial would start a program the command names, or reach another machine, before you answer.',
   alsoDrops: (count, branch) => `It also takes the line of work ${branch} back by ${plural(count, 'saved version', 'saved versions')}.`,
 }
 

@@ -1,5 +1,5 @@
 // Measuring git's risky commands and migrations: the changes `reset --hard` and
-// `checkout -- .` drop, the commits a force push drops, the migrations to apply.
+// `checkout -- .` drop, the commits a force push drops; migrations are held unlisted.
 
 import { emptyReport, nothingReport, lines, plural, LIST_MAX } from './report'
 import type { Item, Report, Run } from './report'
@@ -10,7 +10,6 @@ type MigrateRisk = Extract<Risk, { kind: 'migrate' }>
 
 const TIMEOUT_MS = 15000
 const SHORT_TIMEOUT_MS = 10000
-const MIGRATE_TIMEOUT_MS = 20000
 
 /** `12\t4\tpath` per file; a rename's `a => b` is keyed by its new name. */
 export function parseNumstat(stdout: string): Map<string, { added: number; removed: number }> {
@@ -116,33 +115,10 @@ export async function measurePush(run: Run, risk: GitRisk, cwd: string): Promise
   return { ...emptyReport('commits', summary, note), count: dropped.length, items, more: Math.max(0, dropped.length - LIST_MAX), where: ref }
 }
 
-type Lister = { argv: string[]; isPending: (line: string) => boolean; strip: (line: string) => string }
+// Every tool's own status command (showmigrations, alembic history, db:migrate:status, prisma migrate status)
+// loads the project's code, and measuring happens before anyone answers: pending migrations are not listed.
+export async function measureMigrations(risk: MigrateRisk): Promise<Report> {
+  const summary = risk.tool === 'unknown' ? 'run migrations' : `run ${risk.label}`
 
-const MIGRATION_LISTERS: Record<string, Lister> = {
-  django: { argv: ['python3', 'manage.py', 'showmigrations', '--plan'], isPending: l => l.startsWith('[ ]'), strip: l => l.slice(4) },
-  alembic: { argv: ['alembic', 'history', '-r', 'current:head'], isPending: l => l.includes('->'), strip: l => l },
-  rails: { argv: ['bin/rails', 'db:migrate:status'], isPending: l => /^\s*down\b/.test(l), strip: l => l.trim() },
-  prisma: { argv: ['npx', '--no-install', 'prisma', 'migrate', 'status'], isPending: l => /^\s{2}\S/.test(l), strip: l => l.trim() },
-}
-
-export async function measureMigrations(run: Run, risk: MigrateRisk, cwd: string): Promise<Report> {
-  const lister = MIGRATION_LISTERS[risk.tool]
-  if (lister === undefined) {
-    return emptyReport('migrations', 'run migrations', words().notes.cannotListMigrations)
-  }
-  let ran
-  try {
-    ran = await run(lister.argv, { cwd, timeoutMs: MIGRATE_TIMEOUT_MS })
-  } catch (error) {
-    ran = { exitCode: -1, stdout: '', stderr: String(error) }
-  }
-  if (ran.exitCode !== 0) {
-    return emptyReport('migrations', `run ${risk.label}`, words().notes.migrationsFailed(lister.argv.join(' ')))
-  }
-  const pending = ran.stdout.split('\n').filter(lister.isPending).map(lister.strip)
-  const items = pending.slice(0, LIST_MAX).map(name => ({ name, tag: '', meta: '', weight: 0 }))
-  if (pending.length === 0) return nothingReport('migrations', `run ${risk.label}: nothing pending`)
-  const summary = `apply ${plural(pending.length, 'pending migration', 'pending migrations')}`
-
-  return { ...emptyReport('migrations', summary, null), count: pending.length, items, more: Math.max(0, pending.length - LIST_MAX) }
+  return emptyReport('migrations', summary, words().notes.cannotListMigrations)
 }

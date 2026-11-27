@@ -9,8 +9,8 @@ const ORIGIN = 'git -C /work/demo-app remote get-url origin'
 const LOGIN = 'gh api user --jq .login'
 const call = ($: any, command: string) => $.tool.call({ tool: 'Bash', command })
 
-async function bandText($: any): Promise<string> {
-  const ui = await mountBand($, 'terminal')
+async function bandText($: any, surface = 'terminal'): Promise<string> {
+  const ui = await mountBand($, surface)
   const text = JSON.stringify(await ui.drawn())
   await ui.unmount()
 
@@ -30,6 +30,7 @@ test('a push to someone else\'s repository runs and leaves a warning; a push to 
   const drawn = await bandText($)
   expect(drawn).toContain('Pushing to acme/payments, which is not yours')
   expect(drawn).toContain('owned by acme, you are partalemre')
+  expect(await bandText($, 'desktop')).toContain('Pushing to acme/payments, which is not yours')
 
   w.answers[ORIGIN] = 'https://github.com/PartalEmre/MODZ.git\n'
   await call($, 'git push')

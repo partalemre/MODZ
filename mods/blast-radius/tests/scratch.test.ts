@@ -33,8 +33,7 @@ test('a subagent deletes and overwrites files in its own scratchpad with no refu
   expect((await call($, `rm -rf ${SCRATCH}/probe`))?.deny).toBeUndefined()
   expect((await call($, `rm -rf ${REAL}/probe/*`))?.deny).toBeUndefined()
   expect((await call($, `cd ${SCRATCH} && rm -rf out && echo hi > notes.txt`))?.deny).toBeUndefined()
-  expect((await call($, `find ${SCRATCH}/cache -name '*.tmp' -delete`))?.deny).toBeUndefined()
-  expect(w.ran).toHaveLength(4)
+  expect(w.ran).toHaveLength(3)
 })
 
 test('a traversal, a sibling folder, another session or a symlink out of the scratchpad keeps the refusal', async ($, on) => {
@@ -52,6 +51,8 @@ test('a traversal, a sibling folder, another session or a symlink out of the scr
     `cd ${SCRATCH}/.. && rm -rf build`,
     `rm -rf ${SCRATCH}/$HOME`,
     `find -L ${SCRATCH} -delete`,
+    `find ${SCRATCH}/cache -name '*.tmp' -delete`,
+    `rm -rf ${SCRATCH}/{..,x}`,
     'rm -rf build',
   ]) {
     if (!/it came from a subagent/.test(String(((await call($, command)) as any)?.deny))) ran.push(command)
@@ -80,7 +81,8 @@ test('paths are read plainly or not at all', () => {
   expect(plainPath('x/.*', '/s')).toBeNull()
   expect(plainPath('x/', '/s')).toBeNull()
   expect(plainPath('x/*.log', '/s')).toBe('/s/x/*.log')
-  expect(writtenPaths(classify('find /s/a /s/b -name x -delete')!)).toEqual(['/s/a', '/s/b'])
+  expect(plainPath('{..,x}', '/s')).toBeNull()
+  expect(writtenPaths(classify('find /s/a -name x -delete')!)).toBeNull()
   expect(writtenPaths(classify('git reset --hard')!)).toBeNull()
   expect(writtenPaths(classify('echo x > "/s/*.txt"')!)).toBeNull()
 })

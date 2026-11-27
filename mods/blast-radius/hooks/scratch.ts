@@ -1,17 +1,17 @@
 // The session's own scratchpad (`scratchpad_dir`): a delete or overwrite whose every path resolves inside it
 // touches only this session's working files, so it runs with no card. A subagent can't answer a card, and its
 // scratch files were refused. Strict: only this session's folder, never the rest of /tmp; a `..`, a variable,
-// `~`, a glob before the last part, or a symlink that leads out keeps the usual check.
+// `~`, a brace, a glob before the last part, or a symlink that leads out keeps the usual check. `find` is not
+// covered: its actions (`-exec rm …`) reach past its roots.
 
 import type { EngineInterface } from 'claude-code'
 
 import type { Risk } from './classify'
 
 const TIMEOUT_MS = 5000
-const UNSAFE = /[$`~\\]/
-const GLOB = /[*?[\]{}]/
-// find options that follow symlinks, so a root inside the folder can reach out of it.
-const FOLLOWS = new Set(['-L', '-H', '-follow'])
+// A variable, a substitution, home, an escape or a brace (`{..,x}` expands to a parent).
+const UNSAFE = /[$`~\\{}]/
+const GLOB = /[*?[\]]/
 
 // Arguments only, never source: the scratchpad's real path, then per path the real path of its nearest existing
 // folder and whether the path itself is a symlink.
@@ -26,22 +26,11 @@ for p in "$@"; do
   printf 'P\\t%s\\t%s\\n' "$l" "$r"
 done`
 
-/** Where find starts: the words before its first test or action ('.' when it names none). */
-function findRoots(args: string[]): string[] | null {
-  if (args.some(arg => FOLLOWS.has(arg))) return null
-  const rest = args[0] === '-P' ? args.slice(1) : args
-  const end = rest.findIndex(arg => arg.startsWith('-') || arg === '(' || arg === '!')
-  const roots = end === -1 ? rest : rest.slice(0, end)
-
-  return roots.length === 0 ? ['.'] : roots
-}
-
 /** The paths a risk deletes or overwrites; null for a kind this exemption does not cover. */
 export function writtenPaths(risk: Risk): string[] | null {
   if (risk.isFromInput === true) return null
   if (risk.kind === 'rm') return risk.targets.length === 0 ? null : risk.targets
   if (risk.kind === 'overwrite') return risk.paths.length === 0 || risk.paths.some(path => GLOB.test(path)) ? null : risk.paths
-  if (risk.kind === 'find') return findRoots(risk.args)
 
   return null
 }
@@ -84,7 +73,8 @@ async function isInScratch($: EngineInterface, risk: Risk, place: { cwd: string;
 export async function outsideScratch($: EngineInterface, risks: Risk[]): Promise<Risk[]> {
   if (risks.length === 0) return risks
   try {
-    const scratch = (await $.session.info()).scratchpadDir
+    // `info` arrived after 2.1.296, whose types some checkouts still hold; an engine without it throws here.
+    const scratch = (await ($.session as typeof $.session & { info: () => Promise<{ scratchpadDir?: string }> }).info()).scratchpadDir
     if (scratch === undefined || scratch === '') return risks
     const place = { cwd: await $.session.cwd(), scratch }
     const kept: Risk[] = []

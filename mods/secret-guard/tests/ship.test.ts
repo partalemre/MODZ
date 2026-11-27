@@ -49,6 +49,17 @@ test('a push of clean commits runs; one that sends an env file is held', async (
   expect(((await ($ as any).tool.call({ tool: 'Bash', command: 'git -C . push' })) as any).deny).toMatch(/blocked this call/)
 })
 
+test('a push whose history git prints past the engine\'s cap is refused, not passed unread', async ($, on) => {
+  const setup = { ...english('Cancel'), truncated: [UNPUSHED] }
+  setup.git[UNPUSHED] = '+++ b/a.ts\n+const a = 1\n'
+  await start($, on, setup)
+
+  const pushed: any = await ($ as any).tool.call({ tool: 'Bash', command: 'git push' })
+
+  expect(pushed.deny).toMatch(/secret-guard could not check/)
+  expect(setup.ran).toHaveLength(0)
+})
+
 test('an injected skill command that pushes a key is refused without a card', async ($, on) => {
   // The event exists from Claude Code 2.1.332; an older engine raises none, so there is nothing to check there.
   if (typeof ($ as any).classic?.PreSkillShellCommand !== 'function') return

@@ -893,6 +893,8 @@ async function scanFile($, path) {
 function gitHost($, cwd) {
   const git = async (argv, dir) => {
     const ran = await $.process.run(["git", ...argv], { cwd: dir });
+    if (ran.isStdoutTruncated)
+      throw new Error(`git ${argv[0] ?? ""} printed more than secret-guard can read`);
     return ran.exitCode === 0 ? ran.stdout : "";
   };
   return { cwd, git, read: (path) => scanFile($, path) };

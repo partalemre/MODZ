@@ -2370,9 +2370,8 @@ function pinned(site, tree) {
 }
 
 const TIMEOUT_MS$1 = 5000;
-const UNSAFE = /[$`~\\]/;
-const GLOB = /[*?[\]{}]/;
-const FOLLOWS = new Set(["-L", "-H", "-follow"]);
+const UNSAFE = /[$`~\\{}]/;
+const GLOB = /[*?[\]]/;
 const SCRIPT = `# blast-radius scratch
 unset CDPATH
 s=$(cd -P -- "$1" 2>/dev/null && pwd -P) || exit 3
@@ -2383,14 +2382,6 @@ for p in "$@"; do
   l=0; [ -L "$p" ] && l=1
   printf 'P\\t%s\\t%s\\n' "$l" "$r"
 done`;
-function findRoots(args) {
-  if (args.some((arg) => FOLLOWS.has(arg)))
-    return null;
-  const rest = args[0] === "-P" ? args.slice(1) : args;
-  const end = rest.findIndex((arg) => arg.startsWith("-") || arg === "(" || arg === "!");
-  const roots = end === -1 ? rest : rest.slice(0, end);
-  return roots.length === 0 ? ["."] : roots;
-}
 function writtenPaths(risk) {
   if (risk.isFromInput === true)
     return null;
@@ -2398,8 +2389,6 @@ function writtenPaths(risk) {
     return risk.targets.length === 0 ? null : risk.targets;
   if (risk.kind === "overwrite")
     return risk.paths.length === 0 || risk.paths.some((path) => GLOB.test(path)) ? null : risk.paths;
-  if (risk.kind === "find")
-    return findRoots(risk.args);
   return null;
 }
 function plainPath(word, base) {

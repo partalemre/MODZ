@@ -1178,7 +1178,7 @@ const KEYWORDS = new Set(["then", "do", "else", "!", "if", "elif", "while", "unt
 const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh"]);
 const XARGS_VALUED = new Set(["-I", "-L", "-n", "-P", "-s", "-d", "-E", "-a", "--arg-file", "--delimiter", "--max-args", "--max-procs", "--max-lines", "--eof"]);
 const READ_ONLY$1 = new Set(["ls", "cat", "echo", "printf", "grep", "rg", "find", "less", "head", "tail", "cd", "git"]);
-const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
+const ASSIGNMENT$1 = /^[A-Za-z_][A-Za-z0-9_]*=/;
 const REDIRECT_ALONE = /^(?:\d*|&)(?:>>?|<)(?:&?\d*|\|)?$/;
 const REDIRECT_GLUED = /^(?:\d*|&)(?:>>?|<)/;
 const MAX_DEPTH = 4;
@@ -1186,7 +1186,7 @@ function readAssignments(segment, vars) {
   const words = tokenize(segment.trim());
   if (words[0] === "export")
     words.shift();
-  if (words.length === 0 || !words.every((word) => ASSIGNMENT.test(word)))
+  if (words.length === 0 || !words.every((word) => ASSIGNMENT$1.test(word)))
     return;
   for (const word of words) {
     const at = word.indexOf("=");
@@ -1249,7 +1249,7 @@ function stripPrefixes(input) {
     const first = words[0] ?? "";
     const name = commandName(first);
     const wrapper = Object.hasOwn(WRAPPERS, name) ? WRAPPERS[name] : undefined;
-    changed = ASSIGNMENT.test(first) || KEYWORDS.has(first) || wrapper !== undefined;
+    changed = ASSIGNMENT$1.test(first) || KEYWORDS.has(first) || wrapper !== undefined;
     if (!changed)
       break;
     words.shift();
@@ -1515,7 +1515,7 @@ async function dropStaleTab(tab) {
   await tab.close();
 }
 
-const TIMEOUT_MS$4 = 15000;
+const TIMEOUT_MS$6 = 15000;
 const SHORT_TIMEOUT_MS = 1e4;
 function parseNumstat(stdout) {
   const stats = new Map;
@@ -1535,14 +1535,14 @@ function changeItem(row, stats) {
 async function measureChanges(run, risk, cwd) {
   const paths = risk.paths ?? [];
   const spec = paths.length > 0 ? ["--", ...paths] : [];
-  const status = await run(["git", "status", "--porcelain", ...spec], { cwd, timeoutMs: TIMEOUT_MS$4 });
+  const status = await run(["git", "status", "--porcelain", ...spec], { cwd, timeoutMs: TIMEOUT_MS$6 });
   if (status.exitCode !== 0) {
     return emptyReport("changes", `${risk.label} (not a git repo here?)`, words().notes.statusFailed(status.stderr.trim().slice(0, 160)));
   }
   const rows = lines(status.stdout).filter((l) => l.length > 3 && !l.startsWith("??"));
   const dropsStaged = risk.kind === "git-reset" || risk.dropsStaged === true;
   const lost = dropsStaged ? rows : rows.filter((l) => l[1] !== " ");
-  const numstat = await run(["git", "diff", "--numstat", ...dropsStaged ? ["HEAD"] : [], ...spec.length > 0 ? spec : dropsStaged ? [] : ["--"]], { cwd, timeoutMs: TIMEOUT_MS$4 });
+  const numstat = await run(["git", "diff", "--numstat", ...dropsStaged ? ["HEAD"] : [], ...spec.length > 0 ? spec : dropsStaged ? [] : ["--"]], { cwd, timeoutMs: TIMEOUT_MS$6 });
   const stats = parseNumstat(numstat.stdout);
   const items = lost.map((row) => changeItem(row, stats)).sort((a, b) => b.weight - a.weight);
   if (lost.length === 0)
@@ -1553,7 +1553,7 @@ async function measureChanges(run, risk, cwd) {
   return { ...emptyReport("changes", summary, null), count: lost.length, items: items.slice(0, LIST_MAX), more: Math.max(0, lost.length - LIST_MAX), added, removed };
 }
 async function droppedCommits(run, range, cwd) {
-  const log = await run(["git", "log", "--oneline", "--no-decorate", ...range], { cwd, timeoutMs: TIMEOUT_MS$4 });
+  const log = await run(["git", "log", "--oneline", "--no-decorate", ...range], { cwd, timeoutMs: TIMEOUT_MS$6 });
   if (log.exitCode !== 0)
     throw new Error(`git log exited ${log.exitCode}: ${log.stderr.trim().slice(0, 120)}`);
   return lines(log.stdout).map((line) => ({ name: line.replace(/^\S+\s*/, ""), tag: line.split(" ")[0] ?? "", meta: "", weight: 0 }));
@@ -1600,7 +1600,7 @@ async function measurePush(run, risk, cwd) {
   if (known.exitCode !== 0) {
     return { ...emptyReport("commits", `force-push to ${ref}`, words().notes.refMissing(ref)), where: ref };
   }
-  const log = await run(["git", "log", "--oneline", "--no-decorate", `${source}..${ref}`], { cwd, timeoutMs: TIMEOUT_MS$4 });
+  const log = await run(["git", "log", "--oneline", "--no-decorate", `${source}..${ref}`], { cwd, timeoutMs: TIMEOUT_MS$6 });
   const dropped = lines(log.stdout);
   const items = dropped.slice(0, LIST_MAX).map((line) => ({ name: line.replace(/^\S+\s*/, ""), tag: line.split(" ")[0] ?? "", meta: "", weight: 0 }));
   const summary = dropped.length === 0 ? `force-push to ${ref}: drops no commits` : `force-push to ${ref}: drops ${plural(dropped.length, "commit", "commits")}`;
@@ -1919,7 +1919,7 @@ function houseHooks(on) {
 const GROUPS_MAX = 8;
 const FILES_PER_GROUP = 30;
 const CLEAN_PATHS_MAX = 2000;
-const TIMEOUT_MS$3 = 15000;
+const TIMEOUT_MS$5 = 15000;
 const REBUILDABLE = new Set([
   "node_modules",
   "dist",
@@ -2021,7 +2021,7 @@ async function isRebuildable(run, targets, cwd) {
   const isNamed = (path) => !/[*?[]/.test(path) && path.split("/").some((part) => REBUILDABLE.has(part));
   if (!targets.every(isNamed))
     return false;
-  const ignored = await run(["git", "check-ignore", "--", ...targets], { cwd, timeoutMs: TIMEOUT_MS$3 });
+  const ignored = await run(["git", "check-ignore", "--", ...targets], { cwd, timeoutMs: TIMEOUT_MS$5 });
   const listed = new Set(lines(ignored.stdout));
   return ignored.exitCode === 0 && targets.every((path) => listed.has(path));
 }
@@ -2034,7 +2034,7 @@ async function measureRm(run, risk, cwd) {
     return emptyReport("files", `${risk.label} ${targets} (paths decided at run time)`, words().notes.decidedAtRun(unknown.join(" ")));
   if (await isRebuildable(run, risk.targets, cwd))
     return nothingReport("files", `delete only git-ignored build output: ${targets}`);
-  const ran = await run(["bash", "-c", FILES_SCRIPT, "blast-radius", ...risk.targets], { cwd, timeoutMs: TIMEOUT_MS$3 });
+  const ran = await run(["bash", "-c", FILES_SCRIPT, "blast-radius", ...risk.targets], { cwd, timeoutMs: TIMEOUT_MS$5 });
   if (ran.exitCode !== 0)
     throw new Error(`the files scan exited ${ran.exitCode}`);
   const scan = parseScan(ran.stdout);
@@ -2070,7 +2070,7 @@ function cleanArgs(args) {
 }
 async function measureClean(run, risk, cwd) {
   const { flags, paths } = cleanArgs(risk.args);
-  const dry = await run(["git", "clean", "-n", ...flags, "--", ...paths], { cwd, timeoutMs: TIMEOUT_MS$3 });
+  const dry = await run(["git", "clean", "-n", ...flags, "--", ...paths], { cwd, timeoutMs: TIMEOUT_MS$5 });
   if (dry.exitCode !== 0)
     return emptyReport("files", "git clean (could not dry-run it)", words().notes.cleanFailed(dry.stderr.trim().slice(0, 160)));
   const gone = lines(dry.stdout).filter((l) => l.startsWith("Would remove ")).map((l) => l.slice("Would remove ".length));
@@ -2081,7 +2081,7 @@ async function measureClean(run, risk, cwd) {
 }
 async function pathsReport(run, found, cwd) {
   const { paths, summary } = found;
-  const ran = await run(["bash", "-c", FILES_SCRIPT, "blast-radius", ...paths.slice(0, CLEAN_PATHS_MAX)], { cwd, timeoutMs: TIMEOUT_MS$3 });
+  const ran = await run(["bash", "-c", FILES_SCRIPT, "blast-radius", ...paths.slice(0, CLEAN_PATHS_MAX)], { cwd, timeoutMs: TIMEOUT_MS$5 });
   const scan = parseScan(ran.stdout);
   if (scan.files)
     return filesReport(scan, summary, null);
@@ -2093,7 +2093,7 @@ async function measureFind(run, risk, cwd) {
     return emptyReport("files", `${risk.label} (could not dry-run it)`, words().notes.findUnmeasured);
   if (risk.args.some(isUnresolved))
     return emptyReport("files", `${risk.label} (paths decided at run time)`, words().notes.decidedAtRun(risk.args.filter(isUnresolved).join(" ")));
-  const dry = await run(["find", ...risk.args], { cwd, timeoutMs: TIMEOUT_MS$3 });
+  const dry = await run(["find", ...risk.args], { cwd, timeoutMs: TIMEOUT_MS$5 });
   if (dry.exitCode !== 0 && dry.stdout === "")
     throw new Error(`find exited ${dry.exitCode}: ${dry.stderr.trim().slice(0, 120)}`);
   const gone = lines(dry.stdout).filter((path) => path !== "." && path !== "./");
@@ -2102,7 +2102,7 @@ async function measureFind(run, risk, cwd) {
   return pathsReport(run, { paths: gone, summary: `delete ${plural(gone.length, "path", "paths")} find matches` }, cwd);
 }
 
-const TIMEOUT_MS$2 = 15000;
+const TIMEOUT_MS$4 = 15000;
 const listReport = (kind, items, summary) => ({
   ...emptyReport(kind, summary, null),
   count: items.length,
@@ -2114,7 +2114,7 @@ function stashItem(line) {
   return { name: at === -1 ? line : line.slice(at + 2), tag: at === -1 ? "" : line.slice(0, at), meta: "", weight: 0 };
 }
 async function measureStash(run, risk, cwd) {
-  const list = await run(["git", "stash", "list"], { cwd, timeoutMs: TIMEOUT_MS$2 });
+  const list = await run(["git", "stash", "list"], { cwd, timeoutMs: TIMEOUT_MS$4 });
   if (list.exitCode !== 0)
     return emptyReport("stashes", risk.label, words().notes.statusFailed(list.stderr.trim().slice(0, 160)));
   const all = lines(list.stdout).map(stashItem);
@@ -2129,7 +2129,7 @@ const onlyOn = (ref, exclude, kind) => [ref, "--not", "HEAD", `--exclude=${exclu
 async function measureBranchDelete(run, risk, cwd) {
   const dropped = [];
   for (const branch of risk.args) {
-    const known = await run(["git", "rev-parse", "--verify", "--quiet", `refs/heads/${branch}`], { cwd, timeoutMs: TIMEOUT_MS$2 });
+    const known = await run(["git", "rev-parse", "--verify", "--quiet", `refs/heads/${branch}`], { cwd, timeoutMs: TIMEOUT_MS$4 });
     if (known.exitCode === 0)
       dropped.push(...await droppedCommits(run, onlyOn(`refs/heads/${branch}`, branch, "--branches"), cwd));
   }
@@ -2143,7 +2143,7 @@ async function measurePushDelete(run, risk, cwd) {
   const dropped = [];
   const refs = branches.map((branch) => `${remote}/${branch.replace(/^refs\/heads\//, "")}`);
   for (const ref of refs) {
-    const known = await run(["git", "rev-parse", "--verify", "--quiet", `refs/remotes/${ref}`], { cwd, timeoutMs: TIMEOUT_MS$2 });
+    const known = await run(["git", "rev-parse", "--verify", "--quiet", `refs/remotes/${ref}`], { cwd, timeoutMs: TIMEOUT_MS$4 });
     if (known.exitCode !== 0)
       return { ...emptyReport("commits", `delete ${ref}`, words().notes.refMissing(ref)), where: ref };
     dropped.push(...await droppedCommits(run, onlyOn(`refs/remotes/${ref}`, ref, "--remotes"), cwd));
@@ -2156,7 +2156,7 @@ async function measureWorktree(run, risk, cwd) {
   const path = risk.args[0];
   if (path === undefined)
     return nothingReport("changes", "remove no worktree");
-  const status = await run(["git", "-C", path, "status", "--porcelain", "--untracked-files=all"], { cwd, timeoutMs: TIMEOUT_MS$2 });
+  const status = await run(["git", "-C", path, "status", "--porcelain", "--untracked-files=all"], { cwd, timeoutMs: TIMEOUT_MS$4 });
   if (status.exitCode !== 0)
     return emptyReport("changes", `${risk.label} ${path}`, words().notes.statusFailed(status.stderr.trim().slice(0, 160)));
   const rows = lines(status.stdout).map((row) => ({ name: row.slice(3), tag: row.slice(0, 2).trim(), meta: "", weight: 0 }));
@@ -2165,7 +2165,7 @@ async function measureWorktree(run, risk, cwd) {
   return listReport("changes", rows, `remove the worktree ${path} with ${plural(rows.length, "uncommitted file", "uncommitted files")}`);
 }
 
-const TIMEOUT_MS$1 = 20000;
+const TIMEOUT_MS$3 = 20000;
 const KUBE_KEPT = new Set(["-n", "--namespace", "-l", "--selector", "-f", "--filename", "--context", "--field-selector"]);
 const KUBE_KEPT_BARE = new Set(["-A", "--all-namespaces", "-R", "--recursive"]);
 function kubeGet(args) {
@@ -2235,7 +2235,7 @@ async function measureTool(run, risk, cwd) {
   const { argv, pick } = LISTERS[risk.tool](risk);
   let ran;
   try {
-    ran = await run(argv, { cwd, timeoutMs: TIMEOUT_MS$1 });
+    ran = await run(argv, { cwd, timeoutMs: TIMEOUT_MS$3 });
   } catch (error) {
     ran = { exitCode: -1, stdout: "", stderr: String(error) };
   }
@@ -2249,7 +2249,7 @@ async function measureTool(run, risk, cwd) {
   return { ...emptyReport("removals", summary, null), count: names.length, items, more: Math.max(0, names.length - LIST_MAX), where: risk.tool };
 }
 
-const TIMEOUT_MS = 15000;
+const TIMEOUT_MS$2 = 15000;
 const WRITE_SCRIPT = `
 for p in "$@"; do
   case "$p" in "~"|"~/"*) p="$HOME\${p#\\~}";; esac
@@ -2272,7 +2272,7 @@ async function measureWrite(run, risk, cwd) {
     return emptyReport("overwrites", `${risk.label} (writes the device ${device})`, words().notes.device(device));
   if (paths.length === 0)
     return nothingReport("overwrites", `${risk.label}: writes only temp files or paths named at run time`);
-  const ran = await run(["bash", "-c", WRITE_SCRIPT, "blast-radius", ...paths], { cwd, timeoutMs: TIMEOUT_MS });
+  const ran = await run(["bash", "-c", WRITE_SCRIPT, "blast-radius", ...paths], { cwd, timeoutMs: TIMEOUT_MS$2 });
   if (ran.exitCode !== 0)
     throw new Error(`the overwrite scan exited ${ran.exitCode}`);
   const lost = [];
@@ -2367,6 +2367,199 @@ function pinned(site, tree) {
     return tree;
   const ctx = { site: `${site.surface}\x00${site.component ?? ""}\x00${site.requestId ?? ""}`, seen: new Map };
   return pinNode(tree, ctx);
+}
+
+const TIMEOUT_MS$1 = 5000;
+const UNSAFE = /[$`~\\{}]/;
+const GLOB = /[*?[\]]/;
+const SCRIPT = `# blast-radius scratch
+unset CDPATH
+s=$(cd -P -- "$1" 2>/dev/null && pwd -P) || exit 3
+printf 'S\\t%s\\n' "$s"; shift
+for p in "$@"; do
+  d=$(dirname -- "$p"); while [ ! -d "$d" ]; do d=$(dirname -- "$d"); done
+  r=$(cd -P -- "$d" 2>/dev/null && pwd -P) || r=
+  l=0; [ -L "$p" ] && l=1
+  printf 'P\\t%s\\t%s\\n' "$l" "$r"
+done`;
+function writtenPaths(risk) {
+  if (risk.isFromInput === true)
+    return null;
+  if (risk.kind === "rm")
+    return risk.targets.length === 0 ? null : risk.targets;
+  if (risk.kind === "overwrite")
+    return risk.paths.length === 0 || risk.paths.some((path) => GLOB.test(path)) ? null : risk.paths;
+  return null;
+}
+function plainPath(word, base) {
+  if (word === "" || UNSAFE.test(word) || !base.startsWith("/") || UNSAFE.test(base))
+    return null;
+  const parts = `${word.startsWith("/") ? "" : `${base}/`}${word}`.split("/").filter((part) => part !== "" && part !== ".");
+  if (parts.length === 0 || parts.includes("..") || word.endsWith("/"))
+    return null;
+  const last = parts[parts.length - 1] ?? "";
+  if (parts.slice(0, -1).some((part) => GLOB.test(part)) || GLOB.test(last) && last.startsWith("."))
+    return null;
+  return `/${parts.join("/")}`;
+}
+const isUnder = (path, root) => path === root || path.startsWith(`${root}/`);
+function isAllInside(stdout, count) {
+  const rows = stdout.split(`
+`).filter((line) => line !== "").map((line) => line.split("\t"));
+  const root = rows[0]?.[0] === "S" ? rows[0][1] ?? "" : "";
+  const paths = rows.slice(1);
+  if (root === "" || paths.length !== count)
+    return false;
+  return paths.every(([tag, link, real]) => tag === "P" && link === "0" && real !== undefined && real !== "" && isUnder(real, root));
+}
+async function isInScratch($, risk, place) {
+  const words = writtenPaths(risk);
+  if (words === null)
+    return false;
+  const base = risk.dir === null ? place.cwd : plainPath(risk.dir, place.cwd) ?? "";
+  const paths = words.map((word) => plainPath(word, base));
+  if (paths.some((path) => path === null))
+    return false;
+  const ran = await $.process.run(["bash", "-c", SCRIPT, "blast-radius", place.scratch, ...paths], { timeoutMs: TIMEOUT_MS$1 });
+  return ran.exitCode === 0 && isAllInside(ran.stdout, paths.length);
+}
+async function outsideScratch($, risks) {
+  if (risks.length === 0)
+    return risks;
+  try {
+    const scratch = (await $.session.info()).scratchpadDir;
+    if (scratch === undefined || scratch === "")
+      return risks;
+    const place = { cwd: await $.session.cwd(), scratch };
+    const kept = [];
+    for (const risk of risks)
+      if (!await isInScratch($, risk, place))
+        kept.push(risk);
+    return kept;
+  } catch {
+    $.ui.log("blast-radius: could not check the scratchpad, so the usual check applies", { to: "debug" });
+    return risks;
+  }
+}
+
+const TIMEOUT_MS = 3000;
+const GIT_VALUED = new Set(["-C", "-c", "--git-dir", "--work-tree", "--namespace"]);
+const OWNER = /github\.com[:/]+([^/\s]+)\/([^/\s]+?)(?:\.git)?\/?$/i;
+const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*=/;
+function pushesOf(command) {
+  const found = [];
+  for (const segment of splitCommands(command)) {
+    const words = tokenize(segment.trim());
+    let at = 0;
+    while (ASSIGNMENT.test(words[at] ?? ""))
+      at += 1;
+    if (words[at] !== "git")
+      continue;
+    let dir = null;
+    at += 1;
+    while ((words[at] ?? "").startsWith("-")) {
+      if (words[at] === "-C")
+        dir = words[at + 1] ?? null;
+      at += GIT_VALUED.has(words[at] ?? "") ? 2 : 1;
+    }
+    if (words[at] !== "push")
+      continue;
+    const remote = words.slice(at + 1).find((word) => !word.startsWith("-")) ?? "origin";
+    found.push({ dir, remote });
+  }
+  return found;
+}
+function repoOf(url) {
+  const match = OWNER.exec(url.trim());
+  return match === null ? null : { owner: match[1] ?? "", name: match[2] ?? "" };
+}
+function warningFor(url, login) {
+  const repo = repoOf(url);
+  if (repo !== null && login !== null && repo.owner.toLowerCase() === login.toLowerCase())
+    return null;
+  return { repo: repo === null ? url.trim() || "this repository" : `${repo.owner}/${repo.name}`, owner: repo?.owner ?? null, login };
+}
+const WORDS = {
+  en: {
+    head: (repo) => `Pushing to ${repo}, which is not yours`,
+    why: (w) => w.login === null ? "gh is not signed in, so its owner could not be checked" : w.owner === null ? "not a GitHub repository you own" : `owned by ${w.owner}, you are ${w.login}`,
+    dismiss: "Got it"
+  },
+  tr: {
+    head: (repo) => `${repo} deposuna gönderiliyor, depo senin değil`,
+    why: (w) => w.login === null ? "gh oturumu açık değil, sahibi denetlenemedi" : w.owner === null ? "senin GitHub deponu değil" : `sahibi ${w.owner}, sen ${w.login}`,
+    dismiss: "Tamam"
+  }
+};
+const state = { told: new Set, shown: null };
+function resetShip() {
+  state.login = undefined;
+  state.told.clear();
+  state.shown = null;
+}
+async function loginOf($) {
+  if (state.login !== undefined)
+    return state.login;
+  const ran = await $.process.run(["gh", "api", "user", "--jq", ".login"], { timeoutMs: TIMEOUT_MS });
+  state.login = ran.exitCode === 0 && ran.stdout.trim() !== "" ? ran.stdout.trim() : null;
+  return state.login;
+}
+async function check($, push) {
+  const cwd = await $.session.cwd();
+  const dir = push.dir === null ? cwd : push.dir.startsWith("/") ? push.dir : `${cwd}/${push.dir}`;
+  const isUrl = /[:/]/.test(push.remote);
+  const ran = isUrl ? null : await $.process.run(["git", "-C", dir, "remote", "get-url", push.remote], { timeoutMs: TIMEOUT_MS });
+  if (ran !== null && ran.exitCode !== 0)
+    return;
+  const warning = warningFor(ran === null ? push.remote : ran.stdout, await loginOf($));
+  if (warning === null || state.told.has(warning.repo))
+    return;
+  state.told.add(warning.repo);
+  state.shown = warning;
+  $.ui.invalidate("ui.render");
+}
+function drawWarning($, ui, shown) {
+  const { Box, Text, Button } = ui;
+  const says = pick(WORDS);
+  const dismiss = () => {
+    state.shown = null;
+    $.ui.invalidate("ui.render");
+  };
+  return h(Box, {
+    key: "blast-radius-ship",
+    flexDirection: "row",
+    flexWrap: "wrap",
+    columnGap: 2
+  }, h(Text, {
+    color: "warning"
+  }, `⚠ ${says.head(shown.repo)}`), h(Text, {
+    dimColor: true
+  }, says.why(shown)), h(Button, {
+    key: "blast-radius-ship-ok",
+    label: says.dismiss,
+    variant: "secondary",
+    onPress: dismiss
+  }));
+}
+function shipHooks(on) {
+  on("tool.call", { tool: "Bash" }, async ($, e, next) => {
+    const pushes = pushesOf(String(e.command ?? ""));
+    for (const push of pushes) {
+      check($, push).catch((cause) => $.ui.log(`blast-radius: could not check the push target: ${String(cause)}`, { to: "debug" }));
+    }
+    return next(e);
+  });
+  on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
+    const shown = state.shown;
+    if (shown === null || e.props.hasSurvey)
+      return next(e);
+    const theirs = await next(e);
+    const ui = $.ui.resolve(e);
+    const { Box } = ui;
+    return h(Box, {
+      flexDirection: "column"
+    }, drawWarning($, ui, shown), theirs);
+  });
 }
 
 const FILES_COLLAPSED = 6;
@@ -2582,6 +2775,7 @@ function holdHooks(on) {
       return;
     }));
     resetHouse();
+    resetShip();
     try {
       await refreshTheme($);
     } catch {
@@ -2591,7 +2785,7 @@ function holdHooks(on) {
   });
   on("tool.call", { tool: "Bash" }, async ($, e, next) => {
     const command = String(e.command ?? "");
-    const risks = classifyAll(command);
+    const risks = await outsideScratch($, classifyAll(command));
     if (risks.length === 0)
       return next(e);
     if (await isUnattended($, e.agentId))
@@ -2658,6 +2852,7 @@ const register = (on) => {
   houseHooks(on);
   editHooks(on);
   drawHooks(on);
+  shipHooks(on);
 };
 
 export { register };

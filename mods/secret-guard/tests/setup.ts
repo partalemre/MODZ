@@ -1,7 +1,7 @@
 // The engine beneath secret-guard in tests: files, git answers, the dialog answered with `choice`.
 
 // `env` is what `$.env.get` answers: MODZ_LANG=tr for the Turkish tests, unset for the English ones.
-export type Setup = { /** Where the session works now (`/work` when not given), and each folder git was started in. */ cwd?: string; gitDirs?: string[]; choice: string; env: Record<string, string>; asked: string[]; files: Record<string, string>; ran: any[]; git: Record<string, string>; cards: string[][]; trees: any[]; dialogs: any[]; theme: string; surface: 'terminal' | 'desktop'; columns?: number; surfaces?: string[]; statuses: (string | undefined)[]; stored: unknown[]; drawn?: unknown }
+export type Setup = { /** git answers cut at the engine's output cap, by key. */ truncated?: string[]; /** Where the session works now (`/work` when not given), and each folder git was started in. */ cwd?: string; gitDirs?: string[]; choice: string; env: Record<string, string>; asked: string[]; files: Record<string, string>; ran: any[]; git: Record<string, string>; cards: string[][]; trees: any[]; dialogs: any[]; theme: string; surface: 'terminal' | 'desktop'; columns?: number; surfaces?: string[]; statuses: (string | undefined)[]; stored: unknown[]; drawn?: unknown }
 
 // The card as the person reads it: one string per line, indents included.
 export function textOf(node: any): string {
@@ -67,9 +67,10 @@ export function stub($: any, on: any, setup: Setup) {
   on('session.cwd', () => ({ value: setup.cwd ?? '/work' }))
   on('process.run', (_: any, e: any) => {
     if (e.argv[0] === 'git') setup.gitDirs?.push(e.init?.cwd)
-    const stdout = setup.git[e.argv.slice(1).join(' ')] ?? ''
+    const key = e.argv.slice(1).join(' ')
+    const stdout = setup.git[key] ?? ''
 
-    return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+    return { value: { exitCode: 0, stdout, stderr: '', isStdoutTruncated: setup.truncated?.includes(key) ?? false, isStderrTruncated: false } }
   })
   on('tool.call', (_: any, e: any) => answerTool($, setup, e))
 }

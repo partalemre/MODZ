@@ -1,5 +1,5 @@
 // Built by `bin/modz build` from the files beside it. Never edited by hand.
-import { atom, update, read } from 'claude-code';
+import { atom, read, update } from 'claude-code';
 
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 const BITS_PER_CHAR = 6;
@@ -210,6 +210,7 @@ function resolvePath(base, path) {
 }
 
 const FILES_MAX = 300;
+const UNPUSHED = ["HEAD", "--not", "--remotes", "--max-count=200"];
 const SEPARATORS$1 = /&&|\|\||;|\n|\|/;
 const ENV_FILE = /^\.env(\..+)?$/;
 const ENV_TEMPLATE = /\.(example|sample|template|dist)$/i;
@@ -241,6 +242,8 @@ function stepOf(tokens) {
     return { kind: "add", cwd, args: rest };
   if (verb === "commit")
     return { kind: "commit", cwd, isAll: rest.some((word) => word === "--all" || /^-[a-zA-Z]*a[a-zA-Z]*$/.test(word)) };
+  if (verb === "push")
+    return { kind: "push", cwd };
   return null;
 }
 function gitSteps(command) {
@@ -285,10 +288,20 @@ async function scanAdd(host, step, found) {
     found.secrets.push(...findSecrets(text, path).map((secret) => ({ ...secret, where: `${path}:${secret.line}` })));
   }
 }
+async function scanPush(host, dir, found) {
+  const names = (await host.git(["log", "--name-only", "--format=", ...UNPUSHED], dir)).split(`
+`).filter((name) => name !== "");
+  found.envFiles.push(...names.filter(isEnvFile));
+  for (const [path, added] of addedByFile(await host.git(["log", "-p", "-U0", "--no-color", "--format=", ...UNPUSHED], dir))) {
+    found.secrets.push(...findSecrets(added, path).map((secret) => ({ ...secret, where: path })));
+  }
+}
 async function scanStep(host, step, found) {
   if (step.kind === "add")
     return scanAdd(host, step, found);
   const dir = step.cwd === null ? host.cwd : resolvePath(host.cwd, step.cwd);
+  if (step.kind === "push")
+    return scanPush(host, dir, found);
   const scopes = step.isAll ? [["--cached"], []] : [["--cached"]];
   for (const scope of scopes) {
     const names = (await host.git(["diff", ...scope, "--name-only"], dir)).split(`
@@ -839,7 +852,7 @@ function sourceOf(found) {
   if (found.path !== null)
     return "write";
   const steps = gitSteps(found.command);
-  if (steps.some((step) => step.kind === "commit"))
+  if (steps.some((step) => step.kind === "commit" || step.kind === "push"))
     return "commit";
   return steps.length > 0 ? "add" : "write";
 }
@@ -865,6 +878,27 @@ const unattendedDeny = (found) => `secret-guard blocked this call: it would expo
 const blockedDeny = (found) => `The user blocked this call: it would expose ${exposed(found)}. Keep secrets in .env (git-ignored) and read them from the environment.`;
 const moveYourselfDeny = (found) => `The user chose to move ${summary(found)} into .env. Move each secret into the project's .env (git-ignored), reference it from the environment, then retry.`;
 const failedDeny = (why) => `secret-guard could not check this call for secrets (${why}), so it was blocked to keep a key from leaking. Retry it; if this keeps happening, the user can turn the scan off with /secret-guard.`;
+
+const FILE_MAX_BYTES = 1e6;
+async function scanFile($, path) {
+  try {
+    const stat = await $.fs.stat(path);
+    if (stat.kind !== "file" || stat.size > FILE_MAX_BYTES)
+      return "";
+    return await $.fs.read(path);
+  } catch {
+    return "";
+  }
+}
+function gitHost($, cwd) {
+  const git = async (argv, dir) => {
+    const ran = await $.process.run(["git", ...argv], { cwd: dir });
+    if (ran.isStdoutTruncated)
+      throw new Error(`git ${argv[0] ?? ""} printed more than secret-guard can read`);
+    return ran.exitCode === 0 ? ran.stdout : "";
+  };
+  return { cwd, git, read: (path) => scanFile($, path) };
+}
 
 const DOTS = "●●●●";
 const REVEAL_FROM = 8;
@@ -1095,6 +1129,32 @@ function maskedProps(component, props, known) {
   return out;
 }
 
+const EVENT = "PreSkillShellCommand";
+const enabledAtom$1 = atom({ plugin: "secret-guard", key: "isEnabled" }, true);
+function skillGitCommand(e) {
+  const input = e;
+  const command = input.hook_event_name === EVENT ? input.tool_input?.command : undefined;
+  return typeof command === "string" && gitSteps(command).length > 0 ? command : null;
+}
+function hookSkillShell(on) {
+  on("classic.*", async ($, e, next) => {
+    const command = skillGitCommand(e);
+    if (command === null || !await read($, enabledAtom$1))
+      return next(e);
+    const found = { secrets: [], envFiles: [], path: null, command };
+    const host = gitHost($, await $.session.cwd().catch(() => "") || "");
+    for (const step of gitSteps(command))
+      await scanStep(host, step, found);
+    if (found.secrets.length + found.envFiles.length === 0)
+      return next(e);
+    return { block: unattendedDeny({ ...found, envFiles: [...new Set(found.envFiles)] }) };
+  }).catch(($, e, next) => {
+    if (next.called || skillGitCommand(e) === null)
+      return next(e);
+    return { block: failedDeny(next.error.message ?? next.error.kind) };
+  });
+}
+
 const SEPARATOR = " · ";
 let shown = null;
 function statusText(spec) {
@@ -1113,28 +1173,10 @@ const COMMAND = "secret-guard";
 const REC_COMMAND = "rec";
 const STORE_KEY = "secret-guard.enabled";
 const DEFAULT_COLUMNS = 100;
-const FILE_MAX_BYTES = 1e6;
 const pendingAtom = atom({ plugin: "secret-guard", key: "pending" }, null);
 const enabledAtom = atom({ plugin: "secret-guard", key: "isEnabled" }, true);
 const recordingAtom = atom({ plugin: "secret-guard", key: "isRecording" }, false);
 const session = { cwd: "", isLight: false, isEnabled: true };
-async function scanFile($, path) {
-  try {
-    const stat = await $.fs.stat(path);
-    if (stat.kind !== "file" || stat.size > FILE_MAX_BYTES)
-      return "";
-    return await $.fs.read(path);
-  } catch {
-    return "";
-  }
-}
-function gitHost($) {
-  const git = async (argv, cwd) => {
-    const ran = await $.process.run(["git", ...argv], { cwd });
-    return ran.exitCode === 0 ? ran.stdout : "";
-  };
-  return { cwd: session.cwd, git, read: (path) => scanFile($, path) };
-}
 async function inspect($, input) {
   const found = { secrets: [], envFiles: [], path: null, command: String(input.command ?? "") };
   session.cwd = await $.session.cwd().catch(() => "") || session.cwd;
@@ -1147,7 +1189,7 @@ async function inspect($, input) {
     found.secrets = [...findSecrets(text, path), ...tokenHits(sessionVault, text)].map((secret) => ({ ...secret, where: `${path}:${secret.line}` }));
   } else if (input.tool === "Bash" && typeof input.command === "string") {
     for (const step of gitSteps(input.command))
-      await scanStep(gitHost($), step, found);
+      await scanStep(gitHost($, session.cwd), step, found);
     found.secrets.push(...bashWriteHits(input.command, sessionVault));
   }
   found.envFiles = [...new Set(found.envFiles)];
@@ -1345,6 +1387,7 @@ const register = (on) => {
   hookSession(on);
   hookCommand(on);
   hookCall(on);
+  hookSkillShell(on);
   hookPlaceholders(on);
   hookRender(on);
 };

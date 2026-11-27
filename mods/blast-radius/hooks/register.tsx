@@ -30,6 +30,8 @@ import { setLang } from './lang'
 import { measure, missingFolder } from './measure'
 import type { Report, Run } from './report'
 import { pinned } from './pin'
+import { outsideScratch } from './scratch'
+import { resetShip, shipHooks } from './ship'
 import { resolveLight } from './theme'
 import { viewOf } from './view'
 import { words } from './words'
@@ -206,6 +208,7 @@ function holdHooks(on: On): void {
   on('session.start', async ($, e, next) => {
     setLang(await $.env.get('MODZ_LANG').catch(() => undefined))
     resetHouse()
+    resetShip()
     try {
       await refreshTheme($)
     } catch {
@@ -217,7 +220,7 @@ function holdHooks(on: On): void {
 
   on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const command = String(e.command ?? '')
-    const risks = classifyAll(command)
+    const risks = await outsideScratch($, classifyAll(command))
     if (risks.length === 0) return next(e)
     if (await isUnattended($, e.agentId)) return (await refuseUnattended($, { command, risks, isSubagent: e.agentId !== undefined })) ?? next(e)
     const mine = await take(holdIo($), { command, signal: next.signal, canStrike: true })
@@ -291,4 +294,5 @@ export const register: Register = on => {
   houseHooks(on)
   editHooks(on)
   drawHooks(on)
+  shipHooks(on)
 }

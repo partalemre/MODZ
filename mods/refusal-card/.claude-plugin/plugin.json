@@ -1,0 +1,12 @@
+{
+  "name": "refusal-card",
+  "description": "When the model's safeguards flag your request and the turn stops, a card above the prompt shows what you asked and one press that puts a /feedback report of a false positive in the prompt box. Nothing is sent until you press Enter there yourself (Turkish with MODZ_LANG=tr).",
+  "author": {
+    "name": "Faik Emre Partal",
+    "url": "https://github.com/partalemre"
+  },
+  "keywords": [
+    "mods",
+    "feedback"
+  ]
+}

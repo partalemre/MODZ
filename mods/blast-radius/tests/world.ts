@@ -44,6 +44,9 @@ export type World = {
   // The label picked in the engine's own question dialog (null: dismissed), and every question shown.
   choice: string | null
   questions: string[]
+  // The session's scratchpad (`scratchpadDir`; none when absent), and how the scratch script answers for its paths.
+  scratch?: string
+  scratchRun?: (argv: string[]) => string
 }
 
 export const SURFACES = ['terminal', 'desktop'] as const
@@ -78,6 +81,7 @@ const ok = (stdout: string) => ({ value: { exitCode: 0, stdout, stderr: '', isSt
 
 // The key a process run is answered by: `bash` for the files script, else the argv joined.
 function keyOf(argv: string[]): string {
+  if (argv[0] === 'bash' && argv[2]?.startsWith('# blast-radius scratch')) return 'scratch'
   if (argv[0] === 'bash' && argv[2]?.includes('compgen')) return 'files'
   if (argv[0] === 'bash' && argv[2]?.includes('ls-files --error-unmatch')) return 'writes'
   if (argv[0] === 'bash' && argv[2]?.includes('pwd -P')) return `cd ${argv[4]}`
@@ -147,6 +151,7 @@ function stubSession(on: any, w: World): void {
   on('session.end', (_: any, e: any) => ({ sessionId: e.sessionId }))
   on('session.root', () => ({ value: w.root }))
   on('session.surfaces', () => ({ value: w.surfaces }))
+  on('session.info', () => ({ value: { transcriptPath: '', ...(w.scratch === undefined ? {} : { scratchpadDir: w.scratch }) } }))
   on('fs.stat', (_: any, e: any) => {
     const path = e.path.startsWith('/') ? e.path : `${w.cwd}/${e.path}`.replace(/\/\.\//g, '/')
 
@@ -177,6 +182,7 @@ export function stub(on: any, w: World): void {
       return ok('')
     }
     if (w.failing.includes(keyOf(e.argv))) return { value: { exitCode: 127, stdout: '', stderr: 'not found' } }
+    if (keyOf(e.argv) === 'scratch' && w.scratchRun !== undefined) return ok(w.scratchRun(e.argv))
 
     return ok(w.answers[keyOf(e.argv)] ?? '')
   })

@@ -7,11 +7,12 @@ import { findSecrets } from './detect'
 import { blockedDeny, failedDeny, isMovable, moveYourselfDeny, pendingOf, unattendedDeny } from './findings'
 import type { Found } from './findings'
 import { gitSteps, isEnvFile, scanStep } from './git'
-import type { GitHost } from './git'
+import { gitHost } from './git-host'
 import { maskTree } from './mask'
 import { appendText, envLines, envRootOf, hasEnvIgnore, parseEnv, planEntries, rewrite, withTokens } from './move'
 import { bashCommand, scrubbedContent, withNote, withTokenNote } from './placeholders'
 import { maskedProps } from './rec'
+import { hookSkillShell } from './skill-shell'
 import { isNewStatus, statusText } from './status'
 import { fileText, isFileTool, patchedFields, pathOf } from './tools'
 import { clearVault, hasTokens, hide, sessionVault, tokenHits } from './vault'
@@ -25,7 +26,6 @@ const COMMAND = 'secret-guard'
 const REC_COMMAND = 'rec'
 const STORE_KEY = 'secret-guard.enabled'
 const DEFAULT_COLUMNS = 100
-const FILE_MAX_BYTES = 1_000_000
 
 const pendingAtom = atom({ plugin: 'secret-guard', key: 'pending' } as const, null)
 const enabledAtom = atom({ plugin: 'secret-guard', key: 'isEnabled' } as const, true)
@@ -33,27 +33,6 @@ const enabledAtom = atom({ plugin: 'secret-guard', key: 'isEnabled' } as const, 
 const recordingAtom = atom({ plugin: 'secret-guard', key: 'isRecording' } as const, false)
 // `isEnabled` mirrors the atom for the fail-closed handler, which may run where `$` calls reject.
 const session = { cwd: '', isLight: false, isEnabled: true }
-
-async function scanFile($: EngineInterface, path: string): Promise<string> {
-  try {
-    const stat = await $.fs.stat(path)
-    if (stat.kind !== 'file' || stat.size > FILE_MAX_BYTES) return ''
-
-    return await $.fs.read(path)
-  } catch {
-    return ''
-  }
-}
-
-function gitHost($: EngineInterface): GitHost {
-  const git = async (argv: string[], cwd: string) => {
-    const ran = await $.process.run(['git', ...argv], { cwd })
-
-    return ran.exitCode === 0 ? ran.stdout : ''
-  }
-
-  return { cwd: session.cwd, git, read: path => scanFile($, path) }
-}
 
 async function inspect($: EngineInterface, input: Record<string, unknown>): Promise<Found | null> {
   const found: Found = { secrets: [], envFiles: [], path: null, command: String(input.command ?? '') }
@@ -67,7 +46,7 @@ async function inspect($: EngineInterface, input: Record<string, unknown>): Prom
     const text = fileText(input)
     found.secrets = [...findSecrets(text, path), ...tokenHits(sessionVault, text)].map(secret => ({ ...secret, where: `${path}:${secret.line}` }))
   } else if (input.tool === 'Bash' && typeof input.command === 'string') {
-    for (const step of gitSteps(input.command)) await scanStep(gitHost($), step, found)
+    for (const step of gitSteps(input.command)) await scanStep(gitHost($, session.cwd), step, found)
     found.secrets.push(...bashWriteHits(input.command, sessionVault))
   }
   found.envFiles = [...new Set(found.envFiles)]
@@ -292,6 +271,7 @@ export const register: Register = on => {
   hookSession(on)
   hookCommand(on)
   hookCall(on)
+  hookSkillShell(on)
   hookPlaceholders(on)
   hookRender(on)
 }

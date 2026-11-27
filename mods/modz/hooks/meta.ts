@@ -35,6 +35,7 @@ export const META: Record<string, Meta> = {
   projects: { group: 'flow', summary: { en: 'Every project: percent, plans, tokens, agents', tr: "Tüm projeler: yüzde, plan, token, ajan" } },
   'plan-steps': { group: 'flow', summary: { en: "The plan's steps and where the work is", tr: "Planın adımları ve işin nerede olduğu" } },
   'reflect-mod': { group: 'flow', summary: { en: 'Turns your corrections into CLAUDE.md rules', tr: "Düzeltmelerini CLAUDE.md kuralına çevirir" } },
+  'refusal-card': { group: 'flow', summary: { en: 'Report a false safeguards flag in one press', tr: 'Yanlış güvenlik uyarısını tek basışta bildir' } },
   'done-ping': { group: 'flow', summary: { en: 'A ping when a long turn ends or Claude waits', tr: "Uzun tur bitince ya da Claude beklerken bildirim" } },
 }
 

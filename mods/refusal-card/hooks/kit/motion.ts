@@ -1,0 +1,67 @@
+// MODZ kit — motion for interactive Svgs (DESIGN.md §5). On the desktop an interactive Svg is a frame the surface
+// keeps while its source stays the same and rebuilds when it changes, and a pane remounts whole when it opens. So a
+// drawing's source is fixed per what it shows (stable.ts): its first draw since the pane opened enters, a later
+// change of what it shows flashes once, and an unchanged drawing keeps its frame, its loops running on undisturbed.
+// Classes carry an `m-` prefix so they never meet a drawing's own (the kit's `shimmer` skeleton is another loop).
+
+// Where a drawing is in its life: first drawn since the pane opened, or redrawn because what it shows changed (an
+// unchanged one is never redrawn: its source is reused). `still`: redrawn for a ticking clock alone, so no sweep.
+export type Phase = 'enter' | 'change' | 'still'
+
+// Its place in the opening cascade, top to bottom.
+export type Cue = { phase: Phase; order: number }
+
+const STAGGER_MS = 45
+const EASE = 'cubic-bezier(.2,.8,.2,1)'
+// A neutral tint that reads on either scheme, for the flash that marks a change.
+const SHEEN = '#A39E93'
+
+// Each rule by the class it styles, so a drawing carries only the ones it uses.
+const RULES: Record<string, string> = {
+  'm-in': `.m-in{animation:m-in .42s ${EASE} both}@keyframes m-in{from{opacity:0;transform:translateY(8px)}}`,
+  'm-fade': `.m-fade{animation:m-fade .5s ${EASE} both}@keyframes m-fade{from{opacity:0}}`,
+  'm-grow': `.m-grow{transform-box:fill-box;transform-origin:left center;animation:m-grow .7s ${EASE} both}@keyframes m-grow{from{transform:scaleX(0)}}`,
+  'm-px': `.m-px{transform-box:fill-box;transform-origin:center;animation:m-px .34s ${EASE} both}@keyframes m-px{from{opacity:0;transform:translateY(-10px) scale(.6)}}`,
+  // Rests unseen and shows only while its animation runs, so under reduced motion it never appears.
+  'm-flash': '.m-flash{opacity:0;animation:m-flash 1.6s ease-out both}@keyframes m-flash{from{opacity:.9}to{opacity:0}}',
+  // A changed meter's fill slides from the width it had (changes.ts sets --m-from, the old width over the new).
+  'm-from': `.m-from{transform-box:fill-box;transform-origin:left center;animation:m-from .32s ${EASE} both}@keyframes m-from{from{transform:scaleX(var(--m-from))}}`,
+  // A done mark draws its stroke once (pathLength 1). At rest it is whole, so reduced motion shows it drawn.
+  'm-draw': `.m-draw{stroke-dasharray:1;animation:m-draw .32s ${EASE} .12s both}@keyframes m-draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}`,
+  // Live work only: the mark breathes, and a dot sends out a soft ring, until the work stops and the source changes.
+  'm-breathe': '.m-breathe{animation:m-breathe 1.8s ease-in-out infinite}@keyframes m-breathe{50%{opacity:.4}}',
+  'm-ring': '.m-ring{transform-box:fill-box;transform-origin:center;animation:m-ring 1.8s ease-out infinite}@keyframes m-ring{from{opacity:.55;transform:scale(1)}to{opacity:0;transform:scale(2.8)}}',
+  // Hover inside the frame: a row's wash comes up and its tile lifts (a press stays on the native button).
+  'm-wash': `.m-wash{fill:#8E8A80;opacity:0;transition:opacity .12s ${EASE}}svg:hover .m-wash{opacity:.12}`,
+  'm-tile': `.m-tile{transform-box:fill-box;transform-origin:center;transition:transform .2s ${EASE}}svg:hover .m-tile{transform:translateY(-1px) scale(1.06)}`,
+}
+
+const REDUCED = '@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}'
+
+// The motion rules `body` uses, with reduced motion last so it wins.
+export function motionCss(body: string): string {
+  const used = Object.keys(RULES).filter(name => new RegExp(`\\b${name}\\b`).test(body))
+
+  return used.length === 0 ? '' : `${used.map(name => RULES[name]).join('')}${REDUCED}`
+}
+
+// Every motion rule, for a drawing that assembles its own style.
+export const MOTION_CSS = Object.values(RULES).join('')
+
+export const isEntering = (cue: Cue): boolean => cue.phase === 'enter'
+
+// Wraps `body` in the entrance, delayed by its place in the cascade; drawn as is when it changed later.
+export function entering(body: string, cue: Cue, kind: 'in' | 'fade' = 'in'): string {
+  if (!isEntering(cue)) return body
+
+  return `<g class="m-${kind}" style="animation-delay:${cue.order * STAGGER_MS}ms">${body}</g>`
+}
+
+// The delay of the n-th piece inside one drawing that is entering, after its own cascade place.
+export const delayOf = (cue: Cue, step: number): string => `animation-delay:${cue.order * STAGGER_MS + step}ms`
+
+// A neutral tint under the whole drawing that fades once: what it shows just changed. Quieter than a beam.
+export const FLASH = `<rect x="0" y="0" width="100%" height="100%" rx="10" fill="${SHEEN}" fill-opacity=".22" class="m-flash"/>`
+
+// The hover wash under a row's drawing.
+export const WASH = '<rect x="0" y="0" width="100%" height="100%" rx="10" class="m-wash"/>'

@@ -59,7 +59,7 @@ Core set (recommended install): modz, savvy-progress, plan-steps, filetree, blas
 
 ## Facts
 
-- Draws in the Claude desktop app's Code tab (rich) and in the terminal (text). Tested on Claude Code 2.1.296 (terminal) and 2.1.317 (desktop app).
+- Draws in the Claude desktop app's Code tab (rich) and in the terminal (text). Tested on Claude Code 2.1.332 (terminal) and 2.1.330 (desktop app).
 - Four mods add a short section to the system prompt: plan-steps, secret-guard, handoff (after Continue from handoff) and reflect-mod.
 - Most mods use no model tokens. Token use: reflect-mod (one small check per correction, one per /mine), cache-tax keepwarm (only when started), handoff (one optional summary per note), effort-router (auto mode only), blast-radius (only with .claude/house-rules.md), replay-theater (rarely), transceiver free-form `ask` (small model on the other side, at most 10 a day per room).
 - License: MIT; adapted mods keep their original license in their folder.

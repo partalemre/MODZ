@@ -54,7 +54,7 @@ Or ask your coding agent: *Install modz for me. Follow https://partalemre.github
 Start a new session and press **modz** under the prompt (or type `/modz`). The modz panel opens on the right with a line from every mod you installed.
 
 - **Where it draws.** The Claude desktop app's Code tab draws everything. The terminal draws the same panels as text.
-- **Requirements.** Claude Code 2.1.295 or later, tested on 2.1.296 (terminal) and 2.1.317 (desktop app). `terminal-browser` draws in the terminal only and needs the external `terminal-browser` CLI (without it, the mod asks you to install it first). Outside the desktop app, `done-ping` falls back to a macOS banner.
+- **Requirements.** Claude Code 2.1.295 or later, tested on 2.1.332 (terminal) and 2.1.330 (desktop app). `terminal-browser` draws in the terminal only and needs the external `terminal-browser` CLI (without it, the mod asks you to install it first). Outside the desktop app, `done-ping` falls back to a macOS banner.
 - **Updates.** Open **Updates** in the modz panel. It says when a new version is out (a toast tells you too), turns automatic updates on or off with one press, and copies the commands to update by hand. Off by default, so nothing new runs on your computer before you choose it. See [SECURITY.md](SECURITY.md).
 - **Language.** The interface is in English. Set `MODZ_LANG=tr` for Turkish.
 - **Transceiver** comes with `modz`: installing the hub installs it too (it is kept in its own repo). On a private GitHub repo you share, its team room opens by itself. Its DMs and the bridge between your own computers need a claude.ai login. If Claude Code runs inside another app (an IDE, `claude -p`, an SDK host), also set `CLAUDE_CODE_ARTIFACT=1`.

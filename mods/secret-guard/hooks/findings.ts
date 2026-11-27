@@ -20,7 +20,7 @@ function sourceOf(found: Found): GuardPending['source'] {
   if (found.path !== null) return 'write'
 
   const steps = gitSteps(found.command)
-  if (steps.some(step => step.kind === 'commit')) return 'commit'
+  if (steps.some(step => step.kind === 'commit' || step.kind === 'push')) return 'commit'
 
   return steps.length > 0 ? 'add' : 'write'
 }

@@ -13,12 +13,13 @@ Or in one step: `/plugin install secret-guard --marketplace partalemre/MODZ`.
 
 ## What it checks
 
-It runs before every `Write`, `Edit`, `MultiEdit` and `NotebookEdit`, and before Bash `git add` and `git commit`, in every permission mode.
+It runs before every `Write`, `Edit`, `MultiEdit` and `NotebookEdit`, and before Bash `git add`, `git commit` and `git push`, in every permission mode.
 
 - `sk-...` keys (Anthropic `sk-ant-...`, OpenAI-style), Stripe `sk_live_` and `rk_live_`, AWS `AKIA...` and `ASIA...` ids and `aws_secret_access_key = ...`, GitHub `ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_` and `github_pat_`, and `-----BEGIN ... PRIVATE KEY-----`.
 - Supabase `service_role` JWTs. The payload is decoded locally; `anon` keys pass.
 - Any `*KEY`, `*SECRET`, `*TOKEN` or `*PASSWORD` assignment whose value looks random (at least 12 characters, Shannon entropy of 3.5 or more, and a digit or 24 or more characters). Placeholders (`your-...`, `xxx`, `example`, `${...}`, `process.env...`, member access such as `config.secretKey`) are ignored.
-- `git add` of `.env`, `.env.local`, `.env.production` and the like, named directly or picked up by `git add .`. Templates such as `.env.example` are fine. `git commit` scans the added lines of the staged diff (plus the unstaged diff for `-a`) and any staged `.env*` names. Files staged by `git add` are scanned, up to 1 MB each and 300 files.
+- `git add` of `.env`, `.env.local`, `.env.production` and the like, named directly or picked up by `git add .`. Templates such as `.env.example` are fine. `git commit` scans the added lines of the staged diff (plus the unstaged diff for `-a`) and any staged `.env*` names. Files staged by `git add` are scanned, up to 1 MB each and 300 files. `git push` scans the added lines of each commit no remote has yet (up to 200), one by one, so a key committed and later deleted still counts, and any `.env*` file those commits add.
+- **`/ship`.** Claude Code's built-in `/ship` stages, commits and pushes without asking, and its own secret check reads file names only. It runs git through the Bash tool, so the scans above read the contents of what it stages, commits and pushes. A shell command a skill injects itself (`` !`git push` `` in a `SKILL.md`, Claude Code 2.1.332 or later) fires no tool call: the same git scan runs on it too, and as a skill cannot wait for the card, a finding refuses the command outright. If that scan fails, the command is refused too.
 
 When nobody can answer the question (a subagent's call, or a `-p` run with nothing drawing), the call is denied with the reason and nothing is moved.
 

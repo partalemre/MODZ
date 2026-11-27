@@ -5,12 +5,15 @@ import { resolvePath } from './tools'
 export type GitStep =
   | { kind: 'add'; cwd: string | null; args: string[] }
   | { kind: 'commit'; cwd: string | null; isAll: boolean }
+  | { kind: 'push'; cwd: string | null }
 
 // What a scan reaches the repository through: register.tsx makes these calls on `$`.
 export type GitHost = { cwd: string; git: (argv: string[], cwd: string) => Promise<string>; read: (path: string) => Promise<string> }
 export type GitFound = { secrets: (Secret & { where: string })[]; envFiles: string[] }
 
 const FILES_MAX = 300
+// A push sends every commit no remote has yet: each one's own patch, so a key added and then removed still counts.
+const UNPUSHED = ['HEAD', '--not', '--remotes', '--max-count=200']
 const SEPARATORS = /&&|\|\||;|\n|\|/
 const ENV_FILE = /^\.env(\..+)?$/
 const ENV_TEMPLATE = /\.(example|sample|template|dist)$/i
@@ -42,6 +45,7 @@ function stepOf(tokens: string[]): GitStep | null {
   const rest = tokens.slice(at + 1)
   if (verb === 'add') return { kind: 'add', cwd, args: rest }
   if (verb === 'commit') return { kind: 'commit', cwd, isAll: rest.some(word => word === '--all' || /^-[a-zA-Z]*a[a-zA-Z]*$/.test(word)) }
+  if (verb === 'push') return { kind: 'push', cwd }
 
   return null
 }
@@ -102,10 +106,20 @@ async function scanAdd(host: GitHost, step: Extract<GitStep, { kind: 'add' }>, f
   }
 }
 
-// `git add` scans the files it would stage; `git commit` the added lines of the staged diff (and the unstaged one for -a).
+async function scanPush(host: GitHost, dir: string, found: GitFound): Promise<void> {
+  const names = (await host.git(['log', '--name-only', '--format=', ...UNPUSHED], dir)).split('\n').filter(name => name !== '')
+  found.envFiles.push(...names.filter(isEnvFile))
+  for (const [path, added] of addedByFile(await host.git(['log', '-p', '-U0', '--no-color', '--format=', ...UNPUSHED], dir))) {
+    found.secrets.push(...findSecrets(added, path).map(secret => ({ ...secret, where: path })))
+  }
+}
+
+// `git add` scans the files it would stage; `git commit` the added lines of the staged diff (and the unstaged one
+// for -a); `git push` the added lines of every commit it would send.
 export async function scanStep(host: GitHost, step: GitStep, found: GitFound): Promise<void> {
   if (step.kind === 'add') return scanAdd(host, step, found)
   const dir = step.cwd === null ? host.cwd : resolvePath(host.cwd, step.cwd)
+  if (step.kind === 'push') return scanPush(host, dir, found)
   const scopes = step.isAll ? [['--cached'], []] : [['--cached']]
   for (const scope of scopes) {
     const names = (await host.git(['diff', ...scope, '--name-only'], dir)).split('\n').filter(name => name !== '')

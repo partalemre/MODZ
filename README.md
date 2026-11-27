@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-<h3 align="center">23 mods for Claude Code. One panel.</h3>
+<h3 align="center">24 mods for Claude Code. One panel.</h3>
 
 <p align="center">See every move Claude makes: agents, files, plans, tests and risky commands, live, beside the chat.</p>
 
@@ -40,11 +40,11 @@ for m in modz savvy-progress plan-steps filetree blast-radius secret-guard check
 done
 ```
 
-The other 15 mods are optional extras. Add any of them by name, or all of them with one loop:
+The other 16 mods are optional extras. Add any of them by name, or all of them with one loop:
 
 ```sh
 for m in savvy-flow projects handoff transceiver test-badge pr-card replay-theater \
-         session-budget cache-tax effort-router done-ping reflect-mod skins wrapped terminal-browser; do
+         session-budget cache-tax effort-router done-ping refusal-card reflect-mod skins wrapped terminal-browser; do
   claude plugin install "$m@modz"
 done
 ```
@@ -107,8 +107,8 @@ The eight in **bold** are the core set. Everything else is an optional extra.
 | | `handoff` | Saves working notes before every compaction (yours, automatic or idle) with no model call, and offers them back after with one press. Near auto-compaction it asks once: compact now, or hand off to a fresh chat; your next chat in the repo is offered the note (**Continue from handoff**). Notes live in the main repository, so a worktree finds them too |
 | | `replay-theater` | Replays the last turn's edits step by step, and earlier turns and past sessions. Opens from `/replay` or the modz row; changes made by shell commands are named as not replayable |
 | | `transceiver` | Team chat and zero-token agent questions on a private GitHub repo you share, with nothing to set up, and between your own computers (beta; from its own repo) |
-| **Safety** | **`blast-radius`** | Holds a shell command that would lose work (`rm -rf`, `find -delete`, `git reset`/`checkout`/`clean`/`stash drop`/`branch -D`, force or deleting pushes, writes over files, docker, terraform, kubectl and database drops) and shows exactly what it would lose; a command that loses nothing runs, and one nobody can answer (a subagent, `claude -p`) is refused at once. Also holds an edit to a file another chat just changed, and checks other commands against your `.claude/house-rules.md` |
-| | **`secret-guard`** | Stops keys and tokens in writes, edits, `git add` and commits, including text a Bash command writes with `echo`, `printf`, `tee` or a heredoc; covers Slack, Google, GitLab, Hugging Face, SendGrid, Supabase, Stripe, database URLs and more. If the guard itself fails, the write is blocked. Keeps pasted keys out of the chat as placeholders; `/rec` masks keys, env values and e-mail addresses on screen |
+| **Safety** | **`blast-radius`** | Holds a shell command that would lose work (`rm -rf`, `find -delete`, `git reset`/`checkout`/`clean`/`stash drop`/`branch -D`, force or deleting pushes, writes over files, docker, terraform, kubectl and database drops) and shows exactly what it would lose; a command that loses nothing runs, and one nobody can answer (a subagent, `claude -p`) is refused at once. Also holds an edit to a file another chat just changed, says when a push goes to a repository that isn't yours, lets the session's own scratchpad be, and checks other commands against your `.claude/house-rules.md` |
+| | **`secret-guard`** | Stops keys and tokens in writes, edits, `git add`, commits and pushes (so `/ship` too), including text a Bash command writes with `echo`, `printf`, `tee` or a heredoc; covers Slack, Google, GitLab, Hugging Face, SendGrid, Supabase, Stripe, database URLs and more. If the guard itself fails, the write is blocked. Keeps pasted keys out of the chat as placeholders; `/rec` masks keys, env values and e-mail addresses on screen |
 | | **`checkpoint`** | A silent git snapshot before each turn's first write (a file tool, or a Bash command that may write); undo a turn. Each session in each worktree sees only its own checkpoints; undo also restores the staging area. Git-ignored files such as `.env` are not covered |
 | | `test-badge` | After you allow it once per folder (it shows the exact command), runs tests and lint in the package you edited and shows the result; a failed run is offered to your next prompt; watches your PR's GitHub CI |
 | | `pr-card` | A card in the conversation for a PR Claude opens, also one the branch already has or the GitHub MCP opened. It runs no poller of its own. In the terminal it shows checks, review and merge state; on the desktop it adds the files with the largest changes |
@@ -117,6 +117,7 @@ The eight in **bold** are the core set. Everything else is an optional extra.
 | | **`hud-pro`** | One line with the 5-hour and 7-day limits, context and cost; when the 5-hour window fills; what fills the context and how many turns are left; 7 and 30 days of usage history. The band above the prompt shows alerts only on the desktop and the full line in the terminal (`/hud band auto\|always\|alerts`). Its pane is the one place for usage: limits, then **Pace**, each turn's share of the 5-hour window (the weekly one if there is no 5-hour reading), the burn rate, and when the window fills at this pace compared with when it resets; with too few readings it says so instead of guessing. One quiet line above the prompt appears only when a turn takes 10 or more points of the 5-hour window (3 or more of the weekly one) or the pace would fill the window before it resets |
 | | `effort-router` | Shows each turn's effort and model; can send light prompts at low effort. A short follow-up goes at your own effort; a lowered turn says so, with a button to re-send at yours. With `hud-pro` installed it shows as a section of the Usage pane |
 | **Comfort** | `done-ping` | A notification when a long turn ends or Claude waits on you, a line when another session waits on you, optional sound packs. On the desktop it stays quiet unless tests failed or the turn ended on an error |
+| | `refusal-card` | When the model's safeguards flag your request and the turn stops, a card above the prompt shows what you asked, with one press that puts a `/feedback` false-positive report in the prompt box. Nothing is sent until you press Enter there and confirm Claude Code's own form |
 | | `reflect-mod` | Saves corrections worth keeping to your CLAUDE.md (this project by default); `/reflect-undo` takes the last one back out; `/mine` turns friction that repeats across past chats into ideas |
 | | `skins` | Themes for the transcript, switched live with `/skin`, and living ASCII scenes above the prompt. It never cuts output short and leaves MCP tool rows as they are |
 | | `wrapped` | Your year with Claude Code as a story and a video, read from your own transcripts: which agents did the work, month by month; it says what kind of work it was (Game, TypeScript file), and real names show only if you press for them |
@@ -179,7 +180,7 @@ Read from the code, not from a promise. "Store" is the mod's own file in `~/.cla
 | `projects` | transcripts, plan files, README | `<config>/modz-projects/`, store | `awk`, `tail`, `git`, `open` | | optional, per project on press |
 | `transceiver` | repo, git | its room | `git` | claude.ai | free-form `ask` |
 | `handoff` | transcript, plan | `.claude/handoff/*.md` in the main repository, store | `git status`, `git rev-parse`, `rm` (own notes) | | optional |
-| `blast-radius` | `.claude/house-rules.md` | store | `git`, a read-only look at what a held command would touch | | with house rules |
+| `blast-radius` | `.claude/house-rules.md` | store | `git`, a read-only look at what a held command would touch; `gh api user` once per session when Claude pushes | | with house rules |
 | `secret-guard` | written files, Bash write commands | `.env`, `.gitignore` (on your press) | `git` | | |
 | `checkpoint` | | store, git refs, shadow repo under `~/.cache` | `git` | | |
 | `test-badge` | project files | store | your test and lint commands, `git`, `gh` | GitHub, through `gh` | |
@@ -190,6 +191,7 @@ Read from the code, not from a promise. "Store" is the mod's own file in `~/.cla
 | `hud-pro` | context breakdown | store | | | |
 | `effort-router` | prompts | store | | | `auto` only |
 | `done-ping` | | store | `osascript`, `terminal-notifier`, `afplay` | | |
+| `refusal-card` | your last prompt | the prompt box (on your press) | | | |
 | `reflect-mod` | transcripts, CLAUDE.md | CLAUDE.md (on your press), store | `tail` | | yes |
 | `skins` | settings | store | | | |
 | `terminal-browser` | web pages | | the `terminal-browser` CLI | yes | |
@@ -216,7 +218,7 @@ If a person asks you to install modz, do exactly this. Every step is safe to rep
 
 1. Check the version: `claude --version` must print 2.1.295 or later. If it is older, ask the person to update Claude Code first.
 2. Add the marketplace: `claude plugin marketplace add partalemre/MODZ`.
-3. Install the core set: `modz savvy-progress plan-steps filetree blast-radius secret-guard checkpoint hud-pro`, each as `claude plugin install <name>@modz` (the first loop under [Install](#install)). If the person did not choose otherwise, stop there. Then install any extra they want, by the names in the table above, or all 15 with the second loop.
+3. Install the core set: `modz savvy-progress plan-steps filetree blast-radius secret-guard checkpoint hud-pro`, each as `claude plugin install <name>@modz` (the first loop under [Install](#install)). If the person did not choose otherwise, stop there. Then install any extra they want, by the names in the table above, or all 16 with the second loop.
 4. Optional settings: put them in the `env` block of `~/.claude/settings.json`, merging with what is already there and never overwriting it:
    - `"MODZ_LANG": "tr"` for a Turkish interface.
    - `"CLAUDE_CODE_ARTIFACT": "1"` if Transceiver is installed and this Claude Code is driven by an SDK host.

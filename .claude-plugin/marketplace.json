@@ -5,7 +5,7 @@
     "url": "https://github.com/partalemre"
   },
   "metadata": {
-    "description": "23 mods for Claude Code. One panel.",
+    "description": "24 mods for Claude Code. One panel.",
     "version": "1.2.0"
   },
   "plugins": [
@@ -48,12 +48,12 @@
     {
       "name": "blast-radius",
       "source": "./mods/blast-radius",
-      "description": "Holds a shell command that would lose work (rm -rf, find -delete, git reset/checkout/clean/stash drop/branch -D, force pushes, writes over files, docker, terraform, kubectl and database drops) and shows exactly what it would lose. A command that loses nothing runs; one nobody can answer is refused. Also holds an edit to a file another chat just changed."
+      "description": "Holds a shell command that would lose work (rm -rf, find -delete, git reset/checkout/clean/stash drop/branch -D, force pushes, writes over files, docker, terraform, kubectl and database drops) and shows exactly what it would lose. A command that loses nothing runs; one nobody can answer is refused. Also holds an edit to a file another chat just changed, and warns when a push goes to a repository that isn't yours."
     },
     {
       "name": "secret-guard",
       "source": "./mods/secret-guard",
-      "description": "Stops keys and tokens before they land: scans writes, edits, text a Bash command writes, git add and commit, and blocks committing .env. If the guard fails, the write is blocked. Pasted keys reach the model as placeholders; /rec masks the screen."
+      "description": "Stops keys and tokens before they land: scans writes, edits, text a Bash command writes, git add, commit and push (so /ship too), and blocks committing .env. If the guard fails, the write is blocked. Pasted keys reach the model as placeholders; /rec masks the screen."
     },
     {
       "name": "checkpoint",
@@ -89,6 +89,11 @@
       "name": "done-ping",
       "source": "./mods/done-ping",
       "description": "A notification when a long turn finishes or Claude is waiting on you, with optional sound packs. On the desktop it stays quiet unless tests failed or the turn ended on an error."
+    },
+    {
+      "name": "refusal-card",
+      "source": "./mods/refusal-card",
+      "description": "When the model's safeguards flag your request and the turn stops, a card shows what you asked and puts a /feedback false-positive report in the prompt box. Nothing is sent until you press Enter."
     },
     {
       "name": "reflect-mod",
